@@ -352,7 +352,7 @@ function project_issue_view(&$node, $teaser = false, $page = false) {
     // Breadcrumb navigation
     $breadcrumb[] = array('path' => 'project', 'title' => t('projects'));
     if (function_exists('taxonomy_node_get_terms') && $term = reset(taxonomy_node_get_terms($node->pid))) {
-      $breadcrumb[] = array('path' => url('project/'. $term->name), 'title' => $term->name);
+      $breadcrumb[] = array('path' => 'project/'. $term->name, 'title' => $term->name);
     }
     $breadcrumb[] = array('path' => 'node/'. $project->nid, 'title' => $project->title);
     $breadcrumb[] = array('path' => 'project/issues/'. $project->uri, 'title' => t('issues'));
