@@ -35,7 +35,7 @@ function _fck_connector_properties() {
 	$properties['File']   = '/';
 	$properties['Image']  = '/images';
 	$properties['Flash']  = '/flash';
-	$properties['Flash']  = '/media';
+	$properties['Media']  = '/media';
 	
 	return $properties;
 }
