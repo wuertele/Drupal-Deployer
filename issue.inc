@@ -473,7 +473,7 @@ function project_issue_query_rss($projects, $result) {
       $title = $projects[$node->pid] ."/$node->category: ". $node->title;
       $body = $node->teaser ? $node->teaser : $node->body;
 
-      $items .= format_rss_item($title, url(node_url($node)), $body);
+      $items .= format_rss_item($title, url("node/view/$node->nid"), $body);
 
       if ($node->updated > $pubdate) {
         $pubdate = $node->updated;

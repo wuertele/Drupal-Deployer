@@ -223,7 +223,7 @@ function project_comment_save($edit) {
       }
     }
 
-    watchdog("special", "project: added comment '$edit->title'", l("view post", node_url($node)));
+    watchdog("special", "project: added comment '$edit->title'", l("view post", "node/view/$node->nid"));
     db_query("INSERT INTO {project_comments} (cid, nid, uid, fid, created, changed, body, data) VALUES (%d, %d, %d, %d, %d, %d, '%s', '%s')", $edit->cid, $edit->nid, $edit->uid, $edit->fid, time(), time(), $edit->body, serialize($data));
     node_save($node);
   }
