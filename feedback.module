@@ -1,89 +1,173 @@
 <?php
-// $id: feedback.module,v 1.2 2002/05/26 21:03:00 barry Exp $
+// $Id$
 
-function feedback_system($field) {
-  $system["description"] = t("the feedback module allows user to e-mail the site admin via a web based form");
+function feedback_help($section = 'admin/feedback/help') {
+  switch ($section) {
+    case 'admin/system/modules#description':
+      $output = t('the feedback module allows user to e-mail the site admin via a web based form');
+      break;
+    case 'admin/system/modules/feedback':
+      $output = t('Feedback is sent to the specified email adress. It is also saved on the site.');
+      break;
+    case 'admin/help#feedback':
+      $output = '';
+      break;
+  }
+
+  return t($output);
+}
+
+function feedback_system($field){
+  $system['description'] = feedback_help('admin/system/modules');
+  $system['admin_help'] = feedback_help('admin/system/modules/feedback');
   return $system[$field];
 }
 
+function _feedback_init() {
+  $feedback_fields = array(
+    'address'       => array('textfield', t('Address'), '', 64, 64, ''),
+    'city'          => array('textfield', t('City'), '', 64, 64, ''),
+    'state'         => array('textfield', t('State, province or region'), '', 64, 64, ''),
+    'zip'           => array('textfield', t('Zip or postal code'), '', 7, 10, ''),
+    'country'       => array('textfield', t('Country'), '', 64, 64, ''),
+    'gender'        => array('select', t('Gender'), '', array(0 => '-', 'm' => t('male'), 'f' => t('female')), '', 0, 0),
+    'job'           => array('textfield', t('Job title'), '', 64, 64, ''),
+    'homepage'      => array('textfield', t('URL of homepage'), '', 64, 64, t('Make sure you enter a fully qualified URL: remember to include \'http://\'.')),
+    'interests'     => array('textarea', t('Interests'), '', 64, 4, ''),
+    'publickey'     => array('textarea', t('Public key'), '', 64, 4, ''),
+  );
+  return $feedback_fields;
+}
+
 function feedback_settings() {
-  $output .= form_textfield(t("Administrative Contact"), "feedback_module_email", variable_get("feedback_module_email", variable_get("site_mail", ini_get("sendmail_from"))) , 55, 128, t("By default, the feedback module sends e-mail to the address specified in site configuration. If you wish it to use a different address, please specify it here."));
-  $output .= form_textarea(t("Feedback Message"), "feedback_module_message", variable_get("feedback_module_message", "Enter your message below:"), 60, 20, t("Enter the message that will appear above the feedback form"));
+  $output .= form_textarea(t('Explanation or submission guidelines'), 'feedback_help', variable_get('feedback_help', ''), 70, 5, t('This text will be displayed at the top of the feedback form.  It is useful for helping or instructing your users.'));
+  $output .= form_select(t('Minimum number of words'), 'minimum_feedback_size', variable_get('minimum_feedback_size', 0), array(0 => '0 '. t('words'), 10 => '10 '. t('words'), 25 => '25 '. t('words'),  50 => '50 '. t('words'), 75 => '75 '. t('words'), 100 => '100 '. t('words'), 125 => '125 '. t('words'),  150 => '150 '. t('words'), 175 => '175 '. t('words'), 200 => '200 '. t('words')), t('The minimum number of words a feedback must be to be considered valid.  This can be useful to rule out submissions that do not meet the site\'s standards, such as short test posts.'));
+  $output .= form_textfield(t('Email address'), 'feedback_email', variable_get('feedback_email', ini_get('sendmail_from')), 70, 70, t('Give the email address where all mails should be sent to'));
+
+  $feedback_fields = _feedback_init();
+  
+  if (!$feedback_fields) {
+    _feedback_init();
+  }
+
+  $feedback_private_fields = variable_get('feedback_private_fields', array());
+  $feedback_required_fields = variable_get('feedback_required_fields', array());
+
+  $header = array('field','enable','required');
+  foreach ($feedback_fields as $key => $field) {
+   $rows[] = array($field[1], form_checkbox('', 'feedback_private_fields][', $key, in_array($key, $feedback_private_fields)), form_checkbox('', 'feedback_required_fields][', $key, in_array($key, $feedback_required_fields)));
+  }
+  $output .= table($header, $rows);
   return $output;
 }
 
+function feedback_node($field) {
+  $info['name'] = t('feedback');
+  $info['description'] = t('Feedback is a node that is sent to a specified email adress. It allows you to set a lot of fields that user can or must fill in, when giving feedback. The node is published, but usually shoul be on;ly visible for administrators.');
+  return $info[$field];
+}
+
 function feedback_perm() {
-  return array("send feedback");
+  return array('give feedback','view feedback');
 }
 
-function feedback_link($type, $node = 0) {
-  if (($type == "page") && user_access("send feedback")) {
-    $links[] = l(t("feedback"), "feedback", array("title" => t("Send the site administrator(s) feedback")));
+function feedback_access($op, $node) {
+  if ($op == 'view' && user_access('view feedback')) {
+    return $node->status;
   }
-  
-  return $links ? $links : array();
+  if ($op == 'create') {
+    return user_access('create feedback');
+  }
 }
 
-function feedback_page() {
-  $op = $_POST["op"];
+function feedback_link($type) {
+  $links = array();
 
-  if(user_access("send feedback")) {
-
-    $op = $op ? $op : "default";
-    $f = "_feedback_page_" . $op;
-
-    if (function_exists($f)) {
-      $f();
+  if ($type == 'page' && user_access('create feedback')) {
+    $links[] = l(t('search'), 'Feedback', array('title' => t('Send an email with feedback')));
+  }  
+  if ($type == 'system') {
+    if (user_access('create feedback')) {
+      menu('node/add/feedback', t('feedback'), 'feedback_page', NULL, 0);
     }
-
-  } else {
-
-    theme("header");
-    theme("box", t("Access denied"), message_access());
-    theme("footer");
-  
   }
 
+  return $links;
 }
 
-function _feedback_page_default() {
+function feedback_validate(&$node) {
 
+  /*
+  ** Validate the size of the feedback:
+  */
 
-  $title  .= t("Feedback");
-
-  $message .= "<br /><p>". variable_get("feedback_module_message", "Enter your message below:") ."</p>";
-
-  $form .= form_textfield(t("Subject"), "subject", $edit[subject], 60, 64);
-  $form .= form_textarea(t("Body"), "message", $edit[message], 60, 20);
-  $form .= form_submit(t("send"));
-
-  theme("header");
-  theme("box", $title, $message . form($form, "post", "index.php?q=feedback/send"));
-  theme("footer");
-
+  if (isset($node->body) && count(explode(' ', $node->body)) < variable_get('minimum_feedback_size', 0)) {
+    print 'body : $node->body';
+    $error['body'] = '<div class=\'error\'>'. t('The content of your feedback is too short.') .'</div>';
+  }
+  return $error;
 }
 
-function _feedback_page_send() {
+function feedback_form(&$node, &$help, &$error) {
+  //Prepare the form
+  $feedback_fields = _feedback_init();
+
+  $reg_fields = _profile_active_fields($mode);
+  $required_fields = _profile_active_fields('required');
+
+  foreach ($feedback_fields as $name => $field) {
+    if ($field[0] && in_array($name, $reg_fields)) {
+      $f = 'form_'. $field[0];
+      $t = 'profile_'. $name;
+      $output .= $f((in_array($name, $required_fields) ? profile_required($field[1]) : $field[1]), $t, $edit[$t], $field[3], $field[4], $field[5], $field[6]);
+    }
+  }
+
+  
+  // Carry out some explanation or submission guidelines:
+  $help = variable_get('feedback_help', '');
+
+  if (function_exists('taxonomy_node_form')) {
+    $output .= implode('', taxonomy_node_form('feedback', $node));
+  }
+
+  $output .= form_textarea(t('Body'), 'body', $node->body, 60, 15, $error['body'] ? $error['body'] : form_allowed_tags_text());
+
+  return $output;
+}
+
+function _feedback_page_send($node) {
   global $user;
-  $edit = $_POST["edit"];
-  $to = variable_get("feedback_module_email", "");
-  if (!$to)
-    $to = variable_get("site_mail", ini_get("sendmail_from"));
-  $from = $user->mail ? $user->mail : variable_get("site_mail", "");
-  $who = $user->name ? $user->name : "anonymous";
-  $subject = "Feedback: ". $edit["subject"];
-  $body = "-- $who sent you the following message using the feedback page --\n" . $edit["message"];
+  $edit = $_POST['edit'];
+  $to = variable_get('feedback_email', '');
+  if (!$to) {
+    $to = variable_get('site_mail', ini_get('sendmail_from'));
+  }
+  
+  $from = $node->mail ? $node->mail : ini_get('sendmail_from');
+  $who = $node->name ? $node->name : t('Anonymous');
+  $subject = t('Feedback: '). $node->title;
+  $body = t(' -- %user sent you the following message using the feedback page --\n', array('%user',$node->user)) . $node->body;
   $body = wordwrap(strip_tags($body),72);
   $trans = get_html_translation_table(HTML_ENTITIES);
   $trans = array_flip($trans);
   $body = strtr($body, $trans);
   
-  user_mail($to, $subject, $body, "From: $from\nReply-to: $from\nX-Mailer: Drupal\nReturn-path: $from\nErrors-to: $from");
+  user_mail($to, $subject, $body, 'From: $from\nReply-to: $from\nX-Mailer: Drupal\nReturn-path: $from\nErrors-to: $from');
 
-  $title .= t("Feedback Confirmation");
-  $message .= "<br /><p>". t("Thank you for your feedback.<br />Your message has been e-mailed to the web site administrator.") ."</p>";
+  $title .= t('Feedback Confirmation');
+  $message .= t('Thank you for your feedback.<br />Your message has been e-mailed.');
 
-  theme("header");
-  theme("box", $title, $message);
-  theme("footer");
+  theme('header');
+  theme('box', $title, $message);
+  theme('footer');
 }
+
+function feedback_content($node) {
+  $node->teaser = check_output($node->teaser);
+  $node->body = check_output($node->body);
+  $node->mail = valid_email_address($mail);
+  
+  return $node;
+}
+?>
