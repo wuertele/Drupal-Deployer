@@ -100,7 +100,7 @@ function project_project_validate(&$node) {
     }
 
     // Make sure uri isn't already in use, or reserved
-    if (in_array($node->uri, array('issues', 'releases')) || db_num_rows(db_query("SELECT nid FROM {project_projects} WHERE uri = '%s' AND nid <> %d", $node->uri, $node->nid))) {
+    if (in_array($node->uri, array('user', 'issues', 'releases')) || db_num_rows(db_query("SELECT nid FROM {project_projects} WHERE uri = '%s' AND nid <> %d", $node->uri, $node->nid))) {
       $error['uri'] .= t('This project name is already in use.');
     }
   }
