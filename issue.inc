@@ -209,16 +209,14 @@ function project_issue_delete($node) {
 }
 
 function project_issue_access($op, $node) {
-  global $user;
-
   switch ($op) {
     case "view":
       return $node->status && user_access("access project issues");
     case "create":
-      return user_access("maintain project issues") && $user->uid;
+      return user_access("maintain project issues");
     case "update":
     case "delete":
-      return (user_access("maintain project issues") && $user->uid == $node->uid) || user_access("administer projects");
+      return user_access("administer projects");
   }
 }
 
