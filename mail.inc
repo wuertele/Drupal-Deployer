@@ -103,7 +103,7 @@ function project_mailhandler($node, $result, $i, $header, $mailbox) {
       // Send the user his errors
       $mailto = mailhandler_get_fromaddress($header, $mailbox);
       $mailfrom = variable_get("site_mail", ini_get("sendmail_from"));
-      $headers = "From: $mailfrom\nReply-to: $mailfrom\nX-Mailer: Drupal Project module (http://drupal.org/project/project\nReturn-path: $mailfrom\nErrors-to: $mailfrom";
+      $headers = "From: $mailfrom\nReply-to: $mailfrom\nX-Mailer: Drupal Project module (http://drupal.org/project/project)\nReturn-path: $mailfrom\nErrors-to: $mailfrom";
 
       $body = t("You had some errors in your submission:");
       foreach ($error as $field => $text) {

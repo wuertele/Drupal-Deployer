@@ -225,6 +225,7 @@ function project_issue_update($node) {
   }
   */
   db_query("UPDATE {project_issues} SET pid = %d, fid = %d, category = '%s', component = '%s', priority = %d, rid = %d, assigned = %d, state = %d WHERE nid = %d", $node->pid, $file->fid, $node->category, $node->component, $node->priority, $node->rid, $node->assigned, $node->state, $node->nid);
+  project_mail_notify($node);
 }
 
 function project_issue_delete($node) {
