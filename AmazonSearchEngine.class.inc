@@ -14,13 +14,15 @@ class AmazonSearchEngine {
     var $type = 'lite';
     var $version;
     var $results;  // Array of results
+    var $xml_format;
+    var $xml_content;
     var $totalResults = 0;
     var $_parser;   // The XML parser
     var $_currentResult;
     var $_grabtags; // Tags to grab the contents of
     var $_currentTagContents;
 
-    function AmazonSearchEngine($dev_token, $associates_id = 'none', $version = '1.0', $atype = 'lite') {
+    function AmazonSearchEngine($dev_token, $associates_id = 'none', $version = '1.0', $atype = 'lite', $f = 'xml') {
         $this->dev_token = $dev_token;
         $this->associates_id = $associates_id;
 
@@ -32,6 +34,7 @@ class AmazonSearchEngine {
         }
 
         $this->type = $atype;
+        $this->xml_format = $f;
 
         $this->results = array();
         $this->_grabtags = array(
@@ -66,17 +69,20 @@ class AmazonSearchEngine {
         } else {
           $contents = $this->doFetch($url);
         }
-        $this->_parser = xml_parser_create();
-        xml_parser_set_option($this->_parser, XML_OPTION_CASE_FOLDING, false);
-        xml_set_object($this->_parser, $this);
-        xml_set_element_handler($this->_parser, 'tag_open', 'tag_close');
-        xml_set_character_data_handler($this->_parser, 'cdata');
-        if (!xml_parse($this->_parser, $contents)) {
-            die(sprintf('XML error: %s at line %d',
-                xml_error_string(xml_get_error_code($this->_parser)),
-                xml_get_current_line_number($this->_parser)));
+        $this->xml_content = $contents;
+        if ($this->xml_format == 'xml') {
+          $this->_parser = xml_parser_create();
+          xml_parser_set_option($this->_parser, XML_OPTION_CASE_FOLDING, false);
+          xml_set_object($this->_parser, $this);
+          xml_set_element_handler($this->_parser, 'tag_open', 'tag_close');
+          xml_set_character_data_handler($this->_parser, 'cdata');
+          if (!xml_parse($this->_parser, $contents)) {
+              die(sprintf('XML error: %s at line %d',
+                  xml_error_string(xml_get_error_code($this->_parser)),
+                  xml_get_current_line_number($this->_parser)));
+          }
+          xml_parser_free($this->_parser);
         }
-        xml_parser_free($this->_parser);
     }
 
     function getVersionParam() {
@@ -96,7 +102,7 @@ class AmazonSearchEngine {
     }
 
     function getFinalAmazonURL($url = '') {
-      return "{$url}&f=xml";
+      return "{$url}&f={$this->xml_format}";
     }
 
     function searchTerm($term, $mode = 'books', $page = 1, $rsort = '') {
