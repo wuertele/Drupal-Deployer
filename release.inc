@@ -153,7 +153,7 @@ function project_release_overview() {
     }
     $releases = array();
     if (arg(2)) {
-      $result2 = db_query("SELECT path, version FROM {project_releases} WHERE nid = %d AND status = 1 AND path <> '' AND version = '%s' ORDER BY created DESC", $node->nid, arg(2));
+      $result2 = db_query("SELECT path, version FROM {project_releases} WHERE nid = %d AND status = 1 AND path <> '' AND version LIKE '%s%%' ORDER BY created DESC", $node->nid, arg(2));
     }
     else {
       $result2 = db_query("SELECT path, version FROM {project_releases} WHERE nid = %d AND status = 1 AND created > 0 AND path <> '' ORDER BY created DESC", $node->nid);
