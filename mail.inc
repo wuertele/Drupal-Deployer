@@ -250,7 +250,7 @@ function project_mail_notify($node) {
   $body = str_replace(array("\r", "\n"), array("", "\r\n"), "$summary\n$body\n$footer\n");
 
   // Create mail header
-  $sender->name = ($pos = strpos($entry->name, "@")) ? substr($entry->name, 0, $pos) : $entry->name;
+  $sender->name = ($pos = strpos($node->updator, "@")) ? substr($node->updator, 0, $pos) : $node->updator;
   $sender->mail = $project->mail;
   $domain = preg_replace("|.+://([a-zA-Z0-9\._-]+).*|", "\$1", $GLOBALS["base_url"]);
   $header = array(
