@@ -26,17 +26,6 @@ Requirements
 
 
 
-Features
---------
- - Administrative features:
-   o Can customize block title 
-   o Can define the type of directory (public/private) 
-
- - User features:
-   o Can add/edit/delete own directory if have 'manage contacts' permission
-
-
-
 Installation
 ------------
   1. Copy fckeditor folder to modules/.
@@ -58,6 +47,10 @@ Credits
 -------
 LatPro Inc.
 
- - Core functionality originally written by:
-    Jorge Tite
-   
+ - FCKeditor for Drupal Core functionality originally written by:
+     Jorge Tite
+ - FCKeditor - The text editor for internet
+     Copyright (C) 2003-2004 Frederico Caldeira Knabben
+     http://www.opensource.org/licenses/lgpl-license.php
+     http://www.fckeditor.net/
+ 
