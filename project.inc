@@ -221,12 +221,12 @@ function project_project_view(&$node, $teaser = false, $page = false) {
       // Support section
       $links = array();
 
-      $links[] = l(t('Support forum'), variable_get('project_support_forum', 'forum/18'). $node->uri, null, 'categories=bug&states=1', null);
+      $links[] = l(t('Support forum'), variable_get('project_support_forum', 'forum/18'));
 
       if ($node->issues) {
         #$output .= '<p>'. t('If you think you have found a bug please check the list of existing bugs reported, if you do not find it please submit a new bug report. Remember to provide as much information as possible to make it easier for the developers to fix the issue.') .'</p>';
-        $links[] = l(t('View pending bug reports'), 'project/issues/'. $node->uri, null, 'categories=bug&states=1', null);
-        $links[] = l(t('View pending feature requests'), 'project/issues/'. $node->uri, null, 'categories=feature&states=1', null);
+        $links[] = l(t('View pending bug reports'), 'project/issues/'. $node->uri, null, 'categories=bug', null);
+        $links[] = l(t('View pending feature requests'), 'project/issues/'. $node->uri, null, 'categories=feature', null);
         $links[] = l(t('Report new bug'), 'node/add/project_issue/'. $node->uri .'/bug');
         $links[] = l(t('Request new feature'), 'node/add/project_issue/'. $node->uri .'/feature');
       }

@@ -35,7 +35,7 @@ function project_comment_page() {
       if (user_access('create project issues')) {
         $edit = array2object($_POST['edit']);
         $edit = project_comment_validate($edit);
-        if ($error) {
+        if (form_get_errors()) {
           $edit->type = 'project_issue';
           print theme('page', node_preview($edit, $error));
         }
