@@ -237,7 +237,7 @@ function project_mail_notify($node) {
     }
   }
   if ($entry->file_path && file_exists($entry->file_path)) {
-    $summary .= ' '. t('Attachment') .': '. file_create_url($entry->file_path) .' ('. format_size($entry->file_size) .")\n";
+    $summary .= ' '. str_pad(t('Attachment'), 14) .': '. file_create_url($entry->file_path) .' ('. format_size($entry->file_size) .")\n";
   }
 
   // Create main body content
