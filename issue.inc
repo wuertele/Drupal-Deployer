@@ -135,7 +135,7 @@ function project_issue_subscribe($project) {
   return $output;
 }
 
-function project_issue_form(&$node, &$help, &$error, &$param) {
+function project_issue_form(&$node, &$error, &$param) {
   global $user;
 
   // Set form parameters so we can accept file uploads.
