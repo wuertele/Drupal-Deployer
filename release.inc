@@ -240,7 +240,7 @@ function project_release_view($node, $main = 0) {
     $breadcrumb[] = l(t("Home"), NULL);
     $breadcrumb[] = l(t("Projects"), "project");
     $breadcrumb[] = l($project->title, "project/$project->uri");
-    
+
 
     theme("breadcrumb", $breadcrumb);
     theme("box", "$project->title $node->version", check_output($node->changes));
@@ -278,11 +278,11 @@ function project_release_view($node, $main = 0) {
         }
         $rows[] = $row;
       }
-  
+
       $output = "<div class=\"project\">\n";
       $output .= table($header, $rows);
       $output .= "</div>\n";
-  
+
       return $output;
     }
   }
