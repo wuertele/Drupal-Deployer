@@ -144,10 +144,6 @@ function project_comment_view($node, $main = 0) {
     $output .= theme('table', NULL, $rows);
     $output .= '</div>';
 
-    if (user_access('create project issues')) {
-      $links[] = '<p>'. l(t('follow up'), "project/comments/add/$node->nid") .'</p>';
-    }
-    $output .= theme('links', $links);
     return theme('box', t('Updates'), $output);
   }
 }
