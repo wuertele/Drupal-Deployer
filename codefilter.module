@@ -1,0 +1,64 @@
+<?php
+// $Id$
+
+function codefilter_help($section) {
+  switch ($section) {
+    case 'admin/modules#description':
+      return t("Provides tags for escaping large pieces of code automatically.");
+    case 'filter#short-tip':
+    case 'filter#long-tip':
+      return t('To post pieces of code, surround them with &lt;code&gt;...&lt;/code&gt; tags. For PHP code, you can use &lt;?php ... ?&gt;, which will also highlight it in a meaningful way.');
+  }
+}
+
+function codefilter_init() {
+  drupal_set_html_head('<style type="text/css">@import url('. $GLOBALS[base_url] .'/modules/codefilter/codefilter.css);</style>');
+}
+
+function codefilter_process_php($text) {
+  // Note, pay attention to odd preg_replace-with-/e behaviour on slashes
+  $text = strtr(trim(str_replace('\"', '"', $text)), array_flip(get_html_translation_table(HTML_SPECIALCHARS)));
+  return '<div class="codeblock">'. highlight_string("<?php\n$text\n?>", 1) .'</div>';
+}
+
+function codefilter_process_code($text) {
+  // Note, pay attention to odd preg_replace-with-/e behaviour on slashes
+  $multiline = ereg("[\n\r]", $text);
+  $text = '<code>'. nl2br(trim(str_replace('\"', '"', $text))) .'</code>';
+  if ($multiline) $text = '<div class="codeblock">'. $text .'</div>';
+  return $text;
+}
+
+function codefilter_escape($text) {
+  // Note, pay attention to odd preg_replace-with-/e behaviour on slashes
+  return drupal_specialchars(str_replace('\"', '"', $text));
+}
+
+function codefilter_filter($op, $text = '') {
+  switch ($op) {
+    case 'name':
+      return t('Code filter');
+
+    case 'settings':
+      return form_group(t('Code filter'), t("Code filter is enabled. Users can use &lt;code&gt;&lt;/code&gt; and &lt;?php ?&gt; tags to post pieces of code. You should add the &lt;code&gt; tag to the list of allowed HTML tags above."));
+
+    case 'prepare':
+      /* Note: we use the bytes 0xFE and 0xFF to replace < > during the filtering process.
+       * These bytes are not valid in UTF-8 data and thus least likely to cause
+       * collisions.
+       */
+      $text = preg_replace('@<code>(.+?)</code>@se', "'\xFEcode\xFF'. codefilter_escape('\\1') .'\xFE/code\xFF'", $text);
+      $text = preg_replace('@<(\?(php)?|%)(.+?)(\?|%)>@se', "'\xFEphp\xFF'. codefilter_escape('\\3') .'\xFE/php\xFF'", $text);
+      return $text;
+       
+    case "process":
+      $text = preg_replace('@\xFEcode\xFF(.+?)\xFE/code\xFF@se', "codefilter_process_code('$1')", $text);
+      $text = preg_replace('@\xFEphp\xFF(.+?)\xFE/php\xFF@se', "codefilter_process_php('$1')", $text);
+      return $text;
+    
+    default:
+      return $text;
+  }
+}
+
+?>
