@@ -41,27 +41,27 @@ function recipe_nodeapi(&$node, $op, $arg) {
       case "fields":
         break;
       case "insert":
-        db_query("INSERT INTO recipe (nid, source, yield, preptime, notes) VALUES ('$node->nid', '$node->source', '$node->yield', '$node->preptime', '$node->notes')");
+        db_query("INSERT INTO recipe (nid, source, yield, preptime, notes) VALUES ('$node->nid', '%s', '%s', '%s', '%s')", $node->source, $node->yield, $node->preptime, $node->notes);
         foreach ($node->ingredients as $weight => $ingredient) {
           if ($ingredient) {      
-            db_query("INSERT INTO recipe_ingredients (nid, ingredient, weight) VALUES ('$node->nid', '$ingredient', '$weight')");
+            db_query("INSERT INTO recipe_ingredients (nid, ingredient, weight) VALUES (%d, '%s', %d)", $node->nid, $ingredient, $weight);
           }
         }  
         break;
       case "update":
-        db_query("UPDATE recipe SET source = '$node->source', yield = '$node->yield', preptime = '$node->preptime', notes = '$node->notes' WHERE nid = '$node->nid'");
+        db_query("UPDATE recipe SET source = '%s', yield = '%s', preptime = '%s', notes = '%s' WHERE nid = %d", $node->source, $node->yield, $node->preptime, $node->notes, $node->nid);
         db_query("DELETE FROM recipe_ingredients WHERE nid = '$node->nid'");
         $i = 0;    
         foreach ($node->ingredients as $ingredient) {
           if ($ingredient) {      
-            db_query("INSERT INTO recipe_ingredients (nid, ingredient, weight) VALUES ('$node->nid', '$ingredient', '$i')");
+            db_query("INSERT INTO recipe_ingredients (nid, ingredient, weight) VALUES (%d, '%s', %d)", $node->nid, $ingredient, $i);
             $i++;
           }
         }  
         break;  
       case "delete":
-        db_query("DELETE FROM recipe WHERE nid = '$node->nid'");
-        db_query("DELETE FROM recipe_ingredients WHERE nid = '$node->nid'");
+        db_query("DELETE FROM recipe WHERE nid = %d", $node->nid);
+        db_query("DELETE FROM recipe_ingredients WHERE nid = %d", $node->nid);
         break;
     }
   }
