@@ -29,7 +29,6 @@ function recipe_node($field) {
   return $info[$field];
 }
 
-// not working for some reason. please fix.
 function recipe_help($section = '') {
   $output ="";
 
@@ -37,21 +36,30 @@ function recipe_help($section = '') {
      case 'admin/help#recipe':
       break;
     case 'admin/system/modules/recipe':
-    case 'admin/system/modules#recipe':
+    case 'admin/system/modules#description':
       $output .= t("Collect and display recipes");
       break;
   }
   return $output;
 }
 
+/*
+** note that 'body' field contains *everything* about a recipe. this is helpful for search. teaser is just 'directions'
+** 'instructions' field is currently stored in the teaser
+*/
 function recipe_nodeapi(&$node, $op, $arg) {
   
   if ($node->type == "recipe") {
     switch ($op) {
+      case 'validate':
+        $node->teaser = $node->instructions;
+        $body = array($node->instructions, $node->source, $node->yield, $node->preptime, $node->notes);
+        $body = array_merge($body, $node->ingredients);
+        $node->body = '<p>'. implode('</p><p>', $body). '</p>';
       case "fields":
         break;
       case "insert":
-        db_query("INSERT INTO recipe (nid, source, yield, preptime, notes) VALUES ('$node->nid', '%s', '%s', '%s', '%s')", $node->source, $node->yield, $node->preptime, $node->notes);
+        db_query("INSERT INTO recipe (nid, source, yield, preptime, notes, instructions) VALUES ('$node->nid', '%s', '%s', '%s', '%s', '%s')", $node->source, $node->yield, $node->preptime, $node->notes, $node->instructions);
         foreach ($node->ingredients as $weight => $ingredient) {
           if ($ingredient) {      
             db_query("INSERT INTO recipe_ingredients (nid, ingredient, weight) VALUES (%d, '%s', %d)", $node->nid, $ingredient, $weight);
@@ -59,7 +67,7 @@ function recipe_nodeapi(&$node, $op, $arg) {
         }  
         break;
       case "update":
-        db_query("UPDATE recipe SET source = '%s', yield = '%s', preptime = '%s', notes = '%s' WHERE nid = %d", $node->source, $node->yield, $node->preptime, $node->notes, $node->nid);
+        db_query("UPDATE recipe SET source = '%s', yield = '%s', preptime = '%s', notes = '%s', instructions = '%s' WHERE nid = %d", $node->source, $node->yield, $node->preptime, $node->notes, $node->instructions, $node->nid);
         db_query("DELETE FROM recipe_ingredients WHERE nid = '$node->nid'");
         $i = 0;    
         foreach ($node->ingredients as $ingredient) {
@@ -102,7 +110,7 @@ function recipe_form(&$node, &$help, &$error) {
     $output .= form_textfield("", "ingredients][$i", $node->ingredients[$i], 60, 127, "");
   }
   $output .= form_checkbox(t("add more ingredients"), "recipe_more_ingredients", 1, 0, t("If you need to add more ingredients, check this box and click "). "<b>". t("Preview"). "</b>"); 
-  $output .= form_textarea(t("Cooking Instructions"), "body", $node->body, 60, 18, $error["body"] ? $error["body"] : t("Include a brief description of your recipe at the top of your instructions."));
+  $output .= form_textarea(t("Cooking Instructions"), "instructions", $node->instructions, 60, 18, $error["instructions"] ? $error["instructions"] : t("Include a brief description of your recipe at the top of your instructions."));
   if (function_exists("taxonomy_node_form")) {
     $output .= implode("", taxonomy_node_form("recipe", $node));
   }
@@ -238,7 +246,7 @@ function recipe_content($node) {
   $output .= "  <div class=\"row\"><div class=\"label\">Ingredients:</div>\n";
   $output .= "  <div class=\"ingredients\">". theme_item_list($node->ingredients). "</div></div>\n";
   $output .= "  <div class=\"row\"><div class=\"label\">Cooking Instructions</div>\n";
-  $output .= "  <div class=\"instructions\">$node->body</div></div>\n";
+  $output .= "  <div class=\"instructions\">$node->instructions</div></div>\n";
   if ($node->source) {
     $output .= "  <div class=\"row\"><div class=\"label\">Source:</div>\n";
     $output .= "  <div class=\"source\">$node->source</div></div>\n";
@@ -261,26 +269,6 @@ function recipe_head($main = 0) {
  $style .= "</style>";
  return array($style); 
 }
-
-function recipe_update_index() {
-
-  // Return an array of values to dictate how to update the search index
-  // for this particular type of node.
-  //
-  // "last_update"'s value is used with variable_set to set the
-  // last time this node type had an index update run.
-  //
-  // "node_type"'s value is used to identify the node type in the search
-  // index.
-  //
-  // "select"'s value is used to select the node id and text fields from
-  // the table we are indexing.
-  
-  return array("last_update" => "recipe_cron_last",
-         "node_type" => "recipe",
-         "select" => "SELECT n.nid as lno, n.title as text1, CONCAT(n.body, ' ', r.notes, ' ', r.source, ' ', r.yield, ' ', r.preptime) as text2 FROM node n INNER JOIN recipe r ON n.nid = r.nid WHERE n.status = 1 AND n.moderate = 0 AND (n.created > " . variable_get("recipe_cron_last", 1) . " OR changed > " . variable_get("recipe_cron_last", 1) . ")");
-}
-
 function recipe_search($keys) {
 
   /*
