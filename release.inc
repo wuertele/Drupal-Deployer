@@ -106,7 +106,7 @@ function project_release_submit() {
     case 'delete':
       if (($release = project_release_load(arg(4))) && $release->nid == arg(1)) {
         project_release_delete(arg(4));
-        drupal_goto(url("node/$release->nid/release"));
+        drupal_goto("node/$release->nid/release");
       }
       break;
     case t('Preview'):
@@ -134,7 +134,7 @@ function project_release_submit() {
           // Save the release and re-direct to the overview page for the project
           $edit->status = 1;
           project_release_save($edit);
-          drupal_goto(url("node/$node->nid/release"));
+          drupal_goto("node/$node->nid/release");
         }
       }
   }
