@@ -56,7 +56,7 @@ function project_project_validate(&$node) {
     }
   }
   if (!$error["uri"]) {
-    $node->uri = "project/$node->uri";
+    $node->path = "project/$node->uri";
   }
 
   // We need a description.
