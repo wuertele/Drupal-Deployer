@@ -169,7 +169,7 @@ function project_comment_view($node, $main = 0) {
 
       if ($summary || $comment->body) {
         $rows[] = array(
-          array("class" => "header", "data" => t("%count submitted by %user on %date", array("%count" => "<a name=\"comment". ++$i. "\" href=\"". url("node/view/$node->nid") ."#comment$i\">#$i</a>", "%user" => format_name($comment), "%date" => format_date($comment->created))) . (node_is_new($node->nid, $comment->changed) ? theme_mark() : "")));
+          array("class" => "header", "data" => t("%count submitted by %user on %date", array("%count" => "<a name=\"comment". ++$i. "\" href=\"". url("node/view/$node->nid") ."#$i\">#$i</a>", "%user" => format_name($comment), "%date" => format_date($comment->created))) . (node_is_new($node->nid, $comment->changed) ? theme_mark() : "")));
         if ($summary) {
           $rows[] = array(array("class" => "summary", "data" => table(NULL, $summary)));
         }
