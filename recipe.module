@@ -39,11 +39,11 @@ function recipe_help($section = '') {
 }
 
 /*
-** note that 'body' field contains *everything* about a recipe. this is helpful for search. teaser is just 'directions'
+** note that 'body' field contains *everything* about a recipe. this is helpful for search.'
 ** 'instructions' field is currently stored in the teaser
 */
 function recipe_nodeapi(&$node, $op, $arg) {
-  
+
   if ($node->type == "recipe") {
     switch ($op) {
       case 'validate':
@@ -56,22 +56,22 @@ function recipe_nodeapi(&$node, $op, $arg) {
       case "insert":
         db_query("INSERT INTO recipe (nid, source, yield, preptime, notes, instructions) VALUES ('$node->nid', '%s', '%s', '%s', '%s', '%s')", $node->source, $node->yield, $node->preptime, $node->notes, $node->instructions);
         foreach ($node->ingredients as $weight => $ingredient) {
-          if ($ingredient) {      
+          if ($ingredient) {
             db_query("INSERT INTO recipe_ingredients (nid, ingredient, weight) VALUES (%d, '%s', %d)", $node->nid, $ingredient, $weight);
           }
-        }  
+        }
         break;
       case "update":
         db_query("UPDATE recipe SET source = '%s', yield = '%s', preptime = '%s', notes = '%s', instructions = '%s' WHERE nid = %d", $node->source, $node->yield, $node->preptime, $node->notes, $node->instructions, $node->nid);
         db_query("DELETE FROM recipe_ingredients WHERE nid = '$node->nid'");
-        $i = 0;    
+        $i = 0;
         foreach ($node->ingredients as $ingredient) {
-          if ($ingredient) {      
+          if ($ingredient) {
             db_query("INSERT INTO recipe_ingredients (nid, ingredient, weight) VALUES (%d, '%s', %d)", $node->nid, $ingredient, $i);
             $i++;
           }
-        }  
-        break;  
+        }
+        break;
       case "delete":
         db_query("DELETE FROM recipe WHERE nid = %d", $node->nid);
         db_query("DELETE FROM recipe_ingredients WHERE nid = %d", $node->nid);
@@ -83,15 +83,15 @@ function recipe_nodeapi(&$node, $op, $arg) {
 function recipe_form($node) {
   $op = arg(1);
   $edit = $_POST["edit"];
-  
+
   if ($edit["recipe_more_ingredients"] == 1) {
     $node->numingredients = $node->numingredients + 6;
   }
   elseif ($node->ingredients) {
     $node->numingredients = count($node->ingredients);
-  }  
+  }
   else {
-    $node->numingredients = 6;    
+    $node->numingredients = 6;
   }
   $output .= form_hidden("numingredients", $node->numingredients);
   $output .= form_textfield(t("Servings"), "yield", $node->yield, 60, 127, t("Describe how many servings this recipe will yield. Feel free to be creative."));
@@ -101,24 +101,27 @@ function recipe_form($node) {
   for ($i = 0; $i < $node->numingredients; $i++) {
     $output .= form_textfield("", "ingredients][$i", $node->ingredients[$i], 60, 127, "");
   }
-  $output .= form_checkbox(t("add more ingredients"), "recipe_more_ingredients", 1, 0, t("If you need to add more ingredients, check this box and click "). "<b>". t("Preview"). "</b>"); 
+  $output .= form_checkbox(t("add more ingredients"), "recipe_more_ingredients", 1, 0, t("If you need to add more ingredients, check this box and click "). "<b>". t("Preview"). "</b>");
   $output .= form_textarea(t("Cooking Instructions"), "instructions", $node->instructions, 60, 18, t("Include a brief description of your recipe at the top of your instructions."));
   if (function_exists("taxonomy_node_form")) {
     $output .= implode("", taxonomy_node_form("recipe", $node));
   }
   $output .= form_textfield(t("Source"), "source", $node->source, 60, 127, t("Optional. Does anyone else deserve credit for this recipe?"));
-  $output .= form_textarea(t("Additional Notes"), "notes", $node->notes, 60, 5, t("Optional. Describe a great dining experience relating to this recipe, or note which wine or other dishes complement this recipe"));  
+  $output .= form_textarea(t("Additional Notes"), "notes", $node->notes, 60, 5, t("Optional. Describe a great dining experience relating to this recipe, or note which wine or other dishes complement this recipe"));
+  $output .= filter_form('format', $node->format);
   return $output;
-  
+
 }
 
-function recipe_menu() {
-  drupal_set_html_head(recipe_html_head());
-  
-  $items = array();
-  $items[] = array('path' => 'node/add/recipe', 'title' => t('recipe'), 'access' => user_access('create recipes'));
-  $items[] = array('path' => 'recipe', 'title' => t('recipes'), 'callback' => 'recipe_page', 'access' => user_access('access content'), 'type' => MENU_SUGGESTED_ITEM);
-  return $items;
+function recipe_menu($may_cache) {
+  if ($may_cache) {
+    $items[] = array('path' => 'node/add/recipe', 'title' => t('recipe'), 'access' => user_access('create recipes'));
+    $items[] = array('path' => 'recipe', 'title' => t('recipes'), 'callback' => 'recipe_page', 'access' => user_access('access content'), 'type' => MENU_SUGGESTED_ITEM);
+  }
+  else {
+    drupal_set_html_head(recipe_html_head());
+  }
+  return $items ? $items : array();
 }
 
 
@@ -131,11 +134,11 @@ function recipe_block($op = "list", $delta = 0) {
     if (user_access("access recipes")) {
       $block["subject"] = t("Newest Recipes");
       $result = db_query_range("SELECT n.nid, n.title, n.uid, u.name FROM node n LEFT JOIN users u ON n.uid = u.uid WHERE n.status = 1 AND n.type='recipe' ORDER BY n.nid DESC", 0, 10);
-      $block["content"] = theme("node_title_list", $result);  
+      $block["content"] = theme("node_title_list", $result);
       return $block;
-    }  
+    }
   }
-}  
+}
 
 function recipe_settings() {
  $output .= form_textarea(t("Explanation or submission guidelines"), "recipe_help", variable_get("recipe_help", ""), 55, 4, t("This text will be displayed at the top of the recipe submission form.  Useful for helping or instructing your users."));
@@ -146,7 +149,7 @@ function recipe_page() {
   $op = arg(1);
 
   if ($op == "feed") {
-    recipe_feed(); // not yet implemented    
+    recipe_feed(); // not yet implemented
     return;
   }
   elseif ($op == "css") {
@@ -158,7 +161,7 @@ function recipe_page() {
       $output .= theme("box", $box["subject"], $box["content"]);
     }
     print theme("page", $output);
-  }  
+  }
 }
 
 
@@ -169,7 +172,7 @@ function recipe_overview() {
     $boxes[$i]["content"] = search_type("recipe", url("search"), NULL, 1);
     $i++;
   }
-  
+
   $boxes[$i] = array ("subject" => t("All recipes"), "content" => recipe_list());
   $i++;
   if (module_exist("taxonomy_dhtml") && $content = recipe_directory_dhtml()) {
@@ -185,7 +188,7 @@ function recipe_directory_dhtml() {
     $output .= "<span class=\"recipe\"><span class=\"label\">". $box["subject"]. "</span></span><br />". $box["content"];
   }
   return $output;
-}  
+}
 
 function recipe_list() {
   $result = pager_query("SELECT n.nid, n.title, n.uid, u.name, r.preptime FROM recipe r INNER JOIN node n ON r.nid = n.nid LEFT JOIN users u ON n.uid = u.uid WHERE n.status=1 ORDER BY n.nid DESC",20);
@@ -213,13 +216,13 @@ function recipe_list() {
 
 function recipe_view($node, $main = 0, $page = 0) {
   $node = recipe_content($node);
-  drupal_set_breadcrumb(array(l(t('Home'), ''), l('Recipes', 'recipe')));  
+  drupal_set_breadcrumb(array(l(t('Home'), ''), l('Recipes', 'recipe')));
   return theme("node", $node, $main, $page);
 }
 
 function recipe_content($node, $main = 0) {
-  
-  $preptime = t("%n hours", array ("%n" => ($node->preptime / 60)));  
+
+  $preptime = t("%n hours", array ("%n" => ($node->preptime / 60)));
   $output = "<div class=\"recipe\">\n";
   $output .= "  <div class=\"row\"><div class=\"label\">Servings:</div>\n";
   $output .= "  <div class=\"servings\">$node->yield</div></div>\n";
@@ -250,7 +253,7 @@ function recipe_html_head() {
  $style .= "  .recipe .ingredients {}\n";
  $style .= "  .recipe .instructions { clear: both; padding-left: 10px; padding-top: 10px; }\n";
  $style .= "</style>";
- return $style; 
+ return $style;
 }
 function recipe_search($keys) {
 
@@ -267,8 +270,8 @@ function recipe_search($keys) {
   ** index.
   **
   ** "select"'s value is used to relate the data from the specific nodes
-  ** table to the data that the search_index table has in it, and the 
-  ** do_search functino will rank it.
+  ** table to the data that the search_index table has in it, and the
+  ** do_search function will rank it.
   **
   ** The select must always provide the following fields - lno, title,
   ** created, uid, name, count
