@@ -11,7 +11,6 @@ function project_comment_page($project) {
           $comment->$var = $node->$var;
         }
 
-        $error = 1;
         $output = project_comment_form($comment, $error, $param);
         theme("header", t("New comment"));
         theme("box", t("New comment"), form($output, ($param["method"] ? $param["method"] : "post"), $param["action"], $param["options"]));
@@ -101,7 +100,7 @@ function project_comment_form(&$edit, &$error, &$param) {
   }
 
   $output .= form_submit(t("Preview"));
-  if (!$error) {
+  if ($error) {
     $output .= form_submit(t("Submit"));
   }
 
