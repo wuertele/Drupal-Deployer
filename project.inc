@@ -1,5 +1,5 @@
 <?php
-// $Id$
+/* $Id$ */
 
 function project_project_node_name() {
   return t('project');

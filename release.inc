@@ -37,7 +37,7 @@ function project_release_scan_parse($dir = NULL, $file = NULL, $matches = NULL) 
     else {
       $project = & $projects[$name];
     }
-  
+
     if ($project->releases[$version]) {
       unset($project->releases[$version]);
     }
