@@ -23,7 +23,7 @@ function codefilter_menu() {
 
 function codefilter_process_php($text) {
   // Note, pay attention to odd preg_replace-with-/e behaviour on slashes
-  $text = trim(preg_replace('@</?(br|p)\s*/?>@', '', str_replace('\"', '"', $text)));
+  $text = preg_replace("/^\n/", '', preg_replace('@</?(br|p)\s*/?>@', '', str_replace('\"', '"', $text)));
   $text = strtr($text, array_flip(get_html_translation_table(HTML_SPECIALCHARS)));
   return '<div class="codeblock">'. highlight_string("<?php\n$text\n?>", 1) .'</div>';
 }
@@ -31,10 +31,15 @@ function codefilter_process_php($text) {
 function codefilter_process_code($text) {
   $multiline = ereg("[\n\r]", $text);
   // Note, pay attention to odd preg_replace-with-/e behaviour on slashes
-  $text = trim(preg_replace('@</?(br|p)\s*/?>@', '', str_replace('\"', '"', $text)));
+  $text = preg_replace("/^\n/", '', preg_replace('@</?(br|p)\s*/?>@', '', str_replace('\"', '"', $text)));
+  $text = preg_replace_callback('/(^ +|\n +)/s', 'codefilter_fix_indent', $text);
   $text = '<code>'. nl2br($text) .'</code>';
   if ($multiline) $text = '<div class="codeblock">'. $text .'</div>';
   return $text;
+}
+
+function codefilter_fix_indent($text) {
+  return str_replace(' ', '&nbsp;', $text[0]);
 }
 
 function codefilter_escape($text) {
