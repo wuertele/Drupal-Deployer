@@ -1,7 +1,7 @@
 <?php
 /* $Id$ */
 
-function project_comment_page($project) {
+function project_comment_page() {
   switch ($_POST['op'] ? $_POST['op'] : arg(2)) {
     case 'add':
       if (user_access('maintain project issues')) {
