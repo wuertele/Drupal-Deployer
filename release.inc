@@ -134,7 +134,7 @@ function project_release_page($node) {
   }
 }
 
-function project_release_overview() {
+function project_release_overview($arg = 0) {
   $output = '<div class="project">';
   $output .= '<div class="downloads">';
 
@@ -152,8 +152,8 @@ function project_release_overview() {
       $rows = array();
     }
     $releases = array();
-    if (arg(2)) {
-      $result2 = db_query("SELECT path, version, changed FROM {project_releases} WHERE nid = %d AND status = 1 AND path <> '' AND version LIKE '%s%%' ORDER BY created DESC", $node->nid, arg(2));
+    if ($arg) {
+      $result2 = db_query("SELECT path, version, changed FROM {project_releases} WHERE nid = %d AND status = 1 AND path <> '' AND version LIKE '%s%%' ORDER BY created DESC", $node->nid, $arg);
     }
     else {
       $result2 = db_query("SELECT path, version, changed FROM {project_releases} WHERE nid = %d AND status = 1 AND created > 0 AND path <> '' ORDER BY created DESC", $node->nid);
