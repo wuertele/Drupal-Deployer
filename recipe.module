@@ -1,0 +1,217 @@
+<?php
+
+function recipe_load($node) {
+  $recipe = db_fetch_object(db_query("SELECT * FROM recipe WHERE nid = '$node->nid'"));
+  $ingredients = db_query("SELECT ingredient, weight FROM recipe_ingredients WHERE nid='$node->nid' ORDER BY weight");
+  while ($ingredient = db_fetch_object($ingredients)) {
+    $recipe->ingredients[$ingredient->weight]  = $ingredient->ingredient;
+  }
+  return $recipe;
+}
+
+function recipe_node($op, &$node, $pos = "post") {
+  if ($op == "info") {
+    $info->name = t("recipe");
+    $info->description = t("Share your favorite recipes with your fellow cooks.");
+    return $info;
+  }
+  elseif ($node->type !== "recipe") { 
+    return;
+  }
+  elseif ($op == "insert") {
+    db_query("INSERT INTO recipe (nid, source, yield, preptime, notes) VALUES ('$node->nid', '$node->source', '$node->yield', '$node->preptime', '$node->notes')");
+    foreach ($node->ingredients as $weight => $ingredient) {
+      if ($ingredient) {      
+        db_query("INSERT INTO recipe_ingredients (nid, ingredient, weight) VALUES ('$node->nid', '$ingredient', '$weight')");
+      }
+    }  
+  }
+  elseif ($op == "update") {
+    db_query("UPDATE recipe SET source = '$node->source', yield = '$node->yield', preptime = '$node->preptime', notes = '$node->notes' WHERE nid = '$node->nid'");
+    db_query("DELETE FROM recipe_ingredients WHERE nid = '$node->nid'");
+    $i = 0;    
+    foreach ($node->ingredients as $ingredient) {
+      if ($ingredient) {      
+        db_query("INSERT INTO recipe_ingredients (nid, ingredient, weight) VALUES ('$node->nid', '$ingredient', '$i')");
+        $i++;
+      }
+    }  
+  }
+  elseif ($op == "delete") {
+    db_query("DELETE FROM recipe WHERE nid = '$node->nid'");
+    db_query("DELETE FROM recipe_ingredients WHERE nid = '$node->nid'");
+  }
+}
+
+function recipe_form(&$node, &$help, &$error) {
+  global $op, $edit;
+  
+  if ($edit["recipe_more_ingredients"] == 1) {
+    $node->numingredients = $node->numingredients + 6;
+  }
+  elseif ($node->ingredients) {
+    $node->numingredients = count($node->ingredients);
+  }  
+  else {
+    $node->numingredients = 6;    
+  } 
+  
+  $help = t(variable_get("recipe_help", ""));
+
+  $output .= form_hidden("numingredients", $node->numingredients);
+  $output .= form_textarea(t("Brief Description"), "teaser", $node->teaser, 60, 3, $error["teaser"]);
+  $output .= form_textfield(t("Servings"), "yield", $node->yield, 60, 127, $error["yield"] ? $error["yield"] : t("Describe how many servings this recipe will yield. Feel free to be creative."));
+  $output .= form_select(t("Preparation time"), "preptime", $node->preptime, array (15 => "15 minutes", 30 => "30 minutes", 45 => "45 minutes", 60 => "1 hour", 90 => "1 1/2 hours", 120 => "2 hours", 150 => "2 1/2 hours", 180 => "3 hours", 210 => "3 1/2 hours", 240 => "4 hours", 300 => "5 hours", 360 => "6 hours"), t("How long does this recipe take to prepare (i.e. elapsed time)"));
+  $output .= form_item(t("Example Ingredients"), t("1 bunch kale or Swiss chard, stems and ribs removed, leaves sliced"). "<br>". t("3 white potatoes - peeled and diced"));
+  $output .= form_item(t("Recipe Ingredients"), "");
+  // there might be a cleaner way to output these elements. teach moshe if you find it.  
+  for ($i = 0; $i < $node->numingredients; $i++) {
+    $output .= form_textfield("", "ingredients][$i", $node->ingredients[$i], 60, 127, "");
+    // next($node->ingredients);    
+    // $a++;
+  }
+  /*while ($a < $node->numingredients) {
+    $output .= form_textfield("", "ingredients][$a", "", 60, 127, "");
+    $a++;
+  }*/  
+  $output .= form_checkbox(t("add more ingredients"), "recipe_more_ingredients", 1, 0, t("If you need to add more ingredients, check this box and click "). "<b>". t("Preview"). "</b>"); 
+  $output .= form_textarea(t("Cooking Instructions"), "body", $node->body, 60, 18, $error["body"] ? $error["body"] : t("Allowed HTML tags") .": ". htmlspecialchars(variable_get("allowed_html", "")));
+  $output .= form_textfield(t("Source"), "source", $node->source, 60, 127, t("Optional. Does anyone else deserve credit for this recipe?"));
+  $output .= form_textarea(t("Additional Notes"), "notes", $node->notes, 60, 5, $error["body"] ? $error["body"] : t("Optional. Describe a great dining experience relating to this recipe, or note which wine or other dishes complement this recipe"));  
+  return $output;
+  
+}
+
+function recipe_link($type) {
+  if ($type == "menu.create" && user_access("post content")) {
+    $links[] = lm(t("create recipe"), array("mod" => "node", "op" => "add", "type" => "recipe"), t("Add a new recipe."));
+  }
+
+  if ($type == "page" && user_access("access content")) {
+    $links[] = lm(t("recipes"), array("mod" => "recipe"), t("View the collection of recipes."));
+  }
+  return $links ? $links : array();  
+}
+
+function recipe_save($op, $node) {
+  if ($op == "approve") {
+    return array("status" => 1, "promote" => 1);
+  }
+
+  if ($op == "create") {
+      return array("numingredients", "source", "yield", "preptime", "notes", "ingredients", "weight");
+  }
+
+  if ($op == "decline") {
+    return array("status" => 0, "promote" => 0);
+  }
+
+  if ($op == "update") {
+    return array("numingredients", "source", "yield", "preptime", "notes", "ingredients", "weight");
+  }
+}
+
+function recipe_block() {
+  $block[0]["subject"] = t("Newest Recipes");
+  $block[0]["info"] = t("Latest 10 recipes");
+  $result = db_query("SELECT nid, title FROM node WHERE type='recipe' ORDER BY nid DESC LIMIT 10");
+  while ($node = db_fetch_object($result)) {
+     if (comment_num_all($node->nid)) $comments = " (". comment_num_all($node->nid). ")";    
+    $output .= l($node->title, array ("id" => $node->nid)). $comments. "<br />";
+  }  
+  $block[0]["content"] = $output;  
+  
+  return $block;
+}  
+
+function recipe_conf_options() {
+ $output .= form_textarea(t("Explanation or submission guidelines"), "recipe_help", variable_get("recipe_help", ""), 55, 4, t("This text will be displayed at the top of the recipe submission form.  Useful for helping or instructing your users."));
+ return $output;
+}
+
+function recipe_page() {
+  global $op, $theme;
+
+  if ($op == "feed") {
+    recipe_feed(); // not yet implemented    
+    return;
+  }
+  else {
+  $theme->header();
+  $theme->box(t("Recipe"), recipe_overview());
+  $theme->footer();
+  }
+}
+
+
+function recipe_overview() {
+  $result = db_query("SELECT nid, title FROM node WHERE type='recipe' ORDER BY nid DESC LIMIT 100");
+  while ($node = db_fetch_object($result)) {
+     if (comment_num_all($node->nid)) $comments = " (". comment_num_all($node->nid). ")";    
+    $output .= l($node->title, array ("id" => $node->nid)). $comments. "<br />";
+  }  
+  return $output;
+}  
+function recipe_view($node, $main = 0) {
+  global $theme;  
+  
+  if ($main) {    
+    return $theme->node($node, $main);
+  }
+  else {
+    if ($node->source) $source = "<span class=\"recipe_label\">Source</span>: $node->source<br />";
+    if ($node->notes) $notes = "<span class=\"recipe_label\">Notes</span>:<br /><blockquote>$node->notes</blockquote>";
+    $preptime = t("%n hours", array ("%n" => ($node->preptime / 60)));
+    $ingredients = implode("<br />\n", $node->ingredients);
+    if ($terms = taxonomy_node_get_terms($nid, "name")) {
+      /*foreach ($terms as $term) {
+        $termlist .= l($term->name"<a href='index.php?or=$term->tid'>";
+              $out .= check_output($term->name)."</a> ";
+            }
+          }    */
+      // $catagories = implode(" / ", array_keys($terms));
+      print_r(array_keys($terms));
+    }  
+    $output = $catagories;
+    
+    $output .= "<style type=\"text/css\"> .recipe_label {  font-weight: bold} .recipe_title {  font-weight: bold; font-size: large}</style><br />";
+    $output .= "<p><span class=\"recipe_label\">Description</span>:<br>";    
+    $output .= "<blockquote>$node->teaser</blockquote>";
+    $output .= "<p><span class=\"recipe_label\">Servings</span>: $node->yield<br>";
+    $output .= "<span class=\"recipe_label\">Preparation Time</span>: $preptime<br />";
+    $output .= $source;
+    $output .=  "<span class=\"recipe_label\">Ingredients</span>:</p>";
+    $output .= "<blockquote>\n$ingredients\n</blockquote>";
+    $output .= "<p><span class=\"recipe_label\">Cooking Instructions</span>:</p>";
+    $output .= "<blockquote>$node->body</blockquote>";
+    $output .= $notes;
+    $output .= "<span class=\"recipe_label\">Catagories</span>: <a href=\"#\">fish</a> / <a href=\"#\">mexican</a></small>";
+EOD;
+    $node->body = strtr($output, "\n", ""); //remove newlines now or else face wrath of nl2br() later
+    $theme->node($node, $main);
+  }
+}
+
+function recipe_update_index() {
+
+  // Return an array of values to dictate how to update the search index
+  // for this particular type of node.
+  //
+  // "last_update"'s value is used with variable_set to set the
+  // last time this node type had an index update run.
+  //
+  // "node_type"'s value is used to identify the node type in the search
+  // index.
+  //
+  // "select"'s value is used to select the node id and text fields from
+  // the table we are indexing.
+  
+  // MW: the following node_type only works because recipe comes after node aphabetically. i overwrite its values with my own 
+  
+  return array("last_update" => "node_cron_last",
+         "node_type" => "node",
+         "select" => "SELECT n.nid as lno, n.title as text1, n.body as text2, r.notes as text3, r.source as text4 FROM node n LEFT JOIN recipe r ON n.nid = r.nid WHERE n.type = 'recipe' AND n.status = 1 AND n.moderate = 0"); //and (n.created > " . variable_get("node_cron_last", 1) . " or changed > " . variable_get("node_cron_last", 1) . ")");
+}
+
+
+?>
