@@ -39,7 +39,7 @@ class AmazonSearchEngine {
             'Description', 'ReleaseDate', 'Manufacturer', 'ImageUrlSmall',
             'ImageUrlMedium', 'ImageUrlLarge', 'ListPrice', 'OurPrice',
             'UsedPrice', 'Author', 'Artist', 'Rating', 'Summary', 'Comment',
-            'Product', 'Feature', 'TotalResults'
+            'Product', 'Feature', 'TotalResults', 'Track', 'ByArtist'
         );
     }
 
@@ -230,6 +230,12 @@ class AmazonSearchEngine {
                 break;
             case 'TotalResults':
                 $this->totalResults = $this->_currentTagContents;
+                break;
+            case 'Track':
+                $this->_currentResult->Tracks[] =  $this->_currentTagContents;
+                break;
+            case 'ByArtist';
+                $this->_currentResult->ByArtist[] = $this->_currentTagContents;
                 break;
             default:
                 if (in_array($tag, $this->_grabtags)) {

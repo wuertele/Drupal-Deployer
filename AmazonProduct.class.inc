@@ -25,6 +25,9 @@ class AmazonProduct {
     var $SimilarProducts = array();
     //
     var $Features = array();
+    //
+    var $Tracks = array();
+    var $ByArtist = array();
     function AmazonProduct() {
         // Does nothing for the moment
         return;
@@ -38,6 +41,15 @@ class AmazonProduct {
             $save = false;
         }
         return $save;
+    }
+    function isEmptyImg() {
+      $arImageSize = getImageSize($this->ImageUrlSmall) ;
+
+      if (is_array($arImageSize)) {
+        return ($arImageSize[1] == 1);
+      } else {
+        return 0;
+      }
     }
 }
 ?>
