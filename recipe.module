@@ -212,26 +212,33 @@ function recipe_list() {
 }  
 
 function recipe_view($node, $main = 0) {
+  if ($main == 0) {
+    // Breadcrumb navigation
+    $breadcrumb[] = l(t("Home"), NULL);
+    $breadcrumb[] = l(t("Recipes"), "recipe");
+    theme("breadcrumb", $breadcrumb);
+  }
+  $node = recipe_content($node);
+  // print the node
+  theme("node", $node, $main);
+}
+
+function recipe_content($node) {
   
-  if ($main) {    
-    return theme("node", $node, $main);
-  }
-  else {    
-    $preptime = t("%n hours", array ("%n" => ($node->preptime / 60)));
-    foreach ($node->ingredients as $ingredient) {
-      $ingredients .= $ingredient ? $ingredient. "<br />\n" : "";
-    }  
-    $output .= "<p><span class=\"recipe_label\">Servings</span>: $node->yield<br />";
-    $output .= "<span class=\"recipe_label\">Preparation Time</span>: $preptime<br />";
-    $output .=  "<span class=\"recipe_label\">Ingredients</span>:</p>";
-    $output .= "<blockquote>\n$ingredients\n</blockquote>";
-    $output .= "<p><span class=\"recipe_label\">Cooking Instructions</span>:</p>";
-    $output .= "<blockquote>$node->body</blockquote>";
-    if ($node->source) $output .= "<span class=\"recipe_label\">Source</span>: $node->source<br />";
-    if ($node->notes) $output .= "<span class=\"recipe_label\">Notes</span>:<br /><blockquote>$node->notes</blockquote>";
-    $node->body = strtr($output, "\n", ""); //remove newlines now or else face wrath of nl2br() later
-    theme("node", $node, $main);
-  }
+  $preptime = t("%n hours", array ("%n" => ($node->preptime / 60)));
+  foreach ($node->ingredients as $ingredient) {
+    $ingredients .= $ingredient ? $ingredient. "<br />\n" : "";
+  }  
+  $output .= "<p><span class=\"recipe_label\">Servings</span>: $node->yield<br />";
+  $output .= "<span class=\"recipe_label\">Preparation Time</span>: $preptime<br />";
+  $output .=  "<span class=\"recipe_label\">Ingredients</span>:</p>";
+  $output .= "<blockquote>\n$ingredients\n</blockquote>";
+  $output .= "<p><span class=\"recipe_label\">Cooking Instructions</span>:</p>";
+  $output .= "<blockquote>$node->body</blockquote>";
+  if ($node->source) $output .= "<span class=\"recipe_label\">Source</span>: $node->source<br />";
+  if ($node->notes) $output .= "<span class=\"recipe_label\">Notes</span>:<br /><blockquote>$node->notes</blockquote>";
+  $node->body = strtr($output, "\n", ""); //remove newlines now or else face wrath of nl2br() later
+  return $node;
 }
 
 function recipe_head() {
