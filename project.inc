@@ -93,7 +93,7 @@ function project_project_validate(&$node) {
   }
   else {
     // Make sure uri only includes valid characters
-    if (!preg_match('/^[a-zA-Z0-9_]+$/', $node->uri)) {
+    if (!preg_match('/^[a-zA-Z0-9_-]+$/', $node->uri)) {
       form_set_error('uri', t('Please only use alphanumerical characters for the project name.'));
     }
 
