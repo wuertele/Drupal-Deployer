@@ -56,7 +56,7 @@ Configuration
    
 Credits
 -------
-LatPor Inc.
+LatPro Inc.
 
  - Core functionality originally written by:
     Jorge Tite
