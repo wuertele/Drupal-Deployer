@@ -140,7 +140,7 @@ function project_release_overview() {
       if (count($rows)) {
         $output .= "<h2>$term->name</h2>";
         $output .= "<p style=\"color: #888;\"><small>$term->description</small></p>";
-        $output .= table($header, $rows);
+        $output .= theme("table", $header, $rows);
       }
       $term = taxonomy_get_term($tid);
       $rows = array();
@@ -161,7 +161,7 @@ function project_release_overview() {
   if (count($rows)) {
     $output .= "<h2>$term->name</h2>";
     $output .= "<p style=\"color: #888;\"><small>$term->description</small></p>";
-    $output .= table($header, $rows);
+    $output .= theme("table", $header, $rows);
   }
 
   $output .= "</div>";
@@ -296,7 +296,7 @@ function project_release_view($project, $main = 0) {
       }
 
       $output = "<div class=\"project\">\n";
-      $output .= table($header, $rows);
+      $output .= theme("table", $header, $rows);
       $output .= "</div>\n";
 
       return $output;
