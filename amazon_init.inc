@@ -1,5 +1,4 @@
 <?php
-/* $Id$ */
   global $_amazon_search_browse_fields;
   global $_amazon_search_browse_nodes;
   /**

@@ -1,5 +1,4 @@
 <?php
-/* $Id$ */
   define('AMAZON_SEARCH_AMAZON_SERVICE', 'AWSECommerceService');
   define('AMAZON_SEARCH_AMAZON_SUBSCRIPTION_ID', '0JEKXTWNECEXBJGY7RR2');
   define('AMAZON_SEARCH_AMAZON_ASSOCIATE_TAG', '');
@@ -322,7 +321,7 @@
    *      a domxml object
   */
   function amazon_get_DOM($Amazon_Params) {
-    return domxml_open_mem(utf8_encode(amazon_get_XML($Amazon_Params)), DOMXML_LOAD_PARSING);
+    return domxml_open_mem(amazon_get_XML($Amazon_Params), DOMXML_LOAD_PARSING);
   }
 
   /**
@@ -336,7 +335,7 @@
    *      an array of amazon_item objects.
   */
   function amazon_get_items($Amazon_Params) {
-    $_amazon_search_amazonDOM = domxml_open_mem(utf8_encode(amazon_get_XML($Amazon_Params)), DOMXML_LOAD_PARSING);
+    $_amazon_search_amazonDOM = amazon_get_DOM($Amazon_Params);
     return _amazon_items_array_from_DOM($_amazon_search_amazonDOM);
   }
 

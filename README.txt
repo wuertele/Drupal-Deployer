@@ -1,5 +1,7 @@
 amazon.module uses Amazon's ECS4 REST interface. The code (in amazon.inc) will work with all Amazon.com stores. The data (in amazon_init.inc) has the basic codes local to each store.
 
+Please note: if you edit amazon_init.inc, make sure your editor understands UTF-8 encoding. The data arrays for the German and French Amazon shops have accented characters that may be lost.
+
 -----------------------------------------------------------------------
 
 amazon.module creates two new node types:
@@ -45,6 +47,7 @@ The current state of the include file with the Amazon code retrieves these field
 
 To do:
 Administration interface needs work
+Add the help text
 Consider disallowing its use until an Associate ID is entered
-Little better documentation
+Little better documentation, 
 Change theme functions to produce DIVs instead of tables
