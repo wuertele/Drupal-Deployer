@@ -198,21 +198,28 @@ function recipe_directory_dhtml() {
 }  
 
 function recipe_list() {
-  $result = pager_query("SELECT n.nid, n.title, n.uid, u.name, r.preptime FROM recipe r INNER JOIN node n ON r.nid = n.nid LEFT JOIN users u ON n.uid = u.uid WHERE n.status=1 ORDER BY n.nid DESC");
-  $header = array(t("Title"), t("Chef"), t("Comments"), t("Preparation time"));
-  $i=0;
+  $result = pager_query("SELECT n.nid, n.title, n.uid, u.name, r.preptime FROM recipe r INNER JOIN node n ON r.nid = n.nid LEFT JOIN users u ON n.uid = u.uid WHERE n.status=1 ORDER BY n.nid DESC",20);
+  $header = array(t("Title"), t("Author"), t("Comments"));
+
   while ($node = db_fetch_object($result)) {
-    $rows[$i][] = l($node->title, "node/view/$node->nid");
-    $rows[$i][] = format_name($node);
-    $rows[$i][] = ($num = comment_num_all($node->nid)) ? $num : "&nbsp;";    
-    $rows[$i][] = $node->preptime;
-    $i++;
+      $rows[] = array(
+        array("data" => l($node->title, "node/view/$node->nid")),
+        array("data" => format_name($node)),
+        array("data" => ($num = comment_num_all($node->nid)) ? $num : "&nbsp;")
+      );
   }
-  if ($pager = pager_display(NULL, 50)) {
-    $rows[] = array(array("data" => $pager, "colspan" => 3));
+
+  if (!$rows) {
+    $rows[] = array(array("data" => t("No Lisp snippets available."), "colspan" => "3"));
   }
-  return theme("table", $header, $rows);
-}  
+
+  $pager = pager_display(NULL, 20, 0);
+  if (!empty($pager)) {
+    $rows[] = array(array("data" => $pager, "colspan" => "3"));
+  }
+
+  return theme("table", table($header, $rows));
+}
 
 function recipe_view($node, $main = 0) {
   if ($main == 0) {
