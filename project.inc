@@ -14,13 +14,13 @@ function project_project_form(&$node, &$help, &$error) {
   else {
     $node->components = "Code\nDocumentation\nMiscellaneous\nUser interface";
   }
-  
+
   /*
   ** Allow the following fields to be initialized via $_GET
   */
-  foreach (array("uri", "mail", "homepage", "issues", "mail_reminder", "mail_digest") as $field) {
-    if ($_GET["edit"][$field]) {
-      $node->$field = $_GET["edit"][$field];
+  foreach (array('uri', 'mail', 'homepage', 'issues', 'mail_reminder', 'mail_digest') as $field) {
+    if ($_GET['edit'][$field]) {
+      $node->$field = $_GET['edit'][$field];
     }
   }
 
@@ -131,25 +131,22 @@ function project_project_validate(&$node) {
   return $error;
 }
 
-function project_project_view($node, $main = 0) {
-  if ($main) {
-    print theme('node', $node, $main);
-  }
-  else {
+function project_project_view($node, $main = 0, $page = 0) {
+  if (!$main) {
     $breadcrumb[] = l(t('Home'), NULL);
     $breadcrumb[] = l(t('Projects'), 'project');
     if (function_exists('taxonomy_node_get_terms') && $term = reset(taxonomy_node_get_terms($node->nid))) {
       $breadcrumb[] = l($term->name, 'project', NULL, "tid=$term->tid");
     }
+    drupal_set_breadcrumb($breadcrumb);
 
     if ($output = project_release_view($node)) {
       $node->body .= '<h2>'. t('Releases') .'</h2>';
       $node->body .= $output;
     }
-
-    print theme('breadcrumb', $breadcrumb);
-    print theme('node', $node, $main);
   }
+
+  return theme('node', $node, $main, $page);
 }
 
 function project_project_load($node) {
