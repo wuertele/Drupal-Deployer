@@ -295,10 +295,8 @@ function project_mail_notify($node) {
     user_mail($recipient->mail, check_output(t("[issue]") ." $node->title"), $body, implode("\n", $header));
   }
 
-  var_dump($project->mail_copy_filter);
   if ($project->mail_copy && (empty($project->mail_copy_filter) || $project->mail_copy_filter[$node->category])) {
-    var_dump("Mailed.");
-    //user_mail($project->mail_copy, check_output(t("[$node->category]") ." $node->title"), $body, implode("\n", $header));
+    user_mail($project->mail_copy, check_output(t("[$node->category]") ." $node->title"), $body, implode("\n", $header));
   }
 }
 
