@@ -267,7 +267,7 @@ function project_mail_notify($node) {
   // Create mail header
   $sender->name = user_mail_encode(($pos = strpos($node->updator, '@')) ? substr($node->updator, 0, $pos) : $node->updator);
   $sender->mail = $project->mail;
-  $domain = preg_replace("|.+://([a-zA-Z0-9\._-]+).*|', '\$1", $GLOBALS['base_url']);
+  $domain = preg_replace('|.+://([a-zA-Z0-9\._-]+).*|', '\1', $GLOBALS['base_url']);
   $header = array(
     "Return-Path: <$sender->mail>",
     'Date: '. date('r'),
