@@ -1,0 +1,130 @@
+<?php
+
+/** 
+ * FCKEditor Module
+ * 
+ * This module allows Drupal to replace textarea fields with FCKEditor. This HTML 
+ * text editor brings to the web many of the powerful functionalities of known 
+ * desktop editors like Word. It's really  lightweight and doesn't require any 
+ * kind of installation on the client computer.
+ * 
+ * 
+ * FCKeditor - The text editor for internet
+ * Copyright (C) 2003-2004 Frederico Caldeira Knabben
+ * 
+ * Licensed under the terms of the GNU Lesser General Public License:
+ * 		http://www.opensource.org/licenses/lgpl-license.php
+ * 
+ * For further information visit:
+ * 		http://www.fckeditor.net/
+ *
+ *
+ * @version 1.0
+ * @author  LatPro Inc (George)
+ */
+
+
+/**
+ * Implementation of hook_help
+ */
+function fckeditor_help($section = '') {
+	if ($section == 'admin/modules#description') {
+		return $output = t("Allows Drupal to replace textarea fields with FCKEditor");
+	}
+	return $output;
+}
+
+
+/**
+ * Implementation of textarea
+ */
+function fckeditor_textarea($op, $name) {
+	$output = '';
+	if ( fckeditor_is_compatible_client() ) {
+		if ( $op == 'pre' ) {
+			$output = '';
+		}
+		if ( $op == 'post' ) {
+			$output = "<script>document.getElementById('edit-$name').style.display = 'none';</script>";
+			$output .= fckeditor_create_editor($name);
+		}
+	}
+	return $output;
+}
+
+/**
+ * Implementation of hook_init().
+ */
+function fckeditor_init() {
+	$output = '<script language="JavaScript1.2" src="modules/fckeditor/lib/fckeditor.js"></script>\n';
+	drupal_set_html_head($output);
+}
+
+
+/**
+ * Implementation of hook_setting().
+ */
+function fckeditor_settings() {
+  $output = form_textfield(t("Height"), "fckeditor_height", variable_get("fckeditor_height", 500), 10, 10, t("height (absolute or relative value)"));
+  $output .= form_textfield(t("Width"), "fckeditor_width", variable_get("fckeditor_width", 500), 10, 10, t("width (absolute or relative value)"));
+  return $output;
+}  
+
+
+
+/**
+ * This function create the HTML objects required for the FCKEditor
+ */
+function fckeditor_create_editor($name) {
+	$html = '';
+	$link = "modules/fckeditor/lib/editor/fckeditor.html?InstanceName=edit-$name";
+	
+	$height = variable_get("fckeditor_height", '500');
+	$width = variable_get("fckeditor_width", '100%');
+	
+	
+	// Render the configurations hidden field.
+	$html .= '<input type="hidden" id="edit-';
+	$html .= $name;
+	$html .= '___Config" value="';
+	$html .= fckeditor_config_string();
+	$html .= '">';
+
+	// Render the editor IFRAME.
+	$html .= '<iframe id="edit-';
+	$html .= $name;
+	$html .= '___Frame" src="';
+	$html .= $link;
+	$html .= "\" width=\"$width\" height=\"$height\" frameborder=\"no\" scrolling=\"no\"></iframe>" ;
+
+	return $html;	
+}
+
+
+/**
+ * Test if client support the FCKEditor
+ */
+function fckeditor_is_compatible_client() {
+	$sAgent = $_SERVER['HTTP_USER_AGENT'] ;
+	
+	if ( strpos($sAgent, 'MSIE') !== false && strpos($sAgent, 'mac') === false && strpos($sAgent, 'Opera') === false ) {
+		$iVersion = (int)substr($sAgent, strpos($sAgent, 'MSIE') + 5, 3);
+		return ($iVersion >= 5.5);
+	}
+	else if ( strpos($sAgent, 'Gecko') !== false ) {
+		$iVersion = (int)substr($sAgent, strpos($sAgent, 'Gecko/') + 6, 8) ;
+		return ($iVersion >= 20030210) ;
+	}
+	else
+		return false;
+}
+
+
+/**
+ * Return the configuration string
+ */
+function fckeditor_config_string() {
+	$output = 'DefaultLanguage=en&AutoDetectLanguage=true';
+	return $output;
+}
+?>
