@@ -13,7 +13,7 @@ function amazon_system($field){
 
 function amazon_help($type = "administrator") {
   if ($type == "user") {
-    $output = "<p>". t("Here you can buy stuff at our shop") ."</p>";
+    $output = "<p>". t("Here you can buy stuff at our Amazon shop") ."</p>";
   } else {
     $output = "The Amazon module allows sites to offer a store via the web-services of Amazon.com";
   }
@@ -27,10 +27,11 @@ function amazon_perm() {
 function amazon_link($type) {
   $links = array();
   if ($type == "page" && user_access("access shop")) {
-    $links[] = l(t("shop"), "amazon");
+    $links[] = l(t("Amazon shop"), "amazon");
   }
   else if ($type == "admin") {
     menu("admin/system/modules/amazon/modes", "product lines", "amazon_admin_modes");
+    menu("admin/system/modules/amazon/taxonomies", "taxonomies to search", "amazon_admin_taxonomies");
   }
   return $links;
 }
@@ -40,6 +41,7 @@ function amazon_settings() {
   $output .= form_textfield("Afiliate ID", "amazon_affid", variable_get("amazon_affid", "none"), 20, 40, "Your Amazon affiliate ID");
   $output .= "<hr /><h3>Amazon block settings</h3>";
   $output .= form_select("Number of book shown in block", "amazon_num", variable_get("amazon_num", "1"), array(1 => "1", 2 => "2", 3 => "3")); 
+  $output .= form_select("Taxonomy", "amazon_vocabulary", variable_get("amazon_vocabulary", "story"), array("story" => "story", "blog" => "blog", "page" => "page"));
   $output .= "<hr /><h3>Amazon page settings</h3>";
   $output .= form_select("Number of book columns in page", "amazon_columns", variable_get("amazon_columns", "3"),  array(1 => "1", 2 => "2", 3 => "3"));
   $output .= form_select("Search type", "amazon_searchtype", variable_get("amazon_searchtype", "1"),  array(1 => "Term", 2 => "Browse", 3 => "Listmania", 4=> "Author", 5=> "ASIN", 6 => "UPC", 7 => "ISBN"));
@@ -55,6 +57,20 @@ function _amazon_getmodes($all = 0) {
     $qry = "SELECT * FROM amazon_modes WHERE enabled = 1";
   } else {
     $qry = "SELECT * FROM amazon_modes";
+  }
+  $result = db_query($qry . " ORDER BY long_name");
+  while($row = db_fetch_object($result)) {
+    $output[$row->short_name] = $row->long_name;
+  }
+  return $output;
+}
+
+function _amazon_taxonomies($all = 0) {
+  $output = array();
+  if ($all == 0) {
+    $qry = "SELECT * FROM amazon_taxonomies WHERE enabled = 1";
+  } else {
+    $qry = "SELECT * FROM amazon_taxonomies";
   }
   $result = db_query($qry . " ORDER BY long_name");
   while($row = db_fetch_object($result)) {
@@ -80,7 +96,6 @@ function _amazon_searchform($skey = "", $smode="") {
 }
 
 function _amazon_format_item($item) {
-
   $output = '<td valign="top">';
   $output .= l('<img src="'.$item->ImageUrlMedium.'" align="right" border = "0"/>', "amazon/asin/$item->Asin");
   $output .= '<b>' . $item->ProductName . '</b><br /><br />';
@@ -164,6 +179,56 @@ function _amazon_admin_save($edit = array()) {
   return 'The modes have been saved';
 }
 
+function amazon_admin_taxonomies() {
+  $op = $_POST["op"];
+  $edit = $_POST["edit"];
+
+  if ($op == "Update taxonomies") {
+    print status(_amazon_admin_taxonomies_save($edit));
+  }
+  $output = '<table border="2">';
+  $output .= '<tr><td><b>Taxonomy Term</b></td><td><b>Alt Search</b></td><td><b>Enabled</b></td></tr>';
+
+  $vocabularies = taxonomy_get_vocabularies(variable_get("amazon_vocabulary", "story"));
+  foreach ($vocabularies as $vocabulary) {
+    $tree = taxonomy_get_tree($vocabulary->vid);
+    foreach ($tree as $term) {
+      $result2 = db_query("SELECT * FROM amazon_taxonomies " .
+			  "WHERE short_name = '$term->name'");
+      if (!$row = db_fetch_object($result2)) {
+        $row->short_name = $term->name;
+        $row->long_name = $term->name;
+        $row->enabled = 0;
+        $row->alt = '';
+	db_query("INSERT INTO amazon_taxonomies " .
+                 "(short_name, enabled, alt) " .
+		 "VALUES ('$term->name', 0, '')");
+      }
+      $output .= '<tr><td>' . $row->short_name . '</td><td>';
+      $output .= form_textfield(NULL, $row->short_name . "][alt]", $row->alt, 10, 255);
+      $output .= '</td><td>';
+      $output .= form_checkbox('', $row->short_name . "][enabled", 1, $row->enabled);
+      $output .= '</td></tr>';
+      
+    }
+  }
+
+  $output .= '</table><br />';
+  $output .= form_submit('Update taxonomies');
+  return form($output, "post", url("admin/system/modules/amazon/taxonomies"));
+}
+
+function _amazon_admin_taxonomies_save($edit = array()) {
+  //db_query('UPDATE amazon_taxonomies SET enabled = 0');
+  foreach ($edit as $name => $value) {
+    $query = "UPDATE amazon_taxonomies SET enabled = '" .
+             $value['enabled'] . "', alt = '" .
+             $value['alt'] . "' WHERE short_name = \"$name\"";
+    db_query($query);
+  }
+  return 'The taxonomies have been saved';
+}
+
 function amazon_admin() {
   $op = $_POST["op"];
   $edit = $_POST["edit"];
@@ -185,7 +250,7 @@ function amazon_admin() {
 }
 
 function _amazon_browsemenu($mode = '', $browseid = 0) {
-  $output = l(t('shop'), "amazon") . '<br />';
+  $output = l(t('Amazon shop'), "amazon") . '<br />';
   if ($mode == '') {
     $output .= '<br />';
     $modes = _amazon_getmodes();
@@ -244,9 +309,13 @@ function _amazon_showresults($results) {
 function amazon_page() {
   global $upc;
   $edit = $_POST["edit"];
-  $mode = arg(1);
-  $browseid = arg(2);
-  $asin = arg(3);
+
+  if (stristr($_GET["q"], "asin")) {
+    $asin = arg(2);
+  } else {
+    $mode = arg(1);
+    $browseid = arg(2);
+  }
 
   theme("header");
   if (user_access('access shop')) {
@@ -259,7 +328,6 @@ function amazon_page() {
       $mode = $edit['amazon_mode'];
       $browseid = 0;
     }
-    //print_r($edit);
     $mode = check_query($mode);
     $browseid = check_query($browseid);
     print '<center>';
@@ -301,7 +369,7 @@ function amazon_page() {
       $search_type = check_query(variable_get('amazon_searchtype','1'));
       $search_mode = check_query(variable_get('amazon_searchmode','books'));
       $search_term = check_query(variable_get('amazon_searchterm',''));
-      $box_title = 'shop';
+      $box_title = 'Amazon Shop';
       switch($search_type) {
         case 1: //1 => 'Term'
           if (($search_mode != '')&&($search_term != '')) {
@@ -366,7 +434,7 @@ function amazon_page() {
     }
     if ($show_menu == '1') {
       print '<td valign="top" style="{width: 155}">';
-      theme("box", t('shop'), _amazon_browsemenu($mode, $browseid));
+      theme("box", t('Amazon Shop'), _amazon_browsemenu($mode, $browseid));
       print '</td>';
     }
     print '<td valign="top">';
@@ -380,35 +448,52 @@ function amazon_page() {
 
 function amazon_block($op = "list", $delta = 0) {
   if ($op == "list") {
-    $blocks[0]['info'] = t('the shop block shows related Amazon.com products when viewing a node.');
+    $blocks[0]['info'] = t('Show related Amazon.com products when viewing a node.');
     return $blocks;
   }
   else {
     switch($delta) {
       case 0:
-        $block = amazon_blockshow();
+        $block['subject'] = t('Related Items from Amazon');
+        $block['content'] = amazon_blockshow();
         break;
     }
     return $block;
   }
 }
 
+function check_amazon_taxonomies($term) {
+  $query = "SELECT * FROM amazon_taxonomies WHERE short_name = '$term'";
+  $result = db_query($query);
+  if ($row = db_fetch_object($result)) {
+    if ($row->enabled) {
+      if ($row->alt) {
+	$term = $row->alt;
+      }
+    } else {
+      $term = false;
+    }
+  }
+  return $term;
+}
+
 function amazon_blockshow() {
   global $id, $mod;
+  if (empty($id)) {
+    $id = arg(2);
+    $mod = arg(1);
+  }
   $output = '';
   $am_devkey = variable_get('amazon_devkey', '');
   $am_affid = variable_get('amazon_affid', 'none');
   $amazonSE = new AmazonSearchEngine($am_devkey, $am_affid, '2.0');
-  if (substr_count(request_uri(), drupal_url())) {
+  if (substr_count(request_uri(), "node/view")) {
     $modes = _amazon_getmodes();
     $num = variable_get('amazon_num', '1');
     if (module_exist('taxonomy')) {
       $terms = taxonomy_node_get_terms($id);
-      $do_title = (count($terms) == 0); 
+      $do_title = (count($terms) == 0);
     } else {
-      $do_title = 1;
-    }
-    if ($do_title) {
       $row = db_fetch_object(db_query("SELECT title FROM node WHERE nid = $id"));
       $terms = explode(' ', $row->title);
     }
@@ -416,25 +501,39 @@ function amazon_blockshow() {
     foreach ($modes as $s_mode => $l_mode) {
       foreach ($terms as $term) {
         if ($total_results < $num) {
-          $amazonSE->searchTerm(strtolower(is_object($term) ? $term->name : $term), $s_mode);
+	  if (is_object($term)) { // This is a tax term
+	    $term = check_amazon_taxonomies($term->name);
+	    if ($term) { // some terms are disabled
+	      if ($terms = explode(",", $term)) {
+		foreach($terms as $term) {
+		  $amazonSE->searchTerm(strtolower($term), $s_mode);
+		}
+	      } else {
+		$amazonSE->searchTerm(strtolower($term), $s_mode);	
+	      }
+	    }
+	  } else {
+	    $amazonSE->searchTerm(strtolower($term), $s_mode);
+	  }
           foreach ($amazonSE->results as $item) {
             if (($total_results < $num)) {
               $total_results++;
               $url = $item->url;
               $pic = $item->ImageUrlMedium;
               $prd = $item->ProductName;
-              $output .= "<center><a href=\"$url\"><img src=\"$pic\" alt=\"$prd\" border=\"0\" vspace=\"2\" /></a></center><br />";
+	      if (!$urllist[$url]) { // eliminate duplicates
+		$urllist[$url] = 1;
+		$output .= "<center><a href=\"$url\"><img src=\"$pic\" alt=\"$prd\" border=\"0\" vspace=\"2\" /></a><br /><a href=\"$url\">$prd</a></center><br />";
+	      }
             }
           }
         }
       }
     }
     if (user_access('access shop') && ($output != "")) {
-      $output .= '<div align="right"><a href="module.php?mod=amazon">more</a></div>';
+      $output .= '<div align="right">' . l("more", "amazon/") . '</div>';
     }
   }
-  $block[0]['subject'] = t('shop');
-  $block[0]['content'] = $output;
-  return $block;
+  return $output;
 }
 ?>
