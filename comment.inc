@@ -74,7 +74,7 @@ function project_comment_page($project) {
         else {
           // Save the comment and re-direct to the overview page for the project
           project_comment_save($edit);
-          drupal_goto(url("node/view/$node-nid"));
+          drupal_goto(url("node/view/$node->nid"));
         }
       }
       break;
