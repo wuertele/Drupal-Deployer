@@ -120,15 +120,15 @@ function project_project_validate(&$node) {
   if (empty($node->mail)) {
     $error['mail'] = t('Required.');
   }
-  elseif (($data = user_validate_mail($node->mail))) {
+  elseif ($data = user_validate_mail($node->mail)) {
     $error['mail'] = $data;
   }
 
-  if (($data = user_validate_mail($node->mail_digest))) {
+  if (!empty($node->mail_digest) && ($data = user_validate_mail($node->mail_digest))) {
     $error['mail_digest'] = $data;
   }
 
-  if (($data = user_validate_mail($node->mail_copy))) {
+  if (!empty($node->mail_copy) && ($data = user_validate_mail($node->mail_copy))) {
     $error['mail_copy'] = $data;
   }
 
