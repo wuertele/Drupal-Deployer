@@ -2,7 +2,7 @@
 // $Id$
 
 function project_issue_node($field) {
-  $info["name"] = t("issue");
+  $info["name"] = t("Issue");
 
   return $info[$field];
 }
