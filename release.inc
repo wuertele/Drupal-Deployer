@@ -35,7 +35,7 @@ function project_release_scan_parse($path = NULL) {
   else {
     $dir = dirname($path);
     $file = basename($path);
-    ereg('(.+)-(.+)\.tar\.gz', $file, $matches);
+    preg_match('/^(.+?)-([0-9.]+(?:-.*)|[^-]+)\.tar\.gz$/', $file, $matches);
     list($filename, $name, $version) = $matches;
 
     if (!$projects[$name]) {
