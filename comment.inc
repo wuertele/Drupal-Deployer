@@ -34,7 +34,7 @@ function project_comment_page($project) {
       theme("footer");
       break;
     case t("Preview"):
-      if (node_access($node, "update")) {
+      if (user_access("maintain project issues")) {
         $edit = array2object($_POST["edit"]);
         $edit->nid = $node->nid;
         $edit->type = "project_issue";
@@ -100,7 +100,7 @@ function project_comment_form(&$edit, &$error, &$param) {
   }
 
   $output .= form_submit(t("Preview"));
-  if ($error) {
+  if (!$error) {
     $output .= form_submit(t("Submit"));
   }
 
