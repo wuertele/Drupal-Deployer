@@ -29,10 +29,20 @@ function recipe_node($field) {
   return $info[$field];
 }
 
-function recipe_system($field){
-    $system["description"] = t("Collect and display recipes");
-    return $system[$field];
+// not working for some reason. please fix.
+function recipe_help($section) {
+  $output ="";
+
+  switch ($section) {
+     case 'admin/help#recipe':
+      break;
+    case 'admin/system/modules/recipe':
+    case 'admin/system/modules#recipe':
+      $output .= t("Collect and display recipes");
+      break;
   }
+  return $output;
+}
 
 function recipe_nodeapi(&$node, $op, $arg) {
   
@@ -103,8 +113,11 @@ function recipe_form(&$node, &$help, &$error) {
 }
 
 function recipe_link($type) {
-  if ($type == "menu.create" && user_access("create recipes")) {
-    $links[] = l(t("create recipe"), "node/add/recipe");
+
+  if ($type == "system") {
+    if (user_access("create recipes")) {
+      menu("node/add/recipe", t("recipe"), "recipe_page", 0);
+    }
   }
 
   if ($type == "page" && user_access("access recipes")) {
