@@ -239,8 +239,10 @@ function project_release_view($node, $main = 0) {
     }
     $breadcrumb[] = l(t("Home"), NULL);
     $breadcrumb[] = l(t("Projects"), "project");
+    if ($term = reset(taxonomy_node_get_terms($project->nid))) {
+      $breadcrumb[] = l($term->name, "project", NULL, "tid=$term->tid");
+    }
     $breadcrumb[] = l($project->title, "project/$project->uri");
-
 
     theme("breadcrumb", $breadcrumb);
     theme("box", "$project->title $node->version", check_output($node->changes));
