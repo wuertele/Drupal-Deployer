@@ -44,7 +44,7 @@ function project_comment_page() {
           $edit->nid = $node->nid;
 
           project_comment_save($edit);
-          drupal_goto(url("node/$node->nid"));
+          drupal_goto("node/$node->nid");
         }
       }
       break;
