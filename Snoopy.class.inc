@@ -714,7 +714,7 @@ class Snoopy
 		if(!empty($this->cookies))
 		{			
 			if(!is_array($this->cookies))
-				$this->cookies = (array)$this->cookies;
+				$this->cookies = Array($this->cookies);
 	
 			while(list($cookieKey,$cookieVal) = each($this->cookies))
 				$headers .= "Cookie: ".$cookieKey."=".$cookieVal."\n";
