@@ -1,8 +1,8 @@
 <?php
 // $Id$
 
-function project_project_node($field) {
-  $info['name'] = t('project');
+function project_project_node_name() {
+  return t('project');
 
   return $info[$field];
 }
