@@ -188,7 +188,7 @@ function project_comment_view($node, $main = 0) {
     if (user_access("maintain project issues")) {
       $links[] = "<p>". l(t("update issue"), "project/comments/add/$node->nid") ."</p>";
     }
-    $output .=  theme("links", $links);
+    $output .=  print theme("links", $links);
     print theme("box", t("Updates"), $output);
   }
 }
