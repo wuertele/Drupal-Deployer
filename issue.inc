@@ -326,7 +326,7 @@ function project_issue_access($op, $node) {
 
 // Support stuff
 function project_issue_state($state = 0) {
-  $states = array(1 => t('active'), t('fixed'), t('duplicate'), t('postponed'), t("won't fix'), t('by design'), t('closed"));
+  $states = array(1 => t('active'), t('fixed'), t('duplicate'), t('postponed'), t("won't fix"), t('by design'), t('closed'));
   return $state ? $states[$state] : $states;
 }
 
