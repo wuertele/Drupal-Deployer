@@ -39,11 +39,9 @@ function recipe_help($section = '') {
 }
 
 /*
-** note that 'body' field contains *everything* about a recipe. this is helpful for search.'
-** 'instructions' field is currently stored in the teaser
+** 'instructions' field is currently stored in the teaser and in its own field.
 */
 function recipe_nodeapi(&$node, $op, $arg) {
-
   if ($node->type == "recipe") {
     switch ($op) {
       case 'validate':
@@ -140,13 +138,13 @@ function recipe_access($op, $node) {
 
 
 function recipe_block($op = "list", $delta = 0) {
-  if($op == "list") {
+  if ($op == "list") {
     $blocks[0]["info"] = t("Newest 10 recipes");
     return $blocks;
   }
-  else {
+  elseif ($op == 'view') {
     $block["subject"] = t("Newest Recipes");
-    $result = db_query_range('SELECT DISTINCT(n.nid), n.title, n.uid, u.name FROM {node} n LEFT JOIN {users} u ON n.uid = u.uid '. node_access_join_sql(). ' WHERE '. node_access_where_sql(). ' AND n.type=\'recipe\' ORDER BY n.nid DESC', 0, 10);
+    $result = db_query_range("SELECT DISTINCT(n.nid), n.title, n.uid, u.name FROM {node} n LEFT JOIN {users} u ON n.uid = u.uid WHERE n.type='recipe' ORDER BY n.nid DESC", 0, 10);
     $block["content"] = node_title_list($result);
     return $block;
   }
@@ -174,9 +172,10 @@ function recipe_page() {
 
 
 function recipe_overview() {
-  if (module_exist('search')) {
+  // no longer possible with 4.6 search. need to find a new way
+  /*if (module_exist('search')) {
     $output .= search_type("recipe", url("search"), NULL, 1);
-  }
+  }*/
   $output .= recipe_list();
   if (module_exist("taxonomy_dhtml") && $content = recipe_directory_dhtml()) {
     $output .= $content;
@@ -193,7 +192,7 @@ function recipe_directory_dhtml() {
 }
 
 function recipe_list() {
-  $result = pager_query('SELECT DISTINCT(n.nid), n.title, n.uid, u.name, r.notes FROM {node} n INNER JOIN {users} u ON n.uid=u.uid INNER JOIN {recipe} r ON n.nid = r.nid'. node_access_join_sql(). ' WHERE '. node_access_where_sql(). " AND n.type = 'recipe' ORDER BY n.created DESC",20);
+  $result = pager_query("SELECT n.nid, n.title, n.uid, u.name, r.notes FROM {node} n INNER JOIN {users} u ON n.uid=u.uid INNER JOIN {recipe} r ON n.nid = r.nid WHERE n.type = 'recipe' ORDER BY n.created DESC", 20);
   $header = array(t("Title"), t("Author"), t('Notes'));
 
   while ($node = db_fetch_object($result)) {
@@ -223,7 +222,6 @@ function recipe_view(&$node, $teaser = 0, $page = 0) {
 }
 
 function recipe_content($node, $teaser = 0) {
-
   $preptime = t("%n hours", array ("%n" => ($node->preptime / 60)));
   $output = "<div class=\"recipe\">\n";
   $output .= "  <div class=\"row\"><div class=\"label\">Servings:</div>\n";
@@ -256,35 +254,6 @@ function recipe_html_head() {
  $style .= "  .recipe .instructions { clear: both; padding-left: 10px; padding-top: 10px; }\n";
  $style .= "</style>";
  return $style;
-}
-function recipe_search($keys) {
-
-  /*
-  ** Return the results of performing a search using the indexed search
-  ** for this particular type of node.
-  **
-  ** Pass an array to the "do_search" function which dictates what it
-  ** will search through, and what it will search for
-  **
-  ** "keys"'s value is the keywords entered by the user
-  **
-  ** "type"'s value is used to identify the node type in the search
-  ** index.
-  **
-  ** "select"'s value is used to relate the data from the specific nodes
-  ** table to the data that the search_index table has in it, and the
-  ** do_search function will rank it.
-  **
-  ** The select must always provide the following fields - lno, title,
-  ** created, uid, name, count
-  **
-  ** The select statement may optionally provide "nid", which is a secondary
-  ** identifier which is currently used by the comment module.
-  */
-
-  $find = do_search(array("keys" => $keys, "type" => "node", "select" => "SELECT s.lno AS lno, n.title AS title, n.created AS created, u.uid AS uid, u.name AS name, s.count AS count FROM search_index s, node n LEFT JOIN users u ON n.uid = u.uid WHERE s.lno = n.nid AND s.type = 'recipe' AND n.status = 1 AND s.word like '%'"));
-
-  return $find;
 }
 
 
