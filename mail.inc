@@ -145,6 +145,10 @@ function project_mail_output(&$body, $html = 1, $format = FILTER_FORMAT_DEFAULT)
     }
 
     $body = check_output($body, $format);
+    $body = preg_replace('!</?blockquote>!i', '"', $body);
+    $body = preg_replace('!</?(em|i)>!i', '/', $body);
+    $body = preg_replace('!</?(b|strong)>!i', '*', $body);
+    $body = preg_replace('!</p>!i', '\n', $body);
     $body = strip_tags($body);
     $body = decode_entities($body);
     $body = wordwrap($body, 72);
