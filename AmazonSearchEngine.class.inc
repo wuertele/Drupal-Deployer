@@ -240,7 +240,7 @@ class AmazonSearchEngine {
             case 'Track':
                 $this->_currentResult->Tracks[] =  $this->_currentTagContents;
                 break;
-            case 'ByArtist';
+            case 'ByArtist':
                 $this->_currentResult->ByArtist[] = $this->_currentTagContents;
                 break;
             default:
