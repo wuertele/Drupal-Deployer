@@ -11,7 +11,7 @@ function project_project_menu(&$node) {
   $categories = project_issue_category(0, 1);
   $uri = "project/$node->uri";
 
-  menu($uri, strtolower($node->title), 1);
+  menu($uri, strtolower($node->title), 'project_page', 3);
   if ($GLOBALS['user']->uid) {
     menu("$uri/issues/user", t('my issues'), 'project_page', 0);
     menu("$uri/issues/subscribe", t('subscribe'), 'project_page', 3);
