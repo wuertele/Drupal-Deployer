@@ -133,7 +133,7 @@ function project_mail_urls($url = 0) {
 function project_mail_output(&$body, $html = 1, $format = FILTER_FORMAT_DEFAULT) {
   static $i = 0;
 
-  if ($wrap) {
+  if ($html) {
     $pattern = '@(<a href="(.+?)">(.+?)</a>)@ei';
     $body = preg_replace($pattern, "'\\3 ['. project_mail_urls('\\2') .']'", $body);
     $urls = project_mail_urls();
