@@ -653,7 +653,7 @@ function project_issue_query_parse($query = NULL) {
   if ($_SERVER['REQUEST_METHOD'] == 'POST' && is_array($_POST['edit'])) {
     foreach ($_POST['edit'] as $key => $value) {
       if (!empty($value) && in_array($key, $fields)) {
-        $query->$key = $value;
+        $query->$key = !is_array($value) ? explode(',', $value) : $value;
         $_POST[$key] = is_array($value) ? implode(',', $value) : $value;
       }
     }
@@ -666,6 +666,8 @@ function project_issue_query_parse($query = NULL) {
       }
     }
   }
+
+
   if (empty($query->states)) {
     $query->states = array(1, 2, 8);
   }
