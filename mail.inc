@@ -259,7 +259,7 @@ function project_mail_notify($node) {
     "From: $sender->name <$sender->mail>",
     'X-Mailer: Drupal Project module (http://drupal.org/project/project)',
     "List-Id: $project->title <$project->uri-issues-$domain>",
-    'List-Archive: <'. url("project/$project->uri/issues", NULL, NULL, 1) .'>',
+    'List-Archive: <'. url("project/issues/$project->uri", NULL, NULL, 1) .'>',
     'List-Subscribe: <'. url("node/view/$project->uri", NULL, NULL, 1) .'>',
     'List-Unsubscribe: <'. url("node/view/$project->uri", NULL, NULL, 1) .'>'
   );
