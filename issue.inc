@@ -250,9 +250,7 @@ function project_issue_form(&$node, &$param) {
     $group2 = form_select(t('Category'), 'category', $node->category, $categories, NULL, 0, FALSE, TRUE);
     $group2 .= form_select(t('Priority'), 'priority', $node->priority, $priorities);
     $group2 .= form_select(t('Assigned'), 'assigned', $node->assigned, $assigned);
-    if ($node->state || $node->nid) {
-      $group2 .= form_select(t('Status'), 'state', $node->state, $states);
-    }
+    $group2 .= form_select(t('Status'), 'state', $node->state, $states);
 
     $output .= '</div>';
     $output .= '<div class="admin">';
