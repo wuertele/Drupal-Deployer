@@ -40,6 +40,9 @@ function recipe_help($section = '') {
     case 'node/add#recipe':
       $output = t("Share your favorite recipes with your fellow cooks.");
       break;
+    case 'node/add/recipe':
+      $output = variable_get("recipe_help", "");;
+      break;
   }
   return $output;
 }
@@ -98,10 +101,7 @@ function recipe_form(&$node, &$help, &$error) {
   }  
   else {
     $node->numingredients = 6;    
-  } 
-  
-  $help = t(variable_get("recipe_help", ""));
-
+  }
   $output .= form_hidden("numingredients", $node->numingredients);
   $output .= form_textfield(t("Servings"), "yield", $node->yield, 60, 127, $error["yield"] ? $error["yield"] : t("Describe how many servings this recipe will yield. Feel free to be creative."));
   $output .= form_select(t("Preparation time"), "preptime", $node->preptime, array (15 => "15 minutes", 30 => "30 minutes", 45 => "45 minutes", 60 => "1 hour", 90 => "1 1/2 hours", 120 => "2 hours", 150 => "2 1/2 hours", 180 => "3 hours", 210 => "3 1/2 hours", 240 => "4 hours", 300 => "5 hours", 360 => "6 hours"), t("How long does this recipe take to prepare (i.e. elapsed time)"));
@@ -171,10 +171,9 @@ function recipe_page() {
     }
     else {
       $boxes = recipe_overview();
-      print theme("header");
       foreach ($boxes as $box) {
         $output .= theme("box", $box["subject"], $box["content"]);
-      }  
+      }
       print theme("page", $output);
     }
   }
@@ -235,6 +234,7 @@ function recipe_list() {
 
 function recipe_view($node, $main = 0, $page = 0) {
   $node = recipe_content($node);
+  drupal_set_breadcrumb(array(l(t('Home'), ''), l('Recipes', 'recipe')));  
   return theme("node", $node, $main, $page);
 }
 
@@ -269,7 +269,7 @@ function recipe_html_head() {
  $style .= "  .recipe .label { padding-right: 5px; font-weight: bold; float: left; }\n";
  $style .= "  .recipe .notes { clear: both; padding-left: 10px; padding-top: 5px;  }\n";
  $style .= "  .recipe .ingredients {}\n";
- $style .= "  .recipe .instructions {padding-top: 10px; }\n";
+ $style .= "  .recipe .instructions { clear: both; padding-left: 10px; padding-top: 10px; }\n";
  $style .= "</style>";
  return $style; 
 }
