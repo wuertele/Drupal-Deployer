@@ -46,8 +46,9 @@ function feedback_menu($may_cache) {
         'title'    => $title,
         'callback' => 'feedback_page',
 	'access'   => $access,
-        'weight'   => 0);
-  }
+        'weight'   => 0,
+         'type' => MENU_CALLBACK);
+ }
 
   return $items;
 }
@@ -190,11 +191,11 @@ function feedback_display_form ()
 
   if ( $instructions )
   	{
-  	$message .= $instructions;
+  	$message .= t($instructions);
 	}
   else
   	{
-  	$message .= "Enter your message below:";
+  	$message .= t("Enter your message below:");
 	}
   	
   if ( variable_get("feedback_field_name", "") )
@@ -311,7 +312,7 @@ function feedback_validate_data( )
 function feedback_validate_email ($email)
 {
 
- if ( eregi("^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,3})$", $email) )
+ if (valid_email_address($email))
     {
     // It looks like a valid email address
     if ( variable_get ("feedback_validate_sender_address", "") )
@@ -325,7 +326,7 @@ function feedback_validate_email ($email)
     }
  else
     {
-    $rc = "Invalid E-mail address structure";
+    $rc = t("Invalid E-mail address structure");
     }
 
  return $rc;    
@@ -436,22 +437,22 @@ function feedback_custom_footers()
   	$footer .= "\nSite Name       : " . variable_get("site_name", "") ;
   if ( $user->name )
   	$footer .= "\nRegistered name : " . $user->name;
-  if ( $edit[form_field_name] )
-  	$footer .= "\nFull Name       : $edit[form_field_name]";
-  if ( $edit[form_field_email] )
-  	$footer .= "\nE-mail address  : $edit[form_field_email]";
-  if ( $edit[form_field_postal] )
-  	$footer .= "\nPostal address  : $edit[form_field_postal]";
-  if ( $edit[form_field_phone] )
-  	$footer .= "\nPhone Number    : $edit[form_field_phone]";
-  if ( $edit[form_field_referer] )
-  	$footer .= "\nReferring page  : $edit[form_field_referer]";
-  if ( $_SERVER[REMOTE_ADDR] )
-  	$footer .= "\nIP Address      : $_SERVER[REMOTE_ADDR]";
-  if ( $_SERVER[REMOTE_HOST] )
-  	$footer .= "\nMachine name    : $_SERVER[REMOTE_HOST]";
-  if ( $_SERVER[HTTP_USER_AGENT] )
-  	$footer .= "\nBrowser info    : $_SERVER[HTTP_USER_AGENT]";
+  if ( isset($edit['form_field_name']))
+  	$footer .= "\nFull Name       : " . $edit['form_field_name'];
+  if ( isset($edit['form_field_email']))
+  	$footer .= "\nE-mail address  : " . $edit['form_field_email'];
+  if ( isset($edit['form_field_postal']))
+  	$footer .= "\nPostal address  : " . $edit['form_field_postal'];
+  if ( isset($edit['form_field_phone']))
+  	$footer .= "\nPhone Number    : " . $edit['form_field_phone'];
+  if ( isset($edit['form_field_referer']))
+  	$footer .= "\nReferring page  : " . $edit['form_field_referer'];
+  if ( isset($_SERVER['REMOTE_ADDR']))
+  	$footer .= "\nIP Address      : " . $_SERVER['REMOTE_ADDR'];
+  if ( isset($_SERVER['REMOTE_HOST']))
+  	$footer .= "\nMachine name    : " . $_SERVER['REMOTE_HOST'];
+  if ( isset($_SERVER['HTTP_USER_AGENT']))
+  	$footer .= "\nBrowser info    : " . $_SERVER['HTTP_USER_AGENT'];
 
   return $footer;
 }
@@ -465,9 +466,9 @@ function feedback_custom_headers()
   $name = $edit["form_field_name"];
 
   $headers .= "From: $name " . " <" . $edit["form_field_email"] . ">\n";
-  $headers .= "Reply-To: $edit[form_field_email]\n";
-  $headers .= "Return-Path: $edit[form_field_email]\n";
-  $headers .= "Errors-To: $edit[form_field_email]\n";
+  $headers .= "Reply-To: " . $edit['form_field_email']. "\n";
+  $headers .= "Return-Path: " . $edit['form_field_email']. "\n";
+  $headers .= "Errors-To: " . $edit['form_field_email'] . "\n";
   $headers .= "X-Mailer: Drupal\n";
 
   return $headers;
@@ -478,7 +479,7 @@ function feedback_format_body ( $body )
   $edit = $_POST["edit"];
 
   $body  = "-- The following message was sent using the feedback page --";
-  $body .= "\n\n$edit[form_field_body]";
+  $body .= "\n\n" . $edit['form_field_body'];
 
   $body = wordwrap(strip_tags($body),72);
 
