@@ -187,6 +187,17 @@ function project_mail_notify($node) {
   }
   $node = node_load(array('nid' => $node->nid, 'type' => 'project_issue'));
   $project = node_load(array('nid' => $node->pid, 'type' => 'project_project'));
+
+
+  if (!count($project->mail_copy_filter) || !$project->mail_copy_filter[$node->category]) {
+    return;
+  }
+
+  if (!count($project->mail_copy_filter_state) || !$project->mail_copy_filter_state[$node->state]) {
+    return;
+  }
+
+
   $fields = array(
     'pid' => t('Project'),
     'rid' => t('Version'),
@@ -315,7 +326,7 @@ function project_mail_notify($node) {
     user_mail($recipient->mail, $node->title, $body, implode("\n", $header));
   }
 
-  if ($project->mail_copy && (!count($project->mail_copy_filter) || $project->mail_copy_filter[$node->category])) {
+  if ($project->mail_copy) {
     user_mail($project->mail_copy, $node->title, $body, implode("\n", $header));
   }
 }
