@@ -104,7 +104,7 @@ function project_comment_view($node, $main = 0) {
     'state' => 'Status'
   );
 
-  $result = db_query('SELECT p.*, u.name FROM {project_comments} p LEFT JOIN {users} u USING (uid) WHERE p.nid = %d ORDER BY p.created ASC', $node->nid);
+  $result = db_query('SELECT p.*, u.name FROM {project_comments} p INNER JOIN {users} u USING (uid) WHERE p.nid = %d ORDER BY p.created ASC', $node->nid);
   if (db_num_rows($result)) {
     $i = 0;
     while ($comment = db_fetch_object($result)) {
@@ -151,7 +151,7 @@ function project_comment_view($node, $main = 0) {
 }
 
 function project_comment_load($cid) {
-  return db_fetch_object(db_query('SELECT p.*, u.name FROM {project_comments} p LEFT JOIN {users} u USING (uid) WHERE p.cid = %d ORDER BY timestamp DESC', $cid));
+  return db_fetch_object(db_query('SELECT p.*, u.name FROM {project_comments} p INNER JOIN {users} u USING (uid) WHERE p.cid = %d ORDER BY timestamp DESC', $cid));
 }
 
 function project_comment_save($edit) {
