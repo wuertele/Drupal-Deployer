@@ -148,11 +148,15 @@ function project_project_validate(&$node) {
   return $error;
 }
 
-function project_project_view($node, $main = 0, $page = 0) {
-  $node->body = check_output($node->body);
-  $node->teaser = check_output($node->teaser);
+/**
+ * Implementation of hook_content().
+ */
+function project_project_content($node, $teaser = false) {
+  return node_prepare($node, $teaser);
+}
 
-  if (!$main) {
+function project_project_view(&$node, $teaser = false, $page = false) {
+  if ($page) {
     $breadcrumb[] = l(t('Home'), NULL);
     $breadcrumb[] = l(t('Projects'), 'project');
     if (function_exists('taxonomy_node_get_terms') && $term = reset(taxonomy_node_get_terms($node->nid))) {
@@ -177,7 +181,7 @@ function project_project_view($node, $main = 0, $page = 0) {
     }
   }
 
-  return theme('node', $node, $main, $page);
+  $node = project_project_content($node, $teaser);
 }
 
 function project_project_load($node) {
@@ -217,7 +221,7 @@ function project_project_access($op, $node) {
 
   switch ($op) {
     case 'view':
-      return user_access('access projects') && $node->status;
+      return user_access('access projects');
     case 'create':
       return user_access('maintain project') && $user->uid;
     case 'update':
