@@ -293,7 +293,7 @@ function project_mail_notify($node) {
   }
 
   if ($project->mail_copy) {
-    user_mail($project->mail_copy, check_output(t("[issue]") ." $node->title"), $body, implode("\r\n", $header));
+    user_mail($project->mail_copy, check_output(t("[$node->category]") ." $node->title"), $body, implode("\r\n", $header));
   }
 }
 

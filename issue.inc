@@ -65,7 +65,7 @@ function project_issue_form(&$node, &$help, &$error, &$param) {
   if ($node->pid) {
     // Load the project and initialize some support arrays.
     $project = node_load(array("nid" => $node->pid, "type" => "project_project"));
-    $categories = project_issue_category();
+    $categories = project_issue_category(0, 0);
     foreach ($project->components as $component) {
       $components[$component] = $component;
     }
@@ -232,8 +232,13 @@ function project_issue_priority($priority = 0) {
   return $priority ? $priorities[$priority] : $priorities;
 }
 
-function project_issue_category($category = 0) {
-  $categories = array("bug" => t("bug reports"), "task" => t("tasks"), "feature" => t("feature requests"), "support" => t("support requests"));
+function project_issue_category($category = 0, $plural = 1) {
+  if ($plural) {
+    $categories = array("bug" => t("bug reports"), "task" => t("tasks"), "feature" => t("feature requests"), "support" => t("support requests"));
+  }
+  else {
+    $categories = array("bug" => t("bug report"), "task" => t("task"), "feature" => t("feature request"), "support" => t("support request"));
+  }
   return $category ? $categories[$category] : $categories;
 }
 
