@@ -36,11 +36,21 @@ function fckeditor_help($section = '') {
 
 
 /**
+ * Implementation of hook_perm
+ */
+function fckeditor_perm() {
+	return array('use fckeditor');
+}
+
+
+/**
  * Implementation of textarea
  */
 function fckeditor_textarea($op, $name) {
 	$output = '';
-	if ( fckeditor_is_compatible_client() ) {
+	$access = user_access('use fckeditor');
+
+	if ( fckeditor_is_compatible_client() && $access ) {
 		if ( $op == 'pre' ) {
 			$output = '';
 		}
@@ -56,7 +66,7 @@ function fckeditor_textarea($op, $name) {
  * Implementation of hook_init().
  */
 function fckeditor_init() {
-	$output = '<script language="JavaScript1.2" src="modules/fckeditor/lib/fckeditor.js"></script>\n';
+	$output = '<script language="JavaScript1.2" src="modules/fckeditor/lib/fckeditor.js"></script>';
 	drupal_set_html_head($output);
 }
 
@@ -65,9 +75,45 @@ function fckeditor_init() {
  * Implementation of hook_setting().
  */
 function fckeditor_settings() {
-  $output = form_textfield(t("Height"), "fckeditor_height", variable_get("fckeditor_height", 500), 10, 10, t("height (absolute or relative value)"));
-  $output .= form_textfield(t("Width"), "fckeditor_width", variable_get("fckeditor_width", 500), 10, 10, t("width (absolute or relative value)"));
-  return $output;
+	$output = form_textfield(
+		t("Base Path"), 
+		"fckeditor_base_path", 
+		variable_get("fckeditor_base_path", '/modules/fckeditor/lib/'), 
+		60, 255, t('The directory wich contains FCKEditor scripts'));
+		
+	$output .= form_select(
+		t('Toolbar'), 
+		'fckeditor_toolbar', 
+		variable_get('fckeditor_toolbar', 'Default'), 
+		array('Default' => 'Default', 'Basic' => 'Basic'), 
+		t('The toolbar set.'));
+
+	$output .= form_select(
+		t('Skin'), 
+		'fckeditor_skin', 
+		variable_get('fckeditor_skin', 'default'), 
+		array('default' => 'Default', 'silver' => 'Silver', 'office2003' => 'Office 2003'), 
+		t('The toolbar set.'));
+
+	$output .= form_select(
+		t('Toolbar start expanded'), 
+		'fckeditor_toolbar_start_expanded', 
+		variable_get('fckeditor_toolbar_start_expanded', 'true'), 
+		array('true' => 'Yes', 'false' => 'No'), 
+		t('The toolbar start expanded or colapced.'));
+
+	$output .= form_textfield(
+		t("Height"), 
+		"fckeditor_height", 
+		variable_get("fckeditor_height", 500), 
+		10, 10, t("height (pixels/percent)"));
+		
+	$output .= form_textfield(
+		t("Width"), "fckeditor_width", 
+		variable_get("fckeditor_width", '100%'), 
+		10, 10, t("width (pixels/percent)"));
+		
+	return $output;
 }  
 
 
@@ -77,7 +123,10 @@ function fckeditor_settings() {
  */
 function fckeditor_create_editor($name) {
 	$html = '';
-	$link = "modules/fckeditor/lib/editor/fckeditor.html?InstanceName=edit-$name";
+	$base_path = variable_get("fckeditor_base_path", '/modules/fckeditor/lib/');
+	
+	$link = "$base_path/editor/fckeditor.html?InstanceName=edit-$name";
+	$link .= '&Toolbar=' . variable_get("fckeditor_toolbar", 'Default');
 	
 	$height = variable_get("fckeditor_height", '500');
 	$width = variable_get("fckeditor_width", '100%');
@@ -124,7 +173,14 @@ function fckeditor_is_compatible_client() {
  * Return the configuration string
  */
 function fckeditor_config_string() {
-	$output = 'DefaultLanguage=en&AutoDetectLanguage=true';
+	$base_path = variable_get("fckeditor_base_path", 'modules/fckeditor/lib');
+	$skin = variable_get("fckeditor_skin", 'default');
+	$start = variable_get('fckeditor_toolbar_start_expanded', 'true');
+	
+	$output = '&DefaultLanguage=en&AutoDetectLanguage=true';
+	$output .= '&SkinPath=' . $base_path . "editor/skins/$skin/";
+	$output .= '&ToolbarStartExpanded=' . $start;
+	
 	return $output;
 }
 ?>

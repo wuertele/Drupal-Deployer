@@ -20,20 +20,37 @@ For further information visit:
 
 Requirements
 ------------
-Drupal 4.5.x
-PHP 4.3.0 or greater
+- Drupal 4.5.x
+- PHP 4.3.0 or greater
+- FCKEditor 2.0 (http://www.fckeditor.net/)
+
+
+
+Features
+--------
+ - Administrative features:
+   o Can customize block title 
+   o Can define the type of directory (public/private) 
+
+ - User features:
+   o Can add/edit/delete own directory if have 'manage contacts' permission
 
 
 
 Installation
 ------------
   1. Copy fckeditor folder to modules/.
+  2. Download FCKeditor 2.0 from http://www.fckeditor.net and copy the
+     distribution files to {DRUPAL_HOME}/modules/fckeditor/lib.
 
 
 
 Configuration
 -------------
   1. Modify the fckconfig.js file to custom your needs (not required)
+  2. Enable the module as usual from Drupal's admin pages.
+  3. Under settings, configure the fckeditor settings.
+  4. Grant permissions to the groups you want use fckeditor.
 
 
    
