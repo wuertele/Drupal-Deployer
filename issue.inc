@@ -361,7 +361,7 @@ function project_issue_query_result($project = 0) {
 
   $items = array(l(t("search issues"), ($project) ? "project/$project->uri/issues/search" : "project/issues/search"));
   if (user_access("maintain project issues")) {
-    foreach (project_issue_category() as $category => $name) {
+    foreach (project_issue_category(0, 0) as $category => $name) {
       $items[] =  l(t("submit %category", array("%category" => $name)), "node/add/project_issue", array(), "project=$project->uri&category=$category");
     }
   }
