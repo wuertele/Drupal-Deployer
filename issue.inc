@@ -1,6 +1,12 @@
 <?php
 // $Id$
 
+function project_issue_node($field) {
+  $info["name"] = t("issue");
+
+  return $info[$field];
+}
+
 function project_issue_page($project) {
   $arg = ($project->nid) ? 3 : 2;
 
