@@ -2,7 +2,7 @@
 // $Id$
 
 function recipe_perm() {
-  return array ("create recipes");
+  return array ("create recipes", 'edit own recipes');
 }
 
 function recipe_load($node) {
@@ -130,6 +130,12 @@ function recipe_access($op, $node) {
   if ($op == 'create') {
     return user_access('create recipes');
   }
+
+  if ($op == 'update' || $op == 'delete') {
+    if (user_access('edit own recipes') && ($user->uid == $node->uid)) {
+      return TRUE;
+    }
+  }
 }
 
 
@@ -140,8 +146,8 @@ function recipe_block($op = "list", $delta = 0) {
   }
   else {
     $block["subject"] = t("Newest Recipes");
-    $result = db_query_range("SELECT n.nid, n.title, n.uid, u.name FROM node n LEFT JOIN users u ON n.uid = u.uid WHERE n.status = 1 AND n.type='recipe' ORDER BY n.nid DESC", 0, 10);
-    $block["content"] = theme("node_title_list", $result);
+    $result = db_query_range('SELECT DISTINCT(n.nid), n.title, n.uid, u.name FROM node n LEFT JOIN users u ON n.uid = u.uid '. node_access_join_sql(). ' WHERE '. node_access_where_sql(). ' AND n.type=\'recipe\' ORDER BY n.nid DESC', 0, 10);
+    $block["content"] = node_title_list($result);
     return $block;
   }
 }
@@ -162,30 +168,20 @@ function recipe_page() {
     print recipe_css();
   }
   else {
-    $boxes = recipe_overview();
-    foreach ($boxes as $box) {
-      $output .= theme("box", $box["subject"], $box["content"]);
-    }
-    print theme("page", $output);
+    print theme("page", recipe_overview());
   }
 }
 
 
 function recipe_overview() {
-  $i = 0;
   if (module_exist('search')) {
-    $boxes[$i]["subject"] = t("Search Recipes");
-    $boxes[$i]["content"] = search_type("recipe", url("search"), NULL, 1);
-    $i++;
+    $output .= search_type("recipe", url("search"), NULL, 1);
   }
-
-  $boxes[$i] = array ("subject" => t("All recipes"), "content" => recipe_list());
-  $i++;
+  $output .= recipe_list();
   if (module_exist("taxonomy_dhtml") && $content = recipe_directory_dhtml()) {
-    $boxes[$i] = array ("subject" => t("Recipes by category"), "content" => $content);
-    $i++;
+    $output .= $content;
   }
-  return $boxes;
+  return $output;
 }
 
 function recipe_directory_dhtml() {
@@ -197,14 +193,15 @@ function recipe_directory_dhtml() {
 }
 
 function recipe_list() {
-  $result = pager_query('SELECT DISTINCT(n.nid), n.title, n.uid, u.name FROM {node} n '. node_access_join_sql(). ' JOIN users u ON n.uid = u.uid WHERE '. node_access_where_sql(). "n.status=1 AND n.type = 'recipe' ORDER BY n.nid DESC",20);
-  $header = array(t("Title"), t("Author"), t("Comments"));
+  $result = pager_query('SELECT DISTINCT(n.nid), n.title, n.uid, u.name, r.notes FROM {node} n INNER JOIN {users} u ON n.uid=u.uid INNER JOIN {recipe} r ON n.nid = r.nid'. node_access_join_sql(). ' WHERE '. node_access_where_sql(). " AND n.type = 'recipe' ORDER BY n.created DESC",20);
+  $header = array(t("Title"), t("Author"), t('Notes'));
 
   while ($node = db_fetch_object($result)) {
       $rows[] = array(
         array("data" => l($node->title, "node/$node->nid")),
         array("data" => format_name($node)),
-        array("data" => ($num = comment_num_all($node->nid)) ? $num : "&nbsp;")
+        array("data" => $node->notes),
+        // array("data" => ($num = comment_num_all($node->nid)) ? $num : "&nbsp;")
       );
   }
 
