@@ -148,21 +148,24 @@ function recipe_settings() {
 }
 
 function recipe_page() {
-  $op = $_POST["op"];
+  $op = arg(1);
 
   if (user_access("access recipes")) {
     if ($op == "feed") {
       recipe_feed(); // not yet implemented    
       return;
     }
-    else {
-    $boxes = recipe_overview();
-    theme("header");
-    foreach ($boxes as $box) {
-      theme("box", $box["subject"], $box["content"]);
-    }  
-    theme("footer");
+    elseif ($op == "css") {
+      print recipe_css();
     }
+    else {
+      $boxes = recipe_overview();
+      theme("header");
+      foreach ($boxes as $box) {
+        theme("box", $box["subject"], $box["content"]);
+      }  
+      theme("footer");
+      }
   }
   else {
     theme("header");
@@ -225,26 +228,38 @@ function recipe_view($node, $main = 0) {
 
 function recipe_content($node) {
   
-  $preptime = t("%n hours", array ("%n" => ($node->preptime / 60)));
-  foreach ($node->ingredients as $ingredient) {
-    $ingredients .= $ingredient ? $ingredient. "<br />\n" : "";
-  }  
-  $output .= "<p><span class=\"recipe_label\">Servings</span>: $node->yield<br />";
-  $output .= "<span class=\"recipe_label\">Preparation Time</span>: $preptime<br />";
-  $output .=  "<span class=\"recipe_label\">Ingredients</span>:</p>";
-  $output .= "<blockquote>\n$ingredients\n</blockquote>";
-  $output .= "<p><span class=\"recipe_label\">Cooking Instructions</span>:</p>";
-  $output .= "<blockquote>$node->body</blockquote>";
-  if ($node->source) $output .= "<span class=\"recipe_label\">Source</span>: $node->source<br />";
-  if ($node->notes) $output .= "<span class=\"recipe_label\">Notes</span>:<br /><blockquote>$node->notes</blockquote>";
-  $node->body = strtr($output, "\n", ""); //remove newlines now or else face wrath of nl2br() later
+  $preptime = t("%n hours", array ("%n" => ($node->preptime / 60)));  
+  $output = "<div class=\"recipe\">\n";
+  $output .= "  <div class=\"row\"><div class=\"label\">Servings:</div>\n";
+  $output .= "  <div class=\"servings\">$node->yield</div></div>\n";
+  $output .= "  <div class=\"row\"><div class=\"label\">Preparation Time:</div>\n";
+  $output .= "  <div class=\"preptime\">$preptime</div></div>\n";
+  $output .= "  <div class=\"row\"><div class=\"label\">Ingredients:</div>\n";
+  $output .= "  <div class=\"ingredients\">". theme_item_list($node->ingredients). "</div></div>\n";
+  $output .= "  <div class=\"row\"><div class=\"label\">Cooking Instructions</div>\n";
+  $output .= "  <div class=\"instructions\">$node->body</div></div>\n";
+  if ($node->source) {
+    $output .= "  <div class=\"row\"><div class=\"label\">Source:</div>\n";
+    $output .= "  <div class=\"source\">$node->source</div></div>\n";
+  }
+  if ($node->notes) {
+    $output .= "  <div class=\"label\">Notes</div>\n";
+    $output .= "  <div class=\"notes\">$node->notes</div>\n";
+  }
+  $output .= '</div>';
+  // $node->body = strtr($output, "\n", ""); //remove newlines now or else face wrath of nl2br() later
+  $node->body = $output;
   return $node;
 }
 
-function recipe_head() {
- return array ("<style type=\"text/css\"> .recipe_label {  font-weight: bold} .recipe_title {  font-weight: bold; font-size: large}</style>"); 
+function recipe_head($main = 0) {
+ $style = "<style type=\"text/css\">\n";
+ $style .= "  .recipe .row { margin-bottom: .3em; } \n";
+ $style .= "  .recipe .label { padding-right: 5px; font-weight: bold; float: left; }\n";
+ $style .= "  .recipe .ingredients, .recipe .notes, .recipe .instructions { clear: both; padding: 10px 10px 10px 10px; }\n";
+ $style .= "</style>";
+ return array($style); 
 }
-
 
 function recipe_update_index() {
 
