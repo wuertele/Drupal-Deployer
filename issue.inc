@@ -13,7 +13,6 @@ function project_issue_page($project) {
   if (project_issue_category(arg($arg))) {
     $_GET['categories'] = arg($arg);
   }
-  $output = project_issue_query_result($project);
 
   $breadcrumb[] = l(t('Home'), NULL);
   $breadcrumb[] = l(t('Projects'), 'project');
@@ -56,7 +55,7 @@ function project_issue_page($project) {
        $_GET['users'] = $GLOBALS['user']->uid;
     default:
       //drupal_set_title(l(t('Issues'), $project->nid ? "project/$project->uri/issues' : 'project/issues", NULL, project_issue_query_url()));
-
+      $output = project_issue_query_result($project);
       print theme('page', $output);
   }
 }
@@ -493,9 +492,9 @@ function project_issue_query_result($project = 0, $format = 'html') {
 }
 
 function project_issue_query_url($query = 0) {
-  static $url;
+  static $url = NULL;
 
-  if (is_array($query)) {
+  if (is_array($query) && $url === NULL) {
     foreach ($query as $key => $value) {
       $url[] = "$key=$value";
     }
