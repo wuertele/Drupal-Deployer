@@ -190,9 +190,7 @@ function project_issue_insert($node) {
   }
   */
   db_query("INSERT INTO {project_issues} (nid, pid, fid, category, component, priority, rid, assigned, state) VALUES (%d, %d, %d, '%s', '%s', %d, %d, %d, %d)", $node->nid, $node->pid, $node->fid, $node->category, $node->component, $node->priority, $node->rid, $node->assigned, $node->state);
-  if ($node->body) {
-    project_mail_notify($node);
-  }
+  project_mail_notify($node);
 }
 
 function project_issue_update($node) {
@@ -202,9 +200,7 @@ function project_issue_update($node) {
   }
   */
   db_query("UPDATE {project_issues} SET pid = %d, fid = %d, category = '%s', component = '%s', priority = %d, rid = %d, assigned = %d, state = %d WHERE nid = %d", $node->pid, $file->fid, $node->category, $node->component, $node->priority, $node->rid, $node->assigned, $node->state, $node->nid);
-  if ($node->body) {
-    project_mail_notify($node);
-  }
+  project_mail_notify($node);
 }
 
 function project_issue_delete($node) {

@@ -201,6 +201,10 @@ function project_mail_notify($node) {
   $node->updator = $entry->name;
   $data = unserialize($entry->data);
 
+  if (empty($entry->body)) {
+    return; // No body to notify about.
+  }
+
   // Record users that are connected to this node
   $uids = array();
   if ($entry->uid) {
