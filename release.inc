@@ -7,7 +7,7 @@ function project_release_cron() {
     $result = db_query("SELECT nid, 'project_project' AS type, release_directory FROM {project_projects} WHERE release_directory <> ''");
     while ($project = db_fetch_object($result)) {
       if ($handle = opendir($dir)) {
-        $releases = project_release_load($project, 1);
+        $releases = project_release_load($project, 0);
         while ($version = readdir($handle)) {
           if (is_dir("$dir/$version") && !in_array($version, array(".", "..", "CVS"))) {
             if (file_exists(getcwd() ."/$dir/$version/$project->release_directory-$version.tar.gz")) {
