@@ -8,7 +8,7 @@ function project_issue_node_name() {
 function project_issue_page($project) {
   $arg = ($project->nid) ? 3 : 2;
 
-  if (project_issue_category(arg($arg))) {
+  if (!is_array(project_issue_category(arg($arg)))) {
     $_GET['categories'] = arg($arg);
   }
 
