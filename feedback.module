@@ -227,7 +227,18 @@ function feedback_display_form ()
 
   $form .= form_submit (t("Send Message"), "op", $edit['op'] );
 
-  $output .= theme("box", $title, $message . form($form, "post", "feedback/send"));
+  if ( variable_get("clean_url", "0") )
+  	{
+	// Clean URLs are disable. Use regular URLs
+  	$command = "?q=feedback/send";
+	}
+  else
+  	{
+	// Clean URLs are enabled. Use clean URLs
+  	$command = "feedback/send";
+	}
+
+  $output .= theme("box", $title, $message . form($form, "post", $command));
 
   return $output;
 }
@@ -313,21 +324,21 @@ function feedback_validate_data( )
 function feedback_validate_email ($email)
 {
 
- if ( variable_get ("feedback_validate_sender_address", "") )
+ if ( eregi("^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,3})$", $email) )
     {
-    if ( eregi("^[_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,3})$", $email) )
+    // It looks like a valid email address
+    if ( variable_get ("feedback_validate_sender_address", "") )
        {
-       // It looks like a valid email address
        $rc = feedback_try_to_feedback_address ( $email );
        }
     else
        {
-       $rc = "Invalid E-mail address structure";
+       $rc = "";
        }
     }
  else
     {
-    $rc = "";
+    $rc = "Invalid E-mail address structure";
     }
 
  return $rc;    
