@@ -1,4 +1,4 @@
-This is actually a package rather that contains two modules (amazon.module and amazon_search.module) that share code to use Amazon's ECS4 REST interface. The code (in amazon.inc) will work with all Amazon.com stores if the data (in amazon_init.inc) is updated to use the codes local to each store.
+amazon.module uses Amazon's ECS4 REST interface. The code (in amazon.inc) will work with all Amazon.com stores. The data (in amazon_init.inc) has the basic codes local to each store.
 
 -----------------------------------------------------------------------
 
@@ -12,9 +12,7 @@ Because the 'amazon-node' nodes are standard nodes they can have categories atta
 
 The module also has a block that displays a random item linked to the Amazon detail page for the item.
 
------------------------------------------------------------------------
-
-amazon_search.module is a drop-in search engine for Amazon.com's book store. The search returns a minimally formatted list of books, including the image Amazon.com provides, the list and Amazon.com prices, a purchase link and each author's name links to an Amazon search for more books by that same author. 
+The module includes a drop-in search engine for Amazon.com's book store. The search returns a minimally formatted list of books, including the image Amazon.com provides, the list and Amazon.com prices, a purchase link and each author's name links to an Amazon search for more books by that same author. 
 
 -----------------------------------------------------------------------
 
@@ -22,7 +20,8 @@ The current state of the include file with the Amazon code retrieves these field
 
 [ASIN] => 0140280197 
 [DetailPageURL] => http://www.amazon.com/exec/obidos/redirect?tag=prometheus606-20%26link_code=xm2%26camp=2025%26creative=165953%26path=http://www.amazon.com/gp/redirect.html%253fASIN=0140280197%2526location=/o/ASIN/0140280197%25253FSubscriptionId=0JEKXTWNECEXBJGY7RR2 
-[SmallImageURL] => http://images.amazon.com/images/P/0140280197.01._SCTHUMBZZZ_.jpg [SmallImageHeight] => 60 
+[SmallImageURL] => http://images.amazon.com/images/P/0140280197.01._SCTHUMBZZZ_.jpg 
+[SmallImageHeight] => 60 
 [SmallImageWidth] => 42 
 [MediumImageURL] => http://images.amazon.com/images/P/0140280197.01._SCMZZZZZZZ_.jpg 
 [MediumImageHeight] => 140 
@@ -47,3 +46,5 @@ The current state of the include file with the Amazon code retrieves these field
 To do:
 Administration interface needs work
 Consider disallowing its use until an Associate ID is entered
+Little better documentation
+Change theme functions to produce DIVs instead of tables
