@@ -174,7 +174,7 @@ function project_project_access($op, $node) {
       return user_access("maintain project") && $user->uid;
     case "update":
     case "delete":
-      return (user_access("maintain project") && $user->uid == $node->uid) || user_access("administer projects");
+      return($user->uid == $node->uid || user_access("administer projects");
   }
 }
 
