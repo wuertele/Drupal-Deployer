@@ -249,32 +249,6 @@ function project_mail_notify($node) {
 
   $hr = str_repeat('-', 72);
 
-  if (count($history)) {
-    $body .= "\n\n\n";
-    $body .= t('Previous comments:');
-    foreach ($history as $entry) {
-      if ($entry->uid) {
-        $uids[$entry->uid] = "u.uid = $entry->uid";
-      }
-      project_mail_output($entry->body);
-      $body .= "\n$hr\n\n";
-      $body .= format_date($entry->created) ." : $entry->name\n\n";
-      if ($entry->file_path && file_exists($entry->file_path)) {
-        $body .= t('Attachment') .': '. file_create_url($entry->file_path) .' ('. format_size($entry->file_size) .")\n\n";
-      }
-      if ($entry->body) {
-        $body .= "$entry->body\n";
-      }
-    }
-  }
-
-  // Create the footer
-  $footer  = "-- \n";
-  $footer .= t('View: %link', array('%link' => url("node/view/$node->nid", NULL, NULL, 1))) ."\n";
-  $footer .= t('Edit: %link', array('%link' => url("project/comments/add/$node->nid", NULL, NULL, 1))) ."\n";
-
-  $body = "$summary\n$body\n$footer\n";
-
   // Create mail header
   $sender->name = user_mail_encode(($pos = strpos($node->updator, '@')) ? substr($node->updator, 0, $pos) : $node->updator);
   $sender->mail = $project->mail;
@@ -294,13 +268,38 @@ function project_mail_notify($node) {
   }
 
   if (count($history)) {
+    $prev = end($history);
     $header[] = "Message-Id: <type=project&nid=$node->nid&cid=$entry->cid&host=@$domain>";
     $header[] = "In-Reply-To: <type=project&nid=$node->nid&host=@$domain>";
-    $header[] = "References: <type=project&nid=$node->nid&host=@$domain> <type=project&nid=$node->nid&revcount=1&host=@$domain>";
+    $header[] = "References: <type=project&nid=$node->nid&host=@$domain> <type=project&nid=$node->nid&cid=$prev->cid&host=@$domain> <type=project&nid=$node->nid&revcount=1&host=@$domain>";
+
+    $body .= "\n\n\n";
+    $body .= t('Previous comments:');
+    foreach ($history as $entry) {
+      if ($entry->uid) {
+        $uids[$entry->uid] = "u.uid = $entry->uid";
+      }
+      project_mail_output($entry->body);
+      $body .= "\n$hr\n\n";
+      $body .= format_date($entry->created) ." : $entry->name\n\n";
+      if ($entry->file_path && file_exists($entry->file_path)) {
+        $body .= t('Attachment') .': '. file_create_url($entry->file_path) .' ('. format_size($entry->file_size) .")\n\n";
+      }
+      if ($entry->body) {
+        $body .= "$entry->body\n";
+      }
+    }
   }
   else {
     $header[] = "Message-Id: <type=project&nid=$node->nid&host=@$domain>";
   }
+
+  // Create the footer
+  $footer  = "-- \n";
+  $footer .= t('View: %link', array('%link' => url("node/view/$node->nid", NULL, NULL, 1))) ."\n";
+  $footer .= t('Edit: %link', array('%link' => url("project/comments/add/$node->nid", NULL, NULL, 1))) ."\n";
+
+  $body = "$summary\n$body\n$footer\n";
 
   if (count($uids)) {
     $result = db_query('SELECT p.*, u.name, u.mail FROM {project_subscriptions} p INNER JOIN {users} u ON p.uid = u.uid WHERE u.status = 1 AND p.nid = %d AND (p.level = 2 OR (p.level = 1 AND (%s)))', $node->pid, implode(' OR ', $uids));
