@@ -182,12 +182,12 @@ function project_issue_view($node, $main = 0) {
     $rows[] = array("Assigned:", $assigned->name);
     $rows[] = array("Status:", project_issue_state($node->state));
     $rows[] = array(array("data" => "<br />", "colspan" => 2));
-    $output .= "<div class=\"summary\">". table(NULL, $rows) ."</div>";
+    $output .= "<div class=\"summary\">". theme("table", NULL, $rows) ."</div>";
 
     $rows = array();
     $rows[] = array(array("data" => t("Description"), "colspan" => 2, "class" => "banner"));
     $rows[] = array(array("data" => check_output($node->body), "colspan" => 2, "class" => "content"));
-    $output .= table(NULL, $rows);
+    $output .= theme("table", NULL, $rows);
     $output .= "</div>";
 
     $node->body = $output;
@@ -404,7 +404,7 @@ function project_issue_query_result($project = 0, $format = "html") {
   }
 
   $output = "<div class=\"project\">";
-  $output .= table($header, $rows);
+  $output .= theme("table", $header, $rows);
   $output .= "</div>";
   return $output;
 }
