@@ -395,7 +395,7 @@ function project_issue_query_parse() {
     }
   }
   if ($_SERVER['REQUEST_METHOD'] == 'GET' && empty($query->states)) {
-    $query->states = "1,2";
+    $query->states = array(1, 2);
   }
   return $query;
 }

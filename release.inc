@@ -10,7 +10,7 @@ function project_release_cron() {
         while ($version = readdir($handle)) {
           if (is_dir("$dir/$version") && !in_array($version, array(".", "..", "CVS"))) {
             if (file_exists(getcwd() ."/$dir/$version/$project->release_directory-$version.tar.gz")) {
-              if (array_search($version, $releases)) {
+              if ($rid = array_search($version, $releases)) {
                 unset($releases[$rid]);
               }
               else {
