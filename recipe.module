@@ -38,14 +38,11 @@ function recipe_help($section = '') {
   return $output;
 }
 
-/*
-** 'instructions' field is currently stored in the teaser and in its own field.
-*/
 function recipe_nodeapi(&$node, $op, $arg) {
   if ($node->type == "recipe") {
     switch ($op) {
       case 'validate':
-        $node->teaser = $node->instructions;
+        // $node->teaser = $node->instructions;
         $body = array($node->instructions, $node->source, $node->yield, $node->preptime, $node->notes);
         $body = array_merge($body, $node->ingredients);
         $node->body = '<p>'. implode('</p><p>', $body). '</p>';
@@ -144,7 +141,7 @@ function recipe_block($op = "list", $delta = 0) {
   }
   elseif ($op == 'view') {
     $block["subject"] = t("Newest Recipes");
-    $result = db_query_range("SELECT DISTINCT(n.nid), n.title, n.uid, u.name FROM {node} n LEFT JOIN {users} u ON n.uid = u.uid WHERE n.type='recipe' ORDER BY n.nid DESC", 0, 10);
+    $result = db_query_range(db_rewrite_sql("SELECT n.nid, n.title, n.uid, u.name FROM {node} n INNER JOIN {users} u ON n.uid = u.uid WHERE n.type='recipe' ORDER BY n.nid DESC"), 0, 10);
     $block["content"] = node_title_list($result);
     return $block;
   }
@@ -192,7 +189,8 @@ function recipe_directory_dhtml() {
 }
 
 function recipe_list() {
-  $result = pager_query("SELECT n.nid, n.title, n.uid, u.name, r.notes FROM {node} n INNER JOIN {users} u ON n.uid=u.uid INNER JOIN {recipe} r ON n.nid = r.nid WHERE n.type = 'recipe' ORDER BY n.created DESC", 20);
+  $result = pager_query(db_rewrite_sql("SELECT n.nid, n.title, n.uid, u.name, r.notes FROM {node} n INNER JOIN {users} u ON n.uid=u.uid INNER JOIN {recipe} r ON n.nid = r.nid WHERE n.type = 'recipe' ORDER BY n.created DESC"), 20);
+  
   $header = array(t("Title"), t("Author"), t('Notes'));
 
   while ($node = db_fetch_object($result)) {
