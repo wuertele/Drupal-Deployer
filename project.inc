@@ -14,6 +14,15 @@ function project_project_form(&$node, &$help, &$error) {
   else {
     $node->components = "Code\nDocumentation\nMiscellaneous\nUser interface";
   }
+  
+  /*
+  ** Allow the following fields to be initialized via $_GET
+  */
+  foreach (array("uri", "mail", "homepage", "issues", "mail_reminder", "mail_digest") as $field) {
+    if ($_GET["edit"][$field]) {
+      $node->$field = $_GET["edit"][$field];
+    }
+  }
 
   if (function_exists('taxonomy_node_form')) {
     $output = implode('', taxonomy_node_form('project', $node));
