@@ -33,7 +33,7 @@ Installation
 ------------
   1. Copy fckeditor folder to modules/.
   2. Download FCKeditor 2.0 from http://www.fckeditor.net and copy the
-     distribution files to modules/fckeditor/lib. (not required)
+     distribution files to modules/fckeditor/lib.
 
 
 
