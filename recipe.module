@@ -6,8 +6,8 @@ function recipe_perm() {
 }
 
 function recipe_load($node) {
-  $recipe = db_fetch_object(db_query("SELECT * FROM recipe WHERE nid = '$node->nid'"));
-  $ingredients = db_query("SELECT ingredient, weight FROM recipe_ingredients WHERE nid='$node->nid' ORDER BY weight");
+  $recipe = db_fetch_object(db_query("SELECT * FROM {recipe} WHERE nid = '$node->nid'"));
+  $ingredients = db_query("SELECT ingredient, weight FROM {recipe_ingredients} WHERE nid='$node->nid' ORDER BY weight");
   while ($ingredient = db_fetch_object($ingredients)) {
     $recipe->ingredients[$ingredient->weight]  = $ingredient->ingredient;
   }
@@ -54,27 +54,27 @@ function recipe_nodeapi(&$node, $op, $arg) {
       case "fields":
         break;
       case "insert":
-        db_query("INSERT INTO recipe (nid, source, yield, preptime, notes, instructions) VALUES ('$node->nid', '%s', '%s', '%s', '%s', '%s')", $node->source, $node->yield, $node->preptime, $node->notes, $node->instructions);
+        db_query("INSERT INTO {recipe} (nid, source, yield, preptime, notes, instructions) VALUES ('$node->nid', '%s', '%s', '%s', '%s', '%s')", $node->source, $node->yield, $node->preptime, $node->notes, $node->instructions);
         foreach ($node->ingredients as $weight => $ingredient) {
           if ($ingredient) {
-            db_query("INSERT INTO recipe_ingredients (nid, ingredient, weight) VALUES (%d, '%s', %d)", $node->nid, $ingredient, $weight);
+            db_query("INSERT INTO {recipe_ingredients} (nid, ingredient, weight) VALUES (%d, '%s', %d)", $node->nid, $ingredient, $weight);
           }
         }
         break;
       case "update":
-        db_query("UPDATE recipe SET source = '%s', yield = '%s', preptime = '%s', notes = '%s', instructions = '%s' WHERE nid = %d", $node->source, $node->yield, $node->preptime, $node->notes, $node->instructions, $node->nid);
-        db_query("DELETE FROM recipe_ingredients WHERE nid = '$node->nid'");
+        db_query("UPDATE {recipe} SET source = '%s', yield = '%s', preptime = '%s', notes = '%s', instructions = '%s' WHERE nid = %d", $node->source, $node->yield, $node->preptime, $node->notes, $node->instructions, $node->nid);
+        db_query("DELETE FROM {recipe_ingredients} WHERE nid = '$node->nid'");
         $i = 0;
         foreach ($node->ingredients as $ingredient) {
           if ($ingredient) {
-            db_query("INSERT INTO recipe_ingredients (nid, ingredient, weight) VALUES (%d, '%s', %d)", $node->nid, $ingredient, $i);
+            db_query("INSERT INTO {recipe_ingredients} (nid, ingredient, weight) VALUES (%d, '%s', %d)", $node->nid, $ingredient, $i);
             $i++;
           }
         }
         break;
       case "delete":
-        db_query("DELETE FROM recipe WHERE nid = %d", $node->nid);
-        db_query("DELETE FROM recipe_ingredients WHERE nid = %d", $node->nid);
+        db_query("DELETE FROM {recipe} WHERE nid = %d", $node->nid);
+        db_query("DELETE FROM {recipe_ingredients} WHERE nid = %d", $node->nid);
         break;
     }
   }
@@ -146,7 +146,7 @@ function recipe_block($op = "list", $delta = 0) {
   }
   else {
     $block["subject"] = t("Newest Recipes");
-    $result = db_query_range('SELECT DISTINCT(n.nid), n.title, n.uid, u.name FROM node n LEFT JOIN users u ON n.uid = u.uid '. node_access_join_sql(). ' WHERE '. node_access_where_sql(). ' AND n.type=\'recipe\' ORDER BY n.nid DESC', 0, 10);
+    $result = db_query_range('SELECT DISTINCT(n.nid), n.title, n.uid, u.name FROM {node} n LEFT JOIN {users} u ON n.uid = u.uid '. node_access_join_sql(). ' WHERE '. node_access_where_sql(). ' AND n.type=\'recipe\' ORDER BY n.nid DESC', 0, 10);
     $block["content"] = node_title_list($result);
     return $block;
   }
