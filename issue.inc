@@ -280,7 +280,7 @@ function project_issue_validate(&$node) {
   }
 
   // Validate the rest of the form when we have a project.
-  if (isset($node->title) && !$node->validated) {
+  if (!$node->validated) {
     if ($node->pid && $project = node_load(array('nid' => $node->pid))) {
       if ($releases = project_release_load($project)) {
         if (!$node->rid || !$releases[$node->rid]) {
@@ -291,12 +291,15 @@ function project_issue_validate(&$node) {
       if ($node->component && !in_array($node->component, $project->components)) {
         $node->component = 0;
       }
-      empty($node->component) and form_set_error($error['component'], t('You have to specify a valid component.'));
       empty($node->priority) and $node->priority = 2;
       empty($node->category) and $node->category = arg(4);
-      empty($node->category) and form_set_error('category', t('You have to specify a valid category.'));
       empty($node->state) and $node->state = 2;
-      empty($node->body) and !$node->comment and form_set_error('body', t('You have to specify a valid description.'));
+
+      if (isset($node->title)) {
+        empty($node->component) and form_set_error($error['component'], t('You have to specify a valid component.'));
+        empty($node->category) and form_set_error('category', t('You have to specify a valid category.'));
+        empty($node->body) and !$node->comment and form_set_error('body', t('You have to specify a valid description.'));
+      }
 
       $file = file_check_upload('file_issue');
       $node->file = file_save_upload($file);
