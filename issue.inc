@@ -74,7 +74,7 @@ function project_issue_form(&$node, &$help, &$error, &$param) {
     // Load the project and initialize some support arrays.
     $project = node_load(array("nid" => $node->pid, "type" => "project_project"));
     if ($releases = project_release_load($project)) {
-      $releases = array(t("<none>")) + project_release_load($project);
+      $releases = array(t("<none>")) + $releases;
     }
     if ($project->components) {
       $components = array(t("<none>"));
