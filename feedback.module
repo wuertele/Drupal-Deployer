@@ -30,14 +30,14 @@ function feedback_help ($section = 'admin/help#feedback')
 
 function feedback_perm()
 {
-  return array ("access feedback");
+  return array ('can send feedback');
 }
 
 function feedback_menu($may_cache) {
   global $user;
   $items = array();
 
-  $access = user_access('access feedback');
+  $access = user_access('can send feedback');
   $title  = t(variable_get("feedback_nav_link", "feedback"));
 
   if ($may_cache) {
@@ -58,6 +58,10 @@ function feedback_settings()
   $output .= form_textfield(t("Navigation link text"), "feedback_nav_link",
     variable_get("feedback_nav_link", "feedback"), 80, 300,
     t("The text that will be shown in the navigation link"));
+    
+  $output .= form_textfield(t("Feedback Page Header"), "feedback_pageheader",
+   variable_get("feedback_pageheader", "Use this form to send us feedback"), 80, 300,
+   t("The page header text that will be shown at the top of the feedback page"));
 
   $output .= form_textfield(t("Default Email Address"), "feedback_email",
     variable_get("feedback_email", ""), 80, 300,
@@ -71,7 +75,17 @@ function feedback_settings()
     variable_get("feedback_instructions", "Enter your message below: "), 60, 10, 
     t("The instructions that will be displayed for the user on how to fill the form"));
 
-  $output .= "<p>Fields to include on the form:</p>";
+  $output .= "<br>";
+    
+  $output .= form_textfield (t("Result Message - Success"), "feedback_rmsg_success",
+    variable_get("feedback_rmsg_success", "Thank you for your message."), 80, 80, 
+    t("The message that will be printed upon successfully completing the feedback request"));
+    
+   $output .= form_textfield (t("Result Message - Failure"), "feedback_rmsg_failure",
+    variable_get("feedback_rmsg_failure", "There are errors in your form."), 80, 80, 
+    t("The message that will be printed upon encountering an error in the feedback request"));
+
+  $output .= "<br><p><b>Fields to include on the form:</b></p>";
 
   $output .= form_checkbox (t("Sender Email Address"), "feedback_field_email", 1,
     variable_get("feedback_field_email", "1") );
@@ -91,11 +105,11 @@ function feedback_settings()
   $output .= form_checkbox (t("Message Body"), "feedback_field_body", 1,
     variable_get("feedback_field_body", "1") );
 
-  $output .= "<p>Miscellaneous Settings:</p>";
+  $output .= "<br><p><b>Miscellaneous Settings:</b></p>";
 
   $output .= form_checkbox (t("Validate Sender's Email Address"),
-  	"feedback_validate_sender_address", 1,
-    	variable_get("feedback_validate_sender_address", "1") );
+  	"feedback_validate_sender_address", 0,
+    	variable_get("feedback_validate_sender_address", "0") );
 
   $output .= form_checkbox (t("Log all Send attempts"), "feedback_logging", 1,
     variable_get("feedback_logging", "1") );
@@ -119,12 +133,12 @@ function feedback_page()
     if ( $errmsg == "")
   	{
   	feedback_send_email();
-        drupal_set_message(t("Thank you for your message."));
+        drupal_set_message(t(variable_get("feedback_rmsg_success", "")));
         print theme("page", $output);
 	}
     else
         {
-        drupal_set_message(t("There are errors in your form."));
+        drupal_set_message(t(variable_get("feedback_rmsg_failure", "")));
         print theme("page", $errmsg );
 	}
     }
@@ -185,7 +199,8 @@ function feedback_display_form ()
 	$edit['form_field_email'] = $user->mail ;
 	}
 
-  $title  .= t("Use this form to send us feedback");
+  $title .= "<br><p>" . variable_get("feedback_pageheader", "") . "</p><br>";
+
 
   $instructions = variable_get("feedback_instructions", "");
 
