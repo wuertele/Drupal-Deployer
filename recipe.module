@@ -2,7 +2,7 @@
 // $Id$
 
 function recipe_perm() {
-  return array ("access recipes", "create recipes");
+  return array ("create recipes");
 }
 
 function recipe_load($node) {
@@ -124,6 +124,14 @@ function recipe_menu($may_cache) {
   return $items ? $items : array();
 }
 
+function recipe_access($op, $node) {
+  global $user;
+
+  if ($op == 'create') {
+    return user_access('create recipes');
+  }
+}
+
 
 function recipe_block($op = "list", $delta = 0) {
   if($op == "list") {
@@ -131,12 +139,10 @@ function recipe_block($op = "list", $delta = 0) {
     return $blocks;
   }
   else {
-    if (user_access("access recipes")) {
-      $block["subject"] = t("Newest Recipes");
-      $result = db_query_range("SELECT n.nid, n.title, n.uid, u.name FROM node n LEFT JOIN users u ON n.uid = u.uid WHERE n.status = 1 AND n.type='recipe' ORDER BY n.nid DESC", 0, 10);
-      $block["content"] = theme("node_title_list", $result);
-      return $block;
-    }
+    $block["subject"] = t("Newest Recipes");
+    $result = db_query_range("SELECT n.nid, n.title, n.uid, u.name FROM node n LEFT JOIN users u ON n.uid = u.uid WHERE n.status = 1 AND n.type='recipe' ORDER BY n.nid DESC", 0, 10);
+    $block["content"] = theme("node_title_list", $result);
+    return $block;
   }
 }
 
