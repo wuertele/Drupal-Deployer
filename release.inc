@@ -36,8 +36,6 @@ function project_release_cron() {
 }
 
 function project_release_page($node) {
-  drupal_set_html_head("<style type=\"text/css\">\n@import url(modules/project/project.css);\n</style>");
-
   switch ($_POST['op'] ? $_POST['op'] : arg(3)) {
     case 'add':
       if (node_access($node, 'update')) {
