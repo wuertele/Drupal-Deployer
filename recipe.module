@@ -33,9 +33,9 @@ function recipe_help($section = '') {
   switch ($section) {
      case 'admin/help#recipe':
       break;
-    case 'admin/system/modules/recipe':
-    case 'admin/system/modules#description':
-      $output .= t("Collect and display recipes");
+    case 'admin/modules/recipe':
+    case 'admin/modules#description':
+      $output = t("Collect and display recipes");
       break;
     case 'node/add#recipe':
       $output = t("Share your favorite recipes with your fellow cooks.");
@@ -121,13 +121,17 @@ function recipe_form(&$node, &$help, &$error) {
   
 }
 
+function recipe_menu() {
+  global $user;
+  $items = array();
+  $items[] = array('path' => 'node/add/recipe', 'title' => t('recipe'), 'access' => user_access('create recipes'));
+  $items[] = array('path' => 'recipe', 'title' => t('recipes'), 'callback' => 'recipe_page', 'access' => user_access('access content'), 'type' => MENU_SUGGESTED_ITEM);
+  return $items;
+}
+
 function recipe_link($type) {
 
   if ($type == "system") {
-    if (user_access("create recipes")) {
-      menu("node/add/recipe", t("recipe"), "node_page", 0);
-      menu("recipe", t("recipe"), "recipe_page", 0, 1);
-    }
     drupal_set_html_head(recipe_html_head());
   }
 
@@ -214,7 +218,7 @@ function recipe_list() {
 
   while ($node = db_fetch_object($result)) {
       $rows[] = array(
-        array("data" => l($node->title, "node/view/$node->nid")),
+        array("data" => l($node->title, "node/$node->nid")),
         array("data" => format_name($node)),
         array("data" => ($num = comment_num_all($node->nid)) ? $num : "&nbsp;")
       );
