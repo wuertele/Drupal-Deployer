@@ -4,16 +4,6 @@ function recipe_perm() {
   return array ("access recipes", "create recipes");
 }
 
-function recipe_access($op, $node) {
-  if ($op == "view" && user_access("access recipes")) {
-    return $node->status;
-  }
-
-  if ($op == "create") {
-    return user_access("create recipes");
-  }
-}
-
 function recipe_load($node) {
   $recipe = db_fetch_object(db_query("SELECT * FROM recipe WHERE nid = '$node->nid'"));
   $ingredients = db_query("SELECT ingredient, weight FROM recipe_ingredients WHERE nid='$node->nid' ORDER BY weight");
@@ -89,7 +79,7 @@ function recipe_nodeapi(&$node, $op, $arg) {
   }
 }
 
-function recipe_form(&$node, &$help, &$error) {
+function recipe_form($node) {
   $op = arg(1);
   $edit = $_POST["edit"];
   
@@ -103,7 +93,7 @@ function recipe_form(&$node, &$help, &$error) {
     $node->numingredients = 6;    
   }
   $output .= form_hidden("numingredients", $node->numingredients);
-  $output .= form_textfield(t("Servings"), "yield", $node->yield, 60, 127, $error["yield"] ? $error["yield"] : t("Describe how many servings this recipe will yield. Feel free to be creative."));
+  $output .= form_textfield(t("Servings"), "yield", $node->yield, 60, 127, t("Describe how many servings this recipe will yield. Feel free to be creative."));
   $output .= form_select(t("Preparation time"), "preptime", $node->preptime, array (15 => "15 minutes", 30 => "30 minutes", 45 => "45 minutes", 60 => "1 hour", 90 => "1 1/2 hours", 120 => "2 hours", 150 => "2 1/2 hours", 180 => "3 hours", 210 => "3 1/2 hours", 240 => "4 hours", 300 => "5 hours", 360 => "6 hours"), t("How long does this recipe take to prepare (i.e. elapsed time)"));
   $output .= form_item(t("Example Ingredients"), t("1 bunch kale or Swiss chard, stems and ribs removed, leaves sliced"). "<br>". t("3 white potatoes - peeled and diced"));
   $output .= form_item(t("Recipe Ingredients"), "");
@@ -111,34 +101,23 @@ function recipe_form(&$node, &$help, &$error) {
     $output .= form_textfield("", "ingredients][$i", $node->ingredients[$i], 60, 127, "");
   }
   $output .= form_checkbox(t("add more ingredients"), "recipe_more_ingredients", 1, 0, t("If you need to add more ingredients, check this box and click "). "<b>". t("Preview"). "</b>"); 
-  $output .= form_textarea(t("Cooking Instructions"), "instructions", $node->instructions, 60, 18, $error["instructions"] ? $error["instructions"] : t("Include a brief description of your recipe at the top of your instructions."));
+  $output .= form_textarea(t("Cooking Instructions"), "instructions", $node->instructions, 60, 18, t("Include a brief description of your recipe at the top of your instructions."));
   if (function_exists("taxonomy_node_form")) {
     $output .= implode("", taxonomy_node_form("recipe", $node));
   }
-  $output .= form_textfield(t("Source"), "source", $node->source, 60, 127, $error["source"] ? $error["source"] : t("Optional. Does anyone else deserve credit for this recipe?"));
-  $output .= form_textarea(t("Additional Notes"), "notes", $node->notes, 60, 5, $error["notes"] ? $error["notes"] : t("Optional. Describe a great dining experience relating to this recipe, or note which wine or other dishes complement this recipe"));  
+  $output .= form_textfield(t("Source"), "source", $node->source, 60, 127, t("Optional. Does anyone else deserve credit for this recipe?"));
+  $output .= form_textarea(t("Additional Notes"), "notes", $node->notes, 60, 5, t("Optional. Describe a great dining experience relating to this recipe, or note which wine or other dishes complement this recipe"));  
   return $output;
   
 }
 
 function recipe_menu() {
-  global $user;
+  drupal_set_html_head(recipe_html_head());
+  
   $items = array();
   $items[] = array('path' => 'node/add/recipe', 'title' => t('recipe'), 'access' => user_access('create recipes'));
   $items[] = array('path' => 'recipe', 'title' => t('recipes'), 'callback' => 'recipe_page', 'access' => user_access('access content'), 'type' => MENU_SUGGESTED_ITEM);
   return $items;
-}
-
-function recipe_link($type) {
-
-  if ($type == "system") {
-    drupal_set_html_head(recipe_html_head());
-  }
-
-  if ($type == "page" && user_access("access recipes")) {
-    $links[] = l(t("recipes"), "recipe", array ("title" => t("View the collection of recipes.")));
-  }
-  return $links ? $links : array();  
 }
 
 
@@ -165,24 +144,19 @@ function recipe_settings() {
 function recipe_page() {
   $op = arg(1);
 
-  if (user_access("access recipes")) {
-    if ($op == "feed") {
-      recipe_feed(); // not yet implemented    
-      return;
-    }
-    elseif ($op == "css") {
-      print recipe_css();
-    }
-    else {
-      $boxes = recipe_overview();
-      foreach ($boxes as $box) {
-        $output .= theme("box", $box["subject"], $box["content"]);
-      }
-      print theme("page", $output);
-    }
+  if ($op == "feed") {
+    recipe_feed(); // not yet implemented    
+    return;
+  }
+  elseif ($op == "css") {
+    print recipe_css();
   }
   else {
-    print theme("page", message_access());
+    $boxes = recipe_overview();
+    foreach ($boxes as $box) {
+      $output .= theme("box", $box["subject"], $box["content"]);
+    }
+    print theme("page", $output);
   }  
 }
 
