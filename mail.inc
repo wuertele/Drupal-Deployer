@@ -381,6 +381,7 @@ function project_mail_reminder() {
 }
 
 function project_mail_digest() {
+  $body = array();
   $header = array(
     'Date: '. date('r'),
     'X-Mailer: Drupal Project module (http://drupal.org/project/project)',
