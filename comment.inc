@@ -142,6 +142,7 @@ function project_comment_view($node, $main = 0) {
   $links = array();
   $rows = array();
   $fields = array(
+    "title" => "Title",
     "pid" => "Project",
     "rid" => "Version",
     "component" => "Component",
@@ -153,7 +154,6 @@ function project_comment_view($node, $main = 0) {
 
   $result = db_query("SELECT p.*, u.name FROM {project_comments} p LEFT JOIN {users} u USING (uid) WHERE p.nid = %d ORDER BY p.created ASC", $node->nid);
   if (db_num_rows($result)) {
-    $output = "<div class=\"project\">";
     while ($comment = db_fetch_object($result)) {
       $data = unserialize($comment->data);
       $summary = array();
@@ -167,23 +167,29 @@ function project_comment_view($node, $main = 0) {
         }
       }
 
-      $rows[] = array(array("class" => "header", "data" => t("Comment submitted by %user on %date", array("%user" => format_name($comment), "%date" => format_date($comment->created))) . (node_is_new($node->nid, $comment->changed) ? theme_mark() : "")));
-      if ($summary) {
-        $rows[] = array(array("class" => "summary", "data" => table(NULL, $summary)));
-      }
-      $rows[] = array(array("class" => "content", "data" => "<p>". check_output($comment->body) ."</p>"));
-      if ($comment->fid) {
-        $rows[] = array(l(t("download attachment"), "project/comments/download/$comment->cid"));
+      if ($summary || $comment->body) {
+        $rows[] = array(
+          array("class" => "header", "data" => t("%count submitted by %user on %date", array("%count" => "<a name=\"comment". ++$i. "\" href=\"". url("node/view/$node->nid") ."#comment$i\">#$i</a>", "%user" => format_name($comment), "%date" => format_date($comment->created))) . (node_is_new($node->nid, $comment->changed) ? theme_mark() : "")));
+        if ($summary) {
+          $rows[] = array(array("class" => "summary", "data" => table(NULL, $summary)));
+        }
+        if ($comment->body) {
+          $rows[] = array(array("class" => "content", "data" => "<p>". check_output($comment->body) ."</p>"));
+        }
+        if ($comment->fid) {
+          $rows[] = array(l(t("download attachment"), "project/comments/download/$comment->cid"));
+        }
       }
     }
-    $output .= "<p>". table(NULL, $rows) ."</p>";
+    $output = "<div class=\"project\">";
+    $output .= table(NULL, $rows);
     $output .= "</div>";
 
     if (user_access("maintain project issues")) {
-      $links[] = "<br /><p>". l(t("update issue"), "project/comments/add/$node->nid") ."</p>";
+      $links[] = "<p>". l(t("update issue"), "project/comments/add/$node->nid") ."</p>";
     }
     $output .=  theme("links", $links);
-    theme("box", "", $output);
+    theme("box", t("Updates"), $output);
   }
 }
 
