@@ -53,23 +53,43 @@ class AmazonSearchEngine {
         }
         xml_parser_free($this->_parser);
     }
-    function searchTerm($term, $mode = 'books') {
+    function searchTerm($term, $mode = 'books', $page = 1) {
         $url = "http://{$this->server}/onca/xml?t={$this->associates_id}&KeywordSearch=$term&mode=$mode";
-        $url .= "&f=xml&type={$this->type}&dev-t={$this->dev_token}&v=1";
+        $url .= "&f=xml&type={$this->type}&dev-t={$this->dev_token}&v=1.0&page=$page";
         $this->doSearch($url);
     }
-    function searchISBN($isbn) {
-        $url = "http://{$this->server}/onca/xml?v=1.0&t={$this->associates_id}&dev-t={$this->dev_token}&AsinSearch=$isbn&type={$this->type}&f=xml";
+    function searchISBN($isbn, $page = 1) {
+        $url = "http://{$this->server}/onca/xml?v=1.0&t={$this->associates_id}&dev-t={$this->dev_token}&AsinSearch=$isbn&type={$this->type}&f=xml&page=$page";
         $this->doSearch($url);
     }
-    function searchAuthor($author) {
-        $url = "http://{$this->server}/onca/xml?v=1.0&t={$this->associates_id}&dev-t={$this->dev_token}&AuthorSearch=$author&mode=books&type={$this->type}&f=xml";
+    function searchAuthor($author, $page = 1) {
+        $url = "http://{$this->server}/onca/xml?v=1.0&t={$this->associates_id}&dev-t={$this->dev_token}&AuthorSearch=$author&mode=books&type={$this->type}&f=xml&page=$page";
         $this->doSearch($url);
     }
-    function searchRelated($asin) {
-        $url = "http://{$this->server}/onca/xml?v=1.0&t={$this->associates_id}&dev-t={$this->dev_token}&SimilaritySearch=$asin&type={$this->type}&f=xml";
+    function searchRelated($asin, $page = 1) {
+        $url = "http://{$this->server}/onca/xml?v=1.0&t={$this->associates_id}&dev-t={$this->dev_token}&SimilaritySearch=" . strtoupper($asin) . "&type={$this->type}&f=xml&page=$page";
         $this->doSearch($url);
     }
+    /* extra functions */
+    function browseNode($browsenode, $mode = 'books', $page = 1) {
+        $url = "http://{$this->server}/onca/xml?v=1.0&t={$this->associates_id}&dev-t={$this->dev_token}&mode=$mode&BrowseNodeSearch=$browsenode&type={$this->type}&f=xml&page=$page";
+        $this->doSearch($url);
+    }
+    function listMania($listid, $page = 1) {
+        $url = "http://{$this->server}/onca/xml?v=1.0&t={$this->associates_id}&dev-t={$this->dev_token}&ListManiaSearch=$listid&type={$this->type}&f=xml&page=$page";
+        $this->doSearch($url);
+    }
+    function searchAsin($asin, $page = 1) {
+        $asins = is_array($asin)?strtoupper(implode(",", $asin)):strtoupper($asin); 
+        $url = "http://{$this->server}/onca/xml?v=1.0&t={$this->associates_id}&dev-t={$this->dev_token}&AsinSearch=$asins&type={$this->type}&f=xml&page=$page";
+        $this->doSearch($url);
+    }
+    function searchUPC($upc, $mode = 'music', $page = 1) {
+        $upcs = is_array($upc)?implode(",", $upc):$upc; 
+        $url = "http://{$this->server}/onca/xml?v=1.0&t={$this->associates_id}&dev-t={$this->dev_token}&UpcSearch=$upcs&type={$this->type}&f=xml&page=$page";
+        $this->doSearch($url);
+    }
+    /* end special functions */
     function tag_open($parser, $tag, $attributes)
     { 
         if ($tag == 'Details') {
