@@ -181,10 +181,10 @@ function project_mail_notify($node) {
   $project = node_load(array("nid" => $node->pid, "type" => "project_project"));
   $fields = array(
     "pid" => t("Project"),
-    "category" => t("Category"),
-    "component" => t("Component"),
-    "priority" => t("Priority"),
     "rid" => t("Version"),
+    "component" => t("Component"),
+    "category" => t("Category"),
+    "priority" => t("Priority"),
     "assigned" => t("Assigned to"),
     "name" => t("Reported by"),
     "updator" => t("Updated by"),
