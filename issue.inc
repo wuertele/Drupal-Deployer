@@ -319,7 +319,7 @@ function project_issue_query($project, $query) {
   );
 
   $output = "<div class=\"project\">";
-  $output .= form(table(NULL, $rows), "post", url($project->uri ? "project/$project->uri/issues" : "project/issues"));
+  $output .= form(theme("table", NULL, $rows), "post", url($project->uri ? "project/$project->uri/issues" : "project/issues"));
   $output .= "</div>";
 
   return $output;
