@@ -2,12 +2,10 @@
 
 // $Id$
 
-function feedback_help ($section = 'admin/help#feedback')
-{
+function feedback_help ($section = 'admin/help#feedback') {
   $output = '';
 
-  switch ($section) {
-
+  switch($section) {
     case 'admin/help#feedback':
       $output .= t("
       <p>Users with the correct <a href=\"%permissions\">permissions</a> can send feedback
@@ -28,8 +26,7 @@ function feedback_help ($section = 'admin/help#feedback')
   return $output;
 }
 
-function feedback_perm()
-{
+function feedback_perm() {
   return array ('can send feedback');
 }
 
@@ -38,39 +35,36 @@ function feedback_menu($may_cache) {
   $items = array();
 
   $access = user_access('can send feedback');
-  $title  = t(variable_get("feedback_nav_link", "feedback"));
+  $title  = variable_get("feedback_nav_link", "feedback");
 
 
   if ($may_cache) {
     $items[] = array(
-	'path'     => 'feedback',
-        'title'    => $title,
-        'callback' => 'feedback_page',
-	'access'   => $access,
-        'weight'   => 0,
-         'type' => MENU_CALLBACK);
+    'path'     => 'feedback',
+    'title'    => $title,
+    'callback' => 'feedback_page',
+    'access'   => $access,
+    'weight'   => 0,
+    'type'     => MENU_CALLBACK);
  }
 
   return $items;
 }
 
 
-function feedback_link($type, $node = 0, $main = 0)
-{
+function feedback_link($type, $node = 0, $main = 0) {
   global $user;
 
   $links = array();
 
-  if ($type == 'page' && user_access('can send feedback'))
-  	{
-	$links[] = l(t('feedback'), 'feedback');
-	}
+  if ($type == 'page' && user_access('can send feedback')) {
+  $links[] = l(t('feedback'), 'feedback');
+  }
 
   return $links;
 }
 
-function feedback_settings()
-{
+function feedback_settings() {
   $output .= form_textfield(t("Navigation link text"), "feedback_nav_link",
     variable_get("feedback_nav_link", "feedback"), 80, 300,
     t("The text that will be shown in the navigation link"));
@@ -91,7 +85,7 @@ function feedback_settings()
     variable_get("feedback_instructions", "Enter your message below: "), 60, 10, 
     t("The instructions that will be displayed for the user on how to fill the form"));
 
-  $output .= "<br>";
+  $output .= "<br/>";
     
   $output .= form_textfield (t("Result Message - Success"), "feedback_rmsg_success",
     variable_get("feedback_rmsg_success", "Thank you for your message."), 80, 80, 
@@ -101,7 +95,7 @@ function feedback_settings()
     variable_get("feedback_rmsg_failure", "There are errors in your form."), 80, 80, 
     t("The message that will be printed upon encountering an error in the feedback request"));
 
-  $output .= "<br><p><b>Fields to include on the form:</b></p>";
+  $output .= "<br/><p><b>" . t("Fields to include on the form:") . "</b></p>";
 
   $output .= form_checkbox (t("Sender Email Address"), "feedback_field_email", 1,
     variable_get("feedback_field_email", "1") );
@@ -121,11 +115,11 @@ function feedback_settings()
   $output .= form_checkbox (t("Message Body"), "feedback_field_body", 1,
     variable_get("feedback_field_body", "1") );
 
-  $output .= "<br><p><b>Miscellaneous Settings:</b></p>";
+  $output .= "<br/><p><b>" . t("Miscellaneous Settings:") . "</b></p>";
 
   $output .= form_checkbox (t("Validate Sender's Email Address"),
-  	"feedback_validate_sender_address", 1,
-    	variable_get("feedback_validate_sender_address", "0") );
+    "feedback_validate_sender_address", 1,
+      variable_get("feedback_validate_sender_address", "0") );
 
   $output .= form_checkbox (t("Log all feedback attempts to watchdog"), "feedback_logging", 1,
     variable_get("feedback_logging", "1") );
@@ -133,8 +127,7 @@ function feedback_settings()
   return $output;
 }
 
-function feedback_page()
-{
+function feedback_page() {
   $edit = $_POST["edit"];
   $op = arg(1);
   
@@ -142,35 +135,29 @@ function feedback_page()
   $breadcrumb = array(array('path' => 'feedback'));
   menu_set_location($breadcrumb);
 
-  if ($edit)
-    {
-    if ( variable_get("feedback_logging", "1") )
-    	{
-    	feedback_watchdog_log();
-	}
+  if ($edit) {
+    if ( variable_get("feedback_logging", "1") ) {
+      feedback_watchdog_log();
+    }
 
     $errmsg = feedback_validate_data();
-    if ( $errmsg == "")
-  	{
-  	feedback_send_email();
-        drupal_set_message(t(variable_get("feedback_rmsg_success", "")));
-        print theme("page", $output);
-	}
-    else
-        {
-        drupal_set_message(t(variable_get("feedback_rmsg_failure", "")));
-        print theme("page", $errmsg );
-	}
+    if ($errmsg) {
+      drupal_set_message(variable_get("feedback_rmsg_failure", "There are errors in your form."));
+      print theme("page", $errmsg );
     }
-  else
-    {
+    else {
+      feedback_send_email();
+      drupal_set_message(variable_get("feedback_rmsg_success", "Thank you for your message"));
+      print theme("page", "");
+    }
+  }
+  else {
     $form = feedback_display_form () ;
     print theme("page", $form);
     }
 }
 
-function feedback_send_email()
-{
+function feedback_send_email() {
   $edit = $_POST["edit"];
 
   $subject_prefix = variable_get("feedback_subject_prefix", "");
@@ -178,7 +165,7 @@ function feedback_send_email()
   $subject = $subject_prefix . " " . $edit["form_field_subject"] ;
 
   $from_email = $edit["form_field_email"] ? $edit["form_field_email"] : 
-  	variable_get("site_mail", ini_get("sendmail_from"));
+    variable_get("site_mail", ini_get("sendmail_from"));
 
   $to = variable_get("feedback_email", "");
 
@@ -186,22 +173,18 @@ function feedback_send_email()
 
   $headers = feedback_custom_headers();
 
-  if ( $to )
-     {
+  if ($to) {
      user_mail($to, $subject, $body, $headers);
      $rc = true;
      }
-  else
-     {
+  else {
      $rc = false;
      }
 
   return $rc;
 }
 
-function feedback_display_form ()
-{
-
+function feedback_display_form () {
   global $user;
 
   $edit = $_POST["edit"];
@@ -209,53 +192,49 @@ function feedback_display_form ()
   $edit['form_field_name']  = "";
   $edit['form_field_email'] = "";
 
-  if ( $user->name )
-  	{
-	$edit['form_field_name'] = $user->name ;
-	}
+  if ($user->name) {
+  $edit['form_field_name'] = $user->name ;
+  }
 
-  if ( $user->mail )
-  	{
-	$edit['form_field_email'] = $user->mail ;
-	}
+  if ($user->mail) {
+  $edit['form_field_email'] = $user->mail ;
+  }
 
-  $title .= "<br><p>" . variable_get("feedback_pageheader", "") . "</p><br>";
+  $title .= "<br/><p>" . variable_get("feedback_pageheader", "") . "</p><br/>";
 
 
   $instructions = variable_get("feedback_instructions", "");
 
-  if ( $instructions )
-  	{
-  	$message .= t($instructions);
-	}
-  else
-  	{
-  	$message .= t("Enter your message below:");
-	}
-  	
+  if ($instructions) {
+    $message .= $instructions;
+  }
+  else {
+    $message .= t("Enter your message below:");
+  }
+    
   if ( variable_get("feedback_field_name", "") )
-  	$form .= form_textfield (t("Your Full Name"), "form_field_name", 
-		$edit['form_field_name'],  60, 64);
+    $form .= form_textfield (t("Your Full Name"), "form_field_name", 
+    $edit['form_field_name'],  60, 64);
 
   if ( variable_get("feedback_field_email", "") )
-  	$form .= form_textfield (t("Your E-Mail Address"), "form_field_email",
-		$edit['form_field_email'], 60, 64);
+    $form .= form_textfield (t("Your E-Mail Address"), "form_field_email",
+    $edit['form_field_email'], 60, 64);
 
   if ( variable_get("feedback_field_postal", "") ) 
-  	$form .= form_textfield (t("Your Postal Address"), "form_field_postal",
-		$edit['form_field_postal'], 60, 64);
+    $form .= form_textfield (t("Your Postal Address"), "form_field_postal",
+    $edit['form_field_postal'], 60, 64);
 
   if ( variable_get("feedback_field_phone", "") ) 
-  	$form .= form_textfield (t("Your Phone Number"), "form_field_phone",
-		$edit['form_field_phone'], 60, 64);
+    $form .= form_textfield (t("Your Phone Number"), "form_field_phone",
+    $edit['form_field_phone'], 60, 64);
 
   if ( variable_get("feedback_field_subject", "") ) 
-  	$form .= form_textfield (t("Subject"), "form_field_subject",
-		$edit['form_field_subject'], 60, 64);
+    $form .= form_textfield (t("Subject"), "form_field_subject",
+    $edit['form_field_subject'], 60, 64);
 
   if ( variable_get("feedback_field_body", "") ) 
-  	$form .= form_textarea  (t("Message"), "form_field_body", 
-		$edit['form_field_body'], 60, 15);
+    $form .= form_textarea  (t("Message"), "form_field_body", 
+    $edit['form_field_body'], 60, 15);
 
   $form .= form_hidden ("form_field_referer", $_SERVER[HTTP_REFERER]);
 
@@ -266,8 +245,7 @@ function feedback_display_form ()
   return $output;
 }
 
-function feedback_watchdog_log()
-{
+function feedback_watchdog_log() {
   $edit = $_POST["edit"];
 
   $name  = $edit["form_field_name"] ;
@@ -279,8 +257,7 @@ function feedback_watchdog_log()
   watchdog ( "user", $message )  ;
 }
 
-function feedback_validate_data( )
-{
+function feedback_validate_data() {
   global $user;
   $edit = $_POST["edit"];
 
@@ -293,82 +270,66 @@ function feedback_validate_data( )
 
   $error_msg = "";
 
-  if (empty ($email) && variable_get ("feedback_field_email", "") )
-     {
-     $error_msg .= t("Error: E-Mail address is required<br>");
+  if (empty ($email) && variable_get ("feedback_field_email", "") ) {
+     $error_msg .= t("Error: E-Mail address is required") . "<br/>";
      }
-  else
-     {
+  else {
      $smtp_err = feedback_validate_email ($email);
-     if ( $smtp_err != "" )
-        {
-        $error_msg .= t("Error: E-Mail address error:<br> SMTP Info: ") . $smtp_err . "<br>";
+     if ( $smtp_err != "" ) {
+        $error_msg .= t("Error: E-Mail address error:") . "<br/>" . t("SMTP Info:") . $smtp_err . "<br/>";
         }
      }
 
-  if (empty($name) && variable_get("feedback_field_name", "") )
-    {
-    $error_msg .= t("Error: Full name is required<br>");
+  if (empty($name) && variable_get("feedback_field_name", "") ) {
+    $error_msg .= t("Error: Full name is required") . "<br/>";
     }
 
-  if (empty($body) && variable_get ("feedback_field_body", "") )
-    {
-    $error_msg .= t("Error: Message Body is required<br>");
+  if (empty($body) && variable_get ("feedback_field_body", "") ) {
+    $error_msg .= t("Error: Message Body is required") . "<br/>";
     }
 
-  if (empty($subj) && variable_get ("feedback_field_subject", "") )
-    {
-    $error_msg .= t("Error: Subject is required<br>");
+  if (empty($subj) && variable_get ("feedback_field_subject", "") ) {
+    $error_msg .= t("Error: Subject is required") . "<br/>";
     }
 
-  if (empty($postal) && variable_get ("feedback_field_postal", "") )
-    {
-    $error_msg .= t("Error: Postal is required<br>");
+  if (empty($postal) && variable_get ("feedback_field_postal", "") ) {
+    $error_msg .= t("Error: Postal is required") . "<br/>";
     }
 
-  if (empty($phone) && variable_get ("feedback_field_phone", "") )
-    {
-    $error_msg .= t("Error: Phone is required<br>");
+  if (empty($phone) && variable_get ("feedback_field_phone", "") ) {
+    $error_msg .= t("Error: Phone is required") . "<br/>";
     }
 
- if (empty($error_msg))
-    {
+ if (empty($error_msg)) {
     return "";
     }
- else
-    {
-    $error_msg = t("The form could not be processed due to the following errors:<br><br>") .
-    	$error_msg;
+ else {
+    $error_msg = t("The form could not be processed due to the following errors:") .
+      "<br/>" . $error_msg;
   
     return $error_msg;
     }
 }
 
-function feedback_validate_email ($email)
-{
+function feedback_validate_email($email) {
 
- if (valid_email_address($email))
-    {
+ if (valid_email_address($email)) {
     // It looks like a valid email address
-    if ( variable_get ("feedback_validate_sender_address", "") )
-       {
+    if ( variable_get ("feedback_validate_sender_address", "") ) {
        $rc = feedback_try_to_feedback_address ( $email );
        }
-    else
-       {
+    else {
        $rc = "";
        }
     }
- else
-    {
+ else {
     $rc = t("Invalid E-mail address structure");
     }
 
  return $rc;    
 }
 
-function feedback_try_to_feedback_address ( $email )
-{
+function feedback_try_to_feedback_address($email) {
 
  // This function is based on one that was written by
  // Jon S. Stevens jon AT clearink.com
@@ -385,83 +346,68 @@ $arr = explode ( ".", $domain );
 $count = count ( $arr );
 $tld = $arr[$count - 2] . "." . $arr[$count - 1];
 
-if ( !$tld )
-   {
+if ( !$tld ) {
    $rc = "Error: Invalid domain part in e-mail";
    return $rc;
    }
 
-if ( checkdnsrr ( $tld, "MX" ) )
-    {
-    if ( getmxrr ( $tld, $mxhosts, $weight ) )
-       {
-       for ( $i = 0; $i < count ( $mxhosts ); $i++ )
-          {
-          $fp = fsockopen ( $mxhosts[$i], 25 );
-          if ( $fp )
-             {
-                $s = 0;
-                $c = 0;
-                $out = "";
-                set_socket_blocking ( $fp, false );
-                do
-                   {
-                   $out = fgets ( $fp, 2500 );
-                   if ( ereg ( "^220", $out ) )
-                      {
-                      $s = 0;
-                      $out = "";
-                      $c++;
-                      }
-                   else
-		   if ( ( $c > 0 ) && ( $out == "" ) )
-                      {
-		      break;
-		      }
-                   else
-                      {
-		      $s++;
-		      }
-
-                   if ( $s == 9999 )
-		      {
-		      break;
-		      }
-                   } while ( $out == "" );
-
-                set_socket_blocking ( $fp, true );
-
-                fputs ( $fp, "HELO $server_name\n" );
-                $output = fgets ( $fp, 2000 );
-                fputs ( $fp, "MAIL FROM: <info@" . $tld . ">\n" );
-                $output = fgets ( $fp, 2000 );
-                fputs ( $fp, "RCPT TO: <$email>\n" );            
-                $output = fgets ( $fp, 2000 );
-                if ( ereg ( "^250", $output ) )
-		   {
-                   $rc = "";
-                   }
-		else
-		   {
-                   $rc = $output;
-                   }
-
-                fputs ( $fp, "QUIT\n" );
-                fclose( $fp );
-
-                if ( $rc == "" )
-                   {
-		   break;
-		   }
-             }
+if ( checkdnsrr ( $tld, "MX" ) ) {
+  if ( getmxrr ( $tld, $mxhosts, $weight ) ) {
+    for ( $i = 0; $i < count ( $mxhosts ); $i++ ) {
+      $fp = fsockopen ( $mxhosts[$i], 25 );
+      if ( $fp ) {
+        $s = 0;
+        $c = 0;
+        $out = "";
+        set_socket_blocking ( $fp, false );
+        do {
+          $out = fgets ( $fp, 2500 );
+          if ( ereg ( "^220", $out ) ) {
+            $s = 0;
+            $out = "";
+            $c++;
           }
-       }
+          else
+          if ( ( $c > 0 ) && ( $out == "" ) ) {
+            break;
+          }
+          else {
+            $s++;
+          }
+          if ( $s == 9999 ) {
+            break;
+          }
+        } while ( $out == "" );
+
+        set_socket_blocking ( $fp, true );
+
+        fputs ( $fp, "HELO $server_name\n" );
+        $output = fgets ( $fp, 2000 );
+        fputs ( $fp, "MAIL FROM: <info@" . $tld . ">\n" );
+        $output = fgets ( $fp, 2000 );
+        fputs ( $fp, "RCPT TO: <$email>\n" );            
+        $output = fgets ( $fp, 2000 );
+        if ( ereg ( "^250", $output ) ) {
+          $rc = "";
+        }
+        else {
+          $rc = $output;
+        }
+
+        fputs ( $fp, "QUIT\n" );
+        fclose( $fp );
+
+        if ($rc == "") {
+          break;
+          }
+        }
+      }
     }
-    return $rc;
+  }
+return $rc;
 }
 
-function feedback_custom_footers()
-{
+function feedback_custom_footers() {
   global $user;
 
   $edit = $_POST["edit"];
@@ -469,31 +415,30 @@ function feedback_custom_footers()
 
   $footer .= "\n----------------------------------";
   if ( $site_name )
-  	$footer .= "\nSite Name       : " . variable_get("site_name", "") ;
+    $footer .= "\nSite Name       : " . variable_get("site_name", "") ;
   if ( $user->name )
-  	$footer .= "\nRegistered name : " . $user->name;
+    $footer .= "\nRegistered name : " . $user->name;
   if ( isset($edit['form_field_name']))
-  	$footer .= "\nFull Name       : " . $edit['form_field_name'];
+    $footer .= "\nFull Name       : " . $edit['form_field_name'];
   if ( isset($edit['form_field_email']))
-  	$footer .= "\nE-mail address  : " . $edit['form_field_email'];
+    $footer .= "\nE-mail address  : " . $edit['form_field_email'];
   if ( isset($edit['form_field_postal']))
-  	$footer .= "\nPostal address  : " . $edit['form_field_postal'];
+    $footer .= "\nPostal address  : " . $edit['form_field_postal'];
   if ( isset($edit['form_field_phone']))
-  	$footer .= "\nPhone Number    : " . $edit['form_field_phone'];
+    $footer .= "\nPhone Number    : " . $edit['form_field_phone'];
   if ( isset($edit['form_field_referer']))
-  	$footer .= "\nReferring page  : " . $edit['form_field_referer'];
+    $footer .= "\nReferring page  : " . $edit['form_field_referer'];
   if ( isset($_SERVER['REMOTE_ADDR']))
-  	$footer .= "\nIP Address      : " . $_SERVER['REMOTE_ADDR'];
+    $footer .= "\nIP Address      : " . $_SERVER['REMOTE_ADDR'];
   if ( isset($_SERVER['REMOTE_HOST']))
-  	$footer .= "\nMachine name    : " . $_SERVER['REMOTE_HOST'];
+    $footer .= "\nMachine name    : " . $_SERVER['REMOTE_HOST'];
   if ( isset($_SERVER['HTTP_USER_AGENT']))
-  	$footer .= "\nBrowser info    : " . $_SERVER['HTTP_USER_AGENT'];
+    $footer .= "\nBrowser info    : " . $_SERVER['HTTP_USER_AGENT'];
 
   return $footer;
 }
 
-function feedback_custom_headers()
-{
+function feedback_custom_headers() {
   $edit = $_POST["edit"];
 
   $headers = "";
@@ -509,8 +454,7 @@ function feedback_custom_headers()
   return $headers;
 }
 
-function feedback_format_body ( $body )
-{
+function feedback_format_body($body) {
   $edit = $_POST["edit"];
 
   $body  = "-- The following message was sent using the feedback page --";
