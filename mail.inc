@@ -282,12 +282,14 @@ function project_mail_notify($node) {
   else {
     $result = db_query("SELECT p.*, u.name, u.mail FROM {project_subscriptions} p LEFT JOIN {users} u ON p.uid = u.uid WHERE u.status = 1 AND p.nid = %d AND p.level = 2", $node->pid);
   }
+
+  project_mail_output($node->title);
   while ($recipient = db_fetch_object($result)) {
     user_mail($recipient->mail, check_output(t("[issue]") ." $node->title"), $body, implode("\r\n", $header));
   }
 
   if ($project->mail_copy) {
-    user_mail($project->mail_copy, check_output(project_issue_category($node->category) ." ". project_mail_output($node->title)), $body, implode("\r\n", $header));
+    user_mail($project->mail_copy, check_output(t("[issue]") ." $node->title"), $body, implode("\r\n", $header));
   }
 }
 
