@@ -318,7 +318,7 @@ function project_release_save($release) {
       $release->fid = drupal_file_save($file);
     }
 
-    $release->created = time();
+    $release->created = ($release->version == "cvs") ? 0 : time();
     $release->changed = time();
 
     // Prepare the query:
