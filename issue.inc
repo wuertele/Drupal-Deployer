@@ -1,5 +1,5 @@
 <?php
-// $Id$
+/* $Id$ */
 
 function project_issue_node_name() {
   return t('issue');
