@@ -231,6 +231,9 @@ function project_mail_notify($node) {
     $uids[$node->assigned] = "u.uid = $node->assigned";
   }
 
+  // Create link to related node
+  $links = t('Issue status update for %link', array('%link' => url("node/$node->nid", NULL, NULL, 1))) ."\n";
+
   // Mail summary (status values)
   foreach ($fields as $field => $text) {
     $text = str_pad("$text:", 14);
@@ -297,12 +300,7 @@ function project_mail_notify($node) {
     $header[] = "Message-Id: <type=project&nid=$node->nid&host=@$domain>";
   }
 
-  // Create the footer
-  $footer  = "-- \n";
-  $footer .= t('View: %link', array('%link' => url("node/$node->nid", NULL, NULL, 1))) ."\n";
-  $footer .= t('Edit: %link', array('%link' => url("project/comments/add/$node->nid", NULL, NULL, 1))) ."\n";
-
-  $body = "$summary\n$body\n$footer\n";
+  $body = "$links\n$summary\n$body";
 
   if (count($uids)) {
     $result = db_query('SELECT p.*, u.name, u.mail FROM {project_subscriptions} p INNER JOIN {users} u ON p.uid = u.uid WHERE u.status = 1 AND p.nid = %d AND (p.level = 2 OR (p.level = 1 AND (%s)))', $node->pid, implode(' OR ', $uids));
