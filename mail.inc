@@ -256,7 +256,7 @@ function project_mail_notify($node) {
   // Create the footer
   $footer  = "-- \n";
   $footer .= t("View: %link", array("%link" => url("node/view/$node->nid"))) ."\n";
-  $footer .= t("Edit: %link", array("%link" => url("project/$project->uri/comment/add/$node->nid"))) ."\n";
+  $footer .= t("Edit: %link", array("%link" => url("project/comments/add/$node->nid"))) ."\n";
 
   $body = "$summary\n$body\n$footer\n";
 

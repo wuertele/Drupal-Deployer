@@ -82,11 +82,6 @@ function project_issue_form(&$node, &$help, &$error, &$param) {
     $categories = project_issue_category(0, 0);
     $priorities = project_issue_priority();
     $states = project_issue_state();
-
-    $output .= form_select(t("Version"), "rid", $node->rid, $releases);
-    $output .= form_select(t("Component"), "component", $node->component, $components);
-    $output .= form_select(t("Category"), "category", $node->category, $categories, theme_error($error["category"]));
-    $output .= form_select(t("Priority"), "priority", $node->priority, $priorities);
     if ($user->uid) {
       if ($user->uid == $node->assigned) {
         $assigned = array(0 => t("Unassign"), $user->uid => $user->name);
@@ -97,9 +92,14 @@ function project_issue_form(&$node, &$help, &$error, &$param) {
           $user->uid => $user->name
         );
       }
-
-      $output .= form_select(t("Assigned"), "assigned", $node->assigned, $assigned);
     }
+
+    $output .= form_select(t("Version"), "rid", $node->rid, $releases);
+    $output .= form_select(t("Component"), "component", $node->component, $components);
+    $output .= form_select(t("Category"), "category", $node->category, $categories, theme_error($error["category"]));
+
+    $output .= form_select(t("Priority"), "priority", $node->priority, $priorities);
+    $output .= form_select(t("Assigned"), "assigned", $node->assigned, $assigned);
     if ($node->state || $node->nid) {
       $output .= form_select(t("Status"), "state", $node->state, $states);
     }
