@@ -9,7 +9,7 @@ function project_issue_page() {
   switch ($_POST['op'] ? $_POST['op'] : arg(2)) {
     case 'search':
       $project = project_project_retrieve(arg(3));
-      print theme('page', project_issue_query($project, $query), NULL, $breadcrumbs);
+      print theme('page', project_issue_query($project, $query));
       break;
     case 'rss':
       $project = project_project_retrieve(arg(3));
