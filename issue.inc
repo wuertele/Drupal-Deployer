@@ -413,7 +413,7 @@ function project_issue_query_result($project = 0, $format = 'html') {
     $query->projects = $project->nid;
   }
   else {
-    $result = db_query("SELECT nid, title FROM node WHERE type = 'project_project'");
+    $result = db_query("SELECT nid, title FROM {node} WHERE type = 'project_project'");
     while ($node = db_fetch_object($result)) {
       $projects[$node->nid] = $node->title;
     }
