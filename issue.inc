@@ -315,6 +315,9 @@ function project_issue_validate(&$node) {
 
 function project_issue_view($node, $main = 0, $page = 0) {
   if ($main) {
+    $node->body = check_output($node->body);
+    $node->teaser = check_output($node->teaser);
+
     return theme('node', $node, $main, $page);
   }
   else {
