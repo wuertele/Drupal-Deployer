@@ -300,7 +300,7 @@ function project_release_list($project, $main = 0) {
       $header[] = array('data' => t('operations'), 'colspan' => 2);
     }
     while ($release = db_fetch_object($result)) {
-      $output .= theme('box', l(t('%project %version', array('%project' => $project->title, '%version' => $release->version)), 'node/'. $project->nid .'/releases', array('id' => $release->version), NULL, $release->version), project_release_view($release, $project));
+      $output .= theme('box', l(t('%project %version', array('%project' => $project->title, '%version' => $release->version)), 'node/'. $project->nid .'/release', array('id' => 'version-'. $release->version), NULL, $release->version), project_release_view($release, $project));
     }
     return $output;
   }
