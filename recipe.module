@@ -111,17 +111,23 @@ function recipe_save($op, $node) {
   }
 }
 
-function recipe_block() {
-  $block[0]["subject"] = t("Newest Recipes");
-  $block[0]["info"] = t("Latest 10 recipes");
-  $result = db_query("SELECT nid, title FROM node WHERE type='recipe' ORDER BY nid DESC LIMIT 10");
-  while ($node = db_fetch_object($result)) {
-     if (comment_num_all($node->nid)) $comments = " (". comment_num_all($node->nid). ")";    
-    $output .= l($node->title, array ("id" => $node->nid)). $comments. "<br />";
-  }  
-  $block[0]["content"] = $output;  
+function recipe_block($op = "list", $delta = 0) {
+  if($op == "list") {
+    $blocks["info"] = t("Latest 10 recipes");
+    return $blocks;
+  }
+  else {
+    $block["subject"] = t("Newest Recipes");
+    $result = db_query("SELECT nid, title FROM node WHERE type='recipe' ORDER BY nid DESC LIMIT 10");
+    while ($node = db_fetch_object($result)) {
+      if (comment_num_all($node->nid)) $comments = " (". comment_num_all($node->nid). ")";    
+      $output .= l($node->title, array ("id" => $node->nid)). $comments. "<br />";
+    }
   
-  return $block;
+    $block["content"] = $output;  
+  
+    return $block;
+  }
 }  
 
 function recipe_conf_options() {
