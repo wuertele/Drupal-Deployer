@@ -144,8 +144,8 @@ function project_project_view($node, $main = 0) {
       $items[] = l(t("View recently submitted issues"), "project/$node->uri/issues");
       $items[] = l(t("Search existing issues"), "project/$node->uri/issues/search");
       if (user_access("maintain project issues")) {
-        foreach (project_issue_category() as $category => $name) {
-          $items[] = l(t("Submit new %category", array("%category" => $name)), "node/add/project_issue", array(), "project=$node->uri&category=$category");
+        foreach (project_issue_category(0, 0) as $category => $name) {
+          $items[] = l(t("Submit %category", array("%category" => $name)), "node/add/project_issue", array(), "project=$node->uri&category=$category");
         }
       }
       $output = theme("theme_item_list", $items, t("Operations"));
