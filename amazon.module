@@ -1,89 +1,88 @@
 <?php
-require_once('includes/AmazonProduct.class.inc');
-require_once('includes/AmazonSearchEngine.class.inc');
+require_once("includes/AmazonProduct.class.inc");
+require_once("includes/AmazonSearchEngine.class.inc");
 
-if (file_exists('includes/Snoopy.class.inc')) {
-  include_once('includes/Snoopy.class.inc');
+if (file_exists("includes/Snoopy.class.inc")) {
+  include_once("includes/Snoopy.class.inc");
 }
 
 function amazon_system($field){
-  $system['description'] = t('Make use of the webservices of Amazon.');
+  $system["description"] = t("Make use of the webservices of Amazon.");
   return $system[$field];
 }
 
-function amazon_help($type = 'administrator') {
-  $output = '';
-  if ($type == 'user') {
-    $output .= '<p>'. t('Here you can buy stuff at our shop') .'</p>';
+function amazon_help($type = "administrator") {
+  if ($type == "user") {
+    $output = "<p>". t("Here you can buy stuff at our shop") ."</p>";
   } else {
-    $output .= 'The Amazon module allows sites to offer a store via the web-services of Amazon.com'; 
+    $output = "The Amazon module allows sites to offer a store via the web-services of Amazon.com";
   }
   return $output;
 }
 
 function amazon_perm() {
-  return array('access shop', 'administer shop', 'search shop');
+  return array("access shop", "administer shop", "search shop");
 }
 
 function amazon_link($type) {
-  if ($type == 'page' && user_access('access shop')) {
-    $links[] = lm(t('shop'), array('mod' => 'amazon'), '', array('title' => t('Go to the shop')));
+  $links = array();
+  if ($type == "page" && user_access("access shop")) {
+    $links[] = l(t("shop"), "amazon");
   }
-
-  if ($type == 'admin' && user_access('administer shop')) {
-    $links[] = la(t('shop'), array('mod' => 'amazon'));
+  else if ($type == "admin") {
+    menu("admin/system/modules/amazon/modes", "product lines", "amazon_admin_modes");
   }
-
-  return $links ? $links : array();
+  return $links;
 }
 
 function amazon_settings() {
-  $output = form_textfield('Developer key', 'amazon_devkey', variable_get('amazon_devkey', ''), 20, 20, 'Your Developer key from Amazon.com');
-  $output .= form_textfield('Afiliate ID', 'amazon_affid', variable_get('amazon_affid', 'none'), 20, 40, 'Your Amazon affiliate ID');
-  $output .= '<hr /><h3>Amazon block settings</h3>';
-  $output .= form_select('Number of book shown in block', 'amazon_num', variable_get('amazon_num', '1'), array(1 => '1', 2 => '2', 3 => '3')); 
-  $output .= '<hr /><h3>Amazon page settings</h3>';
-  $output .= form_select('Number of book columns in page', 'amazon_columns', variable_get('amazon_columns', '3'),  array(1 => '1', 2 => '2', 3 => '3'));
-  $output .= form_select('Search type', 'amazon_searchtype', variable_get('amazon_searchtype', '1'),  array(1 => 'Term', 2 => 'Browse', 3 => 'Listmania', 4=> 'Author', 5=> 'ASIN', 6 => 'UPC', 7 => 'ISBN'));
-  $output .= form_select('Search mode', 'amazon_searchmode', variable_get('amazon_searchmode', ''), _amazon_getmodes(),'mode if applicable');
-  $output .= form_textfield('Search term', 'amazon_searchterm', variable_get('amazon_searchterm', ''), 20, 50, 'Default search term');
-  $output .= form_select('Show browse nodes on page', 'amazon_shownodes', variable_get('amazon_shownodes', 1), array(0 => 'False', 1 => 'True'));
+  $output = form_textfield("Developer key", "amazon_devkey", variable_get("amazon_devkey", ""), 20, 20, "Your Developer key from Amazon.com");
+  $output .= form_textfield("Afiliate ID", "amazon_affid", variable_get("amazon_affid", "none"), 20, 40, "Your Amazon affiliate ID");
+  $output .= "<hr /><h3>Amazon block settings</h3>";
+  $output .= form_select("Number of book shown in block", "amazon_num", variable_get("amazon_num", "1"), array(1 => "1", 2 => "2", 3 => "3")); 
+  $output .= "<hr /><h3>Amazon page settings</h3>";
+  $output .= form_select("Number of book columns in page", "amazon_columns", variable_get("amazon_columns", "3"),  array(1 => "1", 2 => "2", 3 => "3"));
+  $output .= form_select("Search type", "amazon_searchtype", variable_get("amazon_searchtype", "1"),  array(1 => "Term", 2 => "Browse", 3 => "Listmania", 4=> "Author", 5=> "ASIN", 6 => "UPC", 7 => "ISBN"));
+  $output .= form_select("Search mode", "amazon_searchmode", variable_get("amazon_searchmode", ""), _amazon_getmodes(),"mode if applicable");
+  $output .= form_textfield("Search term", "amazon_searchterm", variable_get("amazon_searchterm", ""), 20, 50, "Default search term");
+  $output .= form_select("Show browse nodes on page", "amazon_shownodes", variable_get("amazon_shownodes", 1), array(0 => "False", 1 => "True"));
   return $output;
 }
 
 function _amazon_getmodes($all = 0) {
   $output = array();
   if ($all == 0) {
-    $qry = 'SELECT * FROM amazon_modes WHERE enabled = 1';
+    $qry = "SELECT * FROM amazon_modes WHERE enabled = 1";
   } else {
-    $qry = 'SELECT * FROM amazon_modes';
+    $qry = "SELECT * FROM amazon_modes";
   }
-  $result = db_query($qry . ' ORDER BY long_name');
+  $result = db_query($qry . " ORDER BY long_name");
   while($row = db_fetch_object($result)) {
     $output[$row->short_name] = $row->long_name;
   }
   return $output;
 }
 
-function _amazon_searchform($skey = '', $smode='') {
-  if (user_access('search shop')) {
-    $frm_output = '<table><tr><td>';
-    $frm_output .= form_textfield('', 'amazon_search', $skey, 30, 50);
-    $frm_output .= '</td><td>';
-    $frm_output .= form_select('', 'amazon_mode', $smode, _amazon_getmodes());
-    $frm_output .= '</td><td>';
-    $frm_output .= form_submit(t('Search'));
-    $frm_output .= '</td></tr></table>';
-    return form($frm_output, 'post', drupal_url(array('mod' => 'amazon'), 'module'));
+function _amazon_searchform($skey = "", $smode="") {
+  if (user_access("search shop")) {
+    global $base_url;
+    $frm_output = "<div class=\"container-inline\"><div>";
+    $frm_output .= form_textfield("", "amazon_search", $skey, 30, 50);
+    $frm_output .= "</div><div>";
+    $frm_output .= form_select("", "amazon_mode", $smode, _amazon_getmodes());
+    $frm_output .= "</div><div>";
+    $frm_output .= form_submit(t("Search"));
+    $frm_output .= "</div></div>";
+    return form($frm_output, "post", url("amazon"));
   } else {
-    return '';
+    return "";
   }
 }
 
 function _amazon_format_item($item) {
 
   $output = '<td valign="top">';
-  $output .= lm('<img src="'.$item->ImageUrlMedium.'" align="right" border = "0"/>', array('mod' => 'amazon', 'asin' => $item->Asin));
+  $output .= l('<img src="'.$item->ImageUrlMedium.'" align="right" border = "0"/>', "amazon/asin/$item->Asin");
   $output .= '<b>' . $item->ProductName . '</b><br /><br />';
   if ($item->Manufacturer != '') {
     $output .= '<b>Manufacturer :</b> '. $item->Manufacturer . '<br />';
@@ -137,13 +136,13 @@ function _amazon_format_row($book_nr, $columns = 3) {
   return $output;
 }
 
-function _amazon_admin_settings() {
-  $output = amazon_settings();
-  $output .= form_submit('Save settings');
-  return form($output, 'post', 'admin.php?mod=amazon');
-}
+function  amazon_admin_modes() {
+  $op = $_POST["op"];
+  $edit = $_POST["edit"];
 
-function  _amazon_admin_modes() {
+  if ($op == "Update modes") {
+    print status(_amazon_admin_save($edit));
+  }
   $output = '<table border="2">';
   $output .= '<tr><td><b>Product line</b></td><td><b>Enabled</b></td></tr>';
   $result = db_query('SELECT * FROM amazon_modes ORDER BY long_name');
@@ -154,39 +153,31 @@ function  _amazon_admin_modes() {
   }
   $output .= '</table><br />';
   $output .= form_submit('Update modes');
-  return form($output, 'post', 'admin.php?mod=amazon');
+  return form($output, "post", url("admin/system/modules/amazon/modes"));
 }
 
 function _amazon_admin_save($edit = array()) {
   db_query('UPDATE amazon_modes SET enabled = 0');
   foreach ($edit as $name => $value) {
-    db_query("UPDATE amazon_modes SET enabled = 1 WHERE short_name = \"$name\"");
+    db_query("UPDATE amazon_modes SET enabled = $value WHERE short_name = \"$name\"");
   }
   return 'The modes have been saved';
 }
 
 function amazon_admin() {
-  global $op, $edit;
+  $op = $_POST["op"];
+  $edit = $_POST["edit"];
+  if (empty($op)) {
+    $op = arg(1);
+  }
   if (user_access('administer shop')) {
-    print '<small>' . la(t('settings'), array('mod' => 'amazon')) . ' | ' . la(t('modes'), array('mod' => 'amazon', 'op' => 'modes')) . ' | ' . la(t('help'), array('mod' => 'amazon', 'op' => 'help')) . '</small>';
-    print '<br /><br />';
     switch ($op) {
       case 'help':
         print amazon_help();
         break;
       case 'Save settings':
         print status(system_save($edit));
-        print _amazon_admin_settings();
         break;
-      case 'modes':
-        print _amazon_admin_modes();
-        break;
-      case 'Update modes':
-        print status(_amazon_admin_save($edit));
-        print _amazon_admin_modes();
-        break;
-      default:
-        print _amazon_admin_settings();
     }
   } else {
     print message_access();
@@ -194,20 +185,19 @@ function amazon_admin() {
 }
 
 function _amazon_browsemenu($mode = '', $browseid = 0) {
-  $output = '';
-  $output .= lm(t('shop'), array('mod' => 'amazon')) . '<br />';
+  $output = l(t('shop'), "amazon") . '<br />';
   if ($mode == '') {
     $output .= '<br />';
     $modes = _amazon_getmodes();
     foreach($modes as $key => $value) {
       $output .= '<small>';
-      $output .= lm(t($value), array('mod' => 'amazon', 'mode' => $key)); 
+      $output .= l(t($value), "amazon/$key"); 
       $output .= '</small><br />';
     }
   } else {
     $mode_info = db_fetch_object(db_query("SELECT * FROM amazon_modes WHERE short_name = \"$mode\""));
     $output .= '&nbsp;';
-    $output .= lm(t($mode_info->long_name), array('mod' => 'amazon', 'mode' => $mode)) . '<br /><br />';
+    $output .= l(t($mode_info->long_name), "amazon/$mode") . '<br /><br />';
     $browse_cat = '';
     if ($mode_info->browsenodes != '') {
       $browse_cat = $mode_info->browsenodes;
@@ -218,7 +208,7 @@ function _amazon_browsemenu($mode = '', $browseid = 0) {
     while($browse_node = db_fetch_object($result)) {
       $output .= '<small>';
       if ($browse_node->browse_id != $browseid) {
-        $output .= lm(t($browse_node->subcat_name), array('mod' => 'amazon', 'mode' => $mode, 'browseid' => $browse_node->browse_id));
+        $output .= l(t($browse_node->subcat_name), "amazon/$mode/$browse_node->browse_id");
       } else {
         $output .= '<b>' . t($browse_node->subcat_name) . '</b>';
       }
@@ -229,9 +219,8 @@ function _amazon_browsemenu($mode = '', $browseid = 0) {
 }
 
 function _amazon_showresults($results) {
-  $output = '';
   if(count($results) == 0) {
-    $output = 'Sorry, nothing was found';
+    $output = t('Sorry, nothing was found');
   } else if (count($results) == 1) {
     $output = _amazon_format_one_item($results[0]);
   } else {
@@ -253,7 +242,11 @@ function _amazon_showresults($results) {
 }
 
 function amazon_page() {
-  global $edit, $mode, $browseid, $asin, $upc;
+  global $upc;
+  $edit = $_POST["edit"];
+  $mode = arg(1);
+  $browseid = arg(2);
+  $asin = arg(3);
 
   theme("header");
   if (user_access('access shop')) {
