@@ -153,14 +153,14 @@ function project_release_overview() {
     }
     $releases = array();
     if (arg(2)) {
-      $result2 = db_query("SELECT path, version FROM {project_releases} WHERE nid = %d AND status = 1 AND path <> '' AND version LIKE '%s%%' ORDER BY created DESC", $node->nid, arg(2));
+      $result2 = db_query("SELECT path, version, changed FROM {project_releases} WHERE nid = %d AND status = 1 AND path <> '' AND version LIKE '%s%%' ORDER BY created DESC", $node->nid, arg(2));
     }
     else {
-      $result2 = db_query("SELECT path, version FROM {project_releases} WHERE nid = %d AND status = 1 AND created > 0 AND path <> '' ORDER BY created DESC", $node->nid);
+      $result2 = db_query("SELECT path, version, changed FROM {project_releases} WHERE nid = %d AND status = 1 AND created > 0 AND path <> '' ORDER BY created DESC", $node->nid);
     }
     if (db_num_rows($result2)) {
       while ($release = db_fetch_object($result2)) {
-        $releases[] = l($release->version, $release->path, array('class' => count($releases) ? 'project-old' : 'project-recent'));
+        $releases[] = l($release->version, $release->path, array('class' => count($releases) ? 'project-old' : 'project-recent')) . ($release->changed > time() - 14 * 24 * 60 * 60 ? theme('mark') : '');
       }
       $rows[] = array(
         array('class' => 'project-name', 'data' => l($node->title, "node/view/$node->nid")),
