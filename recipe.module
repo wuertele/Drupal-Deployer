@@ -30,7 +30,7 @@ function recipe_node($field) {
 }
 
 // not working for some reason. please fix.
-function recipe_help($section) {
+function recipe_help($section = '') {
   $output ="";
 
   switch ($section) {
@@ -116,7 +116,8 @@ function recipe_link($type) {
 
   if ($type == "system") {
     if (user_access("create recipes")) {
-      menu("node/add/recipe", t("recipe"), "recipe_page", 0);
+      menu("node/add/recipe", t("recipe"), "node_page", 0);
+      menu("recipe", t("recipe"), "recipe_page", 0, 1);
     }
   }
 
@@ -165,21 +166,21 @@ function recipe_page() {
         print theme("box", $box["subject"], $box["content"]);
       }  
       print theme("footer");
-      }
+    }
   }
   else {
-    print theme("header");
-    message_access();
-    print theme("footer");
+    print theme("page", message_access());
   }  
 }
 
 
 function recipe_overview() {
   $i = 0;
-  $boxes[$i]["subject"] = t("Search Recipes");
-  $boxes[$i]["content"] = search_type("recipe", url("search"), NULL, 1);
-  $i++;
+  if (module_exist('search')) {
+    $boxes[$i]["subject"] = t("Search Recipes");
+    $boxes[$i]["content"] = search_type("recipe", url("search"), NULL, 1);
+    $i++;
+  }
   
   if (module_exist("taxonomy_dhtml")) {
     $boxes[$i] = array ("subject" => t("Recipes by category"), "content" => recipe_directory_dhtml());
@@ -210,7 +211,7 @@ function recipe_list() {
   }
 
   if (!$rows) {
-    $rows[] = array(array("data" => t("No Lisp snippets available."), "colspan" => "3"));
+    $rows[] = array(array("data" => t("No recipes available."), "colspan" => "3"));
   }
 
   $pager = pager_display(NULL, 20, 0);
@@ -218,19 +219,12 @@ function recipe_list() {
     $rows[] = array(array("data" => $pager, "colspan" => "3"));
   }
 
-  return theme("table", table($header, $rows));
+  return theme('table', $header, $rows);
 }
 
-function recipe_view($node, $main = 0) {
-  if ($main == 0) {
-    // Breadcrumb navigation
-    $breadcrumb[] = l(t("Home"), NULL);
-    $breadcrumb[] = l(t("Recipes"), "recipe");
-    print theme("breadcrumb", $breadcrumb);
-  }
+function recipe_view($node, $main = 0, $page = 0) {
   $node = recipe_content($node);
-  // print the node
-  print theme("node", $node, $main);
+  return theme("node", $node, $main, $page);
 }
 
 function recipe_content($node) {
