@@ -36,6 +36,8 @@ function project_release_cron() {
 }
 
 function project_release_page($node) {
+  drupal_set_html_head("<style type=\"text/css\">\n@import url(modules/project/project.css);\n</style>");
+
   switch ($_POST['op'] ? $_POST['op'] : arg(3)) {
     case 'add':
       if (node_access($node, 'update')) {
@@ -61,7 +63,7 @@ function project_release_page($node) {
       }
       break;
     case 'view':
-      if (node_access($node, 'view') && ($release = project_release_load(arg(4))) && $node->nid == $release->nid) {
+      if ($release = project_release_load(arg(4))) {
         print theme('page', project_release_view($release), "$node->title $release->version");
       }
       break;
