@@ -617,7 +617,7 @@ function project_issue_query_sql($query) {
   }
   else {
     return array(
-      'sql' => 'SELECT DISTINCT(n.nid) FROM {project_comments} c LEFT JOIN {project_issues} p ON c.nid = p.nid LEFT JOIN {node} n ON p.nid = n.nid WHERE n.status = 1 AND ('. implode(' AND ', $sql) .')',
+      'sql' => 'SELECT DISTINCT(n.nid) FROM {project_issues} p LEFT JOIN {project_comments} c ON c.nid = p.nid LEFT JOIN {node} n ON p.nid = n.nid WHERE n.status = 1 AND ('. implode(' AND ', $sql) .')',
       'count' => 'SELECT COUNT(DISTINCT(n.nid)) FROM {project_comments} c LEFT JOIN {project_issues} p ON c.nid = p.nid LEFT JOIN {node} n ON p.nid = n.nid WHERE n.status = 1 AND ('. implode(' AND ', $sql) .')'
     );
   }
