@@ -5,42 +5,67 @@
    See http://scripts.incutio.com/
 */
 
-// Currently only handles 'lite' queries on 'books'
 class AmazonSearchEngine {
     var $server = 'xml.amazon.com';
+    var $server_xml_url;
     var $search;
     var $dev_token;
     var $associates_id;
     var $type = 'lite';
+    var $version;
     var $results;  // Array of results
+    var $totalResults = 0;
     var $_parser;   // The XML parser
     var $_currentResult;
     var $_grabtags; // Tags to grab the contents of
     var $_currentTagContents;
-    function AmazonSearchEngine($dev_token, $associates_id = 'none') {
+
+    function AmazonSearchEngine($dev_token, $associates_id = 'none', $version = '1.0', $atype = 'lite') {
         $this->dev_token = $dev_token;
         $this->associates_id = $associates_id;
+
+        $this->version = $version;
+        if ($this->version == '1.0') {
+          $this->server_xml_url = 'onca/xml';
+        } else if ($this->version == '2.0') {
+          $this->server_xml_url = 'onca/xml2';
+        }
+
+        $this->type = $atype;
+
         $this->results = array();
         $this->_grabtags = array(
             'Asin', 'ProductName', 'Catalog', 'ErrorMsg',
             'Description', 'ReleaseDate', 'Manufacturer', 'ImageUrlSmall',
             'ImageUrlMedium', 'ImageUrlLarge', 'ListPrice', 'OurPrice',
-            'UsedPrice', 'Author', 'Artist'
+            'UsedPrice', 'Author', 'Artist', 'Rating', 'Summary', 'Comment',
+            'Product', 'Feature', 'TotalResults'
         );
     }
-    function doSearch($url) {
-        $s = new Snoopy;
-        $s->fetch($url);
-        $contents = $s->results;
-        /*$fp = fopen($url, 'r');
-        while ($data = fread($fp, 4096)) {
-            if (!xml_parse($this->_parser, $data, feof($fp))) {
-                die(sprintf('XML error: %s at line %d',
-                    xml_error_string(xml_get_error_code($this->_parser)),
-                    xml_get_current_line_number($this->_parser)));
-            }
+
+    function doFetch($url) {
+      $fp = fsockopen($this->server, 80);
+      fputs($fp, "GET " . $url . " HTTP/1.0\n\n");
+      $body = false;
+      $xml = '';
+      while(($line = fgets($fp, 1024))) {
+        $body = $body || trim($line) == "";
+        if($body) {
+          $xml .= $line;
         }
-        */
+      }
+      fclose($fp);
+      return trim($xml);
+    }
+
+    function doSearch($url) {
+        if(file_exists('includes/Snoopy.class.inc')) {
+          $s = new Snoopy;
+          $s->fetch($url);
+          $contents = $s->results;
+        } else {
+          $contents = $this->doFetch($url);
+        }
         $this->_parser = xml_parser_create();
         xml_parser_set_option($this->_parser, XML_OPTION_CASE_FOLDING, false);
         xml_set_object($this->_parser, $this);
@@ -53,45 +78,109 @@ class AmazonSearchEngine {
         }
         xml_parser_free($this->_parser);
     }
-    function searchTerm($term, $mode = 'books', $page = 1) {
-        $url = "http://{$this->server}/onca/xml?t={$this->associates_id}&KeywordSearch=$term&mode=$mode";
-        $url .= "&f=xml&type={$this->type}&dev-t={$this->dev_token}&v=1.0&page=$page";
-        $this->doSearch($url);
+
+    function getVersionParam() {
+      $version_text = ($this->version == '1.0') ? 'v=1.0&' : '';
+      return $version_text;
     }
-    function searchISBN($isbn, $page = 1) {
-        $url = "http://{$this->server}/onca/xml?v=1.0&t={$this->associates_id}&dev-t={$this->dev_token}&AsinSearch=$isbn&type={$this->type}&f=xml&page=$page";
-        $this->doSearch($url);
+
+    function getSortParam($rsort = '') {
+      $sort_text = ($rsort == '') ? '' : (($this->version == '2.0') ? "&sort=$rsort" : '');
+      return sort_text;
     }
-    function searchAuthor($author, $page = 1) {
-        $url = "http://{$this->server}/onca/xml?v=1.0&t={$this->associates_id}&dev-t={$this->dev_token}&AuthorSearch=$author&mode=books&type={$this->type}&f=xml&page=$page";
-        $this->doSearch($url);
+
+    function getBaseAmazonURL() {
+      $version_text = $this->getVersionParam();
+      $url = "http://{$this->server}/{$this->server_xml_url}?{$version_text}t={$this->associates_id}&dev-t={$this->dev_token}";
+      return $url;
     }
+
+    function getFinalAmazonURL($url = '') {
+      return "{$url}&f=xml";
+    }
+
+    function searchTerm($term, $mode = 'books', $page = 1, $rsort = '') {
+        $sort_text = $this->getSortParam($rsort);
+        $url = $this->getBaseAmazonURL();
+        $url .= "&KeywordSearch=".urlencode($term)."&mode=$mode&type={$this->type}&page=$page{$sort_text}";
+        $this->doSearch($this->getFinalAmazonURL($url));
+    }
+
+    function searchISBN($isbn) {
+        $isbns = is_array($isbn) ? strtoupper(implode(",", $isbn)) : strtoupper($isbn);
+        $sort_text = $this->getSortParam($rsort);
+        $url = $this->getBaseAmazonURL();
+        $url .= "&AsinSearch=$isbns";
+        $url .= "&type={$this->type}";
+        $this->doSearch($this->getFinalAmazonURL($url));
+    }
+
+    function searchAuthor($author, $page = 1, $rsort = '') {
+        $sort_text = $this->getSortParam($rsort);
+        $url = $this->getBaseAmazonURL();
+        $url .= "&AuthorSearch=".urlencode($author)."&mode=books";
+        $url .= "&type={$this->type}&page=$page{$sort_text}";
+        $this->doSearch($this->getFinalAmazonURL($url));
+    }
+
     function searchRelated($asin, $page = 1) {
-        $url = "http://{$this->server}/onca/xml?v=1.0&t={$this->associates_id}&dev-t={$this->dev_token}&SimilaritySearch=" . strtoupper($asin) . "&type={$this->type}&f=xml&page=$page";
-        $this->doSearch($url);
+        $sort_text = $this->getSortParam($rsort);
+        $url = $this->getBaseAmazonURL();
+        $url .= "&SimilaritySearch=$asin";
+        $url .= "&type={$this->type}&page=$page";
+        $this->doSearch($this->getFinalAmazonURL($url));
     }
+
     /* extra functions */
-    function browseNode($browsenode, $mode = 'books', $page = 1) {
-        $url = "http://{$this->server}/onca/xml?v=1.0&t={$this->associates_id}&dev-t={$this->dev_token}&mode=$mode&BrowseNodeSearch=$browsenode&type={$this->type}&f=xml&page=$page";
-        $this->doSearch($url);
+
+    function browseNode($browsenode, $mode = 'books', $page = 1, $rsort = '') {
+        $sort_text = $this->getSortParam($rsort);
+        $url = $this->getBaseAmazonURL();
+        $url .= "&BrowseNodeSearch=$browsenode&mode=$mode";
+        $url .= "&type={$this->type}&page=$page{$sort_text}";
+        $this->doSearch($this->getFinalAmazonURL($url));
     }
-    function listMania($listid, $page = 1) {
-        $url = "http://{$this->server}/onca/xml?v=1.0&t={$this->associates_id}&dev-t={$this->dev_token}&ListManiaSearch=$listid&type={$this->type}&f=xml&page=$page";
-        $this->doSearch($url);
+
+    function listMania($listid, $page = 1, $rsort = '') {
+        $sort_text = $this->getSortParam($rsort);
+        $url = $this->getBaseAmazonURL();
+        $url .= "&ListManiaSearch=$listid";
+        $url .= "&type={$this->type}";
+        $this->doSearch($this->getFinalAmazonURL($url));
     }
+
     function searchAsin($asin, $page = 1) {
         $asins = is_array($asin)?strtoupper(implode(",", $asin)):strtoupper($asin); 
-        $url = "http://{$this->server}/onca/xml?v=1.0&t={$this->associates_id}&dev-t={$this->dev_token}&AsinSearch=$asins&type={$this->type}&f=xml&page=$page";
-        $this->doSearch($url);
+        $sort_text = $this->getSortParam($rsort);
+        $url = $this->getBaseAmazonURL();
+        $url .= "&AsinSearch=$asins";
+        $url .= "&type={$this->type}";
+        $this->doSearch($this->getFinalAmazonURL($url));
     }
-    function searchUPC($upc, $mode = 'music', $page = 1) {
-        $upcs = is_array($upc)?implode(",", $upc):$upc; 
-        $url = "http://{$this->server}/onca/xml?v=1.0&t={$this->associates_id}&dev-t={$this->dev_token}&UpcSearch=$upcs&type={$this->type}&f=xml&page=$page";
-        $this->doSearch($url);
+
+    function searchUPC($upc, $mode = 'music', $page = 1, $rsort = '') {
+        $upcs = is_array($upc)?implode(",", $upc):$upc;
+        $sort_text = $this->getSortParam($rsort);
+        $url = $this->getBaseAmazonURL();
+        $url .= "&UpcSearch=$upcs&mode=$mode";
+        $url .= "&type={$this->type}";
+        $this->doSearch($this->getFinalAmazonURL($url));
     }
+
+    function searchWishList($wl, $page = 1, $rsort = '') {
+      if ($this->version == '2.0') {
+        $sort_text = $this->getSortParam($rsort);
+        $url = $this->getBaseAmazonURL();
+        $url .= "WishlistSearch=$wl&type={$this->type}";
+        $this->doSearch($this->getFinalAmazonURL($url));
+      }
+    }
+
     /* end special functions */
+
     function tag_open($parser, $tag, $attributes)
     { 
+
         if ($tag == 'Details') {
             // We've hit a new result
             $this->_currentResult = new AmazonProduct;
@@ -103,12 +192,14 @@ class AmazonSearchEngine {
             $this->_currentTag = '';
         }
     }
+
     function cdata($parser, $cdata)
     {
         if ($this->_currentTag) {
             $this->_currentTagContents = trim($cdata);
         }
     }
+
     function tag_close($parser, $tag)
     {
         switch ($tag) {
@@ -121,6 +212,24 @@ class AmazonSearchEngine {
                 break;
             case 'Artist':
                 $this->_currentResult->Artists[] = $this->_currentTagContents;
+                break;
+            case 'Rating':
+                $this->_currentResult->ReviewRating[] = $this->_currentTagContents;
+                break;
+            case 'Summary':
+                $this->_currentResult->ReviewSummary[] = $this->_currentTagContents;
+                break;
+            case 'Comment':
+                $this->_currentResult->ReviewComment[] = $this->_currentTagContents;
+                break;
+            case 'Product':
+                $this->_currentResult->SimilarProducts[] = $this->_currentTagContents;
+                break;
+            case 'Feature':
+                $this->_currentResult->Features[] = $this->_currentTagContents;
+                break;
+            case 'TotalResults':
+                $this->totalResults = $this->_currentTagContents;
                 break;
             default:
                 if (in_array($tag, $this->_grabtags)) {

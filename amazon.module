@@ -1,7 +1,10 @@
 <?php
 require_once('includes/AmazonProduct.class.inc');
 require_once('includes/AmazonSearchEngine.class.inc');
-require_once('includes/Snoopy.class.inc');
+
+if (file_exists('includes/Snoopy.class.inc')) {
+  include_once('includes/Snoopy.class.inc');
+}
 
 function amazon_system($field){
   $system['description'] = t('Make use of the webservices of Amazon.');
@@ -258,7 +261,7 @@ function amazon_page() {
     $am_affid = variable_get('amazon_affid', 'none');
     $show_menu = variable_get('amazon_shownodes', 1);
     $is_search = ($edit['amazon_search'] != '');
-    $amazonSE = new AmazonSearchEngine($am_devkey, $am_affid);
+    $amazonSE = new AmazonSearchEngine($am_devkey, $am_affid, '2.0');
     if (($is_search)&&($edit['amazon_mode'] != '')) {
       $mode = $edit['amazon_mode'];
       $browseid = 0;
@@ -271,7 +274,7 @@ function amazon_page() {
     print '</center><br />';
     print '<table width="100%"><tr>';
     if ($is_search) {
-      $amazonSE->searchTerm(urlencode(check_input($edit['amazon_search'])), $mode);
+      $amazonSE->searchTerm(check_input($edit['amazon_search']), $mode);
       $box_title = 'Results';
       $box_output = _amazon_showresults($amazonSE->results);
     } else if ($mode != '') {
@@ -387,7 +390,7 @@ function amazon_block() {
   $output = '';
   $am_devkey = variable_get('amazon_devkey', '');
   $am_affid = variable_get('amazon_affid', 'none');
-  $amazonSE = new AmazonSearchEngine($am_devkey, $am_affid);
+  $amazonSE = new AmazonSearchEngine($am_devkey, $am_affid, '2.0');
   if (substr_count(request_uri(), drupal_url())) {
     $modes = _amazon_getmodes();
     $num = variable_get('amazon_num', '1');

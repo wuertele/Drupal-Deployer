@@ -17,6 +17,14 @@ class AmazonProduct {
     var $ListPrice;
     var $OurPrice;
     var $UsedPrice;
+    // reviews
+    var $ReviewRating = array();
+    var $ReviewSummary = array();
+    var $ReviewComment = array();
+    // similar products
+    var $SimilarProducts = array();
+    //
+    var $Features = array();
     function AmazonProduct() {
         // Does nothing for the moment
         return;
