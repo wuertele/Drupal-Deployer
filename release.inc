@@ -125,8 +125,9 @@ function project_release_page($node) {
       }
       $breadcrumb[] = l($node->title, "node/view/$node->nid");
 
+      $links = array();
       if (node_access($node, 'update')) {
-        $links = array(l(t('add new release'), "project/$node->uri/releases/add"));
+        $links[] = l(t('add new release'), "project/$node->uri/releases/add");
       }
       $output = project_release_view($node) . theme('links', $links);
 
@@ -252,6 +253,7 @@ function project_release_view($project, $main = 0) {
   if ($project->changes) {
     $release = $project;
     $project = node_load(array('nid' => $project->nid));
+    $links = array();
 
     if (variable_get('project_release_directory', '')) {
       $links[] = ($release->path) ? l(t('download'), $release->path) : $release->version;
