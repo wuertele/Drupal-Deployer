@@ -301,11 +301,11 @@ function project_mail_notify($node) {
   project_mail_output($node->title, 0);
   $node->title = t("[$node->category]") ." $node->title";
   while ($recipient = db_fetch_object($result)) {
-    user_mail($recipient->mail, $subject, $body, implode("\n", $header));
+    user_mail($recipient->mail, $node->title, $body, implode("\n", $header));
   }
 
   if ($project->mail_copy && (!count($project->mail_copy_filter) || $project->mail_copy_filter[$node->category])) {
-    user_mail($project->mail_copy, $subject, $body, implode("\n", $header));
+    user_mail($project->mail_copy, $node->title, $body, implode("\n", $header));
   }
 }
 
