@@ -596,7 +596,7 @@ function project_issue_query_result($query = NULL, $format = 'html', $search = t
       if (!$project->nid) {
         $row[] = l($projects[$node->pid], "project/issues/$node->pid");
       }
-      $row[] = l(substr($node->title, 0, 50), "node/$node->nid") . (node_is_new($node->nid, $node->changed) ? theme_mark() .' ' : '');
+      $row[] = l(substr($node->title, 0, 50), "node/$node->nid") .  theme('mark', node_mark($node->nid, $node->changed));
       $row[] = $states[$node->state];
       $row[] = $priorities[$node->priority];
       $row[] = t($node->category);
