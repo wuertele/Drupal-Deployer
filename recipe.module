@@ -222,8 +222,7 @@ function recipe_head() {
  return array ("<style type=\"text/css\"> .recipe_label {  font-weight: bold} .recipe_title {  font-weight: bold; font-size: large}</style>"); 
 }
 
-// TODO. Untested and probably doesn't work.
-// TODO. other approach is to suff all fields in the $node->body since it gets indexed automatically.
+
 function recipe_update_index() {
 
   // Return an array of values to dictate how to update the search index
@@ -238,11 +237,39 @@ function recipe_update_index() {
   // "select"'s value is used to select the node id and text fields from
   // the table we are indexing.
   
-  // MW: the following node_type only works because recipe comes after node aphabetically. i overwrite its values with my own 
-  
-  return array("last_update" => "node_cron_last",
-         "node_type" => "node",
-         "select" => "SELECT n.nid as lno, n.title as text1, n.body as text2, r.notes as text3, r.source as text4 FROM node n LEFT JOIN recipe r ON n.nid = r.nid WHERE n.type = 'recipe' AND n.status = 1 AND n.moderate = 0"); //and (n.created > " . variable_get("node_cron_last", 1) . " or changed > " . variable_get("node_cron_last", 1) . ")");
+  return array("last_update" => "recipe_cron_last",
+         "node_type" => "recipe",
+         "select" => "SELECT n.nid as lno, n.title as text1, CONCAT(n.body, r.notes, r.source, r.yield, r.preptime) as text2 FROM node n LEFT JOIN recipe r ON n.nid = r.nid WHERE n.type = 'recipe' AND n.status = 1 AND n.moderate = 0 AND (created > " . variable_get("recipe_cron_last", 1) . " OR changed > " . variable_get("recipe_cron_last", 1) . ")");
+}
+
+function recipe_search($keys) {
+
+  /*
+  ** Return the results of performing a search using the indexed search
+  ** for this particular type of node.
+  **
+  ** Pass an array to the "do_search" function which dictates what it
+  ** will search through, and what it will search for
+  **
+  ** "keys"'s value is the keywords entered by the user
+  **
+  ** "type"'s value is used to identify the node type in the search
+  ** index.
+  **
+  ** "select"'s value is used to relate the data from the specific nodes
+  ** table to the data that the search_index table has in it, and the 
+  ** do_search functino will rank it.
+  **
+  ** The select must always provide the following fields - lno, title,
+  ** created, uid, name, count
+  **
+  ** The select statement may optionally provide "nid", which is a secondary
+  ** identifier which is currently used by the comment module.
+  */
+
+  $find = do_search(array("keys" => $keys, "type" => "node", "select" => "select s.lno as lno, n.title as title, n.created as created, u.uid as uid, u.name as name, s.count as count FROM search_index s, node n LEFT JOIN users u ON n.uid = u.uid WHERE s.lno = n.nid AND s.type = 'recipe' AND n.status = 1 AND s.word like '%'"));
+
+  return $find;
 }
 
 
