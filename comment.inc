@@ -151,7 +151,7 @@ function project_comment_view($node, $main = 0) {
 }
 
 function project_comment_load($cid) {
-  return db_fetch_object(db_query('SELECT p.*, u.name FROM {project_comments} p INNER JOIN {users} u USING (uid) WHERE p.cid = %d ORDER BY changed DESC', $cid));
+  return db_fetch_object(db_query('SELECT p.*, u.name FROM {project_comments} p INNER JOIN {users} u USING (uid) WHERE p.cid = %d ORDER BY p.created DESC', $cid));
 }
 
 function project_comment_save($edit) {
