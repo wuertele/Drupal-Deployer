@@ -97,7 +97,9 @@ function project_project_validate(&$node) {
     $error["mail_copy"] = $data;
   }
 
-  $node->mail_copy_filter = array_filter($node->mail_copy_filter, "project_project_cleanup");
+  if (is_array($node->mail_copy_filter)) {
+    $node->mail_copy_filter = array_filter($node->mail_copy_filter, "project_project_cleanup");
+  }
 
   // Make sure all URL fields actually contain URLs.
   foreach (array("homepage", "changelog", "cvs", "demo") as $uri) {
