@@ -10,10 +10,10 @@ function project_release_scan() {
 function project_release_scan_directory($project = NULL) {
   if ($dir = file_create_path(variable_get('project_release_directory', ''))) {
     if ($project) {
-      $regexp = "($project)" .'-(.+)\.tar\.gz';
+      $regexp = "($project)" .'-(.+)\.[tar.gz|zip]';
     }
     else {
-      $regexp = '(.+)-(.+)\.tar\.gz';
+      $regexp = '(.+)-(.+)\.[tar.gz|zip]';
     }
     file_scan_directory($dir, $regexp, array('.', '..', 'CVS'), 'project_release_scan_parse');
 
@@ -36,7 +36,7 @@ function project_release_scan_parse($path = NULL) {
   else {
     $dir = dirname($path);
     $file = basename($path);
-    preg_match('/^(.+?)-([0-9.]+(?:-.*)|[^-]+)\.tar\.gz$/', $file, $matches);
+    preg_match('/^(.+?)-([0-9.]+(?:-.*)|[^-]+)\.[tar.gz$|zip$]/', $file, $matches);
     list($filename, $name, $version) = $matches;
 
     if (!$projects[$name]) {
