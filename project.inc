@@ -24,7 +24,7 @@ function project_project_menu(&$node) {
   menu("$uri/issues/search", t('search'), 'project_page', 5);
 }
 
-function project_project_form(&$node, &$help, &$error) {
+function project_project_form(&$node, &$error) {
   if (count($node->components)) {
     $node->components = implode("\n", $node->components);
   }
