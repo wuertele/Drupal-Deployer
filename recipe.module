@@ -1,5 +1,19 @@
 <?php
 
+function recipe_perm() {
+  return array ("access recipes", "create recipes");
+}
+
+function recipe_access($op, $node) {
+  if ($op == "view" && user_access("access recipes")) {
+    return $node->status;
+  }
+
+  if ($op == "create") {
+    return user_access("create recipes");
+  }
+}
+
 function recipe_load($node) {
   $recipe = db_fetch_object(db_query("SELECT * FROM recipe WHERE nid = '$node->nid'"));
   $ingredients = db_query("SELECT ingredient, weight FROM recipe_ingredients WHERE nid='$node->nid' ORDER BY weight");
@@ -9,42 +23,53 @@ function recipe_load($node) {
   return $recipe;
 }
 
-function recipe_node($op, &$node, $pos = "post") {
-  if ($op == "info") {
-    $info->name = t("recipe");
-    $info->description = t("Share your favorite recipes with your fellow cooks.");
-    return $info;
+function recipe_node($field) {
+  $info["name"] = t("recipe");
+  $info["description"] = t("Share your favorite recipes with your fellow cooks.");
+  return $info[$field];
+}
+
+function recipe_system($field){
+    $system["description"] = t("Collect and display recipes");
+    return $system[$field];
   }
-  elseif ($node->type !== "recipe") { 
-    return;
-  }
-  elseif ($op == "insert") {
-    db_query("INSERT INTO recipe (nid, source, yield, preptime, notes) VALUES ('$node->nid', '$node->source', '$node->yield', '$node->preptime', '$node->notes')");
-    foreach ($node->ingredients as $weight => $ingredient) {
-      if ($ingredient) {      
-        db_query("INSERT INTO recipe_ingredients (nid, ingredient, weight) VALUES ('$node->nid', '$ingredient', '$weight')");
-      }
-    }  
-  }
-  elseif ($op == "update") {
-    db_query("UPDATE recipe SET source = '$node->source', yield = '$node->yield', preptime = '$node->preptime', notes = '$node->notes' WHERE nid = '$node->nid'");
-    db_query("DELETE FROM recipe_ingredients WHERE nid = '$node->nid'");
-    $i = 0;    
-    foreach ($node->ingredients as $ingredient) {
-      if ($ingredient) {      
-        db_query("INSERT INTO recipe_ingredients (nid, ingredient, weight) VALUES ('$node->nid', '$ingredient', '$i')");
-        $i++;
-      }
-    }  
-  }
-  elseif ($op == "delete") {
-    db_query("DELETE FROM recipe WHERE nid = '$node->nid'");
-    db_query("DELETE FROM recipe_ingredients WHERE nid = '$node->nid'");
+
+function recipe_nodeapi(&$node, $op, $arg) {
+  
+  if ($node->type == "recipe") {
+    switch ($op) {
+      case "fields":
+        break;
+      case "insert":
+        db_query("INSERT INTO recipe (nid, source, yield, preptime, notes) VALUES ('$node->nid', '$node->source', '$node->yield', '$node->preptime', '$node->notes')");
+        foreach ($node->ingredients as $weight => $ingredient) {
+          if ($ingredient) {      
+            db_query("INSERT INTO recipe_ingredients (nid, ingredient, weight) VALUES ('$node->nid', '$ingredient', '$weight')");
+          }
+        }  
+        break;
+      case "update":
+        db_query("UPDATE recipe SET source = '$node->source', yield = '$node->yield', preptime = '$node->preptime', notes = '$node->notes' WHERE nid = '$node->nid'");
+        db_query("DELETE FROM recipe_ingredients WHERE nid = '$node->nid'");
+        $i = 0;    
+        foreach ($node->ingredients as $ingredient) {
+          if ($ingredient) {      
+            db_query("INSERT INTO recipe_ingredients (nid, ingredient, weight) VALUES ('$node->nid', '$ingredient', '$i')");
+            $i++;
+          }
+        }  
+        break;  
+      case "delete":
+        db_query("DELETE FROM recipe WHERE nid = '$node->nid'");
+        db_query("DELETE FROM recipe_ingredients WHERE nid = '$node->nid'");
+        break;
+    }
   }
 }
 
 function recipe_form(&$node, &$help, &$error) {
-  global $op, $edit;
+  $op = arg(1);
+  $edit = $_POST["edit"];
   
   if ($edit["recipe_more_ingredients"] == 1) {
     $node->numingredients = $node->numingredients + 6;
@@ -59,74 +84,48 @@ function recipe_form(&$node, &$help, &$error) {
   $help = t(variable_get("recipe_help", ""));
 
   $output .= form_hidden("numingredients", $node->numingredients);
-  $output .= form_textarea(t("Brief Description"), "teaser", $node->teaser, 60, 3, $error["teaser"]);
   $output .= form_textfield(t("Servings"), "yield", $node->yield, 60, 127, $error["yield"] ? $error["yield"] : t("Describe how many servings this recipe will yield. Feel free to be creative."));
   $output .= form_select(t("Preparation time"), "preptime", $node->preptime, array (15 => "15 minutes", 30 => "30 minutes", 45 => "45 minutes", 60 => "1 hour", 90 => "1 1/2 hours", 120 => "2 hours", 150 => "2 1/2 hours", 180 => "3 hours", 210 => "3 1/2 hours", 240 => "4 hours", 300 => "5 hours", 360 => "6 hours"), t("How long does this recipe take to prepare (i.e. elapsed time)"));
   $output .= form_item(t("Example Ingredients"), t("1 bunch kale or Swiss chard, stems and ribs removed, leaves sliced"). "<br>". t("3 white potatoes - peeled and diced"));
   $output .= form_item(t("Recipe Ingredients"), "");
-  // there might be a cleaner way to output these elements. teach moshe if you find it.  
   for ($i = 0; $i < $node->numingredients; $i++) {
     $output .= form_textfield("", "ingredients][$i", $node->ingredients[$i], 60, 127, "");
-    // next($node->ingredients);    
-    // $a++;
   }
-  /*while ($a < $node->numingredients) {
-    $output .= form_textfield("", "ingredients][$a", "", 60, 127, "");
-    $a++;
-  }*/  
   $output .= form_checkbox(t("add more ingredients"), "recipe_more_ingredients", 1, 0, t("If you need to add more ingredients, check this box and click "). "<b>". t("Preview"). "</b>"); 
-  $output .= form_textarea(t("Cooking Instructions"), "body", $node->body, 60, 18, $error["body"] ? $error["body"] : t("Allowed HTML tags") .": ". htmlspecialchars(variable_get("allowed_html", "")));
-  $output .= form_textfield(t("Source"), "source", $node->source, 60, 127, t("Optional. Does anyone else deserve credit for this recipe?"));
-  $output .= form_textarea(t("Additional Notes"), "notes", $node->notes, 60, 5, $error["body"] ? $error["body"] : t("Optional. Describe a great dining experience relating to this recipe, or note which wine or other dishes complement this recipe"));  
+  $output .= form_textarea(t("Cooking Instructions"), "body", $node->body, 60, 18, $error["body"] ? $error["body"] : t("Include a brief description of your recipe at the top of your instructions."));
+  if (function_exists("taxonomy_node_form")) {
+    $output .= implode("", taxonomy_node_form("recipe", $node));
+  }
+  $output .= form_textfield(t("Source"), "source", $node->source, 60, 127, $error["source"] ? $error["source"] : t("Optional. Does anyone else deserve credit for this recipe?"));
+  $output .= form_textarea(t("Additional Notes"), "notes", $node->notes, 60, 5, $error["notes"] ? $error["notes"] : t("Optional. Describe a great dining experience relating to this recipe, or note which wine or other dishes complement this recipe"));  
   return $output;
   
 }
 
 function recipe_link($type) {
-  if ($type == "menu.create" && user_access("post content")) {
-    $links[] = lm(t("create recipe"), array("mod" => "node", "op" => "add", "type" => "recipe"), t("Add a new recipe."));
+  if ($type == "menu.create" && user_access("create recipes")) {
+    $links[] = l(t("create recipe"), "node/add/recipe");
   }
 
-  if ($type == "page" && user_access("access content")) {
-    $links[] = lm(t("recipes"), array("mod" => "recipe"), t("View the collection of recipes."));
+  if ($type == "page" && user_access("access recipes")) {
+    $links[] = l(t("recipes"), "recipe", array ("title" => t("View the collection of recipes.")));
   }
   return $links ? $links : array();  
 }
 
-function recipe_save($op, $node) {
-  if ($op == "approve") {
-    return array("status" => 1, "promote" => 1);
-  }
-
-  if ($op == "create") {
-      return array("numingredients", "source", "yield", "preptime", "notes", "ingredients", "weight");
-  }
-
-  if ($op == "decline") {
-    return array("status" => 0, "promote" => 0);
-  }
-
-  if ($op == "update") {
-    return array("numingredients", "source", "yield", "preptime", "notes", "ingredients", "weight");
-  }
-}
 
 function recipe_block($op = "list", $delta = 0) {
   if($op == "list") {
-    $blocks["info"] = t("Latest 10 recipes");
+    $blocks[0]["info"] = t("Newest 10 recipes");
     return $blocks;
   }
   else {
-    $block["subject"] = t("Newest Recipes");
-    $result = db_query("SELECT nid, title FROM node WHERE type='recipe' ORDER BY nid DESC LIMIT 10");
-    while ($node = db_fetch_object($result)) {
-      if (comment_num_all($node->nid)) $comments = " (". comment_num_all($node->nid). ")";    
-      $output .= l($node->title, array ("id" => $node->nid)). $comments. "<br />";
-    }
-  
-    $block["content"] = $output;  
-  
-    return $block;
+    if (user_access("access recipes")) {
+      $block["subject"] = t("Newest Recipes");
+      $result = db_query_range("SELECT n.nid, n.title, n.uid, u.name FROM node n LEFT JOIN users u ON n.uid = u.uid WHERE n.status = 1 AND n.type='recipe' ORDER BY n.nid DESC", 0, 10);
+      $block["content"] = theme("node_title_list", $result);  
+      return $block;
+    }  
   }
 }  
 
@@ -136,68 +135,95 @@ function recipe_settings() {
 }
 
 function recipe_page() {
-  global $op;
+  $op = $_POST["op"];
 
-  if ($op == "feed") {
-    recipe_feed(); // not yet implemented    
-    return;
+  if (user_access("access recipes")) {
+    if ($op == "feed") {
+      recipe_feed(); // not yet implemented    
+      return;
+    }
+    else {
+    $boxes = recipe_overview();
+    theme("header");
+    foreach ($boxes as $box) {
+      theme("box", $box["subject"], $box["content"]);
+    }  
+    theme("footer");
+    }
   }
   else {
-  theme("header");
-  theme("box", t("Recipe"), recipe_overview());
-  theme("footer");
-  }
+    theme("header");
+    message_access();
+    theme("footer");
+  }  
 }
 
 
 function recipe_overview() {
-  $result = db_query("SELECT nid, title FROM node WHERE type='recipe' ORDER BY nid DESC LIMIT 100");
-  while ($node = db_fetch_object($result)) {
-     if (comment_num_all($node->nid)) $comments = " (". comment_num_all($node->nid). ")";    
-    $output .= l($node->title, array ("id" => $node->nid)). $comments. "<br />";
+  //TODO: search receipes
+  $i=0;
+  if (module_exist("taxonomy_dhtml")) {
+    $boxes[$i] = array ("subject" => t("Recipes by category"), "content" => recipe_directory_dhtml());
+    $i++;
   }  
+  $boxes[$i] = array ("subject" => t("All recipes"), "content" => recipe_list());
+  return $boxes;
+}
+
+function recipe_directory_dhtml() {
+  $boxes = taxonomy_dhtml_overview("recipe");
+  foreach ($boxes as $box) {
+    $output .= "<span class=\"recipe_label\">". $box["subject"]. "</span><br />". $box["content"];
+  }
   return $output;
 }  
+
+function recipe_list() {
+  $result = pager_query("SELECT n.nid, n.title, n.uid, u.name, r.preptime FROM recipe r LEFT JOIN node n ON r.nid = n.nid LEFT JOIN users u ON n.uid = u.uid WHERE n.status=1 ORDER BY n.nid DESC");
+  $header = array(t("Title"), t("Chef"), t("Comments"), t("Preparation time"));
+  $i=0;
+  while ($node = db_fetch_object($result)) {
+    $rows[$i][] = l($node->title, "node/view/$node->nid");
+    $rows[$i][] = format_name($node);
+    $rows[$i][] = ($num = comment_num_all($node->nid)) ? $num : "&nbsp;";    
+    $rows[$i][] = $node->preptime;
+    $i++;
+  }
+  if ($pager = pager_display(NULL, 50)) {
+    $rows[] = array(array("data" => $pager, "colspan" => 3));
+  }
+  return table($header, $rows);
+}  
+
 function recipe_view($node, $main = 0) {
-  
   
   if ($main) {    
     return theme("node", $node, $main);
   }
-  else {
-    if ($node->source) $source = "<span class=\"recipe_label\">Source</span>: $node->source<br />";
-    if ($node->notes) $notes = "<span class=\"recipe_label\">Notes</span>:<br /><blockquote>$node->notes</blockquote>";
+  else {    
     $preptime = t("%n hours", array ("%n" => ($node->preptime / 60)));
-    $ingredients = implode("<br />\n", $node->ingredients);
-    if ($terms = taxonomy_node_get_terms($nid, "name")) {
-      /*foreach ($terms as $term) {
-        $termlist .= l($term->name"<a href='index.php?or=$term->tid'>";
-              $out .= check_output($term->name)."</a> ";
-            }
-          }    */
-      // $catagories = implode(" / ", array_keys($terms));
-      print_r(array_keys($terms));
+    foreach ($node->ingredients as $ingredient) {
+      $ingredients .= $ingredient ? $ingredient. "<br />\n" : "";
     }  
-    $output = $catagories;
-    
-    $output .= "<style type=\"text/css\"> .recipe_label {  font-weight: bold} .recipe_title {  font-weight: bold; font-size: large}</style><br />";
-    $output .= "<p><span class=\"recipe_label\">Description</span>:<br>";    
-    $output .= "<blockquote>$node->teaser</blockquote>";
     $output .= "<p><span class=\"recipe_label\">Servings</span>: $node->yield<br>";
     $output .= "<span class=\"recipe_label\">Preparation Time</span>: $preptime<br />";
-    $output .= $source;
     $output .=  "<span class=\"recipe_label\">Ingredients</span>:</p>";
     $output .= "<blockquote>\n$ingredients\n</blockquote>";
     $output .= "<p><span class=\"recipe_label\">Cooking Instructions</span>:</p>";
     $output .= "<blockquote>$node->body</blockquote>";
-    $output .= $notes;
-    $output .= "<span class=\"recipe_label\">Catagories</span>: <a href=\"#\">fish</a> / <a href=\"#\">mexican</a></small>";
-EOD;
+    if ($node->source) $output .= "<span class=\"recipe_label\">Source</span>: $node->source<br />";
+    if ($node->notes) $output .= "<span class=\"recipe_label\">Notes</span>:<br /><blockquote>$node->notes</blockquote>";
     $node->body = strtr($output, "\n", ""); //remove newlines now or else face wrath of nl2br() later
     theme("node", $node, $main);
   }
 }
 
+function recipe_head() {
+ return array ("<style type=\"text/css\"> .recipe_label {  font-weight: bold} .recipe_title {  font-weight: bold; font-size: large}</style>"); 
+}
+
+// TODO. Untested and probably doesn't work.
+// TODO. other approach is to suff all fields in the $node->body since it gets indexed automatically.
 function recipe_update_index() {
 
   // Return an array of values to dictate how to update the search index
