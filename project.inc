@@ -202,7 +202,7 @@ function project_project_view(&$node, $teaser = false, $page = false) {
       if (count($releases) > 1) {
         $links[] = l(t('View older releases'), 'node/'. $node->nid .'/release');
       }
-      if (node_access('update', $node)) {
+      if (node_access('update', $node) && !variable_get('project_release_directory', '')) {
         $links[] = l(t('Add new release'), 'node/'. $node->nid .'/release/add');
       }
       if ($links) {
