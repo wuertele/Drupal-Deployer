@@ -36,3 +36,20 @@ Installation:
 -------------
 
 Please see the INSTALL document for details.
+
+Bugs/Features/Patches:
+----------------------
+
+If you want to report bugs, feature requests, or submit a patch, please do so
+at the project page on the Drupal web site.
+http://drupal.org/project/feedback
+
+Author
+------
+
+Originally by: Barry O'Rourke (barry@alted.co.uk)
+
+Rewritten by: Khalid Baheyeldin (http://baheyeldin.com/khalid)
+
+If you use this module, find it userful, and want to send the author
+a thank you note, then use the Feedback/Contact page at the URL above.
