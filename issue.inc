@@ -173,7 +173,9 @@ function project_issue_form(&$node, &$error, &$param) {
     }
 
     $group1 = form_select(t('Project'), 'pid', $node->pid, $projects, theme('error', $error['pid']));
-    $group1 .= form_select(t('Version'), 'rid', $node->rid, $releases, theme('error', $error['rid']));
+    if ($releases) {
+      $group1 .= form_select(t('Version'), 'rid', $node->rid, $releases, theme('error', $error['rid']));
+    }
     $group1 .= form_select(t('Component'), 'component', $node->component, $components, theme('error', $error['component']));
 
     $group2 = form_select(t('Category'), 'category', $node->category, $categories, theme('error', $error['category']));
