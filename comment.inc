@@ -162,7 +162,7 @@ function project_comment_view($node, $main = 0) {
           $summary[] = array(
             t($text) .":",
             project_mail_summary($field, $data["old"]->$field),
-            "&rArr; ". project_mail_summary($field, $data["new"]->$field)
+            "&raquo; ". project_mail_summary($field, $data["new"]->$field)
           );
         }
       }
