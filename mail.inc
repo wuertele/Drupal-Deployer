@@ -189,11 +189,11 @@ function project_mail_notify($node) {
   $project = node_load(array('nid' => $node->pid, 'type' => 'project_project'));
 
 
-  if (!count($project->mail_copy_filter) || !$project->mail_copy_filter[$node->category]) {
+  if (count($project->mail_copy_filter) && !$project->mail_copy_filter[$node->category]) {
     return;
   }
 
-  if (!count($project->mail_copy_filter_state) || !$project->mail_copy_filter_state[$node->state]) {
+  if (count($project->mail_copy_filter_state) && !$project->mail_copy_filter_state[$node->state]) {
     return;
   }
 
