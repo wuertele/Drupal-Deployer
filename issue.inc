@@ -117,6 +117,7 @@ function project_issue_validate(&$node) {
 
   empty($node->priority) and $node->priority = 2;
   empty($node->category) and $node->category = $_GET["category"];
+  empty($node->state) and $node->state = 1;
   empty($node->rid) and $node->rid = db_result(db_query("SELECT version FROM {project_projects} WHERE nid = %d", $node->pid), 0);
   empty($node->rid) and $error["rid"] = t("Required.");
   empty($node->pid) and $error["pid"] = t("Required.");
