@@ -223,7 +223,7 @@ function project_project_access($op, $node) {
     case 'view':
       return user_access('access projects');
     case 'create':
-      return user_access('maintain project') && $user->uid;
+      return user_access('maintain projects') && $user->uid;
     case 'update':
     case 'delete':
       return $user->uid && ($user->uid == $node->uid || user_access('administer projects'));
