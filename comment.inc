@@ -162,7 +162,7 @@ function project_comment_view($node, $main = 0) {
       $data = unserialize($comment->data);
       $summary = array();
       foreach ($fields as $field => $text) {
-        if (isset($data["new"]->$field)) {
+        if (isset($data["old"]->$field) && isset($data["new"]->$field)) {
           $summary[] = array(
             t($text) .":",
             project_mail_summary($field, $data["old"]->$field),
