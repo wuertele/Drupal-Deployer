@@ -11,6 +11,7 @@ function project_comment_page($project) {
           $comment->$var = $node->$var;
         }
 
+        $error = project_comment_validate($comment);
         $output = project_comment_form($comment, $error, $param);
         theme("header", t("New comment"));
         theme("box", t("New comment"), form($output, ($param["method"] ? $param["method"] : "post"), $param["action"], $param["options"]));
@@ -119,13 +120,8 @@ function project_comment_validate(&$edit) {
     $edit->fid = $comment->fid;
   }
 
-  if (empty($edit->pid)) {
-    $error["pid"] = t("Required.");
-  }
-
-  if (!isset($edit->priority)) {
-    $edit->priority = 1;
-  }
+  $error = project_issue_validate($edit);
+  unset($error["body"]);
 
   /* TODO: pending final fileapi
   $file = check_file("file");
