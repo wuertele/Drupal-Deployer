@@ -84,9 +84,6 @@ function project_project_cleanup($input) {
 }
 
 function project_project_validate(&$node) {
-  $node->promote = 0;
-  $node->moderate = 0;
-
   // Make sure title isn't already in use
   if (db_num_rows(db_query("SELECT nid FROM {node} WHERE type = '%s' AND status = 1 AND title = '%s' AND nid <> %d", $node->type, $node->title, $node->nid))) {
     $error['title'] .= t('This project name is already in use.');
