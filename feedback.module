@@ -25,7 +25,7 @@ function feedback_link($type, $node = 0) {
 }
 
 function feedback_page() {
-  global $op;
+  $op = $_POST["op"];
 
   if(user_access("send feedback")) {
 
@@ -64,14 +64,15 @@ function _feedback_page_default() {
 }
 
 function _feedback_page_send() {
-  global $edit, $user;
+  global $user;
+  $edit = $_POST["edit"];
   $to = variable_get("feedback_module_email", "");
   if (!$to)
     $to = variable_get("site_mail", ini_get("sendmail_from"));
   $from = $user->mail ? $user->mail : variable_get("site_mail", "");
   $who = $user->name ? $user->name : "anonymous";
-  $subject = "Feedback: ". $edit[subject];
-  $body = "-- $who sent you the following message using the feedback page --\n" . $edit[message];
+  $subject = "Feedback: ". $edit["subject"];
+  $body = "-- $who sent you the following message using the feedback page --\n" . $edit["message"];
   $body = wordwrap(strip_tags($body),72);
   $trans = get_html_translation_table(HTML_ENTITIES);
   $trans = array_flip($trans);
