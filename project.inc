@@ -7,6 +7,23 @@ function project_project_node($field) {
   return $info[$field];
 }
 
+function project_project_menu(&$node) {
+  $categories = project_issue_category(0, 1);
+  $uri = "project/$node->uri";
+
+  menu($uri, strtolower($node->title), 1);
+  if ($GLOBALS['user']->uid) {
+    menu("$uri/issues/user", t('my issues'), 'project_page', 0);
+    menu("$uri/issues/subscribe", t('subscribe'), 'project_page', 3);
+  }
+  foreach ($categories as $cat => $category) {
+    menu("$uri/issues/$cat", $category, 'project_page', 2);
+  }
+  menu("$uri/issues/add", t('submit'), 'project_page', 3);
+  menu("$uri/issues/statistics", t('statistics'), 'project_page', 4);
+  menu("$uri/issues/search", t('search'), 'project_page', 5);
+}
+
 function project_project_form(&$node, &$help, &$error) {
   if (count($node->components)) {
     $node->components = implode("\n", $node->components);
@@ -147,6 +164,7 @@ function project_project_view($node, $main = 0, $page = 0) {
       $breadcrumb[] = l($term->name, 'project', NULL, "tid=$term->tid");
     }
     drupal_set_breadcrumb($breadcrumb);
+    menu_set_active_item("project/$node->uri");
 
     foreach (array('homepage' => t('homepage'), 'changelog' => t('changelog'), 'cvs' => t('cvs tree'), 'demo' => t('demo site'), 'screenshots' => t('screenshots')) as $uri => $name) {
       if (!empty($node->$uri)) {

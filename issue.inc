@@ -306,6 +306,8 @@ function project_issue_view($node, $main = 0, $page = 0) {
 
     drupal_set_breadcrumb($breadcrumb);
 
+    menu_set_active_item("project/$project->uri/issues/$node->category");
+
     $output = theme('node', $node, $main, $page);
     $output .= project_comment_view($node);
     return $output;
