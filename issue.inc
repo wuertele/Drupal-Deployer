@@ -642,7 +642,7 @@ function project_issue_query_url($query = 0) {
     foreach ($query as $key => $value) {
       $url[] = "$key=$value";
     }
-    $url = implode('&amp;', $url);
+    $url = implode('&', $url);
   }
   return $url;
 }
