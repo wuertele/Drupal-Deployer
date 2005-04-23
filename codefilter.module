@@ -1,6 +1,9 @@
 <?php
 // $Id$
 
+/**
+ * Implementation of hook_help()
+ */
 function codefilter_help($section) {
   switch ($section) {
     case 'admin/modules#description':
@@ -8,6 +11,9 @@ function codefilter_help($section) {
   }
 }
 
+/**
+ * Implementation of hook_filter_tips()
+ */
 function codefilter_filter_tips($delta, $format, $long = false) {
   if ($long) {
     return t('To post pieces of code, surround them with &lt;code&gt;...&lt;/code&gt; tags. For PHP code, you can use &lt;?php ... ?&gt;, which will also colour it based on syntax.');
@@ -17,10 +23,18 @@ function codefilter_filter_tips($delta, $format, $long = false) {
   }
 }
 
-function codefilter_menu() {
-  drupal_set_html_head('<style type="text/css">@import url('. $GLOBALS[base_url] .'/modules/codefilter/codefilter.css);</style>');
+/**
+ * Implementation of hook_menu()
+ */
+function codefilter_menu($may_cache) {
+  if (!$may_cache) {
+    drupal_set_html_head('<style type="text/css">@import url('. $GLOBALS[base_url] .'/modules/codefilter/codefilter.css);</style>');
+  }
 }
 
+/**
+ * Processes chunks of escaped PHP code into HTML.
+ */
 function codefilter_process_php($text) {
   // Note, pay attention to odd preg_replace-with-/e behaviour on slashes
   // Undo possible linebreak filter conversion
@@ -33,6 +47,22 @@ function codefilter_process_php($text) {
   return '<div class="codeblock">'. highlight_string("<?php\n$text\n?>", 1) .'</div>';
 }
 
+/**
+ * Helper function for codefilter_process_code().
+ */
+function codefilter_process_php_inline($matches) {
+  // Undo nl2br
+  $text = str_replace('<br />', '', $matches[0]);
+  // Decode entities (the highlighter re-entifies) and highlight text
+  $text = highlight_string(decode_entities($text), 1);
+  // Remove PHP's own added code tags
+  $text = str_replace(array('<code>', '</code>', "\r", "\n"), array('', '', '', ''), $text);
+  return $text;
+}
+
+/**
+ * Processes chunks of escaped code into HTML.
+ */
 function codefilter_process_code($text) {
   // Inline or block level piece?
   $multiline = ereg("[\n\r]", $text);
@@ -42,8 +72,13 @@ function codefilter_process_code($text) {
   $text = preg_replace_callback('/(^ +|\n +)/s', 'codefilter_fix_indent', $text);
   // Trim leading and trailing linebreaks
   $text = trim($text, "\r\n");
+  // Escape newlines
+  $text = nl2br($text);
 
-  $text = '<code>'. nl2br($text) .'</code>';
+  // PHP code in regular code
+  $text = preg_replace_callback('/&lt;\?php.+?\?&gt;/', 'codefilter_process_php_inline', $text);
+
+  $text = '<code>'. $text .'</code>';
   if ($multiline) $text = '<div class="codeblock">'. $text .'</div>';
   return $text;
 }
