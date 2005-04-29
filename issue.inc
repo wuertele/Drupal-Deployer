@@ -411,7 +411,7 @@ function project_issue_delete($node) {
 function project_issue_access($op, $node) {
   switch ($op) {
     case 'view':
-      return user_access('access project issues');
+      return user_access('access project issues') || (user_access('access own project issues') && $node->uid == $user->uid);
     case 'create':
       return user_access('create project issues');
     case 'update':

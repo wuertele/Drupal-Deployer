@@ -318,7 +318,7 @@ function project_project_access($op, $node) {
 
   switch ($op) {
     case 'view':
-      return user_access('access projects');
+      return user_access('access projects') || (user_access('access own projects') && $node->uid == $user->uid);
     case 'create':
       return user_access('maintain projects') && $user->uid;
     case 'update':
