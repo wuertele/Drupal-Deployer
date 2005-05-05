@@ -40,7 +40,7 @@ function project_release_scan_parse($path = NULL) {
     list($filename, $name, $version) = $matches;
 
     if (!$projects[$name]) {
-      if ($project = db_fetch_object(db_query(db_rewrite_sql("SELECT n.nid, n.type, n.moderate FROM {node} n INNER JOIN {project_projects} p USING (nid) WHERE p.uri = '%s'"), $name))) {
+      if ($project = db_fetch_object(db_query(db_rewrite_sql("SELECT n.nid, n.type, n.moderate FROM {node} n INNER JOIN {project_projects} p ON n.nid = p.nid WHERE p.uri = '%s'"), $name))) {
         if ($releases = project_release_load($project, 0)) {
           $project->releases = array_flip($releases);
         }
