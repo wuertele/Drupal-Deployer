@@ -38,6 +38,9 @@ function currency_settings()
     variable_get("currency_overview_title", t("currency exchange")), 35, 255,
     t("The text in the navigation link which points to the currency exchange page."));  
 
+  $output .= form_checkbox (t("Log conversions and errors to watchdog"), "currency_watchdog", 1,
+    variable_get("currency_watchdog", "1"));
+
   return $output;
 }  
 
@@ -181,42 +184,209 @@ function currency_detailed_quote ( $currency_from, $currency_to )
 
 function currency_do_quote( $currency_from, $currency_to, $amount = 1 )
 {
- $currency_array = array
-	(
-	's'  => 'Currencies',
-	'l1' => 'Last'
-	);
-
- $url = "http://finance.yahoo.com/d/quotes.csv?e=.csv&f=" .
-   currency_get_fields($currency_array) . 
-   "&s=" . $currency_from . $currency_to . "=X";
-
- $handle = @fopen ( $url, "r" );
- if ( $handle )
- {
-		$record = fgets ( $handle, 4096 );
-
-		$currency_data = explode (',', $record);
-
-    $rate = $currency_data[1];
-    $value = $amount * $rate;
-
-    $result .= '<p>'. $amount .' '.
-      _get_currency_description($currency_from) .' = '. $value .' '.
-      _get_currency_description($currency_to) . '</p>';
-
-    $result .= '<p>'. currency_detailed_quote($currency_from, $currency_to).'</p>';
-
-		fclose ( $handle );
-
+  $ret = currency_exchange($currency_from, $currency_to, $amount);
+  //print_r ($ret);
+  if ($ret['status'] == FALSE)
+ 	{ 
+    drupal_set_message(t('currency exchange error: ') . $ret['message']);
  	}
  	else
- 	{ 
-    drupal_set_message(t("Could not contact host: ") . $url);
+  {
+    $result .= '<p>'. $amount .' '.
+      currency_get_description($currency_from) .' = '. $ret['value'] .' '.
+      currency_get_description($currency_to) . '</p>';
+
+    $result .= '<p>'. currency_detailed_quote($currency_from, $currency_to).'</p>';
  	}
 
  return $result;
 }
+
+/**
+ * Currency exchange API function
+ *
+ * This function converts two currencies using exchange rates from Yahoo Finance.
+ * The currency codes are standard ISO 3-letter codes, and you can find the details
+ * here:
+ *  http://www.oanda.com/site/help/iso_code.shtml
+ *
+ * Here is an example on how to use it:
+ *
+ *   $from = 'CAD';
+ *   $to   = 'USD';
+ *   $amt  = 20;
+ *   $ret = currency_exchange($from, $to, $amt);
+ *   if ($ret['status'] == FALSE)
+ *   {
+ *     drupal_set_message(t('An error occured: '). $ret['message']);
+ *   }
+ *   else
+ *   {
+ *     print $amt .' '. $from .' = '. $ret['value'];
+ *   }
+ *
+ * @param $currency_from
+ *   Currency to convert from
+ *
+ * @param $currency_to
+ *   Currency to convert to
+ *
+ * @param $amount
+ *   Option amount to convert. If not supplied, 1 is assumed.
+ *
+ * @return $result
+ *   An associative array that contains the following:
+ *    $result['status'] TRUE or FALSE
+ *    $result['message']'success' when status is TRUE, otherwise, contains a 
+ *                      descriptive error text
+ *   The following items are only returned when status is TRUE
+ *    $result['value']  $amount * exchange rate of $currency_from into $currency_to
+ *    $result['date']   Date of the last update to the rates (Format is "m/d/yyyy")
+ *    $result['time']   Time of the last update to the rates (Format is "h:mmpm")
+ */
+function currency_exchange($currency_from, $currency_to, $amount = 1)
+{
+ $currency_array = array
+	(
+	's'  => 'Currencies',
+	'l1' => 'Last',
+	'd1' => 'Date',
+	't1' => 'Time'
+	);
+
+ $result = array();
+ $result['status']  = FALSE;
+ $result['message'] = '';
+ $result['value']   = '';
+ $result['date']    = '';
+ $result['time']    = '';
+
+ $from = strtoupper($currency_from);
+ $to   = strtoupper($currency_to);
+
+ $url = "http://finance.yahoo.com/d/quotes.csv?e=.csv&f=" .
+   currency_get_fields($currency_array) . "&s=". $from . $to ."=X";
+
+ // Validate the passed currency codes, to make sure they are valid
+ if (FALSE == currency_get_description($from))
+ {
+   $msg = "currency: Invalid currency_from=$from";
+   _log_to_watchdog($msg);
+   $result['message'] = $msg;
+   $result['status'] = FALSE;
+ }
+
+ if (FALSE == currency_get_description($currency_to))
+ {
+   $msg = "currency: Invalid currency_to=$to";
+   _log_to_watchdog($msg);
+   return FALSE;
+   $result['message'] = $msg;
+   $result['status'] = FALSE;
+ }
+
+ if (!is_numeric($amount))
+ {
+   $msg = "currency: Invalid amount=$amount";
+   _log_to_watchdog($msg);
+   $result['message'] = $msg;
+   $result['status'] = FALSE;
+ }
+
+ $handle = @fopen($url, 'r');
+ if ($handle)
+ {
+	  if ($record = fgets($handle, 4096))
+    {
+		  fclose($handle);
+		  $currency_data = explode(',', $record);
+      $rate = $currency_data[1];
+      $date = $currency_data[2];
+      $time = $currency_data[3];
+
+      // Calculate the result
+      $value = $amount * $rate;
+
+      // Log it
+      _log_to_watchdog("currency: $amount $from = $value $to");
+
+      // Got what we need
+      $result['value']  = $value;
+      $result['date']   = $date;
+      $result['time']   = $time;
+      $result['status'] = TRUE;
+      $result['message']= 'success';
+    }
+    else
+    {
+      $msg = "currency: fgets failed";
+      _log_to_watchdog($msg);
+      $result['status'] = FALSE;
+      $result['message'] = $msg;
+    }
+ }
+ else
+ {
+   $msg = "currency: cannot contact Yahoo Finance host";
+   _log_to_watchdog($msg);
+   $result['status'] = FALSE;
+   $result['message'] = $msg;
+ }
+
+ return $result;
+}
+
+
+/**
+ * Currency exchange API function
+ *
+ * This function gets the currency name for a standard ISO 3-letter codes,
+ * You can find the details here:
+ *  http://www.oanda.com/site/help/iso_code.shtml
+ *
+ * Here is an example on how to use it:
+ *
+ *   $ccode = 'CAD';
+ *   $ret = currency_get_description($ccode);
+ *   if ($ret == FALSE)
+ *   {
+ *     drupal_set_message(t('Could not get description'));
+ *   }
+ *   else
+ *   {
+ *     print $ccode .' => '. $ret;
+ *   }
+ *
+ * @param $currency
+ *   Currency code (3-letter ISO)
+ *
+ * @return $result
+ *   Contains FALSE if the currency cannot be found, otherwise, it
+ *   has the description.
+ */
+function currency_get_description($currency)
+{
+  foreach ( _get_currency_list() as $key => $description)
+  {
+    if ($key == $currency)
+    {
+      return $description;
+    }
+  }
+  return FALSE;
+}
+
+function _log_to_watchdog($message)
+{
+  if (module_exist('watchdog'))
+  {
+    if (variable_get("currency_watchdog", "1"))
+    {
+      watchdog('user', $message);
+    }
+  }
+}
+
 
 function _get_currency_list()
 {
@@ -382,18 +552,6 @@ $currency = array (
   );
 
   return ($currency);
-}
-
-function _get_currency_description($currency)
-{
-  foreach ( _get_currency_list() as $key => $description)
-  {
-    if ($key == $currency)
-    {
-      return $description;
-    }
-  }
-  return "";
 }
 
 ?>

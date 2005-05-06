@@ -14,6 +14,8 @@ This module provides several options that customize its look and feel:
 * Users can enter an amount, and that amount will calculated in the target
   currency.
 * Provides a link to a detailed history and chart page on Yahoo Finance.
+* Provides a callable API for other modules to do currency exchange calculations.
+  See API.txt for details.
 
 Database:
 ---------
