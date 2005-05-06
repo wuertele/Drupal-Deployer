@@ -1,0 +1,419 @@
+<?php
+
+// $Id$
+
+function currency_help($section)
+{
+  $output ="";
+
+  switch ($section)
+  {
+    case 'admin/modules#description':
+      $output = t("Currency exchange page");
+      break;
+    case 'admin/help#currency':
+    case 'admin/settings/currency':
+      $output = t("This module provides currency exchange rates.");
+      break;
+  }
+
+  return $output;
+}
+  
+function currency_settings()
+{
+  $output .= form_textfield(t("Default Currency From"), "currency_default_from",
+    variable_get("currency_default_from", 'CAD'), 3, 3,
+    t('Three letter symbol for default currency to convert from.'));
+
+  $output .= form_textfield(t("Default Currency To"), "currency_default_to",
+    variable_get("currency_default_to",   'USD'), 3, 3,
+    t('Three letter symbol for default currency to convert to.'));
+
+  $output .= form_textarea(t("Description"), "currency_description",
+    variable_get("currency_description", t("This is the currency exchange page.")), 70, 7,
+    t('This text will be displayed at the top of the currency exchange page'));
+
+  $output .= form_textfield(t("Navigation link text"), "currency_overview_title",
+    variable_get("currency_overview_title", t("currency exchange")), 35, 255,
+    t("The text in the navigation link which points to the currency exchange page."));  
+
+  return $output;
+}  
+
+function currency_perm()
+{
+  return array ("use currency");
+}
+
+function currency_link($type, $node = 0, $main = 0)
+{
+  global $user;
+
+  $links = array();
+
+  if ($type == 'page' && user_access('use currency'))
+  {
+          $links[] = l(t('currency'), 'currency');
+  }
+
+  return $links;
+}
+// Navigation menu
+function currency_menu($may_cache)
+{
+  $items = array();
+
+  $access = user_access('use currency');
+  $title  = t(variable_get("currency_overview_title", "currency exchange"));
+  $path   = 'currency';
+
+  $items[] = array(
+	'path'     => $path,
+	'title'    => $title,
+	'access'   => $access,
+      	'callback' => 'currency_page',
+      	'weight'   => 0 );
+
+  return $items;
+}
+
+// Display the currency page
+function currency_page()
+{
+  $output = currency_contents ();
+
+  print theme("page", $output );
+}
+
+// Display the form
+function currency_form ( )
+{
+ global $user;
+ 
+ $edit = $_POST['edit'];
+
+ $from   = $edit['currency_from'];
+ $to     = $edit['currency_to'];
+ $amount = $edit['currency_amount'];
+
+ if (!isset($from))
+ {
+   $from = variable_get('currency_default_from', 'CAD');
+ }
+
+ if (!isset($to))
+ {
+   $to = variable_get('currency_default_to', 'USD');
+ }
+
+ if (!isset($amount))
+ {
+   $amount = 1;
+ }
+
+ if (!is_numeric($amount))
+ {
+   $amount = 1;
+ }
+
+ $output .= form_textfield(t('Amount'), 'currency_amount', $amount, 9, 9, t('Amount to convert'));
+ $output .= form_select   (t('From'),   'currency_from', $from, _get_currency_list());
+ $output .= form_select   (t('To'),     'currency_to',   $to,   _get_currency_list());
+ $output .= form_submit   (t('Convert'),'button_convert');
+
+ $form = form($output);
+
+ return $form;
+}
+
+
+function currency_contents()
+{
+ global $user;
+
+ $edit = $_POST['edit'];
+
+ $amount = $edit['currency_amount'];
+ $from   = strtoupper($edit['currency_from']);
+ $to     = strtoupper($edit['currency_to']);
+
+ if (($amount != "") AND (!is_numeric($amount)))
+ {
+   drupal_set_message(t('Invalid Amount. Please enter a number'), 'error');
+ }
+ else
+ {
+   $output .= variable_get("currency_description", "This is the currency exchange page.");
+   if (isset($_POST['button_convert']))
+   {
+ 	   $output .= currency_do_quote($from, $to, $amount);
+   }
+ }
+
+ $output .= currency_form();
+
+ return $output ;
+}
+
+function currency_get_fields ( $array )
+{
+ // print "<!-- currency_get_fields() array=$array -->";
+ while ( list($field, $header) = each($array) )
+	{
+	$field_string = $field_string . $field;
+	}
+
+ return ( $field_string );
+}
+
+function currency_detailed_quote ( $currency_from, $currency_to )
+{
+ 
+ $full_quote_url = 'http://finance.yahoo.com/q?s=';
+ 
+ 
+ $url = $full_quote_url . $currency_from . $currency_to . '=X';
+
+ return '<a target="_blank" title="'.
+   t('History and Chart').'" href="'.$url.'">'.t('Detailed history and chart').'</a>';
+}
+
+function currency_do_quote( $currency_from, $currency_to, $amount = 1 )
+{
+ $currency_array = array
+	(
+	's'  => 'Currencies',
+	'l1' => 'Last'
+	);
+
+ $url = "http://finance.yahoo.com/d/quotes.csv?e=.csv&f=" .
+   currency_get_fields($currency_array) . 
+   "&s=" . $currency_from . $currency_to . "=X";
+
+ $handle = @fopen ( $url, "r" );
+ if ( $handle )
+ {
+		$record = fgets ( $handle, 4096 );
+
+		$currency_data = explode (',', $record);
+
+    $rate = $currency_data[1];
+    $value = $amount * $rate;
+
+    $result .= '<p>'. $amount .' '.
+      _get_currency_description($currency_from) .' = '. $value .' '.
+      _get_currency_description($currency_to) . '</p>';
+
+    $result .= '<p>'. currency_detailed_quote($currency_from, $currency_to).'</p>';
+
+		if ( true == feof( $handle ) )
+	  {
+			break;
+		}
+
+		fclose ( $handle );
+
+ 	}
+ 	else
+ 	{ 
+    drupal_set_message(t("Could not contact host: ") . $url);
+ 	}
+
+ return $result;
+}
+
+function stripchar ($char, $str)
+{
+ if ( strstr ( $str, '"' ) )
+        {
+        $tmp_array = explode ('"', $str);
+
+        $str = $tmp_array[1];
+
+        // pcmnt ("stripchar(): str=$str");
+
+        }
+
+ return ($str);
+}
+
+function _get_currency_list()
+{
+
+$currency = array (
+  'AFA' => t('Afghanistan Afghani (AFA)'),
+  'ALL' => t('Albanian Lek (ALL)'),
+  'DZD' => t('Algerian Dinar (DZD)'),
+  'ARS' => t('Argentine Peso (ARS)'),
+  'AWG' => t('Aruba Florin (AWG)'),
+  'AUD' => t('Australian Dollar (AUD)'),
+  'BSD' => t('Bahamian Dollar (BSD)'),
+  'BHD' => t('Bahraini Dinar (BHD)'),
+  'BDT' => t('Bangladesh Taka (BDT)'),
+  'BBD' => t('Barbados Dollar (BBD)'),
+  'BYR' => t('Belarus Ruble (BYR)'),
+  'BZD' => t('Belize Dollar (BZD)'),
+  'BMD' => t('Bermuda Dollar (BMD)'),
+  'BTN' => t('Bhutan Ngultrum (BTN)'),
+  'BOB' => t('Bolivian Boliviano (BOB)'),
+  'BWP' => t('Botswana Pula (BWP)'),
+  'BRL' => t('Brazilian Real (BRL)'),
+  'GBP' => t('British Pound (GBP)'),
+  'BND' => t('Brunei Dollar (BND)'),
+  'BGN' => t('Bulgarian Lev (BGN)'),
+  'BIF' => t('Burundi Franc (BIF)'),
+  'KHR' => t('Cambodia Riel (KHR)'),
+  'CAD' => t('Canadian Dollar (CAD)'),
+  'CVE' => t('Cape Verde Escudo (CVE)'),
+  'KYD' => t('Cayman Islands Dollar (KYD)'),
+  'XOF' => t('CFA Franc (BCEAO) (XOF)'),
+  'XAF' => t('CFA Franc (BEAC) (XAF)'),
+  'CLP' => t('Chilean Peso (CLP)'),
+  'CNY' => t('Chinese Yuan (CNY)'),
+  'COP' => t('Colombian Peso (COP)'),
+  'KMF' => t('Comoros Franc (KMF)'),
+  'CRC' => t('Costa Rica Colon (CRC)'),
+  'HRK' => t('Croatian Kuna (HRK)'),
+  'CUP' => t('Cuban Peso (CUP)'),
+  'CYP' => t('Cyprus Pound (CYP)'),
+  'CZK' => t('Czech Koruna (CZK)'),
+  'DKK' => t('Danish Krone (DKK)'),
+  'DJF' => t('Dijibouti Franc (DJF)'),
+  'DOP' => t('Dominican Peso (DOP)'),
+  'XCD' => t('East Caribbean Dollar (XCD)'),
+  'ECS' => t('Ecuador Sucre (ECS)'),
+  'EGP' => t('Egyptian Pound (EGP)'),
+  'SVC' => t('El Salvador Colon (SVC)'),
+  'ERN' => t('Eritrea Nakfa (ERN)'),
+  'EEK' => t('Estonian Kroon (EEK)'),
+  'ETB' => t('Ethiopian Birr (ETB)'),
+  'EUR' => t('Euro (EUR)'),
+  'FKP' => t('Falkland Islands Pound (FKP)'),
+  'FJD' => t('Fiji Dollar (FJD)'),
+  'GMD' => t('Gambian Dalasi (GMD)'),
+  'GHC' => t('Ghanian Cedi (GHC)'),
+  'GIP' => t('Gibraltar Pound (GIP)'),
+  'XAU' => t('Gold Ounces (XAU)'),
+  'GTQ' => t('Guatemala Quetzal (GTQ)'),
+  'GNF' => t('Guinea Franc (GNF)'),
+  'GYD' => t('Guyana Dollar (GYD)'),
+  'HTG' => t('Haiti Gourde (HTG)'),
+  'HNL' => t('Honduras Lempira (HNL)'),
+  'HKD' => t('Hong Kong Dollar (HKD)'),
+  'HUF' => t('Hungarian Forint (HUF)'),
+  'ISK' => t('Iceland Krona (ISK)'),
+  'INR' => t('Indian Rupee (INR)'),
+  'IDR' => t('Indonesian Rupiah (IDR)'),
+  'IRR' => t('Iran Rial (IRR)'),
+  'IQD' => t('Iraqi Dinar (IQD)'),
+  'ILS' => t('Israeli Shekel (ILS)'),
+  'JMD' => t('Jamaican Dollar (JMD)'),
+  'JPY' => t('Japanese Yen (JPY)'),
+  'JOD' => t('Jordanian Dinar (JOD)'),
+  'KZT' => t('Kazakhstan Tenge (KZT)'),
+  'KES' => t('Kenyan Shilling (KES)'),
+  'KRW' => t('Korean Won (KRW)'),
+  'KWD' => t('Kuwaiti Dinar (KWD)'),
+  'LAK' => t('Lao Kip (LAK)'),
+  'LVL' => t('Latvian Lat (LVL)'),
+  'LBP' => t('Lebanese Pound (LBP)'),
+  'LSL' => t('Lesotho Loti (LSL)'),
+  'LRD' => t('Liberian Dollar (LRD)'),
+  'LYD' => t('Libyan Dinar (LYD)'),
+  'LTL' => t('Lithuanian Lita (LTL)'),
+  'MOP' => t('Macau Pataca (MOP)'),
+  'MKD' => t('Macedonian Denar (MKD)'),
+  'MGF' => t('Malagasy Franc (MGF)'),
+  'MWK' => t('Malawi Kwacha (MWK)'),
+  'MYR' => t('Malaysian Ringgit (MYR)'),
+  'MVR' => t('Maldives Rufiyaa (MVR)'),
+  'MTL' => t('Maltese Lira (MTL)'),
+  'MRO' => t('Mauritania Ougulya (MRO)'),
+  'MUR' => t('Mauritius Rupee (MUR)'),
+  'MXN' => t('Mexican Peso (MXN)'),
+  'MDL' => t('Moldovan Leu (MDL)'),
+  'MNT' => t('Mongolian Tugrik (MNT)'),
+  'MAD' => t('Moroccan Dirham (MAD)'),
+  'MZM' => t('Mozambique Metical (MZM)'),
+  'MMK' => t('Myanmar Kyat (MMK)'),
+  'NAD' => t('Namibian Dollar (NAD)'),
+  'NPR' => t('Nepalese Rupee (NPR)'),
+  'ANG' => t('Neth Antilles Guilder (ANG)'),
+  'NZD' => t('New Zealand Dollar (NZD)'),
+  'NIO' => t('Nicaragua Cordoba (NIO)'),
+  'NGN' => t('Nigerian Naira (NGN)'),
+  'KPW' => t('North Korean Won (KPW)'),
+  'NOK' => t('Norwegian Krone (NOK)'),
+  'OMR' => t('Omani Rial (OMR)'),
+  'XPF' => t('Pacific Franc (XPF)'),
+  'PKR' => t('Pakistani Rupee (PKR)'),
+  'XPD' => t('Palladium Ounces (XPD)'),
+  'PAB' => t('Panama Balboa (PAB)'),
+  'PGK' => t('Papua New Guinea Kina (PGK)'),
+  'PYG' => t('Paraguayan Guarani (PYG)'),
+  'PEN' => t('Peruvian Nuevo Sol (PEN)'),
+  'PHP' => t('Philippine Peso (PHP)'),
+  'XPT' => t('Platinum Ounces (XPT)'),
+  'PLN' => t('Polish Zloty (PLN)'),
+  'QAR' => t('Qatar Rial (QAR)'),
+  'ROL' => t('Romanian Leu (ROL)'),
+  'RUB' => t('Russian Rouble (RUB)'),
+  'RWF' => t('Rwanda Franc (RWF)'),
+  'WST' => t('Samoa Tala (WST)'),
+  'STD' => t('Sao Tome Dobra (STD)'),
+  'SAR' => t('Saudi Arabian Riyal (SAR)'),
+  'SCR' => t('Seychelles Rupee (SCR)'),
+  'SLL' => t('Sierra Leone Leone (SLL)'),
+  'XAG' => t('Silver Ounces (XAG)'),
+  'SGD' => t('Singapore Dollar (SGD)'),
+  'SKK' => t('Slovak Koruna (SKK)'),
+  'SIT' => t('Slovenian Tolar (SIT)'),
+  'SBD' => t('Solomon Islands Dollar (SBD)'),
+  'SOS' => t('Somali Shilling (SOS)'),
+  'ZAR' => t('South African Rand (ZAR)'),
+  'LKR' => t('Sri Lanka Rupee (LKR)'),
+  'SHP' => t('St Helena Pound (SHP)'),
+  'SDD' => t('Sudanese Dinar (SDD)'),
+  'SRG' => t('Surinam Guilder (SRG)'),
+  'SZL' => t('Swaziland Lilageni (SZL)'),
+  'SEK' => t('Swedish Krona (SEK)'),
+  'CHF' => t('Swiss Franc (CHF)'),
+  'SYP' => t('Syrian Pound (SYP)'),
+  'TWD' => t('Taiwan Dollar (TWD)'),
+  'TZS' => t('Tanzanian Shilling (TZS)'),
+  'THB' => t('Thai Baht (THB)'),
+  'TOP' => t('Tonga Pa\'anga (TOP)'),
+  'TTD' => t('Trinidad&Tobago Dollar (TTD)'),
+  'TND' => t('Tunisian Dinar (TND)'),
+  'TRL' => t('Turkish Lira (TRL)'),
+  'USD' => t('U.S. Dollar (USD)'),
+  'AED' => t('UAE Dirham (AED)'),
+  'UGX' => t('Ugandan Shilling (UGX)'),
+  'UAH' => t('Ukraine Hryvnia (UAH)'),
+  'UYU' => t('Uruguayan New Peso (UYU)'),
+  'VUV' => t('Vanuatu Vatu (VUV)'),
+  'VEB' => t('Venezuelan Bolivar (VEB)'),
+  'VND' => t('Vietnam Dong (VND)'),
+  'YER' => t('Yemen Riyal (YER)'),
+  'YUM' => t('Yugoslav Dinar (YUM)'),
+  'ZMK' => t('Zambian Kwacha (ZMK)'),
+  'ZWD' => t('Zimbabwe Dollar (ZWD)')
+  );
+
+  return ($currency);
+}
+
+function _get_currency_description($currency)
+{
+  foreach ( _get_currency_list() as $key => $description)
+  {
+    if ($key == $currency)
+    {
+      return $description;
+    }
+  }
+  return "";
+}
+
+?>
