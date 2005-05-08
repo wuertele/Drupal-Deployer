@@ -10,10 +10,10 @@ function project_release_scan() {
 function project_release_scan_directory($project = NULL) {
   if ($dir = file_create_path(variable_get('project_release_directory', ''))) {
     if ($project) {
-      $regexp = "($project)" .'-(.+)\.[tar.gz|zip]';
+      $regexp = "($project)" .'-(.+)\.(tar.gz|zip)';
     }
     else {
-      $regexp = '(.+)-(.+)\.[tar.gz|zip]';
+      $regexp = '(.+)-(.+)\.(tar.gz|zip)';
     }
     file_scan_directory($dir, $regexp, array('.', '..', 'CVS'), 'project_release_scan_parse');
 

@@ -333,7 +333,13 @@ function project_project_retrieve($key = 0) {
       $node = node_load(array('nid' => $key, 'type' => 'project_project'));
     }
     else {
-      $node = node_load(array('nid' => db_result(db_query("SELECT nid FROM {project_projects} WHERE uri = '%s'", $key), 0), 'type' => 'project_project'));
+      $nid = db_result(db_query("SELECT nid FROM {project_projects} WHERE uri = '%s'", $key), 0);
+      if (!$nid) {
+        return new StdClass();
+      }
+      else {
+        $node = node_load(array('nid' => $nid, 'type' => 'project_project'));
+      }
     }
   }
   return $node;
