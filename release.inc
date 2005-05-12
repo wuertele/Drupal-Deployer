@@ -272,7 +272,7 @@ function project_release_validate(&$edit) {
 
 function project_release_view($release, $project = 0) {
   if (!$project) {
-    $project = node_load(array('nid' => $project->nid));
+    $project = node_load(array('nid' => $release->nid));
   }
 
   $links = array();
