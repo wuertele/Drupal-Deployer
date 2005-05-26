@@ -150,6 +150,8 @@ function project_mail_output(&$body, $html = 1, $format = FILTER_FORMAT_DEFAULT)
     $body = preg_replace('!</?(b|strong)>!i', '*', $body);
     $body = preg_replace("@<br />(?!\n)@i", "\n", $body);
     $body = preg_replace("@</p>(?!\n\n)@i", "\n\n", $body);
+    $body = preg_replace("@<li>@i", "* ", $body);
+    $body = preg_replace("@</li>\n?@i", "\n", $body);
     $body = strip_tags($body);
     $body = decode_entities($body);
     $body = wordwrap($body, 72);
