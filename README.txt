@@ -51,5 +51,8 @@ Originally by: Barry O'Rourke (barry@alted.co.uk)
 
 Rewritten by: Khalid Baheyeldin (http://baheyeldin.com/khalid)
 
-If you use this module, find it userful, and want to send the author
+If you use this module, find it useful, and want to send the author
 a thank you note, then use the Feedback/Contact page at the URL above.
+
+The author can also be contacted for paid customizations of this
+and other modules.
