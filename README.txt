@@ -1,3 +1,7 @@
+$Id$
+
+Copyright 2005 http://2bits.com
+
 Description:
 ------------
         
@@ -49,7 +53,7 @@ Author
 
 Originally by: Barry O'Rourke (barry@alted.co.uk)
 
-Rewritten by: Khalid Baheyeldin (http://baheyeldin.com/khalid)
+Rewritten by: Khalid Baheyeldin (http://baheyeldin.com/khalid and http://2bits.com)
 
 If you use this module, find it useful, and want to send the author
 a thank you note, then use the Feedback/Contact page at the URL above.
