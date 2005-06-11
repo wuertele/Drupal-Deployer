@@ -8,7 +8,7 @@ define('RECIPE_MODULE_VERSION', '2.0.1');
  */
 function recipe_init() {
   if (version_compare(variable_get('recipe_installed_version', 0), RECIPE_MODULE_VERSION, '<')) {
-    // recipe_upgrade();
+    recipe_upgrade();
   }
 }
 
@@ -123,7 +123,8 @@ function recipe_form($node) {
   $system = variable_get('recipe_ingredient_system','complex');
   if ($system == 'complex') {
     $header = array(t('Quantity'), t('Units'), t('Ingredient Name'));
-  } else {
+  }
+  else {
     $header = array(t('Ingredients'));
   }
   $rows = array();
@@ -314,52 +315,58 @@ function recipe_view(&$node, $teaser = 0, $page = 0) {
  * Returns the recipe for display on _view pages
  */
 function recipe_content($node, $teaser = 0) {
-  if (intval($node->yield) == $node->yield) {
-    $yield = $_POST['custom_yield'];
-    if ($yield && $yield != $node->yield) {
-      $factor = $yield / $node->yield;
-      $node->yield = $yield;
-    } else {
+  if (!$teaser) {
+    if (intval($node->yield) == $node->yield) {
+      $yield = $_POST['custom_yield'];
+      if ($yield && $yield != $node->yield) {
+        $factor = $yield / $node->yield;
+        $node->yield = $yield;
+      }
+      else {
+        $factor = 1;
+      }
+      $form = '<input name="custom_yield" value="'.$node->yield.'" size="2" />';
+      $form .= '<input type="submit" value="'.t('Update').'">';
+      $yield = form($form);
+    }
+    else {
+      $yield = $node->yield;
       $factor = 1;
     }
-    $form = '<input name="custom_yield" value="'.$node->yield.'" size="2" />';
-    $form .= '<input type="submit" value="'.t('Update').'">';
-    $yield = form($form);
-  } else {
-    $yield = $node->yield;
-    $factor = 1;
-  }
 
-  foreach ($node->ingredients as $ingredient) {
-    if (isset($ingredient->quantity) && $ingredient->name) {
-      if (!$ingredient->abbreviation) {
-        $ingredient->abbreviation = recipe_unit_abbreviation($ingredient->unit_id);
-      }
-      if ($ingredient->quantity > 0)
-        $ingredient->quantity *= $factor;
-      else
-        $ingredient->quantity = '';
-      $ingredients[] = $ingredient->quantity.$ingredient->abbreviation.' '.$ingredient->name;
-    }
-  }
-
-  $summary = '<table>';
-
-  $summary .= '<tr><th>Yield</th><td>'.$yield.'</td></tr>';
-  if ($node->source) {
-    $summary .= '<tr><th>Source</th><td>'.$node->source.'</td></tr>';
-  }
-  $vocabs = taxonomy_get_vocabularies('recipe');
-  if (count($vocabs) > 0) {
-    foreach ($vocabs as $vocab) {
-      $terms = taxonomy_node_get_terms_by_vocabulary($node->nid, $vocab->vid);
-      if (count($terms) > 0) {
-        $term = array_shift($terms);
-        $summary .= '<tr><th>'.$vocab->name.'</th><td>'.l($term->name, 'taxonomy/term/'.$term->tid).'</td></tr>';
+    foreach ($node->ingredients as $ingredient) {
+      if (isset($ingredient->quantity) && $ingredient->name) {
+        if (!$ingredient->abbreviation) {
+          $ingredient->abbreviation = recipe_unit_abbreviation($ingredient->unit_id);
+        }
+        if ($ingredient->quantity > 0) {
+          $ingredient->quantity *= $factor;
+        }
+        else {
+          $ingredient->quantity = '';
+        }
+        $ingredients[] = $ingredient->quantity.$ingredient->abbreviation.' '.$ingredient->name;
       }
     }
+
+    $summary = '<table>';
+
+    $summary .= '<tr><th>Yield</th><td>'.$yield.'</td></tr>';
+    if ($node->source) {
+      $summary .= '<tr><th>Source</th><td>'.$node->source.'</td></tr>';
+    }
+    $vocabs = taxonomy_get_vocabularies('recipe');
+    if (count($vocabs) > 0) {
+      foreach ($vocabs as $vocab) {
+        $terms = taxonomy_node_get_terms_by_vocabulary($node->nid, $vocab->vid);
+        if (count($terms) > 0) {
+          $term = array_shift($terms);
+          $summary .= '<tr><th>'.$vocab->name.'</th><td>'.l($term->name, 'taxonomy/term/'.$term->tid).'</td></tr>';
+        }
+      }
+    }
+    $summary .= '</table>';
   }
-  $summary .= '</table>';
 
   $node->teaser = check_output($node->body, $node->format);
   $node->instructions = check_output($node->instructions, $node->format);
@@ -397,11 +404,18 @@ function recipe_ingredient_row($ingredient = NULL) {
       form_select('', 'ingredients]['.$id.'][unit_id', $ingredient->unit_id, recipe_unit_options()),
       form_autocomplete('', 'ingredients]['.$id.'][name', $ingredient->name, 32, 32, $callback)
     );
-  } else {
+  }
+  else {
     if ($ingredient->name) {
-      if ($ingredient->quantity == 0) $ingredient->quantity = '';
-      else $ingredient->quantity .= ' ';
-      if ($ingredient->abbreviation != '') $ingredient->abbreviation .= ' ';
+      if ($ingredient->quantity == 0) {
+        $ingredient->quantity = '';
+      }
+      else {
+        $ingredient->quantity .= ' ';
+      }
+      if ($ingredient->abbreviation != '') {
+        $ingredient->abbreviation .= ' ';
+      }
       $ingredient->name = $ingredient->quantity . $ingredient->abbreviation . $ingredient->name;
     }
     $row = array(form_autocomplete('', 'ingredients]['.$id.'][name', $ingredient->name, 60, 60, $callback));
@@ -480,14 +494,29 @@ function recipe_ingredients_diff($a1,$a2) {
 
   foreach ($a1 as $pl) {
     $pl = array2object($pl);
-    if ($pl->name && !in_array($pl, $a2) )
+    if ($pl->name && !_in_array($pl, $a2) ) {
       $return->add[] = $pl;
+    }
   }
   foreach ($a2 as $k => $pl) {
-    if (! in_array($pl, $a1))
+    if (!_in_array($pl, $a1)) {
       $return->remove[] = $map[$k];
+    }
   }
   return $return;
+}
+
+/**
+ * Custom in_array() function because PHP 4 in_aray() doesnt seem to
+ * handle the first arguement being an object
+ */
+function _in_array($a, $b) {
+  foreach ($b as $c) {
+    if ($a == $c) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -589,8 +618,9 @@ function recipe_validate(&$node) {
   foreach ($node->ingredients as $key => $ingredient) {
     $ingredient = array2object($ingredient);
     if (!isset($ingredient->quantity)) {
-      $node->ingredients[$key] = recipe_parse_ingredient_string($ingredient->name);
+      $ingredient = recipe_parse_ingredient_string($ingredient->name);
     }
+    $node->ingredients[$key] = $ingredient;
   }
 }
 
@@ -601,15 +631,17 @@ function recipe_parse_ingredient_string($ingredient_string) {
   if (preg_match('#([0-9.]+(?:\s?\d*/\d*)?\s?)?(?:([a-zA-Z.]*)\s)?(.*)#', trim($ingredient_string), $matches)) {
     $ingredient->name = $matches[3];
     $ingredient->quantity = trim($matches[1]);
-    if ($ingredient->quantity == 0)
+    if ($ingredient->quantity == 0) {
       $ingredient->quantity = 0;
+    }
     $t_unit = $matches[2];
     $unit = recipe_unit_from_name($t_unit);
 
     if ($unit) {
       $ingredient->unit_id = $unit->id;
       $ingredient->abbreviation = $unit->abbreviation;
-    } else {
+    }
+    else {
       $ingredient->unit_id = 29;
       $ingredient->abbreviation = '';
       $ingredient->name = $t_unit . ' ' . $ingredient->name;
@@ -618,7 +650,8 @@ function recipe_parse_ingredient_string($ingredient_string) {
     $ingredient->name = trim($ingredient->name);
 
     return $ingredient;
-  } else {
+  }
+  else {
     return false;
   }
 }
@@ -632,11 +665,13 @@ function recipe_unit_from_name($name) {
   else
     $string = $name;
   $ending = substr($string, -1, 1);
-  if ($ending == 's'  && $string != 'ds' || $ending == '.')
+  if ($ending == 's'  && $string != 'ds' || $ending == '.') {
     $string = substr($string, 0, strlen($string) -1);
+  }
   $ending = substr($string, -1, 1);
-  if ($ending == 's'  && $string != 'ds'|| $ending == '.')
+  if ($ending == 's'  && $string != 'ds'|| $ending == '.') {
     $string = substr($string, 0, strlen($string) -1);
+  }
 
 
   static $units_array;
