@@ -625,7 +625,7 @@ function project_issue_query_result($query = NULL, $format = 'html', $search = t
   }
   elseif (db_num_rows($result)) {
     while ($node = db_fetch_object($result)) {
-      $node = node_load($node);
+      $node = node_load((array)$node);
       $row = array();
       $number++;
       $class = 'state_'. ($number % 2 ? 'light' : 'dark') ."_$node->state";
@@ -827,7 +827,7 @@ function project_issue_query_rss($projects, $result) {
 
   if (db_num_rows($result)) {
     while ($node = db_fetch_object($result)) {
-      $node = node_load($node);
+      $node = node_load((array)$node);
 
       $body = $node->teaser ? $node->teaser : $node->body;
 
