@@ -235,7 +235,8 @@ function project_mail_notify($node) {
   }
 
   // Create link to related node
-  $links = t('Issue status update for %link', array('%link' => url("node/$node->nid", NULL, NULL, 1))) ."\n";
+  $links = t('Issue status update for %link', array('%link' => "\n". url("node/$node->nid", NULL, NULL, 1))) ."\n";
+  $links .= t('Post a follow up: %link', array('%link' => "\n". url("project/comments/add/$node->nid", NULL, NULL, 1))) ."\n";
 
   // Mail summary (status values)
   foreach ($fields as $field => $text) {
