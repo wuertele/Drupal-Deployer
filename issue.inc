@@ -789,7 +789,7 @@ function project_issue_query_result($query = NULL, $format = 'html', $search = t
       form_hidden('users', $query->users) . form_submit(t('Search')),
       l(t('advanced search'), 'project/issues/search'. ($project->uri ? "/$project->uri" : ""))
     ));
-    $form .= form(theme('table', '', $rows));
+    $form .= form(theme('table', array(), $rows));
   }
 
   $rows = array();
