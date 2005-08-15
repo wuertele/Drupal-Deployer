@@ -133,7 +133,7 @@ function project_comment_view($node, $main = 0) {
           $rows[] = array(array('class' => 'summary', 'data' => theme('table', array(), $summary)));
         }
         if ($comment->body) {
-          $rows[] = array(array('class' => 'content', 'data' => '<p>'. check_output($comment->body) .'</p>'));
+          $rows[] = array(array('class' => 'content', 'data' => '<p>'. check_markup($comment->body) .'</p>'));
         }
         if ($comment->fid) {
           $rows[] = array(l(t('download attachment'), "project/comments/download/$comment->cid"));
