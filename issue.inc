@@ -814,7 +814,7 @@ function project_issue_query_result($query = NULL, $format = 'html', $search = t
         $row[] = $releases[$node->rid];
       }
       $row[] = array('data' => format_interval(time() - $node->changed, 2), 'align' => 'right');
-      $row[] = ($node->assigned) ? theme('user', user_load(array('uid' => $node->assigned))) : '';
+      $row[] = ($node->assigned) ? theme('username', user_load(array('uid' => $node->assigned))) : '';
 
       $row = array('data' => $row, 'class' => $class);
 
