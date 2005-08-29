@@ -1,10 +1,6 @@
 <?php
 /* $Id$ */
 
-function project_issue_node_name() {
-  return t('issue');
-}
-
 function project_issue_nodeapi(&$node, $op, $arg) {
   global $user;
   switch ($op) {

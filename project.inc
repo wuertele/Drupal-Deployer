@@ -1,12 +1,6 @@
 <?php
 /* $Id$ */
 
-function project_project_node_name() {
-  return t('project');
-
-  return $info[$field];
-}
-
 function project_project_form(&$node) {
   if (count($node->components)) {
     $node->components = implode("\n", $node->components);
