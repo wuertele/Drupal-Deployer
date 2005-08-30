@@ -278,43 +278,90 @@ function feedback_validate_data() {
 
   if (empty ($email) && variable_get ("feedback_field_email", "") ) {
      $error_msg .= t("Error: E-Mail address is required") . "<br/>";
-     }
+  }
   else {
      $smtp_err = feedback_validate_email ($email);
      if ( $smtp_err != "" ) {
         $error_msg .= t("Error: E-Mail address error:") . "<br/>" . t("SMTP Info:") . $smtp_err . "<br/>";
-        }
      }
+     else {
+       if (feedback_check_exploit($email)) {
+         $error_msg .= t("Error: invalid data in email") . "<br/>";
+       }
+     }
+  }
 
   if (empty($name) && variable_get("feedback_field_name", "") ) {
     $error_msg .= t("Error: Full name is required") . "<br/>";
+  }
+  else {
+    if (feedback_check_exploit($name)) {
+      $error_msg .= t("Error: invalid data in name") . "<br/>";
     }
+  }
 
   if (empty($body) && variable_get ("feedback_field_body", "") ) {
     $error_msg .= t("Error: Message Body is required") . "<br/>";
+  }
+  else {
+    if (feedback_check_exploit($body)) {
+      $error_msg .= t("Error: invalid data in body") . "<br/>";
     }
+  }
 
   if (empty($subj) && variable_get ("feedback_field_subject", "") ) {
     $error_msg .= t("Error: Subject is required") . "<br/>";
+  }
+  else {
+    if (feedback_check_exploit($subj)) {
+      $error_msg .= t("Error: invalid data in subject") . "<br/>";
     }
+  }
 
   if (empty($postal) && variable_get ("feedback_field_postal", "") ) {
     $error_msg .= t("Error: Postal is required") . "<br/>";
+  }
+  else {
+    if (feedback_check_exploit($postal)) {
+      $error_msg .= t("Error: invalid data in postal") . "<br/>";
     }
+  }
 
   if (empty($phone) && variable_get ("feedback_field_phone", "") ) {
     $error_msg .= t("Error: Phone is required") . "<br/>";
+  }
+  else {
+    if (feedback_check_exploit($phone)) {
+      $error_msg .= t("Error: invalid data in phone") . "<br/>";
     }
+  }
 
- if (empty($error_msg)) {
+  if (empty($error_msg)) {
     return "";
-    }
- else {
+  }
+  else {
     $error_msg = t("The form could not be processed due to the following errors:") .
       "<br/>" . $error_msg;
   
     return $error_msg;
+  }
+}
+
+function feedback_check_exploit($data) {
+  $bad_strings = array (
+    'To:',
+    'Cc:',
+    'Bcc:',
+    'Content-Type:',
+    'MIME-Version:',
+    'Content-Transfer-Encoding:');
+
+  foreach($bad_strings as $str) {
+    if (stristr($data, $str)) {
+      return true;
     }
+  }
+  return false;
 }
 
 function feedback_validate_email($email) {
