@@ -171,7 +171,7 @@ function feedback_send_email() {
 
   $to = variable_get("feedback_email", "");
 
-  $body = feedback_format_body($edit["form_field_body"]) . "\n\n" . feedback_custom_footers();
+  $body = feedback_format_body($edit["form_field_body"]) . feedback_custom_footers();
 
   $headers = feedback_custom_headers();
 
@@ -417,9 +417,8 @@ function feedback_custom_footers() {
   global $user;
 
   $edit = $_POST["edit"];
-  $site_name =  variable_get("site_name", "") ;
+  $site_name = variable_get("site_name", "") ;
 
-  $footer .= "\n----------------------------------";
   if ( $site_name )
     $footer .= "\nSite Name       : " . variable_get("site_name", "") ;
   if ( $user->name )
@@ -465,10 +464,9 @@ function feedback_format_body($body) {
   $trans = get_html_translation_table(HTML_ENTITIES);
   $trans = array_flip($trans);
 
-  $output  = t("-- The following message was sent using the feedback page --\n\n");
-  $output .= wordwrap(strip_tags($body),72);
-
+  $output = wordwrap(strip_tags($body),72);
   $output = strtr(wordwrap(strip_tags($output),72), $trans);
+  $output .= t("\n\n-- The above message was sent using the feedback page --");
 
   return $output;
 }
