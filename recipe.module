@@ -260,10 +260,6 @@ function recipe_list() {
     }
   }
 
-  $query->selects .= ',n.uid,u.name';
-  $query->joins .= ' INNER JOIN {users} u ON n.uid=u.uid';
-
-
   foreach ($vids as $index => $vid) {
     $query->selects .= ',td'. $index .'.name AS td'. $index;
     $query->joins .= ' INNER JOIN {term_node} tn'. $index .' ON n.nid = tn'. $index .'.nid';
@@ -273,33 +269,33 @@ function recipe_list() {
 
   $query->wheres[] = 'n.type="recipe"';
 
-  $sql = 'SELECT DISTINCT(n.nid) FROM {node} n ' .$query->joins . ' WHERE n.status = 1 AND ' . implode(' AND ', $query->wheres). tablesort_sql($header);
+  $sql = 'SELECT DISTINCT(n.nid)'.$query->selects.' FROM {node} n ' .$query->joins . ' WHERE n.status = 1 AND ' . implode(' AND ', $query->wheres). tablesort_sql($header);
 
   $result = pager_query($sql, 10);
   $rows = array();
-  while ($node = db_fetch_object($result)) {
-    $node = node_load($node->nid);
+  while ($r = db_fetch_object($result)) {
+    $node = node_load($r->nid);
     $row = array(
       l($node->title, 'node/'.$node->nid) . ''. check_markup($node->body, $node->format),
       theme('username', $node),
     );
     foreach ($vids as $index=>$vid) {
       $term_name = 'td'.$index;
-      $row[] = $node->$term_name;
+      $row[] = $r->$term_name;
     }
     $rows[] = $row;
   }
 
   if (!$rows) {
-    $rows[] = array(array("data" => t("No recipes available."), "colspan" => "3"));
+    $output = '<p>'.t('No recipes available.').'</p>';
   }
 
-  $pager = theme("pager", NULL, 20, 0);
-  if (!empty($pager)) {
-    $rows[] = array(array("data" => $pager, "colspan" => "3"));
+  $output = theme('table', $header, $rows);
+  if (!$pager = theme('pager', NULL, 10, 0)) {
+    $output .= $pager;
   }
 
-  return theme('table', $header, $rows);
+  return $output;
 }
 
 /**
