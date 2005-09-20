@@ -273,14 +273,15 @@ function recipe_list() {
 
   $query->wheres[] = 'n.type="recipe"';
 
-  $sql = 'SELECT DISTINCT(n.nid),n.title,n.body,n.format'.$query->selects.' FROM {node} n ' .$query->joins . ' WHERE n.status = 1 AND ' . implode(' AND ', $query->wheres). tablesort_sql($header);
+  $sql = 'SELECT DISTINCT(n.nid) FROM {node} n ' .$query->joins . ' WHERE n.status = 1 AND ' . implode(' AND ', $query->wheres). tablesort_sql($header);
 
   $result = pager_query($sql, 10);
   $rows = array();
   while ($node = db_fetch_object($result)) {
+    $node = node_load($node->nid);
     $row = array(
-      l($node->title, 'node/'.$node->nid) . ''. check_output($node->body, $node->format),
-      format_name($node)
+      l($node->title, 'node/'.$node->nid) . ''. check_markup($node->body, $node->format),
+      theme('username', $node),
     );
     foreach ($vids as $index=>$vid) {
       $term_name = 'td'.$index;
@@ -448,7 +449,7 @@ function recipe_ingredient_id_from_name($name) {
   static $cache;
 
   if (!$cache[$name]) {
-    $ingredient_id = db_result(db_query('SELECT id FROM {recipe_ingredient} WHERE name="%s"', $name));
+    $ingredient_id = db_result(db_query('SELECT id FROM {recipe_ingredient} WHERE LOWER(name)="%s"', trim(strtolower($name))));
 
     if (!$ingredient_id) {
       global $active_db;
@@ -477,6 +478,11 @@ function recipe_save_ingredients($node) {
     $ingredient->id = recipe_ingredient_id_from_name($ingredient->name);
     db_query("INSERT INTO {recipe_node_ingredient} (nid,ingredient_id,quantity,unit_id) VALUES (%d,%d,%f,%d)", $node->nid, $ingredient->id, $ingredient->quantity, $ingredient->unit_id);
   }
+
+  foreach ($changes->update as $ingredient) {
+    $ingredient->id = recipe_ingredient_id_from_name($ingredient->name);
+    db_query("UPDATE {recipe_node_ingredient} SET quantity='%f', unit_id='%d' WHERE nid='%d' AND ingredient_id='%d'", $ingredient->quantity, $ingredient->unit_id, $node->nid, $ingredient->id);
+  }
 }
 
 /**
@@ -485,22 +491,25 @@ function recipe_save_ingredients($node) {
 function recipe_ingredients_diff($a1,$a2) {
   $return->add = array();
   $return->remove = array();
-
-  foreach ($a2 as $k=>$pl) {
-    $map[$k] = $a2[$k]->id;
-    unset($a2[$k]->id);
-    unset($a2[$k]->ingredient_id);
-  }
+  $return->update = array();
 
   foreach ($a1 as $pl) {
     $pl = array2object($pl);
-    if ($pl->name && !_in_array($pl, $a2) ) {
-      $return->add[] = $pl;
+    $pl->name = trim($pl->name);
+    if ($pl->name) {
+      if (!_in_array($pl,$return->add)) {
+        // Duplicate entries for the same ingredient are ignored.
+        if (!_in_array($pl, $a2))
+          $return->add[] = $pl;
+        else
+          if (!_in_array($pl,$return->update))
+            $return->update[] = $pl;
+      }
     }
   }
   foreach ($a2 as $k => $pl) {
     if (!_in_array($pl, $a1)) {
-      $return->remove[] = $map[$k];
+      $return->remove[] = $pl->id;
     }
   }
   return $return;
@@ -511,10 +520,10 @@ function recipe_ingredients_diff($a1,$a2) {
  * handle the first arguement being an object
  */
 function _in_array($a, $b) {
-  foreach ($b as $c) {
-    if ($a == $c) {
+  $a->name = trim(strtolower($a->name));
+  foreach($b as $row) {
+    if ($a->name === trim(strtolower($row->name)))
       return true;
-    }
   }
   return false;
 }
@@ -600,13 +609,17 @@ function recipe_export_page($id = 0) {
 /**
  * Implementation of hook_settings().
  */
-function recipe_autocomplete_page($string, $limit = 10) {
+function recipe_autocomplete_page($string = "", $limit = 10) {
   $matches = array();
-  $rs = db_query('SELECT name FROM {recipe_ingredient} WHERE name LIKE "%%%s%%" ORDER BY name LIMIT %d', $string, $limit);
+  $rs = db_query('SELECT name FROM {recipe_ingredient} WHERE LOWER(name) LIKE "%%%s%%" ORDER BY name LIMIT %d', strtolower($string), $limit);
   while ($r = db_fetch_object($rs)) {
     $matches[$r->name] = check_plain($r->name);
   }
-  echo drupal_implode_autocomplete($matches);
+  $output = array();
+  foreach ($matches as $k => $v) {
+    $output[] = str_replace('|', '&#124;', $k) .'|'. str_replace('|', '&#124;', $v);
+  }
+  echo implode('||', $output);
   exit();
 }
 
@@ -615,10 +628,16 @@ function recipe_autocomplete_page($string, $limit = 10) {
  */
 function recipe_validate(&$node) {
   if (!$node->ingredients) return;
+  $ingredients = array();
   foreach ($node->ingredients as $key => $ingredient) {
     $ingredient = array2object($ingredient);
     if (!isset($ingredient->quantity)) {
       $ingredient = recipe_parse_ingredient_string($ingredient->name);
+    }
+    if ($ingredient->name && _in_array($ingredient,$ingredients)) {
+      form_set_error("recipe", "Duplicate ingredients are not allowed.");
+    } else {
+      $ingredients[] = $ingredient;
     }
     $node->ingredients[$key] = $ingredient;
   }
