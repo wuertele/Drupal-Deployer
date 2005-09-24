@@ -5,7 +5,10 @@ Copyright 2005 http://2bits.com
 Description:
 ------------
 
-This module provides visitors to your web site with currency exchange rates.
+This module provides visitors to your web site with currency conversion rates.
+
+It also provides a callable API for currency conversion that other modules can
+use.
 
 It relies on Yahoo! Finance for getting the currency exchange data.
 
@@ -18,9 +21,9 @@ This module provides several options that customize its look and feel:
 * Users can enter an amount, and that amount will calculated in the target
   currency.
 * Provides a link to a detailed history and chart page on Yahoo Finance.
-* All currency exchange operations are logged to the watchdog (optional).
+* All currency conversion operations are logged to the watchdog (optional).
 * Provides a callable API for other modules to do currency exchange calculations.
-  See API.txt for details.
+  See currency_api/API.txt for details.
 
 Database:
 ---------
