@@ -18,7 +18,7 @@ function project_project_form(&$node) {
     }
   }
 
-  //$output .= form_textfield(t('Full project name'), 'title', $node->title, 40, 255, t('This is the publicly visible project name.'));
+  $project .= form_textfield(t('Full project name'), 'title', $node->title, 60, 128, NULL, NULL, TRUE);
   $project .= form_textarea(t('Full description'), 'body', $node->body, 40, 10, null, null, true);
   $project .= filter_form('format', $node->format);
   $project .= form_textfield(t('Short project name'), 'uri', $node->uri, 40, 50, t('This will be used to generate a /project/&lt;shortname&gt;/ URL for your project.'), null, true);
@@ -71,6 +71,7 @@ function project_project_cleanup($input) {
 }
 
 function project_project_validate(&$node) {
+  node_validate_title($node);
   // Bail if user hasn't done a preview yet.
   if (!isset($node->title)) {
     return $node;
