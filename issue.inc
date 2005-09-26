@@ -781,13 +781,15 @@ function project_issue_query_result($query = NULL, $format = 'html', $search = t
     }
 
     // Make quick search form:
-    $form .= form_select(t('Project'), 'projects', $query->projects, $projects);
-    $form .= form_select(t('Category'), 'categories', $query->categories, $categories);
-    $form .= form_select(t('Priority'), 'priorities', $query->priorities, $priorities);
-    $form .= form_hidden('users', $query->users) . form_submit(t('Search'));
-    $form .= form_select(t('Status'), 'states', $query->states, $states);
-    $form .= l(t('advanced search'), 'project/issues/search'. ($project->uri ? "/$project->uri" : ""));
-    $form .= form(theme('table', array(), $rows));
+    $rows[] = array(
+      array('data'=> form_select(t('Project'), 'projects', $query->projects, $projects)),
+      array('data'=> form_select(t('Status'), 'states', $query->states, $states)),
+      array('data'=> form_select(t('Category'), 'categories', $query->categories, $categories)),
+      array('data'=> form_select(t('Priority'), 'priorities', $query->priorities, $priorities)),
+      array('data'=> form_hidden('users', $query->users) . form_submit(t('Search'))),
+      array('data'=> l(t('advanced search'), 'project/issues/search'. ($project->uri ? "/$project->uri" : "")))
+    );
+    $form = form(theme('table', array(), $rows));
   }
 
   $rows = array();
