@@ -573,7 +573,7 @@ function project_issue_query($project = 0, $query = NULL) {
   }
   $rows[] = array(
     array('data' => form_select(t('Priorities'), 'priorities', $query->priorities, $priorities, '', 'size="5"', 1)),
-    array('data' => form_select(t('Status'), 'states', ($query->states) ? $query->states : array(1, 2, 8), $states, '', 'size="5"', 1), 'colspan' => 2)
+    array('data' => form_select(t('Status'), 'states', ($query->states) ? $query->states : array(1, 2, 8, 13, 14), $states, '', 'size="5"', 1), 'colspan' => 2)
   );
   $rows[] = array(
     array('data' => form_textfield(t('Submitted by'), 'submitted', $query->submitted, 20, 255)),
@@ -875,7 +875,7 @@ function project_issue_query_parse($query = NULL) {
   }
 
   if (empty($query->states)) {
-    $query->states = array(1, 2, 8);
+    $query->states = array(1, 2, 8, 13, 14);
   }
 
   return $query;
