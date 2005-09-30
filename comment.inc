@@ -13,7 +13,7 @@ function project_comment_page() {
 
         $comment = project_comment_validate($comment);
         $output .= form(project_comment_form($comment, $param), ($param['method'] ? $param['method'] : 'post'), $param['action'], $param['options']);
-        $output .= node_view($node);
+        $output .= node_view($node, NULL, TRUE);
 
         $breadcrumb = drupal_get_breadcrumb();
         $breadcrumb[] = l($node->title, "node/$node->nid");
