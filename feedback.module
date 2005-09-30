@@ -67,6 +67,10 @@ function feedback_link($type, $node = 0, $main = 0) {
 }
 
 function feedback_settings() {
+  $output .= form_textfield(t("Default Email Address"), "feedback_email",
+    _feedback_get_to_email, 80, 300,
+    t("The email address which should receive all form submissions"));
+
   $output .= form_textfield(t("Navigation link text"), "feedback_nav_link",
     variable_get("feedback_nav_link", "feedback"), 80, 300,
     t("The text that will be shown in the navigation link"));
@@ -74,10 +78,6 @@ function feedback_settings() {
   $output .= form_textfield(t("Feedback Page Header"), "feedback_pageheader",
    variable_get("feedback_pageheader", "Use this form to send us feedback"), 80, 300,
    t("The page header text that will be shown at the top of the feedback page"));
-
-  $output .= form_textfield(t("Default Email Address"), "feedback_email",
-    variable_get("feedback_email", ""), 80, 300,
-    t("The email address which should receive all form submissions"));
 
   $output .= form_textfield (t("Subject Prefix"), "feedback_subject_prefix",
     variable_get("feedback_subject_prefix", "Feedback: "), 80, 80, 
@@ -166,10 +166,9 @@ function feedback_send_email() {
   
   $subject = $subject_prefix . " " . $edit["form_field_subject"] ;
 
-  $from_email = $edit["form_field_email"] ? $edit["form_field_email"] : 
-    variable_get("site_mail", ini_get("sendmail_from"));
+  $from_email = $edit["form_field_email"] ? $edit["form_field_email"] : _feedback_get_to_email
 
-  $to = variable_get("feedback_email", "");
+  $to = _feedback_get_to_email() {
 
   $body = feedback_format_body($edit["form_field_body"]) . feedback_custom_footers();
 
@@ -184,6 +183,10 @@ function feedback_send_email() {
      }
 
   return $rc;
+}
+
+function _feedback_get_to_email() {
+  return variable_get('feedback_email', variable_get('site_mail', ini_get('sendmail_from')));
 }
 
 function feedback_display_form () {
@@ -215,27 +218,27 @@ function feedback_display_form () {
     $message .= t("Enter your message below:");
   }
     
-  if ( variable_get("feedback_field_name", "") )
+  if ( variable_get("feedback_field_name", t('Name')) )
     $form .= form_textfield (t("Your Full Name"), "form_field_name", 
     $edit['form_field_name'],  60, 64);
 
-  if ( variable_get("feedback_field_email", "") )
+  if ( variable_get("feedback_field_email", t('Email Address')) )
     $form .= form_textfield (t("Your E-Mail Address"), "form_field_email",
     $edit['form_field_email'], 60, 64);
 
-  if ( variable_get("feedback_field_postal", "") ) 
+  if ( variable_get("feedback_field_postal", t('Postal Address')) ) 
     $form .= form_textarea (t("Your Postal Address"), "form_field_postal",
     $edit['form_field_postal'], 50, 4);
 
-  if ( variable_get("feedback_field_phone", "") ) 
+  if ( variable_get("feedback_field_phone", t('Phone Number')) ) 
     $form .= form_textfield (t("Your Phone Number"), "form_field_phone",
     $edit['form_field_phone'], 60, 64);
 
-  if ( variable_get("feedback_field_subject", "") ) 
+  if ( variable_get("feedback_field_subject", t('Subject')) ) 
     $form .= form_textfield (t("Subject"), "form_field_subject",
     $edit['form_field_subject'], 60, 64);
 
-  if ( variable_get("feedback_field_body", "") ) 
+  if ( variable_get("feedback_field_body", t('Message')) ) 
     $form .= form_textarea  (t("Message"), "form_field_body", 
     $edit['form_field_body'], 60, 15);
 
