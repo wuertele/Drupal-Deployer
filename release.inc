@@ -220,11 +220,11 @@ function project_release_view($release, $project = 0) {
   }
 
   if ($release->path) {
-    $output .= '<small>Download: '. l(basename($release->path), $release->path) .'</small><br />';
+    $output .= '<small>Download: <a href="' . $release->path . '">' . $release->path . '</a>' . '</small><br />';
   }
 
   if ($release->created) {
-    $output .= '<small>Released: '. format_date($release->created) .'</small><br />';
+    $output .= '<small>Released: ' . format_date($release->created) . '</small><br />';
   }
 
   $output .= $release->changes;
