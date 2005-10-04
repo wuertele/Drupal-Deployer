@@ -176,7 +176,8 @@ function project_comment_save($edit) {
     }
 
     watchdog('special', "project: added comment '$edit->title'", l('view', "node/$node->nid"));
-    db_query("INSERT INTO {project_comments} (cid, nid, uid, created, changed, body, data, file_path, file_mime, file_size) VALUES (%d, %d, %d, %d, %d, '%s', '%s', '%s', '%s', %d)", $edit->cid, $edit->nid, $edit->uid, time(), time(), $edit->body, serialize($data), $file->filepath, $file->filemime, $file->filesize);
+    $node->changed = time();
+    db_query("INSERT INTO {project_comments} (cid, nid, uid, created, changed, body, data, file_path, file_mime, file_size) VALUES (%d, %d, %d, %d, %d, '%s', '%s', '%s', '%s', %d)", $edit->cid, $edit->nid, $edit->uid, $node->changed, $node->changed, $edit->body, serialize($data), $file->filepath, $file->filemime, $file->filesize);
 
     // Update node_comment_statistics so the tracker page lists the number of comments
     $count = db_result(db_query('SELECT COUNT(cid) FROM {project_comments} WHERE nid = %d', $edit->nid));
