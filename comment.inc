@@ -127,7 +127,7 @@ function project_comment_view($node, $main = 0) {
       }
 
       if ($summary || $comment->body) {
-        $rows[] = array(array('class' => 'header', 'data' => t('%count submitted by %user on %date', array('%count' => l("#$i", "node/$node->nid", array ('id' => "comment-$comment->cid", 'name' => "comment-$comment->cid"), NULL, "comment-$comment->cid"), '%user' => theme('username', $comment), '%date' => format_date($comment->created))) . theme('mark', node_mark($node->nid, $node->changed))));
+        $rows[] = array(array('class' => 'header', 'data' => t('%count submitted by %user on %date', array('%count' => l("#$i", "node/$node->nid", array ('id' => "comment-$comment->cid", 'name' => "comment-$comment->cid"), NULL, "comment-$comment->cid"), '%user' => theme('username', $comment), '%date' => format_date($comment->created))) . theme('mark', node_mark($comment->nid, $comment->changed))));
         if ($summary) {
           $rows[] = array(array('class' => 'summary', 'data' => theme('table', array(), $summary)));
         }
