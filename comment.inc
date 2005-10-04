@@ -54,7 +54,6 @@ function project_comment_page() {
 function project_comment_form(&$edit, &$param) {
   $output = '<div class="node-form">';
   $output .= '<div class="standard">';
-  $output .= form_textfield(t('Title'), 'title', $edit->title, 60, 128, NULL, NULL, TRUE);
   $output .= project_issue_form($edit, $param);
   $output .= '</div></div>';
 
