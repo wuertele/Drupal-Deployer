@@ -342,6 +342,12 @@ function project_issue_form(&$node, &$param) {
 }
 
 function project_issue_validate(&$node) {
+
+  // Set default values.
+  empty($node->priority) and $node->priority = 2;
+  empty($node->category) and $node->category = arg(4);
+  empty($node->sid) and $node->sid = 1;
+
   // Try to find the active project
   if (empty($node->pid) && $arg = arg(3)) {
     if (is_numeric($arg)) {
@@ -380,9 +386,6 @@ function project_issue_validate(&$node) {
       if ($node->component && !in_array($node->component, $project->components)) {
         $node->component = 0;
       }
-      empty($node->priority) and $node->priority = 2;
-      empty($node->category) and $node->category = arg(4);
-      empty($node->sid) and $node->sid = 1;
 
       empty($node->component) and form_set_error($error['component'], t('You have to specify a valid component.'));
       empty($node->category) and form_set_error('category', t('You have to specify a valid category.'));
