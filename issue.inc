@@ -461,6 +461,14 @@ function project_issue_form(&$node, &$param) {
   return $form;
 }
 
+function project_issue_node_form_form_alter(&$form) {
+  // Alter the buttons.
+  if (!$_POST['op']) {
+    $form['preview'] = array('#type' => 'button', '#value' => t('Next'), '#weight' => 19);
+    $form['submit'] = array('#type' => 'value', '#value' => 'hidden');
+  }
+}
+
 function project_issue_validate(&$node) {
 
   // Set default values.
@@ -484,7 +492,7 @@ function project_issue_validate(&$node) {
     }
     else {
       switch ($_POST['op']) {
-        case t('Preview'):
+        case t('Next'):
           return;
         case t('Submit'):
           form_set_error('title', t('You have to specify a valid title and other required fields.'));
