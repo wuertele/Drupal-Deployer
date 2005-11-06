@@ -430,8 +430,7 @@ function project_issue_form(&$node, &$param) {
       '#type' => 'textarea',
       '#title' => t('Description'),
       '#default_value' => $node->body,
-      '#rows' => 40,
-      '#cols' => 10,
+      '#rows' => 10,
       '#required' => !$node->comment,
     );
     $form['issue_details']['format'] = filter_form($node->format);
