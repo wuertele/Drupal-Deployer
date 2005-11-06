@@ -185,7 +185,7 @@ function project_release_form(&$release, &$param) {
   $form['version'] = array('#type' => 'textfield', '#title' => t('Version'), '#default_value' => $release->version, '#size' => 40, '#maxlength' => 255, '#required' => TRUE);
   $form['changes'] = array('#type' => 'textarea', '#title' => t('Changes'), '#default_value' => $release->changes, '#rows' => 10, '#cols' => 40, '#required' => TRUE);
   if (!variable_get('project_release_directory', '')) {
-    $form['file'] = array('#type' => 'file', '#title' => t('File'), '#size' => 40, '#description' => ($release->fid) ? t('A file already exists, if you upload another file the current file will be replaced.') : '' . $error['file'], '#required' => $release->fid);
+    $form['path'] = array('#type' => 'file', '#title' => t('File'), '#size' => 40, '#description' => ($release->fid) ? t('A file already exists, if you upload another file the current file will be replaced.') : '' . $error['file'], '#required' => $release->fid);
   }
   if ($release->rid) {
     $form['rid'] = array(
