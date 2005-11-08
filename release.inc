@@ -142,17 +142,6 @@ function project_release_submit() {
         drupal_goto("node/$release->nid/release");
       }
       break;
-    case t('Preview'):
-      $edit = array2object($_POST['edit']);
-      $node = node_load($edit->nid);
-      if (node_access('update', $node)) {
-        project_release_validate($edit);
-        $output = project_release_view($edit);
-        $output = drupal_get_form('project_release_form', project_release_form($release, $param));
-
-        return $output;
-      }
-      break;
     case t('Submit'):
       $edit = array2object($_POST['edit']);
       $node = node_load($edit->nid);
@@ -218,11 +207,6 @@ function project_release_form(&$release, &$param) {
   $form['nid'] = array(
     '#type' => 'hidden',
     '#default_value' => $release->nid,
-  );
-  
-  $form['preview'] = array(
-    '#type' => 'submit',
-    '#value' => t('Preview'),
   );
   
   if (!form_get_errors()) {
