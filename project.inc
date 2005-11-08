@@ -50,7 +50,7 @@ function project_project_form(&$node) {
     '#default_value' => $node->uri,
     '#size' => 40,
     '#maxlength' => 50,
-    '#description' => t('This will be used to generate a /project/<shortname>/ URL for your project.'),
+    '#description' => t('This will be used to generate a /project/&lt;shortname&gt;/ URL for your project.'),
     '#required' => TRUE,
   );
   $form['project']['mail'] = array(
