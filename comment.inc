@@ -46,7 +46,11 @@ function project_comment_page() {
 function project_comment_form(&$edit, &$param) {
   $op = $_POST['op'];
   if (isset($param)) {
-    $form = array('#method' => $param['method'], '#action' => $param['action'], '#attributes' => $param['options']);
+    $form = array(
+      '#method' => $param['method'],
+      '#action' => $param['action'],
+      '#attributes' => $param['options'],
+    );
   } else {
     $form['#attributes'] = array('enctype' => 'multipart/form-data');
   }
