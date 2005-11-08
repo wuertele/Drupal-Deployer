@@ -340,6 +340,15 @@ function project_issue_form(&$node, &$param) {
       $projects[$project->nid] = $project->title;
     }
   }
+  // Try to find the active project
+  if (empty($node->pid) && $arg = arg(3)) {
+    if (is_numeric($arg)) {
+      $node->pid = db_result(db_query(db_rewrite_sql('SELECT p.nid FROM {project_projects} p WHERE p.nid = %d', 'p'), $arg), 0);
+    }
+    else {
+      $node->pid = db_result(db_query(db_rewrite_sql("SELECT p.nid FROM {project_projects} p WHERE p.uri = '%s'", 'p'), $arg), 0);
+    }
+  }
   $pid = $node->pid ? $node->pid : $_POST['edit']['pid'];
   if ($pid) {
     // Load the project and initialize some support arrays.
