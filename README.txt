@@ -1,9 +1,11 @@
 Overview
 --------
-This module allows Drupal to replace textarea fields with FCKeditor. This HTML 
-text editor brings to the web many of the powerful functionalities of known 
-desktop editors like Word. It's really lightweight and doesn't require any 
-kind of installation on the client computer.
+This module allows Drupal to replace textarea fields with FCKeditor or have 
+the option to use FCKeditor in its own popup window thus allowing a user the 
+choice of when to load and use it. This HTML text editor brings to the web 
+many of the powerful functionalities of known desktop editors like Word. 
+It's really lightweight and doesn't require any kind of installation on the 
+client computer.
 
 
 
@@ -23,7 +25,7 @@ For further information visit:
 
 Requirements
 ------------
-- Drupal 4.5.x
+- Drupal 4.5.x => 4.6.3
 - PHP 4.3.0 or greater
 - FCKEditor 2.0 (http://www.fckeditor.net/)
 
@@ -34,6 +36,8 @@ Installation
   1. Copy fckeditor folder to modules/.
   2. Download FCKeditor 2.0 from http://www.fckeditor.net and copy the
      distribution files to modules/fckeditor/lib.
+  3. If upgrading, make sure modules/fckeditor/lib/fckpopup.php is not
+     deleted as it is required for "Pop Up Window" Mode. 
 
 
 
@@ -43,7 +47,8 @@ Configuration
   2. Enable the module as usual from Drupal's admin pages.
   3. Under settings, configure the fckeditor settings.
   4. Grant permissions to the groups you want use fckeditor.
-
+  5. If you do not want to replace all textareas and/or only use fckeditor 
+     when required, select "Pop Up Window" Mode in fckeditor settings.
 
 
 Server Side Integration
@@ -81,4 +86,5 @@ LatPro Inc.
      Copyright (C) 2003-2004 Frederico Caldeira Knabben
      http://www.opensource.org/licenses/lgpl-license.php
      http://www.fckeditor.net/
- 
+ - FCKeditor for Drupal "Pop Up Window" extension added by:
+     Davide Santolin   
