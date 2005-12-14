@@ -1475,7 +1475,6 @@ function project_issue_query_rss($projects, $result) {
   $description = variable_get('site_mission', '');
 
   $output .= "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
-  $output .= "<!DOCTYPE rss [<!ENTITY % HTMLlat1 PUBLIC \"-//W3C//ENTITIES Latin 1 for XHTML//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml-lat1.ent\">]>\n";
   $output .= "<rss version=\"0.92\" xml:base=\"". $base_url ."\">\n";
   $output .= format_rss_channel($title, $link, $description, $items, $locale);
   $output .= "</rss>\n";
