@@ -142,21 +142,21 @@ function feedback_page() {
       feedback_watchdog_log();
     }
 
-    $errmsg = feedback_validate_data();
-    if ($errmsg) {
-      drupal_set_message(variable_get("feedback_rmsg_failure", "There are errors in your form."));
-      print theme("page", $errmsg );
+    feedback_validate_data();
+    if (form_get_errors()) {
+      $form = feedback_display_form() ;
+      print theme("page", $form);
     }
     else {
       feedback_send_email();
       drupal_set_message(variable_get("feedback_rmsg_success", "Thank you for your message"));
-      print theme("page", "");
+      drupal_goto(); // Go to home page
     }
   }
   else {
     $form = feedback_display_form () ;
     print theme("page", $form);
-    }
+  }
 }
 
 function feedback_send_email() {
@@ -194,17 +194,15 @@ function feedback_display_form () {
 
   $edit = $_POST["edit"];
 
-  $edit['form_field_name']  = "";
-  $edit['form_field_email'] = "";
-
-  if ($user->name) {
-  $edit['form_field_name'] = $user->name ;
+  // Assign default values to some form fields while making sure the field
+  // content is preserved after errors
+  if (!$edit['form_field_name'] && $user->name) {
+    $edit['form_field_name'] = $user->name;
   }
-
-  if ($user->mail) {
-  $edit['form_field_email'] = $user->mail ;
+  if (!$edit['form_field_email'] && $user->mail) {
+    $edit['form_field_email'] = $user->mail;
   }
-
+  
   if (variable_get("feedback_pageheader", "")) {
     $title .= variable_get("feedback_pageheader", "");
   }
@@ -219,33 +217,33 @@ function feedback_display_form () {
   }
     
   if ( variable_get("feedback_field_name", t('Name')) )
-    $form .= form_textfield (t("Your Full Name"), "form_field_name", 
-    $edit['form_field_name'],  60, 64);
+    $form .= form_textfield (t("Your full name"), "form_field_name", 
+      $edit['form_field_name'], 60, 64, NULL, NULL, TRUE);
 
-  if ( variable_get("feedback_field_email", t('Email Address')) )
-    $form .= form_textfield (t("Your E-Mail Address"), "form_field_email",
-    $edit['form_field_email'], 60, 64);
+  if ( variable_get("feedback_field_email", t('E-mail address')) )
+    $form .= form_textfield (t("Your e-mail address"), "form_field_email",
+      $edit['form_field_email'], 60, 64, NULL, NULL, TRUE);
 
-  if ( variable_get("feedback_field_postal", t('Postal Address')) ) 
-    $form .= form_textarea (t("Your Postal Address"), "form_field_postal",
-    $edit['form_field_postal'], 50, 4);
+  if ( variable_get("feedback_field_postal", t('Postal address')) ) 
+    $form .= form_textarea (t("Your postal address"), "form_field_postal",
+      $edit['form_field_postal'], 50, 4, NULL, NULL, TRUE);
 
-  if ( variable_get("feedback_field_phone", t('Phone Number')) ) 
-    $form .= form_textfield (t("Your Phone Number"), "form_field_phone",
-    $edit['form_field_phone'], 60, 64);
+  if ( variable_get("feedback_field_phone", t('Phone number')) ) 
+    $form .= form_textfield (t("Your phone number"), "form_field_phone",
+      $edit['form_field_phone'], 60, 64, NULL, NULL, TRUE);
 
   if ( variable_get("feedback_field_subject", t('Subject')) ) 
     $form .= form_textfield (t("Subject"), "form_field_subject",
-    $edit['form_field_subject'], 60, 64);
+      $edit['form_field_subject'], 60, 64, NULL, NULL, TRUE);
 
   if ( variable_get("feedback_field_body", t('Message')) ) 
     $form .= form_textarea  (t("Message"), "form_field_body", 
-    $edit['form_field_body'], 60, 15);
+      $edit['form_field_body'], 60, 15, NULL, NULL, TRUE);
 
   $form .= form_hidden ("form_field_referer", $_SERVER[HTTP_REFERER]);
 
-  $form .= form_submit (t("Send Message"), "op", $edit['op'] );
-
+  $form .= form_submit (t("Send message"), "op", $edit['op'] );
+  
   $output .= $message . form($form, "post");
   if ($title) {
     $output = theme("box", $title, $output);
@@ -272,86 +270,61 @@ function feedback_validate_data() {
 
   $name    = $edit["form_field_name"] ;
   $email   = $edit["form_field_email"] ; 
-  $subj    = $edit["form_field_subject"] ; 
+  $subject = $edit["form_field_subject"] ; 
   $body    = $edit["form_field_body"] ; 
   $postal  = $edit["form_field_postal"] ; 
   $phone   = $edit["form_field_phone"] ; 
   $referer = $edit["form_field_referer"] ; 
 
-  $error_msg = "";
-
-  if (empty ($email) && variable_get ("feedback_field_email", "") ) {
-     $error_msg .= t("Error: E-Mail address is required") . "<br/>";
+  if (!strlen(trim($name)) && variable_get("feedback_field_name", "") ) {
+    form_set_error('form_field_name', t('Please enter your full name'));
   }
-  else {
-     $smtp_err = feedback_validate_email ($email);
-     if ( $smtp_err != "" ) {
-        $error_msg .= t("Error: E-Mail address error:") . "<br/>" . t("SMTP Info:") . $smtp_err . "<br/>";
-     }
-     else {
-       if (feedback_check_exploit($email)) {
-         $error_msg .= t("Error: invalid data in email") . "<br/>";
-       }
-     }
+  elseif (feedback_check_exploit($name)) {
+    form_set_error('form_field_name', t("Invalid data in name"));
   }
 
-  if (empty($name) && variable_get("feedback_field_name", "") ) {
-    $error_msg .= t("Error: Full name is required") . "<br/>";
+  if (!strlen(trim($email)) && variable_get ("feedback_field_email", "") ) {
+	form_set_error('form_field_email', t('Please enter your e-mail address'));
   }
   else {
-    if (feedback_check_exploit($name)) {
-      $error_msg .= t("Error: invalid data in name") . "<br/>";
+    $smtp_err = feedback_validate_email ($email);
+    if ($smtp_err) {
+      form_set_error('form_field_email', $smtp_err);
+    }
+    elseif (feedback_check_exploit($email)) {
+      form_set_error('form_field_email', t("Invalid data in e-mail address"));
     }
   }
 
-  if (empty($body) && variable_get ("feedback_field_body", "") ) {
-    $error_msg .= t("Error: Message Body is required") . "<br/>";
+  if (!strlen(trim($subject)) && variable_get ("feedback_field_subject", "") ) {
+    form_set_error('form_field_subject', t('Please enter a subject'));
   }
-  else {
-    if (feedback_check_exploit($body)) {
-      $error_msg .= t("Error: invalid data in body") . "<br/>";
-    }
+  elseif (feedback_check_exploit($subject)) {
+    form_set_error('form_field_subject', t("Invalid data in subject"));
   }
 
-  if (empty($subj) && variable_get ("feedback_field_subject", "") ) {
-    $error_msg .= t("Error: Subject is required") . "<br/>";
-  }
-  else {
-    if (feedback_check_exploit($subj)) {
-      $error_msg .= t("Error: invalid data in subject") . "<br/>";
-    }
+  // Note: The body does not need to be checked for exploits because it is
+  // treated as text (RFC 822).
+  if (!strlen(trim($body)) && variable_get ("feedback_field_body", "") ) {
+    form_set_error('form_field_body', t('Please enter your message'));
   }
 
-  if (empty($postal) && variable_get ("feedback_field_postal", "") ) {
-    $error_msg .= t("Error: Postal is required") . "<br/>";
+  if (!strlen(trim($postal)) && variable_get ("feedback_field_postal", "") ) {
+    form_set_error('form_field_postal', t('Please enter your postal address'));
   }
-  else {
-    if (feedback_check_exploit($postal)) {
-      $error_msg .= t("Error: invalid data in postal") . "<br/>";
-    }
+  elseif (feedback_check_exploit($postal)) {
+    form_set_error('form_field_postal', t("Invalid data in postal address"));
   }
 
-  if (empty($phone) && variable_get ("feedback_field_phone", "") ) {
-    $error_msg .= t("Error: Phone is required") . "<br/>";
+  if (!strlen(trim($phone)) && variable_get ("feedback_field_phone", "") ) {
+    form_set_error('form_field_phone', t('Please enter your phone number'));
   }
-  else {
-    if (feedback_check_exploit($phone)) {
-      $error_msg .= t("Error: invalid data in phone") . "<br/>";
-    }
+  elseif (feedback_check_exploit($phone)) {
+    form_set_error('form_field_phone', t("Invalid data in phone number"));
   }
 
   if (feedback_check_exploit($referer)) {
-    $error_msg .= t("Error: invalid data in referer") . "<br/>";
-  }
-
-  if (empty($error_msg)) {
-    return "";
-  }
-  else {
-    $error_msg = t("The form could not be processed due to the following errors:") .
-      "<br/>" . $error_msg;
-  
-    return $error_msg;
+    form_set_error('referer', t("Invalid data in referer"));
   }
 }
 
