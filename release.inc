@@ -143,7 +143,7 @@ function project_release_submit() {
       }
       break;
     case t('Submit'):
-      $edit = array2object($_POST['edit']);
+      $edit = (object) $_POST['edit'];
       $node = node_load($edit->nid);
       if (node_access('update', $node)) {
         project_release_validate($edit);

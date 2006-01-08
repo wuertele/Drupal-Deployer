@@ -4,7 +4,7 @@
 function project_comment_page() {
   
   if (user_access('create project issues')) {
-    $edit = array2object($_POST['edit']);
+    $edit = (object) $_POST['edit'];
     $node = node_load(array('nid' => arg(3), 'type' => 'project_issue'));
 
     if ($_POST['op'] == t('Preview') || $_POST['op'] == t('Submit')) {
