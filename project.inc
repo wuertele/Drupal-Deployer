@@ -347,12 +347,8 @@ function project_project_view(&$node, $teaser = false, $page = false) {
       // Download section
       $links = array();
 
-      if ($release->version == 'cvs') {
-        $links[] = '<a href="' . $release->path . '">' . t('Download latest release (%version)', array('%version' => $release->version)) . '</a>';
-      }
-      else {
-        $links[] = '<a href="' . $release->path . '">' . t('Download latest release (%version, %date)', array('%version' => $release->version, '%date' => format_date($release->created, 'small')))  . '</a>';
-      }
+      $links[] = '<a href="' . $release->path . '">' . t('Download latest release (%version, %date, %size)', array('%version' => $release->version, '%date' => format_date($release->changed, 'small'), '%size' => format_size(filesize($release->path))))  . '</a>';
+
       if ($release->changes) {
         $links[] = l(t('Read release notes'), 'node/'. $node->nid .'/release', null, null, 'version-'. $release->version);
       }
