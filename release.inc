@@ -30,6 +30,7 @@ function project_release_scan_directory($project = NULL) {
       }
     }
   }
+  project_releases_list(TRUE);
 }
 
 function project_release_scan_directory_results($type = NULL) {
@@ -396,8 +397,8 @@ function project_release_delete($rid) {
   db_query('UPDATE {project_releases} SET status = 0 WHERE rid = %d', $rid);
 }
 
-function project_releases_list() {
-  if ($versions = cache_get('project_releases')) {
+function project_releases_list($refresh = FALSE) {
+  if (!$refresh && ($versions = cache_get('project_releases'))) {
     $versions = unserialize($versions->data);
   }
   else {
@@ -408,6 +409,7 @@ function project_releases_list() {
       $versions[$version] = $version == $object->version ? $version : $version .'.x';
     }
     cache_set('project_releases', serialize($versions));
+    menu_rebuild();
   }
 
   return $versions;
