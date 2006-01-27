@@ -314,7 +314,7 @@ function project_mail_notify($node) {
   }
 
   project_mail_output($node->title, 0);
-  $node->title = t("[$node->category]") ." $node->title";
+  $node->title = "[$project->title " . t("$node->category") ."] $node->title";
 
   while ($recipient = db_fetch_object($result)) {
     user_mail($recipient->mail, $node->title, $body, implode("\n", $header));
