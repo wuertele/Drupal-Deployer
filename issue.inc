@@ -685,6 +685,7 @@ function project_issue_delete($node) {
 }
 
 function project_issue_access($op, $node) {
+  global $user;
   switch ($op) {
     case 'view':
       return user_access('access project issues') || (user_access('access own project issues') && $node->uid == $user->uid);
