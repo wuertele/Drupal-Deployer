@@ -96,7 +96,7 @@ function project_mailhandler($node, $result, $i, $header, $mailbox) {
       }
     }
     else {
-      $error['user'] = message_access();
+      $error['user'] = t('You are not authorized to access this page.');
     }
 
     if ($error && $mailbox['replies']) {
