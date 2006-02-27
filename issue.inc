@@ -1323,7 +1323,7 @@ function project_issue_query_sql_field($field, $values, $like = 0, $operator = '
     if ($callback) {
       $value = $callback($value);
     }
-    $sql[] = $like ? "$field LIKE '%$value%'" : "$field = '$value'";
+    $sql[] = ($like && $field != 'p.pid') ? "$field LIKE '%$value%'" : "$field = '$value'";
   }
   if ($sql) {
     return '('. implode($operator, $sql) .')';
