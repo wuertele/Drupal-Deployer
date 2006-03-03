@@ -171,7 +171,7 @@ function project_issue_statistics($project = 0) {
   return $output;
 }
 
-function project_issue_subscribe_execute($form_id, $form_values) {
+function project_issue_subscribe_submit($form_id, $form_values) {
 
   global $user;
   $all = $_POST['all'];
@@ -1077,7 +1077,7 @@ function project_issue_admin_delete_state_confirm() {
     );
 }
 
-function project_issue_admin_delete_state_execute($form_id, $form_values) {
+function project_issue_admin_delete_state_submit($form_id, $form_values) {
   if($form_values['new_sid'] == $form_values['sid']) {
       form_set_error('new_sid', t('Choose a new issue status for existing issues of status %name.', array('%name' => $form_values['name'])));
   } else {
