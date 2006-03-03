@@ -214,7 +214,7 @@ function project_release_form(&$release, &$param) {
   
   if (!form_get_errors()) {
     $form['submit'] = array(
-      '#type' => 'submit',
+      '#type' => 'button',
       '#value' => t('Submit'),
     );
   }
