@@ -455,7 +455,7 @@ function project_issue_form(&$node, &$param) {
       '#title' => t('Description'),
       '#default_value' => $node->body,
       '#rows' => 10,
-      '#required' => !$node->comment,
+      '#required' => TRUE,
     );
     $form['issue_details']['format'] = filter_form($node->format);
     $form['issue_details']['file_issue'] = array(
