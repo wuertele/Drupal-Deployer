@@ -506,11 +506,12 @@ function project_form_alter($form_id, &$form) {
         '#value' => 'hidden',
       );
     } elseif ($op == t('Next')) {
+      $default_format = variable_get('filter_default_format', 1);
       $form['project_info']['rid']['#validated'] = TRUE;
       $form['project_info']['component'] ['#validated'] = TRUE;
       $form['issue_info']['category']['#validated'] = TRUE;
       $form['issue_details']['title']['#validated'] = TRUE;
-      $form['issue_details']['format'][variable_get('filter_default_format', 1)]['#value'] = 1;
+      $form['issue_details']['format'][$default_format]['#value'] = $default_format;
     }
   }
 }
