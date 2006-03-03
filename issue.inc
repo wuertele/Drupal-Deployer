@@ -318,7 +318,7 @@ function project_issue_form(&$node, &$param) {
   $form['#attributes'] = array('enctype' => 'multipart/form-data');
 
   // Fetch a list of all projects to make swapping simpler
-  $projects = array_merge(array(t('<none>')), project_projects_select_options());
+  $projects = array(t('<none>')) + project_projects_select_options();
 
   // Try to find the active project
   if (empty($node->pid) && $arg = arg(3)) {
