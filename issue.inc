@@ -73,7 +73,7 @@ function project_issue_page() {
       }
       break;
     case 'user':
-       $_GET['users'] = $GLOBALS['user']->uid;
+       $_GET['participated'] = $GLOBALS['user']->uid;
     default:
       $project = project_project_retrieve(arg(2));
       if ($project->nid && node_access('view', $project)) {
