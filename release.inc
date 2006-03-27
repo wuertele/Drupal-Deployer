@@ -274,7 +274,7 @@ function project_release_view($release, $project = 0) {
   }
 
   if ($release->path) {
-    $output .= '<small>' . t('Download: <a href="%path">%path</a>', array('%path' => $release->path)) . '</small><br />';
+    $output .= '<small>' . t('Download: <a href="%path">%path</a>', array('%path' => base_path() . $release->path)) . '</small><br />';
     $output .= '<small>' . t('Size: %size', array('%size' => format_size(filesize($release->path)))) . '</small><br />';
     $output .= '<small>' . t('md5_file hash: %hash', array('%hash' => $release->hash)) . '</small><br />';
   }
