@@ -347,6 +347,7 @@ function project_project_view(&$node, $teaser = false, $page = false) {
       }
       // Fallback to the latest
       if (!isset($release)) {
+        reset($releases);
         list($release) = each($releases);
       }
       $release = project_release_load($release);
