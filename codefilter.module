@@ -44,7 +44,8 @@ function codefilter_process_php($text) {
   // Trim leading and trailing linebreaks
   $text = trim($text, "\r\n");
   // Highlight as PHP
-  return '<div class="codeblock">'. highlight_string("<?php\n$text\n?>", 1) .'</div>';
+  $text = '<div class="codeblock">'. highlight_string("<?php\n$text\n?>", 1) .'</div>';
+  return codefilter_fix_spaces($text);
 }
 
 /**
@@ -57,7 +58,7 @@ function codefilter_process_php_inline($matches) {
   $text = highlight_string(decode_entities($text), 1);
   // Remove PHP's own added code tags
   $text = str_replace(array('<code>', '</code>', "\r", "\n"), array('', '', '', ''), $text);
-  return $text;
+  return codefilter_fix_spaces($text);
 }
 
 /**
@@ -68,8 +69,6 @@ function codefilter_process_code($text) {
   $multiline = ereg("[\n\r]", $text);
   // Note, pay attention to odd preg_replace-with-/e behaviour on slashes
   $text = preg_replace("/^\n/", '', preg_replace('@</?(br|p)\s*/?>@', '', str_replace('\"', '"', $text)));
-  // Replace indentation with non-breaking spaces
-  $text = preg_replace_callback('/(^ +|\n +)/s', 'codefilter_fix_indent', $text);
   // Trim leading and trailing linebreaks
   $text = trim($text, "\r\n");
   // Escape newlines
@@ -78,13 +77,13 @@ function codefilter_process_code($text) {
   // PHP code in regular code
   $text = preg_replace_callback('/&lt;\?php.+?\?&gt;/', 'codefilter_process_php_inline', $text);
 
-  $text = '<code>'. $text .'</code>';
+  $text = '<code>'. codefilter_fix_spaces($text) .'</code>';
   if ($multiline) $text = '<div class="codeblock">'. $text .'</div>';
   return $text;
 }
 
-function codefilter_fix_indent($text) {
-  return str_replace(' ', '&nbsp;', $text[0]);
+function codefilter_fix_spaces($text) {
+  return preg_replace('/&nbsp;&nbsp;|  /', ' &nbsp;', $text);
 }
 
 function codefilter_escape($text) {
