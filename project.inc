@@ -236,7 +236,6 @@ function project_project_cleanup($input) {
 }
 
 function project_project_validate(&$node) {
-  node_validate_title($node);
   // Bail if user hasn't done a preview yet.
   if (!isset($node->title)) {
     return $node;

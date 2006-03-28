@@ -516,7 +516,6 @@ function project_issue_node_form_validate($form_id, $form) {
   if (($edit['wizard'] == 'two')) {
     if ($form_values['pid'] && $project = node_load($form_values['pid'])) {
       $node->title = $form_values['title'];
-      node_validate_title($node);
       if ($releases = project_release_load($project)) {
         if (!$form_values['rid'] || !$releases[$form_values['rid']]) {
           $form_values['rid'] = $project->version;
@@ -560,7 +559,6 @@ function project_issue_comment_validate(&$node) {
   // Validate the rest of the form.
   if (isset($node->title) && !$node->validated) {
     if ($node->pid && $project = node_load($node->pid)) {
-      node_validate_title($node);
       if ($releases = project_release_load($project)) {
         if (!$node->rid || !$releases[$node->rid]) {
           $node->rid = $project->version;
