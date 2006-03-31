@@ -57,6 +57,7 @@ function project_comment_form(&$edit, &$param) {
   $form['project_issue_form']['#prefix'] = '<div class="node-form"><div class="standard">';
   $form['project_issue_form']['#suffix'] = '</div></div>';
   $form['project_issue_form'] = project_issue_form($edit, $param);
+  $form['project_issue_form']['issue_details']['body']['#required'] = FALSE;
   if ($edit->cid) {
     $form['cid']= array('#type' => 'hidden', '#value' => $edit->cid);
   }
