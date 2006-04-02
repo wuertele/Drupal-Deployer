@@ -677,6 +677,7 @@ function project_issue_update($node) {
 function project_issue_delete($node) {
   file_delete($node->file_path);
   db_query('DELETE FROM {project_issues} WHERE nid = %d', $node->nid);
+  db_query('DELETE FROM {project_comments} WHERE nid = %d', $node->nid);
 }
 
 function project_issue_access($op, $node) {
