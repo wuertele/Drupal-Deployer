@@ -368,7 +368,7 @@ function project_issue_form(&$node, &$param) {
       );
     }
 
-    $form['#prefix'] = '</div><div class="admin">';
+    //$form['#prefix'] = '</div><div class="admin">';
 
     $form['project_info'] = array(
       '#type' => 'fieldset',
