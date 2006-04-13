@@ -658,13 +658,14 @@ function project_page_overview($termname = NULL, $sort_method = NULL) {
   }
   $class = 'even';
   while ($project = db_fetch_object($result)) {
-    $project->term = $termname;
     $project->body = check_markup($project->teaser, $project->format, FALSE);
-
-    $project->terms = array();
-    foreach (taxonomy_node_get_terms($project->nid) as $term) {
-      if ($term->name != $termname) {
-        $project->terms[] = l($term->name, project_term_path($term));
+    if (module_exist('taxonomy')) {
+      $project->term = $termname;
+      $project->terms = array();
+      foreach (taxonomy_node_get_terms($project->nid) as $term) {
+        if ($term->name != $termname) {
+          $project->terms[] = l($term->name, project_term_path($term));
+        }
       }
     }
 
