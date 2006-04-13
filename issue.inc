@@ -232,7 +232,7 @@ function project_issue_subscribe($project = 0) {
     );
     foreach ($levels as $key => $level) {
       $form['buttons'][$level] = array(
-        '#type' => 'button',
+        '#type' => 'submit',
         '#name' => 'all',
         '#value' => $level,
       );
@@ -272,7 +272,7 @@ function project_issue_subscribe($project = 0) {
     }
   }
   $form['submit'] = array(
-    '#type' => 'button',
+    '#type' => 'submit',
     '#value' => t('Subscribe'),
   );
   return drupal_get_form('project_issue_subscribe', $form);
