@@ -1239,7 +1239,7 @@ function project_issue_query_result($query = NULL, $format = 'html', $search = t
     $rss = theme('feed_icon', url('project/issues/rss', project_issue_query_url($query)));
     $link = l(t('#'), 'project/issues', array('title' => t('Permalink to search query.')), project_issue_query_url($query));
 
-    if ($pager = theme("pager", NULL, 20, 0, $query + tablesort_pager())) {
+    if ($pager = theme('pager', NULL, 20, 0, $query)) {
       $rows[] = array(array('data' => $pager, 'colspan' => count($header)));
     }
   }
