@@ -612,9 +612,9 @@ function project_issue_view(&$node, $teaser = false, $page = false) {
 
     $output = '<div class="project">';
     $rows = array();
-    $rows[] = array('Project:', $project->title);
+    $rows[] = array('Project:', check_plain($project->title));
     if ($release->version) {
-      $rows[] = array('Version:', $release->version);
+      $rows[] = array('Version:', check_plain($release->version));
     }
     $rows[] = array(t('Component:'),  check_plain($node->component));
     $rows[] = array(t('Category:'), check_plain($node->category));
