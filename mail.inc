@@ -182,7 +182,7 @@ function project_mail_summary($field, $value) {
     case 'sid':
       return $value ? project_issue_state($value) : t('<none>');
     default:
-      return $value;
+      return check_plain($value);
   }
 }
 
