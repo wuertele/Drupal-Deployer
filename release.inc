@@ -432,5 +432,3 @@ function project_releases_list($refresh = FALSE) {
 
   return $versions;
 }
-
-?>

@@ -420,5 +420,3 @@ function project_mail_digest() {
     user_mail($mailto, t('Release critical bugs for %date', array('%date' => date('F d, Y', time()))), $text, implode("\n", $header));
   }
 }
-
-?>

@@ -189,5 +189,3 @@ function project_comment_save($edit) {
 
   return $edit->cid;
 }
-
-?>

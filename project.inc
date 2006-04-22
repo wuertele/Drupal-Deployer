@@ -549,5 +549,3 @@ function project_cvs($nid = 0) {
     drupal_not_found();
   }
 }
-
-?>

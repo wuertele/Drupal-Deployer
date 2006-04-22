@@ -1464,5 +1464,3 @@ function project_issue_query_rss($projects, $result) {
 function project_issue_tracker_comments($node) {
   return db_query(db_rewrite_sql("SELECT c.nid, c.cid, c.uid, c.created AS timestamp, '%s' AS subject, u.name FROM {project_comments} c INNER JOIN {users} u ON c.uid = u.uid WHERE c.nid = %d ORDER BY c.cid DESC", 'c'), $node->title, $node->nid);
 }
-
-?>
