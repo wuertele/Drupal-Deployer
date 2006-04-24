@@ -66,7 +66,7 @@ function project_comment_form(&$edit, &$param) {
     $form['submit'] = array('#type' => 'button', '#value' => t('Submit'));
   }
   if ($op == t('Preview')) {
-    $form['#after_build'] = 'node_form_add_preview';
+    $form['#after_build'] = array('node_form_add_preview');
   }
   return drupal_get_form('project_comment_form', $form);
 }
