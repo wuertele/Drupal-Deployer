@@ -1,0 +1,288 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Enables the creation and display of FAQs
+ */
+define("FAQ_ADMIN", "administer faq");
+
+/**
+ * Implementation of hook_perm()
+ */
+function faq_perm(){
+	return array(
+		FAQ_ADMIN
+	);
+}
+
+/**
+ * Implementation of hook_access()
+ */
+function faq_access($op, $node){
+	if($op == 'create' || $op == 'update' || $op == 'delete'){
+		return user_access(FAQ_ADMIN);
+	}
+}
+
+/**
+ * Implementation of hook_node_name()
+ */
+function faq_node_name(){
+	return 'faq';
+}
+
+/**
+ * Implementation of hook_menu()
+ */
+function faq_menu($may_cache){
+
+	$items = array();
+
+	if($may_cache){
+	}
+
+	$items[] = array('path' => 'faq', 'title' => t('FAQs'), 'callback' => 'theme_faq_list', 'access' => user_access('access content'), 'type' => MENU_NORMAL_ITEM);
+	$items[] = array('path' => 'faq/show', 'title' => t('FAQs'), 'callback' => 'theme_faq_show', 'access' => user_access('access content'), 'type' => MENU_CALLBACK);
+
+	return $items;
+
+}
+
+/**
+ * Implementation of hook_form()
+ */
+function faq_form(&$node){
+	$ouptut = '';
+	$values = array();
+	for($i = -10; $i <= 10; $i++){
+		$values[$i] = $i;
+	}
+	$output .= form_select(t('Weight'), 'weight', isset($node->weight) ? $node->weight : '0', $values);
+	foreach(taxonomy_node_form('faq', $node) as $vocab){
+		$output .= $vocab;
+	}
+	$output .= form_textarea(t('Answer'), 'body', $node->body, 60, 20, 'Enter the answer to the question given in the title.', NULL, TRUE);
+	return $output;
+}
+
+/**
+ * Implementation of hook_insert()
+ */
+function faq_insert($node){
+	db_query('INSERT INTO faq (fid, weight) VALUES(%d, %d)', $node->nid, $node->weight);
+}
+
+/**
+ * Implementation of hook_update()
+ */
+function faq_update($node){
+	db_query('UPDATE faq SET weight = %d WHERE fid = %d', $node->weight, $node->nid);
+}
+
+
+function faq_block($op = 'list', $delta = 0, $edit = array()){
+	//print 'op: ' . $op . '; delta: ' . $delta . '<br />';
+	switch($op){
+		case 'list':
+			$blocks[0]['info'] = t('FAQ Categories');
+			$blocks[1]['info'] = t('Recent FAQs');
+			return $blocks;
+			break;
+		case 'view':
+			switch($delta){
+				case 0:
+					$terms = array();
+					foreach(taxonomy_get_vocabularies('faq') as $v){
+						foreach(taxonomy_get_tree($v->vid) as $term){
+							$terms[$term->name] = $term->tid;
+							//$terms = array_merge($terms, taxonomy_get_tree($v->vid));
+						}
+                    }
+					ksort($terms);
+					if(sizeof($terms) > 0){
+						$block['subject'] = t('FAQ Categories');
+						$block['content'] = '<ul>' . "\n";
+						foreach($terms as $name => $tid){
+							$block['content'] .= '<li><a href="faq/show/' . $tid . '">' . $name . '</a></li>' . "\n";
+						}
+						$block['content'] .= '</ul>' . "\n";
+					}
+		
+					break;
+				case 1:
+					$block['subject'] = t('Recent FAQs');
+					$block['content'] = theme_faq_highlights('created', 5);
+					break;
+			}
+			return $block;
+			break;
+		case 'configure':
+		case 'save':
+	}
+}
+
+/**
+ * Implementation of hook_load()
+ */
+function faq_load(&$node){	 
+	$data = db_fetch_object(db_query("SELECT * FROM {faq} WHERE fid = %d", $node->nid));
+	return $data; 
+}
+
+/**
+  * Callback for displaying individual FAQ.
+  */
+
+function theme_faq_show(){
+	$tid = intval(arg(2));
+	$output = '<a name="top"></a>' . "\n";
+	$term = taxonomy_get_term($tid);
+
+	if($tid == 0 || $term->tid == 0){
+		$output = 'No such FAQ exists.';
+		drupal_set_title($output);
+	}
+	else{
+		$output .= theme_faq_get_faqs_for_term($term);
+		drupal_set_title($term->name . ' FAQ');
+	}
+	print theme('page', $output);
+}
+
+/**
+ * Callback for displaying FAQ list.
+ */
+
+function theme_faq_list(){
+	$output = '';
+	$terms = array();
+
+	//Get all vocabs for faqs.
+	$vocabs = taxonomy_get_vocabularies('faq');
+
+	//For each, get all term trees and stuff them onto an array.
+	foreach($vocabs as $vocab){
+		$tree = taxonomy_get_tree($vocab->vid);
+		$terms = array_merge($terms, $tree);
+	}
+
+	//Then, for each term, call the theme function to display.
+	foreach($terms as $term){
+		$output .= theme_faq_questions_for_term($term);
+	}
+
+	print theme('page', $output);
+}
+
+/**
+ * Callback for displaying FAQ questions (and term headers) only.
+ */
+
+function theme_faq_highlights($order = 'created', $num = 5){
+	$output = '';
+
+	$sql = 'SELECT n.nid, n.title, n.teaser FROM {node} n WHERE n.type = "faq" AND n.status = 1 ORDER BY n.created DESC LIMIT ' . intval($num);
+
+	if($order == 'rating' && function_exists('voting_get_vote')){
+		$sql = 'SELECT v.content_id nid, SUM(v.vote) rating FROM {votes} v, {node} n WHERE v.content_id = n.nid AND n.type = "faq" GROUP BY v.content_id ORDER BY rating DESC LIMIT ' . intval($num);
+	}
+
+	$result = db_query($sql);
+	$output .= '<ul>' . "\n";
+	while($node = db_fetch_object($result)){
+		$node = node_load(array('nid' => $node->nid));
+		$node = node_prepare($node);
+
+		//Add the voting form if enabled and applicable. Hacky, I know.
+		if($node->voting && function_exists('voting_control_node')){
+			$node->rating_form = voting_control_node($node, false, true);
+		}
+
+		//$output .= node_view($node, 1);
+		$output .= '<li><a href="node/' . $node->nid . '">' . $node->title . '</a></li>' . "\n";		
+		//$output .= '<p>' . $node->teaser . '</p>' . "\n";		
+		//$output .= '' . "\n";		
+	}
+	$output .= '</ul>' . "\n";
+
+	$output .= '<p><br /><a href="faq">All FAQs</a></p>' . "\n";
+
+	return $output;
+}
+
+function theme_faq_questions_for_term($term){
+	$found = false;
+	$result = db_query('SELECT n.nid, n.title FROM {node} n, {term_node} t, {faq} f WHERE t.nid = n.nid AND f.fid = n.nid AND n.type="faq" AND n.status=1 AND t.tid = %d ORDER BY f.weight, n.title', $term->tid);
+
+	$output = '<h2><a href="faq/show/' . $term->tid . '">' . $term->name . '</a></h2>' . "\n";
+	$output .= '<ul>' . "\n";
+	while($node = db_fetch_object($result)){
+		$node = node_prepare($node);
+
+		$edit = '';
+		if(user_access('administer nodes')){
+			$edit = ' (<a href="node/' . $node->nid . '/edit">edit</a>)';
+		}
+
+		$output .= '<li><a href="faq/show/' . $term->tid . '#q_' . $node->nid . '">' . $node->title . '</a>' . $edit . '</li>';
+		$found = true;
+	}	
+	$output .= '</ul>' . "\n";
+
+	if($found){
+		return $output;
+	}
+}
+
+/**
+  * Callback for displaying FAQ questions and answers for a given term.
+  */
+
+function theme_faq_get_faqs_for_term($term){
+	$found = false;
+	$output = '';
+	$title = '<h1>' . $term->name . ' FAQ</h1>' . "\n";
+	$result = db_query('SELECT n.nid, n.title, n.body FROM {node} n, {term_node} t, {faq} f WHERE t.nid = n.nid AND f.fid = n.nid AND n.type="faq" AND n.status=1 AND t.tid = %d ORDER BY f.weight, n.title', $term->tid);
+
+	$links = '<ul>' . "\n";
+	while($node = db_fetch_object($result)){
+		$node = node_load(array('nid' => $node->nid));
+		$node = node_prepare($node);
+
+		$edit = '';
+		if(user_access('administer nodes')){
+			$edit = '<a href="node/' . $node->nid . '/edit">edit</a>';
+		}
+
+		$links .= '<li><a href="faq/show/' . $term->tid . '#q_' . $node->nid . '">' . $node->title . '</a>' . ($edit == '' ? '' : ' (' . $edit . ') ') . '</li>';
+
+		//Add the voting form if enabled and applicable. Hacky, I know.
+		if($node->voting && function_exists('voting_control_node')){
+			$node->body .= voting_control_node($node, false, true);
+		}
+
+		//$output .= '<div class="faq">' . "\n" . '<a name="q_' . $node->nid . '"></a>' . "\n" . '<h3>' . $node->title . '</h3>' . "\n" . $node->body .  "\n" . '<a href="faq/show/' . $term->tid . '#top">top</a> ' . $edit . '</div>';
+		$output .= '<div class="faq">' . "\n" . '<a name="q_' . $node->nid . '"></a>' . "\n" . '<h3>' . $node->title . '</h3>' . "\n" . $node->body .  "\n" . '<a href="faq/show/' . $term->tid . '#top">top</a> ' . $edit . '</div>';
+		$found = true;
+	}
+	$links .= '</ul>' . "\n";
+
+	$output = $title . $links . $output;
+
+	if(!$found){
+		$output = $title;
+	}
+	return $output;
+}
+
+function faq_help(){
+	switch ($section) {
+		case 'admin/modules#help':
+			return t('Allows you to create FAQ nodes that are presented in a standard FAQ layout (questions up top, anchor links below, etc.).');
+		case 'node/add#help':
+			return t('Be sure to create some categories prior to adding any FAQs so that they can be browsed easily.');
+	}
+}
+
+?>
