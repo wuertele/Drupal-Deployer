@@ -1136,10 +1136,8 @@ function project_issue_query_result($query = NULL, $format = 'html', $search = t
   }
 
   // Load active project
-  if (!$project) {
-    if (count($query->projects) == 1) {
-      $project = node_load($query->projects[0]);
-    }
+  if (count($query->projects) == 1) {
+    $project = node_load($query->projects[0]);
   }
 
   if ($project) {
