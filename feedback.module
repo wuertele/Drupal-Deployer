@@ -258,8 +258,6 @@ function feedback_display_form () {
 
   $edit = $_POST["edit"];
 
-  // Assign default values to some form fields while making sure the field
-  // content is preserved after errors
   if (!$edit['form_field_name'] && $user->name) {
     $edit['form_field_name'] = $user->name;
   }
@@ -267,19 +265,13 @@ function feedback_display_form () {
     $edit['form_field_email'] = $user->mail;
   }
   
-  if (variable_get("feedback_pageheader", "")) {
-    $title .= variable_get("feedback_pageheader", "");
-  }
+  drupal_set_title(variable_get("feedback_pageheader", 'feedback'));
 
-  $instructions = variable_get("feedback_instructions", "");
+  $form['form_instructions'] = array (
+    '#type' => 'markup',
+    '#value' => variable_get('feedback_instructions', 'Enter your message below'),
+    );
 
-  if ($instructions) {
-    $message .= $instructions;
-  }
-  else {
-    $message .= t("Enter your message below:");
-  }
-    
   if ( variable_get("feedback_field_name", t('Name')) )
     $form['form_field_name'] = array (
       '#type' => 'textfield',
@@ -345,14 +337,7 @@ function feedback_display_form () {
       '#value' => t('Send Message'),
     );
 
-//  $output .= $message . form($form, "post");
-//  if ($title) {
-//    $output = theme("box", $title, $output);
-//  }
-
-  $output .= drupal_get_form('', $form);
-
-  return $output;
+  return drupal_get_form('', $form);
 }
 
 function feedback_watchdog_log() {
