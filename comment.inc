@@ -54,8 +54,8 @@ function project_comment_form(&$edit, &$param) {
   } else {
     $form['#attributes'] = array('enctype' => 'multipart/form-data');
   }
-  $form['project_issue_form']['#prefix'] = '<div class="node-form"><div class="standard">';
-  $form['project_issue_form']['#suffix'] = '</div></div>';
+  $form['#prefix'] = '<div class="node-form"><div class="standard">';
+  $form['#suffix'] = '</div></div>';
   $form['project_issue_form'] = project_issue_form($edit, $param);
   _project_issue_form_add_required_fields($form['project_issue_form'], FALSE);
   if ($edit->cid) {
