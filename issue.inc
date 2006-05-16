@@ -444,7 +444,7 @@ function project_issue_form(&$node, &$param) {
 
     $form['issue_details'] = array(
       '#type' => 'fieldset',
-      '#title' => t('Issue Details'),
+      '#title' => t('Issue details'),
       '#prefix' => '</div><div class="standard">',
     );
     $form['issue_details']['title'] = array(
