@@ -325,6 +325,9 @@ function project_issue_form(&$node, &$param) {
     '#value' => isset($_POST['edit']['page']) ? $_POST['edit']['page'] : 1,
   );
 
+  $form['#prefix'] = '<div class="project">';
+  $form['#suffix'] = '</div>';
+
   // Fetch a list of all projects to make swapping simpler
   $projects = array(t('<none>')) + project_projects_select_options();
 
@@ -367,8 +370,6 @@ function project_issue_form(&$node, &$param) {
         $user->uid => $user->name
       );
     }
-
-    //$form['#prefix'] = '</div><div class="admin">';
 
     $form['project_info'] = array(
       '#type' => 'fieldset',
