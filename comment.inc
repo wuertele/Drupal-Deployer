@@ -80,7 +80,6 @@ function project_comment_validate($edit) {
   if ($edit->cid) {
     $comment = project_comment_load($edit->cid);
     $edit->nid = $comment->nid;
-    $edit->fid = $comment->fid;
   }
 
   $edit->comment = true;
@@ -178,9 +177,6 @@ function _project_comment_view_single($comment, $count) {
     }
     if ($comment->body) {
       $rows[] = array(array('class' => 'content', 'data' => '<p>'. check_markup($comment->body) .'</p>'));
-    }
-    if ($comment->fid) {
-      $rows[] = array(l(t('download attachment'), "project/comments/download/$comment->cid"));
     }
   }
   return $rows;
