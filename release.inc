@@ -323,7 +323,7 @@ function project_release_load($rid, $status = 1) {
 function project_release_save($release) {
   $fields = array('rid' => '%d', 'nid' => '%d', 'fid' => '%d',
                     'path' => "'%s'", 'created' => '%d',
-                    'changed' => '%d', 'hash' => '"%s"', 'version' => "'%s'",
+                    'changed' => '%d', 'hash' => "'%s'", 'version' => "'%s'",
                     'changes' => "'%s'", 'status' => '%d');
 
   $node = node_load($release->nid);
@@ -420,7 +420,7 @@ function project_releases_list($refresh = FALSE) {
     $versions = unserialize($versions->data);
   }
   else {
-    $result = db_query("SELECT version FROM {project_releases} WHERE status = 1 GROUP BY version ORDER BY created DESC;");
+    $result = db_query("SELECT version FROM {project_releases} WHERE status = 1 GROUP BY version, created ORDER BY created DESC;");
     $versions = array();
     while ($object = db_fetch_object($result)) {
       $version = preg_replace('/^(.+?)\.?(?:\d+)?$/', '\1', $object->version);
