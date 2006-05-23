@@ -135,7 +135,7 @@ function project_project_form(&$node) {
     '#type' => 'checkbox',
     '#title' => t('Enable issue tracker'),
     '#return_value' => 1,
-    '#default_value' => $node->issues,
+    '#default_value' => isset($node->issues) ? $node->issues : 1,
     '#description' => t('Let users submit bug requests, patches, feature requests, support requests, etc.'),
   );
   if ($releases = project_release_load($node)) {
