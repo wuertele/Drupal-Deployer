@@ -1211,7 +1211,7 @@ function project_issue_query_result($query = NULL, $format = 'html', $search = t
 
   if ($search) {
     // Action links:
-    $group = theme('item_list', $links);
+    $group = theme('links', $links);
 
     // Convert array fields to single select form items. Some magic happens here.
     $fields = array('projects', 'states', 'priorities', 'categories', 'users');
