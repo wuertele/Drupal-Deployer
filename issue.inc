@@ -749,6 +749,7 @@ function project_issue_access($op, $node) {
     case 'create':
       return user_access('create project issues');
     case 'update':
+      return user_access('administer projects') || (user_access('edit own project issues') && $node->uid == $user->uid);
     case 'delete':
       return user_access('administer projects');
   }
