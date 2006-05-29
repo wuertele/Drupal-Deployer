@@ -201,7 +201,7 @@ function feedback_page() {
   $breadcrumb = array(array('path' => 'feedback'));
   menu_set_location($breadcrumb);
 
-  if ($edit) {
+  if ($edit && ($edit['form_id'] == 'feedback_form')) {
     if ( variable_get("feedback_logging", "1") ) {
       feedback_watchdog_log();
     }
@@ -258,11 +258,13 @@ function feedback_display_form () {
 
   $edit = $_POST["edit"];
 
-  if (!$edit['form_field_name'] && $user->name) {
-    $edit['form_field_name'] = $user->name;
-  }
-  if (!$edit['form_field_email'] && $user->mail) {
-    $edit['form_field_email'] = $user->mail;
+  if ($edit['form_id'] == 'feedback_form') {
+      if (!$edit['form_field_name'] && $user->name) {
+	$edit['form_field_name'] = $user->name;
+      }
+      if (!$edit['form_field_email'] && $user->mail) {
+	$edit['form_field_email'] = $user->mail;
+      }
   }
   
   drupal_set_title(variable_get("feedback_pageheader", 'feedback'));
@@ -337,7 +339,7 @@ function feedback_display_form () {
       '#value' => t('Send Message'),
     );
 
-  return drupal_get_form('', $form);
+  return drupal_get_form('feedback_form', $form);
 }
 
 function feedback_watchdog_log() {
