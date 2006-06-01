@@ -683,8 +683,10 @@ function _project_save_taxonomy(&$node) {
     }
     $tid = $node->project_type;
     _project_db_save_taxonomy($node->nid, $tid);
-    foreach ($node->$tid as $tid) {
-      _project_db_save_taxonomy($node->nid, $tid);
+    if (isset($node->$tid)) {
+      foreach ($node->$tid as $tid) {
+        _project_db_save_taxonomy($node->nid, $tid);
+      }
     }
   }
 }
