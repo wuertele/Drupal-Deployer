@@ -601,7 +601,7 @@ function project_project_access($op, $node) {
     case 'create':
       if ($user->uid && user_access('maintain projects')) {
         if (module_exist('cvs') && variable_get('cvs_restrict_project_creation',0)) {
-          return db_result(db_query("SELECT uid FROM {cvs_accounts} WHERE uid = %d", $user->uid), 0);
+          return db_result(db_query("SELECT uid FROM {cvs_accounts} WHERE uid = %d", $user->uid), 0) ? TRUE : FALSE;
         }
         else {
           return TRUE;
