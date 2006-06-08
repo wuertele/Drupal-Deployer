@@ -589,7 +589,10 @@ function project_project_update($node) {
 
 function project_project_delete($node) {
   db_query('DELETE FROM {project_projects} WHERE nid = %d', $node->nid);
+  db_query('DELETE FROM {project_releases} WHERE nid = %d', $node->nid);
   db_query('DELETE FROM {project_issues} WHERE pid = %d', $node->nid);
+  db_query('DELETE FROM {project_comments} WHERE nid = %d', $node->nid);
+  db_query('DELETE FROM {project_subscriptions} WHERE nid = %d', $node->nid);
 }
 
 function project_project_access($op, $node) {
