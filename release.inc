@@ -270,8 +270,10 @@ function project_release_view($release, $project = 0) {
 
   $links = array();
   if ($release->rid && node_access('update', $project)) {
-    $links[] = l('edit', "node/$project->nid/release/edit/$release->rid");
-    //$links[] = l('delete', "node/$project->nid/release/delete/$release->rid");
+    $links['project_release_edit'] = array(
+      '#title' => t('edit'),
+      '#href' => "node/$project->nid/release/edit/$release->rid",
+    );
   }
 
   if ($release->path) {
