@@ -568,18 +568,19 @@ function project_nodeapi(&$node, $op, $arg) {
     case 'insert':
       if ($node->type == 'project_project') {
         _project_save_taxonomy($node);
-      }
-      if (module_exist('path')) {
-        path_set_alias("node/$node->nid", "project/$node->uri");
+        if (module_exist('path')) {
+          path_set_alias("node/$node->nid", "project/$node->uri");
+        }
       }
       break;
+
     case 'update':
       if ($node->type == 'project_project') {
         _project_save_taxonomy($node);
-      }
-      if (module_exist('path')) {
-        path_set_alias("node/$node->nid");  // Clear existing alias.
-        path_set_alias("node/$node->nid", "project/$node->uri");
+        if (module_exist('path')) {
+          path_set_alias("node/$node->nid");  // Clear existing alias.
+          path_set_alias("node/$node->nid", "project/$node->uri");
+        }
       }
       break;
   }
