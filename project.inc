@@ -589,7 +589,9 @@ function project_project_access($op, $node) {
       return user_access('access projects') || (user_access('access own projects') && $node->uid == $user->uid);
     case 'create':
       if ($user->uid && user_access('maintain projects')) {
-        if (module_exist('cvs') && variable_get('cvs_restrict_project_creation',1)) {
+        // Since this CVS access checking is non-standard, we need to
+        // special-case uid 1 to always allow everything.
+        if ($user->uid != 1 && module_exist('cvs') && variable_get('cvs_restrict_project_creation',1)) {
           return db_result(db_query("SELECT uid FROM {cvs_accounts} WHERE uid = %d AND status = %d", $user->uid, CVS_APPROVED)) ? TRUE : FALSE;
         }
         else {
