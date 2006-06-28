@@ -5,43 +5,65 @@
 // Copyright 2005 Khalid Baheyeldin http://2bits.com
 
 function currency_help($section) {
-  $output ="";
+  $output = '';
 
   switch ($section) {
     case 'admin/modules#description':
-      $output = t("Currency conversion page. Requires currency_api.");
+      $output = t('Currency conversion page. Requires currency_api.');
       break;
+      
     case 'admin/help#currency':
     case 'admin/settings/currency':
-      $output = t("This module provides currency conversion rates.");
+      $output = t('This module provides currency conversion rates.');
       break;
   }
 
   return $output;
 }
   
-function currency_settings() {
-  $output .= form_textfield(t("Default Currency From"), "currency_default_from",
-    variable_get("currency_default_from", 'CAD'), 3, 3,
-    t('Three letter symbol for default currency to convert from.'));
+function currency_settings() {  
+  
+  $form['currency_default_from'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Default Currency From'),
+    '#default_value' => variable_get('currency_default_from', 'CAD'),
+    '#size' => 3,
+    '#maxlength' => 3,
+    '#description' => t('Three letter symbol for default currency to convert from.'),
+  );
+  
+  $form['currency_default_to'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Default Currency To'),
+    '#default_value' => variable_get('currency_default_to', 'USD'),
+    '#size' => 3,
+    '#maxlength' => 3,
+    '#description' => t('Three letter symbol for default currency to convert to.'),
+  );
+  
+  $form['currency_description'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Description'),
+    '#default_value' =>  variable_get('currency_description', t('This is the currency conversion page.')),
+    '#cols' => 70,
+    '#rows' => 7,
+    '#description' => t('This text will be displayed at the top of the currency conversion page'),
+  );
+  
+  $form['currency_overview_title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Navigation link text'),
+    '#default_value' => variable_get('currency_overview_title', t('currency conversion')),
+    '#size' => 35,
+    '#maxlength' => 255,
+    '#description' => t('The text in the navigation link which points to the currency conversion page.'),
+  ); 
 
-  $output .= form_textfield(t("Default Currency To"), "currency_default_to",
-    variable_get("currency_default_to",   'USD'), 3, 3,
-    t('Three letter symbol for default currency to convert to.'));
-
-  $output .= form_textarea(t("Description"), "currency_description",
-    variable_get("currency_description", t("This is the currency conversion page.")), 70, 7,
-    t('This text will be displayed at the top of the currency conversion page'));
-
-  $output .= form_textfield(t("Navigation link text"), "currency_overview_title",
-    variable_get("currency_overview_title", t("currency conversion")), 35, 255,
-    t("The text in the navigation link which points to the currency conversion page."));  
-
-  return $output;
+  return $form;
 }  
 
 function currency_perm() {
-  return array ("use currency");
+  return array ('use currency');
 }
 
 function currency_link($type, $node = 0, $main = 0) {
@@ -50,7 +72,7 @@ function currency_link($type, $node = 0, $main = 0) {
   $links = array();
 
   if ($type == 'page' && user_access('use currency')) {
-          $links[] = l(t('currency'), 'currency');
+    $links[] = l(t('currency'), 'currency');
   }
 
   return $links;
@@ -60,110 +82,130 @@ function currency_menu($may_cache) {
   $items = array();
 
   $access = user_access('use currency');
-  $title  = t(variable_get("currency_overview_title", "currency conversion"));
+  $title  = t(variable_get('currency_overview_title', 'currency conversion'));
   $path   = 'currency';
 
   $items[] = array(
-	 'path'     => $path,
-	 'title'    => $title,
-	 'access'   => $access,
-   'callback' => 'currency_page',
-   'weight'   => 0 );
+    'path'     => $path,
+    'title'    => $title,
+    'access'   => $access,
+    'callback' => 'currency_page',
+    'weight'   => 0,
+  );
 
   return $items;
 }
 
 // Display the currency page
 function currency_page() {
-  $output = currency_contents ();
+  $output = currency_contents();
 
-  print theme("page", $output );
+  return $output;
 }
 
 // Display the form
 function currency_form() {
+  $edit   = isset($_POST['edit']) ? $_POST['edit'] : '';
+  $from   = $edit['currency_from'];
+  $to     = $edit['currency_to'];
+  $amount = $edit['currency_amount'];
+
+  if (empty($from)) {
+    $from = variable_get('currency_default_from', 'CAD');
+  }
+
+  if (empty($to)) {
+    $to = variable_get('currency_default_to', 'USD');
+  }
+
+  if (!isset($amount)) {
+    $amount = 1;
+  }
+
+  if (!is_numeric($amount)) {
+    $amount = 1;
+  }
  
- $edit = $_POST['edit'];
-
- $from   = $edit['currency_from'];
- $to     = $edit['currency_to'];
- $amount = $edit['currency_amount'];
-
- if (!isset($from)) {
-   $from = variable_get('currency_default_from', 'CAD');
- }
-
- if (!isset($to)) {
-   $to = variable_get('currency_default_to', 'USD');
- }
-
- if (!isset($amount)) {
-   $amount = 1;
- }
-
- if (!is_numeric($amount)) {
-   $amount = 1;
- }
-
- $output .= form_textfield(t('Amount'), 'currency_amount', $amount, 9, 9, t('Amount to convert'));
- $output .= form_select   (t('From'),   'currency_from', $from, currency_api_get_list());
- $output .= form_select   (t('To'),     'currency_to',   $to,   currency_api_get_list());
- $output .= form_submit   (t('Convert'),'button_convert');
-
- $form = form($output);
-
- return $form;
+  $form['currency_amount'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Amount'),
+    '#default_value' => $amount,
+    '#size' => 9,
+    '#maxlength' => 9, 
+    '#description' => t('Amount to convert'), 
+  );
+  
+  $form['currency_from'] = array(
+    '#type' => 'select',
+    '#title' => t('From'),
+    '#default_value' => $from,
+    '#options' => currency_api_get_list(),    
+  );
+  
+  $form['currency_to'] = array(
+    '#type' => 'select',
+    '#title' => t('To'),
+    '#default_value' => $to,
+    '#options' => currency_api_get_list(),    
+  );
+       
+  $form['button_convert'] = array(
+    '#type' => 'button',
+    '#input' => TRUE,
+    '#name' => 'op',
+    '#button_type' => 'submit',
+    '#value' => t('Convert'),
+    '#execute' => TRUE,
+  ); 
+    
+  $form['#method'] = 'post';
+  
+  return drupal_get_form('stock_form', $form);
 }
 
 
 function currency_contents() {
+  $op = isset($_POST['op']) ? $_POST['op'] : '';
+  $edit   = isset($_POST['edit']) ? $_POST['edit'] : '';
+  $amount = $edit['currency_amount'];
+  $from   = strtoupper($edit['currency_from']);
+  $to     = strtoupper($edit['currency_to']);
 
- $edit = $_POST['edit'];
+  if (($amount != "") AND (!is_numeric($amount))) {
+    drupal_set_message(t('Invalid Amount. Please enter a number'), 'error');
+  }
+  else {
+    $output .= variable_get('currency_description', 'This is the currency conversion page.');
+    if ($op == t('Convert')) {
+      $output .= currency_do_quote($from, $to, $amount);
+    }
+  }
 
- $amount = $edit['currency_amount'];
- $from   = strtoupper($edit['currency_from']);
- $to     = strtoupper($edit['currency_to']);
+  $output .= currency_form();
 
- if (($amount != "") AND (!is_numeric($amount))) {
-   drupal_set_message(t('Invalid Amount. Please enter a number'), 'error');
- }
- else {
-   $output .= variable_get("currency_description", "This is the currency conversion page.");
-   if (isset($_POST['button_convert'])) {
- 	   $output .= currency_do_quote($from, $to, $amount);
-   }
- }
-
- $output .= currency_form();
-
- return $output ;
+  return $output;
 }
 
-function currency_detailed_quote ( $currency_from, $currency_to ) {
- 
- $full_quote_url = 'http://finance.yahoo.com/q?s=';
- 
- 
- $url = $full_quote_url . $currency_from . $currency_to . '=X';
+function currency_detailed_quote($currency_from, $currency_to) { 
+  $full_quote_url = 'http://finance.yahoo.com/q?s=';
+  
+  $url = $full_quote_url . $currency_from . $currency_to . '=X';
 
- return '<a target="_blank" title="'.
-   t('History and Chart').'" href="'.$url.'">'.t('Detailed history and chart').'</a>';
+  return l(t('Detailed history and chart'), $url, array('title' => t('History and Chart'), 'target' => '_blank'), NULL, NULL, TRUE);  
 }
 
-function currency_do_quote( $currency_from, $currency_to, $amount = 1 ) {
+function currency_do_quote($currency_from, $currency_to, $amount = 1) {
   $ret = currency_api_convert($currency_from, $currency_to, $amount);
+  
   if ($ret['status'] == FALSE) { 
     drupal_set_message(t('currency conversion error: ') . $ret['message']);
- 	}
- 	else {
-    $result .= '<p>'. $amount .' '.
-      currency_api_get_desc($currency_from) .' = '. $ret['value'] .' '.
-      currency_api_get_desc($currency_to) . '</p>';
-
-    $result .= '<p>'. currency_detailed_quote($currency_from, $currency_to).'</p>';
- 	}
-
- return $result;
+  }
+  else {
+    $result .= '<p>'. $amount .' '. currency_api_get_desc($currency_from) .' = '. $ret['value'] .' '. currency_api_get_desc($currency_to) .'</p>';
+    $result .= '<p>'. currency_detailed_quote($currency_from, $currency_to) .'</p>';
+  }
+  
+  return $result;
 }
 
 ?>
