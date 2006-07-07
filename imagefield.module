@@ -1,0 +1,574 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Defines an image field type.
+ *
+ * @status
+ *   - can submit nodes
+ *   - can update nodes
+ *   - can delete nodes
+ *   - multiple value option now works.
+ *   - content.module is managing fid.
+ * 
+ * @todo
+ *   - access control
+ *   DONE - test required option
+ *   DONE - update node testing
+ *   DONE - delete node testing
+ *   DONE - delete individual of multiple testing.
+ *   DONE - switch delete option to set a flag... for deletion.
+ *   DONE - add title and alt fields.
+ *   DONE - replace single upload if multiple is not enabled. db vs session set ['flags']['delete']
+ *
+ * @hurrah!!
+ */
+
+/**
+ * Implementation of hook_help().
+ */
+function imagefield_help($section) {
+  switch ($section) {
+    case 'admin/modules#description':
+      return t('Defines an image field type for content.module.');
+  }
+}
+
+function imagefield_menu($maycache) {
+  $items = array();
+
+  // Add handlers for previewing new uploads.
+  if ($_SESSION['imagefield']) {
+    foreach ($_SESSION['imagefield'] as $fieldname => $files) {
+      foreach($files as $delta => $file) {
+        $filename = file_create_filename($file['filename'], file_create_path());
+        // strip file_directory_path() from private downloads path. @see file_create_url
+        if (variable_get('file_downloads', FILE_DOWNLOADS_PUBLIC) ==  FILE_DOWNLOADS_PRIVATE) {
+          if (strpos($filename, file_directory_path()) !== false) {
+            $filename = trim(substr($filename, strlen(file_directory_path())), '\\/');
+          }
+          $filename = 'system/files/' . $filename;
+        }
+        $items[] = array(
+          'path' => $filename, 'title' => t('file download'),
+          'callback' => '_imagefield_preview',
+          'access' => TRUE,
+          'type' => MENU_CALLBACK
+        );
+        $file['preview'] = $filename;
+        $_SESSION['imagefield'][$fieldname][$delta] = $file;        
+      }
+    }
+  }
+  return $items;
+}
+
+/**
+ *  transfer a file that is in a 'preview' state.
+ *  @todo  multiple support
+ */
+function _imagefield_preview() {
+  foreach ($_SESSION['imagefield'] as $fieldname => $files) {
+    foreach ($files as $delta => $file) {
+      if ($file['preview'] == $_GET['q']) {
+        file_transfer($file['filepath'], array('Content-Type: '. mime_header_encode($file['filemime']),
+                                           'Content-Length: '. $file['filesize']));
+        exit();
+      }
+    }
+  }
+}
+
+/**
+ * Implementation of hook_field_info().
+ */
+function imagefield_field_info() {
+  return array(
+    'image' => array('label' => 'Image'),
+  );
+}
+
+/**
+ * Implementation of hook_field_settings().
+ */
+function imagefield_field_settings($op, $field) {
+  switch ($op) {
+    case 'form':
+      $form = array();
+      return $form;
+    case 'validate':
+
+      break;
+    case 'save':
+      return array();
+    case 'database columns':
+      $columns = array(
+        'fid' => array('type' => 'int', 'not null' => TRUE, 'default' => '0'),
+        'title' => array('type' => 'varchar', length => 255, 'not null' => TRUE, 'default' => "''", 'sortable' => TRUE),
+        'alt' => array('type' => 'varchar', length => 255, 'not null' => TRUE, 'default' => "''", 'sortable' => TRUE),
+      );
+      return $columns;
+  }
+}
+
+/**
+ * insert a file into the database.
+ * @param $node
+ *    node object file will be associated with.
+ * @param $file
+ *    file to be inserted, passed by reference since fid should be attached.
+ *    
+ */
+function imagefield_file_insert($node, &$file, $field) {
+  $fieldname = $field['field_name'];
+  if ($file = file_save_upload((object)$file, file_directory_path() . '/'.$file['filename'])) {
+    $file = (array)$file;
+    $file['fid'] = db_next_id('{files}_fid');
+    db_query('INSERT into {files} (fid, nid, filename, filepath, filemime, filesize)  
+             VALUES (%d, %d, "%s","%s","%s",%d)',
+            $file['fid'], $node->nid, $file['filename'], $file['filepath'], $file['filemime'], $file['filesize']);
+    return (array)$file;
+  }
+  else {
+    // Include file name in upload error.
+    form_set_error(NULL,'upload failed');
+    return FALSE;
+  }
+}
+
+
+/**
+ * update the file record if necessary
+ * @param $node
+ * @param $file
+ * @param $field
+ */
+function imagefield_file_update($node, &$file, $field) {
+  $file = (array)$file; 
+  if ($file['flags']['delete'] == TRUE) {
+    return _imagefield_file_delete($file, $field['field_name']);
+  }
+  if ($file['fid'] == 'upload') {  
+    return imagefield_file_insert($node, $file, $field);
+  }
+  else {
+    // if fid is not numeric here we should complain.
+    // else we update the file table.  
+  }
+  return $file;
+}
+
+/**
+ * Implementation of hook_field().
+ */
+function imagefield_field($op, $node, $field, &$node_field, $a1, $a2) {
+  $fieldname = $field['field_name'];
+  switch ($op) {
+    // called after content.module loads default data.
+    case 'load':
+      $values = array();
+      foreach ($node_field as $delta => $file) {
+        $values[$delta]  = array_merge($node_field[$delta], _imagefield_file_load($file['fid']));
+        $node_field[$delta] = $values[$delta];
+      }
+      $output = array($fieldname => $values);
+      break; 
+
+    case 'view':
+      $images = array();
+      foreach ($node_field as $delta => $item) {
+        // do not show images flagged for deletion in preview.
+        if (!$item['flags']['delete'] == 1) {
+          $node_field[$delta]['view'] = theme('imagefield_image', $item); 
+          $images[] =  $node_field[$delta]['view'];
+        }
+      }
+      $view = theme('imagefield_multiple', $images);
+      
+      $output = '<div class="'. $field['field_name'] .'">'. $view .'</div>';
+      break;
+
+    // called before content.module defaults.
+    case 'insert':
+      foreach ($node_field as  $delta => $item) {
+        $node_field[$delta] = imagefield_file_insert($node, $item, $field); 
+      }
+      break;
+
+    // called before content.module defaults.
+    case 'update':
+      foreach ($node_field as $delta => $item) {
+        $node_field[$delta] = imagefield_file_update($node, $item, $field); 
+      }
+      break;
+
+    case 'delete':
+      foreach ($node_field as $delta => $item) {
+        _imagefield_file_delete($item, $field['field_name']); 
+      }
+      break;
+  }
+  return $output;
+}
+
+/**
+ * Implementation of hook_widget_info().
+ */
+function imagefield_widget_info() {
+  return array(
+    'image' => array(
+      'label' => 'Image',
+      'field types' => array('image'),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_widget_settings().
+ */
+function imagefield_widget_settings($op, $widget) {
+  switch ($op) {
+    case 'form':
+      $form = array();
+      $form['max_resolution'] = array (
+        '#type' => 'textfield', 
+        '#title' => t('Maximum resolution for mages'), 
+        '#default_value' => $widget['max_resolution'] ? $widget['max_resolution'] : 0,
+        '#size' => 15, 
+        '#maxlength' => 10, 
+        '#description' => 
+        t('The maximum allowed image size expressed as WIDTHxHEIGHT (e.g. 640x480). Set to 0 for no restriction.')
+      );
+      return $form;
+    case 'validate':
+      break;
+    case 'save':
+      return array('max_resolution');
+  }
+}
+
+
+function _imagefield_scale_image($file, $resolution = 0) {
+  $info = image_get_info($file['filepath']);
+  if ($info) {
+    list($width, $height) = explode('x', $resolution);
+    if ($width && $height) {
+      $result = image_scale($file['filepath'], $file['filepath'], $width, $height);
+      if ($result) {
+        $file['filesize'] = filesize($file['filepath']);
+        drupal_set_message(t('The image was resized to fit within the maximum allowed resolution of %resolution pixels', array('%resolution' => theme('placeholder',$resolution))));      
+      }
+    }
+  }
+  return $file;
+}
+
+
+function imagefield_clear_session() {
+  if (is_array($_SESSION['imagefield']) && count($_SESSION['imagefield'])) {
+    foreach (array_keys($_SESSION['imagefield']) as $fieldname) {
+      imagefield_clear_field_session($fieldname);
+    }
+    unset($_SESSION['imagefield']);
+  }
+}
+
+function imagefield_clear_field_session($fieldname) {
+  if (count($_SESSION['imagefield'][$fieldname])) {
+    foreach ($_SESSION['imagefield'][$fieldname] as $files) {
+      foreach ($files as $delta => $file) {
+        if (is_file($file['filepath'])) {
+          file_delete($file['filepath']);
+        }
+      }
+    }
+    unset($_SESSION['imagefield'][$fieldname]);
+  }
+}
+
+function _imagefield_file_delete($file, $fieldname) {
+  if (is_numeric($file['fid'])) {
+    db_query('DELETE FROM {files} WHERE fid = %d', $file['fid']);
+  }
+  else {
+    unset($_SESSION['imagefield'][$fieldname][$file['sessionid']]);
+  }
+  return file_delete($file['filepath']);
+}
+
+/**
+ * Implementation of hook_widget().
+ */
+function imagefield_widget($op, $node, $field, &$node_field) {
+  $fieldname = $field['field_name'];
+  switch ($op) {
+    case 'prepare form values':
+      // clean up the session if we weren't posted.
+      if (!count($_POST)) {
+        imagefield_clear_session();
+      }
+
+      // Attach new files 
+      if ($_POST['cck_imagefield_'. $fieldname .'_op'] == t('Attach') || $_POST['op'] == t('Submit') || $_POST['op'] == t('Preview')) {
+        if ($file = file_check_upload($fieldname . '_upload')) {
+          $file = (array)$file;
+          if (strpos($file['filemime'],'image') !== false) { 
+            $file = _imagefield_scale_image($file, $field['widget']['max_resolution']); 
+          }
+          else {
+            return false;
+          }
+          $file['fid'] = 'upload';
+          if (!$field['multiple']) {
+            // Remove old temporary file from session.
+            imagefield_clear_field_session($fieldname);
+          }
+          $file['sessionid'] = count($_SESSION['imagefield'][$fieldname]);
+        }
+        $_SESSION['imagefield'][$fieldname][$file['sessionid']] = $file;
+        
+      }
+
+      
+      // Load files from preview state. before committing actions.
+      if (is_array($_SESSION['imagefield'][$fieldname]) && count($_SESSION['imagefield'][$fieldname])) {
+        foreach($_SESSION['imagefield'][$fieldname] as $delta => $file) {
+          $node_field[] = $file;
+        }
+      }
+      break;
+
+    case 'form':
+      
+      $form = _imagefield_widget_form($node, $field, $node_field);
+      return $form;
+
+    case 'validate':
+      if ($field['required']) {
+        if (!count($node_field)) {
+          form_set_error($fieldname, $field['widget']['label'] .' is required.');
+
+        }
+      }
+      return;
+  }
+}
+
+function _imagefield_widget_form($node, $field, &$node_field) {
+  $fieldname = $field['field_name'];
+  theme_add_style(drupal_get_path('module', 'imagefield') .'/imagefield.css');
+ 
+  $form = array(); 
+  $form[$fieldname] = array(
+    '#type' => 'fieldset',
+    '#title' => t($field['widget']['label']),
+    '#weight' => 5,
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#tree' => TRUE,
+  );
+      
+  // Seperate from tree becase of that silly things won't be 
+  // displayed is they are a child of '#type' = form issue
+  $form[$fieldname][$fieldname .'_upload'] = array(
+    '#type'  => 'file',
+    '#description' => 'attach a file',
+    '#tree' => FALSE,
+    '#weight' => 9,
+  );
+
+  $form[$fieldname]['Attach'] = array(
+    '#type' => 'button',
+    '#value' => t('Attach'),
+    '#name' => 'cck_imagefield_'.$fieldname.'_op',
+    '#attributes' => array('id' => $fieldname.'-attach-button'),
+    '#tree' => FALSE,
+    '#weight' => 10,
+  );
+  $form[$fieldname]['Update'] = array(
+    '#type' => 'button',
+    '#value' => t('update'),
+    '#name' => 'cck_imagefield_'.$fieldname.'_op',
+    '#attributes' => array('id' => $fieldname.'-update-button'),
+    '#tree' => FALSE,
+    '#weight' => 10,
+  );
+
+  // Store the file data object to be carried on.
+  if (is_array($node_field) && count($node_field)) {
+    foreach($node_field as $delta => $file) {
+      if ($file['filepath']) {
+        $form[$fieldname][$delta] = array (
+          '#theme' => 'imagefield_edit_image_row',
+        );
+
+        $form[$fieldname][$delta]['flags']['delete'] = array(
+          '#type' => 'checkbox',
+          '#title' => t('Delete'),
+          '#default_value' => 0,
+          '#attributes' => array('id' => $fieldname .'-'. $delta.'-delete-checkbox'),
+        );
+      
+        $form[$fieldname][$delta]['preview'] = array(
+          '#type' => 'markup',
+          '#value' => theme('imagefield_image_preview', $file, '', '', array('width' => '150'), FALSE),
+        );
+        
+        $form[$fieldname][$delta]['description'] = array(
+          '#type' => 'markup',
+          '#value' => '<p>'. t('filename:') . $file['filename']. '</p>',
+        );
+        $form[$fieldname][$delta]['alt'] = array(
+          '#type' => 'textfield',
+          '#title' =>  t('alternate text'),
+          '#default_value' => $file['alt'],
+          '#description' => t('Alternate text to be displayed if the image cannot be displayed.'),
+          '#maxlength' => 255,
+          '#size' => 10,
+        );
+        $form[$fieldname][$delta]['title'] = array(
+          '#type' => 'textfield',
+          '#title' =>  t('title'),
+          '#default_value' =>  $file['title'],
+          '#description' => t('Text to be displayed on mouse overs.'),
+          '#maxlength' => 255,
+          '#size' => 10,
+        );
+        // must set #tree => true, so data structure will be carried
+        // with node into hook_field.... 
+        $form[$fieldname][$delta]['filename'] = array('#type' => 'value',  '#value' => $file['filename']);
+        $form[$fieldname][$delta]['filepath'] = array('#type' => 'value',  '#value' => $file['filepath']);
+        $form[$fieldname][$delta]['filemime'] = array('#type' => 'value',  '#value' => $file['filemime']);
+        $form[$fieldname][$delta]['filesize'] = array('#type' => 'value',  '#value' => $file['filesize']);
+        $form[$fieldname][$delta]['fid'] = array('#type' => 'value',  '#value' => $file['fid']);
+      
+        // Special handling for single value fields
+        if (!$field['multiple'] && $delta == 0) {
+          // Mark [0] for deletion.
+          if (count($_SESSION['imagefield'][$fieldname])) {
+            $form[$fieldname][$delta]['flags']['delete']['#value'] = 1;
+            $form[$fieldname][$delta]['replace'] = array(
+              '#type' => 'markup',
+              '#value' => 'This image will be removed from Drupal and Replaced on submit.',
+            );
+          }
+        } 
+      }
+    }
+  }
+  return $form;
+}
+
+
+/**
+ * Implementation of hook_views_tables().
+ * @todo views export work.
+ */
+function imagefield_views_tables() {
+  $tables = array();
+  // Get a list of field types
+  $fields = _content_fields();
+  // Search for our field.
+  foreach ($fields as $field) {
+    // Match our field.
+    if ($field['type'] == 'number_integer') {
+      //Field specific code goes here...
+      $tables['node_field_imagefield_data_'. $field['field_name']] = array (
+        'name' => 'node_field_imagefield_data',
+        'join' => array(
+          'left' => array(
+            'table' => 'node',
+            'field' => 'vid',
+          ),
+          'right' => array(
+            'field' => 'vid',
+          ),
+          'extra' => array('field_name' => $field['field_name']),
+        ),
+        'fields' => array(
+          'field_fid' => array(
+            'name' => 'Fid: '. $field['field_name'],
+            'sortable' => TRUE,
+          ),
+        ),
+        'sorts' => array(
+          'field_fid' => array('name' => 'Fid: '. $field['field_name']),
+        )
+      ); 
+    }
+  }
+  return $tables;
+}
+
+
+function _imagefield_file_load($fid = NULL) {
+  // Exit if we were not passed an fid to load;
+  if (!isset($fid)) { 
+    return false;
+  }
+  // Test to catch fid, eventuall plan to have node_load syntax
+  // once file_attributes table is complete
+  if (is_numeric($fid)) {
+    $result = db_query('SELECT * FROM {files} WHERE fid = %d', $fid);
+    return db_fetch_array($result);
+  }
+  return FALSE;
+}
+
+function theme_imagefield_image_preview($file, $alt ='', $title='', $attributes = NULL, $getsize= TRUE) {
+  return '<span class="imagefield-image-preview">'.theme('imagefield_image', $file, $alt, $title, $attributes , $getsize) .'</span>';
+}
+
+
+function theme_imagefield_edit_image_row($element) {
+  $output = '<div class="imagefield-edit-preview">'. form_render($element['preview']) .'</div>';
+  $output .= '<div class="imagefield-edit-image-description">'.form_render($element['description']).'</div>';
+  $output .= '<div class="imagefield-edit-image-fid">'. $element['fid']['#value'] .'</div>';
+  if (isset($element['replace'])) {
+    $output .= '<div class="imagefield-edit-image-replace">'.form_render($element['replace']).'</div>';
+  } else {
+    $output .= '<div class="imagefield-edit-image-flags">'.form_render($element['flags']).'</div>';
+  }
+  $output .= '<div style="clear:both">&nbsp;</div>';
+  if (!isset($element['replace'])) {
+    $output .= '<div class="imagefield-edit-image-alt">'.form_render($element['alt']).'</div>';
+    $output .= '<div class="imagefield-edit-image-title">'.form_render($element['title']).'</div>';
+  }
+  $output = '<div class="imagefield-edit-image-row">'. $output .'</div>';
+
+  return $output;  
+}
+
+function theme_imagefield_image($file, $alt = '', $title = '', $attributes = NULL, $getsize = TRUE) {
+  $file = (array)$file;
+  if (!$getsize || (is_file($file['filepath']) && (list($width, $height, $type, $image_attributes) = @getimagesize($file['filepath'])))) {
+    $attributes = drupal_attributes($attributes);
+    if ($file['fid'] == 'upload') {
+      $path = file_create_filename($file['filename'], file_create_path());
+    }
+    else {
+      $path = $file['filepath'];
+    }
+    $url = file_create_url($path);
+    if ($alt == '') {
+      $alt = $file['alt'];
+    }
+    if ($title == '') {
+      $title = $file['title'];
+    }
+    return '<img src="'. check_url($url) .'" alt="'.
+        check_plain($alt) .'" title="'. check_plain($title) .'" '. $image_attributes . $attributes .' />';
+  }
+}
+
+/**
+ * formats an array of images.
+ * @param images
+ *    array of individually themed images
+ * @return 
+ *    html string
+ */
+function theme_imagefield_multiple($images) {
+  return implode("\n", $images);
+}
