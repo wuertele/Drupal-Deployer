@@ -4,25 +4,12 @@
 /**
  * @file
  * Defines an image field type.
+ *  uses content.module to store the fid, and the drupal files table to store the actual file data.
  *
- * @status
- *   - can submit nodes
- *   - can update nodes
- *   - can delete nodes
- *   - multiple value option now works.
- *   - content.module is managing fid.
- * 
  * @todo
  *   - access control
- *   DONE - test required option
- *   DONE - update node testing
- *   DONE - delete node testing
- *   DONE - delete individual of multiple testing.
- *   DONE - switch delete option to set a flag... for deletion.
- *   DONE - add title and alt fields.
- *   DONE - replace single upload if multiple is not enabled. db vs session set ['flags']['delete']
- *
- * @hurrah!!
+ *   - multiple image support for views integration. -- stange territory.
+ *   @hurrah!!
  */
 
 /**
@@ -460,45 +447,15 @@ function _imagefield_widget_form($node, $field, &$node_field) {
   return $form;
 }
 
-
-/**
- * Implementation of hook_views_tables().
- * @todo views export work.
- */
-function imagefield_views_tables() {
-  $tables = array();
-  // Get a list of field types
-  $fields = content_fields();
-  // Search for our field.
-  foreach ($fields as $field) {
-    // Match our field.
-    if ($field['type'] == 'number_integer') {
-      //Field specific code goes here...
-      $tables['node_field_imagefield_data_'. $field['field_name']] = array (
-        'name' => 'node_field_imagefield_data',
-        'join' => array(
-          'left' => array(
-            'table' => 'node',
-            'field' => 'vid',
-          ),
-          'right' => array(
-            'field' => 'vid',
-          ),
-          'extra' => array('field_name' => $field['field_name']),
-        ),
-        'fields' => array(
-          'field_fid' => array(
-            'name' => 'Fid: '. $field['field_name'],
-            'sortable' => TRUE,
-          ),
-        ),
-        'sorts' => array(
-          'field_fid' => array('name' => 'Fid: '. $field['field_name']),
-        )
-      ); 
-    }
+function imagefield_field_view_item($field, $node_field_item) {
+  if (!$field['multiple']) {
+    $file = _imagefield_file_load($node_field_item['fid']);
+    return theme('imagefield_image', $file, $node_field_item['alt'], $node_field_item['title']); 
   }
-  return $tables;
+  else {
+    return implode(' ', $node_field_item);
+  }
+
 }
 
 
