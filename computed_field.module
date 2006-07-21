@@ -1,0 +1,218 @@
+<?php
+// $Id$
+
+/******************************************************************
+
+  This file is part of Computed Field.
+
+  Computed Field is free software; you can redistribute it and/or modify it
+  under the terms of the GNU General Public License as published by the Free
+  Software Foundation; either version 2.1 of the License, or (at your option)
+  any later version.
+
+  Computed Field is distributed in the hope that it will be useful, but WITHOUT
+  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+  FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+  details.
+
+  You should have received a copy of the GNU General Public License along with
+  Computed Field; if not, write to the Free Software Foundation, Inc., 59
+  Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  Computed Field
+  Copyright (C) 2006 Agileware Pty Ltd
+  Unit 17/160 Lysaght St. MITCHELL 2911 Canberra Australia
+  web http://www.agileware.net/
+  email enquiry@agileware.net
+
+ *******************************************************************/
+
+
+/**
+ * Implementation of hook_help
+ */
+function computed_field_help($section) {
+	switch ($section) {
+    case 'admin/modules#description':
+      return t('Allows the user to define computed values in custom content types. <em>Note: Requires content.module</em>');
+  }
+}
+
+/**
+ * Implementation of cck hook_field_info
+ */
+function computed_field_field_info() {
+  return array('computed' => array('label' => 'Computed'));
+}
+
+/**
+ * Implementation of cck hook_widget_settings()
+ */
+function computed_field_widget_settings($op, $widget) {
+  switch ($op) {
+    case 'form':
+      $form = array();
+      $form['code'] = array(
+        '#type' => 'textarea',
+        '#rows' => 15,
+        '#title' => t('Computed Code'),
+        '#description' => t('The variables available to your code are: ') . '<code>$node, $field, and &amp;$node_field</code>' . t('. To set the value of the field, set ') . '<code>$node_field[\'value\']</code>' . t('. Here\'s a simple example which sets the computed field\'s value to the value of the sum of the number fields field_a and field_b: ') . '<code>$node_field[\'value\'] = $node->field_a[0][\'value\'] + $node->field_b[0][\'value\'];</code>',
+        '#default_value' => isset($widget['code']) ? $widget['code'] : '',
+      );
+      $form['display'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Display this field'),
+        '#default_value' => isset($widget['display']) ? $widget['display'] : true,
+      );
+      $form['display_format'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Display Format'),
+        '#description' => t('enter a string (without the quotes) with ') . '%value' . t(' in which ') . '%value' . t(' will be substituted for the field value on display.'),
+        '#default_value' => isset($widget['display_format']) ? $widget['display_format'] : '%value',
+      );
+      return $form;
+    case 'validate':
+      //TODO: can we validate the code? maybe try to parse it?
+      break;
+
+    case 'save':
+      return array('code', 'display', 'display_format');
+  }
+}
+
+/**
+ * Implementation of cck hook_field_settings
+ */
+function computed_field_field_settings($op, $field) {
+  switch ($op) {
+    case 'form':
+      $form = array();
+      $form['store'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Store using the database settings below'),
+        '#default_value' => isset($field['store']) ? $field['store'] : false,
+      );
+      $form['database'] = array('#type' => 'fieldset', '#title' => t('Database Storage Settings'));
+      $form['database']['data_type'] = array(
+        '#type' => 'radios',
+        '#title' => t('Data Type'),
+        '#description' => t('The SQL datatype to store this field in.'),
+        '#default_value' => $field['data_type'],
+        '#options' => array('int' => 'int', 'float' => 'float', 'varchar' => 'varchar', 'text' => 'text'),
+        '#required' => true,
+      );
+      $form['database']['data_length'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Data Length'),
+        '#default_value' => isset($field['data_length']) ? $field['data_length'] : null,
+        '#required' => true,
+      );
+      $form['database']['data_default'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Default Value'),
+        '#default_value' => $field['data_default'],
+        '#required' => false,
+      );
+      $form['database']['data_not_null'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Not NULL'),
+        '#default_value' => isset($field['data_not_null']) ? $field['data_not_null'] : true,
+      );
+      $form['database']['data_sortable'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Sortable'),
+        '#default_value' => isset($field['data_sortable']) ? $field['data_sortable'] : false,
+      );
+      return $form;
+    case 'validate':
+      // TODO
+      break;
+    case 'save':
+      return array('store', 'data_type', 'data_length', 'data_not_null', 'data_default', 'data_sortable');
+    case 'database columns':
+      $columns = array('value' => array());
+      $columns['value']['type'] = isset($field['data_type']) ? $field['data_type'] : 'varchar';
+      $columns['value']['length'] = isset($field['data_length']) ? $field['data_length'] : 32;
+      $columns['value']['not null'] = isset($field['data_not_null']) ? $field['data_not_null'] : true;
+      $columns['value']['sortable'] = isset($field['data_sortable']) ? $field['data_sortable'] : false;
+      if ($field['data_default'] != '')  {
+        $columns['value']['default'] = $field['data_default'];
+      }
+      return $columns;
+  }
+}
+
+function _computed_field_compute_value($node, $field, &$node_field) {
+  eval($field['widget']['code']);
+}
+
+function _computed_field_compute_values($node, $field, &$node_field) {
+  foreach ($node_field as $delta => $item) {
+    _computed_field_compute_value($node, $field, $node_field[$delta]);
+  }
+}
+
+/**
+ * Implementation of cck hook_field
+ */
+function computed_field_field($op, &$node, $field, &$node_field, $teaser, $page) {
+  switch ($op) {
+    case 'view':
+      if ($field['widget']['display']) {
+        // (re)compute value on view so it works in preview. Unfortunately this
+        // means it is recomputed on every view, and the database value is ignored.
+        _computed_field_compute_values($node, $field, $node_field);
+        foreach ($node_field as $delta => $item) {
+          $node_field[$delta]['view'] = computed_field_field_view_item($field, $item);
+        }
+        return theme('field', $node, $field, $node_field, $teaser, $page);
+      }
+      break;
+    case 'validate':
+      break;
+  }
+}
+
+/**
+ * Implementation of cck hook_field_view_item
+ */
+function computed_field_field_view_item($field, $node_field_item) {
+  if ($field['widget']['display']) {
+    return t($field['widget']['display_format'], array('%value' => check_plain($node_field_item['value'])));
+  }
+}
+
+/**
+ * Implementation of cck hook_widget_info
+ */
+function computed_field_widget_info() {
+  return array(
+    'computed' => array(
+      'label' => t('Computed'),
+      'field types' => array('computed'),
+    ),
+  );
+}
+
+/**
+ * Implementation of cck hook_widget
+ */
+function computed_field_widget($op, &$node, $field, &$node_field) {
+  switch ($op) {
+    case 'form':
+      $form = array();
+
+      $form[$field['field_name']] = array('#tree' => true);
+
+      $form[$field['field_name']][0]['value'] = array(
+        '#type' => 'value',
+        '#title' => t($field['widget']['label']),
+        '#default_value' => isset($node_field[0]['value']) ? $node_field[0]['value'] : '',
+      );
+      return $form;
+    case 'process form values':
+      _computed_field_compute_values($node, $field, $node_field);
+      break;
+  }
+}
+
