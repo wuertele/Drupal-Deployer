@@ -1,0 +1,64 @@
+<?php
+// $Id$
+
+function feedback_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysqli':
+    case 'mysql':     
+      $result = db_query("
+        CREATE TABLE IF NOT EXISTS {feedback_pages} (
+        name VARCHAR(32) NOT NULL PRIMARY KEY,
+        data LONGTEXT
+        ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
+      break;
+    case 'pgsql':
+      $result = db_query("
+      CREATE TABLE {feedback_pages} (
+        name VARCHAR(32) NOT NULL PRIMARY KEY,
+        data TEXT
+        )");
+    default:
+      break;
+  }
+  
+  //insert default feedback page
+  _feedback_add_page('default');
+  
+  if ($result) {
+    drupal_set_message(t('Feedback module database tables installed successfully.'));
+  }
+  else {
+    drupal_set_message(t('Feedback module database table creation was unsuccessful.'), 'error');
+  }
+}
+
+/*
+ * convert data from old feedback storage
+ */
+function feedback_update_1() {
+  global $conf;
+
+  $defaults = array();
+  $defaults['email'] = variable_get('feedback_email', variable_get('site_mail', ini_get('sendmail_from')));
+  $defaults['title'] = variable_get('feedback_nav_link', t('feedback'));
+  $defaults['instructions'] = variable_get('feedback_instructions','');
+  $defaults['subject_prefix'] = variable_get('feedback_subject_prefix', '');
+  $defaults["field_subject"] = variable_get('feedback_field_subject', '1');
+  $defaults["field_name"] = variable_get('feedback_field_name', '1');
+  $defaults["field_postal"] = variable_get('feedback_field_postal', '0');
+  $defaults["field_phone"] = variable_get('feedback_field_phone', '0');
+  $defaults["field_body"] = variable_get('feedback_field_body', '1');
+  $defaults["logging"] = variable_get('feedback_logging', '1');
+  $defaults['hourly_threshold'] = 3;
+  
+  db_query("UPDATE {feedback_pages} SET data = '%s' WHERE name = '%s'", serialize($defaults), 'default');
+
+  //clear old unused variables
+  foreach($conf as $key => $variable) {
+    if(strpos($key, 'feedback') === 0) {
+      variable_del($key);
+    }
+  }
+  return array();  
+}
+

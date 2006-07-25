@@ -1,592 +1,560 @@
 <?php
 
-//$Id$
+// $Id$
 
-// Copyright 2004-2005 Khalid Baheyeldin http://2bits.com
+/**
+ * @file
+ * Enables a site-wide feedback page.
+ */
 
-
-function feedback_help ($section = 'admin/help#feedback') {
-  $output = '';
-
-  switch($section) {
-    case 'admin/help#feedback':
-      $output .= t("
-      <p>Users with the correct <a href=\"%permissions\">permissions</a> can send feedback
-       to the site admin via email from a form on the site.</p>
-      <p>To enable its use, a user needs the \"access feedback\" permission.</p>
-      <p>The site admin specifies the email address that the users send to, as well as other
-       parameters, such as what fields to show the user to fill (name, address, email), whether
-       the user address is to be validated, and whether to log all attempts to use this form.</p>
-      <p>The email address is never visible to the users, and therefore cannot be used by SPAM
-       harvesters.</p>",
-       array("%permissions" => url("admin/user/permission"), "%feedback" => url("feedback")));
-      break;
-    case 'admin/modules#description':
-      $output = t("Enables visitors to your site to provide feedback from a web form.");
-      break;
-  }
-
-  return $output;
+/**
+ * Implementation of hook_help().
+ */
+function feedback_help($section) {
+	switch ($section) {
+		case 'admin/modules#description' :
+			return t('Enables a site-wide feedback page.');
+	}
 }
 
-function feedback_perm() {
-  return array ('can send feedback');
-}
-
+/**
+ * Implementation of hook_menu().
+ */
 function feedback_menu($may_cache) {
-  global $user;
-  $items = array();
+	$items = array ();
+	if ($may_cache) {
+		$items[] = array (
+      'path' => 'feedback',
+      'title' => t('feedback'),
+      'callback' => 'feedback_mail_page',
+      'access' => user_access('can send feedback'),
+      'type' => MENU_NORMAL_ITEM,
+      );
 
-  $access = user_access('can send feedback');
-  $title  = variable_get("feedback_nav_link", "feedback");
-
-
-  if ($may_cache) {
-    $items[] = array(
-    'path'     => 'feedback',
-    'callback' => 'feedback_page',
-    'title'    => $title,
-    'access'   => $access,
-    'weight'   => 0);
- }
-
-  return $items;
+		$items[] = array (
+      'path' => 'admin/settings/feedback',
+      'title' => t('feedback'),
+      'callback' => 'feedback_settings_page',
+      'access' => user_access('access administration pages'),
+      'type' => MENU_NORMAL_ITEM,
+      );
+	}
+	return $items;
 }
 
+/**
+ * feedback admin center
+ */
+function feedback_settings_page() {
+	$page = arg(3);
 
-function feedback_link($type, $node = 0, $main = 0) {
-  global $user;
-
-  $links = array();
-
-  if ($type == 'page' && user_access('can send feedback')) {
-  $links[] = l(t('feedback'), 'feedback');
-  }
-
-  return $links;
+	if (empty($page)) {
+		$output = feedback_settings_overview($page);
+	}
+	else if (arg(4) == 'delete' && $page != 'default') {
+		$output = feedback_settings_delete($page);
+	}
+  else {
+		$output = feedback_settings_form($page);
+	}
+	print theme('page', $output);
 }
 
-function feedback_settings() {
-  $form['feedback_email'] = array (
+/**
+ * admin settings overview page
+ */
+function feedback_settings_overview($page) {
+	//show feedback pages overview
+	$header = array (t('Feedback page name'), t('Feedback page location'), '');
+
+  $pages = _feedback_get_page_names();
+	foreach ($pages as $page) {
+    $delete = ($page != 'default') ? ' '.l(t('delete'), 'admin/settings/feedback/'.$page.'/delete') : '';
+    $path = ($page != 'default') ? 'feedback/'.$page : 'feedback';
+		$rows[] = array ($page, l(url($path), $path), l(t('edit'), 'admin/settings/feedback/'.$page) . $delete);
+	}
+	$output = theme('table', $header, $rows);
+
+  $form['group']['page_name'] = array(
     '#type' => 'textfield',
-    '#title' => t('Default Email Address'),
-    '#default_value' => _feedback_get_to_email(),
+    '#title' => t('Feedback page name'),
+    '#size' => 50,
+    '#maxlength' => 60,
+    '#required' => TRUE,
+  );
+  $form['group'][] = array(
+    '#type' => 'submit',
+    '#value' => t('Add'),
+  );
+  $form['group'] += array(
+    '#type' => 'fieldset',
+    '#title' => t('Add a further feedback page'),
+  );
+  $form['#validate']['feedback_overview_validate'] = array($pages);
+  $form['#submit']['feedback_overview_submit'] = array($pages);
+  
+  $form['#method'] = 'post';
+  $output .= drupal_get_form('feedback_overview', $form);
+
+	return $output;
+}
+
+function feedback_overview_validate($form_id, &$edit, &$form, &$pages) {
+
+  if (in_array($edit['page_name'], $pages)) {
+    form_set_error('page_name', t('This page already exists.'));
+  }
+}
+
+
+function feedback_overview_submit($form_id, &$edit, &$pages) {
+
+  _feedback_add_page($edit['page_name']);
+  drupal_set_message(t('Your feedback page has been added.'));
+}
+
+
+/**
+ * Shows a form for editing a feedback page
+ */
+function feedback_settings_form($pagename) {
+
+  $page = _feedback_get_page($pagename);
+  
+  $form["email"] = array(
+    '#type' => 'textfield',
+    '#title' => t("Default Email Address"),
+    '#default_value' => $page->email,
     '#size' => 80,
     '#maxlength' => 300,
-    '#description' => t('The email address which should receive all form submissions'),
-  );
-
-  $form['feedback_nav_link'] = array (
+    '#description' => t("The email address which should receive all form submissions"),
+    '#required' => TRUE,
+  ); 
+  $form["title"] = array(
     '#type' => 'textfield',
-    '#title' => t('Navigation link text'),
-    '#default_value' => variable_get('feedback_nav_link', 'feedback'),
-    '#size' => '80',
-    '#maxlength' => '300',
-    '#description' => t('The text that will be shown in the navigation link'),
+    '#title' => t("Title of the feedback page"),
+    '#default_value' => $page->title,
+    '#size' => 80,
+    '#maxlength' => 80,
+    '#required' => TRUE,    
   );
-  
-  $form['feedback_pageheader'] = array (
-    '#type' => 'textfield',
-    '#title' => t('Feedback Page Header'),
-    '#default_value' => variable_get('feedback_pageheader', 'Use this form to send us feedback'),
-    '#size' => '80',
-    '#maxlength' => '300',
-    '#description' => t('The page header text that will be shown at the top of the feedback page'),
-  );
-
-  $form['feedback_subject_prefix'] = array (
-    '#type' => 'textfield',
-    '#title' => t('Subject Prefix'),
-    '#default_value' => variable_get('feedback_subject_prefix', 'Feedback: '),
-    '#size' => '80',
-    '#maxlength' => '80',
-    '#description' => t('The prefix that should be added before the subject on each email'),
-  );
-
-  $form['feedback_instructions'] = array (
+  $form["instructions"] = array(
     '#type' => 'textarea',
-    '#title' => t('Instructions'),
-    '#default_value' => variable_get('feedback_instructions', 'Enter your message below: '),
-    '#cols' => '60',
-    '#rows' => '10',
-    '#description' => t('The instructions that will be displayed for the user on how to fill the form'),
+    '#title' => t("Instructions"),
+    '#default_value' => $page->instructions,
+    '#cols' => 60,
+    '#rows' => 10,
+    '#description' => t("The instructions that will be displayed for the user on how to fill the form"),
   );
-
-  $form['feedback_rmsg_success'] = array (
-    '#type' => 'textfield',
-    '#title' => t('Result Message - Success'),
-    '#default_value' => variable_get('feedback_rmsg_success', 'Thank you for your message.'),
-    '#size' => '80',
-    '#maxlength' => '80',
-    '#description' => t('The message that will be printed upon successfully completing the feedback request'),
-  );
-
-  $form['feedback_rmsg_failure'] = array (
-    '#type' => 'textfield',
-    '#title' => t('Result Message - Failure'),
-    '#default_value' => variable_get('feedback_rmsg_failure', 'There are errors in your form.'),
-    '#size' => '80',
-    '#maxlength' => '80',
-    '#description' => t('The message that will be printed upon encountering an error in the feedback request'),
-  );
-
-  $form['feedback_fields'] = array (
+  $form["subject"] = array(
     '#type' => 'fieldset',
-    '#title' => t('Fields to include on the form:'),
-    '#tree' => FALSE,
+    '#title' => t('Subject'),
+  );  
+  $form["subject"]["subject_prefix"] = array(
+    '#type' => 'textfield',
+    '#title' => t("Subject Prefix"),
+    '#default_value' => $page->subject_prefix,
+    '#size' => 80,
+    '#maxlength' => 80,
+    '#description' => t("The prefix that should be added before the subject on each email"),
   );
-  
-  $form['feedback_fields']['feedback_field_email'] = array (
+  $form["subject"]["field_subject"] = array(
     '#type' => 'checkbox',
-    '#title' => t('Sender Email Address'),
-    '#default_value' => variable_get('feedback_field_email', '1'),
+    '#title' => t("Include a subject textfield"),
+    '#return_value' => 1,
+    '#default_value' => $page->field_subject,
   );
-
-  $form['feedback_fields']['feedback_field_name'] = array (
-    '#type' => 'checkbox',
-    '#title' => t('Sender Name'),
-    '#default_value' => variable_get('feedback_field_name', '1'),
+  $form["subject"]["field_category"] = array(
+    '#type' => 'textarea',
+    '#title' => t("Categories"),
+    '#default_value' => $page->field_category,
+    '#cols' => 40,
+    '#rows' => 6,
+    '#description' => t('Put each subject category on a separate line or separate them by commas.  No HTML allowed.').'<br />'.t('Leave this field empty to disable this feature.'),
   );
-
-  $form['feedback_fields']['feedback_field_postal'] = array (
-    '#type' => 'checkbox',
-    '#title' => t('Postal Address'),
-    '#default_value' => variable_get('feedback_field_postal', '0'),
-  );
-
-  $form['feedback_fields']['feedback_field_phone'] = array (
-    '#type' => 'checkbox',
-    '#title' => t('Phone Number'),
-    '#default_value' => variable_get('feedback_field_phone', '0'),
-  );
-
-  $form['feedback_fields']['feedback_field_subject'] = array (
-    '#type' => 'checkbox',
-    '#title' => t('Message Subject'),
-    '#default_value' => variable_get('feedback_field_subject', '1'),
-  );
-
-  $form['feedback_fields']['feedback_field_body'] = array (
-    '#type' => 'checkbox',
-    '#title' => t('Message Body'),
-    '#default_value' => variable_get('feedback_field_body', '1'),
-  );
-
-  $form['miscellaneous_settings'] = array (
+  $form["fields"] = array(
     '#type' => 'fieldset',
-    '#title' => t('Miscellaneous Settings:'),
-    '#tree' => FALSE,
+    '#title' => t("Fields to include on the form"),
   );
-
-  $form['miscellaneous_settings']['feedback_validate_sender_address'] = array (
+  $form["fields"]["field_name"] = array(
     '#type' => 'checkbox',
-    '#title' => t('Validate Sender\'s Email Address'),
-    '#default_value' => variable_get('feedback_validate_sender_address', '0'),
+    '#title' => t("Sender Name"),
+    '#return_value' => 1,
+    '#default_value' => $page->field_name,
   );
-
-  $form['miscellaneous_settings']['feedback_logging'] = array (
+  $form["fields"]["field_postal"] = array(
     '#type' => 'checkbox',
-    '#title' => t('Log all feedback attempts to watchdog'),
-    '#default_value' => variable_get('feedback_logging', '1'),
+    '#title' => t("Postal Address"),
+    '#return_value' => 1,
+    '#default_value' => $page->field_postal,
+  );
+  $form["fields"]["field_phone"] = array(
+    '#type' => 'checkbox',
+    '#title' => t("Phone Number"),
+    '#return_value' => 1,
+    '#default_value' => $page->field_phone,
+  );
+  $form["fields"]["field_body"] = array(
+    '#type' => 'checkbox',
+    '#title' => t("Message Body"),
+    '#return_value' => 1,
+    '#default_value' => $page->field_body,
   );
 
-  return $form;
+  $form["misc"] = array(
+    '#type' => 'fieldset',
+    '#title' => t("Miscellaneous Settings"),
+  );
+  $form["misc"]['hourly_threshold'] = array(
+    '#type' => 'select',
+    '#title' => t('Hourly threshold'),
+    '#default_value' => $page->hourly_threshold,
+    '#options' => drupal_map_assoc(array (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 30, 40, 50)),
+    '#description' => t('The maximum number of form submissions a user can perform per hour.'),
+  );
+  $form["misc"]["logging"] = array(
+    '#type' => 'checkbox',
+    '#title' => t("Log all feedback attempts to watchdog"),
+    '#return_value' => 1,
+    '#default_value' => $page->logging,
+  );
+
+  $form['#redirect'] = 'admin/settings/feedback';
+  $form['#submit']['feedback_settings_form_submit'] = array($page);
+  $form['buttons']['submit'] = array('#type' => 'submit', '#value' => t('Save configuration') );
+  return drupal_get_form('feedback_settings_form' . $page->name, $form, 'feedback_settings_form'); 
 }
 
-function feedback_page() {
-  $edit = $_POST["edit"];
-  $op = arg(1);
-  
-  // Set breadcrumbs
-  $breadcrumb = array(array('path' => 'feedback'));
-  menu_set_location($breadcrumb);
+function feedback_settings_form_submit($form_id, $edit, &$page) {
+  unset($edit['submit']);
+  unset($edit['form_id']);
+  db_query("UPDATE {feedback_pages} SET data = '%s' WHERE name = '%s'", serialize($edit), $page->name);
+  drupal_set_message(t('The configuration options have been saved.'));
+}
 
-  if ($edit && ($edit['form_id'] == 'feedback_form')) {
-    if ( variable_get("feedback_logging", "1") ) {
-      feedback_watchdog_log();
-    }
 
-    feedback_validate_data();
-    if (form_get_errors()) {
-      $form = feedback_display_form() ;
-      print theme("page", $form);
-    }
-    else {
-      feedback_send_email();
-      drupal_set_message(variable_get("feedback_rmsg_success", "Thank you for your message"));
-      drupal_goto(); // Go to home page
-    }
-  }
+/**
+ * Deletes a feedback page, if the user confirms
+ */
+function feedback_settings_delete($pagename) {
+	if ($_POST['op'] == t('Delete')) {
+		db_query("DELETE FROM {feedback_pages} WHERE name ='%s'", $pagename);
+    drupal_set_message(t('The feedback page has been deleted.'));
+		drupal_goto("admin/settings/feedback");
+	} 
   else {
-    $form = feedback_display_form () ;
-    print theme("page", $form);
-  }
+    $message = t('Are you sure you want to delete the feedback page "%page"?', array('%page' => $pagename));
+		$output = confirm_form('feedback_delete', array(), $message, 'admin/settings/feedback', $message, t('Delete'), t('Cancel'));
+		return $output;
+	}
 }
 
-function feedback_send_email() {
-  $edit = $_POST["edit"];
+/**
+ * Implementation of hook_perm().
+ */
+function feedback_perm() {
+	return array ('can send feedback');
+}
 
-  $subject_prefix = variable_get("feedback_subject_prefix", "");
-  
-  $subject = $subject_prefix . " " . $edit["form_field_subject"] ;
+/**
+ * Site-wide feedback page
+ */
+function feedback_mail_page() {
 
-  $from_email = $edit["form_field_email"] ? $edit["form_field_email"] : _feedback_get_to_email();
+	$page = arg(1);
 
-  $to = _feedback_get_to_email();
-
-  $body = feedback_format_body($edit["form_field_body"]) . feedback_custom_footers();
-
-  $headers = feedback_custom_headers();
-
-  if ($to) {
-     user_mail($to, $subject, $body, $headers);
-     $rc = true;
-     }
+	if (!empty ($page)) {
+		//check if this feedback page exists
+		$pages = _feedback_get_page_names();
+		if (!in_array($page, $pages)) {
+			drupal_not_found();
+			exit;
+		}
+	}
   else {
-     $rc = false;
-     }
-
-  return $rc;
-}
-
-function _feedback_get_to_email() {
-  return variable_get('feedback_email', variable_get('site_mail', ini_get('sendmail_from')));
-}
-
-function feedback_display_form () {
-  global $user;
-
-  $edit = $_POST["edit"];
-
-  if ($edit['form_id'] == 'feedback_form') {
-      if (!$edit['form_field_name'] && $user->name) {
-	$edit['form_field_name'] = $user->name;
-      }
-      if (!$edit['form_field_email'] && $user->mail) {
-	$edit['form_field_email'] = $user->mail;
-      }
+    $page = 'default';
   }
+	print theme('page', feedback_mail_form($page));
+}
+
+
+function feedback_mail_form($pagename) {
+	global $user;
+  $page = _feedback_get_page($pagename);
   
-  drupal_set_title(variable_get("feedback_pageheader", 'feedback'));
+	$breadcrumb[] = array ('path' => 'feedback', 'title' => $page->title);
+	menu_set_location($breadcrumb);
 
-  $form['form_instructions'] = array (
-    '#type' => 'markup',
-    '#value' => variable_get('feedback_instructions', 'Enter your message below'),
-    );
-
-  if ( variable_get("feedback_field_name", t('Name')) )
-    $form['form_field_name'] = array (
+	if (!flood_is_allowed('feedback'.$page->name, $page->hourly_threshold)) {
+		$output = t("You cannot send more than %number messages per hour. Please try again later.", array ('%number' => $page->hourly_threshold));
+	} 
+  else {
+		if ($page->field_name) {
+      $form["emailname"] = array(
+        '#type' => 'textfield',
+        '#title' => t("Your full name"),
+        '#default_value' => ($user->uid) ? $user->name : '',
+        '#size' => 60,
+        '#maxlength' => 64,
+        '#description' => NULL,
+        '#attributes' => NULL,
+        '#required' => TRUE,
+      );
+		}
+    $form["mail"] = array(
       '#type' => 'textfield',
-      '#title' => t('Your Full Name'),
-      '#default_value' => $edit['form_field_name'],
-      '#size' => '60',
-      '#maxlength' => '64',
+      '#title' => t("Your e-mail address"),
+      '#default_value' => ($user->uid) ? $user->mail : '',
+      '#size' => 60,
+      '#maxlength' => 64,
+      '#description' => NULL,
+      '#attributes' => NULL,
+      '#required' => TRUE,
     );
-    
+		if ($page->field_postal) {
+      $form["postal"] = array(
+        '#type' => 'textarea',
+        '#title' => t("Your postal address"),
+        '#cols' => 50,
+        '#rows' => 4,
+      );
+		}
+		if ($page->field_phone) {
+      $form["phone"] = array(
+        '#type' => 'textfield',
+        '#title' => t("Your phone number"),
+        '#size' => 60,
+        '#maxlength' => 64,
+      );
+		}
+		if ($page->field_subject) {
+      $form["subject"] = array(
+        '#type' => 'textfield',
+        '#title' => t("Subject"),
+        '#size' => 60,
+        '#maxlength' => 64,
+        '#description' => NULL,
+        '#attributes' => NULL,
+        '#required' => TRUE,
+      );
+		}
+		if ($page->field_category) {
+      $form["category"] = array(
+        '#type' => 'select',
+        '#title' => t("Category"),
+        '#options' => _feedback_get_options($page->field_category),
+        '#description' => NULL,
+        '#extra' => 0,
+        '#multiple' => FALSE,
+        '#required' => TRUE,
+      );
+		}
+		if ($page->field_body) {
+      $form["body"] = array(
+        '#type' => 'textarea',
+        '#title' => t("Message"),
+        '#cols' => 60,
+        '#rows' => 15,
+        '#description' => NULL,
+        '#attributes' => NULL,
+        '#required' => TRUE,
+      );
+		}
 
-  if ( variable_get("feedback_field_email", t('Email Address')) )
-    $form['form_field_email'] = array (
-      '#type' => 'textfield',
-      '#title' => t('Your E-Mail Address'),
-      '#default_value' => $edit['form_field_email'],
-      '#size' => '60',
-      '#maxlength' => '64',
-    );
-
-  if ( variable_get("feedback_field_postal", t('Postal Address')) ) 
-    $form['form_field_postal'] = array (
-      '#type' => 'textfield',
-      '#title' => t('Your Postal Address'),
-      '#default_value' => $edit['form_field_postal'],
-      '#size' => '50',
-      '#maxlength' => '64',
-    );
-
-  if ( variable_get("feedback_field_phone", t('Phone Number')) ) 
-    $form['form_field_phone'] = array (
-      '#type' => 'textfield',
-      '#title' => t('Your Phone Number'),
-      '#default_value' => $edit['form_field_phone'],
-      '#size' => '60',
-      '#maxlength' => '64',
-    );
-
-  if ( variable_get("feedback_field_subject", t('Subject')) ) 
-    $form['form_field_subject'] = array (
-      '#type' => 'textfield',
-      '#title' => t('Subject'),
-      '#default_value' => $edit['form_field_subject'],
-      '#size' => '60',
-      '#maxlength' => '64',
-    );
-
-  if ( variable_get("feedback_field_body", t('Message')) ) 
-    $form['form_field_body'] = array (
-      '#type' => 'textarea',
-      '#title' => t('Message'),
-      '#default_value' => $edit['form_field_body'],
-      '#cols' => '60',
-      '#rows' => '15',
-    );
-
-    $form['form_field_referer'] = array (
+    $form["referer"] = array(
       '#type' => 'hidden',
-      '#value' => filter_xss($_SERVER[HTTP_REFERER]),
+      '#value' => $_SERVER[HTTP_REFERER],
     );
-
-    $form['submit'] = array (
+    $form["op"] = array(
       '#type' => 'submit',
-      '#value' => t('Send Message'),
+      '#value' => t("Send message"),
     );
-
-  return drupal_get_form('feedback_form', $form);
-}
-
-function feedback_watchdog_log() {
-  $edit = $_POST["edit"];
-
-  $name  = $edit["form_field_name"];
-  $email = $edit["form_field_email"]; 
-  $subj  = $edit["form_field_subject"]; 
-
-  $message = 'feedback: ' . $name . ' &lt;' . $email . '&gt; subject: ' . $subj;
-
-  watchdog ( "user", check_plain($message));
-}
-
-function feedback_validate_data() {
-  global $user;
-  $edit = $_POST["edit"];
-
-  $name    = $edit["form_field_name"] ;
-  $email   = $edit["form_field_email"] ; 
-  $subject = $edit["form_field_subject"] ; 
-  $body    = $edit["form_field_body"] ; 
-  $postal  = $edit["form_field_postal"] ; 
-  $phone   = $edit["form_field_phone"] ; 
-  $referer = $edit["form_field_referer"] ; 
-
-  if (!strlen(trim($name)) && variable_get("feedback_field_name", "") ) {
-    form_set_error('form_field_name', t('Please enter your full name'));
-  }
-  elseif (feedback_check_exploit($name)) {
-    form_set_error('form_field_name', t("Invalid data in name"));
-  }
-
-  if (!strlen(trim($email)) && variable_get ("feedback_field_email", "") ) {
-	form_set_error('form_field_email', t('Please enter your e-mail address'));
-  }
-  else {
-    $smtp_err = feedback_validate_email ($email);
-    if ($smtp_err) {
-      form_set_error('form_field_email', $smtp_err);
-    }
-    elseif (feedback_check_exploit($email)) {
-      form_set_error('form_field_email', t("Invalid data in e-mail address"));
-    }
-  }
-
-  if (!strlen(trim($subject)) && variable_get ("feedback_field_subject", "") ) {
-    form_set_error('form_field_subject', t('Please enter a subject'));
-  }
-  elseif (feedback_check_exploit($subject)) {
-    form_set_error('form_field_subject', t("Invalid data in subject"));
-  }
-
-  // Note: The body does not need to be checked for exploits because it is
-  // treated as text (RFC 822).
-  if (!strlen(trim($body)) && variable_get ("feedback_field_body", "") ) {
-    form_set_error('form_field_body', t('Please enter your message'));
-  }
-
-  if (!strlen(trim($postal)) && variable_get ("feedback_field_postal", "") ) {
-    form_set_error('form_field_postal', t('Please enter your postal address'));
-  }
-  elseif (feedback_check_exploit($postal)) {
-    form_set_error('form_field_postal', t("Invalid data in postal address"));
-  }
-
-  if (!strlen(trim($phone)) && variable_get ("feedback_field_phone", "") ) {
-    form_set_error('form_field_phone', t('Please enter your phone number'));
-  }
-  elseif (feedback_check_exploit($phone)) {
-    form_set_error('form_field_phone', t("Invalid data in phone number"));
-  }
-
-  if (feedback_check_exploit($referer)) {
-    form_set_error('referer', t("Invalid data in referer"));
-  }
-}
-
-function feedback_check_exploit($data) {
-  $bad_strings = array (
-    'To:',
-    'Cc:',
-    'Bcc:',
-    'Content-Type:',
-    'MIME-Version:',
-    'Content-Transfer-Encoding:');
-
-  foreach($bad_strings as $str) {
-    if (stristr($data, $str)) {
-      watchdog ('user', t('Attempt to relay spam using %str. Field is %data',
-        array('str'=>$str, 'data'=>$data)));
-      return true;
-    }
-  }
-  return false;
-}
-
-function feedback_validate_email($email) {
-
- if (valid_email_address($email)) {
-    // It looks like a valid email address
-    if ( variable_get ("feedback_validate_sender_address", "") ) {
-       $rc = feedback_try_to_feedback_address ( $email );
-       }
-    else {
-       $rc = "";
-       }
-    }
- else {
-    $rc = t("Invalid E-mail address structure");
-    }
-
- return $rc;    
-}
-
-function feedback_try_to_feedback_address($email) {
-
- // This function is based on one that was written by
- // Jon S. Stevens jon AT clearink.com
- // Copyright 1998 Jon S. Stevens, Clear Ink
- // This code has all the normal disclaimers.
- // It is free for any use, just keep the credits intact.
-
-$server_name = $_SERVER['SERVER_NAME'];
+    $form['#method'] = "post";
     
-$rc = "Undefined error";
+    $form['#validate']['feedback_mail_page_validate'] = array('page' => $page);
+    $form['#submit']['feedback_mail_page_submit'] = array('page' => $page);  
+    
+    $output = drupal_get_form('feedback_mail_page', $form);
+		$output = theme('box', $page->title, $page->instructions.$output);
+	}
 
-list ( $user, $domain )  = split ( "@", $email, 2 );
-$arr = explode ( ".", $domain );
-$count = count ( $arr );
-$tld = $arr[$count - 2] . "." . $arr[$count - 1];
+	return $output;
+}
 
-if ( !$tld ) {
-   $rc = "Error: Invalid domain part in e-mail";
-   return $rc;
-   }
+/**
+ * Validate the site-wide form submission.
+ */
+function feedback_mail_page_validate($form_id, &$edit, $page) {
 
-if ( checkdnsrr ( $tld, "MX" ) ) {
-  if ( getmxrr ( $tld, $mxhosts, $weight ) ) {
-    for ( $i = 0; $i < count ( $mxhosts ); $i++ ) {
-      $fp = fsockopen ( $mxhosts[$i], 25 );
-      if ( $fp ) {
-        $s = 0;
-        $c = 0;
-        $out = "";
-        set_socket_blocking ( $fp, false );
-        do {
-          $out = fgets ( $fp, 2500 );
-          if ( ereg ( "^220", $out ) ) {
-            $s = 0;
-            $out = "";
-            $c++;
-          }
-          else
-          if ( ( $c > 0 ) && ( $out == "" ) ) {
-            break;
-          }
-          else {
-            $s++;
-          }
-          if ( $s == 9999 ) {
-            break;
-          }
-        } while ( $out == "" );
+	if (!valid_email_address($edit['mail'])) {
+		form_set_error('mail', t('You must enter a valid e-mail address.'));
+	}
+	if (preg_match("/\r|\n/", $edit['subject'])) {
+		form_set_error('subject', t('The subject cannot contain linebreaks.'));
+		watchdog('mail', 'Email injection exploit attempted in feedback form subject: '.check_plain($edit['subject']), WATCHDOG_NOTICE);
+	}
 
-        set_socket_blocking ( $fp, true );
+	if (!$edit['emailname'] && $page->field_name) {
+		form_set_error('emailname', t('Please enter your full name'));
+	} 
+  else if ($page->field_name && drupal_strlen($edit['emailname']) > 64) {
+			form_set_error('emailname', t('Too long input.'));
+	}
 
-        fputs ( $fp, "HELO $server_name\n" );
-        $output = fgets ( $fp, 2000 );
-        fputs ( $fp, "MAIL FROM: <info@" . $tld . ">\n" );
-        $output = fgets ( $fp, 2000 );
-        fputs ( $fp, "RCPT TO: <$email>\n" );            
-        $output = fgets ( $fp, 2000 );
-        if ( ereg ( "^250", $output ) ) {
-          $rc = "";
-        }
-        else {
-          $rc = $output;
-        }
+	if ($page->field_category && (!$edit['category'] || !in_array($edit['category'], _feedback_get_options($page->field_category)))) {
 
-        fputs ( $fp, "QUIT\n" );
-        fclose( $fp );
+		form_set_error('category', t('Please choose a category'));
+	}
 
-        if ($rc == "") {
-          break;
-          }
-        }
-      }
-    }
+	if (!$edit['subject'] && $page->field_subject) {
+		form_set_error('subject', t('Please enter a subject'));
+	} 
+  else if ($page->field_subject && drupal_strlen($edit['subject']) > 64) {
+			form_set_error('subject', t('Too long input.'));
+	}
+
+	if (!$edit['body'] && $page->field_body) {
+		form_set_error('body', t('Please enter your message'));
+	} 
+  else if ($page->field_body && drupal_strlen($edit['body']) > 1000) {
+			form_set_error('body', t('Please shorten your input. Only 1000 characters are allowed.'));
+	}
+
+	if ($page->field_postal && drupal_strlen($edit['postal']) > 1000) {
+		form_set_error('postal', t('Please shorten your input. Only 1000 characters are allowed.'));
+	}
+	if ($page->field_phone && drupal_strlen($edit['phone']) > 64) {
+		form_set_error('phone', t('Too long input.'));
+	}
+}
+
+/**
+ * Process the site-wide form submission.
+ */
+function feedback_mail_page_submit($form_id, &$edit, $page) {
+
+	// Prepare the sender:
+	$from = $edit['mail'];
+
+	// Compose the body:
+	$message[] = t("%name sent a message using the feedback form at %form.", array ('%name' => $edit['emailname'], '%form' => url($_GET['q'], NULL, NULL, TRUE)));
+	if ($page->field_category) {
+		$message[] = t("Category").": ".check_plain($edit['category']);
+	}
+	if ($page->field_body) {
+		$message[] = check_plain($edit['body']);
+	}
+	$message[] = _feedback_user_info($edit, $page);
+
+	// Tidy up the body:
+	foreach ($message as $key => $value) {
+		$message[$key] = wordwrap($value);
+	}
+
+	// Prepare the body:
+	$body = implode("\n\n", $message);
+
+	$category = $page->field_category ? ' ['.$edit['category'].'] ' : ' ';
+	$subject = $page->subject_prefix.$category.$edit["subject"];
+
+	// Send the e-mail to the recipients:
+	user_mail($page->email, $subject, $body, "From: $from\nReply-to: $from\nX-Mailer: Drupal\nReturn-path: $from\nErrors-to: $from");
+
+	// Log the operation:
+	flood_register_event('feedback'.$page->name);
+	if ($page->logging) {
+		watchdog('mail', t('%name-from sent an feedback e-mail', array ('%name-from' => theme('placeholder', check_plain($edit['emailname'])." <$from>"))));
+	}
+
+	// Update user:
+	drupal_set_message(t('Your message has been sent.'));
+
+	// Jump to home page rather than back to feedback page to avoid contradictory messages if flood control has been activated.
+	drupal_goto();
+}
+
+/*
+ * Returns some additional user information to append to the mail
+ */
+function _feedback_user_info(&$edit, $page) {
+	global $user;
+
+	$info = "\n".t('Site Name').": ".variable_get("site_name", "");
+	if ($user->name) {
+		$info .= "\n".t('Registered name').": ".check_plain($user->name);
+	}
+	if ($page->field_name) {
+		$info .= "\n".t('Entered Name').": ".check_plain($edit['emailname']);
+	}
+	$info .= "\nE-mail address: ".$edit['mail'];
+	if ($page->field_postal) {
+		$info .= "\n".t('Postal address').": ".check_plain($edit['postal']);
+	}
+	if ($page->field_phone) {
+		$info .= "\n".t('Phone Number').": ".check_plain($edit['phone']);
+	}
+	if ($edit['referer']) {
+		$info .= "\n".t('Referring page').": ".check_plain($edit['referer']);
+	}
+	if (isset ($_SERVER['REMOTE_ADDR'])) {
+		$info .= "\n".t('IP Address').": ".'http://whois.sc/'.check_plain($_SERVER['REMOTE_ADDR']);
+	}
+	if (isset ($_SERVER['REMOTE_HOST'])) {
+		$info .= "\n".t('Machine name').": ".check_plain($_SERVER['REMOTE_HOST']);
+	}
+	if (isset ($_SERVER['HTTP_USER_AGENT'])) {
+		$info .= "\n".t('Browser info').": ".check_plain($_SERVER['HTTP_USER_AGENT']);
+	}
+	return $info;
+}
+
+function _feedback_get_options($text) {
+	$options = array ("0" => '--');
+	$lines = split("[,\n\r]", $text);
+	foreach ($lines as $line) {
+		if ($line = trim($line)) {
+			$options[$line] = $line;
+		}
+	}
+	return $options;
+}
+/*
+ * Returns an array of all available feedback page names
+ */
+function _feedback_get_page_names() {
+  
+  $result = db_query("SELECT name from {feedback_pages}");
+  $pages = array();
+  while ($row = db_fetch_object($result)) {
+    $pages[] = $row->name;
   }
-return $rc;
+  return $pages;
 }
 
-function feedback_custom_footers() {
-  global $user;
+/*
+ * Returns a data object from a feedback page
+ */
+function _feedback_get_page($name) {  
+  $result = db_query("SELECT * from {feedback_pages} WHERE name = '%s'", $name);
+  
+  if ($row = db_fetch_array($result)) {
+    $row += (array)unserialize($row['data']);
+    unset($row['data']);
+  }
 
-  $edit = $_POST["edit"];
-  $site_name = variable_get("site_name", "") ;
-
-  if ( $site_name )
-    $footer .= "\nSite Name       : " . variable_get("site_name", "") ;
-  if ( $user->name )
-    $footer .= "\nRegistered name : " . $user->name;
-  if ( isset($edit['form_field_name']))
-    $footer .= "\nFull Name       : " . $edit['form_field_name'];
-  if ( isset($edit['form_field_email']))
-    $footer .= "\nE-mail address  : " . $edit['form_field_email'];
-  if ( isset($edit['form_field_postal']))
-    $footer .= "\nPostal address  : " . $edit['form_field_postal'];
-  if ( isset($edit['form_field_phone']))
-    $footer .= "\nPhone Number    : " . $edit['form_field_phone'];
-  if ( isset($edit['form_field_referer']))
-    $footer .= "\nReferring page  : " . $edit['form_field_referer'];
-  if ( isset($_SERVER['REMOTE_ADDR']))
-    $footer .= "\nIP Address      : " . 'http://whois.sc/' . $_SERVER['REMOTE_ADDR'];
-  if ( isset($_SERVER['REMOTE_HOST']))
-    $footer .= "\nMachine name    : " . $_SERVER['REMOTE_HOST'];
-  if ( isset($_SERVER['HTTP_USER_AGENT']))
-    $footer .= "\nBrowser info    : " . $_SERVER['HTTP_USER_AGENT'];
-
-  return $footer;
+  return (object)$row;
 }
 
-function feedback_custom_headers() {
-  $edit = $_POST["edit"];
-
-  $headers = "";
-
-  $headers .= "From: " . $edit['form_field_email'] . "\r\n";
-  $headers .= "Reply-To: " . $edit['form_field_email']. "\r\n";
-  $headers .= "Return-Path: " . $edit['form_field_email']. "\r\n";
-  $headers .= "Errors-To: " . $edit['form_field_email'] . "\r\n";
-  $headers .= "X-Mailer: Drupal\r\n";
-
-  return $headers;
+  
+function  _feedback_add_page($pagename) {
+  
+  $defaults = array(
+    'email' => variable_get('site_mail', ini_get('sendmail_from')),
+    'title' => t('feedback'), 
+    'hourly_threshold' => 3,
+    'logging' => 1,
+    'field_name' => 1,
+    'field_body' => 1,
+    );
+  db_query("INSERT INTO {feedback_pages} (name, data) VALUES('%s','%s')", $pagename, serialize($defaults));
 }
-
-function feedback_format_body($body) {
-
-  $trans = get_html_translation_table(HTML_ENTITIES);
-  $trans = array_flip($trans);
-
-  $output = wordwrap(strip_tags($body),72);
-  $output = strtr(wordwrap(strip_tags($output),72), $trans);
-  $output .= t("\n\n-- The above message was sent using the feedback page --");
-
-  return $output;
-}
-
-?>
