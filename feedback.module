@@ -2,6 +2,11 @@
 
 // $Id$
 
+define('FEEDBACK_MAX_NAME',   64);
+define('FEEDBACK_MAX_SUBJECT',   64);
+define('FEEDBACK_MAX_BODY',   1000);
+define('FEEDBACK_MAX_POSTAL', 200);
+
 /**
  * @file
  * Enables a site-wide feedback page.
@@ -397,7 +402,7 @@ function feedback_mail_page_validate($form_id, &$edit, $page) {
 	if (!$edit['emailname'] && $page->field_name) {
 		form_set_error('emailname', t('Please enter your full name'));
 	} 
-  else if ($page->field_name && drupal_strlen($edit['emailname']) > 64) {
+  else if ($page->field_name && drupal_strlen($edit['emailname']) > FEEDBACK_MAX_NAME) {
 			form_set_error('emailname', t('Too long input.'));
 	}
 
@@ -409,19 +414,19 @@ function feedback_mail_page_validate($form_id, &$edit, $page) {
 	if (!$edit['subject'] && $page->field_subject) {
 		form_set_error('subject', t('Please enter a subject'));
 	} 
-  else if ($page->field_subject && drupal_strlen($edit['subject']) > 64) {
+  else if ($page->field_subject && drupal_strlen($edit['subject']) > FEEDBACK_MAX_SUBJECT) {
 			form_set_error('subject', t('Too long input.'));
 	}
 
 	if (!$edit['body'] && $page->field_body) {
-		form_set_error('body', t('Please enter your message'));
+		form_set_error('body', t('Please enter your message.'));
 	} 
-  else if ($page->field_body && drupal_strlen($edit['body']) > 1000) {
-			form_set_error('body', t('Please shorten your input. Only 1000 characters are allowed.'));
+  else if ($page->field_body && drupal_strlen($edit['body']) > FEEDBACK_MAX_BODY) {
+		form_set_error('body', t('Please shorten your input. Up to %limit characters are allowed.', array ('%limit' => FEEDBACK_MAX_BODY));
 	}
 
-	if ($page->field_postal && drupal_strlen($edit['postal']) > 1000) {
-		form_set_error('postal', t('Please shorten your input. Only 1000 characters are allowed.'));
+	if ($page->field_postal && drupal_strlen($edit['postal']) > FEEDBACK_MAX_POSTAL) {
+		form_set_error('postal', t('Please shorten your input. Up to %limit characters are allowed.', array ('%limit' => FEEDBACK_MAX_POSTAL));
 	}
 	if ($page->field_phone && drupal_strlen($edit['phone']) > 64) {
 		form_set_error('phone', t('Too long input.'));
@@ -437,13 +442,14 @@ function feedback_mail_page_submit($form_id, &$edit, $page) {
 	$from = $edit['mail'];
 
 	// Compose the body:
-	$message[] = t("%name sent a message using the feedback form at %form.", array ('%name' => $edit['emailname'], '%form' => url($_GET['q'], NULL, NULL, TRUE)));
 	if ($page->field_category) {
 		$message[] = t("Category").": ".check_plain($edit['category']);
 	}
 	if ($page->field_body) {
 		$message[] = check_plain($edit['body']);
 	}
+	$message[] = t("Sent from %form by %name.", array ('%name' => $edit['emailname'], '%form' => url($_GET['q'], NULL, NULL, TRUE)));
+
 	$message[] = _feedback_user_info($edit, $page);
 
 	// Tidy up the body:
