@@ -61,6 +61,7 @@ function project_project_form(&$node) {
       '#default_value' => $current_top,
       '#required' => TRUE,
     );
+    $select_size = max(5, 2*count($top_level));
     foreach ($options as $tid => $values) {
       $form['project_taxonomy']["tid_$tid"] = array(
         '#title' => t('%type categories', array('%type' => $top_level[$tid])),
@@ -68,6 +69,7 @@ function project_project_form(&$node) {
         '#multiple' => TRUE,
         '#options' => $values,
         '#default_value' => $current_options,
+        '#attributes' => array('size' => min($select_size, count($values))),
         '#prefix' => '<div class="project-taxonomy-element">',
         '#suffix' => '</div>',
       );
