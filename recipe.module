@@ -1,41 +1,43 @@
 <?php
 // $Id$
 
-define('RECIPE_MODULE_VERSION', '2.0.1');
+/**
+ * @file
+ * recipe.module - share recipes
+ * for drupal 4.7
+ *
+ * @todo
+ */
+
+define('RECIPE_MODULE_VERSION', '3.0.0');
 
 /**
  * Implementation of hook_init().
  */
 function recipe_init() {
   if (version_compare(variable_get('recipe_installed_version', 0), RECIPE_MODULE_VERSION, '<')) {
-    recipe_upgrade();
+    if (version_compare(variable_get('recipe_installed_version', 0), '2.0.1', '<')) {
+      recipe_upgrade_201();
+    }
+    elseif (version_compare(variable_get('recipe_installed_version', 0), '2.0.1', 'eq')) {
+      variable_set('recipe_installed_version', RECIPE_MODULE_VERSION);
+      drupal_set_message(t('Upgraded recipe module version to %version', array('%version' => RECIPE_MODULE_VERSION)));
+    }
   }
-}
-
-function recipe_upgrade() {
-  $old_ingredients = db_query('SELECT * FROM {recipe_ingredients}');
-
-  while ($old_ingredient = db_fetch_object($old_ingredients)) {
-    $ingredient = recipe_parse_ingredient_string($old_ingredient->ingredient);
-    $ingredient->id = recipe_ingredient_id_from_name($ingredient->name);
-    db_query("INSERT INTO {recipe_node_ingredient} (nid,ingredient_id,quantity,unit_id) VALUES (%d,%d,%f,%d)", $old_ingredient->nid, $ingredient->id, $ingredient->quantity, $ingredient->unit_id);
-  }
-  variable_set('recipe_installed_version', RECIPE_MODULE_VERSION);
-  drupal_set_message(t('Upgraded database for recipe module version %version', array('%version' => RECIPE_MODULE_VERSION)));
 }
 
 /**
  * Implementation of hook_perm().
  */
 function recipe_perm() {
-  return array ("create recipes", 'edit own recipes');
+  return array('create recipes', 'edit own recipes');
 }
 
 /**
  * Implementation of hook_load().
  */
 function recipe_load($node) {
-  $recipe = db_fetch_object(db_query("SELECT * FROM {recipe} WHERE nid = %d", $node->nid));
+  $recipe = db_fetch_object(db_query('SELECT * FROM {recipe} WHERE vid = %d', $node->vid));
   $recipe->ingredients = recipe_load_ingredients($node);
   return $recipe;
 }
@@ -43,18 +45,28 @@ function recipe_load($node) {
 /**
  * Implementation of hook_link().
  */
-function recipe_link($type, $node = 0, $main) {
+function recipe_link($type, $node = NULL, $teaser = FALSE) {
   $links = array();
 
   if ($type == 'node' && $node->type == 'recipe') {
-    $links[] = l(t('export'), "recipeml/$node->nid", array('title' => t('Export this recipe to RecipeML.')));
+    if (!$teaser) {
+      if (variable_get('recipe_export_recipeml_enable', 1) == 1) {
+        $links[] = l(t('export to RecipeML'), 'recipe/export/recipeml/'. $node->nid,
+          array('title' => t('Export this recipe to RecipeML.')));
+      }
+      if (variable_get('recipe_export_html_enable', 1) == 1) {
+        $links[] = l(t('printer-friendly version'), 'recipe/export/html/'. $node->nid,
+          array('title' => t('Show a printer-friendly version of this recipe.')));
+      }
+    }
   }
 
   return $links;
 }
 
 /**
- * Implementation of hook_node_info().
+ * Implementation of hook_node_info(). This function replaces hook_node_name()
+ * and hook_node_types() from 4.6.
  */
 function recipe_node_info() {
   return array('recipe' => array('name' => t('recipe'), 'base' => 'recipe'));
@@ -63,104 +75,299 @@ function recipe_node_info() {
 /**
  * Implementation of hook_help().
  */
-function recipe_help($section = '') {
-  $output ="";
-
+function recipe_help($section) {
   switch ($section) {
     case 'admin/help#recipe':
       break;
     case 'admin/modules/recipe':
     case 'admin/modules#description':
-      $output = t("Collect and display recipes");
-      break;
+      // This description is shown in the listing at admin/modules.
+      return t("Collect and display recipes");
     case 'node/add#recipe':
-      $output = t("Share your favorite recipes with your fellow cooks.");
-      break;
+      // This description shows up when users click "create content."
+      return t("Share your favorite recipes with your fellow cooks.");
     case 'node/add/recipe':
-      $output = variable_get("recipe_help", "");;
-      break;
+      return variable_get("recipe_help", "");
   }
-  return $output;
 }
 
 /**
- * Implementation of hook_recipe().
+ * Implementation of hook_insert().
+ *
+ * As a new node is being inserted into the database, we need to do our own
+ * database inserts.
  */
-function recipe_nodeapi(&$node, $op, $arg) {
-  if ($node->type == "recipe") {
-    switch ($op) {
-      case "insert":
-        db_query("INSERT INTO {recipe} (nid, source, yield, notes, instructions) VALUES (%d, '%s', '%s', '%s', '%s')", $node->nid, $node->source, $node->yield, $node->notes, $node->instructions);
-        recipe_save_ingredients($node);
-        break;
-      case "update":
-        db_query("UPDATE {recipe} SET source = '%s', yield = '%s', notes = '%s', instructions = '%s' WHERE nid = %d", $node->source, $node->yield, $node->notes, $node->instructions, $node->nid);
-        recipe_save_ingredients($node);
-        break;
-      case "delete":
-        db_query("DELETE FROM {recipe} WHERE nid = %d", $node->nid);
-        db_query("DELETE FROM {recipe_node_ingredient} WHERE nid = %d", $node->nid);
-        break;
-    }
+function recipe_insert($node) {
+  db_query("INSERT INTO {recipe} (nid, vid, source, yield, notes, instructions) VALUES (%d, %d, '%s', '%s', '%s', '%s')", $node->nid, $node->vid, $node->source, $node->yield, $node->notes, $node->instructions);
+  recipe_save_ingredients($node);
+}
+
+/**
+ * Implementation of hook_update().
+ *
+ * As an existing node is being updated in the database, we need to do our own
+ * database updates.
+ */
+function recipe_update($node) {
+  // if this is a new node or we're adding a new revision,
+  if ($node->revision) {
+    recipe_insert($node);
   }
+  else {
+    db_query("UPDATE {recipe} SET source = '%s', yield = '%s', notes = '%s', instructions = '%s' WHERE vid = %d", $node->source, $node->yield, $node->notes, $node->instructions, $node->vid);
+    recipe_save_ingredients($node);
+  }
+}
+
+/**
+ * Implementation of hook_delete().
+ *
+ * When a node is deleted, we need to clean up related tables.
+ */
+function recipe_delete($node) {
+  db_query("DELETE FROM {recipe} WHERE nid = %d", $node->nid);
+  db_query("DELETE FROM {recipe_node_ingredient} WHERE nid = %d", $node->nid);
 }
 
 /**
  * Implementation of hook_form().
  */
-function recipe_form($node) {
-  $output = '';
+function recipe_form(&$node) {
+  // drupal 4.7 requires the title field to be defined by the custom node's module
+  $form['title'] = array('#type' => 'textfield', '#title' => t('Title'),
+    '#size' => 60, '#maxlength' => 128, '#required' => TRUE,
+    '#default_value' => $node->title);
 
-  if (function_exists('taxonomy_node_form')) {
-    $output .= implode('', taxonomy_node_form('recipe', $node));
-  }
-
-  $output .= form_textarea(t('Description'), 'body', $node->body, 60, 3, 'A short description or "teaser" for the recipe.');
-  $output .= form_textfield(t('Yield'), 'yield', $node->yield, 10, 10, 'The number of servings the recipe will make.', NULL, TRUE);
-  $output .= form_textfield(t("Source"), "source", $node->source, 60, 127, t("Optional. Does anyone else deserve credit for this recipe?"));
+  // Now we define the form elements specific to our node type.
+  $form['body'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Description'),
+    '#default_value' => $node->body,
+    '#cols' => 60,
+    '#rows' => 2,
+    '#description' => 'A short description or "teaser" for the recipe.',
+    '#required' => TRUE,
+  );
+  $form['yield'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Yield'),
+    '#default_value' => $node->yield,
+    '#size' => 10,
+    '#maxlength' => 10,
+    '#description' => 'The number of servings the recipe will make.',
+    '#attributes' => NULL,
+    '#required' => TRUE,
+  );
+  $form["source"] = array(
+    '#type' => 'textfield',
+    '#title' => t("Source"),
+    '#default_value' => $node->source,
+    '#size' => 60,
+    '#maxlength' => 127,
+    '#description' => t("Optional. Does anyone else deserve credit for this recipe?"),
+  );
 
   // Table of existing ingredients
+  $form['ingredients']['#tree'] = TRUE;
   $system = variable_get('recipe_ingredient_system','complex');
   if ($system == 'complex') {
-    $header = array(t('Quantity'), t('Units'), t('Ingredient Name'));
+    $form['ingredients']['headings'] = array(
+      '#value' => '<div><table ><thead><tr><th>Quantity</th><th>Units</th><th>Ingredient Name</th></tr></thead>'."\n".'<tbody>',
+    );
   }
   else {
-    $header = array(t('Ingredients'));
+    $form['ingredients']['headings'] = array(
+      '#value' => '<div><table ><thead><tr><th>Ingredients</th></tr></thead>'."\n".'<tbody>',
+    );
   }
   $rows = array();
+  $callback = 'recipe/ingredient/autocomplete';
+  $num_ingredients = 0;
   if ($node->ingredients) {
     foreach ($node->ingredients as $id => $ingredient) {
-      if ($ingredient->name && isset($ingredient->quantity)) {
-        $rows[] = recipe_ingredient_row($ingredient, $id);
+      $num_ingredients = $id+1;
+      if ($id == 0) { 
+        $j = '0';
       }
+      else {
+        $j = $id;
+      }
+      if ($ingredient->name && isset($ingredient->quantity)) {
+        // When can the following statement be true?
+        if (!$ingredient) {
+          drupal_set_message(t('Recipe Module: An error has occured.  Please report this error to the system administrator.'), 'error');
+          $ingredient->quantity = '';
+          $ingredient->unit_id = 21;
+          $ingredient->name = '';
+        }
+        if ($system == 'complex') {
+          $form['ingredients'][$j]['open_tags'] = array(
+            '#value' => '<tr><th>',
+          );
+          $form['ingredients'][$j]['quantity'] = array(
+            '#type' => 'textfield',
+            '#title' => '',
+            '#default_value' => $ingredient->quantity,
+            '#size' => 8,
+            '#maxlength' => 8,
+          );
+          $form['ingredients'][$j]['mid1_tags'] = array(
+            '#value' => '</th><th>',
+          );
+          $form['ingredients'][$j]['unit_id'] = array(
+            '#type' => 'select',
+            '#title' => '',
+            '#default_value' => $ingredient->unit_id,
+            '#options' => recipe_unit_options(),
+          );
+          $form['ingredients'][$j]['mid2_tags'] = array(
+            '#value' => '</th><th>',
+          );
+          $form['ingredients'][$j]['name'] = array(
+            '#type' => 'textfield',
+            '#title' => '',
+            '#default_value' => $ingredient->name,
+            '#size' => 64,
+            '#maxlength' => 128,
+            '#autocomplete_path' => $callback,
+          );
+          $form['ingredients'][$j]['close_tags'] = array(
+            '#value' => '</th></tr>',
+          );
+        }
+        else {
+          if ($ingredient->name) {
+            if ($ingredient->quantity == 0) {
+              $ingredient->quantity = '';
+            }
+            else {
+              $ingredient->quantity .= ' ';
+            }
+            if ($ingredient->abbreviation != '') {
+              $ingredient->abbreviation .= ' ';
+            }
+            $ingredient->name = $ingredient->quantity . $ingredient->abbreviation . $ingredient->name;
+          }
+          $form['ingredients'][$j]['open_tags'] = array(
+            '#value' => '<tr><th>',
+            '#tree' => TRUE,
+          );
+          $form['ingredients'][$j]['name'] = array(
+            '#type' => 'textfield',
+            '#title' => '',
+            '#default_value' => $ingredient->name,
+            '#size' => 64,
+            '#maxlength' => 128,
+            '#autocomplete_path' => $callback,
+          );
+          $form['ingredients'][$j]['close_tags'] = array(
+            '#value' => '</th></tr>',
+          );
+        } // else
+      } // if ($ingredient->name && isset($ingredient->quantity))
+    } // foreach ($node->ingredients as $id => $ingredient)
+  } // if ($node->ingredients)
+  // Add ten more spots for ingredients than are already used
+  for ($i = $num_ingredients; $i < $num_ingredients+10; $i++) {
+    if ($i == 0) { 
+      $j = '0';
+    }
+    else {
+      $j = $i;
+    }
+    if ($system == 'complex') {
+      $form['ingredients'][$j]['open_tags'] = array(
+        '#value' => '<tr><th>',
+      );
+      $form['ingredients'][$j]['quantity'] = array(
+        '#type' => 'textfield',
+        '#title' => '',
+        '#size' => 8,
+        '#maxlength' => 8,
+      );
+      $form['ingredients'][$j]['mid1_tags'] = array(
+        '#value' => '</th><th>',
+      );
+      $form['ingredients'][$j]['unit_id'] = array(
+        '#type' => 'select',
+        '#title' => '',
+        '#options' => recipe_unit_options(),
+        '#default_value' => 2,
+      );
+      $form['ingredients'][$j]['mid2_tags'] = array(
+        '#value' => '</th><th>',
+      );
+      $form['ingredients'][$j]['name'] = array(
+        '#type' => 'textfield',
+        '#title' => '',
+        '#size' => 64,
+        '#maxlength' => 128,
+        '#autocomplete_path' => $callback,
+      );
+      $form['ingredients'][$j]['close_tags'] = array(
+        '#value' => '</th></tr>',
+      );
+    }
+    else {
+      $form['ingredients'][$j]['open_tags'] = array(
+        '#value' => '<tr><th>',
+      );
+      $form['ingredients'][$j]['name'] = array(
+        '#type' => 'textfield',
+        '#title' => '',
+        '#size' => 64,
+        '#maxlength' => 128,
+        '#autocomplete_path' => $callback,
+      );
+      $form['ingredients'][$j]['close_tags'] = array(
+        '#value' => '</th></tr>',
+      );
     }
   }
-  for ($i = 0; $i < 10; $i++) {
-    $rows[] = recipe_ingredient_row();
-  }
+  $form['ingredients']['end'] = array(
+    '#value' => '</tbody>'."\n".'</table></div>'."\n",
+  );
 
-  $output .= theme('table', $header, $rows, array('id' => 'recipe-ingredients'));
+  $form['instructions'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Instructions'),
+    '#default_value' => $node->instructions,
+    '#cols' => 60,
+    '#rows' => 10,
+    '#description' => 'Step by step instructions on how to prepare and cook the recipe.',
+  );
+  $form["notes"] = array(
+    '#type' => 'textarea',
+    '#title' => t("Additional Notes"),
+    '#default_value' => $node->notes,
+    '#cols' => 60,
+    '#rows' => 5,
+    '#description' => t("Optional. Describe a great dining experience relating to this recipe, or note which wine or other dishes complement this recipe"),
+  );
 
-  $output .= form_textarea(t('Instructions'), 'instructions', $node->instructions, 60, 10, 'Step by step instructions on how to prepare and cook the recipe.');
-  $output .= form_textarea(t("Additional Notes"), "notes", $node->notes, 60, 5, t("Optional. Describe a great dining experience relating to this recipe, or note which wine or other dishes complement this recipe"));
-  $output .= filter_form('format', $node->format);
-  return $output;
-
+  return $form;
 }
 
 /**
  * Implementation of hook_menu().
+ *
+ * Note: when editing this function you must visit 'admin/menu' to reset the cache
  */
 function recipe_menu($may_cache) {
+  $items = array();
+
   if ($may_cache) {
-    $items[] = array('path' => 'node/add/recipe', 'title' => t('recipe'), 'access' => user_access('create recipes'));
-    $items[] = array('path' => 'recipe', 'title' => t('recipes'), 'callback' => 'recipe_overview', 'access' => user_access('access content'), 'type' => MENU_SUGGESTED_ITEM);
     $items[] = array(
-          'path' => 'recipeml',
-          'title' => t('recipe export'),
-          'callback' => 'recipe_export_page',
-          'type'  => MENU_CALLBACK,
-          'access' => user_access('access content')
+      'path' => 'node/add/recipe',
+      'title' => t('recipe'),
+      'access' => user_access('create recipes')
+    );
+    $items[] = array(
+      'path' => 'recipe',
+      'title' => t('recipes'),
+      'callback' => 'recipe_page',
+      'access' => user_access('access content'),
+      'type' => MENU_SUGGESTED_ITEM
     );
     $items[] = array(
       'path' => 'recipe/ingredient/autocomplete',
@@ -169,11 +376,14 @@ function recipe_menu($may_cache) {
       'type' => MENU_CALLBACK,
       'access' => user_access('access content')
     );
+    $items[] = array(
+      'path' => 'recipe/export',
+      'callback' => 'recipe_export',
+      'type'  => MENU_CALLBACK,
+      'access' => user_access('access content')
+    );
   }
-  else {
-    theme_add_style('modules/recipe/recipe.css');
-  }
-  return $items ? $items : array();
+  return $items;
 }
 
 /**
@@ -183,9 +393,12 @@ function recipe_access($op, $node) {
   global $user;
 
   if ($op == 'create') {
+    // Only users with permission to do so may create this node type.
     return user_access('create recipes');
   }
 
+  // Users who create a node may edit or delete it later, assuming they have the
+  // necessary permissions.
   if ($op == 'update' || $op == 'delete') {
     if (user_access('edit own recipes') && ($user->uid == $node->uid)) {
       return TRUE;
@@ -196,16 +409,30 @@ function recipe_access($op, $node) {
 /**
  * Implementation of hook_block().
  */
-function recipe_block($op = "list", $delta = 0) {
-  if ($op == "list") {
-    $blocks[0]["info"] = t("Newest 10 recipes");
-    return $blocks;
-  }
-  elseif ($op == 'view') {
-    $block["subject"] = t("Newest Recipes");
-    $result = db_query_range(db_rewrite_sql("SELECT n.nid, n.title, n.uid, u.name FROM {node} n INNER JOIN {users} u ON n.uid = u.uid WHERE n.type='recipe' AND n.status =1 ORDER BY n.nid DESC"), 0, 5);
-    $block["content"] = node_title_list($result);
-    return $block;
+function recipe_block($op = 'list', $delta = 0, $edit = array()) {
+  // The $op parameter determines what piece of information is being requested.
+  switch ($op) {
+    case 'list':
+      // If $op is "list", we just need to return a list of block descriptions.
+      // This is used to provide a list of possible blocks to the administrator,
+      // end users will not see these descriptions.
+      $blocks[0]['info'] = t('Newest recipes');
+      return $blocks;
+    case 'view':
+      // If $op is "view", then we need to generate the block for display
+      // purposes. The $delta parameter tells us which block is being requested.
+      switch ($delta) {
+        case 0:
+          // The subject is displayed at the top of the block. Note that it
+          // should be passed through t() for translation.
+          $block['subject'] = t('Newest Recipes');
+          // The content of the block is typically generated by calling a custom
+          // function.
+          $result = db_query_range(db_rewrite_sql("SELECT n.nid, n.title, n.uid, u.name FROM {node} n INNER_JOIN {node_revisions} r ON n.vid = r.vid INNER JOIN {users} u ON n.uid = u.uid WHERE n.type='recipe' AND n.status =1 ORDER BY n.created DESC"), 0, 5);
+          $block["content"] = node_title_list($result);
+          break;
+      }
+      return $block;
   }
 }
 
@@ -213,212 +440,97 @@ function recipe_block($op = "list", $delta = 0) {
  * Implementation of hook_settings().
  */
 function recipe_settings() {
- $output .= form_textarea(t("Explanation or submission guidelines"), "recipe_help", variable_get("recipe_help", ""), 55, 4, t("This text will be displayed at the top of the recipe submission form.  Useful for helping or instructing your users."));
- $options = array('simple' => t('Simple'), 'complex' => t('Complex'));
- $output .= form_radios(t('Ingredient entering system'), 'recipe_ingredient_system', variable_get('recipe_ingredient_system','complex'), $options);
- return $output;
-}
-
-/**
- * Page to display an overview of recipes
- */
-function recipe_overview() {
-  // no longer possible with 4.6 search. need to find a new way
-  /*if (module_exist('search')) {
-    $output .= search_type("recipe", url("search"), NULL, 1);
-  }*/
-  $output .= recipe_list();
-  if (module_exist("taxonomy_dhtml") && $content = recipe_directory_dhtml()) {
-    $output .= $content;
-  }
-  echo theme("page", $output);
-}
-
-function recipe_directory_dhtml() {
-  $boxes = taxonomy_dhtml_overview("recipe");
-  foreach ($boxes as $box) {
-    $output .= "<span class=\"recipe\"><span class=\"label\">". $box["subject"]. "</span></span><br />". $box["content"];
-  }
-  return $output;
-}
-
-/**
- * Returns a sortable table of recipes, showing some taxonomy in columns
- */
-function recipe_list() {
-  $header = array(
-    array('data' => t('Title'), 'field' => 'title'),
-    array('data' => t('Author'), 'field' => 'u.name')
-   );
-
-  $vids = array();
-  $vocabs = taxonomy_get_vocabularies('recipe');
-  foreach ($vocabs as $index => $vocab) {
-    if ($vocab->required && !$vocab->multiple) {
-      $vids[$index] = $vocab->vid;
-      $header[] = array('data'=>$vocab->name,'field'=> 'td'.$index);
+  $vocabularies = module_invoke('taxonomy', 'get_vocabularies');
+  $select=array();
+  if (is_array($vocabularies) && count($vocabularies) > 0) {
+    foreach ($vocabularies as $vocabulary) {
+      $select[$vocabulary->vid] = $vocabulary->name;
     }
   }
-
-  foreach ($vids as $index => $vid) {
-    $query->selects .= ',td'. $index .'.name AS td'. $index;
-    $query->joins .= ' INNER JOIN {term_node} tn'. $index .' ON n.nid = tn'. $index .'.nid';
-    $query->joins .= ' INNER JOIN {term_data} td'. $index .' ON tn'. $index .'.tid = td'. $index .'.tid';
-    $query->wheres[] = 'td'. $index .'.vid = '.$vid;
-  }
-
-  $query->wheres[] = 'n.type="recipe"';
-
-  $sql = 'SELECT DISTINCT(n.nid)'.$query->selects.' FROM {node} n ' .$query->joins . ' WHERE n.status = 1 AND ' . implode(' AND ', $query->wheres). tablesort_sql($header);
-
-  $result = pager_query($sql, 10);
-  $rows = array();
-  while ($r = db_fetch_object($result)) {
-    $node = node_load($r->nid);
-    $row = array(
-      l($node->title, 'node/'.$node->nid) . ''. check_markup($node->body, $node->format),
-      theme('username', $node),
-    );
-    foreach ($vids as $index=>$vid) {
-      $term_name = 'td'.$index;
-      $row[] = $r->$term_name;
-    }
-    $rows[] = $row;
-  }
-
-  if (!$rows) {
-    $output = '<p>'.t('No recipes available.').'</p>';
-  }
-
-  $output = theme('table', $header, $rows);
-  if (!$pager = theme('pager', NULL, 10, 0)) {
-    $output .= $pager;
-  }
-
-  return $output;
+  $form['recipe_vocab'] = array(
+    '#type' => 'select',
+    '#title' => t('Recipe Vocabularies'),
+    '#default_value' => variable_get('recipe_vocab', array()),
+    '#options' => $select,
+    '#description' => t('Select the vocabularies which contain the Recipe categories. All the vocabularies you select here will show up on the Recipe index.'),
+    '#extra' => '',
+    '#multiple' => 1,
+  );
+  $form['recipe_index_depth'] = array(
+    '#type' => 'select',
+    '#title' => t('Index Depth'),
+    '#default_value' => variable_get('recipe_index_depth', 0),
+    '#options' => array(0 => "All Terms", 1 => "1", 2 => "2", 3 => "3", 4 => "4", 5 => "5", 6 => "6"),
+    '#description' => t("Defines how many levels of terms should be displayed on any given recipe index page. For example, if you select 1 then only one level of the Recipe index tree will be displayed at a time."),
+  );
+  $form['recipe_recent_box_enable'] = array(
+    '#type' => 'radios',
+    '#title' => t('Recent Recipes Box'),
+    '#default_value' => variable_get('recipe_recent_box_enable', 1),
+    '#options' => array(t('Disabled'), t('Enabled')),
+    '#description' => t('Enables or Disables the recent recipes box on the recipes index page.'),
+    '#required' => false,
+  );
+  $form['recipe_recent_box_title'] = array(
+    '#type' => 'textfield',
+    '#title' => 'Box Title',
+    '#default_value' => variable_get('recipe_recent_box_title', t('Latest Recipes')),
+    '#size' => 35,
+    '#maxlength' => 255,
+    '#description' => t('Title of the Recent Recipes Box on the Recipes index page.'),
+  );
+  $form['recipe_recent_display'] = array(
+    '#type' => 'select',
+    '#title' => t('Recipes to Display'),
+    '#default_value' => variable_get('recipe_recent_display', '5'),
+    '#options' => array(5 => "5", 10 => "10", 15 => "15"),
+    '#description' => t("Sets the number of recent recipes that will be displayed in the Recent Recipes box. (0 = not displayed)."),
+  );
+  $form['recipe_help'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Explanation or submission guidelines'),
+    '#default_value' => variable_get('recipe_help', ''),
+    '#cols' => 55,
+    '#rows' => 4,
+    '#description' => t('This text will be displayed at the top of the recipe submission form.  Useful for helping or instructing your users.'),
+  );
+  $options = array('simple' => t('Simple'), 'complex' => t('Complex'));
+  $form['recipe_ingredient_system'] = array(
+    '#type' => 'radios',
+    '#title' => t('Ingredient entering system'),
+    '#default_value' => variable_get('recipe_ingredient_system','complex'),
+    '#options' => $options,
+    '#description' => t('The simple ingredient system allows all ingredients to be entered on one line.  The complex system forces the user to seperate the quanity and units from the ingredient'),
+  );
+  $form['recipe_export_html_enable'] = array(
+    '#type' => 'radios',
+    '#title' => t('Export HTML'),
+    '#default_value' => variable_get('recipe_export_html_enable', 1),
+    '#options' => array(t('Disabled'), t('Enabled')),
+    '#description' => t('Enables or Disables the Export as HTML link.'),
+    '#required' => false,
+  );
+  $form['recipe_export_recipeml_enable'] = array(
+    '#type' => 'radios',
+    '#title' => t('Export RecipeML'),
+    '#default_value' => variable_get('recipe_export_recipeml_enable', 1),
+    '#options' => array(t('Disabled'), t('Enabled')),
+    '#description' => t('Enables or Disables the Export as RecipeML link.'),
+    '#required' => false,
+  );
+  return $form;
 }
 
 /**
  * Implementation of hook_view().
  */
-function recipe_view(&$node, $teaser = 0, $page = 0) {
-  $node = recipe_content($node, $teaser);
+function recipe_view(&$node, $teaser = FALSE, $page = FALSE) {
   if ($page) {
     drupal_set_breadcrumb(array(l(t('Home'), ''), l('Recipes', 'recipe')));
+    theme_add_style('modules/recipe/recipe.css');
   }
-}
-
-/**
- * Returns the recipe for display on _view pages
- */
-function recipe_content($node, $teaser = 0) {
-  if (!$teaser) {
-    if (intval($node->yield) == $node->yield) {
-      $yield = $_POST['custom_yield'];
-      if ($yield && $yield != $node->yield) {
-        $factor = $yield / $node->yield;
-        $node->yield = $yield;
-      }
-      else {
-        $factor = 1;
-      }
-      $form = '<input name="custom_yield" value="'.$node->yield.'" size="2" />';
-      $form .= '<input type="submit" value="'.t('Update').'">';
-      $yield = form($form);
-    }
-    else {
-      $yield = $node->yield;
-      $factor = 1;
-    }
-
-    foreach ($node->ingredients as $ingredient) {
-      if (isset($ingredient->quantity) && $ingredient->name) {
-        if (!$ingredient->abbreviation) {
-          $ingredient->abbreviation = recipe_unit_abbreviation($ingredient->unit_id);
-        }
-        if ($ingredient->quantity > 0) {
-          $ingredient->quantity *= $factor;
-        }
-        else {
-          $ingredient->quantity = '';
-        }
-        $ingredients[] = $ingredient->quantity.$ingredient->abbreviation.' '.$ingredient->name;
-      }
-    }
-
-    $summary = '<table>';
-
-    $summary .= '<tr><th>Yield</th><td>'.$yield.'</td></tr>';
-    if ($node->source) {
-      $summary .= '<tr><th>Source</th><td>'.$node->source.'</td></tr>';
-    }
-    $vocabs = taxonomy_get_vocabularies('recipe');
-    if (count($vocabs) > 0) {
-      foreach ($vocabs as $vocab) {
-        $terms = taxonomy_node_get_terms_by_vocabulary($node->nid, $vocab->vid);
-        if (count($terms) > 0) {
-          $term = array_shift($terms);
-          $summary .= '<tr><th>'.$vocab->name.'</th><td>'.l($term->name, 'taxonomy/term/'.$term->tid).'</td></tr>';
-        }
-      }
-    }
-    $summary .= '</table>';
-  }
-
-  $node->teaser = check_markup($node->body, $node->format);
-  $node->instructions = check_markup($node->instructions, $node->format);
-  $node->readmore = true;
-
-  $node->body = '<div class="recipe-summary">'.theme('box', t('Summary'), $summary ).'</div>';
-  $node->body .= theme('box', t('Description'), $node->teaser);
-  $node->body .= theme('box', t('Ingredients'), theme('item_list', $ingredients));
-  $node->body .= theme('box', t('Instructions'), $node->instructions);
-  if ($node->notes) {
-    $node->body .= theme('box', t('Notes'), $node->notes);
-  }
-  return $node;
-}
-
-/**
- * Returns a single row of the ingredient editting table
- */
-function recipe_ingredient_row($ingredient = NULL) {
-  static $id;
-  $id++;
-
-  if (!$ingredient) {
-    $ingredient->quantity = '';
-    $ingredient->unit_id = 21;
-    $ingredient->name = '';
-  }
-
-  $system = variable_get('recipe_ingredient_system','complex');
-  $callback = 'recipe/ingredient/autocomplete';
-
-  if ($system == 'complex') {
-    $row = array(
-      form_textfield('', 'ingredients]['.$id.'][quantity', $ingredient->quantity, 8, 8),
-      form_select('', 'ingredients]['.$id.'][unit_id', $ingredient->unit_id, recipe_unit_options()),
-      form_autocomplete('', 'ingredients]['.$id.'][name', $ingredient->name, 32, 32, $callback)
-    );
-  }
-  else {
-    if ($ingredient->name) {
-      if ($ingredient->quantity == 0) {
-        $ingredient->quantity = '';
-      }
-      else {
-        $ingredient->quantity .= ' ';
-      }
-      if ($ingredient->abbreviation != '') {
-        $ingredient->abbreviation .= ' ';
-      }
-      $ingredient->name = $ingredient->quantity . $ingredient->abbreviation . $ingredient->name;
-    }
-    $row = array(form_autocomplete('', 'ingredients]['.$id.'][name', $ingredient->name, 60, 60, $callback));
-  }
-
-  return $row;
+  $node = recipe_node_prepare($node, $teaser);
+  $node->body .= theme('node_recipe', $node, $page);
 }
 
 /**
@@ -426,15 +538,22 @@ function recipe_ingredient_row($ingredient = NULL) {
  */
 function recipe_unit_options() {
   static $options;
-
-  if (!isset($units)) {
+  static $unit_rs;
+  if(!isset($unit_rs)) {
     $unit_rs = db_query('SELECT id,type,name,abbreviation FROM {recipe_unit} ORDER BY type ASC, metric');
     $options = array();
-    while ( $r = db_fetch_object($unit_rs) ) {
-      $options[$r->type][$r->id] = $r->name.' ('.$r->abbreviation.')';
+    while ($r = db_fetch_object($unit_rs)) {
+      if (isset($r->type)) {
+          if (!isset($options[$r->type])) {
+            $options[$r->type] = array();
+          }
+          $options[$r->type][$r->id] = $r->name.' ('.$r->abbreviation.')';
+      }
+      else {
+        $options[$r->id] = $r->name.' ('.$r->abbreviation.')';
+      }
     }
   }
-
   return $options;
 }
 
@@ -463,6 +582,9 @@ function recipe_ingredient_id_from_name($name) {
  * (by comparing the old and new ingredients first)
  */
 function recipe_save_ingredients($node) {
+  if(!$node->ingredients) {
+    $node->ingredients = array();
+  }
   $changes = recipe_ingredients_diff($node->ingredients, recipe_load_ingredients($node));
 
   if (count($changes->remove) > 0) {
@@ -472,12 +594,12 @@ function recipe_save_ingredients($node) {
 
   foreach ($changes->add as $ingredient) {
     $ingredient->id = recipe_ingredient_id_from_name($ingredient->name);
-    db_query("INSERT INTO {recipe_node_ingredient} (nid,ingredient_id,quantity,unit_id) VALUES (%d,%d,%f,%d)", $node->nid, $ingredient->id, $ingredient->quantity, $ingredient->unit_id);
+    db_query("INSERT INTO {recipe_node_ingredient} (nid,vid,ingredient_id,quantity,unit_id) VALUES (%d,%d,%d,%f,%d)", $node->nid, $node->vid, $ingredient->id, $ingredient->quantity, $ingredient->unit_id);
   }
 
   foreach ($changes->update as $ingredient) {
     $ingredient->id = recipe_ingredient_id_from_name($ingredient->name);
-    db_query("UPDATE {recipe_node_ingredient} SET quantity='%f', unit_id='%d' WHERE nid='%d' AND ingredient_id='%d'", $ingredient->quantity, $ingredient->unit_id, $node->nid, $ingredient->id);
+    db_query("UPDATE {recipe_node_ingredient} SET quantity='%f', unit_id='%d' WHERE nid='%d' AND vid='%d' AND ingredient_id='%d'", $ingredient->quantity, $ingredient->unit_id, $node->nid, $node->vid, $ingredient->id);
   }
 }
 
@@ -490,7 +612,7 @@ function recipe_ingredients_diff($a1,$a2) {
   $return->update = array();
 
   foreach ($a1 as $pl) {
-    $pl = array2object($pl);
+    $pl = (object)$pl;
     $pl->name = trim($pl->name);
     if ($pl->name) {
       if (!_in_array($pl,$return->add)) {
@@ -544,8 +666,9 @@ function recipe_load_ingredients($node) {
     ri.ingredient_id = i.id
     AND ri.unit_id = u.id
     AND ri.nid=%d
+    AND ri.vid=%d
   ORDER BY
-    i.name', $node->nid);
+    i.name', $node->nid, $node->vid);
   $ingredients = array();
   while ($ingredient = db_fetch_object($rs)) {
     $ingredients[] = $ingredient;
@@ -570,69 +693,124 @@ function recipe_unit_abbreviation($unit_id) {
 }
 
 /**
- * Displays a RecipeML export of a recipe node
+ * Menu callback; Generates various representation of a recipe page with
+ * all descendants and prints the requested representation to output.
+ *
+ * The function delegates the generation of output to helper functions.
+ * The function name is derived by prepending 'recipe_export_' to the
+ * given output type.  So, e.g., a type of 'html' results in a call to
+ * the function recipe_export_html().
+ *
+ * @param type
+ *   - a string encoding the type of output requested.
+ *       The following types are currently supported in recipe module
+ *          html: HTML (printer friendly output)
+ *          recipeml: XML (RecipeML formatted output)
+ *       Other types can be supported with contributed modules.
+ * @param nid
+ *   - an integer representing the node id (nid) of the node to export
+ *
  */
-function recipe_export_page($id = 0) {
-  if ($id == 0)
-    die();
-  $node = node_load(array('nid' => $id, 'type' => 'recipe'));
+function recipe_export($type = 'html', $nid = 0) {
+  $type = drupal_strtolower($type);
+  $export_function = 'recipe_export_' . $type;
+
+  if (function_exists($export_function)) {
+    echo call_user_func($export_function, $nid);
+  }
+  else {
+    drupal_set_message('Unknown export format');
+    drupal_not_found();
+  }
+}
+
+/**
+ * This function is called by recipe_export() to generate HTML for export.
+ *
+ * @param nid
+ *   - an integer representing the node id (nid) of the node to export
+ * @return
+ * - string containing HTML representing the recipe
+ */
+function recipe_export_html($nid) {
+  if($nid == 0) { drupal_goto('recipe'); }
+  $node = node_load(array('nid' => $nid, 'type' => 'recipe'));
+
+  $node = recipe_node_prepare($node, $teaser);
+  $output = theme('node_recipe', $node, FALSE);
+
+  $html = theme('recipe_export_html', check_plain($node->title), $output);
+  return $html;
+}
+
+/**
+ * This function is called by recipe_export() to generate RecipeML for export.
+ *
+ * @param nid
+ *   - an integer representing the node id (nid) of the node to export
+ * @return
+ * - string containing the recipe in RecipeML
+*/
+function recipe_export_recipeml($nid) {
+  if($nid == 0) { drupal_goto('recipe'); }
+
+  $node = node_load(array('nid' => $nid, 'type' => 'recipe'));
 
   drupal_set_header('Content-type: text/xml');
 
-  $output = '<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE recipeml PUBLIC "-//FormatData//DTD RecipeML 0.5//EN" "http://www.formatdata.com/recipeml/recipeml.dtd">
-<recipeml version="0.5">
-  <recipe>
-    <head>
-      <title>'.$node->title.'</title>
-    </head>
-    <yield><qty>'.$node->serving.'</qty></yield>
-    <ingredients>';
+  $output = '<?xml version="1.0" encoding="UTF-8"?>'."\n".
+  '<!DOCTYPE recipeml PUBLIC "-//FormatData//DTD RecipeML 0.5//EN" "http://www.formatdata.com/recipeml/recipeml.dtd">'."\n".
+  '<recipeml version="0.5">'."\n".
+  '  <recipe>'."\n".
+  '    <head>'."\n".
+  '      <title>'.$node->title.'</title>'."\n".
+  '    </head>'."\n".
+  '    <yield><qty>'.$node->serving.'</qty></yield>'."\n".
+  '    <ingredients>';
 
   foreach ($node->ingredients as $ingredient) {
     $output .= "\n".'<ing><amt><qty>'.$ingredient->quantity.'</qty><unit>'.$ingredient->abbreviation.'</unit></amt><item>'.$ingredient->name.'</item></ing>';
   }
 
-  $output .= '
-    </ingredients>
-    <directions>'.$node->instructions.'</directions>
-  </recipe>
-</recipeml>';
+  $output .= "\n".
+  '    </ingredients>'."\n".
+  '    <directions>' . $node->instructions . '</directions>'."\n".
+  '  </recipe>'."\n".
+  '</recipeml>';
 
-  echo $output;
+  return $output;
 }
 
 /**
- * Implementation of hook_settings().
+ * Callback function for ingredient autocomplete
  */
 function recipe_autocomplete_page($string = "", $limit = 10) {
   $matches = array();
-  $rs = db_query('SELECT name FROM {recipe_ingredient} WHERE LOWER(name) LIKE "%%%s%%" ORDER BY name LIMIT %d', strtolower($string), $limit);
+  $rs = db_query('SELECT name FROM {recipe_ingredient} WHERE LOWER(name) LIKE "%s%%" ORDER BY name LIMIT %d', strtolower($string), $limit);
   while ($r = db_fetch_object($rs)) {
     $matches[$r->name] = check_plain($r->name);
   }
-  $output = array();
-  foreach ($matches as $k => $v) {
-    $output[] = str_replace('|', '&#124;', $k) .'|'. str_replace('|', '&#124;', $v);
-  }
-  echo implode('||', $output);
+  print drupal_to_js($matches);
   exit();
 }
 
 /**
  * Implementation of hook_validate().
+ *
+ * Errors should be signaled with form_set_error().
  */
 function recipe_validate(&$node) {
   if (!$node->ingredients) return;
   $ingredients = array();
   foreach ($node->ingredients as $key => $ingredient) {
-    $ingredient = array2object($ingredient);
+    $ingredient = (object)$ingredient;
     if (!isset($ingredient->quantity)) {
       $ingredient = recipe_parse_ingredient_string($ingredient->name);
     }
     if ($ingredient->name && _in_array($ingredient,$ingredients)) {
       form_set_error("recipe", "Duplicate ingredients are not allowed.");
-    } else {
+    }
+    else {
       $ingredients[] = $ingredient;
     }
     $node->ingredients[$key] = $ingredient;
@@ -688,7 +866,6 @@ function recipe_unit_from_name($name) {
     $string = substr($string, 0, strlen($string) -1);
   }
 
-
   static $units_array;
 
   if (!$units_array) {
@@ -702,5 +879,474 @@ function recipe_unit_from_name($name) {
   return $units_array[$string];
 }
 
+/**
+ Menu Callback - created output for the main recipe page.
+
+ @return $body
+**/
+function recipe_page() {
+  $body = "";
+
+  if (arg(1) == "feed") {
+    module_invoke('node', 'feed', module_invoke('taxonomy', 'select_nodes', recipe_get_recipe_terms(), 'or', 0, FALSE));
+  }
+  else {
+    if (arg(1) != NULL) {
+      $breadcrumb = drupal_get_breadcrumb();
+      $term = recipe_build_breadcrumbs($breadcrumb);
+      drupal_set_breadcrumb($breadcrumb);
+
+      if ($term != NULL) {
+        $content = recipe_index($term->tid);
+        if ($content != '') {
+          $body = theme('box', $term->name . '- '. t('Sub Categories'), $content);
+        }
+
+        $terms = array_merge(array($term->tid), array_map('_recipe_get_tid_from_term', module_invoke('taxonomy', 'get_children', $term->tid)));
+        $body .= module_invoke('taxonomy', 'render_nodes', module_invoke('taxonomy', 'select_nodes', $terms));
+      }
+    }
+    else {
+      $body = '';
+
+      if (variable_get('recipe_recent_box_enable', 1)) {
+        $body = theme('box', variable_get('recipe_recent_box_title', t('Latest Recipes')), module_invoke('node', 'title_list', recipe_get_latest(variable_get('recipe_recent_display', '5')), '') . theme('recipe_more_info', theme('feed_icon', url("recipe/feed"))));
+      }
+      $content = recipe_index();
+      if ($content != '') {
+        $body .= theme('box', t('Recipe Categories'), $content);
+      }
+    }
+  }
+  return $body;
+}
+
+/**
+ Builds a breadcrumb list.
+
+ @param breadcrumb a reference to the breadcrumb array. New items will be appending to this array.
+
+ @return returns a term object if the last item in the url is a term, otherwise returns NULL.
+**/
+function recipe_build_breadcrumbs(&$breadcrumb) {
+  if (arg(1) != NULL) {
+    $i = 1;
+    $url = 'recipe';
+    $breadcrumb[] = l(ucwords(t('Recipes')), $url);
+    while (arg($i) != NULL) {
+      $last_term = urldecode(arg($i));
+      $url = $url . '/' . urlencode($last_term);
+      $breadcrumb[] = l(ucwords($last_term), $url);
+      $i++;
+    }
+
+    $term = current(module_invoke('taxonomy', 'get_term_by_name', $last_term));
+    return $term;
+  }
+  return NULL;
+}
+
+/**
+ Recursively traverses the term tree to construct the index.
+
+ @return string the output for this tree.
+**/
+function recipe_build_index(&$tree, $parent_url) {
+  $output = '';
+
+  if ($tree == array()) {
+    return '';
+  }
+
+  do {
+    $cur = current($tree);
+    $nex = next($tree);
+    if ($nex === false) {
+      $next_depth = -1;
+    }
+    else {
+      $next_depth = $nex->depth;
+    }
+
+    $cur->link = $parent_url . '/' . urlencode(strtolower(trim($cur->name)));
+
+    $cur->children = '';
+    if ($next_depth > $cur->depth) {
+      $cur->children = recipe_build_index($tree, $cur->link);
+
+      // sync $next_depth, because 'next item' may be shoved forward
+      // Thanks for the patch Roderik.
+      $nex = current($tree);
+      if ($nex === false) {
+        $next_depth = -1;
+      }
+      else {
+        $next_depth = $nex->depth;
+      }
+    }
+
+    $cur->count = module_invoke('taxonomy', 'term_count_nodes', ($cur->tid));
+
+    $output .= theme('recipe_index_item', $cur);
+  }while ($cur->depth == $next_depth);
+
+  return theme('recipe_list', $output);
+}
+
+/**
+  Constructs a url from the current url arguments list.
+
+  @return a string containing a formated URL.
+**/
+function recipe_get_current_url() {
+  $arg_index = 1;
+  $url = arg(0);
+  while ($argument = arg($arg_index)) {
+    $url .= '/'. urlencode($argument);
+    $arg_index++;
+  }
+  return $url;
+}
+
+/**
+ Get the latest recipes
+
+ @return a database query result.
+**/
+function recipe_get_latest($count = 0) {
+   $tids = recipe_get_recipe_terms();
+   return recipe_select_nodes($tids, 'or', 0, FALSE, $count);
+}
+
+/**
+ Get all the terms associated with Recipes.
+
+ @return an array of unique term ids.
+**/
+function recipe_get_recipe_terms() {
+  $vocabs = recipe_get_vocabularies();
+  $tids = array();
+  foreach ($vocabs as $vocab) {
+    $tids = array_merge($tids, recipe_tax_get_terms($vocab->vid));
+  }
+  return array_unique($tids);
+}
+
+/**
+ Gets all the vocabularies that are associated with the recipe module.
+
+ @return array the vocabularies.
+**/
+function recipe_get_vocabularies() {
+  $allvocabularies = module_invoke('taxonomy', 'get_vocabularies');
+  $recipe_vocabs = variable_get('recipe_vocab', array());
+  $vocabularies = array();
+  foreach ($recipe_vocabs as $vocab) {
+    $vocabularies[] = $allvocabularies[$vocab];
+  }
+  return $vocabularies;
+}
+
+/**
+ Constructs the recipe index page, using theme functions.
+
+ @return a string containing the output ready for display.
+**/
+function recipe_index($tid = 0) {
+  $output = "";
+
+  $vocabularies = recipe_get_vocabularies();
+  foreach ($vocabularies as $vocab) {
+    $max_depth = variable_get('recipe_index_depth', 0);
+    $vocab_tree = module_invoke('taxonomy', 'get_tree', $vocab->vid, $tid, -1, ($max_depth <= 0) ? NULL : $max_depth);
+    $content = '';
+
+    while (current($vocab_tree) != NULL) {
+      $content .= recipe_build_index($vocab_tree, recipe_get_current_url());
+    }
+
+    if ($content != '') {
+      $output .= theme('recipe_index', $vocab->name, $content);
+    }
+  }
+
+  return $output;
+}
+
+/**
+ * Custom version of node_prepare().
+ *
+ */
+function recipe_node_prepare($node, $teaser = FALSE) {
+  $node->readmore = TRUE;
+  if ($teaser == FALSE) {
+    $node->body = check_markup($node->body, $node->format, FALSE);
+    $node->instructions = check_markup($node->instructions, $node->format, FALSE);
+    if ($node->notes) {
+      $node->notes = check_markup($node->notes, $node->format, FALSE);
+    }
+  }
+  else {
+    $node->teaser = check_markup($node->body, $node->format, FALSE);
+  }
+  return $node;
+}
+
+/**
+ * Finds all nodes that match selected taxonomy conditions.
+ * This is just a copy of taxonomy_select_nodes() but
+ * includes node title field in the selection.
+ * Is this useful or try to find a taxonomy function
+ * to achieve this?
+ *
+ * @param $tids
+ *   An array of term IDs to match.
+ * @param $operator
+ *   How to interpret multiple IDs in the array. Can be "or" or "and".
+ * @param $depth
+ *   How many levels deep to traverse the taxonomy tree. Can be a nonnegative
+ *   integer or "all".
+ * @param $pager
+ *   Whether the nodes are to be used with a pager (the case on most Drupal
+ *   pages) or not (in an XML feed, for example).
+ * @return
+ *   A resource identifier pointing to the query results.
+ */
+function recipe_select_nodes($tids = array(), $operator = 'or', $depth = 0, $pager = TRUE, $count = 0) {
+  if (count($tids) > 0) {
+    // For each term ID, generate an array of descendant term IDs to the right depth.
+    $descendant_tids = array();
+    if ($depth === 'all') {
+      $depth = NULL;
+    }
+    foreach ($tids as $index => $tid) {
+      $term = module_invoke('taxonomy', 'get_term', $tid);
+      $tree = module_invoke('taxonomy', 'get_tree', $term->vid, $tid, -1, $depth);
+      $descendant_tids[] = array_merge(array($tid), array_map('_recipe_get_tid_from_term', $tree));
+    }
+
+    if ($operator == 'or') {
+      $str_tids = implode(',', call_user_func_array('array_merge', $descendant_tids));
+      $sql = 'SELECT n.nid, n.title, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE tn.tid IN ('. $str_tids .') AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC';
+      $sql_count = 'SELECT COUNT(n.nid) FROM {node} n INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE tn.tid IN ('. $str_tids .') AND n.status = 1';
+    }
+    else {
+      $joins = '';
+      $wheres = '';
+      foreach ($descendant_tids as $index => $tids) {
+        $joins .= ' INNER JOIN {term_node} tn'. $index .' ON n.nid = tn'. $index .'.nid';
+        $wheres .= ' AND tn'. $index .'.tid IN ('. implode(',', $tids) .')';
+      }
+      $sql = 'n.nid, n.title, n.sticky, n.created FROM {node} n '. $joins .' WHERE n.status = 1 AND '. $wheres .' ORDER BY n.sticky DESC, n.created DESC';
+      $sql_count = 'SELECT COUNT(n.nid) FROM {node} n '. $joins .' WHERE n.status = 1 AND '. $wheres;
+    }
+
+    if ($pager && ($count > 0)) {
+      $result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 10) , 0, db_rewrite_sql($sql_count));
+    }
+    else {
+      $count = ($count > 0) ? $count : 15;
+      $result = db_query_range(db_rewrite_sql($sql), 0, $count);
+    }
+  }
+
+  return $result;
+}
+
+/**
+ Get all the terms in a given vocabulary.
+
+ @return an array of unique term ids.
+**/
+function recipe_tax_get_terms($vid) {
+  $result = db_query("SELECT tid FROM {term_data} WHERE vid = %d", $vid);
+  $tids = array();
+  while ($term = db_fetch_array($result)) {
+    $tids[] = $term['tid'];
+  }
+  return array_unique($tids);
+}
+
+/**
+ * RECIPE_MODULE_VERSION 2.0.1 database changes update function
+ */
+function recipe_upgrade_201() {
+  $old_ingredients = db_query('SELECT * FROM {recipe_ingredients}');
+
+  while ($old_ingredient = db_fetch_object($old_ingredients)) {
+    $ingredient = recipe_parse_ingredient_string($old_ingredient->ingredient);
+    $ingredient->id = recipe_ingredient_id_from_name($ingredient->name);
+    db_query("INSERT INTO {recipe_node_ingredient} (nid,ingredient_id,quantity,unit_id) VALUES (%d,%d,%f,%d)", $old_ingredient->nid, $ingredient->id, $ingredient->quantity, $ingredient->unit_id);
+  }
+  variable_set('recipe_installed_version', RECIPE_MODULE_VERSION);
+  drupal_set_message(t('Upgraded database for recipe module version %version', array('%version' => RECIPE_MODULE_VERSION)));
+}
+
+/**
+ Helper function for array map purposes.
+ @param term the term object from which the tid will be extracted.
+
+ @return the tid member of $term.
+**/
+function _recipe_get_tid_from_term($term) {
+  return $term->tid;
+}
+
+/**
+ * Theme functions group
+ */
+
+/**
+ * A custom theme function.
+ *
+ * By using this function to format our node-specific information, themes
+ * can override this presentation if they wish. We also wrap the default
+ * presentation in a CSS class that is prefixed by the module name. This
+ * way, style sheets can modify the output without requiring theme code.
+ */
+function theme_node_recipe($node, $yield_form = TRUE) {
+  // Get custom yield or default to a factor of 1
+  if ($yield_form && intval($node->yield) == $node->yield) {
+    $yield = $_POST['edit']['custom_yield'];
+    if ($yield && $yield != $node->yield && $node->yield !=0) {
+      $factor = $yield / $node->yield;
+      $node->yield = $yield;
+    }
+    else {
+      $factor = 1;
+    }
+    $form['custom_yield'] = array(
+      '#type' => 'textfield',
+      '#default_value' => $node->yield,
+      '#size' => 2,
+      '#maxlength' => 4,
+    );
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Update')
+    );
+    $_POST = array();
+    $yield = drupal_get_form('recipe_custom_yield', $form);
+  }
+  else {
+    $yield = $node->yield;
+    $factor = 1;
+  }
+
+  // Construct the $ingredients[] array
+  if ($node->ingredients){
+    foreach ($node->ingredients as $ingredient) {
+      if (isset($ingredient->quantity) && $ingredient->name) {
+        if (!$ingredient->abbreviation) {
+          $ingredient->abbreviation = recipe_unit_abbreviation($ingredient->unit_id);
+        }
+        if ($ingredient->quantity > 0) {
+          $ingredient->quantity *= $factor;
+        }
+        else {
+          $ingredient->quantity = '';
+        }
+        $ingredients[] = $ingredient->quantity.$ingredient->abbreviation.' '.$ingredient->name;
+      }
+    }
+  }
+
+  // Construct the summary
+  $summary = '<table>';
+  $summary .= '<tr><th>Yield</th><td>'.$yield.'</td></tr>';
+  if ($node->source) {
+    $summary .= '<tr><th>Source</th><td>'.$node->source.'</td></tr>';
+  }
+  $vocabs = taxonomy_get_vocabularies('recipe');
+  if (count($vocabs) > 0) {
+    foreach ($vocabs as $vocab) {
+      $terms = taxonomy_node_get_terms_by_vocabulary($node->nid, $vocab->vid);
+      if (count($terms) > 0) {
+        $term = array_shift($terms);
+        $summary .= '<tr><th>'.$vocab->name.'</th><td>'.l($term->name, 'taxonomy/term/'.$term->tid).'</td></tr>';
+      }
+    }
+  }
+  $summary .= '</table>';
+
+  // Create the output
+  $output = '';
+  $output .= '<div class="recipe-summary">'.theme('box', t('Summary'), $summary ).'</div>';
+  $output .= '<div class="recipe-description">'.theme('box', t('Description'), $node->body).'</div>';
+  $output .= '<div class="recipe-ingredients">'.theme('box', t('Ingredients'), theme('item_list', $ingredients)).'</div>';
+  $output .= '<div class="recipe-instructions">'.theme('box', t('Instructions'), $node->instructions).'</div>';
+  if ($node->notes !== '') {
+    $output .= '<div class="recipe-notes">'.theme('box', t('Notes'), $node->notes).'</div>';
+  }
+
+  return $output;
+}
+
+
+/**
+ Controls the output of the rendered index list.
+
+ @return string the output for the index list.
+**/
+function theme_recipe_index(&$name, &$index_list) {
+  if ($index_list != "") {
+    return "<div class=\"item-list\">\n$index_list\n</div>\n";
+  }
+  return "";
+}
+
+/**
+ Displays a single index item.
+
+ @return string the output for this item.
+**/
+function theme_recipe_index_item(&$term) {
+  $description = ($term->description != '') ? "<p class=\"recipe-desc\">". $term->description ."</p>" : '';
+  if ($term->count > 0) {
+    return "<li ><div class=\"recipe-title\">". l($term->name ." ($term->count)", $term->link) ."</div>". $description.$term->children ."</li>";
+  }
+  else {
+    return "<li><div class=\"recipe-title\">". $term->name ." ($term->count)</div>". $description.$term->children ."</li>";
+  }
+}
+
+/**
+ Displays a single one level list. Called for each group of items at the same depth.
+
+ @return string the output for this list.
+**/
+function theme_recipe_list(&$output) {
+  if ($output != '') {
+    return "<ul>". $output ."</ul>\n";
+  }
+  return '';
+}
+
+/**
+ Displays more information content, suck as "more" links, and
+ feed images.
+
+ @return formatted string containint the output.
+**/
+function theme_recipe_more_info($content) {
+  return "<div class=\"more-link\">". $content ."</div>";
+}
+
+/**
+ * How the recipe's HTML export should be themed
+ *
+ * @ingroup themeable
+ */
+function theme_recipe_export_html($title, $content) {
+  global $base_url;
+  $html = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n";
+  $html .= '<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">';
+  $html .= "<head>\n<title>". $title ."</title>\n";
+  $html .= '<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />';
+  $html .= '<base href="'. $base_url .'/" />' . "\n";
+  $html .= "<style type=\"text/css\">\n@import url(modules/recipe/print.css);\n</style>\n";
+  $html .= "</head>\n<body>\n<h1 class=title>" . $title . "</h1>\n" . $content . "\n</body>\n</html>\n";
+  return $html;
+}
 
 ?>
