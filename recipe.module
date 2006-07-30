@@ -336,7 +336,7 @@ function recipe_form(&$node) {
     '#rows' => 10,
     '#description' => 'Step by step instructions on how to prepare and cook the recipe.',
   );
-  $form["notes"] = array(
+  $form['notes'] = array(
     '#type' => 'textarea',
     '#title' => t("Additional Notes"),
     '#default_value' => $node->notes,
@@ -344,6 +344,7 @@ function recipe_form(&$node) {
     '#rows' => 5,
     '#description' => t("Optional. Describe a great dining experience relating to this recipe, or note which wine or other dishes complement this recipe"),
   );
+  $form['filter'] = filter_form($node->format);
 
   return $form;
 }
@@ -807,6 +808,9 @@ function recipe_validate(&$node) {
     if (!isset($ingredient->quantity)) {
       $ingredient = recipe_parse_ingredient_string($ingredient->name);
     }
+    if (check_plain($ingredient->name) != $ingredient->name) {
+      form_set_error("recipe", "Ingredient names must be plain text.");
+    }
     if ($ingredient->name && _in_array($ingredient,$ingredients)) {
       form_set_error("recipe", "Duplicate ingredients are not allowed.");
     }
@@ -1084,6 +1088,14 @@ function recipe_node_prepare($node, $teaser = FALSE) {
     $node->instructions = check_markup($node->instructions, $node->format, FALSE);
     if ($node->notes) {
       $node->notes = check_markup($node->notes, $node->format, FALSE);
+    }
+    if ($node->source) {
+      $node->source = check_markup($node->source, $node->format, FALSE);
+    }
+    if ($node->ingredients){
+      foreach ($node->ingredients as $ingredient) {
+        $ingredient->name = check_plain($ingredient->name);
+      }
     }
   }
   else {
