@@ -1,12 +1,12 @@
 <?php
 // recipe.install 
 function recipe_install() {
+  $s = false;
   switch ($GLOBALS['db_type']) {
     case 'mysql':
     case 'mysqli':
-      db_query("CREATE TABLE recipe (
+      $s = db_query("CREATE TABLE recipe (
          nid int(10) unsigned NOT NULL,
-         vid int(10) unsigned NOT NULL,
          source varchar(255),
          yield int(2) unsigned NOT NULL,
          instructions text,
@@ -15,22 +15,21 @@ function recipe_install() {
          KEY `recipe_nid` (nid)
       ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
 
-      db_query("CREATE TABLE recipe_node_ingredient (
+      $s = $s && db_query("CREATE TABLE recipe_node_ingredient (
          id int unsigned NOT NULL PRIMARY KEY auto_increment,
          nid int(10) unsigned NOT NULL,
-         vid int(10) unsigned NOT NULL,
          unit_id int(3) unsigned NOT NULL,
          quantity double,
          ingredient_id int(10) unsigned NOT NULL,
          weight tinyint DEFAULT '0'
       ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
 
-      db_query("CREATE TABLE recipe_ingredient (
+      $s = $s && db_query("CREATE TABLE recipe_ingredient (
          id int(10) unsigned NOT NULL PRIMARY KEY auto_increment,
          name varchar(255)
       ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
 
-      db_query("CREATE TABLE recipe_unit (
+      $s = $s && db_query("CREATE TABLE recipe_unit (
          id int(3) unsigned NOT NULL PRIMARY KEY auto_increment,
          name varchar(64) NOT NULL default '',
          abbreviation varchar(8) NOT NULL default '',
@@ -38,41 +37,12 @@ function recipe_install() {
          type enum('Mass','Volume','Unit') NOT NULL default 'Mass'
       ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
 
-      db_query("INSERT INTO recipe_unit VALUES (1, 'Slice', 'sli', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (2, 'Unit', '', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (3, 'Clove', 'clv', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (4, 'Pinch', 'pn', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (5, 'Package', 'pk', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (6, 'Can', 'cn', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (7, 'Drop', 'dr', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (8, 'Bunch', 'bn', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (9, 'Dash', 'ds', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (10, 'Carton', 'ct', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (11, 'Cup', 'c', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (12, 'Tablespoon', 'T', 0, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (13, 'Teaspoon', 't', 0, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (14, 'Pound', 'lb', 0, 'Mass');");
-      db_query("INSERT INTO recipe_unit VALUES (15, 'Ounce', 'oz', 0, 'Mass');");
-      db_query("INSERT INTO recipe_unit VALUES (16, 'Pint', 'pt', 0, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (17, 'Quart', 'q', 0, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (18, 'Gallon', 'gal', 0, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (19, 'Milligram', 'mg', 1, 'Mass');");
-      db_query("INSERT INTO recipe_unit VALUES (20, 'Centigram', 'cg', 1, 'Mass');");
-      db_query("INSERT INTO recipe_unit VALUES (21, 'Gram', 'g', 1, 'Mass');");
-      db_query("INSERT INTO recipe_unit VALUES (22, 'Kilogram', 'kg', 1, 'Mass');");
-      db_query("INSERT INTO recipe_unit VALUES (23, 'Millilitre', 'ml', 1, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (24, 'Centilitre', 'cl', 1, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (25, 'Litre', 'l', 1, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (26, 'Decilitre', 'dl', 1, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (27, 'Tablespoon (Metric)', 'tbsp', 1, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (28, 'Teaspoon (Metric)', 'tsp', 1, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (29, 'Unknown', '', 0, 'Unit');");
-      break;
+       $s = $s && recipe_populate_units();
+       break;
 
     case 'pgsql':
-      db_query("CREATE TABLE recipe (
+      $s = db_query("CREATE TABLE {recipe} 
          nid integer unsigned NOT NULL,
-         vid integer unsigned NOT NULL,
          source varchar(255),
          yield integer unsigned NOT NULL,
          instructions text,
@@ -81,10 +51,9 @@ function recipe_install() {
          KEY `recipe_nid` (nid)
       );");
 
-      db_query("CREATE TABLE recipe_node_ingredient (
+     $s = $s && db_query("CREATE TABLE recipe_node_ingredient (
          id integer unsigned NOT NULL auto_increment,
          nid integer unsigned NOT NULL,
-         vid integer unsigned NOT NULL,
          unit_id integer unsigned NOT NULL,
          quantity double,
          ingredient_id integer unsigned NOT NULL,
@@ -92,12 +61,12 @@ function recipe_install() {
          PRIMARY KEY(id)
       );");
 
-      db_query("CREATE TABLE recipe_ingredient (
+      $s = $s && db_query("CREATE TABLE recipe_ingredient (
          id integer unsigned NOT NULL PRIMARY KEY auto_increment,
          name varchar(255)
       );");
 
-      db_query("CREATE TABLE recipe_unit (
+      $s = $s && db_query("CREATE TABLE recipe_unit (
          id integer unsigned NOT NULL PRIMARY KEY auto_increment,
          name varchar(64) NOT NULL default '',
          abbreviation varchar(8) NOT NULL default '',
@@ -105,62 +74,50 @@ function recipe_install() {
          type enum('Mass','Volume','Unit') NOT NULL default 'Mass'
       );");
 
-      db_query("INSERT INTO recipe_unit VALUES (1, 'Slice', 'sli', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (2, 'Unit', '', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (3, 'Clove', 'clv', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (4, 'Pinch', 'pn', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (5, 'Package', 'pk', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (6, 'Can', 'cn', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (7, 'Drop', 'dr', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (8, 'Bunch', 'bn', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (9, 'Dash', 'ds', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (10, 'Carton', 'ct', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (11, 'Cup', 'c', 0, 'Unit');");
-      db_query("INSERT INTO recipe_unit VALUES (12, 'Tablespoon', 'T', 0, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (13, 'Teaspoon', 't', 0, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (14, 'Pound', 'lb', 0, 'Mass');");
-      db_query("INSERT INTO recipe_unit VALUES (15, 'Ounce', 'oz', 0, 'Mass');");
-      db_query("INSERT INTO recipe_unit VALUES (16, 'Pint', 'pt', 0, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (17, 'Quart', 'q', 0, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (18, 'Gallon', 'gal', 0, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (19, 'Milligram', 'mg', 1, 'Mass');");
-      db_query("INSERT INTO recipe_unit VALUES (20, 'Centigram', 'cg', 1, 'Mass');");
-      db_query("INSERT INTO recipe_unit VALUES (21, 'Gram', 'g', 1, 'Mass');");
-      db_query("INSERT INTO recipe_unit VALUES (22, 'Kilogram', 'kg', 1, 'Mass');");
-      db_query("INSERT INTO recipe_unit VALUES (23, 'Millilitre', 'ml', 1, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (24, 'Centilitre', 'cl', 1, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (25, 'Litre', 'l', 1, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (26, 'Decilitre', 'dl', 1, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (27, 'Tablespoon (Metric)', 'tbsp', 1, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (28, 'Teaspoon (Metric)', 'tsp', 1, 'Volume');");
-      db_query("INSERT INTO recipe_unit VALUES (29, 'Unknown', '', 0, 'Unit');");
-
+      $s = $s && recipe_populate_units();
       break;
+  }
+  if ($s) {
+    drupal_set_message(t('Recipe module installed tables successfully.'));
+  }
+  else {
+    drupal_set_message(t('The installation of the Recipe module was unsuccessful.'), 'error');
   }
 }
 
-function recipe_update_1() {
-  $ret = array();
-
-  switch ($GLOBALS['db_type']) {
-    case 'pgsql':
-      db_add_column($ret, 'recipe', 'vid', 'integer', array('unsigned' => TRUE, 'not null' => TRUE, 'default' => ''));
-      db_add_column($ret, 'recipe_node_ingredient', 'vid', 'integer', array('unsigned' => TRUE, 'not null' => TRUE, 'default' => ''));
-      break;
-
-    case 'mysql':
-    case 'mysqli':
-      $ret[] = update_sql("ALTER TABLE {recipe} DROP PRIMARY KEY");
-      $ret[] = update_sql("ALTER TABLE {recipe} ADD {vid} INT UNSIGNED NOT NULL AFTER {nid}");
-      $ret[] = update_sql("UPDATE {recipe} SET {vid} = {nid}");
-      $ret[] = update_sql("ALTER TABLE {recipe} ADD PRIMARY KEY ( {nid} , {vid} )");
-
-      $ret[] = update_sql("ALTER TABLE {recipe_node_ingredient} ADD {vid} INT UNSIGNED NOT NULL AFTER {nid}");
-      $ret[] = update_sql("ALTER TABLE {recipe} ADD INDEX ( {nid}, {vid} )");
-      $ret[] = update_sql("UPDATE {recipe_node_ingredient} SET {vid} = {nid}");
-      break;
-  }
-
-  return $ret;
+function recipe_populate_units()
+{
+  $s = true;
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (1, 'Slice', 'sli', 0, 'Unit');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (2, 'Unit', '', 0, 'Unit');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (3, 'Clove', 'clv', 0, 'Unit');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (4, 'Pinch', 'pn', 0, 'Unit');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (5, 'Package', 'pk', 0, 'Unit');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (6, 'Can', 'cn', 0, 'Unit');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (7, 'Drop', 'dr', 0, 'Unit');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (8, 'Bunch', 'bn', 0, 'Unit');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (9, 'Dash', 'ds', 0, 'Unit');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (10, 'Carton', 'ct', 0, 'Unit');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (11, 'Cup', 'c', 0, 'Unit');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (12, 'Tablespoon', 'T', 0, 'Volume');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (13, 'Teaspoon', 't', 0, 'Volume');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (14, 'Pound', 'lb', 0, 'Mass');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (15, 'Ounce', 'oz', 0, 'Mass');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (16, 'Pint', 'pt', 0, 'Volume');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (17, 'Quart', 'q', 0, 'Volume');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (18, 'Gallon', 'gal', 0, 'Volume');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (19, 'Milligram', 'mg', 1, 'Mass');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (20, 'Centigram', 'cg', 1, 'Mass');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (21, 'Gram', 'g', 1, 'Mass');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (22, 'Kilogram', 'kg', 1, 'Mass');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (23, 'Millilitre', 'ml', 1, 'Volume');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (24, 'Centilitre', 'cl', 1, 'Volume');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (25, 'Litre', 'l', 1, 'Volume');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (26, 'Decilitre', 'dl', 1, 'Volume');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (27, 'Tablespoon (Metric)', 'tbsp', 1, 'Volume');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (28, 'Teaspoon (Metric)', 'tsp', 1, 'Volume');");
+  $s = $s && db_query("INSERT INTO recipe_unit VALUES (29, 'Unknown', '', 0, 'Unit');");
+  return $s;
 }
+
 ?>
