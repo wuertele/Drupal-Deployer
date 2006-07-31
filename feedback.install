@@ -1,6 +1,7 @@
 <?php
 // $Id$
 
+
 function feedback_install() {
   switch ($GLOBALS['db_type']) {
     case 'mysqli':
@@ -32,10 +33,19 @@ function feedback_install() {
   }
 }
 
+
+// Table creation called in update_1 to allow for the case
+// where a user is upgrading from a previous version of
+// the feedback module that did not use tables.
+function feedback_update_1() {
+    feedback_install();
+}
+
+
 /*
  * convert data from old feedback storage
  */
-function feedback_update_1() {
+function feedback_update_2() {
   global $conf;
 
   $defaults = array();
@@ -51,13 +61,18 @@ function feedback_update_1() {
   $defaults["logging"] = variable_get('feedback_logging', '1');
   $defaults['hourly_threshold'] = 3;
   
-  db_query("UPDATE {feedback_pages} SET data = '%s' WHERE name = '%s'", serialize($defaults), 'default');
+  $result = db_query("UPDATE {feedback_pages} SET data = '%s' WHERE name = '%s'", serialize($defaults), 'default');
 
-  //clear old unused variables
-  foreach($conf as $key => $variable) {
-    if(strpos($key, 'feedback') === 0) {
-      variable_del($key);
-    }
+
+  if($result) {
+     //clear old unused variables
+     foreach($conf as $key => $variable) {
+       if(strpos($key, 'feedback') === 0) {
+         variable_del($key);
+       }
+     }
+  } else {
+    drupal_set_message('Failed to transfer old feedback configuration to new feedback configuration table', 'error');
   }
   return array();  
 }
