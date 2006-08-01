@@ -46,7 +46,7 @@ function codefilter_process_php($text) {
   // Highlight as PHP
   $text = '<div class="codeblock">'. highlight_string("<?php\n$text\n?>", 1) .'</div>';
   // Remove newlines to avoid clashing with the linebreak filter
-  $text = str_replace(array("\r", "\n"), array('', ''), $text);
+  $text = str_replace('\n', '', $text);
   return codefilter_fix_spaces($text);
 }
 
@@ -59,7 +59,7 @@ function codefilter_process_php_inline($matches) {
   // Decode entities (the highlighter re-entifies) and highlight text
   $text = highlight_string(decode_entities($text), 1);
   // Remove PHP's own added code tags
-  $text = str_replace(array('<code>', '</code>', "\r", "\n"), array('', '', '', ''), $text);
+  $text = str_replace(array('<code>', '</code>', '\n'), array('', '', ''), $text);
   return codefilter_fix_spaces($text);
 }
 
@@ -67,12 +67,14 @@ function codefilter_process_php_inline($matches) {
  * Processes chunks of escaped code into HTML.
  */
 function codefilter_process_code($text) {
+  // Undo linebreak escaping
+  $text = str_replace('&#10;', "\n", $text);
   // Inline or block level piece?
-  $multiline = ereg("[\n\r]", $text);
+  $multiline = strpos($text, "\n") !== FALSE;
   // Note, pay attention to odd preg_replace-with-/e behaviour on slashes
   $text = preg_replace("/^\n/", '', preg_replace('@</?(br|p)\s*/?>@', '', str_replace('\"', '"', $text)));
   // Trim leading and trailing linebreaks
-  $text = trim($text, "\r\n");
+  $text = trim($text, "\n");
   // Escape newlines
   $text = nl2br($text);
 
@@ -82,17 +84,17 @@ function codefilter_process_code($text) {
   $text = '<code>'. codefilter_fix_spaces($text) .'</code>';
   if ($multiline) $text = '<div class="codeblock">'. $text .'</div>';
   // Remove newlines to avoid clashing with the linebreak filter
-  return str_replace(array("\r", "\n"), array('', ''), $text);
+  return str_replace('\n', '', $text);
 }
 
 function codefilter_fix_spaces($text) {
-  $text = str_replace('&nbsp;', ' ', $text);
-  return str_replace('  ', '&nbsp; ', $text);
+  return str_replace('&nbsp;&nbsp;', '&nbsp; ', $text);
 }
 
 function codefilter_escape($text) {
   // Note, pay attention to odd preg_replace-with-/e behaviour on slashes
-  return check_plain(str_replace('\"', '"', $text));
+  // Protect newlines from linebreak filter
+  return str_replace(array("\r", "\n"), array('', '&#10;'), check_plain(str_replace('\"', '"', $text)));
 }
 
 function codefilter_filter($op, $delta = 0, $format = -1, $text = '') {
