@@ -297,25 +297,23 @@ function imagefield_widget($op, $node, $field, &$node_field) {
       }
 
       // Attach new files 
-      if ($_POST['cck_imagefield_'. $fieldname .'_op'] == t('Attach') || $_POST['op'] == t('Submit') || $_POST['op'] == t('Preview')) {
-        if ($file = file_check_upload($fieldname . '_upload')) {
-          $file = (array)$file;
-          if (strpos($file['filemime'],'image') !== false) { 
-            $file = _imagefield_scale_image($file, $field['widget']['max_resolution']); 
-          }
-          else {
-            return false;
-          }
-          $file['fid'] = 'upload';
-          if (!$field['multiple']) {
-            // Remove old temporary file from session.
-            imagefield_clear_field_session($fieldname);
-          }
-          $file['sessionid'] = count($_SESSION['imagefield'][$fieldname]);
+      if ($file = file_check_upload($fieldname . '_upload')) {
+        $file = (array)$file;
+        if (strpos($file['filemime'],'image') !== false) { 
+          $file = _imagefield_scale_image($file, $field['widget']['max_resolution']); 
         }
+        else {
+          return false;
+        }
+        $file['fid'] = 'upload';
+        if (!$field['multiple']) {
+          // Remove old temporary file from session.
+          imagefield_clear_field_session($fieldname);
+        }
+        $file['sessionid'] = count($_SESSION['imagefield'][$fieldname]);
         $_SESSION['imagefield'][$fieldname][$file['sessionid']] = $file;
-        
       }
+        
 
       
       // Load files from preview state. before committing actions.
@@ -357,7 +355,7 @@ function _imagefield_widget_form($node, $field, &$node_field) {
   );
       
   // Seperate from tree becase of that silly things won't be 
-  // displayed is they are a child of '#type' = form issue
+  // displayed if they are a child of '#type' = form issue
   $form[$fieldname][$fieldname .'_upload'] = array(
     '#type'  => 'file',
     '#description' => t('Attach an image'),
@@ -365,19 +363,11 @@ function _imagefield_widget_form($node, $field, &$node_field) {
     '#weight' => 9,
   );
 
-  $form[$fieldname]['Attach'] = array(
-    '#type' => 'button',
-    '#value' => t('Attach'),
-    '#name' => 'cck_imagefield_'.$fieldname.'_op',
-    '#attributes' => array('id' => $fieldname.'-attach-button'),
-    '#tree' => FALSE,
-    '#weight' => 10,
-  );
   $form[$fieldname]['Update'] = array(
     '#type' => 'button',
     '#value' => t('Update'),
     '#name' => 'cck_imagefield_'.$fieldname.'_op',
-    '#attributes' => array('id' => $fieldname.'-update-button'),
+    '#attributes' => array('id' => $fieldname.'-attach-button'),
     '#tree' => FALSE,
     '#weight' => 10,
   );
@@ -449,7 +439,7 @@ function _imagefield_widget_form($node, $field, &$node_field) {
 
 function imagefield_field_view_item($field, $node_field_item) {
     $file = _imagefield_file_load($node_field_item['fid']);
-    return theme('imagefield_image', $file, $node_field_item['alt'], $node_field_item['title']); 
+    return theme('imagefield_view_image', $file, $node_field_item['alt'], $node_field_item['title']); 
 }
 
 
@@ -468,18 +458,23 @@ function _imagefield_file_load($fid = NULL) {
 }
 
 function theme_imagefield_image_preview($file, $alt ='', $title='', $attributes = NULL, $getsize= TRUE) {
-  return '<span class="imagefield-image-preview">'.theme('imagefield_image', $file, $alt, $title, $attributes , $getsize) .'</span>';
+  return '<span class="imagefield-image-preview">'. theme('imagefield_image', $file, $alt, $title, $attributes , $getsize) .'</span>';
 }
+
+function theme_imagefield_view_image($file, $alt = '', $title = '', $attributes = NULL, $getsize = TRUE) {
+  return theme('imagefield_image', $file, $alt, $title, $attributes , $getsize);
+}
+
 
 
 function theme_imagefield_edit_image_row($element) {
   $output = '<div class="imagefield-edit-preview">'. form_render($element['preview']) .'</div>';
-  $output .= '<div class="imagefield-edit-image-description">'.form_render($element['description']).'</div>';
-  $output .= '<div class="imagefield-edit-image-fid">'. $element['fid']['#value'] .'</div>';
+  $output .= '<div class="imagefield-edit-image-description">'. form_render($element['description']) .'</div>';
+  //$output .= '<div class="imagefield-edit-image-fid">'. $element['fid']['#value'] .'</div>';
   if (isset($element['replace'])) {
-    $output .= '<div class="imagefield-edit-image-replace">'.form_render($element['replace']).'</div>';
+    $output .= '<div class="imagefield-edit-image-replace">'. form_render($element['replace']) .'</div>';
   } else {
-    $output .= '<div class="imagefield-edit-image-flags">'.form_render($element['flags']).'</div>';
+    $output .= '<div class="imagefield-edit-image-flags">'. form_render($element['flags']) .'</div>';
   }
   $output .= '<div style="clear:both">&nbsp;</div>';
   if (!isset($element['replace'])) {
@@ -487,7 +482,6 @@ function theme_imagefield_edit_image_row($element) {
     $output .= '<div class="imagefield-edit-image-title">'.form_render($element['title']).'</div>';
   }
   $output = '<div class="imagefield-edit-image-row">'. $output .'</div>';
-
   return $output;  
 }
 
