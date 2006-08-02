@@ -11,8 +11,8 @@ function recipe_install() {
          yield int(2) unsigned NOT NULL,
          instructions text,
          notes text,
-         PRIMARY KEY (vid, nid),
-         KEY `recipe_nid` (nid)
+         preptime int(10) unsigned DEFAULT '0',
+         PRIMARY KEY (nid)
       ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
 
       $s = $s && db_query("CREATE TABLE recipe_node_ingredient (
@@ -20,8 +20,7 @@ function recipe_install() {
          nid int(10) unsigned NOT NULL,
          unit_id int(3) unsigned NOT NULL,
          quantity double,
-         ingredient_id int(10) unsigned NOT NULL,
-         weight tinyint DEFAULT '0'
+         ingredient_id int(10) unsigned NOT NULL
       ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
 
       $s = $s && db_query("CREATE TABLE recipe_ingredient (
@@ -47,8 +46,8 @@ function recipe_install() {
          yield integer unsigned NOT NULL,
          instructions text,
          notes text,
-         PRIMARY KEY (vid, nid),
-         KEY `recipe_nid` (nid)
+         preptime integer unsigned NOT NULL default '0',
+         PRIMARY KEY (nid)
       );");
 
      $s = $s && db_query("CREATE TABLE recipe_node_ingredient (
@@ -57,7 +56,6 @@ function recipe_install() {
          unit_id integer unsigned NOT NULL,
          quantity double,
          ingredient_id integer unsigned NOT NULL,
-         weight tinyint DEFAULT '0'
          PRIMARY KEY(id)
       );");
 
@@ -83,6 +81,22 @@ function recipe_install() {
   else {
     drupal_set_message(t('The installation of the Recipe module was unsuccessful.'), 'error');
   }
+}
+
+function recipe_update_1() {
+  $ret = array();
+  $ret[] = update_sql("ALTER TABLE {recipe_node_ingredient} DROP weight");
+  switch ($GLOBALS['db_type']) {
+    case 'pgsql':
+      db_add_column($ret, 'recipe', 'preptime', 'integer', array('not null' => TRUE, 'default' => 0));
+      break;
+
+    case 'mysql':
+    case 'mysqli':
+      $ret[] = update_sql("ALTER TABLE {recipe} ADD COLUMN preptime int(10) NOT NULL DEFAULT 0");
+      break;
+  }
+  return $ret;
 }
 
 function recipe_populate_units()
