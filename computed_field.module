@@ -56,7 +56,7 @@ function computed_field_widget_settings($op, $widget) {
         '#type' => 'textarea',
         '#rows' => 15,
         '#title' => t('Computed Code'),
-        '#description' => t('The variables available to your code are: ') . '<code>$node, $field, and &amp;$node_field</code>' . t('. To set the value of the field, set ') . '<code>$node_field[\'value\']</code>' . t('. Here\'s a simple example which sets the computed field\'s value to the value of the sum of the number fields field_a and field_b: ') . '<code>$node_field[\'value\'] = $node->field_a[0][\'value\'] + $node->field_b[0][\'value\'];</code>',
+        '#description' => t('The variables available to your code are: ') . '<code>$node, $field, and &amp;$node_field</code>' . t('. To set the value of the field, set ') . '<code>$node_field[0][\'value\']</code>' . t('. Here\'s a simple example which sets the computed field\'s value to the value of the sum of the number fields field_a and field_b: ') . '<code>$node_field[0][\'value\'] = $node->field_a[0][\'value\'] + $node->field_b[0][\'value\'];</code>',
         '#default_value' => isset($widget['code']) ? $widget['code'] : '',
       );
       $form['display'] = array(
@@ -99,13 +99,13 @@ function computed_field_field_settings($op, $field) {
         '#description' => t('The SQL datatype to store this field in.'),
         '#default_value' => $field['data_type'],
         '#options' => array('int' => 'int', 'float' => 'float', 'varchar' => 'varchar', 'text' => 'text'),
-        '#required' => true,
+        '#required' => false,
       );
       $form['database']['data_length'] = array(
         '#type' => 'textfield',
         '#title' => t('Data Length'),
         '#default_value' => isset($field['data_length']) ? $field['data_length'] : null,
-        '#required' => true,
+        '#required' => false,
       );
       $form['database']['data_default'] = array(
         '#type' => 'textfield',
@@ -125,13 +125,20 @@ function computed_field_field_settings($op, $field) {
       );
       return $form;
     case 'validate':
-      // TODO
+      if ($field['store']) {
+        if (!isset($field['data_type'])) {
+          form_set_error($field['data_type'], t('To store this field in the database, please specify a data type.'));
+        }
+        if (!isset($field['data_length'])) {
+          form_set_error($field['data_type'], t('To store this field in the database, please specify the data length.'));
+        }
+      }
       break;
     case 'save':
       return array('store', 'data_type', 'data_length', 'data_not_null', 'data_default', 'data_sortable');
     case 'database columns':
-      $columns = array('value' => array());
       if ($field['store']) {
+        $columns = array('value' => array());
         $columns['value']['type'] = isset($field['data_type']) ? $field['data_type'] : 'varchar';
         $columns['value']['length'] = isset($field['data_length']) ? $field['data_length'] : 32;
         $columns['value']['not null'] = isset($field['data_not_null']) ? $field['data_not_null'] : true;
@@ -148,12 +155,6 @@ function _computed_field_compute_value($node, $field, &$node_field) {
   eval($field['widget']['code']);
 }
 
-function _computed_field_compute_values($node, $field, &$node_field) {
-  foreach ($node_field as $delta => $item) {
-    _computed_field_compute_value($node, $field, $node_field[$delta]);
-  }
-}
-
 /**
  * Implementation of cck hook_field
  */
@@ -161,8 +162,12 @@ function computed_field_field($op, &$node, $field, &$node_field, $teaser, $page)
   switch ($op) {
     case 'view':
       if ($field['widget']['display']) {
+        // compute field on view if it isn't stored in the database
+        if (!$field['store']) {
+          _computed_field_compute_value($node, $field, $node_field);
+        }
         foreach ($node_field as $delta => $item) {
-          $node_field[$delta]['view'] = computed_field_field_view_item($field, $item);
+          $node_field[$delta]['view'] = computed_field_view_item($field, $item);
         }
         return theme('field', $node, $field, $node_field, $teaser, $page);
       }
@@ -175,7 +180,7 @@ function computed_field_field($op, &$node, $field, &$node_field, $teaser, $page)
 /**
  * Implementation of cck hook_field_view_item
  */
-function computed_field_field_view_item($field, $node_field_item) {
+function computed_field_view_item($field, $node_field_item) {
   if ($field['widget']['display']) {
     return t($field['widget']['display_format'], array('%value' => $node_field_item['value']));
   }
@@ -210,7 +215,7 @@ function computed_field_widget($op, &$node, $field, &$node_field) {
       );
       return $form;
     case 'submit':
-      _computed_field_compute_values($node, $field, $node_field);
+      _computed_field_compute_value($node, $field, $node_field);
       break;
   }
 }
