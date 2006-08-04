@@ -1363,7 +1363,7 @@ function project_issue_query_parse($query = NULL) {
   }
 
   if (empty($query->states)) {
-    $query->states = array(1, 2, 8, 13, 14);
+    $query->states = array(1, 2, 8, 13, 14, 4);
   }
 
   return $query;
