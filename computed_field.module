@@ -131,12 +131,14 @@ function computed_field_field_settings($op, $field) {
       return array('store', 'data_type', 'data_length', 'data_not_null', 'data_default', 'data_sortable');
     case 'database columns':
       $columns = array('value' => array());
-      $columns['value']['type'] = isset($field['data_type']) ? $field['data_type'] : 'varchar';
-      $columns['value']['length'] = isset($field['data_length']) ? $field['data_length'] : 32;
-      $columns['value']['not null'] = isset($field['data_not_null']) ? $field['data_not_null'] : true;
-      $columns['value']['sortable'] = isset($field['data_sortable']) ? $field['data_sortable'] : false;
-      if ($field['data_default'] != '')  {
-        $columns['value']['default'] = $field['data_default'];
+      if ($field['store']) {
+        $columns['value']['type'] = isset($field['data_type']) ? $field['data_type'] : 'varchar';
+        $columns['value']['length'] = isset($field['data_length']) ? $field['data_length'] : 32;
+        $columns['value']['not null'] = isset($field['data_not_null']) ? $field['data_not_null'] : true;
+        $columns['value']['sortable'] = isset($field['data_sortable']) ? $field['data_sortable'] : false;
+        if ($field['data_default'] != '')  {
+          $columns['value']['default'] = $field['data_default'];
+        }
       }
       return $columns;
   }
@@ -159,9 +161,6 @@ function computed_field_field($op, &$node, $field, &$node_field, $teaser, $page)
   switch ($op) {
     case 'view':
       if ($field['widget']['display']) {
-        // (re)compute value on view so it works in preview. Unfortunately this
-        // means it is recomputed on every view, and the database value is ignored.
-        _computed_field_compute_values($node, $field, $node_field);
         foreach ($node_field as $delta => $item) {
           $node_field[$delta]['view'] = computed_field_field_view_item($field, $item);
         }
@@ -178,7 +177,7 @@ function computed_field_field($op, &$node, $field, &$node_field, $teaser, $page)
  */
 function computed_field_field_view_item($field, $node_field_item) {
   if ($field['widget']['display']) {
-    return t($field['widget']['display_format'], array('%value' => check_plain($node_field_item['value'])));
+    return t($field['widget']['display_format'], array('%value' => $node_field_item['value']));
   }
 }
 
@@ -210,7 +209,7 @@ function computed_field_widget($op, &$node, $field, &$node_field) {
         '#default_value' => isset($node_field[0]['value']) ? $node_field[0]['value'] : '',
       );
       return $form;
-    case 'process form values':
+    case 'submit':
       _computed_field_compute_values($node, $field, $node_field);
       break;
   }
