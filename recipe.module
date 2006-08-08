@@ -451,22 +451,6 @@ function recipe_block($op = 'list', $delta = 0, $edit = array()) {
  * Implementation of hook_settings().
  */
 function recipe_settings() {
-  $vocabularies = module_invoke('taxonomy', 'get_vocabularies');
-  $select=array();
-  if (is_array($vocabularies) && count($vocabularies) > 0) {
-    foreach ($vocabularies as $vocabulary) {
-      $select[$vocabulary->vid] = $vocabulary->name;
-    }
-  }
-  $form['recipe_vocab'] = array(
-    '#type' => 'select',
-    '#title' => t('Recipe Vocabularies'),
-    '#default_value' => variable_get('recipe_vocab', array()),
-    '#options' => $select,
-    '#description' => t('Select the vocabularies which contain the Recipe categories. All the vocabularies you select here will show up on the Recipe index.'),
-    '#extra' => '',
-    '#multiple' => 1,
-  );
   $form['recipe_index_depth'] = array(
     '#type' => 'select',
     '#title' => t('Index Depth'),
@@ -1057,12 +1041,7 @@ function recipe_get_recipe_terms() {
  @return array the vocabularies.
 **/
 function recipe_get_vocabularies() {
-  $allvocabularies = module_invoke('taxonomy', 'get_vocabularies');
-  $recipe_vocabs = variable_get('recipe_vocab', array());
-  $vocabularies = array();
-  foreach ($recipe_vocabs as $vocab) {
-    $vocabularies[] = $allvocabularies[$vocab];
-  }
+  $vocabularies = module_invoke('taxonomy', 'get_vocabularies', 'recipe');
   return $vocabularies;
 }
 
