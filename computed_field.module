@@ -65,10 +65,11 @@ function computed_field_widget_settings($op, $widget) {
         '#default_value' => isset($widget['display']) ? $widget['display'] : true,
       );
       $form['display_format'] = array(
-        '#type' => 'textfield',
+        '#type' => 'textarea',
         '#title' => t('Display Format'),
-        '#description' => t('enter a string (without the quotes) with ') . '%value' . t(' in which ') . '%value' . t(' will be substituted for the field value on display.'),
-        '#default_value' => isset($widget['display_format']) ? $widget['display_format'] : '%value',
+        //'#description' => t('enter a string (without the quotes) with ') . '%value' . t(' in which ') . '%value' . t(' will be substituted for the field value on display.'),
+		'#description' => t('This code should assign a string to the $display variable, which will be printed as the value of the field. The stored value of the field is in $node_field_item[\'value\'].'),
+        '#default_value' => isset($widget['display_format']) ? $widget['display_format'] : '$display = $node_field_item[\'value\'];',
       );
       return $form;
     case 'validate':
@@ -167,7 +168,7 @@ function computed_field_field($op, &$node, $field, &$node_field, $teaser, $page)
           _computed_field_compute_value($node, $field, $node_field);
         }
         foreach ($node_field as $delta => $item) {
-          $node_field[$delta]['view'] = computed_field_view_item($field, $item);
+          $node_field[$delta]['view'] = computed_field_field_view_item($field, $item);
         }
         return theme('field', $node, $field, $node_field, $teaser, $page);
       }
@@ -180,9 +181,13 @@ function computed_field_field($op, &$node, $field, &$node_field, $teaser, $page)
 /**
  * Implementation of cck hook_field_view_item
  */
-function computed_field_view_item($field, $node_field_item) {
+function computed_field_field_view_item($field, $node_field_item) {
+  global $base_url;
   if ($field['widget']['display']) {
-    return t($field['widget']['display_format'], array('%value' => $node_field_item['value']));
+	$display = '';
+	eval($field['widget']['display_format']);
+	return $display;
+    //return t($field['widget']['display_format'], array('%value' => $node_field_item['value'], '%base_path' => base_path(), '%base_url' => $base_url));
   }
 }
 
