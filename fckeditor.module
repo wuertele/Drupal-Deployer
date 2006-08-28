@@ -1,26 +1,32 @@
 <?php
-
-/** 
- * FCKEditor Module
+/*
+ * FCKeditor Module for Drupal 4.7
  * 
- * This module allows Drupal to replace textarea fields with FCKEditor. This HTML 
- * text editor brings to the web many of the powerful functionalities of known 
- * desktop editors like Word. It's really  lightweight and doesn't require any 
- * kind of installation on the client computer.
- * 
- * 
+ * This module allows Drupal to replace textarea fields with FCKEditor.
+ *
+ * This HTML text editor brings to the web many of the powerful functionalities
+ * of known desktop editors like Word. It's really  lightweight and doesn't
+ * require any kind of installation on the client computer.
+ *
+ * ----------------------------------------------------------------------------
+ *
  * FCKeditor - The text editor for internet
- * Copyright (C) 2003-2004 Frederico Caldeira Knabben
+ * Copyright (C) 2003-2006 Frederico Caldeira Knabben
  * 
  * Licensed under the terms of the GNU Lesser General Public License:
- *     http://www.opensource.org/licenses/lgpl-license.php
+ * 		http://www.opensource.org/licenses/lgpl-license.php
  * 
  * For further information visit:
- *     http://www.fckeditor.net/
+ * 		http://www.fckeditor.net/
  *
+ * ----------------------------------------------------------------------------
  *
  * @version 1.0
  * @author  LatPro Inc (George)
+ * @version 1.1
+ * @author  Frederico Caldeira Knabben (www.fckeditor.net)
+ * @version 1.2
+ * @author Ontwerpwerk (www.ontwerpwerk.nl)
  */
 
 
@@ -29,7 +35,7 @@
  */
 function fckeditor_help($section = '') {
   if ($section == 'admin/modules#description') {
-    return $output = t("Allows Drupal to replace textarea fields with FCKEditor");
+    return $output = t("Enables the usage of FCKeditor (WYSIWYG editor) instead of plain text fields.");
   }
   return $output;
 }
@@ -39,144 +45,194 @@ function fckeditor_help($section = '') {
  * Implementation of hook_perm
  */
 function fckeditor_perm() {
-  return array('use fckeditor');
+  return array('use default fckeditor', 'use advanced fckeditor');
 }
-
 
 /**
  * Implementation of textarea
  */
-function fckeditor_textarea($op, $name) {
-  $output = '';
-  $access = user_access('use fckeditor');
-  $fckeditor_mode = variable_get("fckeditor_popup", '0');
-
-  if ( fckeditor_is_compatible_client() && $access) {
-    if ( $op == 'pre' ) {
-      $output = '';
-    }
-    if ( $op == 'post' ) {
-      if( $fckeditor_mode ) {
-        $output .= fckeditor_popup_editor($name);
-      } else {
-        $output = "<script>document.getElementById('edit-$name').style.display = 'none';</script>";
-        $output .= fckeditor_create_editor($name);
-      }
+function fckeditor_elements() {
+  $type = array();
+  if (user_access('use advanced fckeditor') || user_access('use default fckeditor')) { 
+    // only roles with permission get the fckeditor
+    if (fckeditor_is_compatible_client()) {
+      // it would be useless to dig deeper if we're not able or allowed to
+      $type['textarea'] = array(
+        '#process' => array(
+          'fckeditor_process_textarea' => array()
+        ),
+      );
     }
   }
-  return $output;
+  return $type;
 }
-
 
 /**
  * Implementation of hook_setting().
  */
 function fckeditor_settings() {
-  $output = form_textfield(
-    t("Base Path"), 
-    "fckeditor_base_path", 
-    variable_get("fckeditor_base_path", 'modules/fckeditor/lib/'), 
-    60, 255, t('The directory which contains FCKEditor scripts'));
-    
-  $output .= form_select(
-    t('Mode'), 
-    'fckeditor_popup', 
-    variable_get('fckeditor_popup', '0'), 
-    array('0' => 'Textarea replace', '1' => 'Pop Up Window'), 
-    t('Popup window or Textarea replace.'));
+  // Settings form
+  variable_set('fckeditor_default_base_path', fckeditor_basepath());
+  $toolbar_options = array('Default' => 'Default', 'DrupalFull' => 'Drupal Full', 'DrupalBasic' =>  'Drupal Basic', 'Basic' => 'Basic');
+  
+  // Generate the form - settings applying to all patterns first
+  $form['fckeditor_settings'] = array(
+    '#type' => 'fieldset',
+    '#weight' => -20,
+    '#title' => t('Basic settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE
+  );
+  $form['fckeditor_settings']['fckeditor_base_path'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Base Path'),
+    '#default_value' => variable_get("fckeditor_base_path", 'modules/fckeditor/lib/'),
+    '#description' => t('The directory which contains FCKEditor scripts (recommended default: %default).', array('%default'=>variable_get('fckeditor_default_base_path',''))),
+  );
+  $form['fckeditor_settings']['fckeditor_default_toolbar'] = array(
+    '#type' => 'select',
+    '#title' => t('Default Toolbar'),
+    '#default_value' => variable_get('fckeditor_default_toolbar', 'DrupalBasic'),
+    '#options' => $toolbar_options,
+    '#description' => t('Choose a default toolbar set.'),
+  );
+  $form['fckeditor_settings']['fckeditor_advanced_toolbar'] = array(
+    '#type' => 'select',
+    '#title' => t('Advanced Toolbar'),
+    '#default_value' => variable_get('fckeditor_advanced_toolbar', 'DrupalFull'),
+    '#options' => $toolbar_options,
+    '#description' => t('Choose a toolbar set for administrators.'),
+  );
 
-  $output .= form_select(
-    t('Toolbar'), 
-    'fckeditor_toolbar', 
-    variable_get('fckeditor_toolbar', 'Default'), 
-    array('Default' => 'Default', 'Basic' => 'Basic'), 
-    t('The toolbar set.'));
+  $form['fckeditor_exclude_settings'] = array(
+    '#type' => 'fieldset',
+    '#weight' => -15,
+    '#title' => t('Exclusion settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $form['fckeditor_exclude_settings']['fckeditor_minimum_rows'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Minimum rows'),
+    '#default_value' => variable_get('fckeditor_minimum_rows', 5),
+    '#description' => t("Textareas must have a minimum of rows before FCKeditor will be triggered"),
+  );
+  /*
+  // get excluded fields - so we can have normal textareas too
+  // split the phrase by any number of commas or space characters,
+  // which include " ", \r, \t, \n and \f
+  */
+  $form['fckeditor_exclude_settings']['fckeditor_exclude'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Exclude'),
+    '#cols' => 60,
+    '#rows' => 5,
+    '#default_value' => variable_get("fckeditor_exclude", ''),
+    '#description' => t("Names (HTML ID's) of fields that may not have an FCKeditor (separated by commas, spaces or newlines. You may also use * for a wildcard)"),
+  );
 
-  $output .= form_select(
-    t('Skin'), 
-    'fckeditor_skin', 
-    variable_get('fckeditor_skin', 'default'), 
-    array('default' => 'Default', 'silver' => 'Silver', 'office2003' => 'Office 2003'), 
-    t('The toolbar set.'));
+  $form['fckeditor_special_settings'] = array(
+    '#type' => 'fieldset',
+    '#weight' => -10,
+    '#title' => t('Advanced settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $form['fckeditor_special_settings']['fckeditor_popup'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use FCKEditor in a popup window'),
+    '#default_value' => variable_get('fckeditor_popup', '0'),
+    '#description' => t('Popup window or Textarea replace.'),
+  );
+  $form['fckeditor_special_settings']['fckeditor_toolbar_start_expanded'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Start the toolbar expanded'),
+    '#default_value' => variable_get('fckeditor_toolbar_start_expanded', '1'),
+    '#description' => t('The toolbar start expanded or collapsed.'),
+  );
+  $form['fckeditor_special_settings']['fckeditor_width'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Width'),
+    '#default_value' => variable_get("fckeditor_width", "100%"),
+    '#description' => t("width (pixels/percent)"),
+  );
 
-  $output .= form_select(
-    t('Toolbar start expanded'), 
-    'fckeditor_toolbar_start_expanded', 
-    variable_get('fckeditor_toolbar_start_expanded', 'true'), 
-    array('true' => 'Yes', 'false' => 'No'), 
-    t('The toolbar start expanded or collapsed.'));
+  $form['fckeditor_skin'] = array('#type' => 'value', '#value' => variable_get('fckeditor_skin', 'default'));
 
-  $output .= form_textfield(
-    t("Height"), 
-    "fckeditor_height", 
-    variable_get("fckeditor_height", 500), 
-    10, 10, t("height (pixels/percent)"));
-    
-  $output .= form_textfield(
-    t("Width"), "fckeditor_width", 
-    variable_get("fckeditor_width", '100%'), 
-    10, 10, t("width (pixels/percent)"));
-    
-  return $output;
+  return $form;
 }  
-
-/**
- * This function create the PopUp window required for the FCKEditor
- */
-function fckeditor_popup_editor($name) {
-  $html = '';
-  $base_path = variable_get("fckeditor_base_path", '/modules/fckeditor/lib/');
-  
-  $link = $base_path . "fckpopup.php?name=$name";
-  $link .= '&Toolbar=' . variable_get("fckeditor_toolbar", 'Default') . fckeditor_config_string();
-  
-  $html .= "\n<script> \n  var oFCKta = null; \n" .
-           "  function wFCK(oTArea) { \n" .
-           "    oFCKta = oTArea; \n" .
-           "    window.open('$link','$name','toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=no,resizable=1,dependent=yes'); \n" .
-           "  } \n</script> \n";  
-  
-  $html .= "<br /><input type=\"button\" value=\"FCKeditor\" onClick=\"wFCK(document.getElementById( 'edit-$name' )); \">";
-  
-  return $html;
-}
-
 
 
 /**
  * This function create the HTML objects required for the FCKEditor
  */
-function fckeditor_create_editor($name) {
-  $html = '';
-  $base_path = variable_get("fckeditor_base_path", 'modules/fckeditor/lib/');
-  
-  $link = "$base_path" . "editor/fckeditor.html?InstanceName=edit[$name]";
-  $link .= '&Toolbar=' . variable_get("fckeditor_toolbar", 'Default');
-  
-  $height = variable_get("fckeditor_height", '500');
-  $width = variable_get("fckeditor_width", '100%');
-  
-  
-  // Render the configurations hidden field.
-  $html .= '<input type="hidden" id="edit-';
-  $html .= $name;
-  $html .= '___Config" value="';
-  $html .= fckeditor_config_string();
-  $html .= '">';
+function fckeditor_process_textarea($element) {
+  $exclude = preg_split("/[\s,]+/", strip_tags(variable_get("fckeditor_exclude", '')));
 
-  // Render the editor IFRAME.
-  $html .= '<iframe id="edit-';
-  $html .= $name;
-  $html .= '___Frame" src="';
-  $html .= $link;
-  $html .= "\" width=\"$width\" height=\"$height\" frameborder=\"no\" scrolling=\"no\"></iframe>" ;
+  if ($element['#rows'] > variable_get('fckeditor_minimum_rows', 5)
+                  && !array_pregsearch($element['#id'], $exclude)) {
+    // only when a textarea has enough rows and is not in the exclusion list
 
-  return $html;  
+    // setting some variables
+    $module_path = drupal_get_path('module', 'fckeditor');
+    $base_path = variable_get("fckeditor_base_path", fckeditor_basepath());
+    $js_id = 'oFCKeditor_' . str_replace('-', '_', $element['#id']);
+
+    // configured in settings
+    $width = variable_get("fckeditor_width", '100%');
+
+    // sensible default for small toolbars
+    $height = $element['#rows'] * 18 + 100;
+
+    // nessecary because FCKeditor interferes with resize script
+    $element['#resizable'] = FALSE;
+
+    drupal_add_js(preg_replace('/^\//', '', $base_path) . 'fckeditor.js');
+
+    if (user_access('use advanced fckeditor')) {
+      $toolbar = variable_get("fckeditor_advanced_toolbar", 'DrupalFull');
+      $height += 100; // sensible default for admin toolbars toolbars
+    } else {
+      $toolbar = variable_get("fckeditor_default_toolbar", 'DrupalBasic');
+    }
+
+  	$element['#suffix'] .= "
+<script type=\"text/javascript\">
+var ".$js_id." = new FCKeditor( '".$element['#id']."' );
+".$js_id.".BasePath	= '".$base_path."';
+".$js_id.".Config['CustomConfigurationsPath'] = '/".$module_path."/fckeditor.config.js';
+".$js_id.".ToolbarSet = '".$toolbar."';
+</script>\n";
+
+  	if (variable_get('fckeditor_popup', '0')) {
+  		// Add the script file with the popup open function.
+  		drupal_add_js($module_path . '/fckeditor.popup.js');
+  		$element['#title'] .= " <span class=\"fckeditor_popuplink\">(<a href=\"#\" onclick=\"FCKeditor_OpenPopup('/".$module_path."/fckeditor.popup.html?var=".$js_id."&el=".$element['#id']."');return false;\">" . t('Open rich editor') . "</a>)</span>" ;
+  	} else {
+      // if no popup mode, add the editor
+   		$element['#suffix'] .="
+  <script type=\"text/javascript\">
+  ".$js_id.".ReplaceTextarea();
+  </script>\n";
+    }
+  }
+
+  return $element;
 }
 
+if (!function_exists('array_pregsearch')) {
+  function array_pregsearch($search, $array) {
+    foreach ($array as $key => $value) {
+      if (!empty($value) && preg_match('/'.str_replace('*','.*',$value).'/si', $search)) {
+        return $key;
+      }
+    }
+    return false;
+  }
+}
 
 /**
- * Test if client support the FCKEditor
+ * Test if client supports the FCKEditor
  */
 function fckeditor_is_compatible_client() {
   $sAgent = $_SERVER['HTTP_USER_AGENT'] ;
@@ -193,19 +249,15 @@ function fckeditor_is_compatible_client() {
     return false;
 }
 
-
 /**
- * Return the configuration string
+ * Gets the Base Path of the FCKeditor installation.
  */
-function fckeditor_config_string() {
-  $base_path = variable_get("fckeditor_base_path", 'modules/fckeditor/lib');
-  $skin = variable_get("fckeditor_skin", 'default');
-  $start = variable_get('fckeditor_toolbar_start_expanded', 'true');
-  
-  $output = '&DefaultLanguage=en&AutoDetectLanguage=true';
-  $output .= '&SkinPath=' . $base_path . "editor/skins/$skin/";
-  $output .= '&ToolbarStartExpanded=' . $start;
-  
-  return $output;
+function fckeditor_basepath() {
+	$path = variable_get( 'fckeditor_base_path', false );
+	
+	if ( !$path ) {
+		return '/' . drupal_get_path('module', 'fckeditor') . '/fckeditor/';
+	}
+	
+	return $path;
 }
-?>

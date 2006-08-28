@@ -7,13 +7,13 @@ many of the powerful functionalities of known desktop editors like Word.
 It's really lightweight and doesn't require any kind of installation on the 
 client computer.
 
-
-
-NOTE: FCKeditor for Drupal relays on an external library called fckeditor. 
+NOTE: FCKeditor for Drupal relays on an external library called FCKeditor. 
 For further information please refer to:
 
+-------------------------------------------------------------------------------
+
 FCKeditor - The text editor for internet
-Copyright (C) 2003-2004 Frederico Caldeira Knabben
+Copyright (C) 2003-2006 Frederico Caldeira Knabben
  
 Licensed under the terms of the GNU Lesser General Public License:
 		http://www.opensource.org/licenses/lgpl-license.php
@@ -21,37 +21,32 @@ Licensed under the terms of the GNU Lesser General Public License:
 For further information visit:
 		http://www.fckeditor.net/
 
-
+-------------------------------------------------------------------------------
 
 Requirements
 ------------
-- Drupal 4.5.x => 4.6.3
+- Drupal 4.7
 - PHP 4.3.0 or greater
-- FCKEditor 2.0 (http://www.fckeditor.net/)
-
-
+- FCKEditor 2.x (http://www.fckeditor.net/)
 
 Installation
 ------------
-  1. Copy fckeditor folder to modules/.
-  2. Download FCKeditor 2.0 from http://www.fckeditor.net and copy the
-     distribution files to modules/fckeditor/lib.
-  3. If upgrading, make sure modules/fckeditor/lib/fckpopup.php is not
-     deleted as it is required for "Pop Up Window" Mode. 
-
-
+  1. Copy the module fckeditor folder to modules/.
+  2. Download FCKeditor 2.x from http://www.fckeditor.net and copy the
+     distribution files (the contents of the "fckeditor" directory from the
+     FCKeditor distribution file) to modules/fckeditor/fckeditor.
 
 Configuration
 -------------
-  1. Modify the fckconfig.js file to custom your needs (not required)
+  1. Modify the fckeditor.config.js file to custom your needs (optional).
   2. Enable the module as usual from Drupal's admin pages.
   3. Under settings, configure the fckeditor settings.
   4. Grant permissions to the groups you want use fckeditor.
-  5. If you do not want to replace all textareas and/or only use fckeditor 
-     when required, select "Pop Up Window" Mode in fckeditor settings.
-
 
 Server Side Integration
+-----------------------
+NOTE: Server Side Integration is not yet tested for drupal 4.7, the configuration 
+instructions are for the previous version, and will probably not work
 -----------------------
 The editor gives the end user the flexibility to create a custom file browser 
 that can be integrated on it. The file browser allows users to view the
@@ -78,13 +73,14 @@ directory (create foldes and upload files). To enable the File Browser
    
 Credits
 -------
-LatPro Inc.
 
  - FCKeditor for Drupal Core functionality originally written by:
-     Jorge Tite
+     Frederico Caldeira Knabben
+     Jorge Tite (LatPro Inc.)
+
+ - FCKeditor for Drupal 4.7
+     Ontwerpwerk (www.ontwerpwerk.nl)
+
  - FCKeditor - The text editor for internet
-     Copyright (C) 2003-2004 Frederico Caldeira Knabben
-     http://www.opensource.org/licenses/lgpl-license.php
+     Copyright (C) 2003-2006 Frederico Caldeira Knabben
      http://www.fckeditor.net/
- - FCKeditor for Drupal "Pop Up Window" extension added by:
-     Davide Santolin   
