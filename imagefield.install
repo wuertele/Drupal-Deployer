@@ -14,37 +14,24 @@ function imagefield_install() {
 function imagefield_update_1() {
   $ret = array();
   
-  // test if the table exists since this should only be a problem for early beta users.  
-  $result = db_query("show tables like '{node_field_imagefield_data}'");
-  if (db_result($result,0,0)) {
-    include_once(drupal_get_path('module', 'content') .'/content.module');
-    include_once(drupal_get_path('module', 'content') .'/content_admin.inc');
+  include_once(drupal_get_path('module', 'content') .'/content.module');
+  include_once(drupal_get_path('module', 'content') .'/content_admin.inc');
 
   
 
-    $fields = _content_fields();
+  $fields = content_fields();
 
-    foreach ($fields as $field) {
-      switch ($field['type']) {
-        case 'image':
-          $columns = array(
-            'fid' => array('type' => 'int', 'not null' => TRUE, 'default' => '0'),
-          );
-          content_alter_db_field(array(), array(), $field, $columns);
-          if ($field['multiple']) {
-            $ret[] = update_sql('INSERT INTO {node_data_'. $field['field_name'] .'} (vid, delta, nid, '. $field['field_name'] ."_fid) SELECT vid, delta, nid, field_fid FROM {node_field_imagefield_data} WHERE field_name = '". $field['field_name'] ."'");
-          }
-          else {
-            $ret[] = update_sql('INSERT INTO {node_data_'. $field['field_name'] .'} (vid, nid, '. $field['field_name'] ."_fid) SELECT vid, nid, field_fid FROM {node_field_imagefield_data} WHERE field_name = '". $field['field_name'] ."'");
-          }
-          break;
-      }
+  foreach ($fields as $field) {
+    switch ($field['type']) {
+      case 'file':
+        $columns = array(
+          'list' => array('type' => 'int', 'not null' => TRUE, 'default' => '0'),
+        );
+        content_alter_db_field(array(), array(), $field, $columns);
+        break;
     }
-
-    $ret[] = update_sql('DROP TABLE {node_field_imagefield_data}');
-
-    db_query('DELETE FROM {cache}');
   }
+  db_query('DELETE FROM {cache}');
   return $ret;
 }
 

@@ -24,27 +24,32 @@ function imagefield_help($section) {
 
 function imagefield_menu($maycache) {
   $items = array();
+  if ($maycache) {
 
-  // Add handlers for previewing new uploads.
-  if ($_SESSION['imagefield']) {
-    foreach ($_SESSION['imagefield'] as $fieldname => $files) {
-      foreach($files as $delta => $file) {
-        $filename = file_create_filename($file['filename'], file_create_path());
-        // strip file_directory_path() from private downloads path. @see file_create_url
-        if (variable_get('file_downloads', FILE_DOWNLOADS_PUBLIC) ==  FILE_DOWNLOADS_PRIVATE) {
-          if (strpos($filename, file_directory_path()) !== false) {
-            $filename = trim(substr($filename, strlen(file_directory_path())), '\\/');
+  } 
+  else {
+    // Add handlers for previewing new uploads.
+    if ($_SESSION['imagefield']) {
+      foreach ($_SESSION['imagefield'] as $fieldname => $files) {
+        foreach($files as $delta => $file) {
+          $filename = file_create_filename($file['filename'], file_create_path());
+          // strip file_directory_path() from private downloads path. @see file_create_url
+          if (variable_get('file_downloads', FILE_DOWNLOADS_PUBLIC) ==  FILE_DOWNLOADS_PRIVATE) {
+            if (strpos($filename, file_directory_path()) !== false) {
+              $filename = trim(substr($filename, strlen(file_directory_path())), '\\/');
+            }
+            $filename = 'system/files/' . $filename;
           }
-          $filename = 'system/files/' . $filename;
+          $items[] = array(
+            'path' => $filename, 'title' => t('file download'),
+            'callback' => '_imagefield_preview',
+            'access' => TRUE,
+            'type' => MENU_CALLBACK
+          );
+          $file['preview'] = $filename;
+          $_SESSION['imagefield'][$fieldname][$delta] = $file;        
+          //drupal_set_message($filename);
         }
-        $items[] = array(
-          'path' => $filename, 'title' => t('file download'),
-          'callback' => '_imagefield_preview',
-          'access' => TRUE,
-          'type' => MENU_CALLBACK
-        );
-        $file['preview'] = $filename;
-        $_SESSION['imagefield'][$fieldname][$delta] = $file;        
       }
     }
   }
@@ -154,12 +159,15 @@ function imagefield_field($op, $node, $field, &$node_field, $a1, $a2) {
   switch ($op) {
     // called after content.module loads default data.
     case 'load':
-      $values = array();
-      foreach ($node_field as $delta => $file) {
-        $values[$delta]  = array_merge($node_field[$delta], _imagefield_file_load($file['fid']));
-        $node_field[$delta] = $values[$delta];
-      }
-      $output = array($fieldname => $values);
+      $output = array();
+      if (count($node_field)) {
+        $values = array();
+        foreach ($node_field as $delta => $file) {
+          $values[$delta]  = array_merge($node_field[$delta], _imagefield_file_load($file['fid']));
+          $node_field[$delta] = $values[$delta];
+        }
+        $output = array($fieldname => $values);
+      };
       break; 
 
     case 'view':
@@ -310,6 +318,7 @@ function imagefield_widget($op, $node, $field, &$node_field) {
           // Remove old temporary file from session.
           imagefield_clear_field_session($fieldname);
         }
+        //drupal_set_message('<pre>'. print_r($file, true) .'</pre>');
         $file['sessionid'] = count($_SESSION['imagefield'][$fieldname]);
         $_SESSION['imagefield'][$fieldname][$file['sessionid']] = $file;
       }
@@ -317,15 +326,30 @@ function imagefield_widget($op, $node, $field, &$node_field) {
 
       
       // Load files from preview state. before committing actions.
+      /* Don't do this until we here whether cck is going to support this...
+         although it is really needed if anyother module wants to modify imagefields.
+
       if (is_array($_SESSION['imagefield'][$fieldname]) && count($_SESSION['imagefield'][$fieldname])) {
         foreach($_SESSION['imagefield'][$fieldname] as $delta => $file) {
           $node_field[] = $file;
         }
       }
+
+      */
+      //drupal_set_message('imagefield['. $fieldname .'] '. $op .' node field: <pre>'. print_r($node_field, true) .'</pre>');
       break;
 
     case 'form':
-      
+      //drupal_set_message('imagefield['. $fieldname .'] '. $op .' node field: <pre>'. print_r($node_field, true) .'</pre>');
+      /* This is hack since content.module isn't returning data added to node_field in hook_widget op=prepare form values.
+         its really annoying with new imagefields that don't already have data in them.  
+      */
+      if (is_array($_SESSION['imagefield'][$fieldname]) && count($_SESSION['imagefield'][$fieldname])) {
+        foreach($_SESSION['imagefield'][$fieldname] as $delta => $file) {
+          $node_field[] = $file;
+        }
+      } 
+
       $form = _imagefield_widget_form($node, $field, $node_field);
       return $form;
 
@@ -348,7 +372,7 @@ function _imagefield_widget_form($node, $field, &$node_field) {
   $form[$fieldname] = array(
     '#type' => 'fieldset',
     '#title' => t($field['widget']['label']),
-    '#weight' => 5,
+    '#weight' => $field['widget']['weight'],
     '#collapsible' => TRUE,
     '#collapsed' => FALSE,
     '#tree' => TRUE,
