@@ -167,8 +167,8 @@ function fckeditor_process_textarea($element) {
     // only when a textarea has enough rows and is not in the exclusion list
 
     // setting some variables
-    $module_path = fckeditor_modulepath();
-    $base_path = fckeditor_basepath();
+    $module_drupal_path	= drupal_get_path('module', 'fckeditor');
+    $module_full_path	= base_path() . $module_drupal_path;
     $js_id = 'oFCKeditor_' . str_replace('-', '_', $element['#id']);
 
     // configured in settings
@@ -180,7 +180,7 @@ function fckeditor_process_textarea($element) {
     // nessecary because FCKeditor interferes with resize script
     $element['#resizable'] = FALSE;
 
-    drupal_add_js(preg_replace('/^\//', '', $base_path) . 'fckeditor.js');
+    drupal_add_js($module_drupal_path . '/fckeditor/fckeditor.js');
 
     if (user_access('use advanced fckeditor')) {
       $toolbar = variable_get("fckeditor_advanced_toolbar", 'DrupalFull');
@@ -192,16 +192,16 @@ function fckeditor_process_textarea($element) {
   	$element['#suffix'] .= "
 <script type=\"text/javascript\">
 var ".$js_id." = new FCKeditor( '".$element['#id']."' );
-".$js_id.".BasePath	= '".$base_path."';
-".$js_id.".Config['CustomConfigurationsPath'] = '".$module_path."/fckeditor.config.js';
+".$js_id.".BasePath	= '".$module_full_path."/fckeditor/';
+".$js_id.".Config['CustomConfigurationsPath'] = '".$module_full_path."/fckeditor.config.js';
 ".$js_id.".ToolbarSet = '".$toolbar."';
 ".$js_id.".Height = '".$height."';
 </script>\n";
 
   	if (variable_get('fckeditor_popup', '0')) {
   		// Add the script file with the popup open function.
-  		drupal_add_js($module_path . '/fckeditor.popup.js');
-  		$element['#title'] .= " <span class=\"fckeditor_popuplink\">(<a href=\"#\" onclick=\"FCKeditor_OpenPopup('".$module_path."/fckeditor.popup.html?var=".$js_id."&el=".$element['#id']."');return false;\">" . t('Open rich editor') . "</a>)</span>" ;
+      drupal_add_js($module_drupal_path . '/fckeditor.popup.js');
+  		$element['#title'] .= " <span class=\"fckeditor_popuplink\">(<a href=\"#\" onclick=\"FCKeditor_OpenPopup('".$module_full_path."/fckeditor.popup.html?var=".$js_id."&el=".$element['#id']."');return false;\">" . t('Open rich editor') . "</a>)</span>" ;
   	} else {
       // if no popup mode, add the editor
    		$element['#suffix'] .="
@@ -241,31 +241,4 @@ function fckeditor_is_compatible_client() {
   }
   else
     return false;
-}
-
-/**
- * Gets the Base Path of the FCKeditor installation.
- */
-function fckeditor_basepath() {
-  $path = variable_get( 'fckeditor_base_path', false );
-
-  if ( !$path ) {
-    $path = fckeditor_modulepath() . '/fckeditor/';
-  }
-
-  return $path;
-}
- 	
-/**
- * Get the path for the fckeditor module. Ensures that the path starts with a
- * slash.
- */
-function fckeditor_modulepath() {
-  $path = drupal_get_path('module', 'fckeditor');
-
-  if ( substr($path, 0, 1) != '/' ) {
-    $path = base_path() . $path;
-  }
-
-  return $path;
 }

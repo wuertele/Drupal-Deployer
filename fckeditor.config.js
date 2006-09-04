@@ -1,5 +1,5 @@
 FCKConfig.ToolbarSets["DrupalFull"] = [
-	['Source',],
+	['Source'],
 	['Cut','Copy','Paste','PasteText','PasteWord'],
 	['Undo','Redo','-','Find','Replace','-','SelectAll','RemoveFormat'],
 	['Bold','Italic','Underline','StrikeThrough','-','Subscript','Superscript'],
