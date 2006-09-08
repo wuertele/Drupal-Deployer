@@ -1297,7 +1297,6 @@ function project_issue_query_result($query = NULL, $format = 'html', $search = t
   else {
     // only set a more descriptive title if we're not looking at "my
     // issues" or "my projects", since those set their own title already.
-    dprint_r($_GET);
     if (!isset($_GET['q']) || !strpos($_GET['q'], '/user')) {
       drupal_set_title(t('issues for all projects'));
     }
