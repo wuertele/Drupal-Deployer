@@ -439,15 +439,15 @@ function feedback_mail_page_validate($form_id, &$edit, $page) {
 function feedback_mail_page_submit($form_id, &$edit, $page) {
 
   // Prepare the sender:
-  $from = check_plain($edit['mail']);
-  $name = check_plain($edit['emailname']);
+  $from = feedback_plain_text($edit['mail']);
+  $name = feedback_plain_text($edit['emailname']);
 
   // Compose the body:
   if ($page->field_category) {
     $message[] = t('Category') . ': ' . check_plain($edit['category']);
   }
   if ($page->field_body) {
-    $message[] = feedback_prepare_mailtext($edit['body']);
+    $message[] = feedback_plain_text($edit['body']);
   }
   $message[] = t('Sent from %form by %name.', array ('%name' => $name, '%form' => url($_GET['q'], NULL, NULL, TRUE)));
 
@@ -488,29 +488,29 @@ function _feedback_user_info(&$edit, $page) {
 
   $info = "\n".t('Site Name').': '.variable_get('site_name', '');
   if ($user->name) {
-    $info .= "\n".t('Registered name').': '.check_plain($user->name);
+    $info .= "\n".t('Registered name').': '.feedback_plain_text($user->name);
   }
   if ($page->field_name) {
-    $info .= "\n".t('Entered Name').': '.check_plain($edit['emailname']);
+    $info .= "\n".t('Entered Name').': '.feedback_plain_text($edit['emailname']);
   }
   $info .= "\n".t('E-mail address').': '.$edit['mail'];
   if ($page->field_postal) {
-    $info .= "\n".t('Postal address').': '.check_plain($edit['postal']);
+    $info .= "\n".t('Postal address').': '.feedback_plain_text($edit['postal']);
   }
   if ($page->field_phone) {
-    $info .= "\n".t('Phone Number').': '.check_plain($edit['phone']);
+    $info .= "\n".t('Phone Number').': '.feedback_plain_text($edit['phone']);
   }
   if ($edit['referer']) {
-    $info .= "\n".t('Referring page').': '.check_plain($edit['referer']);
+    $info .= "\n".t('Referring page').': '.feedback_plain_text($edit['referer']);
   }
   if (isset ($_SERVER['REMOTE_ADDR'])) {
-    $info .= "\n".t('IP Address').': '.'http://whois.domaintools.com/'.check_plain($_SERVER['REMOTE_ADDR']);
+    $info .= "\n".t('IP Address').': '.'http://whois.domaintools.com/'.feedback_plain_text($_SERVER['REMOTE_ADDR']);
   }
   if (isset ($_SERVER['REMOTE_HOST'])) {
-    $info .= "\n".t('Machine name').': '.check_plain($_SERVER['REMOTE_HOST']);
+    $info .= "\n".t('Machine name').': '.feedback_plain_text($_SERVER['REMOTE_HOST']);
   }
   if (isset ($_SERVER['HTTP_USER_AGENT'])) {
-    $info .= "\n".t('Browser info').': '.check_plain($_SERVER['HTTP_USER_AGENT']);
+    $info .= "\n".t('Browser info').': '.feedback_plain_text($_SERVER['HTTP_USER_AGENT']);
   }
   return $info;
 }
@@ -518,7 +518,7 @@ function _feedback_user_info(&$edit, $page) {
 /*
  * Strips tags and makes entities readable
  */
-function feedback_prepare_mailtext($string) {
+function feedback_plain_text($string) {
   return html_entity_decode(strip_tags($string), ENT_QUOTES);
 }
 
