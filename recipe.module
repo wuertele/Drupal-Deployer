@@ -652,6 +652,26 @@ function recipe_ingredient_quantity_from_decimal($ingredient_quantity) {
 }
 
 /**
+ * Converts an ingredient's quantity from fractions to decimal
+ */
+function recipe_ingredient_quantity_from_fraction($ingredient_quantity) {
+  if ($pos_slash = strpos($ingredient_quantity, '/')) {
+    $pos_space = strpos($ingredient_quantity, ' ');
+    // can't trust $pos_space to be a zero value if there is no space
+    // so set it explicitly
+    if ($pos_space === false)
+      $pos_space = 0;
+
+    $whole = substr($ingredient_quantity, 0, $pos_space);
+    $numerator = substr($ingredient_quantity, $pos_space, $pos_slash);
+    $denominator = substr($ingredient_quantity, $pos_slash+1);
+    $ingredient_quantity = $whole+($numerator/$denominator);
+  }
+
+  return $ingredient_quantity;
+}
+
+/**
  * Saves the changed ingredients of a recipe node to the database
  * (by comparing the old and new ingredients first)
  */
@@ -668,11 +688,13 @@ function recipe_save_ingredients($node) {
 
   foreach ($changes->add as $ingredient) {
     $ingredient->id = recipe_ingredient_id_from_name($ingredient->name);
+    $ingredient->quantity = recipe_ingredient_quantity_from_fraction($ingredient->quantity);
     db_query("INSERT INTO {recipe_node_ingredient} (nid,ingredient_id,quantity,unit_id) VALUES (%d,%d,%f,%d)", $node->nid, $ingredient->id, $ingredient->quantity, $ingredient->unit_id);
   }
 
   foreach ($changes->update as $ingredient) {
     $ingredient->id = recipe_ingredient_id_from_name($ingredient->name);
+    $ingredient->quantity = recipe_ingredient_quantity_from_fraction($ingredient->quantity);
     db_query("UPDATE {recipe_node_ingredient} SET quantity='%f', unit_id='%d' WHERE nid='%d' AND  ingredient_id='%d'", $ingredient->quantity, $ingredient->unit_id, $node->nid, $ingredient->id);
   }
 }
