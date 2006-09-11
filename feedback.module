@@ -40,7 +40,7 @@ function feedback_menu($may_cache) {
       'path' => 'admin/settings/feedback',
       'title' => t('feedback'),
       'callback' => 'feedback_settings_page',
-      'access' => user_access('access administration pages'),
+      'access' => user_access('administer feedback'),
       'type' => MENU_NORMAL_ITEM,
       );
   }
@@ -105,25 +105,20 @@ function feedback_settings_overview($page) {
 }
 
 function feedback_overview_validate($form_id, &$edit, &$form, &$pages) {
-
   if (in_array($edit['page_name'], $pages)) {
     form_set_error('page_name', t('This page already exists.'));
   }
 }
 
-
 function feedback_overview_submit($form_id, &$edit, &$pages) {
-
   _feedback_add_page($edit['page_name']);
   drupal_set_message(t('Your feedback page has been added.'));
 }
-
 
 /**
  * Shows a form for editing a feedback page
  */
 function feedback_settings_form($pagename) {
-
   $page = _feedback_get_page($pagename);
   
   $form['email'] = array(
@@ -258,14 +253,13 @@ function feedback_settings_delete($pagename) {
  * Implementation of hook_perm().
  */
 function feedback_perm() {
-  return array ('can send feedback');
+  return array ('can send feedback', 'administer feedback');
 }
 
 /**
  * Site-wide feedback page
  */
 function feedback_mail_page() {
-
   $page = arg(1);
 
   if (!empty ($page)) {
@@ -437,7 +431,6 @@ function feedback_mail_page_validate($form_id, &$edit, $page) {
  * Process the site-wide form submission.
  */
 function feedback_mail_page_submit($form_id, &$edit, $page) {
-
   // Prepare the sender:
   $from = feedback_plain_text($edit['mail']);
   $name = feedback_plain_text($edit['emailname']);
@@ -536,7 +529,6 @@ function _feedback_get_options($text) {
  * Returns an array of all available feedback page names
  */
 function _feedback_get_page_names() {
-  
   $result = db_query('SELECT name from {feedback_pages}');
   $pages = array();
   while ($row = db_fetch_object($result)) {
@@ -561,7 +553,6 @@ function _feedback_get_page($name) {
 
   
 function  _feedback_add_page($pagename) {
-  
   $defaults = array(
     'email' => variable_get('site_mail', ini_get('sendmail_from')),
     'title' => t('feedback'), 
