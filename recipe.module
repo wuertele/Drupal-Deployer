@@ -497,6 +497,14 @@ function recipe_settings() {
     '#options' => $options,
     '#description' => t('The simple ingredient system allows all ingredients to be entered on one line.  The complex system forces the user to seperate the quanity and units from the ingredient'),
   );
+  $form['recipe_fraction_display'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Fractions Display String'),
+    '#default_value' => variable_get('recipe_fraction_display', t('{%d }%d&frasl;%d')),
+    '#size' => 35,
+    '#maxlength' => 255,
+    '#description' => t('How fractions should be displayed.  Leave blank to display as decimals.  Each incidence of %d will be replaced by the whole number, the numerator, and the denominator in that order.  Anything between curly braces will not be displayed when the whole number is equal to 0.  Recommended settings are "{%d }%d&amp;frasl;%d" or "{%d }&lt;sup&gt;%d&lt;/sup&gt;/&lt;sub&gt;%d&lt;/sub&gt;"'),
+  );
   $form['recipe_export_html_enable'] = array(
     '#type' => 'radios',
     '#title' => t('Export HTML'),
@@ -570,6 +578,77 @@ function recipe_ingredient_id_from_name($name) {
   }
 
   return $cache[$name];
+}
+
+/**
+ * Converts an ingredient's quantity from decimal to fraction
+ */
+function recipe_ingredient_quantity_from_decimal($ingredient_quantity) {
+  if (strpos($ingredient_quantity, '.')) {
+    $decimal = $ingredient_quantity;
+
+    if ($decimal == 0) {
+      $whole = 0;
+      $numerator = 0;
+      $denominator = 1;
+      $top_heavy = 0;
+    }
+    else {
+      $sign = 1;
+      if ($decimal < 0)
+        $sign = -1;
+    }
+
+    if (floor(abs($decimal)) == 0) {
+      $whole = 0;
+      $conversion = abs($decimal);
+    }
+    else {
+      $whole = floor(abs($decimal));
+      $conversion = abs($decimal);
+    }
+
+    $power = 1;
+    $flag = 0;
+    while ($flag == 0) {
+      $argument = $conversion * $power;
+      if ($argument == floor($argument)) {
+        $flag = 1;
+      }
+      else {
+        $power = $power * 10;
+      }
+    }
+   
+    $numerator = $conversion * $power;
+    $denominator = $power;
+
+    $hcf = recipe_euclid ($numerator, $denominator);
+
+    $numerator = $numerator/$hcf;
+    $denominator = $denominator/$hcf;
+    $whole = $sign * $whole;
+    $top_heavy = $sign * $numerator;
+
+    $numerator = abs($top_heavy) - (abs($whole) * $denominator);
+
+    if (($whole == 0) && ($sign == -1)) {
+        $numerator = $numerator * $sign;
+    }
+
+    $ingredient_quantity = sprintf(variable_get('recipe_fraction_display', '{%d} %d&frasl;%d'), $whole, $numerator, $denominator);
+
+    if ( ($whole == 0) && (strpos($ingredient_quantity, '{') >= 0) ) {
+      /* remove anything in curly braces */
+      $ingredient_quantity = preg_replace('/{.*}/', '', $ingredient_quantity);
+    }
+    else {
+      /* remove just the curly braces, but keep everything between them */
+      $ingredient_quantity = preg_replace('/{|}/', '', $ingredient_quantity);
+    } 
+  }
+
+  return filter_xss_admin($ingredient_quantity);
 }
 
 /**
@@ -1268,6 +1347,10 @@ function theme_node_recipe($node, $yield_form = TRUE) {
         else {
           $ingredient->quantity = '';
         }
+        if (variable_get('recipe_fraction_display', '')) {
+          $ingredient->quantity = recipe_ingredient_quantity_from_decimal($ingredient->quantity);
+        }
+
         $ingredients[] = $ingredient->quantity.$ingredient->abbreviation.' '.$ingredient->name;
       }
     }
@@ -1280,7 +1363,7 @@ function theme_node_recipe($node, $yield_form = TRUE) {
     $summary .= '<tr><th>Source</th><td>'.$node->source.'</td></tr>';
   }
   if ($node->preptime) {
-    $preptime = t("%n hours", array ("%n" => ($node->preptime / 60)));
+    $preptime = t("%n hours", array ("%n" => recipe_ingredient_quantity_from_decimal($node->preptime / 60)));
     $summary .= '<tr><th>Prep Time</th><td>'.$preptime.'</td></tr>';
   }
   $vocabs = taxonomy_get_vocabularies('recipe');
@@ -1374,5 +1457,44 @@ function theme_recipe_export_html($title, $content) {
   $html .= "</head>\n<body>\n<h1 class=title>" . $title . "</h1>\n" . $content . "\n</body>\n</html>\n";
   return $html;
 }
+
+/**
+ *
+ *
+ */
+function recipe_euclid ($number_one, $number_two) {
+      if (($number_one == 0) or ($number_two == 0)) {
+      $hcf = 1;
+      return $hcf;
+      }
+      else {
+         if ($number_one < $number_two) {
+         $buffer = $number_one;
+         $number_one = $number_two;
+         $number_two = $buffer;
+         }
+
+         $dividend = $number_one;
+         $divisor = $number_two;
+         $remainder = $dividend;
+
+         while ($remainder > 0) {
+           if ((floor($dividend/$divisor)) == ($dividend/$divisor)) {
+           $quotient = $dividend/$divisor;
+           $remainder = 0;
+           }
+           else {
+           $quotient = floor($dividend/$divisor);
+           $remainder = $dividend - ($quotient * $divisor);
+           }
+           $hcf = $divisor;
+           $dividend = $divisor;
+           $divisor = $remainder;
+         }
+
+
+    }
+   return $hcf;
+   }
 
 ?>
