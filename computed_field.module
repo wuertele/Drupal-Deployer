@@ -46,58 +46,42 @@ function computed_field_field_info() {
 }
 
 /**
- * Implementation of cck hook_widget_settings()
- */
-function computed_field_widget_settings($op, $widget) {
-  switch ($op) {
-    case 'form':
-      $form = array();
-      $form['code'] = array(
-        '#type' => 'textarea',
-        '#rows' => 15,
-        '#title' => t('Computed Code'),
-        '#description' => t('The variables available to your code are: ') . '<code>&amp;$node, $field, and &amp;$node_field</code>' . t('. To set the value of the field, set ') . '<code>$node_field[0][\'value\']</code>' . t('. Here\'s a simple example which sets the computed field\'s value to the value of the sum of the number fields field_a and field_b: ') . '<code>$node_field[0][\'value\'] = $node->field_a[0][\'value\'] + $node->field_b[0][\'value\'];</code>',
-        '#default_value' => isset($widget['code']) ? $widget['code'] : '',
-      );
-      $form['display'] = array(
-        '#type' => 'checkbox',
-        '#title' => t('Display this field'),
-        '#default_value' => isset($widget['display']) ? $widget['display'] : true,
-      );
-      $form['display_format'] = array(
-        '#type' => 'textarea',
-        '#title' => t('Display Format'),
-		'#description' => t('This code should assign a string to the $display variable, which will be printed as the value of the field. The stored value of the field is in $node_field_item[\'value\'].'),
-        '#default_value' => isset($widget['display_format']) ? $widget['display_format'] : '$display = $node_field_item[\'value\'];',
-      );
-      return $form;
-    case 'validate':
-      //TODO: can we validate the code? maybe try to parse it?
-      break;
-
-    case 'save':
-      return array('code', 'display', 'display_format');
-  }
-}
-
-/**
  * Implementation of cck hook_field_settings
  */
 function computed_field_field_settings($op, $field) {
   switch ($op) {
     case 'form':
       $form = array();
+      // these next 3 have been moved from widget to field, so they copy default values from widget
+      $form['code'] = array(
+        '#type' => 'textarea',
+        '#rows' => 15,
+        '#title' => t('Computed Code'),
+        '#description' => t('The variables available to your code are: ') . '<code>&amp;$node, $field, and &amp;$node_field</code>' . t('. To set the value of the field, set ') . '<code>$node_field[0][\'value\']</code>' . t('. Here\'s a simple example which sets the computed field\'s value to the value of the sum of the number fields field_a and field_b: ') . '<code>$node_field[0][\'value\'] = $node->field_a[0][\'value\'] + $node->field_b[0][\'value\'];</code>',
+        '#default_value' => isset($field['code']) ? $field['code'] : (isset($field['widget']['code']) ? $field['widget']['code'] : ''),
+      );
+      $form['display'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Display this field'),
+        '#default_value' => isset($field['code']) ? $field['code'] : (isset($field['widget']['display']) ? $field['widget']['display'] : true),
+      );
+      $form['display_format'] = array(
+        '#type' => 'textarea',
+        '#title' => t('Display Format'),
+		'#description' => t('This code should assign a string to the $display variable, which will be printed as the value of the field. The stored value of the field is in $node_field_item[\'value\'].'),
+        '#default_value' => isset($field['display_format']) ? $field['display_format'] : (isset($field['widget']['display_format']) ? $field['widget']['display_format'] : '$display = $node_field_item[\'value\'];'),
+      );
       $form['store'] = array(
         '#type' => 'checkbox',
         '#title' => t('Store using the database settings below'),
-        '#default_value' => isset($field['store']) ? $field['store'] : false,
+        '#default_value' => isset($field['store']) ? $field['store'] : true,
       );
       $form['database'] = array('#type' => 'fieldset', '#title' => t('Database Storage Settings'));
       $form['database']['data_type'] = array(
         '#type' => 'radios',
         '#title' => t('Data Type'),
         '#description' => t('The SQL datatype to store this field in.'),
-        '#default_value' => $field['data_type'],
+        '#default_value' => isset($field['data_type']) ? $field['data_type'] : 'varchar',
         '#options' => array('int' => 'int', 'float' => 'float', 'varchar' => 'varchar', 'text' => 'text'),
         '#required' => false,
       );
@@ -116,12 +100,12 @@ function computed_field_field_settings($op, $field) {
       $form['database']['data_not_null'] = array(
         '#type' => 'checkbox',
         '#title' => t('Not NULL'),
-        '#default_value' => isset($field['data_not_null']) ? $field['data_not_null'] : true,
+        '#default_value' => isset($field['data_not_null']) ? $field['data_not_null'] : false,
       );
       $form['database']['data_sortable'] = array(
         '#type' => 'checkbox',
         '#title' => t('Sortable'),
-        '#default_value' => isset($field['data_sortable']) ? $field['data_sortable'] : false,
+        '#default_value' => isset($field['data_sortable']) ? $field['data_sortable'] : true,
       );
       return $form;
     case 'validate':
@@ -135,7 +119,7 @@ function computed_field_field_settings($op, $field) {
       }
       break;
     case 'save':
-      return array('store', 'data_type', 'data_length', 'data_not_null', 'data_default', 'data_sortable');
+      return array('code', 'display', 'display_format', 'store', 'data_type', 'data_length', 'data_not_null', 'data_default', 'data_sortable');
     case 'database columns':
       if ($field['store']) {
         $columns = array('value' => array());
@@ -148,11 +132,25 @@ function computed_field_field_settings($op, $field) {
         }
       }
       return $columns;
+
+    case 'filters':
+      return array(
+        'default' => array(
+          'name' => t('Default'),
+          'operator' => 'views_handler_operator_gtlt',
+        ),
+      );
   }
 }
 
 function _computed_field_compute_value(&$node, $field, &$node_field) {
-  eval($field['widget']['code']);
+  if (isset($field['code'])) {
+    eval($field['code']);
+  }
+  // fall back on old widget code if field code hasn't been set
+  elseif (isset($field['widget']['code'])) {
+    eval($field['widget']['code']);
+  }
 }
 
 /**
@@ -161,17 +159,17 @@ function _computed_field_compute_value(&$node, $field, &$node_field) {
 function computed_field_field($op, &$node, $field, &$node_field, $teaser, $page) {
   switch ($op) {
     case 'view':
-      if ($field['widget']['display']) {
+      if ($field['display']) {
         // compute field on view if it isn't stored in the database
         if (!$field['store']) {
           _computed_field_compute_value($node, $field, $node_field);
         }
         if (empty($node_field)) {
-          $node_field[0]['view'] = computed_field_view_item($field, $item, $node);
+          $node_field[0]['view'] = content_format($field, $node_field[0], 'markup', $node);
         }
         else {
           foreach ($node_field as $delta => $item) {
-            $node_field[$delta]['view'] = computed_field_view_item($field, $item, $node);
+            $node_field[0]['view'] = content_format($field, $node_field[0], 'markup', $node);
           }
         }
         return theme('field', $node, $field, $node_field, $teaser, $page);
@@ -183,18 +181,6 @@ function computed_field_field($op, &$node, $field, &$node_field, $teaser, $page)
     case 'update':
       _computed_field_compute_value($node, $field, $node_field);
       break;
-  }
-}
-
-/**
- * Implementation of cck hook_view_item
- */
-function computed_field_view_item($field, $node_field_item, $node = null) {
-  global $base_url;
-  if ($field['widget']['display']) {
-    $display = '';
-    eval($field['widget']['display_format']);
-    return $display;
   }
 }
 
@@ -229,3 +215,53 @@ function computed_field_widget($op, &$node, $field, &$node_field) {
   }
 }
 
+/**
+ * Implementation of cck hook_view_item (obsolete, retained for backward compatibility with older cck)
+ */
+function computed_field_view_item($field, $node_field_item, $node = null) {
+  global $base_url;
+  if ($field['display']) {
+    $display = '';
+    eval($field['display_format']);
+    return $display;
+  }
+}
+
+/**
+ * Implementation of cck hook_field_formatter_info()
+ */
+function computed_field_field_formatter_info() {
+  return array(
+    'default' => array(
+      'label' => t('Plain text'),
+      'field types' => array('computed'),
+    ),
+    'markup' => array(
+      'label' => t('Markup'),
+      'field types' => array('computed'),
+    ),
+  );
+}
+
+/**
+ * Implementation of cck hook_field_formatter():
+ */
+function computed_field_field_formatter($field, $item, $formatter, $node) {
+  // backward compatibility with computed_field_view_item
+  global $base_url;
+  $node_field_item = $item;
+
+  $display = '';
+
+  if ($field['display']) {
+    eval($field['display_format']);
+  }
+
+  switch ($formatter) {
+    case 'markup':
+      return check_markup($display);    
+    case 'default':
+    default:
+      return check_plain($display);
+  }
+}
