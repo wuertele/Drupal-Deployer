@@ -792,6 +792,21 @@ function recipe_unit_abbreviation($unit_id) {
 }
 
 /**
+ * Converts a recipe unit ID to it's name */
+function recipe_unit_name($unit_id) {
+  static $unit_names;
+
+  if (!$unit_names) {
+    $rs = db_query('SELECT id,name FROM {recipe_unit}');
+    while ($unit = db_fetch_object($rs)) {
+      $unit_names[$unit->id] = $unit->name;
+    }
+  }
+
+  return $unit_names[$unit_id];
+}
+
+/**
  * Menu callback; Generates various representation of a recipe page with
  * all descendants and prints the requested representation to output.
  *
@@ -1371,7 +1386,7 @@ function theme_node_recipe($node, $yield_form = TRUE) {
           $ingredient->quantity = recipe_ingredient_quantity_from_decimal($ingredient->quantity);
         }
 
-        $ingredients[] = $ingredient->quantity.$ingredient->abbreviation.' '.$ingredient->name;
+        $ingredients[] = $ingredient->quantity.'<acronym title="'.recipe_unit_name($ingredient->unit_id).'">'.$ingredient->abbreviation.'</acronym>'.' '.$ingredient->name;
       }
     }
   }
