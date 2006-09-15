@@ -165,11 +165,11 @@ function computed_field_field($op, &$node, $field, &$node_field, $teaser, $page)
           _computed_field_compute_value($node, $field, $node_field);
         }
         if (empty($node_field)) {
-          $node_field[0]['view'] = content_format($field, $node_field[0], 'markup', $node);
+          $node_field[0]['view'] = content_format($field, $node_field[0], 'default', $node);
         }
         else {
           foreach ($node_field as $delta => $item) {
-            $node_field[0]['view'] = content_format($field, $node_field[0], 'markup', $node);
+            $node_field[0]['view'] = content_format($field, $node_field[0], 'default', $node);
           }
         }
         return theme('field', $node, $field, $node_field, $teaser, $page);
@@ -233,6 +233,10 @@ function computed_field_view_item($field, $node_field_item, $node = null) {
 function computed_field_field_formatter_info() {
   return array(
     'default' => array(
+      'label' => t('Raw text'),
+      'field types' => array('computed'),
+    ),
+    'plain' => array(
       'label' => t('Plain text'),
       'field types' => array('computed'),
     ),
@@ -258,10 +262,12 @@ function computed_field_field_formatter($field, $item, $formatter, $node) {
   }
 
   switch ($formatter) {
+    case 'plain':
+      return check_plain($display);
     case 'markup':
       return check_markup($display);    
     case 'default':
     default:
-      return check_plain($display);
+      return $display;
   }
 }
