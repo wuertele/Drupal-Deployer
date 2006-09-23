@@ -163,7 +163,7 @@ function fckeditor_process_textarea($element) {
   $exclude = preg_split("/[\s,]+/", strip_tags(variable_get("fckeditor_exclude", '')));
 
   if ($element['#rows'] > variable_get('fckeditor_minimum_rows', 5)
-                  && !array_pregsearch($element['#id'], $exclude)) {
+                  && !fckeditor_idsearch($element['#id'], $exclude)) {
     // only when a textarea has enough rows and is not in the exclusion list
 
     // setting some variables
@@ -210,20 +210,24 @@ var ".$js_id." = new FCKeditor( '".$element['#id']."' );
   </script>\n";
     }
   }
-
+  $element['#suffix'] .= theme('placeholder',$element['#id']);
   return $element;
 }
 
-if (!function_exists('array_pregsearch')) {
-  function array_pregsearch($search, $array) {
-    foreach ($array as $key => $value) {
-      if (!empty($value) && preg_match('/'.str_replace('*','.*',$value).'/si', $search)) {
-        return $key;
-      }
+
+/**
+ * Search the disabled field ids for matches, return true on the first match
+ */
+function fckeditor_idsearch($search, $array) {
+  foreach ($array as $key => $value) {
+    if (!empty($value) && preg_match('/^'.str_replace('*','.*',$value).'$/i', $search)) {
+      // on any first match we know we're done here so return positive
+      return true;
     }
-    return false;
   }
+  return false;
 }
+
 
 /**
  * Test if client supports the FCKeditor
