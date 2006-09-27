@@ -154,7 +154,7 @@ function imagefield_file_update($node, &$file, $field) {
 /**
  * Implementation of hook_field().
  */
-function imagefield_field($op, $node, $field, &$node_field, $a1, $a2) {
+function imagefield_field($op, $node, $field, &$node_field, $teaser, $page) {
   $fieldname = $field['field_name'];
   switch ($op) {
     // called after content.module loads default data.
@@ -175,7 +175,7 @@ function imagefield_field($op, $node, $field, &$node_field, $a1, $a2) {
       foreach ($node_field as $delta => $item) {
         // do not show images flagged for deletion in preview.
         if (!$item['flags']['delete'] == 1) {
-          $node_field[$delta]['view'] = theme('imagefield_image', $item); 
+          $node_field[$delta]['view'] = content_format($field, $item, ($page ? 'default' : 'thumb')); 
           $images[] =  $node_field[$delta]['view'];
         }
       }
@@ -461,9 +461,46 @@ function _imagefield_widget_form($node, $field, &$node_field) {
   return $form;
 }
 
-function imagefield_field_view_item($field, $node_field_item) {
-    $file = _imagefield_file_load($node_field_item['fid']);
-    return theme('imagefield_view_image', $file, $node_field_item['alt'], $node_field_item['title']); 
+/**
+ * Implementation of hook_field_formatter_info().
+ */
+function imagefield_field_formatter_info() {
+  $formatters = array(
+    'default' => array(
+      'label' => 'Default',
+      'field types' => array('image'),
+    ),
+  );
+  if (module_exist('imagecache')) {
+    $rules = _imagecache_get_presets();
+    foreach ($rules as $ruleid => $rulename) {
+       $formatters[$rulename] = array(
+         'label' => $rulename,
+         'field types' => array('image'),
+         );
+    }
+  }
+  return $formatters;
+}
+
+/**
+ * Implementation of hook_field_formatter().
+ *
+ */
+function imagefield_field_formatter($field, $item, $formatter) {
+  if (!isset($item['fid'])) {
+    return '';
+  }
+  
+  $file = _imagefield_file_load($item['fid']);
+  if (module_exist('imagecache')) {
+    $rules = _imagecache_get_presets();
+    if (in_array($formatter, (array) $rules)) {
+      return theme('imagecache', $formatter, $file['filepath']);
+    }
+  }
+  return theme('imagefield_image', $file, $item['title'], $item['alt']);
+
 }
 
 
@@ -510,6 +547,7 @@ function theme_imagefield_edit_image_row($element) {
 }
 
 function theme_imagefield_image($file, $alt = '', $title = '', $attributes = NULL, $getsize = TRUE) {
+  
   $file = (array)$file;
   if (!$getsize || (is_file($file['filepath']) && (list($width, $height, $type, $image_attributes) = @getimagesize($file['filepath'])))) {
     $attributes = drupal_attributes($attributes);
