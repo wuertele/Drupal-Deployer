@@ -1,6 +1,11 @@
 imagefield provides a image field type to cck.
 
-This module requires the cvs head of cck.
+
+Installing Imagefield.module:
+  Download the imagefield release for your version.
+  Untar it in the Drupal modules directory.
+  navigate to admin/modules and enable the module.
+
 
 To make previews work you should update the .htaccess file in you files
 directory.
