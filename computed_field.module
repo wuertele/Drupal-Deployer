@@ -158,12 +158,15 @@ function _computed_field_compute_value(&$node, $field, &$node_field) {
  */
 function computed_field_field($op, &$node, $field, &$node_field, $teaser, $page) {
   switch ($op) {
+    case 'load':
+      // compute field on load if it isn't stored in the database
+      if (!$field['store']) {
+	_computed_field_compute_value($node, $field, $node_field);
+	return array($field['field_name'] => $node_field);
+      }
+      break;
     case 'view':
       if ($field['display']) {
-        // compute field on view if it isn't stored in the database
-        if (!$field['store']) {
-          _computed_field_compute_value($node, $field, $node_field);
-        }
         if (empty($node_field)) {
           $node_field[0]['view'] = content_format($field, $node_field[0], 'default', $node);
         }
