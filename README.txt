@@ -1,20 +1,20 @@
 Overview
 --------
-This module allows Drupal to replace textarea fields with FCKeditor or have 
-the option to use FCKeditor in its own popup window thus allowing a user the 
-choice of when to load and use it. This HTML text editor brings to the web 
-many of the powerful functionalities of known desktop editors like Word. 
-It's really lightweight and doesn't require any kind of installation on the 
-client computer.
+This module allows Drupal to replace textarea fields with FCKeditor or have
+the option to use FCKeditor in its own popup window thus allowing a user the
+choice of when to load and use it.
+This HTML text editor brings to the web many of the powerful functionalities
+of known desktop editors like Word. It's relatively lightweight and doesn't
+require any kind of installation on the client computer.
 
-NOTE: FCKeditor for Drupal relays on an external library called FCKeditor. 
+NOTE: FCKeditor for Drupal relays on an external library called FCKeditor.
 For further information please refer to:
 
 -------------------------------------------------------------------------------
 
 FCKeditor - The text editor for internet
 Copyright (C) 2003-2006 Frederico Caldeira Knabben
- 
+
 Licensed under the terms of the GNU Lesser General Public License:
 		http://www.opensource.org/licenses/lgpl-license.php
 
@@ -39,38 +39,33 @@ Installation
 Configuration
 -------------
   1. Modify the fckeditor.config.js file to custom your needs (optional).
-  2. Enable the module as usual from Drupal's admin pages.
-  3. Under settings, configure the fckeditor settings.
-  4. Grant permissions to the groups you want use fckeditor.
+  2. Enable the imagebrowser (optional)
+  3. Enable the module as usual from Drupal's admin pages.
+  4. Under settings, configure the fckeditor settings.
+  5. Grant permissions to the groups you want use fckeditor.
 
-Server Side Integration
------------------------
-NOTE: Server Side Integration is not yet tested for drupal 4.7, the configuration 
-instructions are for the previous version, and will probably not work
------------------------
-The editor gives the end user the flexibility to create a custom file browser 
+How to enable the imagebrowser (in FCKeditor 2.3.x)
+---------------------------------------------------
+The editor gives the end user the flexibility to create a custom file browser
 that can be integrated on it. The file browser allows users to view the
-content of a specific directory on the server and add new content to that 
-directory (create foldes and upload files). To enable the File Browser 
-(server side integration pack) follow these steps
+content of a specific directory on the server and add new content to that
+directory (create foldes and upload files).
 
-  1. Edit the fckconfig.js file and set the FCKConfig.LinkBrowserURL and
-     FCKConfig.ImageBrowserURL properties to:
-         
-       FCKConfig.LinkBrowserURL = FCKConfig.BasePath + "filemanager/browser/default/browser.html?Type=Image&Connector=[context_path]/modules/fckeditor/ssip/connector.php"
-       FCKConfig.ImageBrowserURL = FCKConfig.BasePath + "filemanager/browser/default/browser.html?Type=Image&Connector=[context_path]/modules/fckeditor/ssip/connector.php"
-       
-     Note: If you are running Drupal under a directory replace '[context_path]'
-     with yours directory's name (ie. /drupal ), otherwise simply remove it
-    
-       FCKConfig.LinkBrowserURL = FCKConfig.BasePath + "filemanager/browser/default/browser.html?Type=Image&Connector=/modules/fckeditor/ssip/connector.php"
-       FCKConfig.ImageBrowserURL = FCKConfig.BasePath + "filemanager/browser/default/browser.html?Type=Image&Connector=/modules/fckeditor/ssip/connector.php"
+To enable file browsing you need to edit the connector configuration file in
+your fckeditor module directory, the file should be in:
+/fckeditor/editor/filemanager/browser/default/connectors/php/config.php
 
-  2. Modify the properties.inc file to fit your customs.
-     Note: if you are running Drupal under a directory you need to set the
-     'context_path' property to the ditectory's name
+In this file you will need to enable the file browser:
+  $Config['Enabled'] = true ;
 
-   
+To use the drupal files directory you also need to comment out the following
+line in the connector configuration:
+  //$Config['UserFilesPath'] = '/UserFiles/' ;
+
+If your file browser does not work you might need to create an "Image" and
+a "Flash" subdirectory in your drupal files directory. These directories
+probably must be world writable (chmod 0777).
+
 Credits
 -------
 

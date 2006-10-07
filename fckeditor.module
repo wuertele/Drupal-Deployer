@@ -1,7 +1,7 @@
 <?php
 /*
  * FCKeditor Module for Drupal 4.7
- * 
+ *
  * This module allows Drupal to replace textarea fields with FCKeditor.
  *
  * This HTML text editor brings to the web many of the powerful functionalities
@@ -12,10 +12,10 @@
  *
  * FCKeditor - The text editor for internet
  * Copyright (C) 2003-2006 Frederico Caldeira Knabben
- * 
+ *
  * Licensed under the terms of the GNU Lesser General Public License:
  * 		http://www.opensource.org/licenses/lgpl-license.php
- * 
+ *
  * For further information visit:
  * 		http://www.fckeditor.net/
  *
@@ -53,7 +53,7 @@ function fckeditor_perm() {
  */
 function fckeditor_elements() {
   $type = array();
-  if (user_access('use advanced fckeditor') || user_access('use default fckeditor')) { 
+  if (user_access('use advanced fckeditor') || user_access('use default fckeditor')) {
     // only roles with permission get the fckeditor
     if (fckeditor_is_compatible_client()) {
       // it would be useless to dig deeper if we're not able or allowed to
@@ -73,7 +73,7 @@ function fckeditor_elements() {
 function fckeditor_settings() {
   // Settings form
   $toolbar_options = array('Default' => 'Default', 'DrupalFull' => 'Drupal Full', 'DrupalBasic' =>  'Drupal Basic', 'Basic' => 'Basic');
-  
+
   // Generate the form - settings applying to all patterns first
   $form['fckeditor_settings'] = array(
     '#type' => 'fieldset',
@@ -153,7 +153,7 @@ function fckeditor_settings() {
   $form['fckeditor_skin'] = array('#type' => 'value', '#value' => variable_get('fckeditor_skin', 'default'));
 
   return $form;
-}  
+}
 
 
 /**
@@ -175,7 +175,7 @@ function fckeditor_process_textarea($element) {
     $width = variable_get("fckeditor_width", '100%');
 
     // sensible default for small toolbars
-    $height = $element['#rows'] * 18 + 100;
+    $height = $element['#rows'] * 16 + 100;
 
     // nessecary because FCKeditor interferes with resize script
     $element['#resizable'] = FALSE;
@@ -194,6 +194,9 @@ function fckeditor_process_textarea($element) {
 var ".$js_id." = new FCKeditor( '".$element['#id']."' );
 ".$js_id.".BasePath	= '".$module_full_path."/fckeditor/';
 ".$js_id.".Config['CustomConfigurationsPath'] = '".$module_full_path."/fckeditor.config.js';
+".$js_id.".Config['LinkBrowserURL'] = '".$module_full_path."/fckeditor/editor/filemanager/browser/default/browser.html?Connector=connectors/php/connector.php&ServerPath=/".variable_get("file_directory_path", 'files')."';
+".$js_id.".Config['ImageBrowserURL'] = '".$module_full_path."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Image&Connector=connectors/php/connector.php&ServerPath=/".variable_get("file_directory_path", 'files')."';
+".$js_id.".Config['FlashBrowserURL'] = '".$module_full_path."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Flash&Connector=connectors/php/connector.php&ServerPath=/".variable_get("file_directory_path", 'files')."';
 ".$js_id.".ToolbarSet = '".$toolbar."';
 ".$js_id.".Height = '".$height."';
 </script>\n";
@@ -210,7 +213,6 @@ var ".$js_id." = new FCKeditor( '".$element['#id']."' );
   </script>\n";
     }
   }
-  $element['#suffix'] .= theme('placeholder',$element['#id']);
   return $element;
 }
 
@@ -234,7 +236,7 @@ function fckeditor_idsearch($search, $array) {
  */
 function fckeditor_is_compatible_client() {
   $sAgent = $_SERVER['HTTP_USER_AGENT'] ;
-  
+
   if ( strpos($sAgent, 'MSIE') !== false && strpos($sAgent, 'mac') === false && strpos($sAgent, 'Opera') === false ) {
     $iVersion = (int)substr($sAgent, strpos($sAgent, 'MSIE') + 5, 3);
     return ($iVersion >= 5.5);
