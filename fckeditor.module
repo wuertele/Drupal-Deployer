@@ -1,15 +1,15 @@
 <?php
-/*
+// $Id$
+/**
+ * @file
  * FCKeditor Module for Drupal 4.7
  *
- * This module allows Drupal to replace textarea fields with FCKeditor.
- *
- * This HTML text editor brings to the web many of the powerful functionalities
- * of known desktop editors like Word. It's really  lightweight and doesn't
- * require any kind of installation on the client computer.
+ * This module allows Drupal to replace textarea fields with the FCKeditor.
+ * This HTML text editor brings many of the powerful functionalities of
+ * known desktop editors like Word to the web. It's relatively lightweight
+ * and doesn't require any kind of installation on the client computer.
  *
  * ----------------------------------------------------------------------------
- *
  * FCKeditor - The text editor for internet
  * Copyright (C) 2003-2006 Frederico Caldeira Knabben
  *
@@ -18,7 +18,6 @@
  *
  * For further information visit:
  * 		http://www.fckeditor.net/
- *
  * ----------------------------------------------------------------------------
  *
  * @version 1.0
@@ -34,8 +33,24 @@
  * Implementation of hook_help
  */
 function fckeditor_help($section = '') {
-  if ($section == 'admin/modules#description') {
-    return $output = t("Enables the usage of FCKeditor (WYSIWYG editor) instead of plain text fields.");
+  switch($section) {
+    case 'admin/modules#name':
+      $output = t("FCKeditor");
+      break;
+    case 'admin/modules#description':
+      $output = t("Enables the usage of FCKeditor (WYSIWYG editor) instead of plain text fields.");
+      break;
+    case 'admin/help#fckeditor':
+      $output = t("<p>The FCKeditor module allows Drupal to replace textarea fields with a rich text or <acronym title=\"What You See Is What You Get\">WYSIWYG</acronym> editor. This editor brings many of the powerful functionalities of known desktop editors like Word to the web. It's relatively lightweight and doesn't require any kind of installation on the client computer.</p>
+<p>More information is located at the %fckeditorlink. A small user guide is located at %userguidelink.</p>", array('%fckeditorlink'=>l(t('FCKeditor homepage'), 'http://www.fckeditor.net'), '%userguidelink'=>l(t('FCKeditor userguide'), 'http://wiki.fckeditor.net/UsersGuide'));
+      // the rest is untranslated for the moment
+      $output .= "<h3>How to enable the imagebrowser (in FCKeditor 2.3.x)</h3>
+<p>The editor gives the end user the flexibility to create a custom file browser that can be integrated on it. The included file browser allows users to view the content of a specific directory on the server and add new content to that directory (create folders and upload files).</p>
+<p>To enable file browsing you need to edit the connector configuration file in your fckeditor module directory, the file should be in:<br /><code>/fckeditor/editor/filemanager/browser/default/connectors/php/config.php</code></p>
+<p>In this file you will need to enable the file browser:<br /><code>$Config['Enabled'] = true;</code></p>
+<p>To use the drupal files directory you also need to comment out the following line in the connector configuration:<br /><code>//$Config['UserFilesPath'] = '/UserFiles/';</code></p>
+<p>If your file browser does not work you must create an <em>'Image'</em> and a <em>'Flash'</em> subdirectory in your drupal files directory ('".file_directory_path()."'). These directories must have the same privileges as the drupal files directory. In some cases these directories must be world writable (chmod 0777).</p>";
+      break;
   }
   return $output;
 }
@@ -49,7 +64,12 @@ function fckeditor_perm() {
 }
 
 /**
- * Implementation of textarea
+ * Implementation of hook_elelments
+ *
+ * Adds an extra procession instruction to the form rendering for textareas
+ *
+ * @return $type
+ *   Additional array for the element configuration
  */
 function fckeditor_elements() {
   $type = array();
@@ -69,10 +89,17 @@ function fckeditor_elements() {
 
 /**
  * Implementation of hook_setting().
+ *
+ * Configuration for the FCKeditor module
  */
 function fckeditor_settings() {
   // Settings form
-  $toolbar_options = array('Default' => 'Default', 'DrupalFull' => 'Drupal Full', 'DrupalBasic' =>  'Drupal Basic', 'Basic' => 'Basic');
+  $toolbar_options = array(
+    'Default' => 'Default',
+    'DrupalFull' => 'Drupal Full',
+    'DrupalBasic' => 'Drupal Basic',
+    'Basic' => 'Basic',
+  );
 
   // Generate the form - settings applying to all patterns first
   $form['fckeditor_settings'] = array(
@@ -80,8 +107,16 @@ function fckeditor_settings() {
     '#weight' => -20,
     '#title' => t('Basic settings'),
     '#collapsible' => TRUE,
-    '#collapsed' => FALSE
+    '#collapsed' => FALSE,
   );
+
+  $form['fckeditor_settings']['fckeditor_popup'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use FCKeditor in a popup window'),
+    '#default_value' => variable_get('fckeditor_popup', '0'),
+    '#description' => t('If this option is selected a link to a popup window will be used instead of a textarea replace.'),
+  );
+
   $form['fckeditor_settings']['fckeditor_default_toolbar'] = array(
     '#type' => 'select',
     '#title' => t('Default Toolbar'),
@@ -89,6 +124,7 @@ function fckeditor_settings() {
     '#options' => $toolbar_options,
     '#description' => t('Choose a default toolbar set.'),
   );
+
   $form['fckeditor_settings']['fckeditor_advanced_toolbar'] = array(
     '#type' => 'select',
     '#title' => t('Advanced Toolbar'),
@@ -104,17 +140,19 @@ function fckeditor_settings() {
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
   );
+
   $form['fckeditor_exclude_settings']['fckeditor_minimum_rows'] = array(
     '#type' => 'textfield',
     '#title' => t('Minimum rows'),
     '#default_value' => variable_get('fckeditor_minimum_rows', 5),
-    '#description' => t("Textareas must have a minimum of rows before FCKeditor will be triggered"),
+    '#description' => t("Textareas must have a minimum of rows before FCKeditor will be triggered. Enter '1' if you do not want to use this feature."),
   );
-  /*
-  // get excluded fields - so we can have normal textareas too
-  // split the phrase by any number of commas or space characters,
-  // which include " ", \r, \t, \n and \f
-  */
+
+  /**
+   * get excluded fields - so we can have normal textareas too
+   * split the phrase by any number of commas or space characters,
+   * which include " ", \r, \t, \n and \f
+   */
   $form['fckeditor_exclude_settings']['fckeditor_exclude'] = array(
     '#type' => 'textarea',
     '#title' => t('Exclude'),
@@ -131,18 +169,14 @@ function fckeditor_settings() {
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
   );
-  $form['fckeditor_special_settings']['fckeditor_popup'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Use FCKeditor in a popup window'),
-    '#default_value' => variable_get('fckeditor_popup', '0'),
-    '#description' => t('Popup window or Textarea replace.'),
-  );
+
   $form['fckeditor_special_settings']['fckeditor_toolbar_start_expanded'] = array(
     '#type' => 'checkbox',
     '#title' => t('Start the toolbar expanded'),
     '#default_value' => variable_get('fckeditor_toolbar_start_expanded', '1'),
     '#description' => t('The toolbar start expanded or collapsed.'),
   );
+
   $form['fckeditor_special_settings']['fckeditor_width'] = array(
     '#type' => 'textfield',
     '#title' => t('Width'),
@@ -150,6 +184,7 @@ function fckeditor_settings() {
     '#description' => t("Width in pixels or percent. Ex: 400 or 100%"),
   );
 
+  // People might want other skins, but lets be evil and not let them have them that easy
   $form['fckeditor_skin'] = array('#type' => 'value', '#value' => variable_get('fckeditor_skin', 'default'));
 
   return $form;
@@ -158,24 +193,30 @@ function fckeditor_settings() {
 
 /**
  * This function create the HTML objects required for the FCKeditor
+ *
+ * @param $element
+ *   A fully populated form elment to add the editor to
+ * @return
+ *   The same $element with extra FCKeditor markup and initialization
  */
 function fckeditor_process_textarea($element) {
   $exclude = preg_split("/[\s,]+/", strip_tags(variable_get("fckeditor_exclude", '')));
 
   if ($element['#rows'] > variable_get('fckeditor_minimum_rows', 5)
                   && !fckeditor_idsearch($element['#id'], $exclude)) {
-    // only when a textarea has enough rows and is not in the exclusion list
+    // only replace textarea when it has enough rows and it is not in the exclusion list
 
     // setting some variables
     $module_drupal_path	= drupal_get_path('module', 'fckeditor');
     $module_full_path	= base_path() . $module_drupal_path;
+    // '-' in a javascript id will not work
     $js_id = 'oFCKeditor_' . str_replace('-', '_', $element['#id']);
 
     // configured in settings
     $width = variable_get("fckeditor_width", '100%');
 
     // sensible default for small toolbars
-    $height = $element['#rows'] * 16 + 100;
+    $height = $element['#rows'] * 14 + 100;
 
     // nessecary because FCKeditor interferes with resize script
     $element['#resizable'] = FALSE;
@@ -185,32 +226,36 @@ function fckeditor_process_textarea($element) {
     if (user_access('use advanced fckeditor')) {
       $toolbar = variable_get("fckeditor_advanced_toolbar", 'DrupalFull');
       $height += 100; // sensible default for admin toolbars toolbars
-    } else {
+    }
+    else {
       $toolbar = variable_get("fckeditor_default_toolbar", 'DrupalBasic');
     }
 
-  	$element['#suffix'] .= "
-<script type=\"text/javascript\">
+  	$element['#suffix'] .= "\n<script type=\"text/javascript\">
 var ".$js_id." = new FCKeditor( '".$element['#id']."' );
 ".$js_id.".BasePath	= '".$module_full_path."/fckeditor/';
 ".$js_id.".Config['CustomConfigurationsPath'] = '".$module_full_path."/fckeditor.config.js';
-".$js_id.".Config['LinkBrowserURL'] = '".$module_full_path."/fckeditor/editor/filemanager/browser/default/browser.html?Connector=connectors/php/connector.php&ServerPath=/".variable_get("file_directory_path", 'files')."';
-".$js_id.".Config['ImageBrowserURL'] = '".$module_full_path."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Image&Connector=connectors/php/connector.php&ServerPath=/".variable_get("file_directory_path", 'files')."';
-".$js_id.".Config['FlashBrowserURL'] = '".$module_full_path."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Flash&Connector=connectors/php/connector.php&ServerPath=/".variable_get("file_directory_path", 'files')."';
 ".$js_id.".ToolbarSet = '".$toolbar."';
-".$js_id.".Height = '".$height."';
-</script>\n";
+".$js_id.".Height = '".$height."';";
+
+    // add code for filebrowser for users that have access
+    $element['#suffix'] .= "".$js_id.".Config['LinkBrowserURL'] = '".$module_full_path."/fckeditor/editor/filemanager/browser/default/browser.html?Connector=connectors/php/connector.php&ServerPath=/".variable_get("file_directory_path", 'files')."';
+".$js_id.".Config['ImageBrowserURL'] = '".$module_full_path."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Image&Connector=connectors/php/connector.php&ServerPath=/".variable_get("file_directory_path", 'files')."';
+".$js_id.".Config['FlashBrowserURL'] = '".$module_full_path."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Flash&Connector=connectors/php/connector.php&ServerPath=/".variable_get("file_directory_path", 'files')."';";
+    }
+
+    $element['#suffix'] .= "</script>";
 
   	if (variable_get('fckeditor_popup', '0')) {
   		// Add the script file with the popup open function.
       drupal_add_js($module_drupal_path . '/fckeditor.popup.js');
-  		$element['#title'] .= " <span class=\"fckeditor_popuplink\">(<a href=\"#\" onclick=\"FCKeditor_OpenPopup('".$module_full_path."/fckeditor.popup.html?var=".$js_id."&el=".$element['#id']."');return false;\">" . t('Open rich editor') . "</a>)</span>" ;
-  	} else {
+  		$element['#title'] .= " <span class=\"fckeditor_popuplink\">(<a href=\"#\" onclick=\"FCKeditor_OpenPopup('".$module_full_path."/fckeditor.popup.html?var=".$js_id."&el=".$element['#id']."');return false;\">" . t('Open rich editor') . "</a>)</span>";
+  	}
+    else {
       // if no popup mode, add the editor
-   		$element['#suffix'] .="
-  <script type=\"text/javascript\">
+   		$element['#suffix'] .="<script type=\"text/javascript\">
   ".$js_id.".ReplaceTextarea();
-  </script>\n";
+</script>";
     }
   }
   return $element;
@@ -218,7 +263,15 @@ var ".$js_id." = new FCKeditor( '".$element['#id']."' );
 
 
 /**
- * Search the disabled field ids for matches, return true on the first match
+ * Search the field id for matches in array of matches
+ *
+ * @param $search
+ *   A string representing a form field id
+ * @ param $array
+ *   An $array with strings to match the $search parameter against
+ *
+ * @return
+ *   TRUE on match, FALSE on no match
  */
 function fckeditor_idsearch($search, $array) {
   foreach ($array as $key => $value) {
@@ -232,18 +285,24 @@ function fckeditor_idsearch($search, $array) {
 
 
 /**
- * Test if client supports the FCKeditor
+ * Test if client can render the FCKeditor
+ *
+ * Check the user agent for a matching browser,
+ * using HTTP_USER_AGENT because the browsers that are known to support FCKeditor are limited
+ *
+ * @return
+ *   TRUE if the browser is reasonably capable
  */
 function fckeditor_is_compatible_client() {
-  $sAgent = $_SERVER['HTTP_USER_AGENT'] ;
+  $useragent = $_SERVER['HTTP_USER_AGENT'];
 
-  if ( strpos($sAgent, 'MSIE') !== false && strpos($sAgent, 'mac') === false && strpos($sAgent, 'Opera') === false ) {
-    $iVersion = (int)substr($sAgent, strpos($sAgent, 'MSIE') + 5, 3);
-    return ($iVersion >= 5.5);
+  if (strpos($useragent, 'MSIE') !== false && strpos($useragent, 'mac') === false && strpos($useragent, 'Opera') === false) {
+    $browserversion = (int)substr($useragent, strpos($useragent, 'MSIE') + 5, 3);
+    return ($browserversion >= 5.5);
   }
-  else if ( strpos($sAgent, 'Gecko') !== false ) {
-    $iVersion = (int)substr($sAgent, strpos($sAgent, 'Gecko/') + 6, 8) ;
-    return ($iVersion >= 20030210) ;
+  elseif (strpos($sAgent, 'Gecko') !== false) {
+    $browserversion = (int)substr($useragent, strpos($useragent, 'Gecko/') + 6, 8);
+    return ($browserversion >= 20030210);
   }
   else
     return false;

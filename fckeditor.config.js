@@ -1,3 +1,4 @@
+// $Id$
 FCKConfig.ToolbarSets["DrupalFull"] = [
 	['Source'],
 	['Cut','Copy','Paste','PasteText','PasteWord'],
