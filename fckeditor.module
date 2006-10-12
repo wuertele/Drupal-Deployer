@@ -42,14 +42,13 @@ function fckeditor_help($section = '') {
       break;
     case 'admin/help#fckeditor':
       $output = t("<p>The FCKeditor module allows Drupal to replace textarea fields with a rich text or <acronym title=\"What You See Is What You Get\">WYSIWYG</acronym> editor. This editor brings many of the powerful functionalities of known desktop editors like Word to the web. It's relatively lightweight and doesn't require any kind of installation on the client computer.</p>
-<p>More information is located at the %fckeditorlink. A small user guide is located at %userguidelink.</p>",
-      array('%fckeditorlink'=>l(t('FCKeditor homepage'), 'http://www.fckeditor.net'), '%userguidelink'=>l(t('FCKeditor userguide'), 'http://wiki.fckeditor.net/UsersGuide')));
+<p>More information is located at the %fckeditorlink. A small user guide is located at %userguidelink.</p>", array('%fckeditorlink'=>l(t('FCKeditor homepage'), 'http://www.fckeditor.net'), '%userguidelink'=>l(t('FCKeditor userguide'), 'http://wiki.fckeditor.net/UsersGuide')));
       // the rest is untranslated for the moment
       $output .= "<h3>How to enable the imagebrowser (in FCKeditor 2.3.x)</h3>
 <p>The editor gives the end user the flexibility to create a custom file browser that can be integrated on it. The included file browser allows users to view the content of a specific directory on the server and add new content to that directory (create folders and upload files).</p>
 <p>To enable file browsing you need to edit the connector configuration file in your fckeditor module directory, the file should be in:<br /><code>/fckeditor/editor/filemanager/browser/default/connectors/php/config.php</code></p>
-<p>In this file you will need to enable the file browser:<br /><code>$Config['Enabled'] = true;</code></p>
-<p>To use the drupal files directory you also need to comment out the following line in the connector configuration:<br /><code>//$Config['UserFilesPath'] = '/UserFiles/';</code></p>
+<p>In this file you will need to enable the file browser:<br /><code>$ Config['Enabled'] = true;</code></p>
+<p>To use the drupal files directory you also need to comment out the following line in the connector configuration:<br /><code>//$ Config['UserFilesPath'] = '/UserFiles/';</code></p>
 <p>If your file browser does not work you must create an <em>'Image'</em> and a <em>'Flash'</em> subdirectory in your drupal files directory ('".file_directory_path()."'). These directories must have the same privileges as the drupal files directory. In some cases these directories must be world writable (chmod 0777).</p>";
       break;
   }
@@ -156,7 +155,7 @@ function fckeditor_settings() {
    */
   $form['fckeditor_exclude_settings']['fckeditor_exclude'] = array(
     '#type' => 'textarea',
-    '#title' => t('Exclude'),
+    '#title' => t('Exclude fields'),
     '#cols' => 60,
     '#rows' => 5,
     '#default_value' => variable_get("fckeditor_exclude", ''),
@@ -203,7 +202,7 @@ function fckeditor_settings() {
 function fckeditor_process_textarea($element) {
   $exclude = preg_split("/[\s,]+/", strip_tags(variable_get("fckeditor_exclude", '')));
 
-  if ($element['#rows'] > variable_get('fckeditor_minimum_rows', 5)
+  if (($element['#rows'] > variable_get('fckeditor_minimum_rows', 5))
                   && !fckeditor_idsearch($element['#id'], $exclude)) {
     // only replace textarea when it has enough rows and it is not in the exclusion list
 
@@ -243,7 +242,6 @@ var ".$js_id." = new FCKeditor( '".$element['#id']."' );
     $element['#suffix'] .= "".$js_id.".Config['LinkBrowserURL'] = '".$module_full_path."/fckeditor/editor/filemanager/browser/default/browser.html?Connector=connectors/php/connector.php&ServerPath=/".variable_get("file_directory_path", 'files')."';
 ".$js_id.".Config['ImageBrowserURL'] = '".$module_full_path."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Image&Connector=connectors/php/connector.php&ServerPath=/".variable_get("file_directory_path", 'files')."';
 ".$js_id.".Config['FlashBrowserURL'] = '".$module_full_path."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Flash&Connector=connectors/php/connector.php&ServerPath=/".variable_get("file_directory_path", 'files')."';";
-    }
 
     $element['#suffix'] .= "</script>";
 
@@ -301,7 +299,7 @@ function fckeditor_is_compatible_client() {
     $browserversion = (int)substr($useragent, strpos($useragent, 'MSIE') + 5, 3);
     return ($browserversion >= 5.5);
   }
-  elseif (strpos($sAgent, 'Gecko') !== false) {
+  elseif (strpos($useragent, 'Gecko') !== false) {
     $browserversion = (int)substr($useragent, strpos($useragent, 'Gecko/') + 6, 8);
     return ($browserversion >= 20030210);
   }
