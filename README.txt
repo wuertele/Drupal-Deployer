@@ -52,6 +52,12 @@ Configuration
   3. Under settings, configure the fckeditor settings.
   4. Grant permissions for use of FCKeditor in Administer > Access Control
 
+Security
+--------
+Note that enabling file uploads is a security risk. That's why there is a
+separate permission in Administer > Access Control for enabling the file
+browser to certain groups.
+
 How to enable the imagebrowser (in FCKeditor 2.3.x)
 ---------------------------------------------------
 The editor gives the end user the flexibility to create a custom file browser
