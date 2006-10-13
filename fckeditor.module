@@ -51,7 +51,7 @@ function fckeditor_help($section = '') {
 <p>To enable file browsing you need to edit the connector configuration file in your fckeditor module directory, the file should be in:<br /><code>/fckeditor/editor/filemanager/browser/default/connectors/php/config.php</code></p>
 <p>In this file you will need to enable the file browser:<br /><code>$ Config['Enabled'] = true;</code></p>
 <p>To use the drupal files directory you also need to comment out the following line in the connector configuration:<br /><code>//$ Config['UserFilesPath'] = '/UserFiles/';</code></p>
-<p>Furthermore, you will need to create a <em>'File'</em>, an  <em>'Image'</em> and a <em>'Flash'</em> subdirectory in your drupal files directory ('".file_directory_path()."'). These directories must have the same privileges as the drupal files directory. In some cases these directories must be world writable (chmod 0777).</p>";
+<p>Furthermore, you will need to create a <em>'File'</em>, <em>'Image'</em>, <em>'Flash'</em> and <em>'Media'</em> subdirectory in your drupal files directory ('".file_directory_path()."'). These directories must have the same privileges as the drupal files directory. In some cases these directories must be world writable (chmod 0777).</p>";
       break;
   }
   return $output;
@@ -211,6 +211,8 @@ function fckeditor_process_textarea($element) {
     // setting some variables
     $module_drupal_path	= drupal_get_path('module', 'fckeditor');
     $module_full_path	= base_path() . $module_drupal_path;
+    // get the default drupal files path
+    $files_path = file_directory_path();
     // '-' in a javascript id will not work
     $js_id = 'oFCKeditor_' . str_replace('-', '_', $element['#id']);
 
@@ -242,9 +244,9 @@ var ".$js_id." = new FCKeditor( '".$element['#id']."' );
 
     // add code for filebrowser for users that have access
     if (user_access('allow fckeditor file uploads')) {
-      $element['#suffix'] .= $js_id.".Config['LinkBrowserURL'] = '".$module_full_path."/fckeditor/editor/filemanager/browser/default/browser.html?Connector=connectors/php/connector.php&ServerPath=/".variable_get("file_directory_path", 'files')."';
-".$js_id.".Config['ImageBrowserURL'] = '".$module_full_path."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Image&Connector=connectors/php/connector.php&ServerPath=/".variable_get("file_directory_path", 'files')."';
-".$js_id.".Config['FlashBrowserURL'] = '".$module_full_path."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Flash&Connector=connectors/php/connector.php&ServerPath=/".variable_get("file_directory_path", 'files')."';
+      $element['#suffix'] .= $js_id.".Config['LinkBrowserURL'] = '".$module_full_path."/fckeditor/editor/filemanager/browser/default/browser.html?Connector=connectors/php/connector.php&ServerPath=/".$files_path."';
+".$js_id.".Config['ImageBrowserURL'] = '".$module_full_path."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Image&Connector=connectors/php/connector.php&ServerPath=/".$files_path."';
+".$js_id.".Config['FlashBrowserURL'] = '".$module_full_path."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Flash&Connector=connectors/php/connector.php&ServerPath=/".$files_path."';
 ".$js_id.".Config['LinkUpload'] = false;
 ".$js_id.".Config['ImageUpload'] = false;
 ".$js_id.".Config['FlashUpload'] = false;\n";

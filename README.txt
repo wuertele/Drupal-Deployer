@@ -76,7 +76,7 @@ To use the drupal files directory you also need to comment out or remove the
 following line in the connector configuration:
   //$Config['UserFilesPath'] = '/UserFiles/' ;
 
-Furthermore, you will need to create a "File", an "Image" and a "Flash"
+Furthermore, you will need to create a "File", "Image", "Flash" and "Media"
 subdirectory in your drupal files directory. These directories must have the
 same privileges as the drupal files directory. In some cases these
 directories must be world writable (chmod 0777).
