@@ -1,6 +1,10 @@
 <?php
 //$Id$
 
+/**
+ * Implementation of hook_help
+ *
+ */
 function path_redirect_help($section){
   switch ($section){
     case 'admin/modules#description':
@@ -13,6 +17,13 @@ function path_redirect_help($section){
   }
 }
 
+/**
+ * Implementation of hook_init
+ * 
+ * Early checking of URL requested.
+ * If a match is found, user is redirected using drupal_goto()
+ *
+ */
 function path_redirect_init(){
   // check through the redirects
   // see if this page is one of those
@@ -24,6 +35,10 @@ function path_redirect_init(){
   }
 }
 
+/**
+ * Implementation of hook_menu
+ *
+ */
 function path_redirect_menu($may_cache){
   $access = user_access('administer redirects');
   $items = array();
@@ -63,10 +78,23 @@ function path_redirect_menu($may_cache){
   return $items;
 }
 
+/**
+ * Implementation of hook_perm
+ */
 function path_redirect_perm(){
   return array('administer redirects');
 }
 
+/**
+ * Callback for administration pages
+ *
+ * @param $rid
+ *  redirect id
+ * @param $op
+ *  operation: delete
+ * @return
+ *  themed output for page
+ */
 function path_redirect_admin($rid = FALSE, $op = FALSE){
   if($rid){
     $breadcrumbs = array(l(t('Home'), '/'), l(t('administer'), 'admin'), l(t('url redirects'), 'admin/path_redirect'));
@@ -94,7 +122,11 @@ function path_redirect_admin($rid = FALSE, $op = FALSE){
     $redirect = drupal_get_path_alias($r->redirect);
     $query = $r->query ? "?$r->query" : '';
     $fragment = $r->fragment ? "#$r->fragment" : '';
-    $rows[] = array($path, $redirect.$query.$fragment, $types[$r->type]['title'],  l(t('edit'), 'admin/path_redirect/edit/'. $r->rid) .' | '. l(t('delete'), 'admin/path_redirect/edit/'. $r->rid .'/delete'));
+    $rows[] = array(
+      $path,
+      $redirect.$query.$fragment, $types[$r->type]['title'],
+      l(t('test'), $r->path, array(), $r->query ? $r->query : NULL, $r->fragment ? $r->fragement : NULL) .' | '. l(t('edit'), 'admin/path_redirect/edit/'. $r->rid) .' | '. l(t('delete'), 'admin/path_redirect/edit/'. $r->rid .'/delete')
+      );
   }
   $header = array(t('From'), t('To'), t('Type'), t('Operations'));
   
@@ -249,6 +281,20 @@ function path_redirect_save($edit){
 
 function path_redirect_delete($rid){
   return db_query('DELETE FROM {path_redirect} WHERE rid = %d', $rid);
+}
+
+function path_redirect_delete_confirm($redirect) {
+  $form['rid'] = array(
+    '#type' => 'value',
+    '#value' => check_plain($redirect['rid']),
+  );
+  return confirm_form('path_redirect_delete', $form, t('Are you sure you want to delete this redirect?'), 'admin/path_redirect');
+}
+
+function path_redirect_delete_submit($form_id, $form_values) {
+  path_redirect_delete($form_values['rid']);
+  drupal_set_message(t('Redirect item has been deleted.'));
+  drupal_goto('admin/path_redirect');
 }
 
 
