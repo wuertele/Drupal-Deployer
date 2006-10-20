@@ -51,6 +51,13 @@ Configuration
   2. Enable the module as usual from Drupal's admin pages.
   3. Under settings, configure the fckeditor settings.
   4. Grant permissions for use of FCKeditor in Administer > Access Control
+  5. For the Rich Text Editing to work you also need to configure your
+     filters for the users that may access Rich Text Editing. Either grant
+     those users Full HTML access or use the following:
+      <a> <em> <strong> <small> <sup> <sub> <cite> <blockquote> <code>
+      <ul> <ol> <li> <dl> <dt> <dd> <h2> <h3> <h4> <img> <br> <br /> <p>
+      <div> <span> <b> <i>
+     Users that need access to tables might be better of using Full HTML
 
 Security
 --------
