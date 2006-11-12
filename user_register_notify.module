@@ -1,0 +1,33 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Notifies administrator of new user registrations.
+ */
+
+/**
+ * Implementation of hook_user().
+ */
+function user_register_notify_user($op, &$edit, &$account, $category = NULL) {
+  switch ($op) {
+    case 'insert':
+      // Notify administrator of new user only if this is not first user and
+      // if visitors can create accounts without administrator's approval.
+      // In case when accounts must be created with administrator's approval
+      // there is already a 'pending approval' e-mail notification.
+      if ($account->uid != 1 && $account->status) {
+        $subject = t('Account details for !username at !site', array('!username' => $account->name, '!site' => variable_get('site_name', 'Drupal')));
+        $to = $from = variable_get('site_mail', ini_get('sendmail_from'));
+
+        drupal_mail(
+          'user-register-notify-admin',
+          $to,
+          $subject,
+          t("!user (!uri) has created account.\n\n!edit-uri", array('!uri' => url("user/$account->uid", NULL, NULL, TRUE), '!user' => $account->name, '!edit-uri' => url("user/$account->uid/edit", NULL, NULL, TRUE))),
+          $from
+        );
+      }
+      break;
+  }
+}
