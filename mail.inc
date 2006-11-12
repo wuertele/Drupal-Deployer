@@ -1,5 +1,6 @@
 <?php
-/* $Id$ */
+// $Id$
+// $Name$
 
 function project_issue_mailhandler($node, $result, $i, $header, $mailbox) {
   if ($node->type == 'project') {

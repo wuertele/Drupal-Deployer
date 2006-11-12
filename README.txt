@@ -30,3 +30,4 @@ Wish list
  - Enable taxonomy support.
 
 $Id$
+$Name$
