@@ -13,12 +13,10 @@ At the moment the CVS version will work in Drupal 4.7 But the integrated
 File Browser needs a bit of manual configuration, more information
 about this is in the included readme.txt file
 
-
 Required components
 -------------------
 To use FCKeditor in Drupal, you will need to download the FCKeditor
 http://www.fckeditor.net/
-
 
 More information and licence
 ----------------------------
@@ -33,7 +31,7 @@ For further information visit:
 
 Requirements
 ------------
-  - Drupal 4.7
+  - Drupal 5.x
   - PHP 4.3.0 or greater
   - FCKeditor 2.3.x (http://www.fckeditor.net/)
 
@@ -94,7 +92,7 @@ Credits
      Frederico Caldeira Knabben
      Jorge Tite (LatPro Inc.)
 
- - FCKeditor for Drupal 4.7
+ - FCKeditor for Drupal 5.x
      Ontwerpwerk (www.ontwerpwerk.nl)
 
  - FCKeditor - The text editor for internet
