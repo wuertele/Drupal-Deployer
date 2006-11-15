@@ -35,7 +35,7 @@ function imagefield_menu($maycache) {
           $filename = file_create_filename($file['filename'], file_create_path());
           // strip file_directory_path() from private downloads path. @see file_create_url
           if (variable_get('file_downloads', FILE_DOWNLOADS_PUBLIC) ==  FILE_DOWNLOADS_PRIVATE) {
-            if (strpos($filename, file_directory_path()) !== false) {
+            if (strpos($filename, file_directory_path()) !== FALSE) {
               $filename = trim(substr($filename, strlen(file_directory_path())), '\\/');
             }
             $filename = 'system/files/' . $filename;
@@ -165,7 +165,7 @@ function imagefield_field($op, $node, $field, &$node_field, $teaser, $page) {
       if (count($node_field)) {
         $values = array();
         foreach ($node_field as $delta => $file) {
-          $values[$delta]  = array_merge($node_field[$delta], _imagefield_file_load($file['fid']));
+          $values[$delta]  = array_merge((array)$node_field[$delta], _imagefield_file_load($file['fid']));
           $node_field[$delta] = $values[$delta];
         }
         $output = array($fieldname => $values);
@@ -309,11 +309,11 @@ function imagefield_widget($op, $node, $field, &$node_field) {
       // Attach new files 
       if ($file = file_check_upload($fieldname . '_upload')) {
         $file = (array)$file;
-        if (strpos($file['filemime'],'image') !== false) { 
+        if (strpos($file['filemime'],'image') !== FALSE) { 
           $file = _imagefield_scale_image($file, $field['widget']['max_resolution']); 
         }
         else {
-          return false;
+          return FALSE;
         }
         $file['fid'] = 'upload';
         if (!$field['multiple']) {
@@ -324,11 +324,9 @@ function imagefield_widget($op, $node, $field, &$node_field) {
         $file['sessionid'] = count($_SESSION['imagefield'][$fieldname]);
         $_SESSION['imagefield'][$fieldname][$file['sessionid']] = $file;
       }
-        
-
       
       // Load files from preview state. before committing actions.
-      /* Don't do this until we here whether cck is going to support this...
+      /* Don't do this until we hear whether cck is going to support this...
          although it is really needed if anyother module wants to modify imagefields.
 
       if (is_array($_SESSION['imagefield'][$fieldname]) && count($_SESSION['imagefield'][$fieldname])) {
@@ -415,7 +413,7 @@ function _imagefield_widget_form($node, $field, &$node_field) {
       
         $form[$fieldname][$delta]['preview'] = array(
           '#type' => 'markup',
-          '#value' => theme('imagefield_image_preview', $file, '', '', array('width' => '150'), FALSE),
+          '#value' => theme('imagefield_image_preview', $file, $file['alt'], $file['title'], array('width' => '150'), FALSE),
         );
         
         $form[$fieldname][$delta]['description'] = array(
@@ -501,23 +499,23 @@ function imagefield_field_formatter($field, $item, $formatter) {
       return theme('imagecache', $formatter, $file['filepath']);
     }
   }
-  return theme('imagefield_image', $file, $item['title'], $item['alt']);
+  return theme('imagefield_image', $file, $item['alt'], $item['title']);
 
 }
 
 
 function _imagefield_file_load($fid = NULL) {
-  // Exit if we were not passed an fid to load;
-  if (!isset($fid)) { 
-    return false;
+  // Don't bother if we weren't passed and fid.
+  if (isset($fid)) { 
+    // Test to catch fid, eventuall plan to have node_load syntax
+    // once file_attributes table is complete
+    if (is_numeric($fid)) {
+      $result = db_query('SELECT * FROM {files} WHERE fid = %d', $fid);
+      $file = db_fetch_array($result);
+      return ($file) ? $file : array();
+    }
   }
-  // Test to catch fid, eventuall plan to have node_load syntax
-  // once file_attributes table is complete
-  if (is_numeric($fid)) {
-    $result = db_query('SELECT * FROM {files} WHERE fid = %d', $fid);
-    return db_fetch_array($result);
-  }
-  return FALSE;
+  return array();
 }
 
 function theme_imagefield_image_preview($file, $alt ='', $title='', $attributes = NULL, $getsize= TRUE) {
