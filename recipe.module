@@ -619,9 +619,25 @@ function recipe_ingredient_quantity_from_decimal($ingredient_quantity) {
         $power = $power * 10;
       }
     }
-   
-    $numerator = $conversion * $power;
-    $denominator = $power;
+
+    // workaround for thirds, sixths, ninths, twelfths
+    $overrides = array(
+        '3333' => array(1, 3),  '6666' => array(2, 3),  '9999' => array(3, 3), // thirds
+        '1666' => array(1, 6),  '8333' => array(5, 6), // sixths
+        '1111' => array(1, 9),  '2222' => array(2, 9),  '4444' => array(4, 9),  '5555' => array(5, 9),  '7777' => array(7, 9),  '8888' => array(8, 9), // ninths
+        '0833' => array(1, 12), '4166' => array(5, 12), '5833' => array(7, 12), '9166' => array(11, 12), // twelfths
+    );
+    $conversionstr = substr((string) ($conversion - floor($conversion)), 2, 4);
+    if (array_key_exists($conversionstr, $overrides)) {
+        if ($overrides[$conversionstr][0] == $overrides[$conversionstr][1]) {
+            return ($whole + 1) * $sign;
+        }
+        $denominator = $overrides[$conversionstr][1];
+        $numerator   = (floor($conversion) * $denominator) + $overrides[$conversionstr][0];
+    } else {
+        $numerator = $conversion * $power;
+        $denominator = $power;
+    }
 
     $hcf = recipe_euclid ($numerator, $denominator);
 
