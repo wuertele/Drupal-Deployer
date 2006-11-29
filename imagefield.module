@@ -79,6 +79,7 @@ function imagefield_field_settings($op, $field) {
   switch ($op) {
     case 'form':
       $form = array();
+      // add per field path here.
       return $form;
     case 'validate':
 
@@ -317,29 +318,18 @@ function imagefield_widget($op, $node, $field, &$node_field) {
       }
       
       // Load files from preview state. before committing actions.
-      /* Don't do this until we hear whether cck is going to support this...
-         although it is really needed if anyother module wants to modify imagefields.
-
       if (is_array($_SESSION['imagefield'][$fieldname]) && count($_SESSION['imagefield'][$fieldname])) {
         foreach($_SESSION['imagefield'][$fieldname] as $delta => $file) {
           $node_field[] = $file;
         }
       }
 
-      */
       //drupal_set_message('imagefield['. $fieldname .'] '. $op .' node field: <pre>'. print_r($node_field, true) .'</pre>');
       break;
 
     case 'form':
+      //drupal_set_message('imagefield['. $fieldname .'] '. $op .' SESSION: <pre>'. print_r($_SESSION['imagefield'], true) .'</pre>');
       //drupal_set_message('imagefield['. $fieldname .'] '. $op .' node field: <pre>'. print_r($node_field, true) .'</pre>');
-      /* This is hack since content.module isn't returning data added to node_field in hook_widget op=prepare form values.
-         its really annoying with new imagefields that don't already have data in them.  
-      */
-      if (is_array($_SESSION['imagefield'][$fieldname]) && count($_SESSION['imagefield'][$fieldname])) {
-        foreach($_SESSION['imagefield'][$fieldname] as $delta => $file) {
-          $node_field[] = $file;
-        }
-      } 
 
       $form = _imagefield_widget_form($node, $field, $node_field);
       return $form;
@@ -407,6 +397,7 @@ function _imagefield_widget_form($node, $field, &$node_field) {
           '#value' => theme('imagefield_image_preview', $file, $file['alt'], $file['title'], array('width' => '150'), FALSE),
         );
         
+      //drupal_set_message('imagefield['. $fieldname .'] '. $op .' node field: <pre>'. print_r($node_field, true) .'</pre>');
         $form[$fieldname][$delta]['description'] = array(
           '#type' => 'markup',
           '#value' => '<p>'. t('filename:') . $file['filename']. '</p>',
