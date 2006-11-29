@@ -1,0 +1,34 @@
+<?php
+
+function page_title_install() {
+  switch ($GLOBALS['db_type']) {
+    case 'mysqli':
+    case 'mysql':
+      $query1 = db_query("CREATE TABLE IF NOT EXISTS {page_title} (
+                            nid INT NOT NULL,
+                            page_title VARCHAR( 128 ) NOT NULL,
+                            PRIMARY KEY ( `nid` )
+                          ) TYPE=MyISAM /*!40100 DEFAULT CHARACTER SET utf8 */;");
+      if ($query1) {
+ 	      $created = TRUE;
+ 	    }
+      break;
+
+    case 'pgsql':
+      $query1 = db_query("CREATE TABLE {page_title} (
+                            nid integer NOT NULL default '0',
+                            page_title text NOT NULL default ''
+                          );");
+      if ($query1) {
+ 	      $created = TRUE;
+ 	    }
+      break;
+  }
+
+  if ($created) {
+    drupal_set_message(t('Page title module installed successfully.'));
+  }
+  else {
+    drupal_set_message(t('Table installation for the Page title module was unsuccessful. The tables may need to be installed by hand. See the README.txt file for a list of the installation queries.'), 'error');
+  }
+}
