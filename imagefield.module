@@ -227,7 +227,18 @@ function imagefield_widget_settings($op, $widget) {
         '#description' => t('Optional subdirectory within the "%dir" directory where images will be stored. Do not include trailing slash.', array('%dir' => theme('placeholder', variable_get('file_directory_path', 'files')))), 
         '#after_build' => array('imagefield_check_directory'),
       );
-
+      $form['custom_alt'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Enable custom alternate text'),
+        '#default_value' =>  $widget['custom_alt'] ? $widget['custom_alt'] : 0,
+        '#description' => t('Enable custom alternate text for images. Filename will be used if not checked.'),
+      );
+      $form['custom_title'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Enable custom title text'),
+        '#default_value' =>  $widget['custom_title'] ? $widget['custom_title'] : 0,
+        '#description' => t('Enable custom title text for images. Filename will be used if not checked.'),
+      );
       if (module_exists('imagecache')) {
         $options = array();
         $options['default'] = 'Default';
@@ -457,22 +468,38 @@ function _imagefield_widget_form($node, $field, &$node_field) {
           '#type' => 'markup',
           '#value' => '<p>'. t('filename:') . $file['filename']. '</p>',
         );
+
         $form[$fieldname][$delta]['alt'] = array(
-          '#type' => 'textfield',
-          '#title' =>  t('alternate text'),
-          '#default_value' => $file['alt'],
-          '#description' => t('Alternate text to be displayed if the image cannot be displayed.'),
-          '#maxlength' => 255,
-          '#size' => 10,
+          '#type' => 'hidden',
+          '#value' => $file['filename'],
         );
+        // overwrite with an input field if custom_alt is flagged;
+        if ($field['widget']['custom_alt']) {
+          $form[$fieldname][$delta]['alt'] = array(
+            '#type' => 'textfield',
+            '#title' =>  t('alternate text'),
+            '#default_value' => $file['alt'],
+            '#description' => t('Alternate text to be displayed if the image cannot be displayed.'),
+            '#maxlength' => 255,
+            '#size' => 10,
+          );
+        }
+        
         $form[$fieldname][$delta]['title'] = array(
-          '#type' => 'textfield',
-          '#title' =>  t('title'),
-          '#default_value' =>  $file['title'],
-          '#description' => t('Text to be displayed on mouse overs.'),
-          '#maxlength' => 255,
-          '#size' => 10,
+          '#type' => 'hidden',
+          '#value' => $file['filename'],
         );
+        // overwrite with an input field if custom_title is flagged;
+        if ($field['widget']['custom_title']) {
+          $form[$fieldname][$delta]['title'] = array(
+            '#type' => 'textfield',
+            '#title' =>  t('title'),
+            '#default_value' =>  $file['title'],
+            '#description' => t('Text to be displayed on mouse overs.'),
+            '#maxlength' => 255,
+            '#size' => 10,
+          );
+        }
         
         $form[$fieldname][$delta]['filename'] = array('#type' => 'value',  '#value' => $file['filename']);
         $form[$fieldname][$delta]['filepath'] = array('#type' => 'value',  '#value' => $file['filepath']);
@@ -529,16 +556,14 @@ function imagefield_field_formatter($field, $item, $formatter) {
   if (!isset($item['fid'])) {
     return '';
   }
-  
   $file = _imagefield_file_load($item['fid']);
   if (module_exists('imagecache')) {
     $rules = _imagecache_get_presets();
     if (in_array($formatter, (array) $rules)) {
-      return theme('imagecache', $formatter, $file['filepath']);
+      return theme('imagecache', $formatter, $file['filepath'], $item['alt'], $item['title']);
     }
   }
   return theme('imagefield_image', $file, $item['alt'], $item['title']);
-
 }
 
 
