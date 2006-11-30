@@ -64,7 +64,6 @@ function imagefield_field_settings($op, $field) {
   switch ($op) {
     case 'form':
       $form = array();
-      // add per field path here.
       return $form;
     case 'validate':
 
@@ -151,9 +150,18 @@ function imagefield_field($op, $node, $field, &$node_field, $teaser, $page) {
       break; 
 
     case 'view':
+      
       $images = array();
+      $formatter = 'default';
+      if (module_exists('imagecache')) {
+        $formatter = $field['widget']['body_preset'];
+        if ($teaser) {
+          $formatter = $field['widget']['teaser_preset'];
+        }
+      }
+      
       foreach ($node_field as $delta => $item) {
-        $node_field[$delta]['view'] = content_format($field, $item, 'default'); 
+        $node_field[$delta]['view'] = content_format($field, $item, $formatter); 
         $images[] =  $node_field[$delta]['view'];
       }
       $view = theme('imagefield_multiple', $images);
@@ -219,11 +227,40 @@ function imagefield_widget_settings($op, $widget) {
         '#description' => t('Optional subdirectory within the "%dir" directory where images will be stored. Do not include trailing slash.', array('%dir' => theme('placeholder', variable_get('file_directory_path', 'files')))), 
         '#after_build' => array('imagefield_check_directory'),
       );
+
+      if (module_exists('imagecache')) {
+        $options = array();
+        $options['default'] = 'Default';
+        $presets =  _imagecache_get_presets();
+        foreach($presets as $id => $name) {
+          $options[$name] = $name;
+        }
+        $form['imagecache'] = array(
+          '#type' => 'fieldset',
+          '#title' => 'Imagecache Options',
+        );
+        $form['imagecache']['teaser_preset'] = array(
+          '#title' => t('Teaser preset'),
+          '#description' => t('Select the imagecache preset you want to handle thumbnails in the teaser.'),
+          '#type' => 'select',
+          '#options' =>  $options,
+          '#default_value' => $widget['teaser_preset'] ? $widget['teaser_preset'] : 'default' ,
+        );
+        $form['imagecache']['body_preset'] = array(
+          '#title' => t('Body preset'),
+          '#description' => t('Select the imagecache preset you want to handle thumbnails in the teaser.'),
+          '#type' => 'select',
+          '#options' =>  $options,
+          '#default_value' => $widget['body_preset'] ? $widget['body_preset'] : 'default',
+        );
+      }
       return $form;
+
     case 'validate':
       break;
+
     case 'save':
-      return array('max_resolution', 'image_path');
+      return array('max_resolution', 'image_path', 'custom_alt', 'custom_title', 'teaser_preset', 'body_preset');
   }
 }
 
