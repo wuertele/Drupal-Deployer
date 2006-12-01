@@ -624,3 +624,41 @@ function theme_imagefield_image($file, $alt = '', $title = '', $attributes = NUL
 function theme_imagefield_multiple($images) {
   return implode("\n", $images);
 }
+
+/** 
+ * implementation of hook_filedownload
+ * replicated from upload.module.
+ *
+ * conditionally included since we're just replicating the 
+ * work of upload.module for now.
+ */
+
+if (!function_exists('upload_file_download')) {
+  function imagefield_file_download($file) {
+    $file = file_create_path($file);
+    $result = db_query("SELECT f.* FROM {files} f WHERE filepath = '%s'", $file);
+    if ($file = db_fetch_object($result)) {
+      if (user_access('view uploaded files')) {
+        $node = node_load($file->nid);
+        if (node_access('view', $node)) {
+          $name = mime_header_encode($file->filename);
+          $type = mime_header_encode($file->filemime);
+          // Serve images and text inline for the browser to display rather than download.
+          $disposition = ereg('^(text/|image/)', $file->filemime) ? 'inline' : 'attachment';
+          return array(
+            'Content-Type: '. $type .'; name='. $name,
+            'Content-Length: '. $file->filesize,
+            'Content-Disposition: '. $disposition .'; filename='. $name,
+            'Cache-Control: private'
+          );
+        }
+        else {
+          return -1;
+        }
+      }
+      else {
+        return -1;
+      }
+    }
+  }
+}
