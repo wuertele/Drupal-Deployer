@@ -165,7 +165,7 @@ function recipe_form(&$node) {
     '#type' => 'select',
     '#title' => t("Preparation time"),
     '#default_value' => $node->preptime,
-    '#options' => array (15 => "15 minutes", 30 => "30 minutes", 45 => "45 minutes", 60 => "1 hour", 90 => "1 1/2 hours", 120 => "2 hours", 150 => "2 1/2 hours", 180 => "3 hours", 210 => "3 1/2 hours", 240 => "4 hours", 300 => "5 hours", 360 => "6 hours"),
+    '#options' => array (5 => "5 minutes", 10 => "10 minutes", 15 => "15 minutes", 20 => "20 minutes", 30 => "30 minutes", 45 => "45 minutes", 60 => "1 hour", 90 => "1 1/2 hours", 120 => "2 hours", 150 => "2 1/2 hours", 180 => "3 hours", 210 => "3 1/2 hours", 240 => "4 hours", 300 => "5 hours", 360 => "6 hours"),
     '#description' => t("How long does this recipe take to prepare (i.e. elapsed time)"),
   );
   $form["source"] = array(
@@ -1435,8 +1435,13 @@ function theme_node_recipe($node, $yield_form = TRUE) {
     $summary .= '<tr><th>Source</th><td>'.$node->source.'</td></tr>';
   }
   if ($node->preptime) {
-    $preptime = t("%n hours", array ("%n" => recipe_ingredient_quantity_from_decimal($node->preptime / 60)));
-    $summary .= '<tr><th>Prep Time</th><td>'.$preptime.'</td></tr>';
+    if ($node->preptime < 60) {
+      $preptime = t("%n minutes", array ("%n" => $node->preptime));
+    }
+    else {
+      $preptime = t("%n hours", array ("%n" => recipe_ingredient_quantity_from_decimal($node->preptime / 60)));
+    }
+     $summary .= '<tr><th>Prep Time</th><td>'.$preptime.'</td></tr>';
   }
   $vocabs = taxonomy_get_vocabularies('recipe');
   if (count($vocabs) > 0) {
