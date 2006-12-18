@@ -27,3 +27,4 @@ Projects
  - Integrate image module galleries for screenshots.
 
 $Id$
+$Name$

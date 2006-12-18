@@ -1,5 +1,6 @@
 <?php
-/* $Id$ */
+// $Id$
+// $Name$
 
 /**
  * All of the release scanning code is probably dead code at this
