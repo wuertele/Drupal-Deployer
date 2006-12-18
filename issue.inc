@@ -762,18 +762,8 @@ function project_issue_comment_validate(&$node) {
   return $node;
 }
 
-
-
-
-/**
- * Implementation of hook_content().
- */
-function project_issue_content($node, $teaser = false) {
-  return node_prepare($node, $teaser);
-}
-
 function project_issue_view(&$node, $teaser = false, $page = false) {
-  $node = project_issue_content($node, $teaser);
+  $node = node_prepare($node, $teaser);
 
   if (!$teaser && $page) {
     $project = node_load(array('nid' => $node->pid, 'type' => 'project_project'));
