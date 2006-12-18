@@ -322,16 +322,17 @@ function project_mail_notify($node) {
     user_mail($recipient->mail, $node->title, $body, implode("\n", $header));
   }
 
-  if (count($project->mail_copy_filter) && !$project->mail_copy_filter[$node->category]) {
+  if (is_array($project->mail_copy_filter) && count(array_filter($project->mail_copy_filter)) && !$project->mail_copy_filter[$node->category]) {
     return;
   }
 
-  if (count($project->mail_copy_filter_state) && !$project->mail_copy_filter_state[$node->sid]) {
+  if (is_array($project->mail_copy_filter_state) && count(array_filter($project->mail_copy_filter_state)) && !$project->mail_copy_filter_state[$node->sid]) {
     return;
   }
 
   if ($project->mail_copy) {
     user_mail($project->mail_copy, $node->title, $body, implode("\n", $header));
+
   }
 }
 
