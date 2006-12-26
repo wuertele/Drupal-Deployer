@@ -174,7 +174,7 @@ function project_mail_summary($field, $value) {
     case 'rid':
       if ($value) {
         $release->nid = $value;
-        if (module_exist('project_release')) {
+        if (module_exists('project_release')) {
           $release = project_release_load($release);
         }
         else {
