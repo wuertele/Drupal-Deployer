@@ -246,8 +246,10 @@ function project_issue_advanced_search($url_arg, $filters) {
   }
 
   // Put the issue filters where the pager links can find them.
-  foreach ($issue_filters as $name => $val) {
-    $_REQUEST[$name] = $val;
+  if (isset($issue_filters)) {
+    foreach ($issue_filters as $name => $val) {
+      $_REQUEST[$name] = $val;
+    }
   }
   // unset $_REQUEST['edit'] so the pager links aren't full of cruft
   unset($_REQUEST['edit']);
