@@ -560,7 +560,7 @@ function project_issue_form($node, $param) {
     $form['project_info'] = array(
       '#type' => 'fieldset',
       '#title' => t('Project information'),
-      '#prefix' => '<div class="options">',
+      '#prefix' => '<div class="inline-options">',
       '#suffix' => '</div>',
     );
     $form['project_info']['pid'] = array(
@@ -588,7 +588,7 @@ function project_issue_form($node, $param) {
     $form['issue_info'] = array(
       '#type' => 'fieldset',
       '#title' => t('Issue information'),
-      '#prefix' => '<div class="options">',
+      '#prefix' => '<div class="inline-options">',
       '#suffix' => '</div>',
     );
     $form['issue_info']['category'] = array(
