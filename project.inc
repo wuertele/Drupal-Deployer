@@ -13,6 +13,7 @@ function project_project_form($node) {
 
   /* Project taxonomy */
   if (project_use_taxonomy()) {
+    drupal_add_js(drupal_get_path('module', 'project') .'/project.js');
     $tree = taxonomy_get_tree(_project_get_vid());
     $top_level = array();
     $options = array();
