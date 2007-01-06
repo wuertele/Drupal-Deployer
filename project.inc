@@ -20,7 +20,7 @@ function project_project_form($node) {
     foreach ($tree as $i => $term) {
       if ($term->parents[0] == 0) {
         $last_top = $term->tid;
-        $top_level[$term->tid] = $term->name;
+        $top_level[$term->tid] = check_plain($term->name);
       }
       else {
         $options[$last_top][$term->tid] = $term->name;
