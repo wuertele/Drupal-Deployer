@@ -106,6 +106,7 @@ function project_issue_update_project($pid, $cid = NULL, $rid = NULL) {
   if ($project->components) {
     $components = array(t('<none>'));
     foreach (unserialize($project->components) as $component) {
+      $component = check_plain($component);
       $components[$component] = $component;
     }
   }
@@ -540,6 +541,7 @@ function project_issue_form($node, $param) {
     if ($project->components) {
       $components = array(t('<none>'));
       foreach ($project->components as $component) {
+        $component = check_plain($component);
         $components[$component] = $component;
       }
     }
@@ -1014,6 +1016,7 @@ function project_issue_query($project = 0, $query = NULL) {
   if ($project->nid) {
     drupal_set_title(t('Search issues for %name', array('%name' => $project->title)));
     foreach ($project->components as $component) {
+      $component = check_plain($component);
       $components[$component] = $component;
     }
     if (module_exists('project_release')) {
