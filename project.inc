@@ -297,7 +297,7 @@ function project_project_view($node, $teaser = false, $page = false) {
 
     foreach (array('documentation' => t('Read documentation'), 'license' => t('Read license'), 'changelog' => t('Read complete log of changes'), 'demo' => t('Try out a demonstration'), 'screenshots' => t('Look at screenshots')) as $uri => $name) {
       if (!empty($node->$uri)) {
-        $links[] = sprintf('<a href="%s">%s</a>', $node->$uri, $name);
+        $links[] = l($name, $node->$uri);
       }
     }
 
@@ -337,7 +337,7 @@ function project_project_view($node, $teaser = false, $page = false) {
     }
 
     if ($node->cvs) {
-      $links[] = sprintf('<a href="%s">%s</a>', $node->cvs, t('Browse the CVS repository'));
+      $links[] = l(t('Browse the CVS repository'), $node->cvs);
     }
 
     if (module_exists('cvs')) {
