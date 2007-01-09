@@ -60,7 +60,7 @@ function feedback_settings_page() {
     $output = feedback_settings_delete($page);
   }
   else {
-    $output = feedback_settings_form($page);
+    $output = drupal_get_form('feedback_settings_form', $page);
   }
   print theme('page', $output);
 }
@@ -79,7 +79,11 @@ function feedback_settings_overview($page) {
     $rows[] = array ($page, l(url($path), $path), l(t('edit'), 'admin/settings/feedback/'.$page) . $delete);
   }
   $output = theme('table', $header, $rows);
+  $output .= drupal_get_form('feedback_settings_overview_add', $pages);
+  return $output;
+}
 
+function feedback_settings_overview_add($pages) {
   $form['group']['page_name'] = array(
     '#type' => 'textfield',
     '#title' => t('Feedback page name'),
@@ -95,22 +99,20 @@ function feedback_settings_overview($page) {
     '#type' => 'fieldset',
     '#title' => t('Add a further feedback page'),
   );
-  $form['#validate']['feedback_overview_validate'] = array($pages);
-  $form['#submit']['feedback_overview_submit'] = array($pages);
-  
-  $form['#method'] = 'post';
-  $output .= drupal_get_form('feedback_overview', $form);
 
-  return $output;
+  $form['pages'] = array('#type' => 'value', '#value' => $pages);
+  return $form;
 }
 
-function feedback_overview_validate($form_id, &$edit, &$form, &$pages) {
+function feedback_settings_overview_add_validate($form_id, &$edit) {
+  $pages = $edit['pages'];
   if (in_array($edit['page_name'], $pages)) {
     form_set_error('page_name', t('This page already exists.'));
   }
 }
 
-function feedback_overview_submit($form_id, &$edit, &$pages) {
+function feedback_settings_overview_add_submit($form_id, &$edit) {
+  $pages = $edit['pages'];
   _feedback_add_page($edit['page_name']);
   drupal_set_message(t('Your feedback page has been added.'));
 }
@@ -222,7 +224,8 @@ function feedback_settings_form($pagename) {
   $form['#redirect'] = 'admin/settings/feedback';
   $form['#submit']['feedback_settings_form_submit'] = array($page);
   $form['buttons']['submit'] = array('#type' => 'submit', '#value' => t('Save configuration') );
-  return drupal_get_form('feedback_settings_form' . $page->name, $form, 'feedback_settings_form'); 
+  //return drupal_get_form('feedback_settings_form' . $page->name, $form, 'feedback_settings_form'); 
+  return $form;
 }
 
 function feedback_settings_form_submit($form_id, $edit, &$page) {
@@ -231,7 +234,6 @@ function feedback_settings_form_submit($form_id, $edit, &$page) {
   db_query("UPDATE {feedback_pages} SET data = '%s' WHERE name = '%s'", serialize($edit), $page->name);
   drupal_set_message(t('The configuration options have been saved.'));
 }
-
 
 /**
  * Deletes a feedback page, if the user confirms
@@ -244,7 +246,7 @@ function feedback_settings_delete($pagename) {
   } 
   else {
     $message = t('Are you sure you want to delete the feedback page "%page"?', array('%page' => $pagename));
-    $output = confirm_form('feedback_delete', array(), $message, 'admin/settings/feedback', $message, t('Delete'), t('Cancel'));
+    $output = drupal_get_form('confirm_form', array(), $message, 'admin/settings/feedback', $message, t('Delete'), t('Cancel'));
     return $output;
   }
 }
@@ -273,117 +275,112 @@ function feedback_mail_page() {
   else {
     $page = 'default';
   }
-  print theme('page', feedback_mail_form($page));
-}
-
-
-function feedback_mail_form($pagename) {
-  global $user;
-  $page = _feedback_get_page($pagename);
+  $page = _feedback_get_page($page);
   
   $breadcrumb[] = array ('path' => 'feedback', 'title' => $page->title);
   menu_set_location($breadcrumb);
 
   if (!flood_is_allowed('feedback'.$page->name, $page->hourly_threshold)) {
     $output = t('You cannot send more than %number messages per hour. Please try again later.', array ('%number' => $page->hourly_threshold));
-  } 
+  }
   else {
-    if ($page->field_name) {
-      $form['emailname'] = array(
-        '#type' => 'textfield',
-        '#title' => t('Your full name'),
-        '#default_value' => ($user->uid) ? $user->name : '',
-        '#size' => 60,
-        '#maxlength' => 64,
-        '#description' => NULL,
-        '#attributes' => NULL,
-        '#required' => TRUE,
-      );
-    }
-    $form['mail'] = array(
+    $output = $page->instructions . drupal_get_form('feedback_mail_form', $page);
+  }
+  print theme('page', $output);
+}
+
+function feedback_mail_form($page) {
+  global $user;
+  if ($page->field_name) {
+    $form['emailname'] = array(
       '#type' => 'textfield',
-      '#title' => t('Your e-mail address'),
-      '#default_value' => ($user->uid) ? $user->mail : '',
+      '#title' => t('Your full name'),
+      '#default_value' => ($user->uid) ? $user->name : '',
       '#size' => 60,
       '#maxlength' => 64,
       '#description' => NULL,
       '#attributes' => NULL,
       '#required' => TRUE,
     );
-    if ($page->field_postal) {
-      $form['postal'] = array(
-        '#type' => 'textarea',
-        '#title' => t('Your postal address'),
-        '#cols' => 50,
-        '#rows' => 4,
-      );
-    }
-    if ($page->field_phone) {
-      $form['phone'] = array(
-        '#type' => 'textfield',
-        '#title' => t('Your phone number'),
-        '#size' => 60,
-        '#maxlength' => 64,
-      );
-    }
-    if ($page->field_subject) {
-      $form['subject'] = array(
-        '#type' => 'textfield',
-        '#title' => t('Subject'),
-        '#size' => 60,
-        '#maxlength' => 64,
-        '#description' => NULL,
-        '#attributes' => NULL,
-        '#required' => TRUE,
-      );
-    }
-    if ($page->field_category) {
-      $form['category'] = array(
-        '#type' => 'select',
-        '#title' => t('Category'),
-        '#options' => _feedback_get_options($page->field_category),
-        '#description' => NULL,
-        '#extra' => 0,
-        '#multiple' => FALSE,
-        '#required' => TRUE,
-      );
-    }
-    if ($page->field_body) {
-      $form['body'] = array(
-        '#type' => 'textarea',
-        '#title' => t('Message'),
-        '#cols' => 60,
-        '#rows' => 15,
-        '#description' => NULL,
-        '#attributes' => NULL,
-        '#required' => TRUE,
-      );
-    }
-
-    $form['referer'] = array(
-      '#type' => 'hidden',
-      '#value' => $_SERVER[HTTP_REFERER],
+  }
+  $form['mail'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Your e-mail address'),
+    '#default_value' => ($user->uid) ? $user->mail : '',
+    '#size' => 60,
+    '#maxlength' => 64,
+    '#description' => NULL,
+    '#attributes' => NULL,
+    '#required' => TRUE,
+  );
+  if ($page->field_postal) {
+    $form['postal'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Your postal address'),
+      '#cols' => 50,
+      '#rows' => 4,
     );
-    $form['op'] = array(
-      '#type' => 'submit',
-      '#value' => t('Send message'),
+  }
+  if ($page->field_phone) {
+    $form['phone'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Your phone number'),
+      '#size' => 60,
+      '#maxlength' => 64,
     );
-    $form['#method'] = 'post';
-    
-    $form['#validate']['feedback_mail_page_validate'] = array('page' => $page);
-    $form['#submit']['feedback_mail_page_submit'] = array('page' => $page);  
-    
-    $output = drupal_get_form('feedback_mail_page', $form);
-    $output = theme('box', $page->title, $page->instructions.$output);
+  }
+  if ($page->field_subject) {
+    $form['subject'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Subject'),
+      '#size' => 60,
+      '#maxlength' => 64,
+      '#description' => NULL,
+      '#attributes' => NULL,
+      '#required' => TRUE,
+    );
+  }
+  if ($page->field_category) {
+    $form['category'] = array(
+      '#type' => 'select',
+      '#title' => t('Category'),
+      '#options' => _feedback_get_options($page->field_category),
+      '#description' => NULL,
+      '#extra' => 0,
+      '#multiple' => FALSE,
+      '#required' => TRUE,
+    );
+  }
+  if ($page->field_body) {
+    $form['body'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Message'),
+      '#cols' => 60,
+      '#rows' => 15,
+      '#description' => NULL,
+      '#attributes' => NULL,
+      '#required' => TRUE,
+    );
   }
 
-  return $output;
+  $form['referer'] = array(
+    '#type' => 'hidden',
+    '#value' => $_SERVER[HTTP_REFERER],
+  );
+  $form['op'] = array(
+    '#type' => 'submit',
+    '#value' => t('Send message'),
+  );
+  $form['page'] = array('#type' => 'value', '#value' => $page);
+
+  return $form;
 }
 
 /**
  * Validate the site-wide form submission.
  */
-function feedback_mail_page_validate($form_id, &$edit, $page) {
+function feedback_mail_form_validate($form_id, &$edit) {
+  $page = $edit['page'];
 
   if (!valid_email_address($edit['mail'])) {
     form_set_error('mail', t('You must enter a valid e-mail address.'));
@@ -430,10 +427,12 @@ function feedback_mail_page_validate($form_id, &$edit, $page) {
 /**
  * Process the site-wide form submission.
  */
-function feedback_mail_page_submit($form_id, &$edit, $page) {
+function feedback_mail_form_submit($form_id, &$edit) {
   // Prepare the sender:
   $from = feedback_plain_text($edit['mail']);
   $name = feedback_plain_text($edit['emailname']);
+
+  $page = $edit['page'];
 
   // Compose the body:
   if ($page->field_category) {
@@ -458,7 +457,7 @@ function feedback_mail_page_submit($form_id, &$edit, $page) {
   $subject = $page->subject_prefix . $category . $edit['subject'];
 
   // Send the e-mail to the recipients:
-  user_mail($page->email, $subject, $body, "From: $name <$from>\nReply-to: $from\nX-Mailer: Drupal\nReturn-path: $from\nErrors-to: $from");
+  drupal_mail('feedback', $page->email, $subject, $body, $from);
 
   // Log the operation:
   flood_register_event('feedback'. $page->name);
