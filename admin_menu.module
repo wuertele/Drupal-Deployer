@@ -57,9 +57,14 @@ function admin_menu_get_menu() {
   // get path id of /q=admin, which we suppose to be the root of admin menu
   $pid_admin = $_menu['path index']['admin'];
   $admin_items[$pid_admin] = $_menu['items'][$pid_admin];
+  
+  // slice admin menu items into a new menu tree
   _admin_menu_get_children($admin_items, $admin_items[$pid_admin]);
   
-  // remove child menu item from parent's children list
+  // adjust some specific menu items for better user experience
+  admin_menu_adjust_items($admin_items);
+  
+  // remove administer menu item from parent's children list
   $parent_id = $_menu['items'][$pid_admin]['pid'];
   $child_key = array_search($pid_admin, $_menu['visible'][$parent_id]['children']);
   unset( $_menu['visible'][$parent_id]['children'][$child_key] );
@@ -75,7 +80,8 @@ function _admin_menu_get_children(&$admin_items, &$item) {
       $is_visible_item = $_menu['items'][$child]['type'] & (MENU_VISIBLE_IN_TREE | MENU_IS_LOCAL_TASK);
 
       // create the child item if it's visible in navigation
-      if ($is_visible_item && !($_menu['items'][$child]['type'] & MENU_LINKS_TO_PARENT)) {
+      // Hide items linking to parent: && !($_menu['items'][$child]['type'] & MENU_LINKS_TO_PARENT) 12/01/2007 sun
+      if ($is_visible_item) {
         $admin_items[$child] = $_menu['items'][$child];
 
         // recurse to child menu items
@@ -98,6 +104,34 @@ function _admin_menu_get_children(&$admin_items, &$item) {
 
     // sort remaining items
     usort($item['children'], '_menu_sort');
+  }
+}
+
+function admin_menu_adjust_items(&$admin_items) {
+  global $_menu;
+  
+  // move 'By module' into Site configuration
+  if (isset( $admin_items[-102] ) && $admin_items[-102]['path'] == 'admin/by-module') {
+    // remove child pointer from original location
+    $parent_id = $admin_items[-102]['pid'];
+    $child_key = array_search(-102, $admin_items[$parent_id]['children']);
+    if ($child_key !== FALSE) {
+      unset( $admin_items[$parent_id]['children'][$child_key] );
+    }
+    // insert new child pointers
+    $pid_settings = $_menu['path index']['admin/settings'];
+    $admin_items[-102]['pid'] = $pid_settings;
+    array_unshift( $admin_items[$pid_settings]['children'], -102);
+  }
+  
+  // remove 'By task' menu item
+  if (isset( $admin_items[-101] ) && $admin_items[-101]['path'] == 'admin/by-task') {
+    // remove child pointer
+    $parent_id = $admin_items[-101]['pid'];
+    $child_key = array_search(-101, $admin_items[$parent_id]['children']);
+    if ($child_key !== FALSE) {
+      unset( $admin_items[$parent_id]['children'][$child_key] );
+    }
   }
 }
 
