@@ -409,6 +409,7 @@ function project_project_access($op, $node) {
       if (!user_access('access projects')) {
          return FALSE;
       }
+      break;
     case 'create':
       if ($user->uid && user_access('maintain projects')) {
         // Since this CVS access checking is non-standard, we need to
@@ -420,15 +421,17 @@ function project_project_access($op, $node) {
           return TRUE;
         }
       }
-      return FALSE;
+      break;
     case 'update':
       if (project_check_admin_access($node)) {
         return TRUE;
       }
+      break;
     case 'delete':
       if (project_check_admin_access($node, FALSE)) {
         return TRUE;
       }
+      break;
   }
 }
 
