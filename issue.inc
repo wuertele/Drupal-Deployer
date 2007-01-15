@@ -945,16 +945,19 @@ function project_issue_access($op, $node) {
       if (!user_access('access project issues')) {
         return FALSE;
       }
+      break;
     case 'create':
       return user_access('create project issues');
     case 'update':
       if (user_access('administer projects') || (user_access('edit own project issues') && $node->uid == $user->uid)) {
         return TRUE;
       }
+      break;
     case 'delete':
       if (user_access('administer projects')) {
         return TRUE;
       }
+      break;
   }
 }
 
