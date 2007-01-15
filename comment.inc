@@ -272,5 +272,6 @@ function project_comment_form_add_preview($form, $edit) {
     $output .= node_view($node, NULL, TRUE);
     $form['comment_preview_below'] = array('#value' => $output, '#weight' => 100);
   }
+  unset($form['#sorted']);
   return $form;
 }
