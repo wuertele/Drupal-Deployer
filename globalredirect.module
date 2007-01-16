@@ -1,5 +1,6 @@
 <?php
 //$Id$
+
 /**
  * Implementation of hook_help().
  */
@@ -12,15 +13,34 @@ function globalredirect_help($section) {
 }
 
 
+/**
+ * Implementation of hook_init().
+ */
 function globalredirect_init() {
   if(isset($_REQUEST['q']) && function_exists('drupal_get_path_alias')) {
+    
+    //Get the Query String (minus the 'q'). If none set, set to NULL
+    if (($query_string = drupal_query_string_encode($_GET, array('q'))) == '') {
+      $query_string = NULL;
+    }
+
+
+
+    //Lets do a check to compare the current url to the site's frontpage.
+    //  If matches, redirect to the frontpage (eg, http://www.mysite.com/)
+    $frontpage = variable_get('site_frontpage', '/');
+    if($_REQUEST['q'] == $frontpage) {
+      drupal_goto('', $query_string, NULL, 301);
+    }
+
+    
+    
     //Check the current url (eg, node/123) for an alias... If set, redirect to it
     $alias = drupal_get_path_alias($_REQUEST['q']);
     if ($alias != $_REQUEST['q']) {
-      drupal_set_header("HTTP/1.1 301 Moved Permanently");
-      drupal_goto($alias);
-      exit();
+      drupal_goto($alias, $query_string, NULL, 301);
     }
+    
     
     //Check if the current url ends in a slash (eg, node/123/)
     if(substr($_REQUEST['q'], -1) == "/") {
@@ -28,21 +48,8 @@ function globalredirect_init() {
       $alias = drupal_get_path_alias(substr($_REQUEST['q'], 0, -1));
       if ($alias != $_REQUEST['q']) {
         //We matched an alias for the current URL with no slash - redirect to that...
-        drupal_set_header("HTTP/1.1 301 Moved Permanently");
-        drupal_goto($alias);
-        exit();
+        drupal_goto($alias, $query_string, NULL, 301);
       }
-    }
-
-
-    //Nothing above has been matched - lets do a check to compare the current url to the site's frontpage.
-    //  If matches, redirect to the frontpage (eg, http://www.mysite.com/)
-    $frontpage = variable_get('site_frontpage', '/');
-    if($_REQUEST['q'] == $frontpage) {
-      drupal_set_header("HTTP/1.1 301 Moved Permanently");
-      drupal_goto('');
-      exit();
     }
   }
 }
-?>
