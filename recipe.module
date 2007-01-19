@@ -4,8 +4,8 @@
 /**
  * @file
  * recipe.module - share recipes
- * for drupal 4.7
- *
+ * for drupal 5.x
+ * 
  * @todo
  */
 
@@ -24,7 +24,7 @@ function recipe_init() {
     }
     elseif (version_compare(variable_get('recipe_installed_version', 0), '2.0.1', 'eq')) {
       variable_set('recipe_installed_version', RECIPE_MODULE_VERSION);
-      drupal_set_message(t('Upgraded recipe module version to %version', array('%version' => RECIPE_MODULE_VERSION)));
+      drupal_set_message(t('Upgraded recipe module version to @version', array('@version' => RECIPE_MODULE_VERSION)));
     }
   }
 }
@@ -54,12 +54,18 @@ function recipe_link($type, $node = NULL, $teaser = FALSE) {
   if ($type == 'node' && $node->type == 'recipe') {
     if (!$teaser) {
       if (variable_get('recipe_export_recipeml_enable', 1) == 1) {
-        $links[] = l(t('export to RecipeML'), 'recipe/export/recipeml/'. $node->nid,
-          array('title' => t('Export this recipe to RecipeML.')));
+        $links['recipe_recipeml'] = array(
+          'title' => t('Export to RecipeML'),
+          'href' => "recipe/export/recipeml/$node->nid",
+          'attributes' => array('title' => t('Export this recipe to RecipeML.')),
+        );
       }
       if (variable_get('recipe_export_html_enable', 1) == 1) {
-        $links[] = l(t('printer-friendly version'), 'recipe/export/html/'. $node->nid,
-          array('title' => t('Show a printer-friendly version of this recipe.')));
+        $links['recipe_html'] = array(
+          'title' => t('Printer-friendly version'),
+          'href' => "recipe/export/html/$node->nid",
+          'attributes' => array('title' => t('Show a printer-friendly version of this recipe.')),
+        );
       }
     }
   }
@@ -72,7 +78,13 @@ function recipe_link($type, $node = NULL, $teaser = FALSE) {
  * and hook_node_types() from 4.6.
  */
 function recipe_node_info() {
-  return array('recipe' => array('name' => t('recipe'), 'base' => 'recipe'));
+  return array(
+    'recipe' => array(
+      'name' => t('Recipe'),
+      'module' => 'recipe',
+      'description' => t("Share your favorite recipes with your fellow cooks."),
+    )
+  );
 }
 
 /**
@@ -80,15 +92,6 @@ function recipe_node_info() {
  */
 function recipe_help($section) {
   switch ($section) {
-    case 'admin/help#recipe':
-      break;
-    case 'admin/modules/recipe':
-    case 'admin/modules#description':
-      // This description is shown in the listing at admin/modules.
-      return t("Collect and display recipes");
-    case 'node/add#recipe':
-      // This description shows up when users click "create content."
-      return t("Share your favorite recipes with your fellow cooks.");
     case 'node/add/recipe':
       return variable_get("recipe_help", "");
   }
@@ -354,104 +357,9 @@ function recipe_form(&$node) {
 }
 
 /**
- * Implementation of hook_menu().
- *
- * Note: when editing this function you must visit 'admin/menu' to reset the cache
+ * Settings form for menu callback
  */
-function recipe_menu($may_cache) {
-  $items = array();
-
-  if ($may_cache) {
-    $items[] = array(
-      'path' => 'node/add/recipe',
-      'title' => t('recipe'),
-      'access' => user_access('create recipes')
-    );
-    $items[] = array(
-      'path' => 'recipe',
-      'title' => t('recipes'),
-      'callback' => 'recipe_page',
-      'access' => user_access('access content'),
-      'type' => MENU_SUGGESTED_ITEM
-    );
-    $items[] = array(
-      'path' => 'recipe/ingredient/autocomplete',
-      'title' => 'ingredient autocomplete',
-      'callback' => 'recipe_autocomplete_page',
-      'type' => MENU_CALLBACK,
-      'access' => user_access('access content')
-    );
-    $items[] = array(
-      'path' => 'recipe/export',
-      'callback' => 'recipe_export',
-      'type'  => MENU_CALLBACK,
-      'access' => user_access('access content')
-    );
-    $items[] = array(
-      'path' => 'recipe/importolddb',
-      'title' => 'import old recipes',
-      'callback' => 'recipe_import_from_46',
-      'type' => MENU_SUGGESTED_ITEM,
-      'access' => user_access('create recipes')
-    );
-  }
-  return $items;
-}
-
-/**
- * Implementation of hook_access().
- */
-function recipe_access($op, $node) {
-  global $user;
-
-  if ($op == 'create') {
-    // Only users with permission to do so may create this node type.
-    return user_access('create recipes');
-  }
-
-  // Users who create a node may edit or delete it later, assuming they have the
-  // necessary permissions.
-  if ($op == 'update' || $op == 'delete') {
-    if (user_access('edit own recipes') && ($user->uid == $node->uid)) {
-      return TRUE;
-    }
-  }
-}
-
-/**
- * Implementation of hook_block().
- */
-function recipe_block($op = 'list', $delta = 0, $edit = array()) {
-  // The $op parameter determines what piece of information is being requested.
-  switch ($op) {
-    case 'list':
-      // If $op is "list", we just need to return a list of block descriptions.
-      // This is used to provide a list of possible blocks to the administrator,
-      // end users will not see these descriptions.
-      $blocks[0]['info'] = t('Newest recipes');
-      return $blocks;
-    case 'view':
-      // If $op is "view", then we need to generate the block for display
-      // purposes. The $delta parameter tells us which block is being requested.
-      switch ($delta) {
-        case 0:
-          // The subject is displayed at the top of the block. Note that it
-          // should be passed through t() for translation.
-          $block['subject'] = t('Newest Recipes');
-          // The content of the block is typically generated by calling a custom
-          // function.
-          $result = db_query_range(db_rewrite_sql("SELECT n.nid, n.title, n.uid, u.name FROM {node} n INNER JOIN {node_revisions} r ON n.nid = r.nid INNER JOIN {users} u ON n.uid = u.uid WHERE n.type='recipe' AND n.status =1 ORDER BY n.created DESC"), 0, 5);
-          $block["content"] = node_title_list($result);
-          break;
-      }
-      return $block;
-  }
-}
-
-/**
- * Implementation of hook_settings().
- */
-function recipe_settings() {
+function recipe_admin_settings() {
   $form['recipe_index_depth'] = array(
     '#type' => 'select',
     '#title' => t('Index Depth'),
@@ -522,7 +430,111 @@ function recipe_settings() {
     '#description' => t('Enables or Disables the Export as RecipeML link.'),
     '#required' => false,
   );
-  return $form;
+  return system_settings_form($form);
+}
+
+/**
+ * Implementation of hook_menu().
+ *
+ * Note: when editing this function you must visit 'admin/menu' to reset the cache
+ */
+function recipe_menu($may_cache) {
+  $items = array();
+
+  if ($may_cache) {
+    $items[] = array(
+      'path' => 'node/add/recipe',
+      'title' => t('Recipe'),
+      'access' => user_access('create recipes')
+    );
+    $items[] = array(
+      'path' => 'recipe',
+      'title' => t('Recipes'),
+      'callback' => 'recipe_page',
+      'access' => user_access('access content'),
+      'type' => MENU_SUGGESTED_ITEM
+    );
+    $items[] = array(
+      'path' => 'recipe/ingredient/autocomplete',
+      'title' => 'Ingredient autocomplete',
+      'callback' => 'recipe_autocomplete_page',
+      'type' => MENU_CALLBACK,
+      'access' => user_access('access content')
+    );
+    $items[] = array(
+      'path' => 'recipe/export',
+      'callback' => 'recipe_export',
+      'type'  => MENU_CALLBACK,
+      'access' => user_access('access content')
+    );
+    $items[] = array(
+      'path' => 'recipe/importolddb',
+      'title' => 'import old recipes',
+      'callback' => 'recipe_import_from_46',
+      'type' => MENU_SUGGESTED_ITEM,
+      'access' => user_access('create recipes')
+    );
+    $items[] = array(
+      'path' => 'admin/settings/recipe',
+      'title' => t('Recipe module'),
+      'description' => t('Settings that control how the recipe module functions.'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => 'recipe_admin_settings',
+      'access' => user_access('administer site configuration'),
+      'type' => MENU_NORMAL_ITEM,
+    );
+  }
+  return $items;
+}
+
+/**
+ * Implementation of hook_access().
+ */
+function recipe_access($op, $node) {
+  global $user;
+
+  if ($op == 'create') {
+    // Only users with permission to do so may create this node type.
+    return user_access('create recipes');
+  }
+
+  // Users who create a node may edit or delete it later, assuming they have the
+  // necessary permissions.
+  if ($op == 'update' || $op == 'delete') {
+    if (user_access('edit own recipes') && ($user->uid == $node->uid)) {
+      return TRUE;
+    }
+  }
+}
+
+/**
+ * Implementation of hook_block().
+ */
+function recipe_block($op = 'list', $delta = 0, $edit = array()) {
+  // The $op parameter determines what piece of information is being requested.
+  switch ($op) {
+    case 'list':
+      // If $op is "list", we just need to return a list of block descriptions.
+      // This is used to provide a list of possible blocks to the administrator,
+      // end users will not see these descriptions.
+      $blocks[0]['info'] = t('Newest recipes');
+      return $blocks;
+    case 'view':
+      // If $op is "view", then we need to generate the block for display
+      // purposes. The $delta parameter tells us which block is being requested.
+      switch ($delta) {
+        case 0:
+          // The subject is displayed at the top of the block. Note that it
+          // should be passed through t() for translation.
+          $block['subject'] = t('Newest Recipes');
+          // The content of the block is typically generated by calling a custom
+          // function.
+          $result = db_query_range(db_rewrite_sql("SELECT n.nid, n.title, n.uid, u.name FROM {node} n INNER JOIN {node_revisions} r ON n.nid = r.nid INNER JOIN {users} u ON n.uid = u.uid WHERE n.type='recipe' AND n.status =1 ORDER BY n.created DESC"), 0, 5);
+          $block["content"] = node_title_list($result);
+          break;
+      }
+      return $block;
+  }
 }
 
 /**
@@ -531,10 +543,16 @@ function recipe_settings() {
 function recipe_view(&$node, $teaser = FALSE, $page = FALSE) {
   if ($page) {
     drupal_set_breadcrumb(array(l(t('Home'), ''), l('Recipes', 'recipe')));
-    theme_add_style(drupal_get_path('module', 'recipe') . '/recipe.css');
+    drupal_add_css(drupal_get_path('module', 'recipe') . '/recipe.css');
   }
   $node = recipe_node_prepare($node, $teaser);
-  $node->body = theme('node_recipe', $node, $page);
+
+  $node->content['body'] = array(
+    '#value' => $teaser ? $node->teaser : theme('node_recipe', $node, $page),
+    '#weight' => 1,
+  );
+
+  return $node;
 }
 
 /**
@@ -869,7 +887,7 @@ function recipe_export_html($nid) {
   if($nid == 0) { drupal_goto('recipe'); }
   $node = node_load(array('nid' => $nid, 'type' => 'recipe'));
 
-  $node = recipe_node_prepare($node, $teaser);
+  $node = recipe_node_prepare($node, FALSE);
   $output = theme('node_recipe', $node, FALSE);
 
   $html = theme('recipe_export_html', check_plain($node->title), $output);
@@ -1240,6 +1258,7 @@ function recipe_node_prepare($node, $teaser = FALSE) {
   else {
     $node->teaser = check_markup($node->body, $node->format, FALSE);
   }
+
   return $node;
 }
 
@@ -1362,14 +1381,14 @@ function _recipe_get_tid_from_term($term) {
 function theme_node_recipe($node, $yield_form = TRUE) {
   // Get custom yield or default to a factor of 1
   if ($yield_form && intval($node->yield) == $node->yield) {
-    if ($_POST['op'] == 'Change')
-      $yield = $_POST['edit']['custom_yield'];
+    if ($_POST['op'] == t('Change'))
+      $yield = $_POST['custom_yield'];
     else
-    if ($_POST['op'] == 'Halve')
-      $yield = $_POST['edit']['custom_yield']/2;
+    if ($_POST['op'] == t('Halve'))
+      $yield = $_POST['custom_yield']/2;
     else
-    if ($_POST['op'] == 'Double')
-      $yield = $_POST['edit']['custom_yield']*2;
+    if ($_POST['op'] == t('Double'))
+      $yield = $_POST['custom_yield']*2;
 
     if ($yield && $yield != $node->yield && $node->yield !=0) {
       $factor = $yield / $node->yield;
@@ -1378,31 +1397,8 @@ function theme_node_recipe($node, $yield_form = TRUE) {
     else {
       $factor = 1;
     }
-    $form['custom_yield_container'] = array(
-      '#type' => 'fieldset',
-      '#collapsible' => FALSE,
-      '#collapsed' => FALSE
-    );
-    $form['custom_yield_container']['custom_yield'] = array(
-      '#type' => 'textfield',
-      '#default_value' => $node->yield,
-      '#size' => 2,
-      '#maxlength' => 4
-    );
-    $form['custom_yield_container']['submit'] = array(
-      '#type' => 'submit',
-      '#value' => t('Change')
-    );
-    $form['halve'] = array(
-      '#type' => 'submit',
-      '#value' => t('Halve')
-    );
-    $form['double'] = array(
-      '#type' => 'submit',
-      '#value' => t('Double')
-    );
     $_POST = array();
-    $yield = drupal_get_form('recipe_custom_yield', $form);
+    $yield = drupal_get_form('recipe_custom_yield_form', $node);
   }
   else {
     $yield = $node->yield;
@@ -1426,7 +1422,7 @@ function theme_node_recipe($node, $yield_form = TRUE) {
           $ingredient->quantity = recipe_ingredient_quantity_from_decimal($ingredient->quantity);
         }
 
-        $ingredients[] = $ingredient->quantity.'<acronym title="'.recipe_unit_name($ingredient->unit_id).'">'.$ingredient->abbreviation.'</acronym>'.' '.$ingredient->name;
+        $ingredients[] = $ingredient->quantity.' <acronym title="'.recipe_unit_name($ingredient->unit_id).'">'.$ingredient->abbreviation.'</acronym> '.$ingredient->name;
       }
     }
   }
@@ -1439,10 +1435,10 @@ function theme_node_recipe($node, $yield_form = TRUE) {
   }
   if ($node->preptime) {
     if ($node->preptime < 60) {
-      $preptime = t("%n minutes", array ("%n" => $node->preptime));
+      $preptime = t("@n minutes", array ("@n" => $node->preptime));
     }
     else {
-      $preptime = t("%n hours", array ("%n" => recipe_ingredient_quantity_from_decimal($node->preptime / 60)));
+      $preptime = t("@n hours", array ("@n" => recipe_ingredient_quantity_from_decimal($node->preptime / 60)));
     }
      $summary .= '<tr><th>Prep Time</th><td>'.$preptime.'</td></tr>';
   }
@@ -1471,6 +1467,33 @@ function theme_node_recipe($node, $yield_form = TRUE) {
   return $output;
 }
 
+function recipe_custom_yield_form($node) {
+    $form['custom_yield_container'] = array(
+      '#type' => 'fieldset',
+      '#collapsible' => FALSE,
+      '#collapsed' => FALSE
+    );
+    $form['custom_yield_container']['custom_yield'] = array(
+      '#type' => 'textfield',
+      '#default_value' => $node->yield,
+      '#size' => 2,
+      '#maxlength' => 4
+    );
+    $form['custom_yield_container']['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Change')
+    );
+    $form['custom_yield_container']['halve'] = array(
+      '#type' => 'submit',
+      '#value' => t('Halve')
+    );
+    $form['custom_yield_container']['double'] = array(
+      '#type' => 'submit',
+      '#value' => t('Double')
+    );
+
+    return $form;
+}
 
 /**
  Controls the output of the rendered index list.
