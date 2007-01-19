@@ -387,6 +387,13 @@ function recipe_menu($may_cache) {
       'type'  => MENU_CALLBACK,
       'access' => user_access('access content')
     );
+    $items[] = array(
+      'path' => 'recipe/importolddb',
+      'title' => 'import old recipes',
+      'callback' => 'recipe_import_from_46',
+      'type' => MENU_SUGGESTED_ITEM,
+      'access' => user_access('create recipes')
+    );
   }
   return $items;
 }
@@ -1536,38 +1543,81 @@ function theme_recipe_export_html($title, $content) {
  *
  */
 function recipe_euclid ($number_one, $number_two) {
-      if (($number_one == 0) or ($number_two == 0)) {
-      $hcf = 1;
-      return $hcf;
+  if (($number_one == 0) or ($number_two == 0)) {
+    $hcf = 1;
+    return $hcf;
+  }
+  else {
+    if ($number_one < $number_two) {
+      $buffer = $number_one;
+      $number_one = $number_two;
+      $number_two = $buffer;
+    }
+
+    $dividend = $number_one;
+    $divisor = $number_two;
+    $remainder = $dividend;
+
+    while ($remainder > 0) {
+      if ((floor($dividend/$divisor)) == ($dividend/$divisor)) {
+        $quotient = $dividend/$divisor;
+        $remainder = 0;
       }
       else {
-         if ($number_one < $number_two) {
-         $buffer = $number_one;
-         $number_one = $number_two;
-         $number_two = $buffer;
-         }
-
-         $dividend = $number_one;
-         $divisor = $number_two;
-         $remainder = $dividend;
-
-         while ($remainder > 0) {
-           if ((floor($dividend/$divisor)) == ($dividend/$divisor)) {
-           $quotient = $dividend/$divisor;
-           $remainder = 0;
-           }
-           else {
-           $quotient = floor($dividend/$divisor);
-           $remainder = $dividend - ($quotient * $divisor);
-           }
-           $hcf = $divisor;
-           $dividend = $divisor;
-           $divisor = $remainder;
-         }
-
-
+        $quotient = floor($dividend/$divisor);
+        $remainder = $dividend - ($quotient * $divisor);
+      }
+      $hcf = $divisor;
+      $dividend = $divisor;
+      $divisor = $remainder;
     }
-   return $hcf;
-   }
+
+
+  }
+  return $hcf;
+}
+
+function recipe_import_from_46() {
+  $rcount = 0;
+  $icount = 0;
+  $out = "<p>";
+  $old = db_query("SELECT * FROM {recipe_old}");
+  while ($o = db_fetch_object($old)) {
+    db_query("INSERT INTO {recipe} (nid, source, yield, preptime, notes, instructions) VALUES('%d', '%s', '%d', '%d', '%s', '%s')", $o->nid, $o->source, intval($o->yield), $o->preptime, $o->notes, $o->instructions);
+    $out .= "Imported recipe {$o->nid} <br />";
+    $rcount++;
+  }
+  $out .= "</p>";
+
+  $out .= "<p><pre>";
+  $ings = db_query("SELECT * FROM {recipe_ingredients}");
+  while ($i = db_fetch_object($ings)) {
+    $unitid = 29; // "unknown"
+    $quantity = recipe_ingredient_quantity_from_fraction($i->ingredient); // best guess
+    $out .= "\n\nParsing {$i->ingredient}\n";
+    $nmatches = preg_match("/([^a-zA-Z]*)([^ ]*) (.*)/", $i->ingredient, $matches);
+    //print_r($matches);
+    if ($nmatches > 0) {
+      $quantity = recipe_ingredient_quantity_from_fraction($matches[1]);
+      $unit = $matches[2];
+      $name = $matches[3];
+      $out .= "looking up unit for '".strtolower($unit)."'\n";
+      $unit_rs = db_query("SELECT id FROM {recipe_unit} WHERE '%s' LIKE CONCAT(LOWER(name),'%%') OR abbreviation='%s'", strtolower($unit), $unit); // allow pints to match pint etc
+      if ($unito = db_fetch_object($unit_rs)) {
+        $out .= "Got unit id ".$unito->id."\n";
+        $unitid = $unito->id;
+      } else {
+        $name = $unit ." ". $name; 
+      }
+    }
+    $iid = recipe_ingredient_id_from_name($name);
+    $out .= "Got id for '{$name}': $iid";
+    db_query("INSERT INTO {recipe_node_ingredient} (nid, unit_id, quantity, ingredient_id) VALUES('%d', '%d', '%f', '%d')", $i->nid, $unitid, $quantity, $iid);
+    $icount++;
+  }
+  $out .= "</pre></p>";
+  $out .= "<p>Imported $rcount recipes and $icount ingredients.</p>";
+  return $out;
+}
 
 ?>
