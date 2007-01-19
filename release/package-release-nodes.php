@@ -201,7 +201,7 @@ function package_release_core($nid, $uri, $version, $rev) {
   }
 
   $id = $uri . '-' . $version;
-  $view_link = l(t('view', 'node/' . $nid);
+  $view_link = l(t('view'), 'node/' . $nid);
   $file_name = $id . '.tar.gz';
   $file_path = $dest_rel . '/' . $file_name;
   $full_dest = $dest_root . '/' . $file_path;
