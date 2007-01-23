@@ -8,14 +8,24 @@ are only visible after one or two clicks normally.
 -- INSTALLATION --
 
 * Copy admin_menu module to your modules directory and enable it on the admin
-modules page.
+  modules page.
 
 * If "Admin Menu Block" is not automatically activated after module
-installation, make sure you visit the block configuration page
-(admin/build/block/) for each theme you want to have admin_menu activated for.
+  installation, make sure you visit the block configuration page
+  (admin/build/block/ in Drupal 5 or admin/block in Drupal 4.7) for each theme
+  you want to have admin_menu activated for.
 
 * If you are using a separate admin theme, make sure the block is activated
-for this theme, too.
+  for this theme, too.
+
+
+-- TROUBLESHOOTING --
+
+* If Drupal Administration Menu is activated after installation but is not
+  displayed and you are missing your 'administer' menu, then visit the block
+  configuration page (admin/build/block/ in Drupal 5 or admin/block in Drupal
+  4.7), ensure that "Admin Menu Block" is placed in front of any other menu
+  block and save your block configuration.
 
 
 -- AUTHORS --
