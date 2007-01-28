@@ -1765,6 +1765,9 @@ function project_issue_query_parse($query = NULL) {
   if (empty($query->states)) {
     $query->states = project_issue_default_states();
   }
+  if ($query->states[0] == 'all') {
+    $query->states = array_keys(project_issue_state());
+  }
   if (!empty($_REQUEST['participated']) && empty($query->participated)) {
     $query->participated = (int)$_REQUEST['participated'];
   }
