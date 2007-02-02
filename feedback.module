@@ -1,5 +1,4 @@
 <?php
-
 // $Id$
 
 define('FEEDBACK_MAX_NAME',   64);
@@ -11,16 +10,6 @@ define('FEEDBACK_MAX_POSTAL', 200);
  * @file
  * Enables a site-wide feedback page.
  */
-
-/**
- * Implementation of hook_help().
- */
-function feedback_help($section) {
-  switch ($section) {
-    case 'admin/modules#description' :
-      return t('Enables a site-wide feedback page.');
-  }
-}
 
 /**
 * Implementation of hook_menu().
@@ -46,6 +35,13 @@ function feedback_menu($may_cache) {
     );
   }
   return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function feedback_perm() {
+  return array ('can send feedback', 'administer feedback');
 }
 
 /**
@@ -94,7 +90,7 @@ function feedback_settings_overview_add($pages) {
   );
   $form['group'][] = array(
     '#type' => 'submit',
-    '#value' => t('Add'),
+    '#value' => t('Add page'),
   );
   $form['group'] += array(
     '#type' => 'fieldset',
@@ -106,14 +102,12 @@ function feedback_settings_overview_add($pages) {
 }
 
 function feedback_settings_overview_add_validate($form_id, &$edit) {
-  $pages = $edit['pages'];
-  if (in_array($edit['page_name'], $pages)) {
+  if (in_array($edit['page_name'], $edit['pages'])) {
     form_set_error('page_name', t('This page already exists.'));
   }
 }
 
 function feedback_settings_overview_add_submit($form_id, &$edit) {
-  $pages = $edit['pages'];
   _feedback_add_page($edit['page_name']);
   drupal_set_message(t('Your feedback page has been added.'));
 }
@@ -222,18 +216,17 @@ function feedback_settings_form($pagename) {
     '#default_value' => $page->logging,
   );
 
-  $form['#redirect'] = 'admin/settings/feedback';
-  $form['#submit']['feedback_settings_form_submit'] = array($page);
-  $form['buttons']['submit'] = array('#type' => 'submit', '#value' => t('Save configuration') );
-  //return drupal_get_form('feedback_settings_form' . $page->name, $form, 'feedback_settings_form'); 
+  $form['page'] = array('#type' => 'value', '#value' => $page);
+  $form['submit'] = array('#type' => 'submit', '#value' => t('Save configuration') );
   return $form;
 }
 
-function feedback_settings_form_submit($form_id, $edit, &$page) {
-  unset($edit['submit']);
-  unset($edit['form_id']);
+function feedback_settings_form_submit($form_id, $edit) {
+  $page = $edit['page'];
+  unset($edit['submit'], $edit['form_id'], $edit['page']);
   db_query("UPDATE {feedback_pages} SET data = '%s' WHERE name = '%s'", serialize($edit), $page->name);
   drupal_set_message(t('The configuration options have been saved.'));
+  return array('admin/settings/feedback');
 }
 
 /**
@@ -253,45 +246,39 @@ function feedback_settings_delete($pagename) {
 }
 
 /**
- * Implementation of hook_perm().
- */
-function feedback_perm() {
-  return array ('can send feedback', 'administer feedback');
-}
-
-/**
  * Site-wide feedback page
  */
 function feedback_mail_page() {
-  $page = arg(1);
-
-  if (!empty ($page)) {
+  if ($pagename = arg(1)) {
     //check if this feedback page exists
     $pages = _feedback_get_page_names();
-    if (!in_array($page, $pages)) {
+    if (!in_array($pagename, $pages)) {
       drupal_not_found();
-      exit;
+      exit();
     }
   }
   else {
-    $page = 'default';
+    $pagename = 'default';
   }
-  $page = _feedback_get_page($page);
-  
+
+  $page = _feedback_get_page($pagename);
   $breadcrumb[] = array ('path' => 'feedback', 'title' => $page->title);
   menu_set_location($breadcrumb);
+  drupal_set_title($page->title);
 
   if (!flood_is_allowed('feedback'.$page->name, $page->hourly_threshold)) {
-    $output = t('You cannot send more than %number messages per hour. Please try again later.', array ('%number' => $page->hourly_threshold));
+    $message = t('You cannot send more than %number messages per hour. Please try again later.', array ('%number' => $page->hourly_threshold));
+    drupal_set_message($message, 'error');
+    return;
   }
-  else {
-    $output = $page->instructions . drupal_get_form('feedback_mail_form', $page);
-  }
-  print theme('page', $output);
+
+  return drupal_get_form('feedback_mail_form', $page);
 }
 
 function feedback_mail_form($page) {
   global $user;
+  $form['instructions'] = array('#value' => $page->instructions);
+
   if ($page->field_name) {
     $form['emailname'] = array(
       '#type' => 'textfield',
@@ -525,6 +512,7 @@ function _feedback_get_options($text) {
   }
   return $options;
 }
+
 /*
  * Returns an array of all available feedback page names
  */
