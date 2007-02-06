@@ -17,7 +17,7 @@ function globalredirect_help($section) {
  * Implementation of hook_init().
  */
 function globalredirect_init() {
-  if(isset($_REQUEST['q']) && function_exists('drupal_get_path_alias')) {
+  if(isset($_REQUEST['q']) && function_exists('drupal_get_path_alias') && !isset($_REQUEST['destination'])) {
     
     //Get the Query String (minus the 'q'). If none set, set to NULL
     if (($query_string = drupal_query_string_encode($_GET, array('q'))) == '') {
@@ -28,8 +28,7 @@ function globalredirect_init() {
 
     //Lets do a check to compare the current url to the site's frontpage.
     //  If matches, redirect to the frontpage (eg, http://www.mysite.com/)
-    $frontpage = variable_get('site_frontpage', '/');
-    if($_REQUEST['q'] == $frontpage) {
+    if(drupal_is_front_page()) {
       drupal_goto('', $query_string, NULL, 301);
     }
 
