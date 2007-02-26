@@ -239,7 +239,7 @@ function feedback_settings_delete($pagename) {
     drupal_goto('admin/settings/feedback');
   } 
   else {
-    $message = t('Are you sure you want to delete the feedback page "%page"?', array('%page' => $pagename));
+    $message = t('Are you sure you want to delete the feedback page "!page"?', array('!page' => $pagename));
     $output = drupal_get_form('confirm_form', array(), $message, 'admin/settings/feedback', $message, t('Delete'), t('Cancel'));
     return $output;
   }
@@ -267,7 +267,7 @@ function feedback_mail_page() {
   drupal_set_title($page->title);
 
   if (!flood_is_allowed('feedback'.$page->name, $page->hourly_threshold)) {
-    $message = t('You cannot send more than %number messages per hour. Please try again later.', array ('%number' => $page->hourly_threshold));
+    $message = t('You cannot send more than !number messages per hour. Please try again later.', array ('!number' => $page->hourly_threshold));
     drupal_set_message($message, 'error');
     return;
   }
@@ -401,11 +401,11 @@ function feedback_mail_form_validate($form_id, &$edit) {
     form_set_error('body', t('Please enter your message.'));
   } 
   else if ($page->field_body && drupal_strlen($edit['body']) > FEEDBACK_MAX_BODY) {
-    form_set_error('body', t('Please shorten your input. Up to %limit characters are allowed.', array ('%limit' => FEEDBACK_MAX_BODY)));
+    form_set_error('body', t('Please shorten your input. Up to !limit characters are allowed.', array ('!limit' => FEEDBACK_MAX_BODY)));
   }
 
   if ($page->field_postal && drupal_strlen($edit['postal']) > FEEDBACK_MAX_POSTAL) {
-    form_set_error('postal', t('Please shorten your input. Up to %limit characters are allowed.', array ('%limit' => FEEDBACK_MAX_POSTAL)));
+    form_set_error('postal', t('Please shorten your input. Up to !limit characters are allowed.', array ('!limit' => FEEDBACK_MAX_POSTAL)));
   }
   if ($page->field_phone && drupal_strlen($edit['phone']) > 64) {
     form_set_error('phone', t('Too long input.'));
@@ -418,7 +418,6 @@ function feedback_mail_form_validate($form_id, &$edit) {
 function feedback_mail_form_submit($form_id, &$edit) {
   // Prepare the sender:
   $from = feedback_plain_text($edit['mail']);
-  $name = feedback_plain_text($edit['emailname']);
 
   $page = $edit['page'];
 
@@ -429,7 +428,7 @@ function feedback_mail_form_submit($form_id, &$edit) {
   if ($page->field_body) {
     $message[] = feedback_plain_text($edit['body']);
   }
-  $message[] = t('Sent from %form by %name.', array ('%name' => $name, '%form' => url($_GET['q'], NULL, NULL, TRUE)));
+  $message[] = t('Sent from @form by @name.', array ('@name' => $edit['emailname'], '@form' => url($_GET['q'], NULL, NULL, TRUE)));
 
   $message[] = _feedback_user_info($edit, $page);
 
@@ -450,7 +449,7 @@ function feedback_mail_form_submit($form_id, &$edit) {
   // Log the operation:
   flood_register_event('feedback'. $page->name);
   if ($page->logging) {
-    watchdog('mail', t('%name-from sent an feedback e-mail', array ('%name-from' => theme('placeholder', $name ." <$from>"))));
+    watchdog('mail', t('@name-from sent a feedback e-mail', array ('@name-from' => $edit['emailname'] . ' <$from>')));
   }
 
   // Update user:
