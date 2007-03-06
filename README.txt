@@ -1,39 +1,34 @@
-Readme
-------
+Drupal Module
+------------------------------------------------------------------------------
+Name: Frequently Asked Questions module
+Author: Stella Power
+Drupal: 5.0.x
+------------------------------------------------------------------------------
 
-This module allows you to manage and display Frequently Asked Questions nodes.
-It uses Drupal's taxonomy module to classify questions and provides
-FAQ-friendly output.
+Description
+============
+The Frequently Asked Questions (faq) module allows users with the 'administer
+faq' permission to create question and answer pairs which they want displayed on
+the 'faq' page.  The 'faq' page is automatically generated from the FAQ nodes
+configured and the layout of this page can be modified on the settings page.
+Users will need the 'access content' permission to view the 'faq' page. 
 
-Note the function theme_faq_highlights(), which shows the top five
-recently-created FAQs. This is called in one of the two blocks this module
-ships with but can also be called in a php-filtered node if desired. 
+Configuration
+=============
+Once the module is activated, you can create your question and answer pairs by
+creating FAQ nodes (Create content >> FAQ).  This allows you to edit the
+question and answer text.  In addition, if the 'Taxonomy' module is enabled and
+there are some terms configured for the FAQ node type, it will also be possible
+to put the questions into different categories when editing.
 
+On the Frequently Asked Questions settings configuration page (Administer >> 
+Site configuration >> Frequently Asked Questions (admin/settings/faq)), you will
+find a form that will allow you to configure the layout of the questions and 
+answers on the 'faq' page.  
 
+The 'administer faq' permission is needed for configuring the 'faq' page layout
+and editing of FAQ nodes.
 
-Requirements
-------------
-
-This module has been tested on Drupal 4.6 and includes a database defintion
-for mysql only.
-
-
-
-Installation
-------------
-
-1. Create the SQL tables. This depends a little on your system, but the most
-   common method is:
-        mysql -u username -ppassword drupal < faq.mysql
-
-2. Copy faq.module to the Drupal modules/ directory.
-
-3. Enable faq in the "site settings | modules" administration screen.
-
-4. Set access control so that admin users can add FAQs.
-
-5. Create your FAQ categories using Drupal's taxonomy module. The faq module
-   currently doesn't support tiered hierarchy.
-
-6. Start adding faq nodes. The questions, broken down by category, appear at
-   http://www.yoursite.com/faq .
+Current maintainer
+===================
+Stella Power (http://drupal.org/user/66894)

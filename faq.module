@@ -1,288 +1,520 @@
 <?php
 // $Id$
-
 /**
- * @file
- * Enables the creation and display of FAQs
- */
-define("FAQ_ADMIN", "administer faq");
+* Display help and module information
+* @param section which section of the site we're displaying help
+* @return help text for section
+*/
+function faq_help($section='') {
 
-/**
- * Implementation of hook_perm()
- */
-function faq_perm(){
-	return array(
-		FAQ_ADMIN
-	);
+  $output = '';
+
+  switch ($section) {
+    case "admin/help#faq":
+      $output .= '<p>'.  t("This module allows users with the 'administer faq' permission to create question and answer pairs which will be displayed on the 'faq' page.  The 'faq' page is automatically generated from the FAQ nodes configured and the layout of this page can be modified on the settings page.  Users will need the 'access content' permission in order to view the 'faq' page."). '</p>'.
+	'<p>' .t("To create a question and answer, the user must create a 'FAQ' node (Create content >> FAQ).  This screen allows the user to edit the question and answer text.  If the 'Taxonomy' module is enabled and there are some terms configured for the FAQ node type, it will also be possible to put the questions into different categories when editing."). '</p>'.
+	'<p>' .t("The 'Frequently Asked Questions' settings configuration screen will allow users with 'administer faq' permissions to specify different layouts of the questions and answers."). '</p>'.
+	'<p>' .t("All users with 'access content' permissions will be able to view the generated FAQ page at 'www.example.com/faq'."). '</p>';
+      return $output;
+    case "admin/modules#description":
+      return t("Allows the user to configure the layout of questions and answers on a FAQ page.");
+    case "node/add#faq":
+      return t("Add a question and answer to a FAQ list.");
+  }
+
 }
 
 /**
- * Implementation of hook_access()
+* Implementation of hook_perm()
+* Define the permissions this module uses
+*/
+function faq_perm() {
+  return array('administer faq');
+}
+
+
+/**
+* Implementation of hook_access()
+*/
+function faq_access($op, $node) {
+  if ($op == 'create' || $op == 'update' || $op == 'delete') {
+    return user_access('administer faq');
+  }
+}
+
+/**
+* Implementation of hook_menu()
+*/
+function faq_menu($may_cache) {
+  $access = user_access('administer faq');
+  $items = array();
+
+  if ($may_cache) {
+    $items[] = array('path' => 'admin/settings/faq', 
+      'title' => t('Frequently Asked Questions'),
+      'callback' => 'faq_settings_page',
+      'access' => $access,
+      'description' => t('Allows the user to configure the layout of questions and answers on a FAQ page.'),
+    );
+    $items[] = array('path' => 'faq', 
+      'title' => t('Frequently Asked Questions'),
+      'callback' => t('faq_page'),
+      'access' => user_access('access content'),
+      'weight' => 1
+    );
+  }
+  else {
+    $items[] = array(
+      'path' => 'admin/settings/faq/configure',
+      'title' => t('Configure'),
+      'description' => t('Allows the user to configure the layout of questions and answers on a FAQ page.'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('faq_settings_form'),
+      'access' => $access,
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'weight' => -10,
+    );
+    $items[] = array('path' => 'node/add/faq',
+      'title' => t('FAQ'),
+      'access' => $access,
+    );
+    $items[] = array('path' => 'faq', 
+      'title' => t('Frequently Asked Questions'),
+      'callback' => t('faq_page'),
+      'access' => user_access('access content'),
+      'weight' => 1
+    );
+
+    if (arg(0) == 'faq' && is_numeric(arg(1))) {
+      $items[] = array('path' => 'faq/' . arg(1), 
+	'title' => t('Frequently Asked Questions'),
+	'callback' => 'faq_page',
+	'callback arguments' => array(arg(1)),
+	'access' => user_access('access content'),
+	'type' => MENU_CALLBACK,
+      );
+    }
+
+  }
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_node_info()
  */
-function faq_access($op, $node){
-	if($op == 'create' || $op == 'update' || $op == 'delete'){
-		return user_access(FAQ_ADMIN);
-	}
+function faq_node_info() {
+  return array(
+    'faq' => array(
+      'name' => t('FAQ'),
+      'module' => 'faq',
+      'description' => t('A frequently asked question and the answer.'),
+    )
+  );
 }
 
 /**
  * Implementation of hook_node_name()
  */
-function faq_node_name(){
-	return 'faq';
+function faq_node_name($node) {
+  return t('FAQ');
 }
 
+function faq_form(&$node) {
+  
+  // question
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Question'),
+    '#default_value' => $node->title,
+    '#required' => TRUE,
+    '#weight' => 0,
+    '#description' => t('Question to be answered'),
+  );
+
+  // answer
+  $form['body_filter']['body'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Answer'),
+    '#default_value' => $node->body,
+    '#rows' => 10,
+    '#required' => TRUE,
+  );
+  $form['body_filter']['format'] = filter_form($node->format);
+
+  return $form;
+}
+
+function faq_settings_page($op = NULL, $aid = NULL) {
+
+  switch ($op) {
+    case 'edit':
+      if (is_numeric($aid)) {
+        $output = drupal_get_form('faq_settings_form');
+      }
+      break;
+    default:
+      $form[] = array(
+	'#type' => 'fieldset',
+	'#title' => t('Add another'),
+      );
+      $output .= drupal_get_form('faq_settings_form');
+      break;
+  }
+  return $output;
+}
+
+
 /**
- * Implementation of hook_menu()
+ * Define a form to upload the avatar images.
  */
-function faq_menu($may_cache){
+function faq_settings_form() {
 
-	$items = array();
+  $form['questions'] = array('#type' => 'fieldset', 
+    '#title' => t('Questions and Answers'), 
+    '#weight' => -1,
+    '#collapsible' => 1,
+    '#collapsed' => 0,
+  );
+  $display_options['questions_inline'] = t('Questions inline');
+  $display_options['questions_top'] = t('Clicking on question brings user to answer further down the page');
+  $display_options['hide_answer'] = t('Clicking on question opens/hides answer under question');
+  $display_options['new_page'] = t('Clicking on question opens the answer in a new page');
 
-	if($may_cache){
-	}
+  $form['questions']['display'] = array('#type' => 'radios',
+    '#options' => $display_options,
+    '#title' => t('Page layout'),
+    '#description' => t('This controls now the questions and answers are displayed on the page and what happens when someone clicks on the question.'),
+    '#default_value' => variable_get('faq_display', 'questions_top'),
+    );
 
-	$items[] = array('path' => 'faq', 'title' => t('FAQs'), 'callback' => 'theme_faq_list', 'access' => user_access('access content'), 'type' => MENU_NORMAL_ITEM);
-	$items[] = array('path' => 'faq/show', 'title' => t('FAQs'), 'callback' => 'theme_faq_show', 'access' => user_access('access content'), 'type' => MENU_CALLBACK);
+  $form['questions']['back_to_top'] = array('#type' => 'textfield',
+    '#title' => t('"Back to Top" link text'),
+    '#description' => t('This allows the user to change the text displayed for the links which return the user to the top of the page on certain page layouts.  Defaults to "Back to Top".  Leave blank to have no link.'),
+    '#default_value' => variable_get('faq_back_to_top', t('Back to Top')),
+    );
 
-	return $items;
 
+  $form['category'] = array('#type' => 'fieldset', 
+    '#title' => t('Categories'), 
+    '#weight' => 0,
+    '#collapsible' => 1,
+    '#collapsed' => 0,
+  );
+
+  $form['category']['categories'] = array('#type' => 'checkbox',
+    '#title' => t('Categorize questions'),
+    '#description' => t('This allows the user to display the questions according to the categories configured on the add/edit FAQ page.  Use of sub-categories is only recommended for large lists of questions.'),
+    '#default_value' => variable_get('faq_use_categories', FALSE),
+  );
+
+  $category_options['categories_inline'] = t('Categories inline');
+  $category_options['hide_qa'] = t('Clicking on category opens/hides questions and answers under category');
+  $category_options['new_page'] = t('Clicking on category opens the questions/answers in a new page');
+
+  $form['category']['category_display'] = array('#type' => 'radios',
+    '#options' => $category_options,
+    '#title' => t('Categories layout'),
+    '#description' => t('This controls now the categories are displayed on the page and what happens when someone clicks on the category.'),
+    '#default_value' => variable_get('faq_category_display', 'categories_inline'),
+    );
+
+  $form['update']['attach'] = array(
+    '#type' => 'submit',
+    '#value' => t('Update'),
+    '#weight' => 3,
+  );
+
+  return $form;
 }
 
 /**
- * Implementation of hook_form()
+ * Validate the submission.
+ *
+ * Check whether:
+ * if any of the settings have changed
  */
-function faq_form(&$node){
-	$ouptut = '';
-	$values = array();
-	for($i = -10; $i <= 10; $i++){
-		$values[$i] = $i;
-	}
-	$output .= form_select(t('Weight'), 'weight', isset($node->weight) ? $node->weight : '0', $values);
-	foreach(taxonomy_node_form('faq', $node) as $vocab){
-		$output .= $vocab;
-	}
-	$output .= form_textarea(t('Answer'), 'body', $node->body, 60, 20, 'Enter the answer to the question given in the title.', NULL, TRUE);
-	return $output;
+function faq_settings_form_validate($form_id, $form_values) {
+  if ($form_values['op'] == t('Update')) {
+    variable_set('faq_display', $form_values['display']);
+    variable_set('faq_back_to_top', $form_values['back_to_top']);
+    variable_set('faq_use_categories', $form_values['categories']);
+    variable_set('faq_category_display', $form_values['category_display']);
+    drupal_set_message(t('Configuration has been updated.'));
+
+    if (variable_get('faq_use_categories', FALSE) && !module_exists("taxonomy")) {
+      drupal_set_message(t("warning: Categorization of questions will not work without the 'taxonomy' module."), 'error');
+    }
+    
+  }
 }
 
 /**
- * Implementation of hook_insert()
+ * Function to display the faq page
  */
-function faq_insert($node){
-	db_query('INSERT INTO faq (fid, weight) VALUES(%d, %d)', $node->nid, $node->weight);
+function faq_page($tid = 0) {
+  drupal_add_css(drupal_get_path('module', 'faq') .'/faq.css');
+
+  // get page layout
+  $faq_display = variable_get('faq_display', 'questions_top');
+
+  // get "back to top" link text
+  $back_to_top = variable_get('faq_back_to_top', t('Back to Top'));
+  $back_to_top = '<br><span class="more-link">'
+    . l(check_plain(t($back_to_top)), 'faq') . '</span>';
+
+  // find out if we should categorize the questions, if so get list of
+  // categories
+  $use_categories = variable_get('faq_use_categories', FALSE);
+  if (!module_exists("taxonomy")) $use_categories = FALSE;
+
+
+
+  // non-categorized questions and answers
+  if (!$use_categories) {
+    $result = db_query("SELECT n.title, n.nid, r.body FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid WHERE n.type='faq' AND n.status = 1 ORDER BY n.created DESC");
+
+    switch ($faq_display) {
+      case 'questions_top':
+	while ($node = db_fetch_object($result)) {
+	  _questions_top($node, $back_to_top, '', $questions, $answers);
+	}
+	$output .= "<ul>" . $questions . "</ul>";
+	$output .= "<dl>". $answers . "</dl>";
+	break;
+
+
+      case 'hide_answer':
+	drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
+	$output = '<dl class="faq">';
+	while ($node = db_fetch_object($result)) {
+	  $output .= _hide_answer($node);
+	}
+	$output .= '</dl>';
+	break;
+
+
+      case 'questions_inline':
+	$output = "<dl>";
+	while ($node = db_fetch_object($result)) {
+	  $output .= _questions_inline($node, $back_to_top);
+	}
+	$output .= "</dl>";
+	break;
+
+      case 'new_page':
+	$output = "<ul>";
+	while ($node = db_fetch_object($result)) {
+	  $output .= _new_page($node);
+	}
+	$output .= "</ul>";
+	break;
+	
+    } // end of switch
+  }
+
+
+
+  // categorize questions
+  else {
+    $category_display=variable_get('faq_category_display', 'categories_inline');
+    $output .= "<br>";
+
+
+    // if we're viewing a specific category/term
+    if ($tid != 0) {
+      $term = taxonomy_get_term($tid);
+      $result = taxonomy_select_nodes(array($term->tid), 'or', 0, FALSE);
+      if ($result) {
+	_display_faq_by_category($faq_display, $category_display, $result,
+	  $term, $output, $output_answers);
+      } 
+      $output = '<div class="content">'.$output . $output_answers .'</div>';
+      return $output;
+    }
+
+
+    $vocabularies = taxonomy_get_vocabularies("FAQ");
+    $terms = array();
+    foreach ($vocabularies as $vid => $vobj) {
+      $tree = taxonomy_get_tree($vid);
+      foreach ($tree as $term) {
+
+	switch ($category_display) {
+	  case 'new_page':
+	    $depth = 0;
+	    while ($depth < $term->depth) {
+	      $indent = '<ul class="category-indent">';
+	      $output .= $indent;
+	      $depth++;
+	    }
+
+	    $output .= "<li>" . l(t($term->name), "faq/$term->tid") . "</li>";
+
+	    while ($depth > 0) {
+	      $output .= '</ul>';
+	      $depth--;
+	    }
+	    break;
+
+	  case 'hide_qa':
+	    drupal_add_js(drupal_get_path('module','faq').'/faq.js','module');
+
+	  case 'categories_inline':
+	    $result = taxonomy_select_nodes(array($term->tid), 'or', 0, FALSE);
+	    if ($result) {
+	      _display_faq_by_category($faq_display, $category_display, $result,
+		$term, $output, $output_answers);
+	    } 
+	    break;
+
+	} // end of switch (category_display)
+      } // end of foreach term
+    } // end of foreach vocab
+    if ($category_display == "new_page") {
+      $output = "\n<ul>" . $output . "</ul>\n";
+    }
+  }
+
+  $output = '<div class="content">'. $output . $output_answers .'</div>';
+
+  return $output;
 }
 
-/**
- * Implementation of hook_update()
- */
-function faq_update($node){
-	db_query('UPDATE faq SET weight = %d WHERE fid = %d', $node->weight, $node->nid);
+
+
+function _display_faq_by_category($faq_display, $category_display, $result, $term, &$output, &$output_answers) {
+
+  $depth = 0;
+  while ($depth < $term->depth) {
+    $indent = '<div class="category-indent">';
+    $output .= $indent;
+    $depth++;
+  }
+
+  $header = '<h5 class="faq_qa_header">' . t($term->name) . '</h5>'; 
+  if ($term->depth > 0) {
+    $header = '<h6 class="faq_qa_header">' .t($term->name). '</h6>'; 
+  }
+
+
+  if ($category_display == "hide_qa") {
+    $faq_qa_div_class = "faq_qa_hide";
+  }
+  else {
+    $faq_qa_div_class = "faq_qa";
+  }
+
+  switch ($faq_display) {
+    case 'questions_top':
+      $questions = NULL;
+      $answers = NULL;
+
+      $output .= $header;
+      $output .= '<div class="'.$faq_qa_div_class.'">';
+      while ($node = db_fetch_object($result)) {
+	$full_node = node_load($node->nid);
+	if ($full_node->type == "faq") {
+	  _questions_top($full_node, $back_to_top, $term->tid, 
+	    $questions, $answers);
+	}
+      }
+      $output .= "<ul>\n" . $questions . "\n</ul>\n";
+
+      if ($category_display == "hide_qa") {
+	$output .= "<dl>\n" .$answers. "\n</dl>\n</div>";
+
+      }
+      else {
+	$output .= "</div>\n";
+	$ans_depth = 0;
+	while ($ans_depth < $term->depth) {
+	  $indent = '<div class="category-indent">';
+	  $output_answers .= $indent;
+	  $ans_depth++;
+	}
+	$output_answers .= $header . "<dl>\n" .$answers. "\n</dl>\n";
+	while ($ans_depth > 0) {
+	  $output_answers .= '</div>';
+	  $ans_depth--;
+	}
+      }
+      break;
+
+
+    case 'hide_answer':
+      drupal_add_js(drupal_get_path('module','faq').'/faq.js','module');
+      $output .= $header;
+      $output .= '<div class="'.$faq_qa_div_class.'">';
+      $output .= '<dl class="faq">'."\n";
+      while ($node = db_fetch_object($result)) {
+	$full_node = node_load($node->nid);
+	if ($full_node->type == "faq") {
+	  $output .= _hide_answer($full_node);
+	}
+      }
+      $output .= "</dl>\n</div>\n";
+      break;
+
+
+    case 'questions_inline':
+      $output .= $header;
+      $output .= '<div class="'.$faq_qa_div_class.'">';
+      $output .= "<dl>\n";
+      while ($node = db_fetch_object($result)) {
+	$full_node = node_load($node->nid);
+	if ($full_node->type == "faq") {
+	  $output .= _questions_inline($full_node, $back_to_top);
+	}
+      }
+      $output .= "</dl>\n</div>\n";
+      break;
+
+
+    case 'new_page':
+      $output .= $header;
+      $output .= '<div class="'.$faq_qa_div_class.'">';
+      $output .= "<ul>\n";
+      while ($node = db_fetch_object($result)) {
+	$full_node = node_load($node->nid);
+	if ($full_node->type == "faq") {
+	  $output .= _new_page($full_node);
+	}
+      }
+      $output .= "</ul>\n</div>\n";
+      break;
+  } // end of switch (faq_display)
+
+
+  while ($depth > 0) {
+    $output .= '</div>';
+    $depth--;
+  }
+
 }
 
-
-function faq_block($op = 'list', $delta = 0, $edit = array()){
-	//print 'op: ' . $op . '; delta: ' . $delta . '<br />';
-	switch($op){
-		case 'list':
-			$blocks[0]['info'] = t('FAQ Categories');
-			$blocks[1]['info'] = t('Recent FAQs');
-			return $blocks;
-			break;
-		case 'view':
-			switch($delta){
-				case 0:
-					$terms = array();
-					foreach(taxonomy_get_vocabularies('faq') as $v){
-						foreach(taxonomy_get_tree($v->vid) as $term){
-							$terms[$term->name] = $term->tid;
-							//$terms = array_merge($terms, taxonomy_get_tree($v->vid));
-						}
-                    }
-					ksort($terms);
-					if(sizeof($terms) > 0){
-						$block['subject'] = t('FAQ Categories');
-						$block['content'] = '<ul>' . "\n";
-						foreach($terms as $name => $tid){
-							$block['content'] .= '<li><a href="faq/show/' . $tid . '">' . $name . '</a></li>' . "\n";
-						}
-						$block['content'] .= '</ul>' . "\n";
-					}
-		
-					break;
-				case 1:
-					$block['subject'] = t('Recent FAQs');
-					$block['content'] = theme_faq_highlights('created', 5);
-					break;
-			}
-			return $block;
-			break;
-		case 'configure':
-		case 'save':
-	}
+function _questions_top($node, $back_to_top, $tid, &$questions, &$answers) {
+  $anchor = $tid . "n" . $node->nid;
+  $this_page = ltrim(request_uri(), "/");
+  $questions .= "<li>" . l(t($node->title), $this_page, NULL, NULL, $anchor) . "</li>";
+  $answers .= "<dt>" . l(t($node->title), "node/$node->nid", array("name" => "$anchor")) . "</dt>";
+  $answers .= "<dd>" . t($node->body) . $back_to_top . "</dd>";
+  return;
 }
 
-/**
- * Implementation of hook_load()
- */
-function faq_load(&$node){	 
-	$data = db_fetch_object(db_query("SELECT * FROM {faq} WHERE fid = %d", $node->nid));
-	return $data; 
+function _hide_answer($node) {
+  $output .= '<dt class="faq_question">' . t($node->title) . '</dt>';
+  $output .= '<dd class="faq_answer">' . t($node->body) . '</dd>';
+  return $output;
 }
 
-/**
-  * Callback for displaying individual FAQ.
-  */
-
-function theme_faq_show(){
-	$tid = intval(arg(2));
-	$output = '<a name="top"></a>' . "\n";
-	$term = taxonomy_get_term($tid);
-
-	if($tid == 0 || $term->tid == 0){
-		$output = 'No such FAQ exists.';
-		drupal_set_title($output);
-	}
-	else{
-		$output .= theme_faq_get_faqs_for_term($term);
-		drupal_set_title($term->name . ' FAQ');
-	}
-	print theme('page', $output);
+function _questions_inline($node, $back_to_top) {
+  $output .= "<dt>" . l(t($node->title), "node/$node->nid") . "</dt>";
+  $output .= "<dd>" . t($node->body) . $back_to_top . "</dd>";
+  return $output;
 }
 
-/**
- * Callback for displaying FAQ list.
- */
-
-function theme_faq_list(){
-	$output = '';
-	$terms = array();
-
-	//Get all vocabs for faqs.
-	$vocabs = taxonomy_get_vocabularies('faq');
-
-	//For each, get all term trees and stuff them onto an array.
-	foreach($vocabs as $vocab){
-		$tree = taxonomy_get_tree($vocab->vid);
-		$terms = array_merge($terms, $tree);
-	}
-
-	//Then, for each term, call the theme function to display.
-	foreach($terms as $term){
-		$output .= theme_faq_questions_for_term($term);
-	}
-
-	print theme('page', $output);
+function _new_page($node) {
+  $output .= "<li>" . l(t($node->title), "node/$node->nid") . "</li>";
+  return $output;
 }
-
-/**
- * Callback for displaying FAQ questions (and term headers) only.
- */
-
-function theme_faq_highlights($order = 'created', $num = 5){
-	$output = '';
-
-	$sql = 'SELECT n.nid, n.title, n.teaser FROM {node} n WHERE n.type = "faq" AND n.status = 1 ORDER BY n.created DESC LIMIT ' . intval($num);
-
-	if($order == 'rating' && function_exists('voting_get_vote')){
-		$sql = 'SELECT v.content_id nid, SUM(v.vote) rating FROM {votes} v, {node} n WHERE v.content_id = n.nid AND n.type = "faq" GROUP BY v.content_id ORDER BY rating DESC LIMIT ' . intval($num);
-	}
-
-	$result = db_query($sql);
-	$output .= '<ul>' . "\n";
-	while($node = db_fetch_object($result)){
-		$node = node_load(array('nid' => $node->nid));
-		$node = node_prepare($node);
-
-		//Add the voting form if enabled and applicable. Hacky, I know.
-		if($node->voting && function_exists('voting_control_node')){
-			$node->rating_form = voting_control_node($node, false, true);
-		}
-
-		//$output .= node_view($node, 1);
-		$output .= '<li><a href="node/' . $node->nid . '">' . $node->title . '</a></li>' . "\n";		
-		//$output .= '<p>' . $node->teaser . '</p>' . "\n";		
-		//$output .= '' . "\n";		
-	}
-	$output .= '</ul>' . "\n";
-
-	$output .= '<p><br /><a href="faq">All FAQs</a></p>' . "\n";
-
-	return $output;
-}
-
-function theme_faq_questions_for_term($term){
-	$found = false;
-	$result = db_query('SELECT n.nid, n.title FROM {node} n, {term_node} t, {faq} f WHERE t.nid = n.nid AND f.fid = n.nid AND n.type="faq" AND n.status=1 AND t.tid = %d ORDER BY f.weight, n.title', $term->tid);
-
-	$output = '<h2><a href="faq/show/' . $term->tid . '">' . $term->name . '</a></h2>' . "\n";
-	$output .= '<ul>' . "\n";
-	while($node = db_fetch_object($result)){
-		$node = node_prepare($node);
-
-		$edit = '';
-		if(user_access('administer nodes')){
-			$edit = ' (<a href="node/' . $node->nid . '/edit">edit</a>)';
-		}
-
-		$output .= '<li><a href="faq/show/' . $term->tid . '#q_' . $node->nid . '">' . $node->title . '</a>' . $edit . '</li>';
-		$found = true;
-	}	
-	$output .= '</ul>' . "\n";
-
-	if($found){
-		return $output;
-	}
-}
-
-/**
-  * Callback for displaying FAQ questions and answers for a given term.
-  */
-
-function theme_faq_get_faqs_for_term($term){
-	$found = false;
-	$output = '';
-	$title = '<h1>' . $term->name . ' FAQ</h1>' . "\n";
-	$result = db_query('SELECT n.nid, n.title, n.body FROM {node} n, {term_node} t, {faq} f WHERE t.nid = n.nid AND f.fid = n.nid AND n.type="faq" AND n.status=1 AND t.tid = %d ORDER BY f.weight, n.title', $term->tid);
-
-	$links = '<ul>' . "\n";
-	while($node = db_fetch_object($result)){
-		$node = node_load(array('nid' => $node->nid));
-		$node = node_prepare($node);
-
-		$edit = '';
-		if(user_access('administer nodes')){
-			$edit = '<a href="node/' . $node->nid . '/edit">edit</a>';
-		}
-
-		$links .= '<li><a href="faq/show/' . $term->tid . '#q_' . $node->nid . '">' . $node->title . '</a>' . ($edit == '' ? '' : ' (' . $edit . ') ') . '</li>';
-
-		//Add the voting form if enabled and applicable. Hacky, I know.
-		if($node->voting && function_exists('voting_control_node')){
-			$node->body .= voting_control_node($node, false, true);
-		}
-
-		//$output .= '<div class="faq">' . "\n" . '<a name="q_' . $node->nid . '"></a>' . "\n" . '<h3>' . $node->title . '</h3>' . "\n" . $node->body .  "\n" . '<a href="faq/show/' . $term->tid . '#top">top</a> ' . $edit . '</div>';
-		$output .= '<div class="faq">' . "\n" . '<a name="q_' . $node->nid . '"></a>' . "\n" . '<h3>' . $node->title . '</h3>' . "\n" . $node->body .  "\n" . '<a href="faq/show/' . $term->tid . '#top">top</a> ' . $edit . '</div>';
-		$found = true;
-	}
-	$links .= '</ul>' . "\n";
-
-	$output = $title . $links . $output;
-
-	if(!$found){
-		$output = $title;
-	}
-	return $output;
-}
-
-function faq_help(){
-	switch ($section) {
-		case 'admin/modules#help':
-			return t('Allows you to create FAQ nodes that are presented in a standard FAQ layout (questions up top, anchor links below, etc.).');
-		case 'node/add#help':
-			return t('Be sure to create some categories prior to adding any FAQs so that they can be browsed easily.');
-	}
-}
-
-?>
