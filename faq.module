@@ -40,6 +40,9 @@ function faq_access($op, $node) {
   if ($op == 'create' || $op == 'update' || $op == 'delete') {
     return user_access('administer faq');
   }
+  else if ($opt == 'view') {
+    return user_access('access content');
+  }
 }
 
 /**
@@ -50,7 +53,7 @@ function faq_menu($may_cache) {
   $items = array();
 
   if ($may_cache) {
-    $items[] = array('path' => 'admin/settings/faq', 
+    $items[] = array('path' => 'admin/content/faq', 
       'title' => t('Frequently Asked Questions'),
       'callback' => 'faq_settings_page',
       'access' => $access,
@@ -65,7 +68,7 @@ function faq_menu($may_cache) {
   }
   else {
     $items[] = array(
-      'path' => 'admin/settings/faq/configure',
+      'path' => 'admin/content/faq/configure',
       'title' => t('Configure'),
       'description' => t('Allows the user to configure the layout of questions and answers on a FAQ page.'),
       'callback' => 'drupal_get_form',
@@ -177,14 +180,14 @@ function faq_settings_form() {
     '#collapsed' => 0,
   );
   $display_options['questions_inline'] = t('Questions inline');
-  $display_options['questions_top'] = t('Clicking on question brings user to answer further down the page');
+  $display_options['questions_top'] = t('Clicking on question takes user to answer further down the page');
   $display_options['hide_answer'] = t('Clicking on question opens/hides answer under question');
   $display_options['new_page'] = t('Clicking on question opens the answer in a new page');
 
   $form['questions']['display'] = array('#type' => 'radios',
     '#options' => $display_options,
     '#title' => t('Page layout'),
-    '#description' => t('This controls now the questions and answers are displayed on the page and what happens when someone clicks on the question.'),
+    '#description' => t('This controls how the questions and answers are displayed on the page and what happens when someone clicks on the question.'),
     '#default_value' => variable_get('faq_display', 'questions_top'),
     );
 
@@ -344,7 +347,7 @@ function faq_page($tid = 0) {
 	  case 'new_page':
 	    $depth = 0;
 	    while ($depth < $term->depth) {
-	      $indent = '<ul class="category-indent">';
+	      $indent = '<ul class="faq_category_indent">';
 	      $output .= $indent;
 	      $depth++;
 	    }
@@ -387,7 +390,7 @@ function _display_faq_by_category($faq_display, $category_display, $result, $ter
 
   $depth = 0;
   while ($depth < $term->depth) {
-    $indent = '<div class="category-indent">';
+    $indent = '<div class="faq_category_indent">';
     $output .= $indent;
     $depth++;
   }
@@ -429,7 +432,7 @@ function _display_faq_by_category($faq_display, $category_display, $result, $ter
 	$output .= "</div>\n";
 	$ans_depth = 0;
 	while ($ans_depth < $term->depth) {
-	  $indent = '<div class="category-indent">';
+	  $indent = '<div class="faq_category_indent">';
 	  $output_answers .= $indent;
 	  $ans_depth++;
 	}
