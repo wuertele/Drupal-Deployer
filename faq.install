@@ -1,0 +1,39 @@
+<?php
+// $Id$
+
+/**
+* Implementation of hook_install()
+* just give a message
+*/
+function faq_install() {
+  watchdog('FAQ', 'faq module installed');
+}
+
+/**
+* Implementation of hook_uninstall().
+*/
+function faq_uninstall() {
+  // delete the variables we created.
+  variable_del('faq_display');
+  variable_del('faq_back_to_top');
+  variable_del('faq_use_categories');
+  variable_del('faq_category_display');
+
+  // Remove all FAQ nodes.
+  $result = db_query('SELECT nid FROM {node} WHERE type = "faq"');
+  while ($obj = db_fetch_object($result)) {
+    node_delete($obj->nid);
+  }
+
+  // Remove the node type
+  node_type_delete('FAQ');
+
+  // clear the cache tables
+  cache_clear_all(null, 'cache');
+  cache_clear_all(null, 'cache_filter');
+  cache_clear_all(null, 'cache_menu');
+  cache_clear_all(null, 'cache_page');
+
+  watchdog ('FAQ', 'faq module removed');
+}
+
