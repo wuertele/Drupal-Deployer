@@ -264,8 +264,6 @@ function faq_page($tid = 0) {
 
   // get "back to top" link text
   $back_to_top = variable_get('faq_back_to_top', t('Back to Top'));
-  $back_to_top = '<br><span class="faq_more_link">'
-    . l(check_plain(t($back_to_top)), 'faq') . '</span>';
 
   // find out if we should categorize the questions, if so get list of
   // categories
@@ -280,38 +278,19 @@ function faq_page($tid = 0) {
 
     switch ($faq_display) {
       case 'questions_top':
-	while ($node = db_fetch_object($result)) {
-	  _questions_top($node, $back_to_top, '', $questions, $answers);
-	}
-	$output .= "<ul>" . $questions . "</ul>";
-	$output .= "<dl>". $answers . "</dl>";
+	$output = theme_questions_top($result, $back_to_top);
 	break;
-
 
       case 'hide_answer':
-	drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
-	$output = '<dl class="faq">';
-	while ($node = db_fetch_object($result)) {
-	  $output .= _hide_answer($node);
-	}
-	$output .= '</dl>';
+	$output = theme_hide_answer($result);
 	break;
 
-
       case 'questions_inline':
-	$output = "<dl>";
-	while ($node = db_fetch_object($result)) {
-	  $output .= _questions_inline($node, $back_to_top);
-	}
-	$output .= "</dl>";
+	$output = theme_questions_inline($result, $back_to_top);
 	break;
 
       case 'new_page':
-	$output = "<ul>";
-	while ($node = db_fetch_object($result)) {
-	  $output .= _new_page($node);
-	}
-	$output .= "</ul>";
+	$output = theme_new_page($result);
 	break;
 	
     } // end of switch
@@ -329,7 +308,7 @@ function faq_page($tid = 0) {
     if ($tid != 0) {
       $term = taxonomy_get_term($tid);
       $result = taxonomy_select_nodes(array($term->tid), 'or', 0, FALSE);
-      if ($result) {
+      if (db_num_rows($result)) {
 	_display_faq_by_category($faq_display, $category_display, $result,
 	  $term, $output, $output_answers);
       } 
@@ -353,7 +332,9 @@ function faq_page($tid = 0) {
 	      $depth++;
 	    }
 
-	    $output .= "<li>" . l(t($term->name), "faq/$term->tid") . "</li>";
+	    if (taxonomy_term_count_nodes($term->tid)) {
+	      $output .= "<li>". l(t($term->name), "faq/$term->tid") ."</li>";
+	    }
 
 	    while ($depth > 0) {
 	      $output .= '</ul>';
@@ -366,7 +347,7 @@ function faq_page($tid = 0) {
 
 	  case 'categories_inline':
 	    $result = taxonomy_select_nodes(array($term->tid), 'or', 0, FALSE);
-	    if ($result) {
+	    if (db_num_rows($result)) {
 	      _display_faq_by_category($faq_display, $category_display, $result,
 		$term, $output, $output_answers);
 	    } 
@@ -396,95 +377,30 @@ function _display_faq_by_category($faq_display, $category_display, $result, $ter
     $depth++;
   }
 
-  $header = '<h5 class="faq_qa_header">' . t($term->name) . '</h5>'; 
-  if ($term->depth > 0) {
-    $header = '<h6 class="faq_qa_header">' .t($term->name). '</h6>'; 
-  }
-
-
+  $faq_class = "faq_qa";
   if ($category_display == "hide_qa") {
-    $faq_qa_div_class = "faq_qa_hide";
-  }
-  else {
-    $faq_qa_div_class = "faq_qa";
+    $faq_class = "faq_qa_hide";
   }
 
   switch ($faq_display) {
     case 'questions_top':
-      $questions = NULL;
-      $answers = NULL;
-
-      $output .= $header;
-      $output .= '<div class="'.$faq_qa_div_class.'">';
-      while ($node = db_fetch_object($result)) {
-	$full_node = node_load($node->nid);
-	if ($full_node->type == "faq") {
-	  _questions_top($full_node, $back_to_top, $term->tid, $questions, $answers);
-	}
-      }
-      $output .= "<ul>\n" . $questions . "\n</ul>\n";
-
-      if ($category_display == "hide_qa") {
-	$output .= "<dl>\n" .$answers. "\n</dl>\n</div>";
-
-      }
-      else {
-	$output .= "</div>\n";
-	$ans_depth = 0;
-	while ($ans_depth < $term->depth) {
-	  $indent = '<div class="faq_category_indent">';
-	  $output_answers .= $indent;
-	  $ans_depth++;
-	}
-	$output_answers .= $header . "<dl>\n" .$answers. "\n</dl>\n";
-	while ($ans_depth > 0) {
-	  $output_answers .= '</div>';
-	  $ans_depth--;
-	}
-      }
+      theme_category_questions_top($result, $back_to_top, $faq_class, 
+	$category_display, $term, $output, $output_answers);
       break;
 
 
     case 'hide_answer':
-      drupal_add_js(drupal_get_path('module','faq').'/faq.js','module');
-      $output .= $header;
-      $output .= '<div class="'.$faq_qa_div_class.'">';
-      $output .= '<dl class="faq">'."\n";
-      while ($node = db_fetch_object($result)) {
-	$full_node = node_load($node->nid);
-	if ($full_node->type == "faq") {
-	  $output .= _hide_answer($full_node);
-	}
-      }
-      $output .= "</dl>\n</div>\n";
+      $output .= theme_category_hide_answer($result, $term->name, $faq_class);
       break;
 
 
     case 'questions_inline':
-      $output .= $header;
-      $output .= '<div class="'.$faq_qa_div_class.'">';
-      $output .= "<dl>\n";
-      while ($node = db_fetch_object($result)) {
-	$full_node = node_load($node->nid);
-	if ($full_node->type == "faq") {
-	  $output .= _questions_inline($full_node, $back_to_top);
-	}
-      }
-      $output .= "</dl>\n</div>\n";
+      $output .= theme_category_questions_inline($result, $back_to_top, $term->name, $faq_class);
       break;
 
 
     case 'new_page':
-      $output .= $header;
-      $output .= '<div class="'.$faq_qa_div_class.'">';
-      $output .= "<ul>\n";
-      while ($node = db_fetch_object($result)) {
-	$full_node = node_load($node->nid);
-	if ($full_node->type == "faq") {
-	  $output .= _new_page($full_node);
-	}
-      }
-      $output .= "</ul>\n</div>\n";
+      $output .= theme_category_new_page($result, $term->name, $faq_class);
       break;
   } // end of switch (faq_display)
 
@@ -496,31 +412,166 @@ function _display_faq_by_category($faq_display, $category_display, $result, $ter
 
 }
 
-function _questions_top($node, $back_to_top, $tid, &$questions, &$answers) {
-  $anchor = $tid . "n" . $node->nid;
+function theme_questions_top($result, $back_to_top) {
+  // configure "back to top" link
+  $back_to_top = '<br><span class="faq_more_link">'. l(t($back_to_top), 'faq') .'</span>';
+
+  while ($node = db_fetch_object($result)) {
+    $anchor = "n". $node->nid;
+    $questions .= "<li>". l(t($node->title), 'faq', NULL, NULL, $anchor) ."</li>";
+    $answers .= "<dt>". l(t($node->title), "node/$node->nid", array("name" => "$anchor")) ."</dt>";
+    $answers .= "<dd>". t($node->body) . $back_to_top ."</dd>";
+  }
+  $output = "<ul>" . $questions . "</ul>";
+  $output .= "<dl>". $answers . "</dl>";
+  return $output;
+}
+
+function theme_category_questions_top($result, $back_to_top, $class, $category_display, $term, &$output, &$output_answers) {
+
+  // configure "back to top" link
+  $back_to_top = '<br><span class="faq_more_link">'. l(t($back_to_top), 'faq') .'</span>';
+
+  // configure header
+  $header = '<h5 class="faq_qa_header">' .check_plain(t($term->name)) .'</h5>';
+  if ($term->depth > 0) {
+    $header = '<h6 class="faq_qa_header">' .check_plain(t($term->name)).'</h6>';
+  }
+
+  $output .= $header;
+  $output .= '<div class="'.$class.'">';
   $this_page = 'faq';
   if (arg(0) == 'faq' && is_numeric(arg(1))) {
-    $this_page .= "/" . arg(1);
+    $this_page .= "/". arg(1);
   }
-  $questions .= "<li>" . l(t($node->title), $this_page, NULL, NULL, $anchor) . "</li>";
-  $answers .= "<dt>" . l(t($node->title), "node/$node->nid", array("name" => "$anchor")) . "</dt>";
-  $answers .= "<dd>" . t($node->body) . $back_to_top . "</dd>";
-  return;
+
+  while ($node = db_fetch_object($result)) {
+    $full_node = node_load($node->nid);
+    if ($full_node->type == "faq") {
+      $anchor = $term->tid ."n". $node->nid;
+      $questions .= "<li>". l(t($node->title), $this_page, NULL, NULL, $anchor) ."</li>";
+      $answers .= "<dt>". l(t($node->title), "node/$node->nid", array("name" => "$anchor")) ."</dt>";
+      $answers .= "<dd>". t($full_node->body) . $back_to_top ."</dd>";
+    }
+  }
+
+  $output .= "<ul>\n" . $questions . "\n</ul>\n";
+
+  if ($category_display == "hide_qa") {
+    $output .= "<dl>\n" .$answers. "\n</dl>\n</div>";
+  }
+  else {
+    $output .= "</div>\n";
+    $ans_depth = 0;
+    while ($ans_depth < $term->depth) {
+      $indent = '<div class="faq_category_indent">';
+      $output_answers .= $indent;
+      $ans_depth++;
+    }
+    $output_answers .= $header ."<dl>\n". $answers ."\n</dl>\n";
+	while ($ans_depth > 0) {
+	  $output_answers .= '</div>';
+	  $ans_depth--;
+	}
+      }
 }
 
-function _hide_answer($node) {
-  $output .= '<dt class="faq_question">' . t($node->title) . '</dt>';
-  $output .= '<dd class="faq_answer">' . t($node->body) . '</dd>';
+function theme_hide_answer($result) {
+  drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
+  $output = '<dl class="faq">';
+  while ($node = db_fetch_object($result)) {
+    $output .= '<dt class="faq_question">' .check_plain(t($node->title)) . '</dt>';
+    $output .= '<dd class="faq_answer">' . t($node->body) . '</dd>';
+  }
+  $output .= '</dl>';
   return $output;
 }
 
-function _questions_inline($node, $back_to_top) {
-  $output .= "<dt>" . l(t($node->title), "node/$node->nid") . "</dt>";
-  $output .= "<dd>" . t($node->body) . $back_to_top . "</dd>";
+function theme_category_hide_answer($result, $term_name, $class) {
+  // configure header
+  $header = '<h5 class="faq_qa_header">' .check_plain(t($term_name)) .'</h5>';
+  if ($term->depth > 0) {
+    $header = '<h6 class="faq_qa_header">' .check_plain(t($term_name)).'</h6>';
+  }
+
+  drupal_add_js(drupal_get_path('module','faq').'/faq.js','module');
+  $output = $header;
+  $output .= '<div class="'.$class.'">';
+  $output .= '<dl class="faq">'."\n";
+  while ($node = db_fetch_object($result)) {
+    $full_node = node_load($node->nid);
+    if ($full_node->type == "faq") {
+      $output .= '<dt class="faq_question">' .check_plain(t($node->title)) . '</dt>';
+      $output .= '<dd class="faq_answer">' . t($full_node->body) . '</dd>';
+    }
+  }
+  $output .= "</dl>\n</div>\n";
   return $output;
 }
 
-function _new_page($node) {
-  $output .= "<li>" . l(t($node->title), "node/$node->nid") . "</li>";
+function theme_questions_inline($result, $back_to_top) {
+  // configure "back to top" link
+  $back_to_top = '<br><span class="faq_more_link">'. l(t($back_to_top), 'faq') .'</span>';
+
+  $output = "<dl>";
+  while ($node = db_fetch_object($result)) {
+    $output .= "<dt>" . l(t($node->title), "node/$node->nid") . "</dt>";
+    $output .= "<dd>" . t($node->body) . $back_to_top . "</dd>";
+  }
+  $output .= "</dl>";
   return $output;
 }
+
+function theme_category_questions_inline($result, $back_to_top, $term_name, $class) {
+  // configure "back to top" link
+  $back_to_top = '<br><span class="faq_more_link">'. l(t($back_to_top), 'faq') .'</span>';
+
+  // configure header
+  $header = '<h5 class="faq_qa_header">' .check_plain(t($term_name)) .'</h5>';
+  if ($term->depth > 0) {
+    $header = '<h6 class="faq_qa_header">' .check_plain(t($term_name)).'</h6>';
+  }
+
+  $output = $header;
+  $output .= '<div class="'.$class.'">';
+  $output .= "<dl>\n";
+  while ($node = db_fetch_object($result)) {
+    $full_node = node_load($node->nid);
+    if ($full_node->type == "faq") {
+      $output .= "<dt>" . l(t($node->title), "node/$node->nid") . "</dt>";
+      $output .= "<dd>" . t($full_node->body) . $back_to_top . "</dd>";
+    }
+  }
+  $output .= "</dl>\n</div>\n";
+  return $output;
+}
+
+function theme_new_page($result) {
+  $output = "<ul>";
+  while ($node = db_fetch_object($result)) {
+    $output .= "<li>" . l(t($node->title), "node/$node->nid") . "</li>";
+  }
+  $output .= "</ul>";
+  return $output;
+}
+
+function theme_category_new_page($result, $term_name, $class) {
+  // configure header
+  $header = '<h5 class="faq_qa_header">' .check_plain(t($term_name)) .'</h5>';
+  if ($term->depth > 0) {
+    $header = '<h6 class="faq_qa_header">' .check_plain(t($term_name)).'</h6>';
+  }
+
+  $output = $header;
+  $output .= '<div class="'.$class.'">';
+  $output .= "<ul>\n";
+  while ($node = db_fetch_object($result)) {
+    $full_node = node_load($node->nid);
+    if ($full_node->type == "faq") {
+      $output .= "<li>" . l(t($node->title), "node/$node->nid") . "</li>";
+    }
+  }
+  $output .= "</ul>\n</div>\n";
+  return $output;
+}
+
