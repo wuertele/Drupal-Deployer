@@ -575,3 +575,60 @@ function theme_category_new_page($result, $term_name, $class) {
   return $output;
 }
 
+function faq_block($op = 'list', $delta = 0, $edit = array()) {
+  switch ($op) {
+    case 'list':
+      $blocks[0]['info'] = t('FAQ Categories');
+      $blocks[1]['info'] = t('Recent FAQs');
+      return $blocks;
+      break;
+
+    case 'view':
+      switch ($delta) {
+        case 0:
+	  // FAQ Categories
+	  if (module_exists("taxonomy")) {
+	    $terms = array();
+	    foreach (taxonomy_get_vocabularies('FAQ') as $vocab) {
+	      foreach (taxonomy_get_tree($vocab->vid) as $term) {
+		$terms[$term->name] = $term->tid;
+	      }
+	    }
+	    ksort($terms);
+	    if (sizeof($terms) > 0) {
+	      $block['subject'] = t('FAQ Categories');
+	      $block['content'] = "<ul>\n";
+	      foreach ($terms as $name => $tid) {
+		$block['content'] .= '<li>'. l($name, 'faq/'. $tid) ."</li>\n";
+	      }
+	      $block['content'] .= "</ul>\n";
+	    }
+	  }
+          break;
+
+        case 1:
+	  // Recent FAQs
+          $block['subject'] = t('Recent FAQs');
+          $block['content'] = theme_faq_highlights(5);
+          break;
+      }
+      return $block;
+      break;
+  }
+}
+
+function theme_faq_highlights($num = 5) {
+
+  $result = db_query("SELECT n.title, n.nid, r.body FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid WHERE n.type='faq' AND n.status = 1 ORDER BY n.created DESC LIMIT %d", $num);
+
+  $output .= "<ul>\n"; 
+  while ($node = db_fetch_object($result)) {
+    $node = node_load(array('nid' => $node->nid));
+    $node = node_prepare($node);
+    $output .= '<li>'. l($node->title, 'node/'.$node->nid) ."</li>\n";
+  }
+  $output .= "</ul>\n";
+
+  $output .= l(t('All FAQs'), 'faq');
+  return $output;
+}
