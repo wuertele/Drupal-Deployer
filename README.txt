@@ -13,6 +13,14 @@ the 'faq' page.  The 'faq' page is automatically generated from the FAQ nodes
 configured and the layout of this page can be modified on the settings page.
 Users will need the 'view faq' permission to view the 'faq' page. 
 
+There are 2 blocks included in this module, one shows a list of FAQ categories
+while the other can show a configurable number of recent FAQs added.
+
+Note the function theme_faq_highlights(), which shows the last X recently
+created FAQs, used by one of the blocks, can also be called in a php-filtered 
+node if desired.
+
+
 Configuration
 =============
 Once the module is activated, you can create your question and answer pairs by
