@@ -7,6 +7,10 @@ function project_comment_page() {
   if (user_access('create project issues')) {
     $edit = (object)$_POST;
     $node = node_load(array('nid' => arg(3), 'type' => 'project_issue'));
+    if (!node_access('view', $node)) {
+      drupal_access_denied();
+      return;
+    }
 
     if ($_POST['op'] == t('Preview') || $_POST['op'] == t('Submit')) {
       project_comment_validate($edit);
