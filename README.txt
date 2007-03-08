@@ -11,7 +11,7 @@ The Frequently Asked Questions (faq) module allows users with the 'administer
 faq' permission to create question and answer pairs which they want displayed on
 the 'faq' page.  The 'faq' page is automatically generated from the FAQ nodes
 configured and the layout of this page can be modified on the settings page.
-Users will need the 'access content' permission to view the 'faq' page. 
+Users will need the 'view faq' permission to view the 'faq' page. 
 
 Configuration
 =============
@@ -22,7 +22,7 @@ there are some terms configured for the FAQ node type, it will also be possible
 to put the questions into different categories when editing.
 
 On the Frequently Asked Questions settings configuration page (Administer >> 
-Site configuration >> Frequently Asked Questions (admin/settings/faq)), you will
+Content management >> Frequently Asked Questions (admin/content/faq)), you will
 find a form that will allow you to configure the layout of the questions and 
 answers on the 'faq' page.  
 

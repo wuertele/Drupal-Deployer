@@ -1,5 +1,6 @@
 <?php
 // $Id$
+
 /**
 * Display help and module information
 * @param section which section of the site we're displaying help
@@ -11,10 +12,10 @@ function faq_help($section='') {
 
   switch ($section) {
     case "admin/help#faq":
-      $output .= '<p>'.  t("This module allows users with the 'administer faq' permission to create question and answer pairs which will be displayed on the 'faq' page.  The 'faq' page is automatically generated from the FAQ nodes configured and the layout of this page can be modified on the settings page.  Users will need the 'access content' permission in order to view the 'faq' page."). '</p>'.
+      $output .= '<p>'.  t("This module allows users with the 'administer faq' permission to create question and answer pairs which will be displayed on the 'faq' page.  The 'faq' page is automatically generated from the FAQ nodes configured and the layout of this page can be modified on the settings page.  Users will need the 'view faq' permission in order to view the 'faq' page."). '</p>'.
 	'<p>' .t("To create a question and answer, the user must create a 'FAQ' node (Create content >> FAQ).  This screen allows the user to edit the question and answer text.  If the 'Taxonomy' module is enabled and there are some terms configured for the FAQ node type, it will also be possible to put the questions into different categories when editing."). '</p>'.
 	'<p>' .t("The 'Frequently Asked Questions' settings configuration screen will allow users with 'administer faq' permissions to specify different layouts of the questions and answers."). '</p>'.
-	'<p>' .t("All users with 'access content' permissions will be able to view the generated FAQ page at 'www.example.com/faq'."). '</p>';
+	'<p>' .t("All users with 'view faq' permissions will be able to view the generated FAQ page at 'www.example.com/faq'."). '</p>';
       return $output;
     case "admin/modules#description":
       return t("Allows the user to configure the layout of questions and answers on a FAQ page.");
@@ -29,7 +30,7 @@ function faq_help($section='') {
 * Define the permissions this module uses
 */
 function faq_perm() {
-  return array('administer faq');
+  return array('administer faq', 'view faq');
 }
 
 
@@ -40,8 +41,8 @@ function faq_access($op, $node) {
   if ($op == 'create' || $op == 'update' || $op == 'delete') {
     return user_access('administer faq');
   }
-  else if ($opt == 'view') {
-    return user_access('access content');
+  else if ($op == 'view') {
+    return user_access('view faq');
   }
 }
 
@@ -62,7 +63,7 @@ function faq_menu($may_cache) {
     $items[] = array('path' => 'faq', 
       'title' => t('Frequently Asked Questions'),
       'callback' => t('faq_page'),
-      'access' => user_access('access content'),
+      'access' => user_access('view faq'),
       'weight' => 1
     );
   }
@@ -84,7 +85,7 @@ function faq_menu($may_cache) {
     $items[] = array('path' => 'faq', 
       'title' => t('Frequently Asked Questions'),
       'callback' => t('faq_page'),
-      'access' => user_access('access content'),
+      'access' => user_access('view faq'),
       'weight' => 1
     );
 
@@ -93,7 +94,7 @@ function faq_menu($may_cache) {
 	'title' => t('Frequently Asked Questions'),
 	'callback' => 'faq_page',
 	'callback arguments' => array(arg(1)),
-	'access' => user_access('access content'),
+	'access' => user_access('view faq'),
 	'type' => MENU_CALLBACK,
       );
     }
@@ -418,8 +419,7 @@ function _display_faq_by_category($faq_display, $category_display, $result, $ter
       while ($node = db_fetch_object($result)) {
 	$full_node = node_load($node->nid);
 	if ($full_node->type == "faq") {
-	  _questions_top($full_node, $back_to_top, $term->tid, 
-	    $questions, $answers);
+	  _questions_top($full_node, $back_to_top, $term->tid, $questions, $answers);
 	}
       }
       $output .= "<ul>\n" . $questions . "\n</ul>\n";
