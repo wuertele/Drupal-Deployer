@@ -581,7 +581,6 @@ function faq_block($op = 'list', $delta = 0, $edit = array()) {
       $blocks[0]['info'] = t('FAQ Categories');
       $blocks[1]['info'] = t('Recent FAQs');
       return $blocks;
-      break;
 
     case 'view':
       switch ($delta) {
@@ -609,11 +608,29 @@ function faq_block($op = 'list', $delta = 0, $edit = array()) {
         case 1:
 	  // Recent FAQs
           $block['subject'] = t('Recent FAQs');
-          $block['content'] = theme_faq_highlights(5);
+          $block['content'] = theme_faq_highlights(variable_get('faq_block_recent_faq_count', 5));
           break;
       }
       return $block;
-      break;
+
+
+    case 'configure':
+      if ($delta == 1) {
+	// Recent FAQs
+	$form['faq_block_recent_faq_count'] = array(
+	  '#type' => 'textfield',
+	  '#title' => t('Number of FAQs to show'),
+	  '#description' => t("This controls the number of FAQs that appear in the 'Recent FAQs' block"),
+	  '#default_value' => variable_get('faq_block_recent_faq_count', 5),
+	);
+      }
+      return $form;
+
+    case 'save':
+      if ($delta == 1) {
+	variable_set('faq_block_recent_faq_count', $edit['faq_block_recent_faq_count']);
+      }
+      return;
   }
 }
 
