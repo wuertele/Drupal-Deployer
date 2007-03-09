@@ -446,7 +446,7 @@ function theme_questions_top($result, $display_vars) {
   // configure "back to top" link
   $back_to_top = '<br />&nbsp;';
   if (isset($display_vars['back_to_top']) && $display_vars['back_to_top'] != '') {
-    $back_to_top = '<br /><span class="faq_top_link">'.  l(t($display_vars['back_to_top']), 'faq') .'</span><br />&nbsp;';
+    $back_to_top = '<p class="faq_top_link">'. l(t($display_vars['back_to_top']), 'faq') .'</p>';
   }
 
   while ($node = db_fetch_object($result)) {
@@ -454,10 +454,11 @@ function theme_questions_top($result, $display_vars) {
     $questions .= "<li>". l(t($node->title), 'faq', NULL, NULL, $anchor) ."</li>\n";
     $answers .= "<dt>". l(t($node->title), "node/$node->nid", array("name" => "$anchor")) ."</dt>\n";
 
+    // should we display teaser or full text
     if ($display_vars['use_teaser']) {
       $more_link = '';
-      if ($display_vars['more_link'] != '') {
-	$more_link = '&nbsp;&nbsp;<span class="faq_more_link">'.  l($display_vars['more_link'], "node/$node->nid") .'</span>';
+      if ($display_vars['more_link'] != '' && strlen($node->teaser) < strlen($node->body)) {
+	$more_link = '<p class="faq_more_link">'. l($display_vars['more_link'], "node/$node->nid") .'</p>';
       }
       $answers .= "<dd>". t($node->teaser). $more_link. $back_to_top ."</dd>\n";
     }
@@ -472,10 +473,15 @@ function theme_questions_top($result, $display_vars) {
 
 function theme_category_questions_top($result, $display_vars, $class, $category_display, $term, &$output, &$output_answers) {
 
+  $this_page = 'faq';
+  if (arg(0) == 'faq' && is_numeric(arg(1))) {
+    $this_page .= "/". arg(1);
+  }
+
   // configure "back to top" link
   $back_to_top = '<br />&nbsp;';
   if (isset($display_vars['back_to_top']) && $display_vars['back_to_top'] != '') {
-    $back_to_top = '<br /><span class="faq_top_link">'.  l(t($display_vars['back_to_top']), 'faq') .'</span><br />&nbsp;';
+    $back_to_top = '<p class="faq_top_link">'. l(t($display_vars['back_to_top']), $this_page) .'</p>';
   }
 
   // configure header
@@ -486,10 +492,6 @@ function theme_category_questions_top($result, $display_vars, $class, $category_
 
   $output .= $header;
   $output .= '<div class="'.$class.'">' ."\n";
-  $this_page = 'faq';
-  if (arg(0) == 'faq' && is_numeric(arg(1))) {
-    $this_page .= "/". arg(1);
-  }
 
   while ($node = db_fetch_object($result)) {
     $full_node = node_load($node->nid);
@@ -497,10 +499,12 @@ function theme_category_questions_top($result, $display_vars, $class, $category_
       $anchor = $term->tid ."n". $node->nid;
       $questions .= "<li>". l(t($node->title), $this_page, NULL, NULL, $anchor) ."</li>\n";
       $answers .= "<dt>". l(t($node->title), "node/$node->nid", array("name" => "$anchor")) ."</dt>\n";
+
+      // should we display teaser or full text
       if ($display_vars['use_teaser']) {
 	$more_link = '';
-	if ($display_vars['more_link'] != '') {
-	  $more_link = '&nbsp;&nbsp;<span class="faq_more_link">'.  l($display_vars['more_link'], "node/$node->nid") .'</span>';
+	if ($display_vars['more_link'] != '' && strlen($full_node->teaser) < strlen($full_node->body)) {
+	  $more_link = '<p class="faq_more_link">'.  l($display_vars['more_link'], "node/$node->nid") .'</p>';
 	}
 	$answers .= "<dd>". t($full_node->teaser). $more_link. $back_to_top ."</dd>\n";
       }
@@ -568,16 +572,18 @@ function theme_questions_inline($result, $display_vars) {
   // configure "back to top" link
   $back_to_top = '<br />&nbsp;';
   if (isset($display_vars['back_to_top']) && $display_vars['back_to_top'] != '') {
-    $back_to_top = '<br /><span class="faq_top_link">'.  l(t($display_vars['back_to_top']), 'faq') .'</span><br />&nbsp;';
+    $back_to_top = '<p class="faq_top_link">'. l(t($display_vars['back_to_top']), 'faq') .'</p>';
   }
 
   $output = "<dl>\n";
   while ($node = db_fetch_object($result)) {
     $output .= "<dt>". l(t($node->title), "node/$node->nid") ."</dt>\n";
+
+    // should we display teaser or full text
     if ($display_vars['use_teaser']) {
       $more_link = '';
-      if ($display_vars['more_link'] != '') {
-	$more_link = '&nbsp;&nbsp;<span class="faq_more_link">'.  l($display_vars['more_link'], "node/$node->nid") .'</span>';
+      if ($display_vars['more_link'] != '' && strlen($node->teaser) < strlen($node->body)) {
+	$more_link = '<p class="faq_more_link">'. l($display_vars['more_link'], "node/$node->nid") .'</p>';
       }
       $output .= "<dd>". t($node->teaser). $more_link. $back_to_top ."</dd>\n";
     }
@@ -590,10 +596,15 @@ function theme_questions_inline($result, $display_vars) {
 }
 
 function theme_category_questions_inline($result, $display_vars, $term_name, $class) {
+  $this_page = 'faq';
+  if (arg(0) == 'faq' && is_numeric(arg(1))) {
+    $this_page .= "/". arg(1);
+  }
+
   // configure "back to top" link
   $back_to_top = '<br />&nbsp;';
   if (isset($display_vars['back_to_top']) && $display_vars['back_to_top'] != '') {
-    $back_to_top = '<br /><span class="faq_top_link">'.  l(t($display_vars['back_to_top']), 'faq') .'</span><br />&nbsp;';
+    $back_to_top = '<p class="faq_top_link">'. l(t($display_vars['back_to_top']), $this_page) .'</p>';
   }
 
   // configure header
@@ -609,10 +620,12 @@ function theme_category_questions_inline($result, $display_vars, $term_name, $cl
     $full_node = node_load($node->nid);
     if ($full_node->type == "faq") {
       $output .= "<dt>". l(t($node->title), "node/$node->nid") ."</dt>\n";
+
+      // should we display teaser or full text
       if ($display_vars['use_teaser']) {
 	$more_link = '';
-	if ($display_vars['more_link'] != '') {
-	  $more_link = '&nbsp;&nbsp;<span class="faq_more_link">'.  l($display_vars['more_link'], "node/$node->nid") .'</span>';
+	if ($display_vars['more_link'] != '' && strlen($full_node->teaser) < strlen($full_node->body)) {
+	  $more_link = '<p class="faq_more_link">'. l($display_vars['more_link'], "node/$node->nid") .'</p>';
 	}
 	$output .= "<dd>". t($full_node->teaser). $more_link. $back_to_top ."</dd>\n";
       }
