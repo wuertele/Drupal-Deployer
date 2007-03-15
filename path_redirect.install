@@ -12,10 +12,24 @@ function path_redirect_install(){
         query varchar(50) NOT NULL,
         fragment varchar(50) NOT NULL,
         type varchar(40) NOT NULL,
-        PRIMARY KEY  (path)
+        PRIMARY KEY  (path),
+        UNIQUE KEY rid (rid)
         ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
       break;
   }
   drupal_set_message(t('Database tables for the Path Redirect module have been installed.'));
 }
 
+
+function path_redirect_update_1() {
+    switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      $ret[] = update_sql("ALTER TABLE {path_redirect} CHANGE path path VARCHAR(255)");
+      $ret[] = update_sql("ALTER TABLE {path_redirect} CHANGE redirect redirect VARCHAR(255)");
+      $ret[] = update_sql("ALTER TABLE {path_redirect} ADD UNIQUE (rid)");
+      break;
+  }
+  drupal_set_message(t('Database tables for the Path Redirect module have been updated.'));
+  return $ret;
+}
