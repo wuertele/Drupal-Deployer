@@ -11,7 +11,10 @@ TODO
 - let users maintain their own recipe collection just like a blog or personal image gallery
 - integrate with bookmarks.module so users may create a 'recipe box' listing the favorite recipes
 
-Author
-------
+Current Maintainers
+-------------------
+brdwor, drawk and marble
 
+Original Author
+---------------
 Moshe Weitzman <weitzman@tejasa.com>
