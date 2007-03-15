@@ -30,7 +30,7 @@ function faq_help($section='') {
 * Define the permissions this module uses
 */
 function faq_perm() {
-  return array('administer faq', 'view faq');
+  return array('administer faq', 'view faq', 'edit own faq', 'edit faq', 'create faq');
 }
 
 
@@ -38,8 +38,20 @@ function faq_perm() {
 * Implementation of hook_access()
 */
 function faq_access($op, $node) {
-  if ($op == 'create' || $op == 'update' || $op == 'delete') {
-    return user_access('administer faq');
+  global $user;
+
+  if ($op == 'create') {
+    if (user_access('create faq') || user_access('administer faq')) {
+      return TRUE;
+    }
+  }
+  else if ($op == 'update' || $op == 'delete') {
+    if (user_access('edit faq') || user_access('administer faq')) {
+      return TRUE;
+    }
+    else if (user_access('edit own faq') && $user->uid == $node->uid) {
+      return TRUE;
+    }
   }
   else if ($op == 'view') {
     return user_access('view faq');
@@ -50,14 +62,13 @@ function faq_access($op, $node) {
 * Implementation of hook_menu()
 */
 function faq_menu($may_cache) {
-  $access = user_access('administer faq');
   $items = array();
 
   if ($may_cache) {
     $items[] = array('path' => 'admin/content/faq', 
       'title' => t('Frequently Asked Questions'),
       'callback' => 'faq_settings_page',
-      'access' => $access,
+      'access' => user_access('administer faq'),
       'description' => t('Allows the user to configure the layout of questions and answers on a FAQ page.'),
     );
     $items[] = array('path' => 'faq', 
@@ -74,13 +85,13 @@ function faq_menu($may_cache) {
       'description' => t('Allows the user to configure the layout of questions and answers on a FAQ page.'),
       'callback' => 'drupal_get_form',
       'callback arguments' => array('faq_settings_form'),
-      'access' => $access,
+      'access' => user_access('administer faq'),
       'type' => MENU_DEFAULT_LOCAL_TASK,
       'weight' => -10,
     );
     $items[] = array('path' => 'node/add/faq',
       'title' => t('FAQ'),
-      'access' => $access,
+      'access' => user_access('create faq'),
     );
     $items[] = array('path' => 'faq', 
       'title' => t('Frequently Asked Questions'),
