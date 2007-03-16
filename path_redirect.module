@@ -129,10 +129,12 @@ function path_redirect_admin($rid = FALSE, $op = FALSE) {
     $rows[] = array(
       $path,
       $redirect.$query.$fragment, $types[$r->type]['title'],
-      l(t('test'), $r->path, array(), $r->query ? $r->query : NULL, $r->fragment ? $r->fragement : NULL) .' | '. l(t('edit'), 'admin/build/path_redirect/edit/'. $r->rid) .' | '. l(t('delete'), 'admin/build/path_redirect/edit/'. $r->rid .'/delete')
-      );
+      array('data' => l(t('test'), $r->path, array(), $r->query ? $r->query : NULL, $r->fragment ? $r->fragement : NULL)),
+      array('data' => l(t('edit'), 'admin/build/path_redirect/edit/'. $r->rid)),
+      array('data' => l(t('delete'), 'admin/build/path_redirect/edit/'. $r->rid .'/delete')),
+    );
   }
-  $header = array(t('From'), t('To'), t('Type'), t('Operations'));
+  $header = array(t('From'), t('To'), t('Type'), array('data' => t('Operations'), 'colspan' => '3'));
   
   if ($count) {
     $output .= '<p>'. theme('table', $header, $rows) .'</p>';
@@ -275,7 +277,7 @@ function path_redirect_edit_submit($form_id, &$form_values) {
 
 function path_redirect_save($edit) {
   if (!$edit['rid']) {
-    $edit['rid'] = db_next_id('path_redirect');
+    $edit['rid'] = db_next_id('{path_redirect}');
   }
   path_redirect_delete_do($edit['rid']);
   return db_query('INSERT INTO {path_redirect} (rid, path, redirect, query, fragment, type) VALUES (%d, "%s", "%s", "%s", "%s", "%s")', $edit['rid'], $edit['path'], $edit['redirect'], $edit['query'], $edit['fragment'], $edit['type']);
