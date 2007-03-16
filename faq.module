@@ -66,7 +66,7 @@ function faq_menu($may_cache) {
 
   if ($may_cache) {
     $items[] = array('path' => 'admin/content/faq', 
-      'title' => t('Frequently Asked Questions'),
+      'title' => t('Frequently Asked Questions Settings'),
       'callback' => 'faq_settings_page',
       'access' => user_access('administer faq'),
       'description' => t('Allows the user to configure the layout of questions and answers on a FAQ page.'),
@@ -123,7 +123,7 @@ function faq_node_info() {
     'faq' => array(
       'name' => t('FAQ'),
       'module' => 'faq',
-      'description' => t('A frequently asked question and the answer.'),
+      'description' => t('A frequently asked question and its answer.'),
     )
   );
 }
@@ -154,6 +154,7 @@ function faq_form(&$node) {
     '#default_value' => $node->body,
     '#rows' => 10,
     '#required' => TRUE,
+    '#description' => t('This is that answer to the question.  It will be filtered according to the input format.'),
   );
   $form['body_filter']['format'] = filter_form($node->format);
 
@@ -224,7 +225,7 @@ function faq_settings_form() {
   $form['questions']['description'] = array('#type' => 'textarea',
     '#title' => t('Description'),
     '#default_value' => variable_get('faq_description', ''),
-    '#description' => t('Your FAQ description.'),
+    '#description' => t('Your FAQ description.  This will be placed at the top of the page, above the questions and can serve as an introductory text.'),
     '#rows' => 5,
     );
 
@@ -238,7 +239,7 @@ function faq_settings_form() {
 
   $form['category']['categories'] = array('#type' => 'checkbox',
     '#title' => t('Categorize questions'),
-    '#description' => t('This allows the user to display the questions according to the categories configured on the add/edit FAQ page.  Use of sub-categories is only recommended for large lists of questions.'),
+    '#description' => t('This allows the user to display the questions according to the categories configured on the add/edit FAQ page.  Use of sub-categories is only recommended for large lists of questions.  The Taxonomy module must be enabled.'),
     '#default_value' => variable_get('faq_use_categories', FALSE),
   );
 
@@ -263,6 +264,7 @@ function faq_settings_form() {
     '#description' => t("This controls how categories are implemented with the 'Clicking on question takes user to answer further down the page' question/answer display."),
     '#default_value' => variable_get('faq_group_questions_top', FALSE),
   );
+
 
   $form['update']['attach'] = array(
     '#type' => 'submit',
@@ -295,7 +297,7 @@ function faq_settings_form_validate($form_id, $form_values) {
     if (variable_get('faq_use_categories', FALSE) && !module_exists("taxonomy")) {
       drupal_set_message(t("warning: Categorization of questions will not work without the 'taxonomy' module."), 'error');
     }
-    
+
   }
 }
 
@@ -385,7 +387,11 @@ function faq_page($tid = 0) {
 	    }
 
 	    if (taxonomy_term_count_nodes($term->tid)) {
-	      $output .= "<li>". l(t($term->name), "faq/$term->tid") .'<div class="faq_qa_description">'.  t($term->description) ."</div></li>";
+	      $desc = '';
+	      if (isset($term->description) && $term->description != '') {
+		$desc = '<div class="faq_qa_description"><p>'. t($term->description) ."</p></div>";
+	      }
+	      $output .= "<li>". l(t($term->name), "faq/$term->tid"). $desc ."</li>\n";
 	    }
 
 	    while ($depth > 0) {
@@ -413,7 +419,11 @@ function faq_page($tid = 0) {
     }
   }
   $faq_description = variable_get('faq_description', '');
-  $output = '<div class="content"><div class="faq"><div class="faq_description">'. t($faq_description). "</div>\n". $output. $output_answers ."</div></div>\n";
+  $desc = '';
+  if ($faq_description != '') {
+    $desc = '<div class="faq_description"><p>'. t($faq_description). "</p></div>\n";
+  }
+  $output = '<div class="content"><div class="faq">'. $desc. $output. $output_answers ."</div></div>\n";
 
   return $output;
 }
@@ -529,7 +539,10 @@ function theme_category_questions_top($result, $display_vars, $class, $category_
   }
 
   $answer_category_name = variable_get('faq_answer_category_name', FALSE);
-  $desc = '<div class="faq_qa_description">'. t($term->description) ."</div>\n";
+  $desc = '';
+  if (isset($term->description) && $term->description != '') {
+    $desc = '<div class="faq_qa_description"><p>'. t($term->description) ."</p></div>\n";
+  }
   $output .= '<div class="faq_category_group">' ."\n";
   $output .= '<div class="faq_qa_header">'. $header. $desc ."</div>\n";
   $output .= '<div class="'.$class.'">' ."\n";
@@ -609,7 +622,10 @@ function theme_category_hide_answer($result, $term, $class) {
   }
 
   drupal_add_js(drupal_get_path('module','faq').'/faq.js','module');
-  $desc = '<div class="faq_qa_description">'. t($term->description) ."</div>\n";
+  $desc = '';
+  if (isset($term->description) && $term->description != '') {
+    $desc = '<div class="faq_qa_description"><p>'. t($term->description) ."</p></div>\n";
+  }
   $output = '<div class="faq_category_group">' ."\n";
   $output .= '<div class="faq_qa_header">'. $header. $desc ."</div>\n";
   $output .= '<div class="'.$class.'">' ."\n";
@@ -670,7 +686,10 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
     $header = '<h6 class="faq_header">' .check_plain(t($term->name)) ."</h6>\n";
   }
 
-  $desc = '<div class="faq_qa_description">'. t($term->description) ."</div>\n";
+  $desc = '';
+  if (isset($term->description) && $term->description != '') {
+    $desc = '<div class="faq_qa_description"><p>'. t($term->description) ."</p></div>\n";
+  }
   $output = '<div class="faq_category_group">' ."\n";
   $output .= '<div class="faq_qa_header">'. $header. $desc ."</div>\n";
   $output .= '<div class="'.$class.'">' ."\n";
@@ -713,7 +732,10 @@ function theme_category_new_page($result, $term, $class) {
     $header = '<h6 class="faq_header">' .check_plain(t($term->name)) ."</h6>\n";
   }
 
-  $desc = '<div class="faq_qa_description">'. t($term->description) ."</div>\n";
+  $desc = '';
+  if (isset($term->description) && $term->description != '') {
+    $desc = '<div class="faq_qa_description"><p>'. t($term->description) ."</p></div>\n";
+  }
   $output = '<div class="faq_category_group">' ."\n";
   $output .= '<div class="faq_qa_header">'. $header. $desc ."</div>\n";
   $output .= '<div class="'.$class.'">' ."\n";
