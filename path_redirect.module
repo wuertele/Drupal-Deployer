@@ -28,8 +28,7 @@ function path_redirect_init() {
   $path = db_escape_string($_GET['q']);
   $r = db_fetch_object(db_query('SELECT redirect, query, fragment, type FROM {path_redirect} WHERE path = "%s"', $path));
   if ($r) {
-    header($r->type);
-    drupal_goto($r->redirect, ($r->query ? $r->query: NULL), ($r->fragment ? $r->fragment : NULL));
+    drupal_goto($r->redirect, ($r->query ? $r->query: NULL), ($r->fragment ? $r->fragment : NULL), $r->type);
   }
 }
 
@@ -152,7 +151,7 @@ function path_redirect_admin($rid = FALSE, $op = FALSE) {
 }
 
 function path_redirect_edit($edit = array()) {
-  $default_type = 'HTTP/1.0 302 Found';
+  $default_type = 301;
   
   if (!empty($edit)) {
     $form['rid'] = array(
@@ -308,13 +307,13 @@ function path_redirect_delete_submit($form_id, $form_values) {
  */
 function path_redirect_error_list() {   
    $errors = array(
-       "HTTP/1.0 300 Multiple Choices" => array('title' => t('300 Multiple Choices'), 'description' => t('The request is ambiguous and needs clarification as to which resource was requested.')),
-       "HTTP/1.0 301 Moved Permanently" => array('title' => t('301 Moved Permanently'), 'description' => t('Moved Permanently. The resource has permanently moved elsewhere, the response indicates where it has gone to.')),
-       "HTTP/1.0 302 Found" => array('title' => t('302 Found'), 'description' => t('The resource has temporarily moved elsewhere, the response indicates where it is at present. <strong>This is the default redirect type.</strong>')),
-       "HTTP/1.0 303 See Other" => array('title' => t('303 See Other'), 'description' => t('See Other/Redirect. A preferred alternative source should be used at present.')),
-       "HTTP/1.0 304 Not Modified" => array('title' => t('304 Not Modified'), 'description' => t('The server has identified from the request information that the client\'s copy of the information is up-to-date and the requested information does not need to be sent again.')),
-       "HTTP/1.0 305 Use Proxy" => array('title' => t('305 Use Proxy'), 'description' => t('The request must be sent through the indicated proxy server.')),
-       "HTTP/1.0 307 Temporary Redirect" => array('title' => t('307 Temporary Redirect'), 'description' => t('The resource has temporarily moved elsewhere, the response indicates where it is at present. Client should still use this URL.')),
+       300 => array('title' => t('300 Multiple Choices'), 'description' => t('The request is ambiguous and needs clarification as to which resource was requested.')),
+       301 => array('title' => t('301 Moved Permanently'), 'description' => t('Moved Permanently. The resource has permanently moved elsewhere, the response indicates where it has gone to. <strong>Recommended.</strong>')),
+       302 => array('title' => t('302 Found'), 'description' => t('The resource has temporarily moved elsewhere, the response indicates where it is at present. <strong>This is Drupal\'s default redirect type.</strong>')),
+       303 => array('title' => t('303 See Other'), 'description' => t('See Other/Redirect. A preferred alternative source should be used at present.')),
+       304 => array('title' => t('304 Not Modified'), 'description' => t('The server has identified from the request information that the client\'s copy of the information is up-to-date and the requested information does not need to be sent again.')),
+       305 => array('title' => t('305 Use Proxy'), 'description' => t('The request must be sent through the indicated proxy server.')),
+       306 => array('title' => t('307 Temporary Redirect'), 'description' => t('The resource has temporarily moved elsewhere, the response indicates where it is at present. Client should still use this URL.')),
    );
     
    return $errors;
