@@ -222,12 +222,14 @@ function faq_settings_form() {
     '#default_value' => variable_get('faq_more_link', t('>> more')),
     );
 
-  $form['questions']['description'] = array('#type' => 'textarea',
+  $form['questions']['body_filter']['description'] = array(
+    '#type' => 'textarea',
     '#title' => t('Description'),
     '#default_value' => variable_get('faq_description', ''),
     '#description' => t('Your FAQ description.  This will be placed at the top of the page, above the questions and can serve as an introductory text.'),
     '#rows' => 5,
     );
+  $form['questions']['body_filter']['format'] = filter_form(variable_get('faq_description_format', ''));
 
 
   $form['category'] = array('#type' => 'fieldset', 
@@ -290,6 +292,7 @@ function faq_settings_form_validate($form_id, $form_values) {
     variable_set('faq_use_teaser', $form_values['use_teaser']);
     variable_set('faq_more_link', $form_values['more_link']);
     variable_set('faq_description', $form_values['description']);
+    variable_set('faq_description_format', $form_values['format']);
     variable_set('faq_group_questions_top', $form_values['group_questions_top']);
     variable_set('faq_answer_category_name', $form_values['answer_category_name']);
     drupal_set_message(t('Configuration has been updated.'));
@@ -418,7 +421,12 @@ function faq_page($tid = 0) {
       $output = "\n" .'<ul class="faq_ul_cat_new_page">'. $output ."</ul>\n";
     }
   }
+
   $faq_description = variable_get('faq_description', '');
+  $format = variable_get('faq_description_format', 0);
+  if ($format) {
+    $faq_description = check_markup($faq_description, $format);
+  }
   $desc = '';
   if ($faq_description != '') {
     $desc = '<div class="faq_description"><p>'. t($faq_description). "</p></div>\n";
