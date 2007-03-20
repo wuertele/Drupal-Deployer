@@ -358,7 +358,7 @@ function package_release_contrib($nid, $uri, $version, $rev, $dir) {
         @unlink("$uri/$uri.po");
         $po_targets = "$uri/general.po ";
         $po_targets .= implode(' ', $po_files);
-        if (!drupal_exec("$msgcat $po_targets | $msgattrib --no-fuzzy -o $uri/$uri.po")) {
+        if (!drupal_exec("$msgcat --use-first $po_targets | $msgattrib --no-fuzzy -o $uri/$uri.po")) {
           return false;
         }
       }
