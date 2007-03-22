@@ -80,14 +80,24 @@ function faq_menu($may_cache) {
   }
   else {
     $items[] = array(
-      'path' => 'admin/content/faq/configure',
-      'title' => t('Configure'),
+      'path' => 'admin/content/faq/questions',
+      'title' => t('Questions'),
       'description' => t('Allows the user to configure the layout of questions and answers on a FAQ page.'),
       'callback' => 'drupal_get_form',
-      'callback arguments' => array('faq_settings_form'),
+      'callback arguments' => array('faq_questions_settings_form'),
       'access' => user_access('administer faq'),
       'type' => MENU_DEFAULT_LOCAL_TASK,
       'weight' => -10,
+    );
+    $items[] = array(
+      'path' => 'admin/content/faq/categories',
+      'title' => t('Categories'),
+      'description' => t('Allows the user to configure the layout of questions and answers using categories on a FAQ page.'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('faq_categories_settings_form'),
+      'access' => user_access('administer faq'),
+      'type' => MENU_LOCAL_TASK,
+      'weight' => -9,
     );
     $items[] = array('path' => 'node/add/faq',
       'title' => t('FAQ'),
@@ -163,35 +173,17 @@ function faq_form(&$node) {
 
 function faq_settings_page($op = NULL, $aid = NULL) {
 
-  switch ($op) {
-    case 'edit':
-      if (is_numeric($aid)) {
-        $output = drupal_get_form('faq_settings_form');
-      }
-      break;
-    default:
-      $form[] = array(
-	'#type' => 'fieldset',
-	'#title' => t('Add another'),
-      );
-      $output .= drupal_get_form('faq_settings_form');
-      break;
-  }
+  $output .= drupal_get_form('faq_questions_settings_form');
+
   return $output;
 }
 
 
 /**
- * Define a form to upload the avatar images.
+ * Define a form to edit the questions/answers setup
  */
-function faq_settings_form() {
+function faq_questions_settings_form() {
 
-  $form['questions'] = array('#type' => 'fieldset', 
-    '#title' => t('Questions and Answers'), 
-    '#weight' => -1,
-    '#collapsible' => 1,
-    '#collapsed' => 0,
-  );
   $display_options['questions_inline'] = t('Questions inline');
   $display_options['questions_top'] = t('Clicking on question takes user to answer further down the page');
   $display_options['hide_answer'] = t('Clicking on question opens/hides answer under question');
@@ -231,13 +223,19 @@ function faq_settings_form() {
     );
   $form['questions']['body_filter']['format'] = filter_form(variable_get('faq_description_format', ''));
 
-
-  $form['category'] = array('#type' => 'fieldset', 
-    '#title' => t('Categories'), 
-    '#weight' => 0,
-    '#collapsible' => 1,
-    '#collapsed' => 0,
+  $form['update']['attach'] = array(
+    '#type' => 'submit',
+    '#value' => t('Update'),
+    '#weight' => 3,
   );
+
+  return $form;
+}
+
+/**
+ * Define a form to edit the categories setup
+ */
+function faq_categories_settings_form() {
 
   $form['category']['categories'] = array('#type' => 'checkbox',
     '#title' => t('Categorize questions'),
@@ -277,33 +275,33 @@ function faq_settings_form() {
   return $form;
 }
 
-/**
- * Validate the submission.
- *
- * Check whether:
- * if any of the settings have changed
- */
-function faq_settings_form_validate($form_id, $form_values) {
+function faq_questions_settings_form_validate($form_id, $form_values) {
   if ($form_values['op'] == t('Update')) {
     variable_set('faq_display', $form_values['display']);
     variable_set('faq_back_to_top', $form_values['back_to_top']);
-    variable_set('faq_use_categories', $form_values['categories']);
-    variable_set('faq_category_display', $form_values['category_display']);
     variable_set('faq_use_teaser', $form_values['use_teaser']);
     variable_set('faq_more_link', $form_values['more_link']);
     variable_set('faq_description', $form_values['description']);
     variable_set('faq_description_format', $form_values['format']);
+
+    drupal_set_message(t('Configuration has been updated.'));
+  }
+}
+
+function faq_categories_settings_form_validate($form_id, $form_values) {
+  if ($form_values['op'] == t('Update')) {
+    variable_set('faq_use_categories', $form_values['categories']);
+    variable_set('faq_category_display', $form_values['category_display']);
     variable_set('faq_group_questions_top',$form_values['group_questions_top']);
     variable_set('faq_answer_category_name', $form_values['answer_category_name']);
+
     drupal_set_message(t('Configuration has been updated.'));
 
     if (variable_get('faq_use_categories', FALSE) && !module_exists("taxonomy")) {
       drupal_set_message(t("warning: Categorization of questions will not work without the 'taxonomy' module."), 'error');
     }
-
   }
 }
-
 /**
  * Function to display the faq page
  */
@@ -352,7 +350,6 @@ function faq_page($tid = 0) {
 	
     } // end of switch
   }
-
 
 
   // categorize questions
@@ -443,15 +440,14 @@ function faq_page($tid = 0) {
     }
   }
 
+  $desc = '';
   $faq_description = variable_get('faq_description', '');
   $format = variable_get('faq_description_format', 0);
   if ($format) {
     $faq_description = check_markup($faq_description, $format, FALSE);
   }
-  $desc = '';
   if ($faq_description != '') {
-    $desc = '<div class="faq_description"><p>';
-    $desc .= t($faq_description). "</p></div>\n";
+    $desc = '<div class="faq_description">'. t($faq_description) ."</div>\n";
   }
   $output = '<div class="content"><div class="faq">'. $desc. $output;
   $output .= $output_answers ."</div></div>\n";
