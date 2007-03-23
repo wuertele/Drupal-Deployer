@@ -655,7 +655,8 @@ function project_issue_form($node, $param) {
     );
     $form['issue_details']['format'] = filter_form($node->format);
 
-    if (file_check_directory(file_create_path(variable_get('project_directory_issues', 'issues')), 0)) {
+    $directory = file_create_path(variable_get('project_directory_issues', 'issues'));
+    if (file_check_directory($directory, 0)) {
     $form['issue_details']['file_issue'] = array(
       '#type' => 'file',
       '#title' => t('File attachment'),
