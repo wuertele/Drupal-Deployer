@@ -181,6 +181,42 @@ function faq_form(&$node) {
   return $form;
 }
 
+function faq_view($node, $teaser = FALSE, $page = FALSE) {
+
+  if ($page) {
+    $breadcrumb = array();
+			 $breadcrumb[] = array('path' => 'node/'. $node->nid); 
+
+				if (module_exists("taxonomy") && $node->taxonomy) {
+						foreach ($node->taxonomy as $term) {
+								$current = $term;
+								continue;
+						}
+						$breadcrumb[] = array(
+								'path' => 'faq/'. $current->tid, 
+								'title' => $current->name,
+						);
+						while ($parents = taxonomy_get_parents($current->tid)) {
+								$current = array_shift($parents);
+								$breadcrumb[] = array(
+										'path' => 'faq/'. $current->tid,
+										'title' => $current->name,
+								);
+						}
+				}
+    $breadcrumb[] = array(
+						'path' => 'faq', 
+						'title' => variable_get('faq_title', t('Frequently Asked Questions')),
+				);
+				$breadcrumb = array_reverse($breadcrumb);
+    menu_set_location($breadcrumb);
+  }
+
+  $node = node_prepare($node, $teaser);
+
+  return $node;
+}
+
 function faq_settings_page($op = NULL, $aid = NULL) {
 
   $output .= drupal_get_form('faq_general_settings_form');
@@ -365,6 +401,30 @@ function faq_categories_settings_form_validate($form_id, $form_values) {
 function faq_page($tid = 0) {
   drupal_add_css(drupal_get_path('module', 'faq') .'/faq.css');
   drupal_set_title(variable_get('faq_title', t('Frequently Asked Questions')));
+		if (!module_exists("taxonomy")) {
+				$tid = 0;
+		}
+
+		// configure the breadcrumb trail
+		$breadcrumb = array();
+
+		if (!empty($tid)) {
+				$current = taxonomy_get_term($tid);
+				$breadcrumb[] = array('path' => 'faq/'. $tid, 'title' => $current->name);
+				while ($parents = taxonomy_get_parents($current->tid)) {
+						$current = array_shift($parents);
+						$breadcrumb[] = array('path' => 'faq/'. $current->tid,
+								'title' => $current->name,
+						);
+				}
+				$breadcrumb[] = array('path' => 'faq', 
+						'title' => variable_get('faq_title', t('Frequently Asked Questions')),
+				);
+				$breadcrumb = array_reverse($breadcrumb);
+				menu_set_location($breadcrumb);
+		}
+
+
 
   // get page layout
   $faq_display = variable_get('faq_display', 'questions_top');
@@ -471,7 +531,7 @@ function faq_page($tid = 0) {
               }
 
               $desc = '';
-              if (isset($term->description) && $term->description != '') {
+              if (!empty($term->description)) {
                 $desc = '<div class="faq_qa_description"><p>';
                 $desc .= t($term->description) ."</p></div>";
               }
@@ -515,7 +575,7 @@ function faq_page($tid = 0) {
   if ($format) {
     $faq_description = check_markup($faq_description, $format, FALSE);
   }
-  if ($faq_description != '') {
+  if (!empty($faq_description)) {
     $desc = '<div class="faq_description">'. t($faq_description) ."</div>\n";
   }
   $output = '<div class="content"><div class="faq">'. $desc. $output;
@@ -594,7 +654,7 @@ function theme_questions_top($result, $display_vars) {
 
   // configure "back to top" link
   $back_to_top = '<br />&nbsp;';
-  if ($display_vars['back_to_top'] != '') {
+  if (!empty($display_vars['back_to_top'])) {
     $back_to_top = '<p class="faq_top_link">';
     $back_to_top .= l(t($display_vars['back_to_top']), 'faq') .'</p>';
   }
@@ -610,7 +670,7 @@ function theme_questions_top($result, $display_vars) {
     // should we display teaser or full text
     if ($display_vars['use_teaser']) {
       $more_link = '';
-      if ($display_vars['more_link'] != '' && strlen($node->teaser) < strlen($node->body)) {
+      if (!empty($display_vars['more_link']) && strlen($node->teaser) < strlen($node->body)) {
         $more_link = '<p class="faq_more_link">';
         $more_link .= l($display_vars['more_link'], "node/$node->nid") .'</p>';
       }
@@ -644,7 +704,7 @@ function theme_category_questions_top($result, $display_vars, $term, $class, &$o
 
   // configure "back to top" link
   $back_to_top = '<br />&nbsp;';
-  if ($display_vars['back_to_top'] != '') {
+  if (!empty($display_vars['back_to_top'])) {
     $back_to_top = '<p class="faq_top_link">';
     $back_to_top .= l(t($display_vars['back_to_top']), $this_page) .'</p>';
   }
@@ -657,7 +717,7 @@ function theme_category_questions_top($result, $display_vars, $term, $class, &$o
 
   $answer_category_name = variable_get('faq_answer_category_name', FALSE);
   $desc = '';
-  if (isset($term->description) && $term->description != '') {
+  if (!empty($term->description)) {
     $desc = '<div class="faq_qa_description"><p>';
     $desc .= t($term->description) ."</p></div>\n";
   }
@@ -671,7 +731,7 @@ function theme_category_questions_top($result, $display_vars, $term, $class, &$o
     foreach ($list as $tid => $sub_term) {
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
         $sub_cat_desc = '';
-        if (isset($sub_term->description) && $sub_term->description != '') {
+        if (!empty($sub_term->description)) {
           $sub_cat_desc = '<div class="faq_qa_description"><p>';
           $sub_cat_desc .= t($sub_term->description) ."</p></div>";
         }
@@ -730,7 +790,7 @@ function theme_category_questions_top($result, $display_vars, $term, $class, &$o
       // should we display teaser or full text
       if ($display_vars['use_teaser']) {
         $more_link = '';
-        if ($display_vars['more_link'] != '' && strlen($node->teaser) < strlen($node->body)) {
+        if (!empty($display_vars['more_link']) && strlen($node->teaser) < strlen($node->body)) {
           $more_link = '<p class="faq_more_link">';
           $more_link.= l($display_vars['more_link'], "node/$node->nid") .'</p>';
         }
@@ -844,7 +904,7 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
 		}
 
   $desc = '';
-  if (isset($term->description) && $term->description != '') {
+  if (!empty($term->description)) {
     $desc = '<div class="faq_qa_description"><p>';
     $desc .= t($term->description) ."</p></div>\n";
   }
@@ -858,7 +918,7 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
     foreach ($list as $tid => $sub_term) {
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
         $sub_cat_desc = '';
-        if (isset($sub_term->description) && $sub_term->description != '') {
+        if (!empty($sub_term->description)) {
           $sub_cat_desc = '<div class="faq_qa_description"><p>';
           $sub_cat_desc .= t($sub_term->description) ."</p></div>";
         }
@@ -926,7 +986,7 @@ function theme_questions_inline($result, $display_vars) {
 
   // configure "back to top" link
   $back_to_top = '<br />&nbsp;';
-  if ($display_vars['back_to_top'] != '') {
+  if (!empty($display_vars['back_to_top'])) {
     $back_to_top = '<p class="faq_top_link">';
     $back_to_top .= l(t($display_vars['back_to_top']), 'faq') .'</p>';
   }
@@ -938,7 +998,7 @@ function theme_questions_inline($result, $display_vars) {
     // should we display teaser or full text
     if ($display_vars['use_teaser']) {
       $more_link = '';
-      if ($display_vars['more_link'] != '' && strlen($node->teaser) < strlen($node->body)) {
+      if (!empty($display_vars['more_link']) && strlen($node->teaser) < strlen($node->body)) {
         $more_link = '<p class="faq_more_link">';
         $more_link .= l($display_vars['more_link'], "node/$node->nid") .'</p>';
       }
@@ -969,7 +1029,7 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
 
   // configure "back to top" link
   $back_to_top = '<br />&nbsp;';
-  if ($display_vars['back_to_top'] != '') {
+  if (!empty($display_vars['back_to_top'])) {
     $back_to_top = '<p class="faq_top_link">';
     $back_to_top .= l(t($display_vars['back_to_top']), $this_page) .'</p>';
   }
@@ -982,7 +1042,7 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
 
   // configure category description
   $desc = '';
-  if (isset($term->description) && $term->description != '') {
+  if (!empty($term->description)) {
     $desc = '<div class="faq_qa_description"><p>';
     $desc .= t($term->description) ."</p></div>\n";
   }
@@ -997,7 +1057,7 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
     foreach ($list as $tid => $sub_term) {
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
         $sub_cat_desc = '';
-        if (isset($sub_term->description) && $sub_term->description != '') {
+        if (!empty($sub_term->description)) {
           $sub_cat_desc = '<div class="faq_qa_description"><p>';
           $sub_cat_desc .= t($sub_term->description) ."</p></div>";
         }
@@ -1056,7 +1116,7 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
       // should we display teaser or full text
       if ($display_vars['use_teaser']) {
         $more_link = '';
-        if ($display_vars['more_link'] != '' && strlen($node->teaser) < strlen($node->body)) {
+        if (!empty($display_vars['more_link']) && strlen($node->teaser) < strlen($node->body)) {
           $more_link = '<p class="faq_more_link">';
           $more_link.= l($display_vars['more_link'], "node/$node->nid") .'</p>';
         }
@@ -1106,7 +1166,7 @@ function theme_category_new_page($result, $display_vars, $term, $class) {
 		}
 
   $desc = '';
-  if (isset($term->description) && $term->description != '') {
+  if (!empty($term->description)) {
     $desc = '<div class="faq_qa_description"><p>';
     $desc .= t($term->description) ."</p></div>\n";
   }
@@ -1120,7 +1180,7 @@ function theme_category_new_page($result, $display_vars, $term, $class) {
     foreach ($list as $tid => $sub_term) {
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
         $sub_cat_desc = '';
-        if (isset($sub_term->description) && $sub_term->description != '') {
+        if (!empty($sub_term->description)) {
           $sub_cat_desc = '<div class="faq_qa_description"><p>';
           $sub_cat_desc .= t($sub_term->description) ."</p></div>";
         }
