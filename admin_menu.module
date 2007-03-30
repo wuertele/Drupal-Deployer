@@ -54,49 +54,74 @@ function admin_menu_get_menu() {
   $admin_items = array();
 
   // get path id of /q=admin, which we suppose to be the root of admin menu
-  $pid_admin = $_menu['path index']['admin'];
-  $admin_items[$pid_admin] = $_menu['items'][$pid_admin];
+  $mid_admin = $_menu['path index']['admin'];
+  
+  // Temporary access permissions fix for root menu items until #126621 is committed to core.
+  foreach ($_menu['items'][$mid_admin]['children'] as $key => $parent) {
+    if ($_menu['items'][$parent]['access'] != false || !isset($_menu['items'][$parent]['children'])) {
+      continue;
+    }
+    $is_accessible = false;
+    foreach ($_menu['items'][$parent]['children'] as $key => $child) {
+      if ($_menu['items'][$child]['access'] == true) {
+        $is_accessible = true;
+      }
+    }
+    if ($is_accessible) {
+      $_menu['items'][$parent]['access'] = true;
+    }
+  }
   
   // slice admin menu items into a new menu tree
-  _admin_menu_get_children($admin_items, $admin_items[$pid_admin]);
+  $admin_items[$mid_admin] = $_menu['items'][$mid_admin];
+  _admin_menu_get_children($admin_items, $admin_items[$mid_admin]);
   
   // adjust some specific menu items for better user experience
   admin_menu_adjust_items($admin_items);
   
   // remove administer menu item from parent's children list
-  $parent_id = $_menu['items'][$pid_admin]['pid'];
-  $child_key = array_search($pid_admin, $_menu['visible'][$parent_id]['children']);
-  unset( $_menu['visible'][$parent_id]['children'][$child_key] );
+  $parent_id = $_menu['items'][$mid_admin]['pid'];
+  $child_key = array_search($mid_admin, $_menu['visible'][$parent_id]['children']);
+  unset($_menu['visible'][$parent_id]['children'][$child_key]);
   
-  return theme('admin_menu_tree', $admin_items, $pid_admin);
+  return theme('admin_menu_tree', $admin_items, $mid_admin);
 }
 
 function _admin_menu_get_children(&$admin_items, &$item) {
   global $_menu;
   
-  if (isset( $item['children'] )) {
+  if (isset($item['children'])) {
     foreach ($item['children'] as $child) {
-      $is_visible_item = $_menu['items'][$child]['type'] & (MENU_VISIBLE_IN_TREE | MENU_IS_LOCAL_TASK);
+      // check access permissions
+      if (!variable_get('admin_menu_show_all', 0)) {
+        $item_is_accessible = !isset($_menu['items'][$child]['access']) || (isset($_menu['items'][$child]['access']) && $_menu['items'][$child]['access']);
+      }
+      else {
+        $item_is_accessible = true;
+      }
+      // check type
+      $item_is_visible = $_menu['items'][$child]['type'] & (MENU_VISIBLE_IN_TREE | MENU_IS_LOCAL_TASK);
 
-      // create the child item if it's visible in navigation
-      // Hide items linking to parent: && !($_menu['items'][$child]['type'] & MENU_LINKS_TO_PARENT) 12/01/2007 sun
-      if ($is_visible_item) {
+      // create the child item if it is accessible and visible
+      // Additional if condition to hide items linking to parent:
+      //   && !($_menu['items'][$child]['type'] & MENU_LINKS_TO_PARENT)
+      if ($item_is_accessible && $item_is_visible) {
         $admin_items[$child] = $_menu['items'][$child];
 
         // recurse to child menu items
-        if (isset( $_menu['items'][$child]['children'] )) {
+        if (isset($_menu['items'][$child]['children'])) {
           _admin_menu_get_children($admin_items, $admin_items[$child]);
         }
 
-        // remove this child item if it's visible in navigation
-        unset( $_menu['visible'][$child] );
+        // remove this child item if it is visible in navigation
+        unset($_menu['visible'][$child]);
       }
       else {
         // remove child menu item from parent's children list
         $parent_id = $_menu['items'][$child]['pid'];
         $child_key = array_search($child, $_menu['items'][$parent_id]['children']);
-        if ($child_key !== FALSE) {
-          unset( $admin_items[$parent_id]['children'][$child_key] );
+        if ($child_key !== false) {
+          unset($admin_items[$parent_id]['children'][$child_key]);
         }
       }
     }
@@ -109,35 +134,20 @@ function _admin_menu_get_children(&$admin_items, &$item) {
 function admin_menu_adjust_items(&$admin_items) {
   global $_menu;
   
-  // move 'By module' into Site configuration
-  $mid_bymodule = $_menu['path index']['admin/by-module'];
-  if (isset( $admin_items[$mid_bymodule] )) {
-    // remove child pointer from original location
-    $parent_id = $admin_items[$mid_bymodule]['pid'];
-    $child_key = array_search($mid_bymodule, $admin_items[$parent_id]['children']);
-    if ($child_key !== FALSE) {
-      unset( $admin_items[$parent_id]['children'][$child_key] );
-    }
-    // insert new child pointers
-    $pid_settings = $_menu['path index']['admin/settings'];
-    $admin_items[$mid_bymodule]['pid'] = $pid_settings;
-    array_unshift( $admin_items[$pid_settings]['children'], $mid_bymodule);
+  // move 'By module' into Site configuration or remove it
+  if (user_access('administer site configuration')) {
+    admin_menu_move_item($admin_items, 'admin/by-module', 'admin/settings');
+  }
+  else {
+    admin_menu_remove_item($admin_items, 'admin/by-module');
   }
   
   // remove 'By task' menu item
-  $mid_bytask = $_menu['path index']['admin/by-task'];
-  if (isset( $admin_items[$mid_bytask] )) {
-    // remove child pointer
-    $parent_id = $admin_items[$mid_bytask]['pid'];
-    $child_key = array_search($mid_bytask, $admin_items[$parent_id]['children']);
-    if ($child_key !== FALSE) {
-      unset( $admin_items[$parent_id]['children'][$child_key] );
-    }
-  }
+  admin_menu_remove_item($admin_items, 'admin/by-task');
 
   // add create content_type items to Content management > Content
   $mid_content = $_menu['path index']['admin/content/node'];
-  if (isset( $admin_items[$mid_content] )) {
+  if (isset($admin_items[$mid_content])) {
     foreach ($_menu['items'][$_menu['path index']['node/add']]['children'] as $mid) {
       $admin_items[$mid] = $_menu['items'][$mid];
       $admin_items[$mid]['title'] = t('Add !content-type', array('!content-type' => $admin_items[$mid]['title']));
@@ -147,6 +157,62 @@ function admin_menu_adjust_items(&$admin_items) {
     // sort childs
     usort($admin_items[$mid_content]['children'], '_menu_sort');
   }
+}
+
+/**
+ * Moves the child pointer for a menu item to a new parent.
+ * 
+ * @param admin_items
+ *      The sliced administration menu.
+ * @param path
+ *      The menu path of the item to move.
+ * @param parent_path
+ *      The menu path of the new parent item.
+ */
+function admin_menu_move_item(&$admin_items, $path, $parent_path) {
+  global $_menu;
+  
+  $mid     = $_menu['path index'][$path];
+  $new_pid = $_menu['path index'][$parent_path];
+  if (isset($admin_items[$mid]) && isset($admin_items[$new_pid])) {
+    // remove current child pointer
+    admin_menu_remove_item($admin_items, $path);
+    
+    // insert new child pointer
+    $admin_items[$mid]['pid'] = $new_pid;
+    array_unshift($admin_items[$new_pid]['children'], $mid);
+    
+    return true;
+  }
+  else {
+    return false;
+  }
+}
+
+/**
+ * Removes the child pointer for a menu item.
+ * 
+ * @param admin_items
+ *      The sliced administration menu.
+ * @param path
+ *      The menu path to remove.
+ */
+function admin_menu_remove_item(&$admin_items, $path) {
+  global $_menu;
+  
+  $mid = $_menu['path index'][$path];
+  if (isset($admin_items[$mid])) {
+    $pid = $admin_items[$mid]['pid'];
+    $child_key = array_search($mid, $admin_items[$pid]['children']);
+    if ($child_key !== false) {
+      unset($admin_items[$pid]['children'][$child_key]);
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
+  return false;
 }
 
 /**
@@ -163,6 +229,11 @@ function admin_menu_item_link(&$admin_items, $mid) {
     $link_item = menu_get_item($link_item['pid']);
   }
 
+  // display menu item ids if enabled (devel)
+  if (variable_get('admin_menu_show_item_ids', 0)) {
+    $item['title'] = $item['title'] . ' (' . $mid . ')';
+  }
+  
   return theme('menu_item_link', $item, $link_item);
 }
 
@@ -179,15 +250,15 @@ function theme_admin_menu_tree(&$menu, $pid = 1) {
   
   if (isset($menu[$pid]) && $menu[$pid]['children']) {
     foreach ($menu[$pid]['children'] as $mid) {
-      $type = isset($menu[$mid]['type']) ? $menu[$mid]['type'] : NULL;
-      $children = isset($menu[$mid]['children']) ? $menu[$mid]['children'] : NULL;
+      $type = isset($menu[$mid]['type']) ? $menu[$mid]['type'] : null;
+      $children = isset($menu[$mid]['children']) ? $menu[$mid]['children'] : null;
       $output .= theme('admin_menu_item', $menu, $mid, theme('admin_menu_tree', $menu, $mid), count($children) == 0);
     }
   }
   return $output ? "<ul>" . $output . "</ul>" : '';
 }
 
-function theme_admin_menu_item(&$admin_items, $mid, $children = '', $leaf = TRUE) {
+function theme_admin_menu_item(&$admin_items, $mid, $children = '', $leaf = true) {
   $output = '<li' . (!$leaf ? ' class="expandable"' : '') . '>';
   $output.= admin_menu_item_link($admin_items, $mid) . $children . "</li>";
   return $output;
@@ -197,3 +268,34 @@ function theme_admin_menu_icon() {
   $output = '<img id="admin_menu_icon" src="' . check_url(base_path() . 'misc/favicon.ico') . '" alt="" border="0" />';
   return $output;
 }
+
+/**
+ * Implementation of hook_form_alter() to extend devel.module.
+ */
+function admin_menu_form_alter($form_id, &$form) {
+  if ($form_id == 'devel_admin_settings') {
+    // shift system_settings_form buttons
+    $weight = $form['buttons']['#weight'];
+    $form['buttons']['#weight'] = $weight + 1;
+    
+    $form['admin_menu'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Administration Menu settings'),
+      '#collapsible' => true,
+      '#collapsed' => true,
+    );
+    $form['admin_menu']['admin_menu_show_item_ids'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Display menu item IDs in Drupal Administration Menu'),
+      '#default_value' => variable_get('admin_menu_show_item_ids', 0),
+      '#description' => t('If enabled, the corresponding menu item id will appear next to each menu item link.'),
+    );
+    $form['admin_menu']['admin_menu_show_all'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Display all menu items'),
+      '#default_value' => variable_get('admin_menu_show_all', 0),
+      '#description' => t('Enable this option to disable user access checks for menu items, i.e. every menu item in the visible menu tree will be displayed to every user regardless of access permissions.'),
+    );
+  }
+}
+
