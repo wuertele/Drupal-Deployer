@@ -25,13 +25,21 @@ function admin_menu_block($op = 'list', $delta = 0) {
         return;
       }
       
-      $css_file = drupal_get_path('module', 'admin_menu') . '/admin_menu.css';
-      if (function_exists('theme_add_style')) {
-        theme_add_style($css_file, 'all');
+      $css_files = array();
+      $css_files[] = array(
+        'file' => drupal_get_path('module', 'admin_menu') . '/admin_menu.css',
+        'type' => 'module',
+      );
+      if (file_exists(path_to_theme() . '/admin_menu.css')) {
+        $css_files[] = array(
+          'file' => path_to_theme() . '/admin_menu.css',
+          'type' => 'theme',
+        );
       }
-      else {
-        drupal_add_css($css_file, 'module', 'all');
+      foreach ($css_files as $css_file) {
+        drupal_add_css($css_file['file'], $css_file['type'], 'all', false);
       }
+      
       // IE fix
       $ie_header = "<!--[if lt IE 7]>\n";
       $ie_header.= '<script type="text/javascript" src="' . base_path() . drupal_get_path('module', 'admin_menu') . '/admin_menu.js' . '"></script>';

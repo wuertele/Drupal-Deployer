@@ -27,6 +27,11 @@ are only visible after one or two clicks normally.
   4.7), ensure that "Admin Menu Block" is placed in front of any other menu
   block and save your block configuration.
 
+* If your theme uses absolute or fixed positioned elements and the default
+  margin-top for <BODY> is not sufficient, you can simply place a stylesheet
+  file with the name 'admin_menu.css' in your theme to override or extend the
+  CSS of your site when Drupal Administration Menu is enabled.
+
 
 -- AUTHORS --
 
