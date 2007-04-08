@@ -5,33 +5,40 @@
 // Copyright 2005 Khalid Baheyeldin http://2bits.com
 
 function currency_api_help($section) {
-  $output = '';
-
   switch ($section) {
-    case 'admin/modules#description':
-      $output = t('Currency Conversion API');
-      break;
     case 'admin/help#currency_api':
-    case 'admin/settings/currency_api':
-      $output = t('This module provides an API for currency conversion.');
-      break;
+      return t('This module provides an API for currency conversion.');
   }
+}
 
-  return $output;
+function currency_api_menu($may_cache) {
+  $items = array();
+  if ($may_cache) {
+    $items[] = array(
+      'path'               => 'admin/settings/currency_api',
+      'title'              => t('Currency API'),
+      'description'        => t('This module provides an API for currency exchange rates.'),
+      'callback'           => 'drupal_get_form',
+      'callback arguments' => array('currency_api_admin_settings'),
+      'access'             => user_access('administer site configuration'),
+      'type'               => MENU_SUGGESTED_ITEM, // optional
+    );
+  }
+  return $items;
 }
   
-function currency_api_settings() {    
+function currency_api_admin_settings() {    
   $form['currency_api_watchdog'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Log all currency conversions and errors to watchdog'),    
+    '#title' => t('Log all currency exchange requests and errors to watchdog'),    
     '#default_value' => variable_get('currency_api_watchdog', 1),    
   );
 
-  return $form;
+  return system_settings_form($form);
 }  
 
 /**
- * Currency conversion API function
+ * Currency exchange rate API function
  *
  * This function converts two currencies using exchange rates from Yahoo Finance.
  * The currency codes are standard ISO 3-letter codes, and you can find the details
@@ -82,10 +89,10 @@ function currency_api_convert($currency_from, $currency_to, $amount = 1) {
 
   $result = array();
   $result['status']  = FALSE;
-  $result['message'] = '';
-  $result['value']   = '';
-  $result['date']    = '';
-  $result['time']    = '';
+  $result['message'] = NULL;
+  $result['value']   = 0;
+  $result['date']    = NULL;
+  $result['time']    = NULL;
 
   $from = strtoupper($currency_from);
   $to   = strtoupper($currency_to);
@@ -100,7 +107,7 @@ function currency_api_convert($currency_from, $currency_to, $amount = 1) {
     $result['status'] = FALSE;
   }
 
-  if (FALSE == currency_api_get_desc($currency_to)) {
+  if (FALSE == currency_api_get_desc($to)) {
     $msg = "currency: Invalid currency_to=$to";
     _log_to_watchdog($msg, WATCHDOG_ERROR);
     return FALSE;
@@ -115,34 +122,26 @@ function currency_api_convert($currency_from, $currency_to, $amount = 1) {
     $result['status'] = FALSE;
   }
 
-  $handle = @fopen($url, 'r');
-  if ($handle) {
-    if ($record = fgets($handle, 4096)) {
-      fclose($handle);
-      $currency_data = explode(',', $record);
-      $rate = $currency_data[1];
-      $date = $currency_data[2];
-      $time = $currency_data[3];
+  
+  $record = file_get_contents($url);
+  if ($record) {
+    $currency_data = explode(',', $record);
+    $rate = $currency_data[1];
+    $date = $currency_data[2];
+    $time = $currency_data[3];
 
-      // Calculate the result
-      $value = $amount * $rate;
+    // Calculate the result
+    $value = $amount * $rate;
 
-      // Log it
-      _log_to_watchdog("currency: $amount $from = $value $to", WATCHDOG_NOTICE);
+    // Log it
+    _log_to_watchdog("currency: $amount $from = $value $to", WATCHDOG_NOTICE);
 
-      // Got what we need
-      $result['value']  = $value;
-      $result['date']   = $date;
-      $result['time']   = $time;
-      $result['status'] = TRUE;
-      $result['message']= 'success';
-    }
-    else {
-      $msg = 'currency: fgets failed';
-      _log_to_watchdog($msg, WATCHDOG_ERROR);
-      $result['status'] = FALSE;
-      $result['message'] = $msg;
-    }
+    // Got what we need
+    $result['value']  = $value;
+    $result['date']   = $date;
+    $result['time']   = $time;
+    $result['status'] = TRUE;
+    $result['message']= 'success';
   }
   else {
     $msg = 'currency: cannot contact Yahoo Finance host';
