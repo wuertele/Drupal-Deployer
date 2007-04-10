@@ -30,7 +30,7 @@ there are some terms configured for the FAQ node type, it will also be possible
 to put the questions into different categories when editing.
 
 On the Frequently Asked Questions settings configuration page (Administer >> 
-Content management >> Frequently Asked Questions (admin/content/faq)), you will
+Content management >> Frequently Asked Questions (admin/settings/faq)), you will
 find a form that will allow you to configure the layout of the questions and 
 answers on the 'faq' page.  
 
