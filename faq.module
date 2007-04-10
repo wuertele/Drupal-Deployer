@@ -109,6 +109,17 @@ function faq_menu($may_cache) {
       'type' => MENU_LOCAL_TASK,
       'weight' => -8,
     );
+				$items[] = array(
+      'path' => 'admin/content/faq/weight',
+      'title' => t('Weight'),
+      'description' => t('Allows the user to configure the order of questions and answers on a FAQ page.'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('faq_weight_settings_form'),
+      'access' => user_access('administer faq'),
+      'type' => MENU_LOCAL_TASK,
+      'weight' => -8,
+    );
+ 
     $items[] = array('path' => 'node/add/faq',
       'title' => t('FAQ'),
       'access' => user_access('create faq'),
@@ -358,7 +369,127 @@ function faq_categories_settings_form() {
   return $form;
 }
 
-function faq_general_settings_form_validate($form_id, $form_values) {
+/**
+ * Define a form to edit the q/a weights
+ */
+function faq_weight_settings_form($form_values = NULL) {
+
+  drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
+  drupal_add_css(drupal_get_path('module', 'faq') .'/faq.css');
+
+		$use_categories = variable_get('faq_use_categories', FALSE);
+		if (!$use_categories) {
+				$step = "order";
+		}
+		elseif (!isset($form_values)) {
+				$step = "categories";
+		}
+		else {
+				$step = "order";
+		}
+		$form['step'] = array(
+				'#type' => 'hidden',
+				'#value' => $step,
+		);
+
+		$form['#multistep'] = TRUE;
+		$form['#redirect'] = FALSE;
+
+		// categorized q/a
+		if ($step == "categories") {
+
+				// get list of categories
+    $vocabularies = taxonomy_get_vocabularies("faq");
+				$options = array();
+    foreach ($vocabularies as $vid => $vobj) {
+						$tree = taxonomy_get_tree($vid);
+      foreach ($tree as $term) {
+								$options[$term->tid] = $term->name;
+								$form['choose_cat']['faq_category'] = array(
+										'#type' => 'select',
+										'#title' => t("Choose a category"),
+										'#description' => t("Choose a category that you wish to order the questions for."),
+										'#options' => $options,
+										'#multiple' => FALSE,
+								);
+
+								$form['choose_cat']['search'] = array(
+										'#type' => 'submit',
+										'#value' => t('Search'),
+								);
+						}
+				}
+
+		}
+
+		else {
+				$options = array();
+				$category = $form_values['faq_category'];
+				if (empty($category)) {
+						$category = 0;
+						if (module_exists("i18n") && variable_get('i18n_node_faq', 0)) {
+								$lang = i18n_get_lang();
+								$result = db_query("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {i18n_node} i ON i.nid = n.nid LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = %d WHERE n.type='faq' AND n.status = 1 AND i.language = '%s' ORDER BY w.weight ASC, n.sticky DESC, n.created DESC", $category, $lang);
+						}
+						else {
+								$result = db_query("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = %d WHERE n.type='faq' AND n.status = 1 ORDER BY w.weight ASC, n.sticky DESC, n.created DESC", $category);
+						}
+				} 
+				else {
+						if (module_exists("i18n") && variable_get('i18n_node_faq', 0)) {
+								$lang = i18n_get_lang();
+								$result = db_query("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON r.nid = n.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {i18n_node} i ON i.nid = n.nid LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = %d WHERE n.type='faq' AND n.status = 1 AND tn.tid = %d AND i.language = '%s' ORDER BY w.weight ASC, n.sticky DESC, n.created DESC", $category, $category, $lang);
+						}
+						else {
+								$result = db_query("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON r.nid = n.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = %d WHERE n.type='faq' AND n.status = 1 AND tn.tid = %d ORDER BY w.weight ASC, n.sticky DESC, n.created DESC", $category, $category);
+						}
+				}
+
+
+				while ($node = db_fetch_object($result)) {
+						$options[$node->nid] = $node->title;
+						$order .= "$node->nid,";
+				}
+				$order = rtrim($order, ",");
+
+				$form['weight']['faq_node_order'] = array(
+						'#type' => 'hidden',
+						'#default_value' => $order,
+				);
+				$form['weight']['faq_category'] = array(
+						'#type' => 'hidden',
+						'#value' => $category,
+				);
+				$form['weight']['order_no_cats'] = array(
+						'#type' => 'select',
+						'#title' => t("Question Order"),
+						'#description' => t("This determines the order of the questions and answers on the FAQ page.  Just select one or more questions and use the arrows to change their position in the list."),
+						'#options' => $options,
+						'#multiple' => TRUE,
+				);
+				$form['weight']['move_up'] = array(
+						'#type' => 'markup',
+						'#value' => '<input type="button" onclick="faq_move_selected_item_up();"
+						value="&uarr;" class="faq_arrow"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;',
+				);
+				$form['weight']['move_down'] = array(
+						'#type' => 'markup',
+						'#value' => '<input type="button" onclick="faq_move_selected_item_down();" value="&darr;" class="faq_arrow"/><br>',
+				);
+
+				$form['update']['attach'] = array(
+						'#type' => 'submit',
+						'#value' => t('Update'),
+						'#weight' => 3,
+						'#attributes' => array('onclick' => 'faq_update_order();'),
+				);
+		}
+
+
+  return $form;
+}
+
+function faq_general_settings_form_submit($form_id, $form_values) {
   if ($form_values['op'] == t('Update')) {
     variable_set('faq_title', $form_values['title']);
     variable_set('faq_description', $form_values['description']);
@@ -368,7 +499,7 @@ function faq_general_settings_form_validate($form_id, $form_values) {
   }
 }
 
-function faq_questions_settings_form_validate($form_id, $form_values) {
+function faq_questions_settings_form_submit($form_id, $form_values) {
   if ($form_values['op'] == t('Update')) {
     variable_set('faq_display', $form_values['display']);
     variable_set('faq_back_to_top', $form_values['back_to_top']);
@@ -379,7 +510,7 @@ function faq_questions_settings_form_validate($form_id, $form_values) {
   }
 }
 
-function faq_categories_settings_form_validate($form_id, $form_values) {
+function faq_categories_settings_form_submit($form_id, $form_values) {
   if ($form_values['op'] == t('Update')) {
     variable_set('faq_use_categories', $form_values['categories']);
     variable_set('faq_category_display', $form_values['category_display']);
@@ -395,6 +526,22 @@ function faq_categories_settings_form_validate($form_id, $form_values) {
     }
   }
 }
+
+function faq_weight_settings_form_submit($form_id, $form_values) {
+  if ($form_values['op'] == t('Update')) {
+
+				$order = preg_split("/,/",$form_values['faq_node_order']);
+				foreach ($order as $index => $nid) {
+						$result = db_query("REPLACE INTO {faq_weights} (tid, nid, weight) VALUES(%d, %d, %d)", $form_values['faq_category'], $nid, $index);
+				}
+
+    drupal_set_message(t('Configuration has been updated.'));
+		}
+		else {
+		}
+}
+
+
 /**
  * Function to display the faq page
  */
@@ -403,6 +550,11 @@ function faq_page($tid = 0) {
   drupal_set_title(variable_get('faq_title', t('Frequently Asked Questions')));
 		if (!module_exists("taxonomy")) {
 				$tid = 0;
+		}
+
+		// check if we need multi-lingual support
+		if (module_exists("i18n") && variable_get('i18n_node_faq', 0)) {
+				$display_vars["lang"] = i18n_get_lang();
 		}
 
 		// configure the breadcrumb trail
@@ -447,7 +599,12 @@ function faq_page($tid = 0) {
 
   // non-categorized questions and answers
   if (!$use_categories) {
-    $result = db_query("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid WHERE n.type='faq' AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC");
+				if (!empty($display_vars["lang"])) {
+						$result = db_query("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid LEFT JOIN {i18n_node} i ON i.nid = n.nid LEFT JOIN {faq_weights} w ON w.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND i.language = '%s' AND w.tid = 0 ORDER BY w.weight, n.sticky DESC, n.created DESC", $display_vars["lang"]);
+				}
+				else {
+						$result = db_query("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid LEFT JOIN {faq_weights} w ON w.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND w.tid = 0 ORDER BY w.weight, n.sticky DESC, n.created DESC");
+				}
 
     switch ($faq_display) {
       case 'questions_top':
@@ -494,7 +651,6 @@ function faq_page($tid = 0) {
 
 
     $vocabularies = taxonomy_get_vocabularies("faq");
-    $terms = array();
     foreach ($vocabularies as $vid => $vobj) {
       if ($hide_sub_categories && $category_display != 'categories_inline') {
         $tree = taxonomy_get_tree($vid, 0, -1, 1);
@@ -536,7 +692,12 @@ function faq_page($tid = 0) {
                 $desc .= t($term->description) ."</p></div>";
               }
               // see if this term has any nodes itself, should it be a link?
-              $result = db_query("SELECT COUNT(n.nid) AS c FROM {term_node} t INNER JOIN {node} n ON t.nid = n.nid WHERE n.status = 1 AND n.type = 'faq' AND t.tid = '%d'", $term->tid);
+														if (!empty($display_vars["lang"])) {
+																$result = db_query("SELECT COUNT(n.nid) AS c FROM {term_node} t INNER JOIN {node} n ON t.nid = n.nid LEFT JOIN {i18n_node} i ON i.nid = n.nid WHERE n.status = 1 AND n.type = 'faq' AND t.tid = '%d' AND i.language = '%s'", $term->tid, $display_vars["lang"]);
+														} 
+														else {
+																$result = db_query("SELECT COUNT(n.nid) AS c FROM {term_node} t INNER JOIN {node} n ON t.nid = n.nid WHERE n.status = 1 AND n.type = 'faq' AND t.tid = '%d'", $term->tid);
+														}
               $count = db_fetch_object($result);
 
               if ($count->c > 0) {
@@ -590,7 +751,12 @@ function faq_page($tid = 0) {
 
 function _display_faq_by_category($faq_display, $category_display, $term, $display_header, &$output, &$output_answers) {
 
-  $result = db_query("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", $term->tid);
+		if (!empty($display_vars["lang"])) {
+				$result = db_query("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid LEFT JOIN {i18n_node} i ON i.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' AND i.language = '%s' ORDER BY w.weight, n.sticky DESC, n.created DESC", $term->tid, $display_vars["lang"]);
+		}
+		else {
+				$result = db_query("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY w.weight, n.sticky DESC, n.created DESC", $term->tid);
+		}
 
   $display_vars['display_header'] = $display_header;
   $display_vars['faq_display'] = $faq_display;
@@ -655,7 +821,7 @@ function _display_faq_by_category($faq_display, $category_display, $term, $displ
 function theme_questions_top($result, $display_vars) {
 
   // configure "back to top" link
-  $back_to_top = '<br />&nbsp;';
+  $back_to_top = '';
   if (!empty($display_vars['back_to_top'])) {
     $back_to_top = '<p class="faq_top_link">';
     $back_to_top .= l(t($display_vars['back_to_top']), 'faq') .'</p>';
@@ -705,7 +871,7 @@ function theme_category_questions_top($result, $display_vars, $term, $class, &$o
   }
 
   // configure "back to top" link
-  $back_to_top = '<br />&nbsp;';
+  $back_to_top = '';
   if (!empty($display_vars['back_to_top'])) {
     $back_to_top = '<p class="faq_top_link">';
     $back_to_top .= l(t($display_vars['back_to_top']), $this_page) .'</p>';
@@ -768,7 +934,12 @@ function theme_category_questions_top($result, $display_vars, $term, $class, &$o
 
     foreach ($list as $tid => $sub_term) {
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-        $sub_result = db_query("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", $sub_term->tid);
+								if (!empty($display_vars["lang"])) {
+										$sub_result = db_query("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {i18n_node} i ON i.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' AND i.language = '%s' ORDER BY n.sticky DESC, n.created DESC", $sub_term->tid, $display_vars["lang"]);
+								}
+								else {
+										$sub_result = db_query("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", $sub_term->tid);
+								}
 								$display_vars['display_header'] = 1;
         $sub_cats .= '<div class="faq_category_indent">';
         theme_category_questions_top($sub_result, $display_vars, $sub_term, $class, $sub_cats, $sub_cat_output_answers);
@@ -881,7 +1052,7 @@ function theme_hide_answer($result) {
   $output = '<dl class="faq_dl">' ."\n";
   while ($node = db_fetch_object($result)) {
     $output .= '<dt class="faq_question">';
-    $outout .= check_plain(t($node->title)) ."</dt>\n";
+    $output .= check_plain(t($node->title)) ."</dt>\n";
     $output .= '<dd class="faq_answer">';
     $output .= t(check_markup($node->body, $node->format, FALSE)) ."</dd>\n";
   }
@@ -956,7 +1127,12 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
 
     foreach ($list as $tid => $sub_term) {
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-        $sub_result = db_query("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", $sub_term->tid);
+								if (!empty($display_vars["lang"])) {
+										$sub_result = db_query("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {i18n_node} i ON i.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' AND i.language = '%s' ORDER BY n.sticky DESC, n.created DESC", $sub_term->tid, $display_vars["lang"]);
+								}
+								else {
+										$sub_result = db_query("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", $sub_term->tid);
+								}
 								$display_vars['display_header'] = 1;
         $sub_cats .= '<div class="faq_category_indent">';
         $sub_cats .= theme_category_hide_answer($sub_result, $display_vars, $sub_term, $class);
@@ -987,7 +1163,7 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
 function theme_questions_inline($result, $display_vars) {
 
   // configure "back to top" link
-  $back_to_top = '<br />&nbsp;';
+  $back_to_top = '';
   if (!empty($display_vars['back_to_top'])) {
     $back_to_top = '<p class="faq_top_link">';
     $back_to_top .= l(t($display_vars['back_to_top']), 'faq') .'</p>';
@@ -1030,7 +1206,7 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
   }
 
   // configure "back to top" link
-  $back_to_top = '<br />&nbsp;';
+  $back_to_top = '';
   if (!empty($display_vars['back_to_top'])) {
     $back_to_top = '<p class="faq_top_link">';
     $back_to_top .= l(t($display_vars['back_to_top']), $this_page) .'</p>';
@@ -1096,7 +1272,12 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
 
     foreach ($list as $tid => $sub_term) {
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-        $sub_result = db_query("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", $sub_term->tid);
+								if (!empty($display_vars["lang"])) {
+										$sub_result = db_query("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {i18n_node} i ON i.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' AND i.language = '%s' ORDER BY n.sticky DESC, n.created DESC", $sub_term->tid, $display_vars["lang"]);
+								}
+								else {
+										$sub_result = db_query("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", $sub_term->tid);
+								}
 								$display_vars['display_header'] = 1;
         $sub_cats .= '<div class="faq_category_indent">';
         $sub_cats .= theme_category_questions_inline($sub_result, $display_vars, $sub_term, $class);
@@ -1216,7 +1397,12 @@ function theme_category_new_page($result, $display_vars, $term, $class) {
 
     foreach ($list as $tid => $sub_term) {
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-        $sub_result = db_query("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", $sub_term->tid);
+								if (!empty($display_vars["lang"])) {
+										$sub_result = db_query("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {i18n_node} i ON i.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' AND i.language = '%s' ORDER BY n.sticky DESC, n.created DESC", $sub_term->tid, $display_vars["lang"]);
+								}
+								else {
+										$sub_result = db_query("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", $sub_term->tid);
+								}
 								$display_vars['display_header'] = 1;
         $sub_cats .= '<div class="faq_category_indent">';
         $sub_cats .= theme_category_new_page($sub_result, $display_vars, $sub_term, $class);
@@ -1309,7 +1495,13 @@ function faq_block($op = 'list', $delta = 0, $edit = array()) {
 
 function theme_faq_highlights($num = 5) {
 
-  $result = db_query("SELECT n.title, n.nid FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid WHERE n.type='faq' AND n.status = 1 ORDER BY n.created DESC LIMIT %d", $num);
+		if (module_exists("i18n") && variable_get('i18n_node_faq', 0)) {
+				$lang = i18n_get_lang();
+				$result = db_query("SELECT n.title, n.nid FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid LEFT JOIN {i18n_node} i ON i.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND i.language = '%s' ORDER BY n.created DESC LIMIT %d", $lang, $num);
+		}
+		else {
+				$result = db_query("SELECT n.title, n.nid FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid WHERE n.type='faq' AND n.status = 1 ORDER BY n.created DESC LIMIT %d", $num);
+		}
 
   $output .= "<ul>\n"; 
   while ($node = db_fetch_object($result)) {
