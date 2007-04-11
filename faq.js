@@ -27,6 +27,7 @@ if (Drupal.jsEnabled) {
   });
 }
 
+
 function faq_display_handler(event) {
   if ($("input[@name=display]:checked").val() == "questions_inline"
     || $("input[@name=display]:checked").val() == "questions_top") {
@@ -81,4 +82,64 @@ function sub_cats_handler(event) {
 		else if ($("input[@name=category_display]:checked").val() != "categories_inline") {
     $("input[@name=show_cat_sub_cats]").removeAttr("disabled");
 		}
+}
+
+
+function faq_has_options(obj) {
+		if (obj != null && obj.options != null) {
+				return true;
+		}
+		return false;
+}
+
+function faq_swap_options(obj, i, j) {
+		var o = obj.options;
+		var i_selected = o[i].selected;
+		var j_selected = o[j].selected;
+		var temp = new Option(o[i].text, o[i].value, o[i].defaultSelected, o[i].selected);
+		var temp2= new Option(o[j].text, o[j].value, o[j].defaultSelected, o[j].selected);
+		o[i] = temp2;
+		o[j] = temp;
+		o[i].selected = j_selected;
+		o[j].selected = i_selected;
+}
+
+function faq_move_selected_item_up() {
+		var obj = document.getElementById("edit-order-no-cats");
+		if (!faq_has_options(obj)) {
+				return;
+		}
+		for (i = 0; i < obj.options.length; i++) {
+				if (obj.options[i].selected) {
+						if (i != 0 && !obj.options[i-1].selected) {
+								faq_swap_options(obj, i, i-1);obj.options[i-1].selected = true;
+						}
+				}
+		}
+}
+
+function faq_move_selected_item_down() {
+		var obj = document.getElementById("edit-order-no-cats");
+		if (!faq_has_options(obj)) {
+				return;
+		}
+		for (i = obj.options.length-1; i >= 0; i--) {
+				if (obj.options[i].selected) {
+						if (i != (obj.options.length-1) && ! obj.options[i+1].selected) {
+								faq_swap_options(obj, i, i+1);
+								obj.options[i+1].selected = true;
+						}
+				}
+		}
+}
+
+function faq_update_order() {
+		var obj = document.getElementById("edit-order-no-cats");
+		var ids = new Array();
+		for (var i = 0; i < obj.length; i++) {
+				ids[i] = obj.options[i].value;
+		}
+		var new_order = new String(ids.join());
+		var form = document.getElementById('faq-weight-settings-form');
+		form.faq_node_order.value = new_order;
 }
