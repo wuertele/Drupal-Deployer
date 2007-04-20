@@ -535,8 +535,20 @@ function faq_weight_settings_form_submit($form_id, $form_values) {
   if ($form_values['op'] == t('Update')) {
 
 				$order = preg_split("/,/",$form_values['faq_node_order']);
-				foreach ($order as $index => $nid) {
-						$result = db_query("REPLACE INTO {faq_weights} (tid, nid, weight) VALUES(%d, %d, %d)", $form_values['faq_category'], $nid, $index);
+				switch ($GLOBALS['db_type']) {
+						case 'mysql':
+						case 'mysqli':
+								foreach ($order as $index => $nid) {
+										$result = db_query("REPLACE INTO {faq_weights} (tid, nid, weight) VALUES(%d, %d, %d)", $form_values['faq_category'], $nid, $index);
+								}
+								break;
+
+						case 'pgsql':
+								foreach ($order as $index => $nid) {
+										$result = db_query("DELETE FROM {faq_weights} WHERE tid = %d AND nid = %d", $form_values['faq_category'], $nid);
+										$result = db_query("INSERT INTO {faq_weights} (tid, nid, weight) VALUES(%d, %d, %d)", $form_values['faq_category'], $nid, $index);
+								}
+								break;
 				}
 
     drupal_set_message(t('Configuration has been updated.'));
