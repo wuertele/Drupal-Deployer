@@ -603,19 +603,19 @@ function faq_page($tid = 0) {
 
     switch ($faq_display) {
       case 'questions_top':
-        $output = theme_questions_top($result, $display_vars);
+        $output = theme('questions_top', $result, $display_vars);
         break;
 
       case 'hide_answer':
-        $output = theme_hide_answer($result);
+        $output = theme('hide_answer', $result);
         break;
 
       case 'questions_inline':
-        $output = theme_questions_inline($result, $display_vars);
+        $output = theme('questions_inline', $result, $display_vars);
         break;
 
       case 'new_page':
-        $output = theme_new_page($result);
+        $output = theme('new_page', $result);
         break;
         
     } // end of switch
@@ -772,24 +772,26 @@ function _display_faq_by_category($faq_display, $category_display, $term, $displ
   switch ($faq_display) {
 
     case 'questions_top':
-      theme_category_questions_top($result, $display_vars, $term, $faq_class, 
+      theme('category_questions_top', $result, $display_vars, $term, $faq_class,
         $output, $output_answers);
       break;
 
 
     case 'hide_answer':
-      $output .= theme_category_hide_answer($result, $display_vars, $term, $faq_class);
+      $output .= theme('category_hide_answer', $result, $display_vars, $term, 
+								$faq_class);
       break;
 
 
     case 'questions_inline':
-      $output .= theme_category_questions_inline($result, $display_vars,
+      $output .= theme('category_questions_inline', $result, $display_vars,
         $term, $faq_class);
       break;
 
 
     case 'new_page':
-      $output .= theme_category_new_page($result, $display_vars, $term, $faq_class);
+      $output .= theme('category_new_page', $result, $display_vars, $term, 
+								$faq_class);
       break;
 
   } // end of switch (faq_display)
@@ -922,7 +924,7 @@ function theme_category_questions_top($result, $display_vars, $term, $class, &$o
 								$sub_result = db_query(db_rewrite_sql("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
 								$display_vars['display_header'] = 1;
         $sub_cats .= '<div class="faq_category_indent">';
-        theme_category_questions_top($sub_result, $display_vars, $sub_term, $class, $sub_cats, $sub_cat_output_answers);
+        theme('category_questions_top', $sub_result, $display_vars, $sub_term, $class, $sub_cats, $sub_cat_output_answers);
         $sub_cats .= '</div>';
       }
     }
@@ -1110,7 +1112,7 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
 								$sub_result = db_query(db_rewrite_sql("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
 								$display_vars['display_header'] = 1;
         $sub_cats .= '<div class="faq_category_indent">';
-        $sub_cats .= theme_category_hide_answer($sub_result, $display_vars, $sub_term, $class);
+        $sub_cats .= theme('category_hide_answer', $sub_result, $display_vars, $sub_term, $class);
         $sub_cats .= '</div>';
       }
     }
@@ -1250,7 +1252,7 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
 								$sub_result = db_query(db_rewrite_sql("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
 								$display_vars['display_header'] = 1;
         $sub_cats .= '<div class="faq_category_indent">';
-        $sub_cats .= theme_category_questions_inline($sub_result, $display_vars, $sub_term, $class);
+        $sub_cats .= theme('category_questions_inline', $sub_result, $display_vars, $sub_term, $class);
         $sub_cats .= '</div>';
       }
     }
@@ -1370,7 +1372,7 @@ function theme_category_new_page($result, $display_vars, $term, $class) {
 								$sub_result = db_query(db_rewrite_sql("SELECT n.title, n.nid, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
 								$display_vars['display_header'] = 1;
         $sub_cats .= '<div class="faq_category_indent">';
-        $sub_cats .= theme_category_new_page($sub_result, $display_vars, $sub_term, $class);
+        $sub_cats .= theme('category_new_page', $sub_result, $display_vars, $sub_term, $class);
         $sub_cats .= '</div>';
       }
     }
@@ -1429,7 +1431,7 @@ function faq_block($op = 'list', $delta = 0, $edit = array()) {
         case 1:
           // Recent FAQs
           $block['subject'] = t('Recent FAQs');
-          $block['content'] = theme_faq_highlights(variable_get('faq_block_recent_faq_count', 5));
+          $block['content'] = theme('faq_highlights', variable_get('faq_block_recent_faq_count', 5));
           break;
 
       } // end switch($delta)
