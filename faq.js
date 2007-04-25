@@ -4,6 +4,7 @@ if (Drupal.jsEnabled) {
     $('dd.faq_answer').hide();
     $("dt.faq_question").click(function() {
       $(this).next("dd.faq_answer").toggle();
+						return false;
     });
 
 
@@ -11,6 +12,7 @@ if (Drupal.jsEnabled) {
     $('div.faq_qa_hide').hide();
     $(".faq_qa_header").click(function() {
       $(this).next("div.faq_qa_hide").toggle();
+						return false;
     });
 
 
@@ -40,6 +42,13 @@ function faq_display_handler(event) {
     $("input[@name=more_link]").attr("disabled", "disabled");
     $("input[@name=back_to_top]").attr("disabled", "disabled");
   }
+  if ($("input[@name=display]:checked").val() == "new_page"
+    || $("input[@name=display]:checked").val() == "questions_top") {
+				$("select[@name=question_listing]").removeAttr("disabled");
+		}
+		else {
+				$("select[@name=question_listing]").attr("disabled", "disabled");
+		}
 }
 
 function questions_top_handler(event) {
@@ -71,6 +80,9 @@ function categories_handler(event) {
   $("input[@name=category_display]:checked").val() == "categories_inline" ?
     $("input[@name=show_cat_sub_cats]").attr("disabled", "disabled"):
     $("input[@name=show_cat_sub_cats]").removeAttr("disabled");
+		$("input[@name=category_display]:checked").val() == "new_page" ?
+				$("select[@name=category_listing]").removeAttr("disabled"):
+				$("select[@name=category_listing]").attr("disabled", "disabled");
 
 		sub_cats_handler();
 }
