@@ -1507,3 +1507,29 @@ function _get_indented_faq_terms($vid, $tid) {
 }
 
 
+function faq_get_terms() {
+		$items = array();
+		$vocabularies = taxonomy_get_vocabularies("faq");
+		foreach ($vocabularies as $vid => $vobj) {
+				$vocab_items = _get_indented_faq_terms($vid, 0);
+				$items = array_merge($items, $vocab_items);
+		}
+		return $items;
+}
+
+function faq_get_faq_list() {
+		// return list of vocab terms if categories are configured
+		$use_categories = variable_get('faq_use_categories', FALSE);
+		if ($use_categories) {
+				return faq_get_terms();
+		}
+
+		// otherwise return list of weighted FAQ nodes
+		$items = array();
+		$result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {faq_weights} w ON w.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND (w.tid = 0 OR w.tid IS NULL) ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"));
+  while ($node = db_fetch_object($result)) {
+    $items[] = l($node->title, "node/$node->nid");
+  }
+
+		return $items;
+}
