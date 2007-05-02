@@ -243,28 +243,22 @@ function faq_settings_page($op = NULL, $aid = NULL) {
  * Define a form to edit the page header and descriptive text
  */
 function faq_general_settings_form() {
-  $form['general']['title'] = array(
+  $form['faq_title'] = array(
     '#type' => 'textfield',
     '#title' => t('Title'),
     '#default_value' => variable_get('faq_title', t('Frequently Asked Questions')),
   );
 
-  $form['general']['body_filter']['description'] = array(
+  $form['body_filter']['faq_description'] = array(
     '#type' => 'textarea',
     '#title' => t('FAQ Description'),
     '#default_value' => variable_get('faq_description', ''),
     '#description' => t('Your FAQ description.  This will be placed at the top of the page, above the questions and can serve as an introductory text.'),
     '#rows' => 5,
     );
-  $form['general']['body_filter']['format'] = filter_form(variable_get('faq_description_format', ''));
+  $form['body_filter']['faq_description_format'] = filter_form(variable_get('faq_description_format', ''));
 
-  $form['update']['attach'] = array(
-    '#type' => 'submit',
-    '#value' => t('Update'),
-    '#weight' => 3,
-  );
-
-  return $form;
+  return system_settings_form($form);
 }
 
 /**
@@ -279,59 +273,60 @@ function faq_questions_settings_form() {
   $display_options['hide_answer'] = t('Clicking on question opens/hides answer under question');
   $display_options['new_page'] = t('Clicking on question opens the answer in a new page');
 
-  $form['questions']['display'] = array('#type' => 'radios',
+  $form['faq_display'] = array('#type' => 'radios',
     '#options' => $display_options,
     '#title' => t('Page layout'),
     '#description' => t('This controls how the questions and answers are displayed on the page and what happens when someone clicks on the question.'),
     '#default_value' => variable_get('faq_display', 'questions_top'),
     );
-  $form['questions']['question_listing'] = array('#type' => 'select',
+  $form['faq_questions_misc'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Miscellaneous layout settings'),
+    '#collapsible' => TRUE,
+  );
+  $form['faq_questions_misc']['faq_question_listing'] = array('#type' => 'select',
     '#options' => array('ol' => 'Ordered list', 'ul' => 'Unordered list'),
     '#title' => t('Questions listing style'),
     '#description' => t('This allows to select how the questions listing is presented, wherever it applies.  An ordered listing would number the questions, whereas an unordered list will have a bullet to the left of each question.'),
     '#default_value' => variable_get('faq_question_listing', 'ul'),
     );
 
-  $form['questions']['back_to_top'] = array('#type' => 'textfield',
-    '#title' => t('"Back to Top" link text'),
-    '#description' => t('This allows the user to change the text displayed for the links which return the user to the top of the page on certain page layouts.  Defaults to "Back to Top".  Leave blank to have no link.'),
-    '#default_value' => variable_get('faq_back_to_top', 'Back to Top'),
-    );
-
-  $form['questions']['use_teaser'] = array('#type' => 'checkbox',
+  $form['faq_questions_misc']['faq_use_teaser'] = array('#type' => 'checkbox',
     '#title' => t('Use answer teaser'),
     '#description' => t("This enables the display of the answer teaser text instead of the full answer when using the 'Questions inline' or 'Clicking on question takes user to answer further down the page' display options.  This is useful when you have long descriptive text.  The user can see the full answer by clicking on the question."),
     '#default_value' => variable_get('faq_use_teaser', FALSE),
     );
 
-  $form['questions']['more_link'] = array('#type' => 'textfield',
+  $form['faq_questions_misc']['faq_back_to_top'] = array('#type' => 'textfield',
+    '#title' => t('"Back to Top" link text'),
+    '#description' => t('This allows the user to change the text displayed for the links which return the user to the top of the page on certain page layouts.  Defaults to "Back to Top".  Leave blank to have no link.'),
+    '#default_value' => variable_get('faq_back_to_top', 'Back to Top'),
+    );
+
+  $form['faq_questions_misc']['faq_more_link'] = array('#type' => 'textfield',
     '#title' => t('">> more" link text'),
     '#description' => t('This allows the user to change the text displayed for the links to the full answer text when teasers are used.  Leave blank to have no link.'),
     '#default_value' => variable_get('faq_more_link', '>> more'),
     );
 
-  $form['update']['attach'] = array(
-    '#type' => 'submit',
-    '#value' => t('Update'),
-    '#weight' => 3,
-  );
-
-  return $form;
+  return system_settings_form($form);
 }
 
 /**
  * Define a form to edit the categories setup
  */
 function faq_categories_settings_form() {
-
+  if (!module_exists("taxonomy")) {
+    drupal_set_message(t('Categorization of questions will not work without the "taxonomy" module being enabled.'), 'error');
+  }
   drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
 
   // set up a hidden variable
-  $form['category']['faq_display'] = array('#type' => 'hidden',
+  $form['faq_display'] = array('#type' => 'hidden',
     '#default_value' => variable_get('faq_display', 'questions_top'),
   );
 
-  $form['category']['categories'] = array('#type' => 'checkbox',
+  $form['faq_use_categories'] = array('#type' => 'checkbox',
     '#title' => t('Categorize questions'),
     '#description' => t('This allows the user to display the questions according to the categories configured on the add/edit FAQ page.  Use of sub-categories is only recommended for large lists of questions.  The Taxonomy module must be enabled.'),
     '#default_value' => variable_get('faq_use_categories', FALSE),
@@ -341,56 +336,55 @@ function faq_categories_settings_form() {
   $category_options['hide_qa'] = t('Clicking on category opens/hides questions and answers under category');
   $category_options['new_page'] = t('Clicking on category opens the questions/answers in a new page');
 
-  $form['category']['category_display'] = array('#type' => 'radios',
+  $form['faq_category_display'] = array('#type' => 'radios',
     '#options' => $category_options,
     '#title' => t('Categories layout'),
     '#description' => t('This controls now the categories are displayed on the page and what happens when someone clicks on the category.'),
     '#default_value' => variable_get('faq_category_display', 'categories_inline'),
     );
 
-  $form['general']['show_count'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Show FAQ count'),
-				'#description' => t('This displays the number of questions in a category after the category name.'),
-    '#default_value' => variable_get('faq_count', FALSE),
+  $form['faq_category_misc'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Miscellaneous layout settings'),
+    '#collapsible' => TRUE,
   );
 
-  $form['category']['category_listing'] = array('#type' => 'select',
+  $form['faq_category_misc']['faq_category_listing'] = array('#type' => 'select',
     '#options' => array('ol' => 'Ordered list', 'ul' => 'Unordered list'),
     '#title' => t('Categories listing style'),
     '#description' => t('This allows to select how the categories listing is presented, wherever it applies.  An ordered listing would number the categories, whereas an unordered list will have a bullet to the left of each category.'),
     '#default_value' => variable_get('faq_category_listing', 'ul'),
     );
 
-  $form['category']['answer_category_name'] = array('#type' => 'checkbox',
+  $form['faq_category_misc']['faq_count'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show FAQ count'),
+				'#description' => t('This displays the number of questions in a category after the category name.'),
+    '#default_value' => variable_get('faq_count', FALSE),
+  );
+
+  $form['faq_category_misc']['faq_answer_category_name'] = array('#type' => 'checkbox',
     '#title' => t('Display category name for answers'),
     '#description' => t("This allows the user to toggle the visibility of the category name above each answer section for the 'Clicking on question takes user to answer further down the page' question/answer display."),
     '#default_value' => variable_get('faq_answer_category_name', FALSE),
   );
-  $form['category']['group_questions_top'] = array('#type' => 'checkbox',
+  $form['faq_category_misc']['faq_group_questions_top'] = array('#type' => 'checkbox',
     '#title' => t("Group questions and answers for 'Categories inline'"),
     '#description' => t("This controls how categories are implemented with the 'Clicking on question takes user to answer further down the page' question/answer display."),
     '#default_value' => variable_get('faq_group_questions_top', FALSE),
   );
-  $form['category']['hide_sub_categories'] = array('#type' => 'checkbox',
+  $form['faq_category_misc']['faq_hide_sub_categories'] = array('#type' => 'checkbox',
     '#title' => t("Only show sub-categories when parent category is selected"),
     '#description' => t("This allows the user more control over how and when sub-categories are displayed.  It does not affect the 'Categories inline' display."),
     '#default_value' => variable_get('faq_hide_sub_categories', FALSE),
   );
-  $form['category']['show_cat_sub_cats'] = array('#type' => 'checkbox',
+  $form['faq_category_misc']['faq_show_cat_sub_cats'] = array('#type' => 'checkbox',
     '#title' => t("Show sub-categories on FAQ category pages"),
     '#description' => t("Sub-categories with 'faq' nodes will be displayed on the per category FAQ page.  This will also happen if 'Only show sub-categories when parent category is selected' is set."),
     '#default_value' => variable_get('faq_show_cat_sub_cats', FALSE),
   );
 
-
-  $form['update']['attach'] = array(
-    '#type' => 'submit',
-    '#value' => t('Update'),
-    '#weight' => 3,
-  );
-
-  return $form;
+  return system_settings_form($form);
 }
 
 /**
@@ -514,47 +508,6 @@ function faq_weight_settings_form($form_values = NULL) {
 
 
   return $form;
-}
-
-function faq_general_settings_form_submit($form_id, $form_values) {
-  if ($form_values['op'] == t('Update')) {
-    variable_set('faq_title', $form_values['title']);
-    variable_set('faq_description', $form_values['description']);
-    variable_set('faq_description_format', $form_values['format']);
-
-    drupal_set_message(t('Configuration has been updated.'));
-  }
-}
-
-function faq_questions_settings_form_submit($form_id, $form_values) {
-  if ($form_values['op'] == t('Update')) {
-    variable_set('faq_display', $form_values['display']);
-    variable_set('faq_question_listing', $form_values['question_listing']);
-    variable_set('faq_back_to_top', $form_values['back_to_top']);
-    variable_set('faq_use_teaser', $form_values['use_teaser']);
-    variable_set('faq_more_link', $form_values['more_link']);
-
-    drupal_set_message(t('Configuration has been updated.'));
-  }
-}
-
-function faq_categories_settings_form_submit($form_id, $form_values) {
-  if ($form_values['op'] == t('Update')) {
-    variable_set('faq_use_categories', $form_values['categories']);
-    variable_set('faq_category_display', $form_values['category_display']);
-    variable_set('faq_count', $form_values['show_count']);
-    variable_set('faq_category_listing', $form_values['category_listing']);
-    variable_set('faq_group_questions_top',$form_values['group_questions_top']);
-    variable_set('faq_hide_sub_categories',$form_values['hide_sub_categories']);
-    variable_set('faq_show_cat_sub_cats' ,$form_values['show_cat_sub_cats']);
-    variable_set('faq_answer_category_name', $form_values['answer_category_name']);
-
-    drupal_set_message(t('Configuration has been updated.'));
-
-    if (variable_get('faq_use_categories', FALSE) && !module_exists("taxonomy")) {
-      drupal_set_message(t("warning: Categorization of questions will not work without the 'taxonomy' module."), 'error');
-    }
-  }
 }
 
 function faq_weight_settings_form_submit($form_id, $form_values) {
