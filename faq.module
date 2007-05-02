@@ -348,6 +348,13 @@ function faq_categories_settings_form() {
     '#default_value' => variable_get('faq_category_display', 'categories_inline'),
     );
 
+  $form['general']['show_count'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show FAQ count'),
+				'#description' => t('This displays the number of questions in a category after the category name.'),
+    '#default_value' => variable_get('faq_count', FALSE),
+  );
+
   $form['category']['category_listing'] = array('#type' => 'select',
     '#options' => array('ol' => 'Ordered list', 'ul' => 'Unordered list'),
     '#title' => t('Categories listing style'),
@@ -445,9 +452,11 @@ function faq_weight_settings_form($form_values = NULL) {
 				if (empty($category)) {
 						$category = 0;
 						$result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = %d WHERE n.type='faq' AND n.status = 1 ORDER BY weight ASC, n.sticky DESC, n.created DESC", "n", "nid"), $category);
+						$date_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = %d WHERE n.type='faq' AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $category);
 				} 
 				else {
 						$result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON r.nid = n.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = %d WHERE n.type='faq' AND n.status = 1 AND tn.tid = %d ORDER BY weight ASC, n.sticky DESC, n.created DESC", "n", "nid"), $category, $category);
+						$date_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON r.nid = n.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = %d WHERE n.type='faq' AND n.status = 1 AND tn.tid = %d ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $category, $category);
 				}
 
 
@@ -457,18 +466,30 @@ function faq_weight_settings_form($form_values = NULL) {
 				}
 				$order = rtrim($order, ",");
 
+				while ($node = db_fetch_object($date_result)) {
+						$date_options[$node->nid] = $node->title;
+						$date_order .= "$node->nid,";
+				}
+				$date_order = rtrim($date_order, ",");
+
 				$form['weight']['faq_node_order'] = array(
 						'#type' => 'hidden',
 						'#default_value' => $order,
+				);
+				$form['weight']['faq_node_date_order'] = array(
+						'#type' => 'hidden',
+						'#default_value' => $date_order,
 				);
 				$form['weight']['faq_category'] = array(
 						'#type' => 'hidden',
 						'#value' => $category,
 				);
+				$asc = '<a href="#" onclick="faq_order_by_date(\'ASC\');">ascending</a>';
+				$desc = '<a href="#" onclick="faq_order_by_date(\'DESC\');">descending</a>';
 				$form['weight']['order_no_cats'] = array(
 						'#type' => 'select',
 						'#title' => t("Question Order"),
-						'#description' => t("This determines the order of the questions and answers on the FAQ page.  Just select one or more questions and use the arrows to change their position in the list."),
+						'#description' => t("This determines the order of the questions and answers on the FAQ page.  Just select one or more questions and use the arrows to change their position in the list.  You can also order the list by the question creation date $desc or $asc."),
 						'#options' => $options,
 						'#multiple' => TRUE,
 				);
@@ -479,7 +500,8 @@ function faq_weight_settings_form($form_values = NULL) {
 				);
 				$form['weight']['move_down'] = array(
 						'#type' => 'markup',
-						'#value' => '<input type="button" onclick="faq_move_selected_item_down();" value="&darr;" class="faq_arrow"/><br>',
+						'#value' => '<input type="button" onclick="faq_move_selected_item_down();"
+						value="&darr;" class="faq_arrow"/><br>',
 				);
 
 				$form['update']['attach'] = array(
@@ -520,6 +542,7 @@ function faq_categories_settings_form_submit($form_id, $form_values) {
   if ($form_values['op'] == t('Update')) {
     variable_set('faq_use_categories', $form_values['categories']);
     variable_set('faq_category_display', $form_values['category_display']);
+    variable_set('faq_count', $form_values['show_count']);
     variable_set('faq_category_listing', $form_values['category_listing']);
     variable_set('faq_group_questions_top',$form_values['group_questions_top']);
     variable_set('faq_hide_sub_categories',$form_values['hide_sub_categories']);
@@ -593,20 +616,13 @@ function faq_page($tid = 0) {
 
 
 
-  // get page layout
   $faq_display = variable_get('faq_display', 'questions_top');
-
-  // get "back to top" link text
   $display_vars['back_to_top'] = variable_get('faq_back_to_top', 'Back to Top');
-
-  // get whether or not we should use teasers
   $display_vars['use_teaser'] = variable_get('faq_use_teaser', FALSE);
-
-  // get ">> more" link text
   $display_vars['more_link'] = variable_get('faq_more_link', '>> more');
-
-  // find out if we should categorize the questions, if so get list of
-  // categories
+  $display_vars['faq_count'] = variable_get('faq_count', FALSE);
+  $display_vars['hide_sub_categories'] = variable_get('faq_hide_sub_categories', FALSE);
+  $display_vars['show_cat_sub_cats'] = variable_get('faq_show_cat_sub_cats', FALSE);
   $use_categories = variable_get('faq_use_categories', FALSE);
   if (!module_exists("taxonomy")) $use_categories = FALSE;
 
@@ -667,7 +683,7 @@ function faq_page($tid = 0) {
     foreach ($vocabularies as $vid => $vobj) {
 
 						if ($category_display == "new_page") {
-								$vocab_items = _get_indented_faq_terms($vid, 0);
+								$vocab_items = _get_indented_faq_terms($vid, 0, $display_vars);
 								$items = array_merge($items, $vocab_items);
 						}
 
@@ -689,7 +705,7 @@ function faq_page($tid = 0) {
 
 												case 'categories_inline':
 														if (taxonomy_term_count_nodes($term->tid, 'faq')) {
-																_display_faq_by_category($faq_display, $category_display, $term, 
+																_display_faq_by_category($faq_display, $category_display, $term,
 																		1, $output, $output_answers);
 														}
 														break;
@@ -732,6 +748,7 @@ function _display_faq_by_category($faq_display, $category_display, $term, $displ
   $display_vars['use_teaser'] = variable_get('faq_use_teaser', FALSE);
   $display_vars['more_link'] = variable_get('faq_more_link', '>> more');
   $display_vars['back_to_top'] = variable_get('faq_back_to_top', 'Back to Top');
+  $display_vars['faq_count'] = variable_get('faq_count', FALSE);
   $display_vars['group_questions_top'] = variable_get('faq_group_questions_top', FALSE);
   $display_vars['hide_sub_categories'] = variable_get('faq_hide_sub_categories', FALSE);
   $display_vars['show_cat_sub_cats'] = variable_get('faq_show_cat_sub_cats', FALSE);
@@ -756,7 +773,7 @@ function _display_faq_by_category($faq_display, $category_display, $term, $displ
 
     case 'questions_top':
       $data = theme('category_questions_top', $result, $display_vars, $term,
-						$faq_class);
+								$faq_class);
 						$output .= $data["output"];
 						$output_answers .= $data["output_answers"];
       break;
@@ -853,10 +870,32 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
     $back_to_top .= l(t($display_vars['back_to_top']), $this_page, array(), NULL, '') .'</p>';
   }
 
+		// get number of questions, and account for hidden sub-cats
+		if ($display_vars['faq_count']) {
+				$count = db_num_rows($result);
+				if ($display_vars['hide_sub_categories']) {
+						$count = taxonomy_term_count_nodes($term->tid, 'faq');
+				}
+		}
+
   // configure header
-		$header = '<h5 class="faq_header">' .check_plain($term->name) ."</h5>\n";
-		if ($term->depth > 0) {
-				$header = '<h6 class="faq_header">' .check_plain($term->name) ."</h6>\n";
+		$hdr = "h5";
+		if ($term->depth > 0) $hdr = "h6";
+		if ($display_vars['category_display'] == 'hide_qa') {
+				$header = "<$hdr class=\"faq_header\">";
+				$header .= l($term->name, "faq/$term->tid");
+				if ($display_vars['faq_count']) $header .= " ($count)";
+				$header .= "</$hdr>\n";
+				$ans_hdr = "<$hdr class=\"faq_header\">";
+				$ans_hdr .= check_plain($term->name) ."</$hdr>\n";
+		}
+		else {
+				$header = "<$hdr class=\"faq_header\">";
+				$header .= check_plain($term->name);
+				if ($display_vars['faq_count']) $header .= " ($count)";
+				$header .= "</$hdr>\n";
+				$ans_hdr = "<$hdr class=\"faq_header\">";
+				$ans_hdr .= check_plain($term->name) ."</$hdr>\n";
 		}
 
   $answer_category_name = variable_get('faq_answer_category_name', FALSE);
@@ -873,13 +912,21 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
 
 				$scats = array();
     foreach ($list as $tid => $sub_term) {
-      if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
+						$sub_count = taxonomy_term_count_nodes($sub_term->tid, 'faq');
+      if ($sub_count) {
         $sub_cat_desc = '';
         if (!empty($sub_term->description)) {
           $sub_cat_desc = '<div class="faq_qa_description"><p>';
           $sub_cat_desc .= $sub_term->description ."</p></div>";
         }
-								$scats[] = l($sub_term->name, "faq/$sub_term->tid") . $sub_cat_desc;
+								// get number of questions, and account for hidden sub-cats
+								if ($display_vars['faq_count']) {
+										$scats[] = l($sub_term->name, "faq/$sub_term->tid")
+												." ($sub_count) $sub_cat_desc";
+								}
+								else {
+										$scats[] = l($sub_term->name, "faq/$sub_term->tid"). $sub_cat_desc;
+								}
       }
     }
 				$list_style = variable_get('faq_category_listing', 'ul');
@@ -963,7 +1010,7 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
 
     if ($answer_category_name) {
       if (db_num_rows($result)) {
-        $output .= $header;
+        $output .= $ans_hdr;
         $output .= '<dl class="faq_dl_questions_top">' ."\n";
         $output .= $answers ."\n</dl>\n";
       }
@@ -998,7 +1045,7 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
 										$sub_cat_output_answers .= $answers;
 										$answers = $sub_cat_output_answers;
 								}
-        $output_answers .= $header ."<dl>\n". $answers ."\n</dl>\n";
+        $output_answers .= $ans_hdr ."<dl>\n". $answers ."\n</dl>\n";
       }
     }
     else {
@@ -1047,10 +1094,28 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
 
   drupal_add_js(drupal_get_path('module','faq').'/faq.js','module');
 
+		// get number of questions, and account for hidden sub-cats
+		if ($display_vars['faq_count']) {
+				$count = db_num_rows($result);
+				if ($display_vars['hide_sub_categories']) {
+						$count = taxonomy_term_count_nodes($term->tid, 'faq');
+				}
+		}
+
   // configure header
-		$header = '<h5 class="faq_header">' .check_plain($term->name) ."</h5>\n";
-		if ($term->depth > 0) {
-				$header = '<h6 class="faq_header">'.check_plain($term->name)."</h6>\n";
+		$hdr = "h5";
+		if ($term->depth > 0) $hdr = "h6";
+		if ($display_vars['category_display'] == 'hide_qa') {
+				$header = "<$hdr class=\"faq_header\">";
+				$header .= l($term->name, "faq/$term->tid");
+				if ($display_vars['faq_count']) $header .= " ($count)";
+				$header .= "</$hdr>\n";
+		}
+		else {
+				$header = "<$hdr class=\"faq_header\">";
+				$header .= check_plain($term->name);
+				if ($display_vars['faq_count']) $header .= " ($count)";
+				$header .= "</$hdr>\n";
 		}
 
   $desc = '';
@@ -1066,13 +1131,20 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
 
 				$scats = array();
     foreach ($list as $tid => $sub_term) {
-      if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
+						$sub_count = taxonomy_term_count_nodes($sub_term->tid, 'faq');
+      if ($sub_count) {
         $sub_cat_desc = '';
         if (!empty($sub_term->description)) {
           $sub_cat_desc = '<div class="faq_qa_description"><p>';
           $sub_cat_desc .= $sub_term->description ."</p></div>";
         }
-								$scats[] = l($sub_term->name, "faq/$sub_term->tid"). $sub_cat_desc;
+								if ($display_vars['faq_count']) {
+										$scats[] = l($sub_term->name, "faq/$sub_term->tid") 
+												." ($sub_count) $sub_cat_desc";
+								}
+								else {
+										$scats[] = l($sub_term->name, "faq/$sub_term->tid"). $sub_cat_desc;
+								}
       }
     }
 				$list_style = variable_get('faq_category_listing', 'ul');
@@ -1184,10 +1256,28 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
     $back_to_top .= l(t($display_vars['back_to_top']), $this_page, array(), NULL, '') .'</p>';
   }
 
+		// get number of questions, and account for hidden sub-cats
+		if ($display_vars['faq_count']) {
+				$count = db_num_rows($result);
+				if ($display_vars['hide_sub_categories']) {
+						$count = taxonomy_term_count_nodes($term->tid, 'faq');
+				}
+		}
+
   // configure header
-		$header = '<h5 class="faq_header">' .check_plain($term->name) ."</h5>\n";
-		if ($term->depth > 0) {
-				$header = '<h6 class="faq_header">' .check_plain($term->name) ."</h6>\n";
+		$hdr = "h5";
+		if ($term->depth > 0) $hdr = "h6";
+		if ($display_vars['category_display'] == 'hide_qa') {
+				$header = "<$hdr class=\"faq_header\">";
+				$header .= l($term->name, "faq/$term->tid");
+				if ($display_vars['faq_count']) $header .= " ($count)";
+				$header .= "</$hdr>\n";
+		}
+		else {
+				$header = "<$hdr class=\"faq_header\">";
+				$header .= check_plain($term->name);
+				if ($display_vars['faq_count']) $header .= " ($count)";
+				$header .= "</$hdr>\n";
 		}
 
   // configure category description
@@ -1205,13 +1295,20 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
 
 				$scats = array();
     foreach ($list as $tid => $sub_term) {
-      if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
+						$sub_count = taxonomy_term_count_nodes($sub_term->tid, 'faq');
+      if ($sub_count) {
         $sub_cat_desc = '';
         if (!empty($sub_term->description)) {
           $sub_cat_desc = '<div class="faq_qa_description"><p>';
           $sub_cat_desc .= $sub_term->description ."</p></div>";
         }
-        $scats[] = l($sub_term->name, "faq/$sub_term->tid"). $sub_cat_desc;
+								if ($display_vars['faq_count']) {
+										$scats[] = l($sub_term->name, "faq/$sub_term->tid") 
+												." ($sub_count) $sub_cat_desc";
+								}
+								else {
+										$scats[] = l($sub_term->name, "faq/$sub_term->tid"). $sub_cat_desc;
+								}
       }
     }
 				$list_style = variable_get('faq_category_listing', 'ul');
@@ -1308,10 +1405,28 @@ function theme_category_new_page($result, $display_vars, $term, $class) {
     $get_sub_terms = arg(1);
   }
 
+		// get number of questions, and account for hidden sub-cats
+		if ($display_vars['faq_count']) {
+				$count = db_num_rows($result);
+				if ($display_vars['hide_sub_categories']) {
+						$count = taxonomy_term_count_nodes($term->tid, 'faq');
+				}
+		}
+
   // configure header
-		$header = '<h5 class="faq_header">' .check_plain($term->name) ."</h5>\n";
-		if ($term->depth > 0) {
-				$header = '<h6 class="faq_header">' .check_plain($term->name) ."</h6>\n";
+		$hdr = "h5";
+		if ($term->depth > 0) $hdr = "h6";
+		if ($display_vars['category_display'] == 'hide_qa') {
+				$header = "<$hdr class=\"faq_header\">";
+				$header .= l($term->name, "faq/$term->tid");
+				if ($display_vars['faq_count']) $header .= " ($count)";
+				$header .= "</$hdr>\n";
+		}
+		else {
+				$header = "<$hdr class=\"faq_header\">";
+				$header .= check_plain($term->name);
+				if ($display_vars['faq_count']) $header .= " ($count)";
+				$header .= "</$hdr>\n";
 		}
 
   $desc = '';
@@ -1327,13 +1442,20 @@ function theme_category_new_page($result, $display_vars, $term, $class) {
 
 				$scats = array();
     foreach ($list as $tid => $sub_term) {
-      if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
+						$sub_count = taxonomy_term_count_nodes($sub_term->tid, 'faq');
+      if ($sub_count) {
         $sub_cat_desc = '';
         if (!empty($sub_term->description)) {
           $sub_cat_desc = '<div class="faq_qa_description"><p>';
           $sub_cat_desc .= $sub_term->description ."</p></div>";
         }
-        $scats[] = l($sub_term->name, "faq/$sub_term->tid"). $sub_cat_desc;
+								if ($display_vars['faq_count']) {
+										$scats[] = l($sub_term->name, "faq/$sub_term->tid") 
+												." ($sub_count) $sub_cat_desc";
+								}
+								else {
+										$scats[] = l($sub_term->name, "faq/$sub_term->tid"). $sub_cat_desc;
+								}
       }
     }
 				$list_style = variable_get('faq_category_listing', 'ul');
@@ -1470,15 +1592,16 @@ function theme_faq_highlights($num = 5) {
   return $output;
 }
 
-function _get_indented_faq_terms($vid, $tid) {
+function _get_indented_faq_terms($vid, $tid, $display_vars) {
 
 		$items = array();
 		$tree = taxonomy_get_tree($vid, $tid, -1, 1);
 
 		foreach ($tree as $term) {
 
-				if (taxonomy_term_count_nodes($term->tid, 'faq')) {
+				$tree_count = taxonomy_term_count_nodes($term->tid, 'faq');
 
+				if ($tree_count) {
 						// get term description
 						$desc = '';
 						if (!empty($term->description)) {
@@ -1488,16 +1611,27 @@ function _get_indented_faq_terms($vid, $tid) {
 
 						// see if this term has any nodes itself, should it be a link?
 						$result = db_query(db_rewrite_sql("SELECT COUNT(n.nid) AS c FROM {term_node} t INNER JOIN {node} n ON t.nid = n.nid WHERE n.status = 1 AND n.type = 'faq' AND t.tid = '%d' ", "n", "nid"), $term->tid);
-						$count = db_fetch_object($result);
+						$term_count = db_fetch_object($result);
 
-						if ($count->c > 0) {
-								$cur_item = l($term->name, "faq/$term->tid"). $desc;
+						if ($term_count->c > 0) {
+								if ($display_vars["faq_count"]) {
+										$count = $term_count->c;
+										if ($display_vars['hide_sub_categories']) {
+												$count = $tree_count;
+										}
+										$cur_item = l($term->name, "faq/$term->tid") ." ($count) ". $desc;
+								}
+								else {
+										$cur_item = l($term->name, "faq/$term->tid"). $desc;
+								}
 						}
 						else {
 								$cur_item = check_plain($term->name). $desc;
 						}
 
-						$term_items = _get_indented_faq_terms($vid, $term->tid);
+						if (!$display_vars['hide_sub_categories']) {
+								$term_items = _get_indented_faq_terms($vid, $term->tid, $display_vars);
+						}
 						$items[] = array("data" => $cur_item, "children" => $term_items);
 
 				}
@@ -1508,10 +1642,12 @@ function _get_indented_faq_terms($vid, $tid) {
 
 
 function faq_get_terms() {
+  $display_vars['faq_count'] = variable_get('faq_count', FALSE);
+  $display_vars['hide_sub_categories'] = variable_get('faq_hide_sub_categories', FALSE);
 		$items = array();
 		$vocabularies = taxonomy_get_vocabularies("faq");
 		foreach ($vocabularies as $vid => $vobj) {
-				$vocab_items = _get_indented_faq_terms($vid, 0);
+				$vocab_items = _get_indented_faq_terms($vid, 0, $display_vars);
 				$items = array_merge($items, $vocab_items);
 		}
 		return theme('item_list', $items);
