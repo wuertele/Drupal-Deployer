@@ -151,7 +151,40 @@ function faq_update_order() {
 		for (var i = 0; i < obj.length; i++) {
 				ids[i] = obj.options[i].value;
 		}
-		var new_order = new String(ids.join());
+		var new_order = new String(ids.join(","));
 		var form = document.getElementById('faq-weight-settings-form');
 		form.faq_node_order.value = new_order;
 }
+
+function faq_order_by_date(order) {
+		var obj = document.getElementById("edit-order-no-cats");
+		if (!faq_has_options(obj)) {
+				return;
+		}
+
+		var form = document.getElementById('faq-weight-settings-form');
+		var date_order = form.faq_node_date_order.value;
+
+		var newIds = date_order.split(",");
+		if (order == "ASC") {
+				newIds.reverse();
+				date_order = new String(newIds.join(","));
+		}
+		form.faq_node_order.value = date_order;
+
+		var opt_text = new Array();
+		var opts = obj.options;
+
+		for (var i = 0; i < opts.length; i++) {
+				var id = opts[i].value;
+				opt_text[id] = opts[i].text;
+		}
+		for (var i = 0; i < newIds.length; i++) {
+				var id = newIds[i];
+				var opt = new Option(opt_text[id], id);
+				obj.options[i] = opt;
+		}
+
+}
+
+
