@@ -199,7 +199,6 @@ function project_mail_notify($node) {
   if (defined('PROJECT_NOMAIL')) {
     return;
   }
-  $node = node_load(array('nid' => $node->nid, 'type' => 'project_issue'));
   $project = node_load(array('nid' => $node->pid, 'type' => 'project_project'));
 
   $fields = array(
