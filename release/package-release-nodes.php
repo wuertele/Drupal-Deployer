@@ -629,6 +629,7 @@ function fix_info_file_version($file, $uri, $version) {
   $info = "\n; Information added by $site_name packaging script on " . date('Y-m-d') . "\n";
   $info .= "version = \"$version\"\n";
   $info .= "project = \"$uri\"\n";
+  $info .= 'datestamp = "'. time() ."\"\n";
   $info .= "\n";
 
   if (!$info_fd = fopen($file, 'ab')) { 
