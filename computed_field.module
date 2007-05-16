@@ -45,7 +45,7 @@ function computed_field_field_settings($op, $field) {
         '#title' => t('Data Type'),
         '#description' => t('The SQL datatype to store this field in.'),
         '#default_value' => isset($field['data_type']) ? $field['data_type'] : 'varchar',
-        '#options' => array('int' => 'int', 'float' => 'float', 'varchar' => 'varchar', 'text' => 'text'),
+        '#options' => array('int' => 'int', 'float' => 'float', 'varchar' => 'varchar', 'text' => 'text', 'longtext' => 'longtext'),
         '#required' => false,
       );
       $form['database']['data_length'] = array(
@@ -76,7 +76,7 @@ function computed_field_field_settings($op, $field) {
         if (empty($field['data_type'])) {
           form_set_error('data_type', t('To store this field in the database, please specify a data type.'));
         }
-        if (empty($field['data_length'])) {
+        if (!($field['data_type'] == 'text' || $field['data_type'] == 'longtext') && empty($field['data_length'])) {
           form_set_error('data_length', t('To store this field in the database, please specify the data length.'));
         }
       }
@@ -87,7 +87,10 @@ function computed_field_field_settings($op, $field) {
       if ($field['store']) {
         $columns = array('value' => array());
         $columns['value']['type'] = isset($field['data_type']) ? $field['data_type'] : 'varchar';
-        $columns['value']['length'] = isset($field['data_length']) ? $field['data_length'] : 32;
+        // text and longtext should not have a length, so we ignore it
+        if (!($field['data_type'] == 'text' || $field['data_type'] == 'longtext')) {
+          $columns['value']['length'] = isset($field['data_length']) ? $field['data_length'] : 32;
+        }
         $columns['value']['not null'] = isset($field['data_not_null']) ? $field['data_not_null'] : true;
         $columns['value']['sortable'] = isset($field['data_sortable']) ? $field['data_sortable'] : false;
         if ($field['data_default'] != '')  {
@@ -102,6 +105,10 @@ function computed_field_field_settings($op, $field) {
           'name' => t('Default'),
           'operator' => 'views_handler_operator_gtlt',
         ),
+      );
+    case 'callbacks':
+      return array(
+        'view' => CONTENT_CALLBACK_CUSTOM,
       );
   }
 }
@@ -124,21 +131,17 @@ function computed_field_field($op, &$node, $field, &$node_field, $teaser, $page)
     case 'load':
       // compute field on load if it isn't stored in the database
       if (!$field['store']) {
-	_computed_field_compute_value($node, $field, $node_field);
-	return array($field['field_name'] => $node_field);
+        _computed_field_compute_value($node, $field, $node_field);
+        return array($field['field_name'] => $node_field);
       }
       break;
     case 'view':
       if ($field['display']) {
-        if (empty($node_field)) {
-          $node_field[0]['view'] = content_format($field, $node_field[0], 'default', $node);
+        $items = array();
+        foreach ($node_field as $delta => $item) {
+          $items[$delta]['view'] = content_format($field, $item, 'default', $node);
         }
-        else {
-          foreach ($node_field as $delta => $item) {
-            $node_field[0]['view'] = content_format($field, $node_field[0], 'default', $node);
-          }
-        }
-        return theme('field', $node, $field, $node_field, $teaser, $page);
+        return theme('field', $node, $field, $items, $teaser, $page);
       }
       break;
     case 'validate':
