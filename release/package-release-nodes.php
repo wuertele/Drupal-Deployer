@@ -632,6 +632,10 @@ function fix_info_file_version($file, $uri, $version) {
   $info .= 'datestamp = "'. time() ."\"\n";
   $info .= "\n";
 
+  if (!chmod($file, 0644)) {
+    wd_err(t("ERROR: chmod(@file, 0644) failed", array('@file' => $file)));
+    return false;
+  }
   if (!$info_fd = fopen($file, 'ab')) { 
     wd_err(t("ERROR: fopen(@file, 'ab') failed", array('@file' => $file)));
     return false;
