@@ -1297,15 +1297,29 @@ function recipe_select_nodes($tids = array(), $operator = 'or', $depth = 0, $pag
 
     if ($operator == 'or') {
       $str_tids = implode(',', call_user_func_array('array_merge', $descendant_tids));
-      $sql = 'SELECT DISTINCT n.nid, n.title, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE tn.tid IN ('. $str_tids .') AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC';
-      $sql_count = 'SELECT COUNT(n.nid) FROM {node} n INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE tn.tid IN ('. $str_tids .') AND n.status = 1';
+      if (module_exists('category')) {
+        $sql = 'SELECT DISTINCT n.nid, n.title, n.sticky, n.created FROM {node} n INNER JOIN {category_node} cn ON n.nid = cn.nid WHERE cn.cid IN ('. $str_tids .') AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC';
+        $sql_count = 'SELECT COUNT(n.nid) FROM {node} n INNER JOIN {category_node} cn ON n.nid = cn.nid WHERE cn.tid IN ('. $str_tids .') AND n.status = 1';
+      }
+      else {
+        $sql = 'SELECT DISTINCT n.nid, n.title, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE tn.tid IN ('. $str_tids .') AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC';
+        $sql_count = 'SELECT COUNT(n.nid) FROM {node} n INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE tn.tid IN ('. $str_tids .') AND n.status = 1';
+      }
     }
     else {
       $joins = '';
       $wheres = '';
-      foreach ($descendant_tids as $index => $tids) {
-        $joins .= ' INNER JOIN {term_node} tn'. $index .' ON n.nid = tn'. $index .'.nid';
-        $wheres .= ' AND tn'. $index .'.tid IN ('. implode(',', $tids) .')';
+      if (module_exists('category')) {
+        foreach ($descendant_tids as $index => $tids) {
+          $joins .= ' INNER JOIN {category_node} cn'. $index .' ON n.nid = cn'. $index .'.nid';
+          $wheres .= ' AND cn'. $index .'.cid IN ('. implode(',', $tids) .')';
+        }
+      }
+      else {
+        foreach ($descendant_tids as $index => $tids) {
+          $joins .= ' INNER JOIN {term_node} tn'. $index .' ON n.nid = tn'. $index .'.nid';
+          $wheres .= ' AND tn'. $index .'.tid IN ('. implode(',', $tids) .')';
+        }
       }
       $sql = 'n.nid, n.title, n.sticky, n.created FROM {node} n '. $joins .' WHERE n.status = 1 AND '. $wheres .' ORDER BY n.sticky DESC, n.created DESC';
       $sql_count = 'SELECT COUNT(n.nid) FROM {node} n '. $joins .' WHERE n.status = 1 AND '. $wheres;
