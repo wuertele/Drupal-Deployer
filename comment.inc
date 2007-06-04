@@ -226,6 +226,15 @@ function project_comment_save($edit) {
       }
     }
 
+    // Add processed cck info into the node object for node_save
+    if (function_exists('_content_widget_invoke')) {
+      $type = content_types($node->type);
+      while (list($field, $val) = each($type['fields'])) {
+        $node->$field = $edit->$field;
+      }
+      _content_widget_invoke('process form values', $node);
+    }
+
     watchdog('content', t('project_issue: added comment %title', array('%title' => $edit->title)), WATCHDOG_NOTICE, l('view', "node/$node->nid"));
     $node->changed = time();
     db_query("INSERT INTO {project_comments} (cid, nid, uid, created, changed, body, data, file_path, file_mime, file_size) VALUES (%d, %d, %d, %d, %d, %b, %b, '%s', '%s', %d)", $edit->cid, $edit->nid, $edit->uid, $node->changed, $node->changed, $edit->body, serialize($data), $file->filepath, $file->filemime, $file->filesize);
