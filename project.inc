@@ -346,7 +346,7 @@ function project_project_view($node, $teaser = false, $page = false) {
       $links[] = l(t('Browse the CVS repository'), $node->cvs);
     }
 
-    if (module_exists('cvs')) {
+    if (module_exists('cvs') && isset($node->cvs_repository) && $node->cvs_repository != 0) {
       $links[] = l(t('View CVS messages'), 'project/cvs/'. $node->nid);
       $links[] = l(t('Developers'), 'project/developers/'. $node->nid);
     }
