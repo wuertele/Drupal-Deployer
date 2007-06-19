@@ -258,7 +258,7 @@ function project_project_validate(&$node) {
   }
 }
 
-function project_project_set_breadcrumb($node = NULL, $extra = array()) {
+function project_project_set_breadcrumb($node = NULL, $extra = NULL) {
   global $_menu;
 
   $breadcrumb = array();
@@ -274,7 +274,14 @@ function project_project_set_breadcrumb($node = NULL, $extra = array()) {
     $term = db_fetch_object($result);
     $breadcrumb[] = l($term->name, 'project/'. $term->name);
   }
-  $breadcrumb = array_merge($breadcrumb, $extra);
+
+  if (is_array($extra)) {
+    $breadcrumb = array_merge($breadcrumb, $extra);
+  }
+  elseif ($extra && !empty($node)) {
+    $breadcrumb[] = l($node->title, 'node/'. $node->nid);
+  }
+ 
   drupal_set_breadcrumb($breadcrumb);
 }
 
@@ -463,6 +470,7 @@ function project_developers($nid = 0) {
   if ($project = node_load($nid)) {
     $output = module_invoke('cvs', 'get_project_contributors', $nid);
     drupal_set_title(t('Developers for %name', array('%name' => check_plain($project->title))));
+    project_project_set_breadcrumb($project, TRUE);
     return $output;
   }
   else {
@@ -475,6 +483,7 @@ function project_cvs($nid = 0) {
     $_REQUEST['nid'] = $nid;
     $output = module_invoke('cvs', 'show_messages');
     drupal_set_title(t('CVS messages for %name', array('%name' => check_plain($project->title))));
+    project_project_set_breadcrumb($project, TRUE);   
     return $output;
   }
   else {
