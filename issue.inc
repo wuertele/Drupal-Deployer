@@ -1595,7 +1595,13 @@ function project_issue_query_result($query = NULL, $format = 'html', $search = t
       if (!$project->nid) {
         $row[] = l($projects[$node->pid], "project/issues/$node->pid");
       }
-      $row[] = l(drupal_substr($node->title, 0, 50), "node/$node->nid") . theme('mark', node_mark($node->nid, $node->changed));
+      if (strlen($node->title) > 50) {
+        $title = l(drupal_substr($node->title, 0, 50), "node/$node->nid", array('title' => $node->title));
+      }
+      else {
+        $title = l($node->title, "node/$node->nid");
+      }
+      $row[] = $title . theme('mark', node_mark($node->nid, $node->changed));
       $row[] = $states[$node->sid];
       $row[] = $priorities[$node->priority];
       $row[] = t($node->category);
