@@ -72,7 +72,7 @@ function faq_menu($may_cache) {
       'description' => t('Allows the user to configure the layout of questions and answers on a FAQ page.'),
     );
     $items[] = array('path' => 'faq', 
-						'title' => variable_get('faq_title', t('Frequently Asked Questions')),
+      'title' => variable_get('faq_title', t('Frequently Asked Questions')),
       'callback' => 'faq_page',
       'access' => user_access('view faq'),
       'weight' => 1
@@ -107,7 +107,7 @@ function faq_menu($may_cache) {
       'type' => MENU_LOCAL_TASK,
       'weight' => -8,
     );
-				$items[] = array(
+    $items[] = array(
       'path' => 'admin/settings/faq/weight',
       'title' => t('Weight'),
       'description' => t('Allows the user to configure the order of questions and answers on a FAQ page.'),
@@ -123,7 +123,7 @@ function faq_menu($may_cache) {
       'access' => user_access('create faq'),
     );
     $items[] = array('path' => 'faq', 
-						'title' => variable_get('faq_title', t('Frequently Asked Questions')),
+      'title' => variable_get('faq_title', t('Frequently Asked Questions')),
       'callback' => 'faq_page',
       'access' => user_access('view faq'),
       'weight' => 1
@@ -131,7 +131,7 @@ function faq_menu($may_cache) {
 
     if (arg(0) == 'faq' && is_numeric(arg(1))) {
       $items[] = array('path' => 'faq/'. arg(1), 
-								'title' => variable_get('faq_title', t('Frequently Asked Questions')),
+        'title' => variable_get('faq_title', t('Frequently Asked Questions')),
         'callback' => 'faq_page',
         'callback arguments' => array(arg(1)),
         'access' => user_access('view faq'),
@@ -191,37 +191,37 @@ function faq_form(&$node) {
 }
 
 function faq_delete(&$node) {
-		db_query('DELETE FROM {faq_weights} WHERE nid = %d', $node->nid); 		
+  db_query('DELETE FROM {faq_weights} WHERE nid = %d', $node->nid);   
 }
 
 function faq_view($node, $teaser = FALSE, $page = FALSE) {
 
   if ($page) {
     $breadcrumb = array();
-			 $breadcrumb[] = array('path' => 'node/'. $node->nid); 
+    $breadcrumb[] = array('path' => 'node/'. $node->nid); 
 
-				if (module_exists("taxonomy") && $node->taxonomy) {
-						foreach ($node->taxonomy as $term) {
-								$current = $term;
-								continue;
-						}
-						$breadcrumb[] = array(
-								'path' => 'faq/'. $current->tid, 
-								'title' => $current->name,
-						);
-						while ($parents = taxonomy_get_parents($current->tid)) {
-								$current = array_shift($parents);
-								$breadcrumb[] = array(
-										'path' => 'faq/'. $current->tid,
-										'title' => $current->name,
-								);
-						}
-				}
+    if (module_exists("taxonomy") && $node->taxonomy) {
+      foreach ($node->taxonomy as $term) {
+        $current = $term;
+        continue;
+      }
+      $breadcrumb[] = array(
+        'path' => 'faq/'. $current->tid, 
+        'title' => $current->name,
+      );
+      while ($parents = taxonomy_get_parents($current->tid)) {
+        $current = array_shift($parents);
+        $breadcrumb[] = array(
+          'path' => 'faq/'. $current->tid,
+          'title' => $current->name,
+        );
+      }
+    }
     $breadcrumb[] = array(
-						'path' => 'faq', 
-						'title' => variable_get('faq_title', t('Frequently Asked Questions')),
-				);
-				$breadcrumb = array_reverse($breadcrumb);
+      'path' => 'faq', 
+      'title' => variable_get('faq_title', t('Frequently Asked Questions')),
+    );
+    $breadcrumb = array_reverse($breadcrumb);
     menu_set_location($breadcrumb);
   }
 
@@ -283,7 +283,7 @@ function faq_questions_settings_form() {
     '#collapsible' => TRUE,
   );
   $form['faq_questions_misc']['faq_question_listing'] = array(
-				'#type' => 'select',
+    '#type' => 'select',
     '#options' => array('ol' => 'Ordered list', 'ul' => 'Unordered list'),
     '#title' => t('Questions listing style'),
     '#description' => t("This allows to select how the questions listing is presented.  It only applies to the layouts: 'Clicking on question takes user to answer further down the page' and 'Clicking on question opens the answer in a new page'.  An ordered listing would number the questions, whereas an unordered list will have a bullet to the left of each question."),
@@ -349,7 +349,7 @@ function faq_categories_settings_form() {
   );
 
   $form['faq_category_misc']['faq_category_listing'] = array(
-				'#type' => 'select',
+    '#type' => 'select',
     '#options' => array('ol' => 'Ordered list', 'ul' => 'Unordered list'),
     '#title' => t('Categories listing style'),
     '#description' => t("This allows to select how the categories listing is presented.  It only applies to the 'Clicking on category opens the questions/answers in a new page' layout.  An ordered listing would number the categories, whereas an unordered list will have a bullet to the left of each category."),
@@ -359,7 +359,7 @@ function faq_categories_settings_form() {
   $form['faq_category_misc']['faq_count'] = array(
     '#type' => 'checkbox',
     '#title' => t('Show FAQ count'),
-				'#description' => t('This displays the number of questions in a category after the category name.'),
+    '#description' => t('This displays the number of questions in a category after the category name.'),
     '#default_value' => variable_get('faq_count', FALSE),
   );
 
@@ -395,116 +395,116 @@ function faq_weight_settings_form($form_values = NULL) {
   drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
   drupal_add_css(drupal_get_path('module', 'faq') .'/faq.css');
 
-		$use_categories = variable_get('faq_use_categories', FALSE);
-		if (!$use_categories) {
-				$step = "order";
-		}
-		elseif (!isset($form_values)) {
-				$step = "categories";
-		}
-		else {
-				$step = "order";
-		}
-		$form['step'] = array(
-				'#type' => 'hidden',
-				'#value' => $step,
-		);
+  $use_categories = variable_get('faq_use_categories', FALSE);
+  if (!$use_categories) {
+    $step = "order";
+  }
+  elseif (!isset($form_values)) {
+    $step = "categories";
+  }
+  else {
+    $step = "order";
+  }
+  $form['step'] = array(
+    '#type' => 'hidden',
+    '#value' => $step,
+  );
 
-		$form['#multistep'] = TRUE;
-		$form['#redirect'] = FALSE;
+  $form['#multistep'] = TRUE;
+  $form['#redirect'] = FALSE;
 
-		// categorized q/a
-		if ($step == "categories") {
+  // categorized q/a
+  if ($step == "categories") {
 
-				// get list of categories
+    // get list of categories
     $vocabularies = taxonomy_get_vocabularies("faq");
-				$options = array();
+    $options = array();
     foreach ($vocabularies as $vid => $vobj) {
-						$tree = taxonomy_get_tree($vid);
+      $tree = taxonomy_get_tree($vid);
       foreach ($tree as $term) {
-								$options[$term->tid] = $term->name;
-								$form['choose_cat']['faq_category'] = array(
-										'#type' => 'select',
-										'#title' => t("Choose a category"),
-										'#description' => t("Choose a category that you wish to order the questions for."),
-										'#options' => $options,
-										'#multiple' => FALSE,
-								);
+        $options[$term->tid] = $term->name;
+        $form['choose_cat']['faq_category'] = array(
+          '#type' => 'select',
+          '#title' => t("Choose a category"),
+          '#description' => t("Choose a category that you wish to order the questions for."),
+          '#options' => $options,
+          '#multiple' => FALSE,
+        );
 
-								$form['choose_cat']['search'] = array(
-										'#type' => 'submit',
-										'#value' => t('Search'),
-								);
-						}
-				}
+        $form['choose_cat']['search'] = array(
+          '#type' => 'submit',
+          '#value' => t('Search'),
+        );
+      }
+    }
 
-		}
+  }
 
-		else {
-				$options = array();
-				$category = $form_values['faq_category'];
-				if (empty($category)) {
-						$category = 0;
-						$result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = %d WHERE n.type='faq' AND n.status = 1 ORDER BY weight ASC, n.sticky DESC, n.created DESC", "n", "nid"), $category);
-						$date_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = %d WHERE n.type='faq' AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $category);
-				} 
-				else {
-						$result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON r.nid = n.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = %d WHERE n.type='faq' AND n.status = 1 AND tn.tid = %d ORDER BY weight ASC, n.sticky DESC, n.created DESC", "n", "nid"), $category, $category);
-						$date_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON r.nid = n.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = %d WHERE n.type='faq' AND n.status = 1 AND tn.tid = %d ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $category, $category);
-				}
+  else {
+    $options = array();
+    $category = $form_values['faq_category'];
+    if (empty($category)) {
+      $category = 0;
+      $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = %d WHERE n.type='faq' AND n.status = 1 ORDER BY weight ASC, n.sticky DESC, n.created DESC", "n", "nid"), $category);
+      $date_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = %d WHERE n.type='faq' AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $category);
+    } 
+    else {
+      $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON r.nid = n.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = %d WHERE n.type='faq' AND n.status = 1 AND tn.tid = %d ORDER BY weight ASC, n.sticky DESC, n.created DESC", "n", "nid"), $category, $category);
+      $date_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON r.nid = n.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = %d WHERE n.type='faq' AND n.status = 1 AND tn.tid = %d ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $category, $category);
+    }
 
 
-				while ($node = db_fetch_object($result)) {
-						$options[$node->nid] = $node->title;
-						$order .= "$node->nid,";
-				}
-				$order = rtrim($order, ",");
+    while ($node = db_fetch_object($result)) {
+      $options[$node->nid] = $node->title;
+      $order .= "$node->nid,";
+    }
+    $order = rtrim($order, ",");
 
-				while ($node = db_fetch_object($date_result)) {
-						$date_options[$node->nid] = $node->title;
-						$date_order .= "$node->nid,";
-				}
-				$date_order = rtrim($date_order, ",");
+    while ($node = db_fetch_object($date_result)) {
+      $date_options[$node->nid] = $node->title;
+      $date_order .= "$node->nid,";
+    }
+    $date_order = rtrim($date_order, ",");
 
-				$form['weight']['faq_node_order'] = array(
-						'#type' => 'hidden',
-						'#default_value' => $order,
-				);
-				$form['weight']['faq_node_date_order'] = array(
-						'#type' => 'hidden',
-						'#default_value' => $date_order,
-				);
-				$form['weight']['faq_category'] = array(
-						'#type' => 'hidden',
-						'#value' => $category,
-				);
-				$asc = '<a href="#" onclick="faq_order_by_date(\'ASC\');">ascending</a>';
-				$desc = '<a href="#" onclick="faq_order_by_date(\'DESC\');">descending</a>';
-				$form['weight']['order_no_cats'] = array(
-						'#type' => 'select',
-						'#title' => t("Question Order"),
-						'#description' => t("This determines the order of the questions and answers on the FAQ page.  Just select one or more questions and use the arrows to change their position in the list.  You can also order the list by the question creation date $desc or $asc."),
-						'#options' => $options,
-						'#multiple' => TRUE,
-				);
-				$form['weight']['move_up'] = array(
-						'#type' => 'markup',
-						'#value' => '<input type="button" onclick="faq_move_selected_item_up();"
-						value="&uarr;" class="faq_arrow"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;',
-				);
-				$form['weight']['move_down'] = array(
-						'#type' => 'markup',
-						'#value' => '<input type="button" onclick="faq_move_selected_item_down();"
-						value="&darr;" class="faq_arrow"/><br>',
-				);
+    $form['weight']['faq_node_order'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $order,
+    );
+    $form['weight']['faq_node_date_order'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $date_order,
+    );
+    $form['weight']['faq_category'] = array(
+      '#type' => 'hidden',
+      '#value' => $category,
+    );
+    $asc = '<a href="#" onclick="faq_order_by_date(\'ASC\');">ascending</a>';
+    $desc = '<a href="#" onclick="faq_order_by_date(\'DESC\');">descending</a>';
+    $form['weight']['order_no_cats'] = array(
+      '#type' => 'select',
+      '#title' => t("Question Order"),
+      '#description' => t("This determines the order of the questions and answers on the FAQ page.  Just select one or more questions and use the arrows to change their position in the list.  You can also order the list by the question creation date $desc or $asc."),
+      '#options' => $options,
+      '#multiple' => TRUE,
+    );
+    $form['weight']['move_up'] = array(
+      '#type' => 'markup',
+      '#value' => '<input type="button" onclick="faq_move_selected_item_up();"
+      value="&uarr;" class="faq_arrow"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;',
+    );
+    $form['weight']['move_down'] = array(
+      '#type' => 'markup',
+      '#value' => '<input type="button" onclick="faq_move_selected_item_down();"
+      value="&darr;" class="faq_arrow"/><br>',
+    );
 
-				$form['update']['attach'] = array(
-						'#type' => 'submit',
-						'#value' => t('Update'),
-						'#weight' => 3,
-						'#attributes' => array('onclick' => 'faq_update_order();'),
-				);
-		}
+    $form['update']['attach'] = array(
+      '#type' => 'submit',
+      '#value' => t('Update'),
+      '#weight' => 3,
+      '#attributes' => array('onclick' => 'faq_update_order();'),
+    );
+  }
 
 
   return $form;
@@ -513,27 +513,27 @@ function faq_weight_settings_form($form_values = NULL) {
 function faq_weight_settings_form_submit($form_id, $form_values) {
   if ($form_values['op'] == t('Update')) {
 
-				$order = preg_split("/,/",$form_values['faq_node_order']);
-				switch ($GLOBALS['db_type']) {
-						case 'mysql':
-						case 'mysqli':
-								foreach ($order as $index => $nid) {
-										$result = db_query("REPLACE INTO {faq_weights} (tid, nid, weight) VALUES(%d, %d, %d)", $form_values['faq_category'], $nid, $index);
-								}
-								break;
+    $order = preg_split("/,/", $form_values['faq_node_order']);
+    switch ($GLOBALS['db_type']) {
+      case 'mysql':
+      case 'mysqli':
+        foreach ($order as $index => $nid) {
+          $result = db_query("REPLACE INTO {faq_weights} (tid, nid, weight) VALUES(%d, %d, %d)", $form_values['faq_category'], $nid, $index);
+        }
+        break;
 
-						case 'pgsql':
-								foreach ($order as $index => $nid) {
-										$result = db_query("DELETE FROM {faq_weights} WHERE tid = %d AND nid = %d", $form_values['faq_category'], $nid);
-										$result = db_query("INSERT INTO {faq_weights} (tid, nid, weight) VALUES(%d, %d, %d)", $form_values['faq_category'], $nid, $index);
-								}
-								break;
-				}
+      case 'pgsql':
+        foreach ($order as $index => $nid) {
+          $result = db_query("DELETE FROM {faq_weights} WHERE tid = %d AND nid = %d", $form_values['faq_category'], $nid);
+          $result = db_query("INSERT INTO {faq_weights} (tid, nid, weight) VALUES(%d, %d, %d)", $form_values['faq_category'], $nid, $index);
+        }
+        break;
+    }
 
     drupal_set_message(t('Configuration has been updated.'));
-		}
-		else {
-		}
+  }
+  else {
+  }
 }
 
 
@@ -544,28 +544,28 @@ function faq_weight_settings_form_submit($form_id, $form_values) {
 function faq_page($tid = 0) {
   drupal_add_css(drupal_get_path('module', 'faq') .'/faq.css');
   drupal_set_title(variable_get('faq_title', t('Frequently Asked Questions')));
-		if (!module_exists("taxonomy")) {
-				$tid = 0;
-		}
+  if (!module_exists("taxonomy")) {
+    $tid = 0;
+  }
 
-		// configure the breadcrumb trail
-		$breadcrumb = array();
+  // configure the breadcrumb trail
+  $breadcrumb = array();
 
-		if (!empty($tid)) {
-				$current = taxonomy_get_term($tid);
-				$breadcrumb[] = array('path' => 'faq/'. $tid, 'title' => $current->name);
-				while ($parents = taxonomy_get_parents($current->tid)) {
-						$current = array_shift($parents);
-						$breadcrumb[] = array('path' => 'faq/'. $current->tid,
-								'title' => $current->name,
-						);
-				}
-				$breadcrumb[] = array('path' => 'faq', 
-						'title' => variable_get('faq_title', t('Frequently Asked Questions')),
-				);
-				$breadcrumb = array_reverse($breadcrumb);
-				menu_set_location($breadcrumb);
-		}
+  if (!empty($tid)) {
+    $current = taxonomy_get_term($tid);
+    $breadcrumb[] = array('path' => 'faq/'. $tid, 'title' => $current->name);
+    while ($parents = taxonomy_get_parents($current->tid)) {
+      $current = array_shift($parents);
+      $breadcrumb[] = array('path' => 'faq/'. $current->tid,
+        'title' => $current->name,
+      );
+    }
+    $breadcrumb[] = array('path' => 'faq', 
+      'title' => variable_get('faq_title', t('Frequently Asked Questions')),
+    );
+    $breadcrumb = array_reverse($breadcrumb);
+    menu_set_location($breadcrumb);
+  }
 
 
 
@@ -583,7 +583,7 @@ function faq_page($tid = 0) {
 
   // non-categorized questions and answers
   if (!$use_categories) {
-				$result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid LEFT JOIN {faq_weights} w ON w.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND (w.tid = 0 OR w.tid IS NULL) ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"));
+    $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid LEFT JOIN {faq_weights} w ON w.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND (w.tid = 0 OR w.tid IS NULL) ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"));
 
     switch ($faq_display) {
       case 'questions_top':
@@ -616,61 +616,61 @@ function faq_page($tid = 0) {
     // if we're viewing a specific category/term
     if ($tid != 0) {
       $term = taxonomy_get_term($tid);
-						$title = variable_get('faq_title', t('Frequently Asked Questions'));
-						drupal_set_title($title .($title ? ' - ' : ''). check_plain($term->name));
+      $title = variable_get('faq_title', t('Frequently Asked Questions'));
+      drupal_set_title($title . ($title ? ' - ' : '') . check_plain($term->name));
       if ($category_display == 'hide_qa') {
         drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
       }
       _display_faq_by_category($faq_display, $category_display, $term, 0, 
-								$output, $output_answers);
+        $output, $output_answers);
       $output = '<div class="content"><div class="faq">'. $output;
       $output .= $output_answers .'</div></div>';
       return $output;
     }
 
 
-				$list_style = variable_get('faq_category_listing', 'ul');
+    $list_style = variable_get('faq_category_listing', 'ul');
     $vocabularies = taxonomy_get_vocabularies("faq");
-				$items = array();
-				$vocab_items = array();
+    $items = array();
+    $vocab_items = array();
     foreach ($vocabularies as $vid => $vobj) {
 
-						if ($category_display == "new_page") {
-								$vocab_items = _get_indented_faq_terms($vid, 0, $display_vars);
-								$items = array_merge($items, $vocab_items);
-						}
+      if ($category_display == "new_page") {
+        $vocab_items = _get_indented_faq_terms($vid, 0, $display_vars);
+        $items = array_merge($items, $vocab_items);
+      }
 
-						// not a new page
+      // not a new page
       else {
-								if ($hide_sub_categories && $category_display == 'hide_qa') {
-										$tree = taxonomy_get_tree($vid, 0, -1, 1);
-								}
-								else {
-										$tree = taxonomy_get_tree($vid);
-								}
-								foreach ($tree as $term) {
+        if ($hide_sub_categories && $category_display == 'hide_qa') {
+          $tree = taxonomy_get_tree($vid, 0, -1, 1);
+        }
+        else {
+          $tree = taxonomy_get_tree($vid);
+        }
+        foreach ($tree as $term) {
 
-										switch ($category_display) {
+          switch ($category_display) {
 
-												case 'hide_qa':
-														drupal_add_js(drupal_get_path('module','faq').'/faq.js','module');
-
-
-												case 'categories_inline':
-														if (taxonomy_term_count_nodes($term->tid, 'faq')) {
-																_display_faq_by_category($faq_display, $category_display, $term,
-																		1, $output, $output_answers);
-														}
-														break;
+            case 'hide_qa':
+              drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
 
 
-										} // end of switch (category_display)
-								} // end of foreach term
-						} // end of foreach vocab
-				} // end of if $category_display != new_page
+            case 'categories_inline':
+              if (taxonomy_term_count_nodes($term->tid, 'faq')) {
+                _display_faq_by_category($faq_display, $category_display, $term,
+                  1, $output, $output_answers);
+              }
+              break;
+
+
+          } // end of switch (category_display)
+        } // end of foreach term
+      } // end of foreach vocab
+    } // end of if $category_display != new_page
 
     if ($category_display == "new_page") {
-						$output = theme('item_list', $items, NULL, $list_style);
+      $output = theme('item_list', $items, NULL, $list_style);
     }
   }
 
@@ -683,7 +683,7 @@ function faq_page($tid = 0) {
   if (!empty($faq_description)) {
     $desc = '<div class="faq_description">'. $faq_description ."</div>\n";
   }
-  $output = '<div class="content"><div class="faq">'. $desc. $output;
+  $output = '<div class="content"><div class="faq">'. $desc . $output;
   $output .= $output_answers ."</div></div>\n";
 
   return $output;
@@ -693,7 +693,7 @@ function faq_page($tid = 0) {
 
 function _display_faq_by_category($faq_display, $category_display, $term, $display_header, &$output, &$output_answers) {
 
-		$result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $term->tid);
+  $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $term->tid);
 
   $display_vars['display_header'] = $display_header;
   $display_vars['faq_display'] = $faq_display;
@@ -710,7 +710,7 @@ function _display_faq_by_category($faq_display, $category_display, $term, $displ
   // handle indenting of categories
   $depth = 0;
   while ($depth < $term->depth) {
-				$display_vars['display_header'] = 1;
+    $display_vars['display_header'] = 1;
     $indent = '<div class="faq_category_indent">';
     $output .= $indent;
     $depth++;
@@ -726,15 +726,15 @@ function _display_faq_by_category($faq_display, $category_display, $term, $displ
 
     case 'questions_top':
       $data = theme('category_questions_top', $result, $display_vars, $term,
-								$faq_class);
-						$output .= $data["output"];
-						$output_answers .= $data["output_answers"];
+        $faq_class);
+      $output .= $data["output"];
+      $output_answers .= $data["output_answers"];
       break;
 
 
     case 'hide_answer':
       $output .= theme('category_hide_answer', $result, $display_vars, $term, 
-								$faq_class);
+        $faq_class);
       break;
 
 
@@ -746,7 +746,7 @@ function _display_faq_by_category($faq_display, $category_display, $term, $displ
 
     case 'new_page':
       $output .= theme('category_new_page', $result, $display_vars, $term, 
-								$faq_class);
+        $faq_class);
       break;
 
   } // end of switch (faq_display)
@@ -770,7 +770,7 @@ function theme_questions_top($result, $display_vars) {
   }
 
   // loop through results
-		$questions = array();
+  $questions = array();
   while ($node = db_fetch_object($result)) {
     $anchor = "n". $node->nid;
 
@@ -787,7 +787,7 @@ function theme_questions_top($result, $display_vars) {
       }
       $answers .= '<dd class="faq_dd_questions_top">';
       $answers .= check_markup($node->teaser, $node->format, FALSE);
-      $answers .= $more_link. $back_to_top ."</dd>\n";
+      $answers .= $more_link . $back_to_top ."</dd>\n";
     }
 
     // full text
@@ -798,17 +798,17 @@ function theme_questions_top($result, $display_vars) {
     }
   }
 
-		$list_style = variable_get('faq_question_listing', 'ul');
-		$output = theme('item_list', $questions, NULL, $list_style, array("class" => "faq_ul_questions_top"));
-  $output .= '<dl class="faq_dl_questions_top">'. "\n". $answers ."</dl>\n";
+  $list_style = variable_get('faq_question_listing', 'ul');
+  $output = theme('item_list', $questions, NULL, $list_style, array("class" => "faq_ul_questions_top"));
+  $output .= '<dl class="faq_dl_questions_top">'."\n". $answers ."</dl>\n";
 
   return $output;
 }
 
 function theme_category_questions_top($result, $display_vars, $term, $class) {
 
-		$output = '';
-		$output_answers = '';
+  $output = '';
+  $output_answers = '';
   $this_page = 'faq';
   $get_sub_terms = 0;
   if (arg(0) == 'faq' && is_numeric(arg(1))) {
@@ -823,33 +823,33 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
     $back_to_top .= l(t($display_vars['back_to_top']), $this_page, array(), NULL, '') .'</p>';
   }
 
-		// get number of questions, and account for hidden sub-cats
-		if ($display_vars['faq_count']) {
-				$count = db_num_rows($result);
-				if ($display_vars['hide_sub_categories']) {
-						$count = taxonomy_term_count_nodes($term->tid, 'faq');
-				}
-		}
+  // get number of questions, and account for hidden sub-cats
+  if ($display_vars['faq_count']) {
+    $count = db_num_rows($result);
+    if ($display_vars['hide_sub_categories']) {
+      $count = taxonomy_term_count_nodes($term->tid, 'faq');
+    }
+  }
 
   // configure header
-		$hdr = "h5";
-		if ($term->depth > 0) $hdr = "h6";
-		if ($display_vars['category_display'] == 'hide_qa') {
-				$header = "<$hdr class=\"faq_header\">";
-				$header .= l($term->name, "faq/$term->tid");
-				if ($display_vars['faq_count']) $header .= " ($count)";
-				$header .= "</$hdr>\n";
-				$ans_hdr = "<$hdr class=\"faq_header\">";
-				$ans_hdr .= check_plain($term->name) ."</$hdr>\n";
-		}
-		else {
-				$header = "<$hdr class=\"faq_header\">";
-				$header .= check_plain($term->name);
-				if ($display_vars['faq_count']) $header .= " ($count)";
-				$header .= "</$hdr>\n";
-				$ans_hdr = "<$hdr class=\"faq_header\">";
-				$ans_hdr .= check_plain($term->name) ."</$hdr>\n";
-		}
+  $hdr = "h5";
+  if ($term->depth > 0) $hdr = "h6";
+  if ($display_vars['category_display'] == 'hide_qa') {
+    $header = "<$hdr class=\"faq_header\">";
+    $header .= l($term->name, "faq/$term->tid");
+    if ($display_vars['faq_count']) $header .= " ($count)";
+    $header .= "</$hdr>\n";
+    $ans_hdr = "<$hdr class=\"faq_header\">";
+    $ans_hdr .= check_plain($term->name) ."</$hdr>\n";
+  }
+  else {
+    $header = "<$hdr class=\"faq_header\">";
+    $header .= check_plain($term->name);
+    if ($display_vars['faq_count']) $header .= " ($count)";
+    $header .= "</$hdr>\n";
+    $ans_hdr = "<$hdr class=\"faq_header\">";
+    $ans_hdr .= check_plain($term->name) ."</$hdr>\n";
+  }
 
   $answer_category_name = variable_get('faq_answer_category_name', FALSE);
   $desc = '';
@@ -863,46 +863,46 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
   if (($display_vars['show_cat_sub_cats'] || $display_vars['hide_sub_categories']) && $display_vars['category_display'] == 'new_page') {
     $list = taxonomy_get_children($term->tid);
 
-				$scats = array();
+    $scats = array();
     foreach ($list as $tid => $sub_term) {
-						$sub_count = taxonomy_term_count_nodes($sub_term->tid, 'faq');
+      $sub_count = taxonomy_term_count_nodes($sub_term->tid, 'faq');
       if ($sub_count) {
         $sub_cat_desc = '';
         if (!empty($sub_term->description)) {
           $sub_cat_desc = '<div class="faq_qa_description"><p>';
           $sub_cat_desc .= $sub_term->description ."</p></div>";
         }
-								// get number of questions, and account for hidden sub-cats
-								if ($display_vars['faq_count']) {
-										$scats[] = l($sub_term->name, "faq/$sub_term->tid")
-												." ($sub_count) $sub_cat_desc";
-								}
-								else {
-										$scats[] = l($sub_term->name, "faq/$sub_term->tid"). $sub_cat_desc;
-								}
+        // get number of questions, and account for hidden sub-cats
+        if ($display_vars['faq_count']) {
+          $scats[] = l($sub_term->name, "faq/$sub_term->tid")
+            ." ($sub_count) $sub_cat_desc";
+        }
+        else {
+          $scats[] = l($sub_term->name, "faq/$sub_term->tid") . $sub_cat_desc;
+        }
       }
     }
-				$list_style = variable_get('faq_category_listing', 'ul');
-				$sub_cats .= theme('item_list', $scats, NULL, $list_style, array("class" => "faq_category_list"));
+    $list_style = variable_get('faq_category_listing', 'ul');
+    $sub_cats .= theme('item_list', $scats, NULL, $list_style, array("class" => "faq_category_list"));
   }
 
 
-  $output .= '<div class="faq_category_group">' ."\n";
-		if ($display_vars['display_header'] == 1) {
-				$output .= '<div class="faq_qa_header">'. $header. $desc ."</div>\n";
-		}
-		else {
-				$output .= '<div class="faq_qa_header">'. $desc ."</div>\n";
-		}
+  $output .= '<div class="faq_category_group">'."\n";
+  if ($display_vars['display_header'] == 1) {
+    $output .= '<div class="faq_qa_header">'. $header . $desc ."</div>\n";
+  }
+  else {
+    $output .= '<div class="faq_qa_header">'. $desc ."</div>\n";
+  }
   $output .= $sub_cats;
   $sub_cats = '';
 
 
   if ($get_sub_terms == $term->tid) {
-    $output .= '<div class="faq_qa">' ."\n";
+    $output .= '<div class="faq_qa">'."\n";
   }
   else {
-    $output .= '<div class="'.$class.'">' ."\n";
+    $output .= '<div class="'. $class .'">'."\n";
   }
 
   if (($get_sub_terms && $display_vars['category_display'] == 'categories_inline') || (($display_vars['show_cat_sub_cats'] || $display_vars['hide_sub_categories']) && $display_vars['category_display'] == 'hide_qa')) {
@@ -910,12 +910,12 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
 
     foreach ($list as $tid => $sub_term) {
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-								$sub_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
-								$display_vars['display_header'] = 1;
+        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
+        $display_vars['display_header'] = 1;
         $sub_cats .= '<div class="faq_category_indent">';
         $sub_cat_data = theme('category_questions_top', $sub_result, $display_vars, $sub_term, $class);
-								$sub_cats .= $sub_cata_data["output"];
-								$sub_cat_output_answers .= $sub_cata_data["output_answers"];
+        $sub_cats .= $sub_cata_data["output"];
+        $sub_cat_output_answers .= $sub_cata_data["output_answers"];
         $sub_cats .= '</div>';
       }
     }
@@ -924,12 +924,12 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
 
 
   if (db_num_rows($result)) {
-				$questions = array();
+    $questions = array();
     while ($node = db_fetch_object($result)) {
       $node = node_load($node->nid);
       $anchor = $term->tid ."n". $node->nid;
 
-						$questions[] = l($node->title, $this_page, NULL, NULL, $anchor);
+      $questions[] = l($node->title, $this_page, NULL, NULL, $anchor);
 
       $answers .= '<dt class="faq_dt_questions_top">'. l($node->title, "node/$node->nid", array("name" => "$anchor")) ."</dt>\n";
 
@@ -938,11 +938,11 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
         $more_link = '';
         if (!empty($display_vars['more_link']) && strlen($node->teaser) < strlen($node->body)) {
           $more_link = '<p class="faq_more_link">';
-          $more_link.= l($display_vars['more_link'], "node/$node->nid") .'</p>';
+          $more_link .= l($display_vars['more_link'], "node/$node->nid") .'</p>';
         }
         $answers .= '<dd class="faq_dd_questions_top">';
         $answers .= check_markup($node->teaser, $node->format, FALSE);
-        $answers .= $more_link. $back_to_top ."</dd>\n";
+        $answers .= $more_link . $back_to_top ."</dd>\n";
       }
 
       // full text
@@ -954,8 +954,8 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
 
     } // end of while
 
-				$list_style = variable_get('faq_question_listing', 'ul');
-				$output .= theme('item_list', $questions, NULL, $list_style, array("class" => "faq_ul_questions_top"));
+    $list_style = variable_get('faq_question_listing', 'ul');
+    $output .= theme('item_list', $questions, NULL, $list_style, array("class" => "faq_ul_questions_top"));
 
   }
 
@@ -964,7 +964,7 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
     if ($answer_category_name) {
       if (db_num_rows($result)) {
         $output .= $ans_hdr;
-        $output .= '<dl class="faq_dl_questions_top">' ."\n";
+        $output .= '<dl class="faq_dl_questions_top">'."\n";
         $output .= $answers ."\n</dl>\n";
       }
       $output .= "</div>\n</div>\n";
@@ -972,7 +972,7 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
 
     else {
       if (db_num_rows($result)) {
-        $output .= '<dl class="faq_dl_questions_top">' ."\n";
+        $output .= '<dl class="faq_dl_questions_top">'."\n";
         $output .= $answers ."\n</dl>\n";
       }
       $output .= "</div>\n</div>\n";
@@ -982,7 +982,7 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
   else {
     $output .= "</div>\n</div>\n";
     $ans_depth = 0;
-				$indent = '<div class="faq_category_indent">' ."\n";
+    $indent = '<div class="faq_category_indent">'."\n";
 
     if ($answer_category_name) {
       while ($ans_depth < $term->depth) {
@@ -991,21 +991,21 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
       }
     }
 
-    $output_answers .= '<div class="faq_category_group">' ."\n";
+    $output_answers .= '<div class="faq_category_group">'."\n";
     if ($answer_category_name) {
-						if (taxonomy_term_count_nodes($term->tid, 'faq')) {
-								if (!empty($sub_cat_output_answers)) {
-										$sub_cat_output_answers .= $answers;
-										$answers = $sub_cat_output_answers;
-								}
+      if (taxonomy_term_count_nodes($term->tid, 'faq')) {
+        if (!empty($sub_cat_output_answers)) {
+          $sub_cat_output_answers .= $answers;
+          $answers = $sub_cat_output_answers;
+        }
         $output_answers .= $ans_hdr ."<dl>\n". $answers ."\n</dl>\n";
       }
     }
     else {
-						if (!empty($sub_cat_output_answers)) {
-						  $output_answers .= $sub_cat_output_answers;
-						}
-      $output_answers .= '<dl class="faq_dl_questions_top">' ."\n";
+      if (!empty($sub_cat_output_answers)) {
+        $output_answers .= $sub_cat_output_answers;
+      }
+      $output_answers .= '<dl class="faq_dl_questions_top">'."\n";
       $output_answers .= $answers ."\n</dl>\n";
     }
     $output_answers .= "</div>\n";
@@ -1018,18 +1018,18 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
     }
   }
 
-		$data["output"] = $output;
-		$data["output_answers"] = $output_answers;
-		return $data;
+  $data["output"] = $output;
+  $data["output_answers"] = $output_answers;
+  return $data;
 }
 
 function theme_hide_answer($result) {
   drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
 
-  $output = '<dl class="faq_dl">' ."\n";
+  $output = '<dl class="faq_dl">'."\n";
   while ($node = db_fetch_object($result)) {
     $output .= '<dt class="faq_question">';
-				$output .= l($node->title, "node/$node->nid") ."</dt>\n";
+    $output .= l($node->title, "node/$node->nid") ."</dt>\n";
     $output .= '<dd class="faq_answer">';
     $output .= check_markup($node->body, $node->format, FALSE) ."</dd>\n";
   }
@@ -1045,31 +1045,31 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
     $get_sub_terms = arg(1);
   }
 
-  drupal_add_js(drupal_get_path('module','faq').'/faq.js','module');
+  drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
 
-		// get number of questions, and account for hidden sub-cats
-		if ($display_vars['faq_count']) {
-				$count = db_num_rows($result);
-				if ($display_vars['hide_sub_categories']) {
-						$count = taxonomy_term_count_nodes($term->tid, 'faq');
-				}
-		}
+  // get number of questions, and account for hidden sub-cats
+  if ($display_vars['faq_count']) {
+    $count = db_num_rows($result);
+    if ($display_vars['hide_sub_categories']) {
+      $count = taxonomy_term_count_nodes($term->tid, 'faq');
+    }
+  }
 
   // configure header
-		$hdr = "h5";
-		if ($term->depth > 0) $hdr = "h6";
-		if ($display_vars['category_display'] == 'hide_qa') {
-				$header = "<$hdr class=\"faq_header\">";
-				$header .= l($term->name, "faq/$term->tid");
-				if ($display_vars['faq_count']) $header .= " ($count)";
-				$header .= "</$hdr>\n";
-		}
-		else {
-				$header = "<$hdr class=\"faq_header\">";
-				$header .= check_plain($term->name);
-				if ($display_vars['faq_count']) $header .= " ($count)";
-				$header .= "</$hdr>\n";
-		}
+  $hdr = "h5";
+  if ($term->depth > 0) $hdr = "h6";
+  if ($display_vars['category_display'] == 'hide_qa') {
+    $header = "<$hdr class=\"faq_header\">";
+    $header .= l($term->name, "faq/$term->tid");
+    if ($display_vars['faq_count']) $header .= " ($count)";
+    $header .= "</$hdr>\n";
+  }
+  else {
+    $header = "<$hdr class=\"faq_header\">";
+    $header .= check_plain($term->name);
+    if ($display_vars['faq_count']) $header .= " ($count)";
+    $header .= "</$hdr>\n";
+  }
 
   $desc = '';
   if (!empty($term->description)) {
@@ -1082,45 +1082,45 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
   if (($display_vars['show_cat_sub_cats'] || $display_vars['hide_sub_categories']) && $display_vars['category_display'] == 'new_page') {
     $list = taxonomy_get_children($term->tid);
 
-				$scats = array();
+    $scats = array();
     foreach ($list as $tid => $sub_term) {
-						$sub_count = taxonomy_term_count_nodes($sub_term->tid, 'faq');
+      $sub_count = taxonomy_term_count_nodes($sub_term->tid, 'faq');
       if ($sub_count) {
         $sub_cat_desc = '';
         if (!empty($sub_term->description)) {
           $sub_cat_desc = '<div class="faq_qa_description"><p>';
           $sub_cat_desc .= $sub_term->description ."</p></div>";
         }
-								if ($display_vars['faq_count']) {
-										$scats[] = l($sub_term->name, "faq/$sub_term->tid") 
-												." ($sub_count) $sub_cat_desc";
-								}
-								else {
-										$scats[] = l($sub_term->name, "faq/$sub_term->tid"). $sub_cat_desc;
-								}
+        if ($display_vars['faq_count']) {
+          $scats[] = l($sub_term->name, "faq/$sub_term->tid") 
+            ." ($sub_count) $sub_cat_desc";
+        }
+        else {
+          $scats[] = l($sub_term->name, "faq/$sub_term->tid") . $sub_cat_desc;
+        }
       }
     }
-				$list_style = variable_get('faq_category_listing', 'ul');
-				$sub_cats .= theme('item_list', $scats, NULL, $list_style, array("class" => "faq_category_list"));
+    $list_style = variable_get('faq_category_listing', 'ul');
+    $sub_cats .= theme('item_list', $scats, NULL, $list_style, array("class" => "faq_category_list"));
   }
 
 
-  $output = '<div class="faq_category_group">' ."\n";
-		if ($display_vars['display_header'] == 1) {
-				$output .= '<div class="faq_qa_header">'. $header. $desc ."</div>\n";
-		}
-		else {
-				$output .= '<div class="faq_qa_header">'. $desc ."</div>\n";
-		}
+  $output = '<div class="faq_category_group">'."\n";
+  if ($display_vars['display_header'] == 1) {
+    $output .= '<div class="faq_qa_header">'. $header . $desc ."</div>\n";
+  }
+  else {
+    $output .= '<div class="faq_qa_header">'. $desc ."</div>\n";
+  }
   $output .= $sub_cats;
   $sub_cats = '';
 
 
   if ($get_sub_terms == $term->tid) {
-    $output .= '<div class="faq_qa">' ."\n";
+    $output .= '<div class="faq_qa">'."\n";
   }
   else {
-    $output .= '<div class="'.$class.'">' ."\n";
+    $output .= '<div class="'. $class .'">'."\n";
   }
 
 
@@ -1129,8 +1129,8 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
 
     foreach ($list as $tid => $sub_term) {
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-								$sub_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
-								$display_vars['display_header'] = 1;
+        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
+        $display_vars['display_header'] = 1;
         $sub_cats .= '<div class="faq_category_indent">';
         $sub_cats .= theme('category_hide_answer', $sub_result, $display_vars, $sub_term, $class);
         $sub_cats .= '</div>';
@@ -1141,12 +1141,12 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
 
 
   if (db_num_rows($result)) {
-    $output .= '<dl class="faq_dl">' ."\n";
+    $output .= '<dl class="faq_dl">'."\n";
 
     while ($node = db_fetch_object($result)) {
       $node = node_load($node->nid);
       $output .= '<dt class="faq_question">';
-						$output .= l($node->title, "node/$node->nid") ."</dt>\n";
+      $output .= l($node->title, "node/$node->nid") ."</dt>\n";
       $output .= '<dd class="faq_answer">';
       $output .= check_markup($node->body, $node->format, FALSE) ."</dd>\n";
     }
@@ -1179,7 +1179,7 @@ function theme_questions_inline($result, $display_vars) {
       }
       $output .= '<dd class="faq_dd_questions_inline">';
       $output .= check_markup($node->teaser, $node->format, FALSE);
-      $output .= $more_link. $back_to_top ."</dd>\n";
+      $output .= $more_link . $back_to_top ."</dd>\n";
     }
 
     // full text
@@ -1209,29 +1209,29 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
     $back_to_top .= l(t($display_vars['back_to_top']), $this_page, array(), NULL, '') .'</p>';
   }
 
-		// get number of questions, and account for hidden sub-cats
-		if ($display_vars['faq_count']) {
-				$count = db_num_rows($result);
-				if ($display_vars['hide_sub_categories']) {
-						$count = taxonomy_term_count_nodes($term->tid, 'faq');
-				}
-		}
+  // get number of questions, and account for hidden sub-cats
+  if ($display_vars['faq_count']) {
+    $count = db_num_rows($result);
+    if ($display_vars['hide_sub_categories']) {
+      $count = taxonomy_term_count_nodes($term->tid, 'faq');
+    }
+  }
 
   // configure header
-		$hdr = "h5";
-		if ($term->depth > 0) $hdr = "h6";
-		if ($display_vars['category_display'] == 'hide_qa') {
-				$header = "<$hdr class=\"faq_header\">";
-				$header .= l($term->name, "faq/$term->tid");
-				if ($display_vars['faq_count']) $header .= " ($count)";
-				$header .= "</$hdr>\n";
-		}
-		else {
-				$header = "<$hdr class=\"faq_header\">";
-				$header .= check_plain($term->name);
-				if ($display_vars['faq_count']) $header .= " ($count)";
-				$header .= "</$hdr>\n";
-		}
+  $hdr = "h5";
+  if ($term->depth > 0) $hdr = "h6";
+  if ($display_vars['category_display'] == 'hide_qa') {
+    $header = "<$hdr class=\"faq_header\">";
+    $header .= l($term->name, "faq/$term->tid");
+    if ($display_vars['faq_count']) $header .= " ($count)";
+    $header .= "</$hdr>\n";
+  }
+  else {
+    $header = "<$hdr class=\"faq_header\">";
+    $header .= check_plain($term->name);
+    if ($display_vars['faq_count']) $header .= " ($count)";
+    $header .= "</$hdr>\n";
+  }
 
   // configure category description
   $desc = '';
@@ -1246,46 +1246,46 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
   if (($display_vars['show_cat_sub_cats'] || $display_vars['hide_sub_categories']) && $display_vars['category_display'] == 'new_page') {
     $list = taxonomy_get_children($term->tid);
 
-				$scats = array();
+    $scats = array();
     foreach ($list as $tid => $sub_term) {
-						$sub_count = taxonomy_term_count_nodes($sub_term->tid, 'faq');
+      $sub_count = taxonomy_term_count_nodes($sub_term->tid, 'faq');
       if ($sub_count) {
         $sub_cat_desc = '';
         if (!empty($sub_term->description)) {
           $sub_cat_desc = '<div class="faq_qa_description"><p>';
           $sub_cat_desc .= $sub_term->description ."</p></div>";
         }
-								if ($display_vars['faq_count']) {
-										$scats[] = l($sub_term->name, "faq/$sub_term->tid") 
-												." ($sub_count) $sub_cat_desc";
-								}
-								else {
-										$scats[] = l($sub_term->name, "faq/$sub_term->tid"). $sub_cat_desc;
-								}
+        if ($display_vars['faq_count']) {
+          $scats[] = l($sub_term->name, "faq/$sub_term->tid") 
+            ." ($sub_count) $sub_cat_desc";
+        }
+        else {
+          $scats[] = l($sub_term->name, "faq/$sub_term->tid") . $sub_cat_desc;
+        }
       }
     }
-				$list_style = variable_get('faq_category_listing', 'ul');
-				$sub_cats .= theme('item_list', $scats, NULL, $list_style, array("class" => "faq_category_list"));
+    $list_style = variable_get('faq_category_listing', 'ul');
+    $sub_cats .= theme('item_list', $scats, NULL, $list_style, array("class" => "faq_category_list"));
   }
 
 
 
-  $output = '<div class="faq_category_group">' ."\n";
-		if ($display_vars['display_header'] == 1) {
-				$output .= '<div class="faq_qa_header">'. $header. $desc ."</div>\n";
-		}
-		else {
-				$output .= '<div class="faq_qa_header">'. $desc ."</div>\n";
-		}
+  $output = '<div class="faq_category_group">'."\n";
+  if ($display_vars['display_header'] == 1) {
+    $output .= '<div class="faq_qa_header">'. $header . $desc ."</div>\n";
+  }
+  else {
+    $output .= '<div class="faq_qa_header">'. $desc ."</div>\n";
+  }
   $output .= $sub_cats;
   $sub_cats = '';
 
 
   if ($get_sub_terms == $term->tid) {
-    $output .= '<div class="faq_qa">' ."\n";
+    $output .= '<div class="faq_qa">'."\n";
   }
   else {
-    $output .= '<div class="'.$class.'">' ."\n";
+    $output .= '<div class="'. $class .'">'."\n";
   }
 
 
@@ -1294,8 +1294,8 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
 
     foreach ($list as $tid => $sub_term) {
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-								$sub_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
-								$display_vars['display_header'] = 1;
+        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
+        $display_vars['display_header'] = 1;
         $sub_cats .= '<div class="faq_category_indent">';
         $sub_cats .= theme('category_questions_inline', $sub_result, $display_vars, $sub_term, $class);
         $sub_cats .= '</div>';
@@ -1306,7 +1306,7 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
 
 
   if (db_num_rows($result)) {
-    $output .= '<dl class="faq_dd_questions_inline">' ."\n";
+    $output .= '<dl class="faq_dd_questions_inline">'."\n";
 
     while ($node = db_fetch_object($result)) {
       $node = node_load($node->nid);
@@ -1318,11 +1318,11 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
         $more_link = '';
         if (!empty($display_vars['more_link']) && strlen($node->teaser) < strlen($node->body)) {
           $more_link = '<p class="faq_more_link">';
-          $more_link.= l($display_vars['more_link'], "node/$node->nid") .'</p>';
+          $more_link .= l($display_vars['more_link'], "node/$node->nid") .'</p>';
         }
         $output .= '<dd class="faq_dd_questions_inline">';
         $output .= check_markup($node->teaser, $node->format, FALSE);
-        $output .= $more_link. $back_to_top ."</dd>\n";
+        $output .= $more_link . $back_to_top ."</dd>\n";
       }
 
       // full text
@@ -1340,12 +1340,12 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
 }
 
 function theme_new_page($result) {
-		$items = array();
+  $items = array();
   while ($node = db_fetch_object($result)) {
     $items[] = l($node->title, "node/$node->nid");
   }
-		$list_style = variable_get('faq_question_listing', 'ul');
-		$output .= theme('item_list', $items, NULL, $list_style, array("class" => "faq_question_listing"));
+  $list_style = variable_get('faq_question_listing', 'ul');
+  $output .= theme('item_list', $items, NULL, $list_style, array("class" => "faq_question_listing"));
 
   return $output;
 }
@@ -1358,29 +1358,29 @@ function theme_category_new_page($result, $display_vars, $term, $class) {
     $get_sub_terms = arg(1);
   }
 
-		// get number of questions, and account for hidden sub-cats
-		if ($display_vars['faq_count']) {
-				$count = db_num_rows($result);
-				if ($display_vars['hide_sub_categories']) {
-						$count = taxonomy_term_count_nodes($term->tid, 'faq');
-				}
-		}
+  // get number of questions, and account for hidden sub-cats
+  if ($display_vars['faq_count']) {
+    $count = db_num_rows($result);
+    if ($display_vars['hide_sub_categories']) {
+      $count = taxonomy_term_count_nodes($term->tid, 'faq');
+    }
+  }
 
   // configure header
-		$hdr = "h5";
-		if ($term->depth > 0) $hdr = "h6";
-		if ($display_vars['category_display'] == 'hide_qa') {
-				$header = "<$hdr class=\"faq_header\">";
-				$header .= l($term->name, "faq/$term->tid");
-				if ($display_vars['faq_count']) $header .= " ($count)";
-				$header .= "</$hdr>\n";
-		}
-		else {
-				$header = "<$hdr class=\"faq_header\">";
-				$header .= check_plain($term->name);
-				if ($display_vars['faq_count']) $header .= " ($count)";
-				$header .= "</$hdr>\n";
-		}
+  $hdr = "h5";
+  if ($term->depth > 0) $hdr = "h6";
+  if ($display_vars['category_display'] == 'hide_qa') {
+    $header = "<$hdr class=\"faq_header\">";
+    $header .= l($term->name, "faq/$term->tid");
+    if ($display_vars['faq_count']) $header .= " ($count)";
+    $header .= "</$hdr>\n";
+  }
+  else {
+    $header = "<$hdr class=\"faq_header\">";
+    $header .= check_plain($term->name);
+    if ($display_vars['faq_count']) $header .= " ($count)";
+    $header .= "</$hdr>\n";
+  }
 
   $desc = '';
   if (!empty($term->description)) {
@@ -1393,44 +1393,44 @@ function theme_category_new_page($result, $display_vars, $term, $class) {
   if (($display_vars['show_cat_sub_cats'] || $display_vars['hide_sub_categories']) && $display_vars['category_display'] == 'new_page') {
     $list = taxonomy_get_children($term->tid);
 
-				$scats = array();
+    $scats = array();
     foreach ($list as $tid => $sub_term) {
-						$sub_count = taxonomy_term_count_nodes($sub_term->tid, 'faq');
+      $sub_count = taxonomy_term_count_nodes($sub_term->tid, 'faq');
       if ($sub_count) {
         $sub_cat_desc = '';
         if (!empty($sub_term->description)) {
           $sub_cat_desc = '<div class="faq_qa_description"><p>';
           $sub_cat_desc .= $sub_term->description ."</p></div>";
         }
-								if ($display_vars['faq_count']) {
-										$scats[] = l($sub_term->name, "faq/$sub_term->tid") 
-												." ($sub_count) $sub_cat_desc";
-								}
-								else {
-										$scats[] = l($sub_term->name, "faq/$sub_term->tid"). $sub_cat_desc;
-								}
+        if ($display_vars['faq_count']) {
+          $scats[] = l($sub_term->name, "faq/$sub_term->tid") 
+            ." ($sub_count) $sub_cat_desc";
+        }
+        else {
+          $scats[] = l($sub_term->name, "faq/$sub_term->tid") . $sub_cat_desc;
+        }
       }
     }
-				$list_style = variable_get('faq_category_listing', 'ul');
-				$sub_cats .= theme('item_list', $scats, NULL, $list_style, array("class" => "faq_category_list"));
+    $list_style = variable_get('faq_category_listing', 'ul');
+    $sub_cats .= theme('item_list', $scats, NULL, $list_style, array("class" => "faq_category_list"));
   }
 
 
-  $output = '<div class="faq_category_group">' ."\n";
-		if ($display_vars['display_header'] == 1) {
-				$output .= '<div class="faq_qa_header">'. $header. $desc ."</div>\n";
-		}
-		else {
-				$output .= '<div class="faq_qa_header">'. $desc ."</div>\n";
-		}
+  $output = '<div class="faq_category_group">'."\n";
+  if ($display_vars['display_header'] == 1) {
+    $output .= '<div class="faq_qa_header">'. $header . $desc ."</div>\n";
+  }
+  else {
+    $output .= '<div class="faq_qa_header">'. $desc ."</div>\n";
+  }
   $output .= $sub_cats;
   $sub_cats = '';
 
   if ($get_sub_terms == $term->tid) {
-    $output .= '<div class="faq_qa">' ."\n";
+    $output .= '<div class="faq_qa">'."\n";
   }
   else {
-    $output .= '<div class="'.$class.'">' ."\n";
+    $output .= '<div class="'. $class .'">'."\n";
   }
 
   if (($get_sub_terms && $display_vars['category_display'] == 'categories_inline') || (($display_vars['show_cat_sub_cats'] || $display_vars['hide_sub_categories']) && $display_vars['category_display'] == 'hide_qa')) {
@@ -1438,8 +1438,8 @@ function theme_category_new_page($result, $display_vars, $term, $class) {
 
     foreach ($list as $tid => $sub_term) {
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-								$sub_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
-								$display_vars['display_header'] = 1;
+        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
+        $display_vars['display_header'] = 1;
         $sub_cats .= '<div class="faq_category_indent">';
         $sub_cats .= theme('category_new_page', $sub_result, $display_vars, $sub_term, $class);
         $sub_cats .= '</div>';
@@ -1450,13 +1450,13 @@ function theme_category_new_page($result, $display_vars, $term, $class) {
 
 
   if (db_num_rows($result)) {
-				$items = array();
+    $items = array();
     while ($node = db_fetch_object($result)) {
       $node = node_load($node->nid);
       $items[] = l($node->title, "node/$node->nid");
     }
-				$list_style = variable_get('faq_question_listing', 'ul');
-				$output .= theme('item_list', $items, NULL, $list_style, array("class" => "faq_ul_new_page"));
+    $list_style = variable_get('faq_question_listing', 'ul');
+    $output .= theme('item_list', $items, NULL, $list_style, array("class" => "faq_ul_new_page"));
   }
   $output .= "</div>\n</div>\n";
 
@@ -1485,12 +1485,12 @@ function faq_block($op = 'list', $delta = 0, $edit = array()) {
             }
             if (sizeof($terms) > 0) {
               $block['subject'] = t('FAQ Categories');
-														$items = array();
+              $items = array();
               foreach ($terms as $name => $tid) {
                 $items[] = l($name, 'faq/'. $tid);
               }
-														$list_style = variable_get('faq_category_listing', 'ul');
-														$block['content'] = theme('item_list', $items, NULL, $list_style);
+              $list_style = variable_get('faq_category_listing', 'ul');
+              $block['content'] = theme('item_list', $items, NULL, $list_style);
             }
           }
           break;
@@ -1530,16 +1530,16 @@ function faq_block($op = 'list', $delta = 0, $edit = array()) {
 
 function theme_faq_highlights($num = 5) {
 
-		$result = db_query_range(db_rewrite_sql("SELECT n.nid, n.title FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid WHERE n.type='faq' AND n.status = 1 ORDER BY n.created DESC", "n", "nid"), 0, $num);
+  $result = db_query_range(db_rewrite_sql("SELECT n.nid, n.title FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid WHERE n.type='faq' AND n.status = 1 ORDER BY n.created DESC", "n", "nid"), 0, $num);
 
-		$items = array();
+  $items = array();
   while ($node = db_fetch_object($result)) {
     $node = node_load(array('nid' => $node->nid));
     $node = node_prepare($node);
-				$items[] = l($node->title, 'node/'.$node->nid);
+    $items[] = l($node->title, 'node/'. $node->nid);
   }
-		$list_style = variable_get('faq_question_listing', 'ul');
-		$output = theme('item_list', $items, NULL, $list_style);
+  $list_style = variable_get('faq_question_listing', 'ul');
+  $output = theme('item_list', $items, NULL, $list_style);
   $output .= l(t('All FAQs'), 'faq');
 
   return $output;
@@ -1547,80 +1547,80 @@ function theme_faq_highlights($num = 5) {
 
 function _get_indented_faq_terms($vid, $tid, $display_vars) {
 
-		$items = array();
-		$tree = taxonomy_get_tree($vid, $tid, -1, 1);
+  $items = array();
+  $tree = taxonomy_get_tree($vid, $tid, -1, 1);
 
-		foreach ($tree as $term) {
+  foreach ($tree as $term) {
 
-				$tree_count = taxonomy_term_count_nodes($term->tid, 'faq');
+    $tree_count = taxonomy_term_count_nodes($term->tid, 'faq');
 
-				if ($tree_count) {
-						// get term description
-						$desc = '';
-						if (!empty($term->description)) {
-								$desc = '<div class="faq_qa_description"><p>';
-								$desc .= $term->description ."</p></div>";
-						}
+    if ($tree_count) {
+      // get term description
+      $desc = '';
+      if (!empty($term->description)) {
+        $desc = '<div class="faq_qa_description"><p>';
+        $desc .= $term->description ."</p></div>";
+      }
 
-						// see if this term has any nodes itself, should it be a link?
-						$result = db_query(db_rewrite_sql("SELECT COUNT(n.nid) AS c FROM {term_node} t INNER JOIN {node} n ON t.nid = n.nid WHERE n.status = 1 AND n.type = 'faq' AND t.tid = '%d' ", "n", "nid"), $term->tid);
-						$term_count = db_fetch_object($result);
+      // see if this term has any nodes itself, should it be a link?
+      $result = db_query(db_rewrite_sql("SELECT COUNT(n.nid) AS c FROM {term_node} t INNER JOIN {node} n ON t.nid = n.nid WHERE n.status = 1 AND n.type = 'faq' AND t.tid = '%d' ", "n", "nid"), $term->tid);
+      $term_count = db_fetch_object($result);
 
-						if ($term_count->c > 0) {
-								if ($display_vars["faq_count"]) {
-										$count = $term_count->c;
-										if ($display_vars['hide_sub_categories']) {
-												$count = $tree_count;
-										}
-										$cur_item = l($term->name, "faq/$term->tid") ." ($count) ". $desc;
-								}
-								else {
-										$cur_item = l($term->name, "faq/$term->tid"). $desc;
-								}
-						}
-						else {
-								$cur_item = check_plain($term->name). $desc;
-						}
+      if ($term_count->c > 0) {
+        if ($display_vars["faq_count"]) {
+          $count = $term_count->c;
+          if ($display_vars['hide_sub_categories']) {
+            $count = $tree_count;
+          }
+          $cur_item = l($term->name, "faq/$term->tid") ." ($count) ". $desc;
+        }
+        else {
+          $cur_item = l($term->name, "faq/$term->tid") . $desc;
+        }
+      }
+      else {
+        $cur_item = check_plain($term->name) . $desc;
+      }
 
-						if (!$display_vars['hide_sub_categories']) {
-								$term_items = _get_indented_faq_terms($vid, $term->tid, $display_vars);
-						}
-						$items[] = array("data" => $cur_item, "children" => $term_items);
+      if (!$display_vars['hide_sub_categories']) {
+        $term_items = _get_indented_faq_terms($vid, $term->tid, $display_vars);
+      }
+      $items[] = array("data" => $cur_item, "children" => $term_items);
 
-				}
-		}
+    }
+  }
 
-		return $items;
+  return $items;
 }
 
 
 function faq_get_terms() {
   $display_vars['faq_count'] = variable_get('faq_count', FALSE);
   $display_vars['hide_sub_categories'] = variable_get('faq_hide_sub_categories', FALSE);
-		$items = array();
-		$vocabularies = taxonomy_get_vocabularies("faq");
-		foreach ($vocabularies as $vid => $vobj) {
-				$vocab_items = _get_indented_faq_terms($vid, 0, $display_vars);
-				$items = array_merge($items, $vocab_items);
-		}
-		return theme('item_list', $items);
+  $items = array();
+  $vocabularies = taxonomy_get_vocabularies("faq");
+  foreach ($vocabularies as $vid => $vobj) {
+    $vocab_items = _get_indented_faq_terms($vid, 0, $display_vars);
+    $items = array_merge($items, $vocab_items);
+  }
+  return theme('item_list', $items);
 }
 
 function faq_get_faq_list() {
-		// return list of vocab terms if categories are configured
-		$use_categories = variable_get('faq_use_categories', FALSE);
-		if ($use_categories) {
-				return faq_get_terms();
-		}
+  // return list of vocab terms if categories are configured
+  $use_categories = variable_get('faq_use_categories', FALSE);
+  if ($use_categories) {
+    return faq_get_terms();
+  }
 
-		// otherwise return list of weighted FAQ nodes
-		$items = array();
-		$result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {faq_weights} w ON w.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND (w.tid = 0 OR w.tid IS NULL) ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"));
+  // otherwise return list of weighted FAQ nodes
+  $items = array();
+  $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {faq_weights} w ON w.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND (w.tid = 0 OR w.tid IS NULL) ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"));
   while ($node = db_fetch_object($result)) {
     $items[] = l($node->title, "node/$node->nid");
   }
 
-		return theme('item_list', $items);
+  return theme('item_list', $items);
 }
 
 /**
