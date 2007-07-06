@@ -10,7 +10,7 @@ Drupal.toJson = function(v) {
     case 'object':
       var output = "{";
       for(i in v) {
-        output = output + i + ":" + Drupal.toJSON(v[i]) + ",";
+        output = output + i + ":" + Drupal.toJson(v[i]) + ",";
       }
       output = output + "}";
       return output;
