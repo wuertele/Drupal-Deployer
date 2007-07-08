@@ -214,7 +214,7 @@ function recipe_form(&$node) {
           $form['ingredients'][$j]['quantity'] = array(
             '#type' => 'textfield',
             '#title' => '',
-            '#default_value' => $ingredient->quantity,
+            '#default_value' => preg_replace('/\&frasl;/', '/', recipe_ingredient_quantity_from_decimal($ingredient->quantity)),
             '#size' => 8,
             '#maxlength' => 8,
           );
@@ -671,7 +671,7 @@ function recipe_ingredient_quantity_from_decimal($ingredient_quantity) {
         $numerator = $numerator * $sign;
     }
 
-    $ingredient_quantity = sprintf(variable_get('recipe_fraction_display', '{%d} %d&frasl;%d'), $whole, $numerator, $denominator);
+    $ingredient_quantity = sprintf(variable_get('recipe_fraction_display', t('{%d} %d&frasl;%d')), $whole, $numerator, $denominator);
 
     if ( ($whole == 0) && (strpos($ingredient_quantity, '{') >= 0) ) {
       /* remove anything in curly braces */
@@ -1429,7 +1429,7 @@ function theme_node_recipe($node, $yield_form = TRUE) {
         else {
           $ingredient->quantity = '';
         }
-        if (variable_get('recipe_fraction_display', '')) {
+        if (variable_get('recipe_fraction_display', t('{%d} %d&frasl;%d'))) {
           $ingredient->quantity = recipe_ingredient_quantity_from_decimal($ingredient->quantity);
         }
 
@@ -1446,10 +1446,10 @@ function theme_node_recipe($node, $yield_form = TRUE) {
   }
   if ($node->preptime) {
     if ($node->preptime < 60) {
-      $preptime = t("@n minutes", array ("@n" => $node->preptime));
+      $preptime = t("!n minutes", array ("!n" => $node->preptime));
     }
     else {
-      $preptime = t("@n hours", array ("@n" => recipe_ingredient_quantity_from_decimal($node->preptime / 60)));
+      $preptime = t("!n hours", array ("!n" => recipe_ingredient_quantity_from_decimal($node->preptime / 60)));
     }
      $summary .= '<tr><th>Prep Time</th><td>'.$preptime.'</td></tr>';
   }
