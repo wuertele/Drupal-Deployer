@@ -1,18 +1,20 @@
 <?php
+// $Id$
 
 /**
+ * @file
+ * Enhanced control over the page title (in the head tag).
+ *
  * This module gives you control over the page title. It gives you the chance
  * to provide templates for how the title should be structured, and on node
  * pages, gives you the chance to specify the page title rather than defaulting
  * to the node title.
  */
 
-define(MODULE_DESCRIPTION, 'Enhanced control over the page title (in the &lt;head&gt; tag).');
-
 function page_title_help($section) {
   switch ($section) {
     case 'admin/modules#description':
-      $output = t(MODULE_DESCRIPTION);
+      $output = t('Enhanced control over the page title (in the &lt;head&gt; tag).');
       break;
     case 'admin/help#page_title':
       $output = t('<p>Adds an extra form element to node creation forms that allows you to specify the page title.</p>
@@ -23,7 +25,7 @@ function page_title_help($section) {
         <ol><li><em>page title</em> | <em>site name</em></li>
             <li><em>site name</em> | <em>site slogan</em></li></ol>
         <p>#1 is the common case where the visitor is viewing a specific page whereas #2 is used at least for the default front page (<em>node</em>).</p>
-        <p>The page_title.module lets you change these defaults in two ways. First, you can adjust the templates below using the placeholders given. This will change the way the default page titles are created. Second, on every node creation form, you can have the option of specifying a title that is different than the title of the node. If a value is provided, this will be used to generate the <code>@page_title</code> placeholder. If left blank, <code>@page_title</code> will be the node's title, as is now the case.</p>");
+        <p>The page_title.module lets you change these defaults in two ways. First, you can adjust the templates below using the placeholders given. This will change the way the default page titles are created. Second, on every node creation form, you can have the option of specifying a title that is different than the title of the node. If a value is provided, this will be used to generate the <code>!page_title</code> placeholder. If left blank, <code>!page_title</code> will be the node's title, as is now the case.</p>");
       break;
   }
   return $output;
@@ -44,7 +46,7 @@ function page_title_menu($may_cache) {
     $items[] = array(
       'path' => 'admin/settings/page_title',
       'title' => t('Page title'),
-      'description' => t(MODULE_DESCRIPTION),
+      'description' => t('Enhanced control over the page title (in the &lt;head&gt; tag).'),
       'callback' => 'drupal_get_form',
       'callback arguments' => 'page_title_admin_settings',
       'access' => user_access('administer site configuration'),
@@ -62,16 +64,16 @@ function page_title_admin_settings() {
   $form['page_title']['page_title_individual'] = array(
     '#type' => 'textfield',
     '#title' => t('Pattern for individual pages'),
-    '#default_value' => variable_get('page_title_individual', '@page_title | @site_name'),
+    '#default_value' => variable_get('page_title_individual', '!page_title | !site_name'),
     '#maxlength' => 128,
-    '#description' => t('Available placeholders: <code>@page_title</code>, <code>@site_name</code>, <code>@site_slogan</code>.'),
+    '#description' => t('Available placeholders: <code>!page_title</code>, <code>!site_name</code>, <code>!site_slogan</code>.'),
   );
   $form['page_title']['page_title_front'] = array(
     '#type' => 'textfield',
     '#title' => t('Pattern for front page'),
-    '#default_value' => variable_get('page_title_front', '@site_name | @site_slogan'),
+    '#default_value' => variable_get('page_title_front', '!site_name | !site_slogan'),
     '#maxlength' => 128,
-    '#description' => t('Available placeholders: <code>@site_name</code>, <code>@site_slogan</code>.'),
+    '#description' => t('Available placeholders: <code>!site_name</code>, <code>!site_slogan</code>.'),
   );
   return system_settings_form($form);
 }
@@ -148,23 +150,28 @@ function page_title_node_get_title($nid) {
  * the page hook of function _phptemplate_variables in template.php.
  */
 function page_title_page_get_title() {
-  $page_title_individual = variable_get('page_title_individual', '@page_title | @site_name');
-  $page_title_front = variable_get('page_title_front', '@site_name | @site_slogan');
+  static $title = NULL;
 
-  // this is the normal title. For node pages it is $node->title
-  $drupal_title = drupal_get_title();
+  if (is_null($title)) {
+    $page_title_individual = variable_get('page_title_individual', '!page_title | !site_name');
+    $page_title_front = variable_get('page_title_front', '!site_name | !site_slogan');
 
-  // this is the custom page title. For node pages it is $node->page_title.
-  $page_title = (page_title_set_title()) ? strip_tags(page_title_set_title()) : $drupal_title;
+    // this is the normal title. For node pages it is $node->title
+    $drupal_title = drupal_get_title();
 
-  $site_name = variable_get('site_name', 'drupal');
-  $site_slogan = variable_get('site_slogan', '');
+    // this is the custom page title. For node pages it is $node->page_title.
+    $page_title = (page_title_set_title()) ? page_title_set_title() : $drupal_title;
+    $page_title = strip_tags($page_title);
 
-  if ($drupal_title) {
-    $title = t($page_title_individual, array('@page_title' => $page_title, '@site_name' => $site_name, '@site_slogan' => $site_slogan));
-  }
-  else {
-    $title = t($page_title_front, array('@site_name' => $site_name, '@site_slogan' => $site_slogan));
+    $site_name = variable_get('site_name', 'drupal');
+    $site_slogan = variable_get('site_slogan', '');
+
+    if (drupal_is_front_page() || !$drupal_title) {
+      $title = t($page_title_front, array('!site_name' => $site_name, '!site_slogan' => $site_slogan));
+    }
+    else {
+      $title = t($page_title_individual, array('!page_title' => $page_title, '!site_name' => $site_name, '!site_slogan' => $site_slogan));
+    }
   }
   return $title;
 }
