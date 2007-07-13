@@ -262,7 +262,7 @@ function project_release_history_write_xml($project, $api_version, $xml) {
 
   // Now we can atomically rename the .new into place in the "live" spot.
   if (!rename($tmp_filename, $filename)) {
-    wd_err(t("ERROR: rename(@old, $new) failed, can't write history for %project.", array('@old' => $tmp_filename, '@new' => $filename, '%project' => $project->title)));
+    wd_err(t("ERROR: rename(@old, @new) failed, can't write history for %project.", array('@old' => $tmp_filename, '@new' => $filename, '%project' => $project->title)));
     return FALSE;
   }
   return TRUE;
