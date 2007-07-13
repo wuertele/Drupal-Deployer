@@ -169,7 +169,9 @@ function project_release_history_generate_project_xml($project_nid, $api_tid) {
     $xml .= " <release>\n";
     $xml .= '  <name>'. check_plain($release->title) ."</name>\n";
     $xml .= '  <version>'. check_plain($release->version) ."</version>\n";
-    $xml .= '  <tag>'. check_plain($release->tag) ."</tag>\n";
+    if (!empty($release->tag) && $tag = check_plain($release->tag)) {
+      $xml .= '  <tag>'. $tag ."</tag>\n";
+    }
     foreach (array('major', 'minor', 'patch', 'extra') as $type) {
       $vers_type = "version_$type";
       if (isset($release->$vers_type)) {
