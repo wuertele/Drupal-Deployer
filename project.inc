@@ -353,7 +353,7 @@ function project_project_view($node, $teaser = false, $page = false) {
       $links[] = l(t('Browse the CVS repository'), $node->cvs);
     }
 
-    if (module_exists('cvs') && isset($node->cvs_repository) && $node->cvs_repository != 0) {
+    if (project_use_cvs($node)) {
       $links[] = l(t('View CVS messages'), 'project/cvs/'. $node->nid);
       $links[] = l(t('Developers'), 'project/developers/'. $node->nid);
     }
@@ -427,7 +427,7 @@ function project_project_access($op, $node) {
       if ($user->uid && user_access('maintain projects')) {
         // Since this CVS access checking is non-standard, we need to
         // special-case uid 1 to always allow everything.
-        if ($user->uid != 1 && module_exists('cvs') && variable_get('cvs_restrict_project_creation',1)) {
+        if ($user->uid != 1 && project_use_cvs($node->project) && variable_get('cvs_restrict_project_creation',1)) {
           return db_result(db_query("SELECT uid FROM {cvs_accounts} WHERE uid = %d AND status = %d", $user->uid, CVS_APPROVED)) ? TRUE : FALSE;
         }
         else {
