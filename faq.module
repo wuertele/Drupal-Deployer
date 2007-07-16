@@ -772,29 +772,32 @@ function theme_questions_top($result, $display_vars) {
   // loop through results
   $questions = array();
   while ($node = db_fetch_object($result)) {
-    $anchor = "n". $node->nid;
+    $node_obj = node_load($node->nid);
+    if (node_access("view", $node_obj)) {
+      $anchor = "n". $node->nid;
 
-    $questions[] = l($node->title, 'faq', NULL, NULL, $anchor);
+      $questions[] = l($node->title, 'faq', NULL, NULL, $anchor);
 
-    $answers .= '<dt class="faq_dt_questions_top">'. l($node->title, "node/$node->nid", array("name" => "$anchor")) ."</dt>\n";
+      $answers .= '<dt class="faq_dt_questions_top">'. l($node->title, "node/$node->nid", array("name" => "$anchor")) ."</dt>\n";
 
-    // should we display teaser or full text
-    if ($display_vars['use_teaser']) {
-      $more_link = '';
-      if (!empty($display_vars['more_link']) && strlen($node->teaser) < strlen($node->body)) {
-        $more_link = '<p class="faq_more_link">';
-        $more_link .= l(t($display_vars['more_link']), "node/$node->nid") .'</p>';
+      // should we display teaser or full text
+      if ($display_vars['use_teaser']) {
+        $more_link = '';
+        if (!empty($display_vars['more_link']) && strlen($node->teaser) < strlen($node->body)) {
+          $more_link = '<p class="faq_more_link">';
+          $more_link .= l(t($display_vars['more_link']), "node/$node->nid") .'</p>';
+        }
+        $answers .= '<dd class="faq_dd_questions_top">';
+        $answers .= check_markup($node->teaser, $node->format, FALSE);
+        $answers .= $more_link . $back_to_top ."</dd>\n";
       }
-      $answers .= '<dd class="faq_dd_questions_top">';
-      $answers .= check_markup($node->teaser, $node->format, FALSE);
-      $answers .= $more_link . $back_to_top ."</dd>\n";
-    }
 
-    // full text
-    else {
-      $answers .= '<dd class="faq_dd_questions_top">';
-      $answers .= check_markup($node->body, $node->format, FALSE);
-      $answers .= $back_to_top ."</dd>\n";
+      // full text
+      else {
+        $answers .= '<dd class="faq_dd_questions_top">';
+        $answers .= check_markup($node->body, $node->format, FALSE);
+        $answers .= $back_to_top ."</dd>\n";
+      }
     }
   }
 
@@ -837,7 +840,7 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
   if ($display_vars['category_display'] == 'hide_qa') {
     $header = "<$hdr class=\"faq_header\">";
     $header .= l($term->name, "faq/$term->tid");
-    if ($display_vars['faq_count']) $header .= " ($count)";
+    if ($display_vars['faq_count']) $header .= " (%d)";
     $header .= "</$hdr>\n";
     $ans_hdr = "<$hdr class=\"faq_header\">";
     $ans_hdr .= check_plain($term->name) ."</$hdr>\n";
@@ -845,7 +848,7 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
   else {
     $header = "<$hdr class=\"faq_header\">";
     $header .= check_plain($term->name);
-    if ($display_vars['faq_count']) $header .= " ($count)";
+    if ($display_vars['faq_count']) $header .= " (%d)";
     $header .= "</$hdr>\n";
     $ans_hdr = "<$hdr class=\"faq_header\">";
     $ans_hdr .= check_plain($term->name) ."</$hdr>\n";
@@ -927,31 +930,35 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
     $questions = array();
     while ($node = db_fetch_object($result)) {
       $node = node_load($node->nid);
-      $anchor = $term->tid ."n". $node->nid;
+      if (node_access("view", $node)) {
+        $anchor = $term->tid ."n". $node->nid;
 
-      $questions[] = l($node->title, $this_page, NULL, NULL, $anchor);
+        $questions[] = l($node->title, $this_page, NULL, NULL, $anchor);
 
-      $answers .= '<dt class="faq_dt_questions_top">'. l($node->title, "node/$node->nid", array("name" => "$anchor")) ."</dt>\n";
+        $answers .= '<dt class="faq_dt_questions_top">'. l($node->title, "node/$node->nid", array("name" => "$anchor")) ."</dt>\n";
 
-      // should we display teaser or full text
-      if ($display_vars['use_teaser']) {
-        $more_link = '';
-        if (!empty($display_vars['more_link']) && strlen($node->teaser) < strlen($node->body)) {
-          $more_link = '<p class="faq_more_link">';
-          $more_link .= l($display_vars['more_link'], "node/$node->nid") .'</p>';
+        // should we display teaser or full text
+        if ($display_vars['use_teaser']) {
+          $more_link = '';
+          if (!empty($display_vars['more_link']) && strlen($node->teaser) < strlen($node->body)) {
+            $more_link = '<p class="faq_more_link">';
+            $more_link .= l($display_vars['more_link'], "node/$node->nid") .'</p>';
+          }
+          $answers .= '<dd class="faq_dd_questions_top">';
+          $answers .= check_markup($node->teaser, $node->format, FALSE);
+          $answers .= $more_link . $back_to_top ."</dd>\n";
         }
-        $answers .= '<dd class="faq_dd_questions_top">';
-        $answers .= check_markup($node->teaser, $node->format, FALSE);
-        $answers .= $more_link . $back_to_top ."</dd>\n";
-      }
 
-      // full text
+        // full text
+        else {
+          $answers .= '<dd class="faq_dd_questions_top">';
+          $answers .= check_markup($node->body, $node->format, FALSE);
+          $answers .= $back_to_top ."</dd>\n";
+        }
+      }
       else {
-        $answers .= '<dd class="faq_dd_questions_top">';
-        $answers .= check_markup($node->body, $node->format, FALSE);
-        $answers .= $back_to_top ."</dd>\n";
+        $count--;
       }
-
     } // end of while
 
     $list_style = variable_get('faq_question_listing', 'ul');
@@ -1018,8 +1025,10 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
     }
   }
 
+  if ($display_vars['faq_count']) $output = sprintf($output, $count);
   $data["output"] = $output;
   $data["output_answers"] = $output_answers;
+
   return $data;
 }
 
@@ -1028,10 +1037,13 @@ function theme_hide_answer($result) {
 
   $output = '<dl class="faq_dl">'."\n";
   while ($node = db_fetch_object($result)) {
-    $output .= '<dt class="faq_question">';
-    $output .= l($node->title, "node/$node->nid") ."</dt>\n";
-    $output .= '<dd class="faq_answer">';
-    $output .= check_markup($node->body, $node->format, FALSE) ."</dd>\n";
+    $node_obj = node_load($node->nid);
+    if (node_access("view", $node_obj)) {
+      $output .= '<dt class="faq_question">';
+      $output .= l($node->title, "node/$node->nid") ."</dt>\n";
+      $output .= '<dd class="faq_answer">';
+      $output .= check_markup($node->body, $node->format, FALSE) ."</dd>\n";
+    }
   }
   $output .= "</dl>\n";
 
@@ -1061,13 +1073,13 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
   if ($display_vars['category_display'] == 'hide_qa') {
     $header = "<$hdr class=\"faq_header\">";
     $header .= l($term->name, "faq/$term->tid");
-    if ($display_vars['faq_count']) $header .= " ($count)";
+    if ($display_vars['faq_count']) $header .= " (%d)";
     $header .= "</$hdr>\n";
   }
   else {
     $header = "<$hdr class=\"faq_header\">";
     $header .= check_plain($term->name);
-    if ($display_vars['faq_count']) $header .= " ($count)";
+    if ($display_vars['faq_count']) $header .= " (%d)";
     $header .= "</$hdr>\n";
   }
 
@@ -1145,15 +1157,21 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
 
     while ($node = db_fetch_object($result)) {
       $node = node_load($node->nid);
-      $output .= '<dt class="faq_question">';
-      $output .= l($node->title, "node/$node->nid") ."</dt>\n";
-      $output .= '<dd class="faq_answer">';
-      $output .= check_markup($node->body, $node->format, FALSE) ."</dd>\n";
+      if (node_access("view", $node)) {
+        $output .= '<dt class="faq_question">';
+        $output .= l($node->title, "node/$node->nid") ."</dt>\n";
+        $output .= '<dd class="faq_answer">';
+        $output .= check_markup($node->body, $node->format, FALSE) ."</dd>\n";
+      }
+      else {
+        $count--;
+      }
     }
     $output .= "</dl>\n";
   }
   $output .= "</div>\n</div>\n";
 
+  if ($display_vars['faq_count']) $output = sprintf($output, $count);
   return $output;
 }
 
@@ -1168,25 +1186,28 @@ function theme_questions_inline($result, $display_vars) {
 
   $output = "<dl>\n";
   while ($node = db_fetch_object($result)) {
-    $output .= "<dt>". l($node->title, "node/$node->nid") ."</dt>\n";
+    $node_obj = node_load($node->nid);
+    if (node_access("view", $node_obj)) {
+      $output .= "<dt>". l($node->title, "node/$node->nid") ."</dt>\n";
 
-    // should we display teaser or full text
-    if ($display_vars['use_teaser']) {
-      $more_link = '';
-      if (!empty($display_vars['more_link']) && strlen($node->teaser) < strlen($node->body)) {
-        $more_link = '<p class="faq_more_link">';
-        $more_link .= l(t($display_vars['more_link']), "node/$node->nid") .'</p>';
+      // should we display teaser or full text
+      if ($display_vars['use_teaser']) {
+        $more_link = '';
+        if (!empty($display_vars['more_link']) && strlen($node->teaser) < strlen($node->body)) {
+          $more_link = '<p class="faq_more_link">';
+          $more_link .= l(t($display_vars['more_link']), "node/$node->nid") .'</p>';
+        }
+        $output .= '<dd class="faq_dd_questions_inline">';
+        $output .= check_markup($node->teaser, $node->format, FALSE);
+        $output .= $more_link . $back_to_top ."</dd>\n";
       }
-      $output .= '<dd class="faq_dd_questions_inline">';
-      $output .= check_markup($node->teaser, $node->format, FALSE);
-      $output .= $more_link . $back_to_top ."</dd>\n";
-    }
 
-    // full text
-    else {
-      $output .= '<dd class="faq_dd_questions_inline">';
-      $output .= check_markup($node->body, $node->format, FALSE);
-      $output .= $back_to_top ."</dd>\n";
+      // full text
+      else {
+        $output .= '<dd class="faq_dd_questions_inline">';
+        $output .= check_markup($node->body, $node->format, FALSE);
+        $output .= $back_to_top ."</dd>\n";
+      }
     }
   }
   $output .= "</dl>\n";
@@ -1223,13 +1244,13 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
   if ($display_vars['category_display'] == 'hide_qa') {
     $header = "<$hdr class=\"faq_header\">";
     $header .= l($term->name, "faq/$term->tid");
-    if ($display_vars['faq_count']) $header .= " ($count)";
+    if ($display_vars['faq_count']) $header .= " (%d)";
     $header .= "</$hdr>\n";
   }
   else {
     $header = "<$hdr class=\"faq_header\">";
     $header .= check_plain($term->name);
-    if ($display_vars['faq_count']) $header .= " ($count)";
+    if ($display_vars['faq_count']) $header .= " (%d)";
     $header .= "</$hdr>\n";
   }
 
@@ -1310,39 +1331,48 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
 
     while ($node = db_fetch_object($result)) {
       $node = node_load($node->nid);
-      $output .= '<dt class="faq_dt_questions_inline">';
-      $output .= l($node->title, "node/$node->nid") ."</dt>\n";
+      if (node_access("view", $node)) {
+        $output .= '<dt class="faq_dt_questions_inline">';
+        $output .= l($node->title, "node/$node->nid") ."</dt>\n";
 
-      // should we display teaser or full text
-      if ($display_vars['use_teaser']) {
-        $more_link = '';
-        if (!empty($display_vars['more_link']) && strlen($node->teaser) < strlen($node->body)) {
-          $more_link = '<p class="faq_more_link">';
-          $more_link .= l($display_vars['more_link'], "node/$node->nid") .'</p>';
+        // should we display teaser or full text
+        if ($display_vars['use_teaser']) {
+          $more_link = '';
+          if (!empty($display_vars['more_link']) && strlen($node->teaser) < strlen($node->body)) {
+            $more_link = '<p class="faq_more_link">';
+            $more_link .= l($display_vars['more_link'], "node/$node->nid") .'</p>';
+          }
+          $output .= '<dd class="faq_dd_questions_inline">';
+          $output .= check_markup($node->teaser, $node->format, FALSE);
+          $output .= $more_link . $back_to_top ."</dd>\n";
         }
-        $output .= '<dd class="faq_dd_questions_inline">';
-        $output .= check_markup($node->teaser, $node->format, FALSE);
-        $output .= $more_link . $back_to_top ."</dd>\n";
-      }
 
-      // full text
+        // full text
+        else {
+          $output .= '<dd class="faq_dd_questions_inline">';
+          $output .= check_markup($node->body, $node->format, FALSE);
+          $output .= $back_to_top ."</dd>\n";
+        }
+      }
       else {
-        $output .= '<dd class="faq_dd_questions_inline">';
-        $output .= check_markup($node->body, $node->format, FALSE);
-        $output .= $back_to_top ."</dd>\n";
+        $count--;
       }
     }
     $output .= "</dl>\n";
   }
   $output .= "</div>\n</div>\n";
 
+  if ($display_vars['faq_count']) $output = sprintf($output, $count);
   return $output;
 }
 
 function theme_new_page($result) {
   $items = array();
   while ($node = db_fetch_object($result)) {
-    $items[] = l($node->title, "node/$node->nid");
+    $node_obj = node_load($node->nid);
+    if (node_access("view", $node_obj)) {
+      $items[] = l($node->title, "node/$node->nid");
+    }
   }
   $list_style = variable_get('faq_question_listing', 'ul');
   $output .= theme('item_list', $items, NULL, $list_style, array("class" => "faq_question_listing"));
@@ -1372,13 +1402,13 @@ function theme_category_new_page($result, $display_vars, $term, $class) {
   if ($display_vars['category_display'] == 'hide_qa') {
     $header = "<$hdr class=\"faq_header\">";
     $header .= l($term->name, "faq/$term->tid");
-    if ($display_vars['faq_count']) $header .= " ($count)";
+    if ($display_vars['faq_count']) $header .= " (%d)";
     $header .= "</$hdr>\n";
   }
   else {
     $header = "<$hdr class=\"faq_header\">";
     $header .= check_plain($term->name);
-    if ($display_vars['faq_count']) $header .= " ($count)";
+    if ($display_vars['faq_count']) $header .= " (%d)";
     $header .= "</$hdr>\n";
   }
 
@@ -1453,13 +1483,19 @@ function theme_category_new_page($result, $display_vars, $term, $class) {
     $items = array();
     while ($node = db_fetch_object($result)) {
       $node = node_load($node->nid);
-      $items[] = l($node->title, "node/$node->nid");
+      if (node_access("view", $node)) {
+        $items[] = l($node->title, "node/$node->nid");
+      }
+      else {
+        $count--;
+      }
     }
     $list_style = variable_get('faq_question_listing', 'ul');
     $output .= theme('item_list', $items, NULL, $list_style, array("class" => "faq_ul_new_page"));
   }
   $output .= "</div>\n</div>\n";
 
+  if ($display_vars['faq_count']) $output = sprintf($output, $count);
   return $output;
 }
 
@@ -1536,7 +1572,9 @@ function theme_faq_highlights($num = 5) {
   while ($node = db_fetch_object($result)) {
     $node = node_load(array('nid' => $node->nid));
     $node = node_prepare($node);
-    $items[] = l($node->title, 'node/'. $node->nid);
+    if (node_access("view", $node)) {
+      $items[] = l($node->title, 'node/'. $node->nid);
+    }
   }
   $list_style = variable_get('faq_question_listing', 'ul');
   $output = theme('item_list', $items, NULL, $list_style);
@@ -1617,7 +1655,10 @@ function faq_get_faq_list() {
   $items = array();
   $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {faq_weights} w ON w.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND (w.tid = 0 OR w.tid IS NULL) ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"));
   while ($node = db_fetch_object($result)) {
-    $items[] = l($node->title, "node/$node->nid");
+    $node_obj = node_load($node->nid);
+    if (node_access("view", $node_obj)) {
+      $items[] = l($node->title, "node/$node->nid");
+    }
   }
 
   return theme('item_list', $items);
