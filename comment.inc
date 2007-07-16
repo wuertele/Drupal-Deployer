@@ -136,14 +136,14 @@ function _project_comment_view_single($comment, $count) {
   $output = '';
 
   $fields = array(
-    'title' => 'Title',
-    'pid' => 'Project',
-    'rid' => 'Version',
-    'component' => 'Component',
-    'category' => 'Category',
-    'priority' => 'Priority',
-    'assigned' => 'Assigned to',
-    'sid' => 'Status'
+    'title' => t('Title'),
+    'pid' => t('Project'),
+    'rid' => t('Version'),
+    'component' => t('Component'),
+    'category' => t('Category'),
+    'priority' => t('Priority'),
+    'assigned' => t('Assigned to'),
+    'sid' => t('Status'),
   );
 
   // If we got this from the DB, we'll have a $data field to unserialize.
@@ -159,14 +159,14 @@ function _project_comment_view_single($comment, $count) {
   foreach ($fields as $field => $text) {
     if (isset($comment->old->$field) && isset($comment->new->$field)) {
       $summary[] = array(
-        t($text) .':',
+        $text .':',
         project_mail_summary($field, $comment->old->$field),
         '&raquo; '. project_mail_summary($field, $comment->new->$field)
       );
     }
     elseif (isset($node->$field) && isset($comment->$field) && $node->$field != $comment->$field ) {
       $summary[] = array(
-        t($text) .':',
+        $text .':',
         project_mail_summary($field, $node->$field),
         '&raquo; '. project_mail_summary($field, $comment->$field)
       );
