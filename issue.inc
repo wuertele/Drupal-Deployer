@@ -1567,7 +1567,7 @@ function project_issue_query_result($query = NULL, $format = 'html', $search = t
   }
   $header[] = array('data' => t('Summary'), 'field' => 'n.title');
   $header[] = array('data' => t('Status'), 'field' => 'p.sid');
-  $header[] = array('data' => t('Pri'), 'field' => 'p.priority');
+  $header[] = array('data' => t('Priority'), 'field' => 'p.priority');
   $header[] = array('data' => t('Category'), 'field' => 'p.category');
   if (count($releases)) {
     $header[] = array('data' => t('Version'), 'field' => 'p.rid');
