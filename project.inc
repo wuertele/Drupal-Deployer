@@ -344,6 +344,9 @@ function project_project_view($node, $teaser = false, $page = false) {
       $links[] = l(t('Report new bug'), 'node/add/project_issue/'. $node->uri .'/bug');
       $links[] = l(t('Request new feature'), 'node/add/project_issue/'. $node->uri .'/feature');
     }
+    else {
+      $links[] = theme('project_issue_create_forbidden', $node->uri);
+    }
 
     if ($links) {
       $node->content['support'] = array(
