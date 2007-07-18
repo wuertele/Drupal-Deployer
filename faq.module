@@ -290,6 +290,25 @@ function faq_questions_settings_form() {
     '#default_value' => variable_get('faq_question_listing', 'ul'),
     );
 
+  $form['faq_questions_misc']['faq_qa_mark'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Label questions and answers'),
+    '#description' => t('This option is only valid for the "Questions Inline" layout.  It labels all questions on the faq page with the "question label" setting and all answers with the "answer label" setting.  For example these could be set to "Q:" and "A:".'),
+    '#default_value' => variable_get('faq_qa_mark', FALSE),
+    );
+  $form['faq_questions_misc']['faq_question_label'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Question Label'),
+    '#description' => t('The label to pre-pend to the question text in the "Questions Inline" layout if labelling is enabled.'),
+    '#default_value' => variable_get('faq_question_label', 'Q:'),
+    );
+  $form['faq_questions_misc']['faq_answer_label'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Answer Label'),
+    '#description' => t('The label to pre-pend to the answer text in the "Questions Inline" layout if labelling is enabled.'),
+    '#default_value' => variable_get('faq_answer_label', 'A:'),
+    );
+
   $form['faq_questions_misc']['faq_use_teaser'] = array('#type' => 'checkbox',
     '#title' => t('Use answer teaser'),
     '#description' => t("This enables the display of the answer teaser text instead of the full answer when using the 'Questions inline' or 'Clicking on question takes user to answer further down the page' display options.  This is useful when you have long descriptive text.  The user can see the full answer by clicking on the question."),
@@ -570,6 +589,9 @@ function faq_page($tid = 0) {
 
 
   $faq_display = variable_get('faq_display', 'questions_top');
+  $display_vars['faq_qa_mark'] = variable_get('faq_qa_mark', FALSE);
+  $display_vars['faq_question_label'] = variable_get('faq_question_label', "Q:");
+  $display_vars['faq_answer_label'] = variable_get('faq_answer_label', "A:");
   $display_vars['back_to_top'] = variable_get('faq_back_to_top', 'Back to Top');
   $display_vars['use_teaser'] = variable_get('faq_use_teaser', FALSE);
   $display_vars['more_link'] = variable_get('faq_more_link', '>> more');
@@ -698,6 +720,9 @@ function _display_faq_by_category($faq_display, $category_display, $term, $displ
   $display_vars['display_header'] = $display_header;
   $display_vars['faq_display'] = $faq_display;
   $display_vars['category_display'] = $category_display;
+  $display_vars['faq_qa_mark'] = variable_get('faq_qa_mark', FALSE);
+  $display_vars['faq_question_label'] = variable_get('faq_question_label', "Q:");
+  $display_vars['faq_answer_label'] = variable_get('faq_answer_label', "A:");
   $display_vars['use_teaser'] = variable_get('faq_use_teaser', FALSE);
   $display_vars['more_link'] = variable_get('faq_more_link', '>> more');
   $display_vars['back_to_top'] = variable_get('faq_back_to_top', 'Back to Top');
@@ -1184,11 +1209,19 @@ function theme_questions_inline($result, $display_vars) {
     $back_to_top .= l(t($display_vars['back_to_top']), 'faq', array(), NULL, '') .'</p>';
   }
 
+  // configure labels
+  $que_label = '';
+  $ans_label = '';
+  if ($display_vars['faq_qa_mark']) {
+    $que_label = $display_vars["faq_question_label"] .' ';
+    $ans_label = '<strong>'. $display_vars["faq_answer_label"] .'</strong> ';
+  }
+
   $output = "<dl>\n";
   while ($node = db_fetch_object($result)) {
     $node_obj = node_load($node->nid);
     if (node_access("view", $node_obj)) {
-      $output .= "<dt>". l($node->title, "node/$node->nid") ."</dt>\n";
+      $output .= "<dt>". l($que_label . $node->title, "node/$node->nid") ."</dt>\n";
 
       // should we display teaser or full text
       if ($display_vars['use_teaser']) {
@@ -1198,14 +1231,14 @@ function theme_questions_inline($result, $display_vars) {
           $more_link .= l(t($display_vars['more_link']), "node/$node->nid") .'</p>';
         }
         $output .= '<dd class="faq_dd_questions_inline">';
-        $output .= check_markup($node->teaser, $node->format, FALSE);
+        $output .= check_markup($ans_label . $node->teaser, $node->format, FALSE);
         $output .= $more_link . $back_to_top ."</dd>\n";
       }
 
       // full text
       else {
         $output .= '<dd class="faq_dd_questions_inline">';
-        $output .= check_markup($node->body, $node->format, FALSE);
+        $output .= check_markup($ans_label . $node->body, $node->format, FALSE);
         $output .= $back_to_top ."</dd>\n";
       }
     }
@@ -1228,6 +1261,14 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
   if (!empty($display_vars['back_to_top'])) {
     $back_to_top = '<p class="faq_top_link">';
     $back_to_top .= l(t($display_vars['back_to_top']), $this_page, array(), NULL, '') .'</p>';
+  }
+
+  // configure labels
+  $que_label = '';
+  $ans_label = '';
+  if ($display_vars['faq_qa_mark']) {
+    $que_label = $display_vars["faq_question_label"] .' ';
+    $ans_label = '<strong>'. $display_vars["faq_answer_label"] .'</strong> ';
   }
 
   // get number of questions, and account for hidden sub-cats
@@ -1333,7 +1374,7 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
       $node = node_load($node->nid);
       if (node_access("view", $node)) {
         $output .= '<dt class="faq_dt_questions_inline">';
-        $output .= l($node->title, "node/$node->nid") ."</dt>\n";
+        $output .= l($que_label . $node->title, "node/$node->nid") ."</dt>\n";
 
         // should we display teaser or full text
         if ($display_vars['use_teaser']) {
@@ -1343,14 +1384,14 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
             $more_link .= l($display_vars['more_link'], "node/$node->nid") .'</p>';
           }
           $output .= '<dd class="faq_dd_questions_inline">';
-          $output .= check_markup($node->teaser, $node->format, FALSE);
+          $output .= check_markup($ans_label . $node->teaser, $node->format, FALSE);
           $output .= $more_link . $back_to_top ."</dd>\n";
         }
 
         // full text
         else {
           $output .= '<dd class="faq_dd_questions_inline">';
-          $output .= check_markup($node->body, $node->format, FALSE);
+          $output .= check_markup($ans_label . $node->body, $node->format, FALSE);
           $output .= $back_to_top ."</dd>\n";
         }
       }
