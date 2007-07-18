@@ -21,9 +21,10 @@ if (Drupal.jsEnabled) {
     faq_display_handler();
     questions_top_handler();
     categories_handler();
-    $("input[@name=display]").bind("click", faq_display_handler);
-    $("input[@name=category_display]").bind("click", categories_handler);
-    $("input[@name=hide_sub_categories]").bind("click", sub_cats_handler);
+    $("input[@name=faq_display]").bind("click", faq_display_handler);
+    $("input[@name=faq_qa_mark]").bind("click", qa_mark_handler);
+    $("input[@name=faq_category_display]").bind("click", categories_handler);
+    $("input[@name=faq_hide_sub_categories]").bind("click", sub_cats_handler);
 
 
   });
@@ -31,68 +32,104 @@ if (Drupal.jsEnabled) {
 
 
 function faq_display_handler(event) {
-  if ($("input[@name=display]:checked").val() == "questions_inline"
-    || $("input[@name=display]:checked").val() == "questions_top") {
-    $("input[@name=use_teaser]").removeAttr("disabled");
-    $("input[@name=more_link]").removeAttr("disabled");
-    $("input[@name=back_to_top]").removeAttr("disabled");
+		// enable / disable "questions_inline" and "questions_top" only settings
+  if ($("input[@name=faq_display]:checked").val() == "questions_inline"
+    || $("input[@name=faq_display]:checked").val() == "questions_top") {
+    $("input[@name=faq_use_teaser]").removeAttr("disabled");
+    $("input[@name=faq_more_link]").removeAttr("disabled");
+    $("input[@name=faq_back_to_top]").removeAttr("disabled");
   }
   else {
-    $("input[@name=use_teaser]").attr("disabled", "disabled");
-    $("input[@name=more_link]").attr("disabled", "disabled");
-    $("input[@name=back_to_top]").attr("disabled", "disabled");
+    $("input[@name=faq_use_teaser]").attr("disabled", "disabled");
+    $("input[@name=faq_more_link]").attr("disabled", "disabled");
+    $("input[@name=faq_back_to_top]").attr("disabled", "disabled");
   }
-  if ($("input[@name=display]:checked").val() == "new_page"
-    || $("input[@name=display]:checked").val() == "questions_top") {
-				$("select[@name=question_listing]").removeAttr("disabled");
+
+		// enable / disable "new_page" and "questions_top" only settings
+  if ($("input[@name=faq_display]:checked").val() == "new_page"
+    || $("input[@name=faq_display]:checked").val() == "questions_top") {
+				$("select[@name=faq_question_listing]").removeAttr("disabled");
 		}
 		else {
-				$("select[@name=question_listing]").attr("disabled", "disabled");
+				$("select[@name=faq_question_listing]").attr("disabled", "disabled");
+		}
+
+		// enable / disable "questions_inline" only settings
+  if ($("input[@name=faq_display]:checked").val() == "questions_inline") {
+				$("input[@name=faq_qa_mark]").removeAttr("disabled");
+				// enable / disable label settings according to "qa_mark" setting
+				if ($("input[@name=faq_qa_mark]:checked").val() == 1) {
+						$("input[@name=faq_question_label]").removeAttr("disabled");
+						$("input[@name=faq_answer_label]").removeAttr("disabled");
+				}
+				else {
+						$("input[@name=faq_question_label]").attr("disabled", "disabled");
+						$("input[@name=faq_answer_label]").attr("disabled", "disabled");
+				}
+		}
+		else {
+				$("input[@name=faq_qa_mark]").attr("disabled", "disabled");
+				$("input[@name=faq_question_label]").attr("disabled", "disabled");
+				$("input[@name=faq_answer_label]").attr("disabled", "disabled");
+		}
+}
+
+function qa_mark_handler(event) {
+  if ($("input[@name=faq_display]:checked").val() == "questions_inline") {
+				// enable / disable label settings according to "qa_mark" setting
+				if ($("input[@name=faq_qa_mark]:checked").val() == 1) {
+						$("input[@name=faq_question_label]").removeAttr("disabled");
+						$("input[@name=faq_answer_label]").removeAttr("disabled");
+				}
+				else {
+						$("input[@name=faq_question_label]").attr("disabled", "disabled");
+						$("input[@name=faq_answer_label]").attr("disabled", "disabled");
+				}
 		}
 }
 
 function questions_top_handler(event) {
   $("input[@name=faq_display]").val() == "questions_top" ?
-    $("input[@name=group_questions_top]").removeAttr("disabled"):
-    $("input[@name=group_questions_top]").attr("disabled", "disabled");
+    $("input[@name=faq_group_questions_top]").removeAttr("disabled"):
+    $("input[@name=faq_group_questions_top]").attr("disabled", "disabled");
 
   $("input[@name=faq_display]").val() == "questions_top" ?
-    $("input[@name=answer_category_name]").removeAttr("disabled"):
-    $("input[@name=answer_category_name]").attr("disabled", "disabled");
+    $("input[@name=faq_answer_category_name]").removeAttr("disabled"):
+    $("input[@name=faq_answer_category_name]").attr("disabled", "disabled");
 }
 
 function categories_handler(event) {
   if ($("input[@name=faq_display]").val() == "questions_top") {
-    $("input[@name=category_display]:checked").val() == "categories_inline" ?
-      $("input[@name=group_questions_top]").removeAttr("disabled"):
-      $("input[@name=group_questions_top]").attr("disabled", "disabled");
-    $("input[@name=category_display]:checked").val() == "new_page" ?
-      $("input[@name=answer_category_name]").attr("disabled", "disabled"):
-      $("input[@name=answer_category_name]").removeAttr("disabled");
+    $("input[@name=faq_category_display]:checked").val() == "categories_inline" ?
+      $("input[@name=faq_group_questions_top]").removeAttr("disabled"):
+      $("input[@name=faq_group_questions_top]").attr("disabled", "disabled");
+    $("input[@name=faq_category_display]:checked").val() == "new_page" ?
+      $("input[@name=faq_answer_category_name]").attr("disabled", "disabled"):
+      $("input[@name=faq_answer_category_name]").removeAttr("disabled");
   }
   else {
-    $("input[@name=group_questions_top]").attr("disabled", "disabled");
+    $("input[@name=faq_group_questions_top]").attr("disabled", "disabled");
   }
 
-  $("input[@name=category_display]:checked").val() == "categories_inline" ?
-    $("input[@name=hide_sub_categories]").attr("disabled", "disabled"):
-    $("input[@name=hide_sub_categories]").removeAttr("disabled");
-  $("input[@name=category_display]:checked").val() == "categories_inline" ?
-    $("input[@name=show_cat_sub_cats]").attr("disabled", "disabled"):
-    $("input[@name=show_cat_sub_cats]").removeAttr("disabled");
-		$("input[@name=category_display]:checked").val() == "new_page" ?
-				$("select[@name=category_listing]").removeAttr("disabled"):
-				$("select[@name=category_listing]").attr("disabled", "disabled");
+  $("input[@name=faq_category_display]:checked").val() == "categories_inline" ?
+    $("input[@name=faq_hide_sub_categories]").attr("disabled", "disabled"):
+    $("input[@name=faq_hide_sub_categories]").removeAttr("disabled");
+  $("input[@name=faq_category_display]:checked").val() == "categories_inline" ?
+    $("input[@name=faq_show_cat_sub_cats]").attr("disabled", "disabled"):
+    $("input[@name=faq_show_cat_sub_cats]").removeAttr("disabled");
+		$("input[@name=faq_category_display]:checked").val() == "new_page" ?
+				$("select[@name=faq_category_listing]").removeAttr("disabled"):
+				$("select[@name=faq_category_listing]").attr("disabled", "disabled");
 
 		sub_cats_handler();
 }
 
 function sub_cats_handler(event) {
-  if ($("input[@name=hide_sub_categories]:checked").val() == 1) {
-    $("input[@name=show_cat_sub_cats]").attr("disabled", "disabled");
+  if ($("input[@name=faq_hide_sub_categories]:checked").val() == 1) {
+    $("input[@name=faq_show_cat_sub_cats]").attr("disabled", "disabled");
 		}
-		else if ($("input[@name=category_display]:checked").val() != "categories_inline") {
-    $("input[@name=show_cat_sub_cats]").removeAttr("disabled");
+		else if ($("input[@name=faq_category_display]:checked").val() != "categories_inline") {
+    $("input[@name=faq_show_cat_sub_cats]").removeAttr("disabled");
 		}
 }
 
