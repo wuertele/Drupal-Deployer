@@ -69,6 +69,7 @@ if (!is_file($full_path)) {
 $stat = stat($full_path);
 $mtime = $stat[9];
 header('Last-Modified: '. gmdate('D, d M Y H:i:s', $mtime) .' GMT');
+header('Cache-Control: max-age=3600');
 
 // Serve the contents.
 echo '<?xml version="1.0" encoding="utf-8"?>' ."\n";
