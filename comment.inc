@@ -3,7 +3,7 @@
 // $Name$
 
 function project_comment_page($op, $nid) {
-  
+
   // Load the parent node.
   $node = node_load($nid);
 
@@ -33,7 +33,7 @@ function project_comment_page($op, $nid) {
         $output .= node_view($node, NULL, TRUE);
         return $output;
         break;
-      case t('Preview'):      
+      case t('Preview'):
           return $output;
         break;
       case t('Submit'):
