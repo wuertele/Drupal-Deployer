@@ -15,9 +15,11 @@ DESCRIPTION:
 ********************************************************************
 PERMISSIONS:
 
-   This module defines the "set page title" permission. This permission
-   determines whether a user will be able to edit the "Page title" field on node
-   edit forms (if visible.)
+   This module defines the "set page title" and "administer page titles"
+   permissions. The "set page title" permission determines whether a user will
+   be able to edit the "Page title" field on node edit forms (if visible.) The
+   "administer page titles" permission determines whether a user will be able to
+   edit the "Page title" administration pages.
 
 ********************************************************************
 INSTALLATION:
