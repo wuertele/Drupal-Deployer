@@ -5,31 +5,26 @@
  * Implementation of hook_install().
  */
 function page_title_install() {
+  $result = FALSE;
   switch ($GLOBALS['db_type']) {
     case 'mysqli':
     case 'mysql':
-      $query1 = db_query("CREATE TABLE IF NOT EXISTS {page_title} (
+      $result = db_query('CREATE TABLE IF NOT EXISTS {page_title} (
                             nid INT NOT NULL,
-                            page_title VARCHAR( 128 ) NOT NULL,
-                            PRIMARY KEY ( `nid` )
-                          ) TYPE=MyISAM /*!40100 DEFAULT CHARACTER SET utf8 */;");
-      if ($query1) {
-        $created = TRUE;
-      }
+                            page_title VARCHAR(255) NOT NULL,
+                            PRIMARY KEY (nid)
+                          ) /*!40100 DEFAULT CHARACTER SET utf8 */');
       break;
 
     case 'pgsql':
-      $query1 = db_query("CREATE TABLE {page_title} (
+      $result = db_query("CREATE TABLE {page_title} (
                             nid integer NOT NULL default '0',
                             page_title text NOT NULL default ''
-                          );");
-      if ($query1) {
-        $created = TRUE;
-      }
+                          )");
       break;
   }
 
-  if ($created) {
+  if ($result) {
     drupal_set_message(t('Page title module installed successfully.'));
   }
   else {
@@ -42,4 +37,29 @@ function page_title_install() {
  */
 function page_title_uninstall() {
   db_query('DROP TABLE {page_title}');
+}
+
+/**
+ * Increases page title in MySQL to 255 characters and modifies the MySQL table type from MYISAM to the user's default type.
+ *
+ * Implementation of hook_update_N().
+ */
+function page_title_update_1() {
+  $items = array();
+  switch ($GLOBALS['db_type']) {
+    case 'mysqli':
+    case 'mysql':
+      $items[] = update_sql('ALTER TABLE {page_title} MODIFY COLUMN page_title VARCHAR(255) NOT NULL');
+      $items[] = update_sql('CREATE TEMPORARY TABLE {page_title_temp} AS SELECT * FROM {page_title}');
+      $items[] = update_sql('DROP TABLE {page_title}');
+      $items[] = update_sql('CREATE TABLE {page_title} (
+                               nid INT NOT NULL,
+                               page_title VARCHAR(255) NOT NULL,
+                               PRIMARY KEY (nid)
+                             ) /*!40100 DEFAULT CHARACTER SET utf8 */;');
+      $items[] = update_sql('INSERT INTO {page_title} (nid, page_title)
+                               SELECT nid, page_title FROM {page_title_temp}');
+      $items[] = update_sql('DROP TABLE {page_title_temp}');
+  }
+  return $items;
 }
