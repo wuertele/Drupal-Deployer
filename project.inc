@@ -196,8 +196,18 @@ function project_project_validate(&$node) {
       form_set_error('uri', t('Please only use alphanumerical characters for the project name.'));
     }
 
-    // Make sure uri isn't already in use, or reserved
-    if (in_array($node->uri, array('user', 'issues', 'releases')) || db_num_rows(db_query("SELECT nid FROM {project_projects} WHERE uri = '%s' AND nid <> %d", $node->uri, $node->nid))) {
+    // Make sure uri isn't already in use, or reserved.  Includes all X from
+    // project/issues/X paths used in project_issues module
+    $reserved_names = array('user', 'issues', 'releases', 'rss', 'subscribe-mail', 'search', 'add', 'update_project', 'statistics', 'comments', 'autocomplete', 'cvs', 'developers');
+    if (project_use_taxonomy()) {
+      $terms = taxonomy_get_tree(_project_get_vid());
+      foreach ($terms as $i => $term) {
+        if ($term->depth == 0) {
+          $reserved_names[] = strtolower($term->name);
+        }
+      }
+    }
+    if (in_array(strtolower($node->uri), $reserved_names) || db_num_rows(db_query("SELECT nid FROM {project_projects} WHERE uri = '%s' AND nid <> %d", $node->uri, $node->nid))) {
       form_set_error('uri', t('This project name is already in use.'));
     }
   }
