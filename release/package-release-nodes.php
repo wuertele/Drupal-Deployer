@@ -336,7 +336,7 @@ function package_release_contrib($nid, $uri, $version, $rev, $dir) {
   }
 
   if ($contrib_type == 'translations') {
-    $exclude = array_merge($exclude, 'README.txt');
+    $exclude[] = 'README.txt';
   }
   $info_files = array();
   $youngest = file_find_youngest($uri, 0, $exclude, $info_files);
