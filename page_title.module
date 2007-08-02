@@ -6,16 +6,16 @@
  * Enhanced control over the page title (in the head tag).
  *
  * This module gives you control over the page title. It gives you the chance
- * to provide templates for how the title should be structured, and on node
+ * to provide patterns for how the title should be structured, and on node
  * pages, gives you the chance to specify the page title rather than defaulting
  * to the node title.
  */
 
+/**
+ * Implementation of hook_help().
+ */
 function page_title_help($section) {
   switch ($section) {
-    case 'admin/modules#description':
-      $output = t('Enhanced control over the page title (in the &lt;head&gt; tag).');
-      break;
     case 'admin/help#page_title':
       $output = t('<p>Adds an extra form element to node creation forms that allows you to specify the page title.</p>
         <p>Allows for better global configuration of the page title.</p>');
@@ -25,7 +25,7 @@ function page_title_help($section) {
         <ol><li><em>page title</em> | <em>site name</em></li>
             <li><em>site name</em> | <em>site slogan</em></li></ol>
         <p>#1 is the common case where the visitor is viewing a specific page whereas #2 is used at least for the default front page (<em>node</em>).</p>
-        <p>The page_title.module lets you change these defaults in two ways. First, you can adjust the templates below using the placeholders given. This will change the way the default page titles are created. Second, on every node creation form, you can have the option of specifying a title that is different than the title of the node. If a value is provided, this will be used to generate the <code>!page_title</code> placeholder. If left blank, <code>!page_title</code> will be the node's title, as is now the case.</p>");
+        <p>The page_title.module lets you change these defaults in two ways. First, you can adjust the patterns below using the placeholders given. This will change the way the default page titles are created. Second, on every node creation form, you can have the option of specifying a title that is different than the title of the node. If a value is provided, this will be used to generate the <code>!page_title</code> placeholder. If left blank, <code>!page_title</code> will be the node's title, as is now the case.</p>");
       break;
   }
   return $output;
@@ -59,7 +59,7 @@ function page_title_menu($may_cache) {
 function page_title_admin_settings() {
   $form['page_title'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Page title templates'),
+    '#title' => t('Page title patterns'),
   );
   $form['page_title']['page_title_individual'] = array(
     '#type' => 'textfield',
@@ -78,6 +78,9 @@ function page_title_admin_settings() {
   return system_settings_form($form);
 }
 
+/**
+ * Implementation of hook_form_alter().
+ */
 function page_title_form_alter($form_id, &$form) {
   if ($form['#id'] == 'node-form' && user_access('set page title')) {
     $form['page_title'] = array(
@@ -91,6 +94,9 @@ function page_title_form_alter($form_id, &$form) {
   }
 }
 
+/**
+ * Implementation of hook_nodeapi().
+ */
 function page_title_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
   switch ($op) {
     case 'update':
@@ -119,9 +125,13 @@ function page_title_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
   }
 }
 
-
 /**
- * Set the page title of the current page, for display on the page and in the title bar.
+ * Sets or retrieves the page title of the current page.
+ *
+ * @param $title
+ *   string The page title to set.
+ * @return
+ *   string The current page's title.
  */
 function page_title_set_title($title = NULL) {
   static $stored_title;
@@ -135,10 +145,12 @@ function page_title_set_title($title = NULL) {
 // Public API (every module's gotta have one =)
 
 /**
- * Gets the page title for a node id
+ * Gets the page title for a node id.
  *
- * @param the node's id
- * @return the node's page title.
+ * @param $nid
+ *   int The node's id.
+ * @return
+ *   string The node's page title.
  */
 function page_title_node_get_title($nid) {
   $row = db_fetch_object(db_query('SELECT page_title FROM {page_title} WHERE nid = %d', $nid));
@@ -146,8 +158,13 @@ function page_title_node_get_title($nid) {
 }
 
 /**
- * Does the logic to see what title should be send to the page template. Call this function from
- * the page hook of function _phptemplate_variables in template.php.
+ * Determines what title should be sent to the page template.
+ *
+ * Call this function from the page hook of function _phptemplate_variables in
+ * template.php.
+ *
+ * @return
+ *   string The page's title.
  */
 function page_title_page_get_title() {
   static $title = NULL;

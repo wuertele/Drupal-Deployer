@@ -8,7 +8,7 @@ Current Maintainers: Nicholas Thompson and John Wilkins
 DESCRIPTION:
 
    This module gives you control over the page title. It gives you the chance
-   to provide templates for how the title should be structured, and on node
+   to provide patterns for how the title should be structured, and on node
    pages, gives you the chance to specify the page title rather than defaulting
    to the node title.
 
@@ -16,7 +16,8 @@ DESCRIPTION:
 PERMISSIONS:
 
    This module defines the "set page title" permission. This permission
-   determines whether a user will see the "Page title" field on node edit forms.
+   determines whether a user will be able to edit the "Page title" field on node
+   edit forms (if visible.)
 
 ********************************************************************
 INSTALLATION:
