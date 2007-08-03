@@ -27,6 +27,9 @@ function page_title_help($section) {
         <p>#1 is the common case where the visitor is viewing a specific page whereas #2 is used for the default front page.</p>
         <p>The <strong>Page title</strong> module lets you change these defaults in two ways. First, you can adjust the patterns below using the placeholders given. This will change the way the default page titles are created. Second, on every content creation form, you can have the option of specifying a page title that overrides the default.</p>");
       break;
+    case 'admin/content/page_title/types':
+      $output = t("<p>By default, a “Page title” field will be displayed (just below the “Title” field) on every content type’s creation form. You may hide this field for each content type below.</p>");
+      break;
   }
   return $output;
 }
@@ -52,6 +55,23 @@ function page_title_menu($may_cache) {
       'callback arguments' => array('page_title_admin_settings'),
       'access' => user_access('administer page titles'),
       'type' => MENU_NORMAL_ITEM,
+    );
+    $items[] = array(
+      'path' => 'admin/content/page_title/settings',
+      'title' => t('Default settings'),
+      'description' => t('Control the page title settings.'),
+      'access' => user_access('administer page titles'),
+      'type' => MENU_DEFAULT_LOCAL_TASK,
+      'weight' => -10,
+    );
+    $items[] = array(
+      'path' => 'admin/content/page_title/types',
+      'title' => t('Content type settings'),
+      'description' => t('Control the display of the Page title field.'),
+      'callback' => 'drupal_get_form',
+      'callback arguments' => array('page_title_admin_types'),
+      'access' => user_access('administer page titles'),
+      'type' => MENU_LOCAL_TASK,
     );
   }
   return $items;
@@ -86,10 +106,49 @@ function page_title_admin_settings() {
 }
 
 /**
+ * Displays the form for the "Content creation types" tab.
+ *
+ * @return
+ *   array A structured form array for use with Forms API.
+ */
+function page_title_admin_types() {
+  $form['page_title_types'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Content creation forms'),
+    '#description' => t('Display a “Page title” field for these content types.'),
+  );
+  foreach (node_get_types('names') AS $type => $name) {
+    $form['page_title_types']["page_title_display_$type"] = array(
+      '#type'          => 'checkbox',
+      '#title'         => $name,
+      '#default_value' => variable_get("page_title_display_$type", 1),
+    );
+  }
+
+  // Add save button, etc to the form.
+  return system_settings_form($form);
+}
+
+/**
+ * Implementation of hook_node_type().
+ *
+ * Updates settings after a node type change.
+ */
+function page_title_node_type($op, $info) {
+  if ($op == 'update' and !empty($info->old_type) and $info->type != $info->old_type) {
+    $old = 'page_title_display_'. $info->old_type;
+    $new = 'page_title_display_'. $info->type;
+
+    variable_set($new, variable_get($old, 1));
+    variable_del($old);
+  }
+}
+
+/**
  * Implementation of hook_form_alter().
  */
 function page_title_form_alter($form_id, &$form) {
-  if ($form['#id'] == 'node-form' && user_access('set page title')) {
+  if ($form['#id'] == 'node-form' and user_access('set page title') and variable_get('page_title_display_'.$form['type']['#value'], 1)) {
     $form['page_title'] = array(
       '#type' => 'textfield',
       '#title' => t('Page title'),
