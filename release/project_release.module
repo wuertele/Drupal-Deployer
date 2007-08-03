@@ -1539,12 +1539,14 @@ function project_release_table($project, $table_type = 'defaults', $release_type
   $tids = project_release_compatibility_list();
   if ($tids) {
     unset($tids[-1]); // get rid of that one.
-    $join = ' INNER JOIN {term_node} tn ON n.nid = tn.nid AND tn.tid in (' 
-      . implode(',', array_keys($tids)) .') ' 
-      .' INNER JOIN {term_data} td ON td.tid = tn.tid ';
-    $selects[] = 'tn.tid';
-    $orderby[] = 'td.weight';
-    $orderby[] = 'td.name';
+    if (!empty($tids)) {
+      $join = ' INNER JOIN {term_node} tn ON n.nid = tn.nid AND tn.tid in (' 
+        . implode(',', array_keys($tids)) .') ' 
+        .' INNER JOIN {term_data} td ON td.tid = tn.tid ';
+      $selects[] = 'tn.tid';
+      $orderby[] = 'td.weight';
+      $orderby[] = 'td.name';
+    }
   }
 
   if ($table_type == 'defaults') {
