@@ -1673,7 +1673,7 @@ function project_issue_query_result_quick_search($query, $projects, $states, $pr
           $option[] = ${$field}[$value];
         }
         else {
-          unset($query->$field[$key]);
+          unset($query->{$field}[$key]);
         }
       }
       $query->$field = implode(',', $query->$field);
