@@ -1,0 +1,70 @@
+<?php
+
+function amazon_media_amazon_item_load($item) {
+  switch ($item->ProducTypeName) {
+    case 'ABIS_BOOK':
+      break;
+    case 'ABIS_DVD':
+      break;
+    case 'ABIS_MUSIC':
+      break;
+    case 'ABIS_VIDEO_GAMES':
+    case 'ABIS_SOFTWARE':
+      break;
+  }
+}
+
+function amazon_media_amazon_item_insert($item) {
+  if (in_array($item->ProductTypeName, amazon_get_cacheable_chunk_list())) {
+    switch ($item->ProducTypeName) {
+      case 'ABIS_BOOK':
+        break;
+      case 'ABIS_DVD':
+        break;
+      case 'ABIS_MUSIC':
+        break;
+      case 'ABIS_VIDEO_GAMES':
+      case 'ABIS_SOFTWARE':
+        break;
+    }
+  }
+}
+
+function amazon_amazon_item_update($item) {
+  if (in_array($item->ProductTypeName, amazon_get_cacheable_chunk_list())) {
+    switch ($item->ProducTypeName) {
+      case 'ABIS_BOOK':
+        db_query("DELETE FROM {amazon_book} WHERE asin = '%s'", $item_id);
+        break;
+      case 'ABIS_DVD':
+        db_query("DELETE FROM {amazon_dvd} WHERE asin = '%s'", $item_id);
+        break;
+      case 'ABIS_MUSIC':
+        db_query("DELETE FROM {amazon_music} WHERE asin = '%s'", $item_id);
+        break;
+      case 'ABIS_VIDEO_GAMES':
+      case 'ABIS_SOFTWARE':
+        db_query("DELETE FROM {amazon_software} WHERE asin = '%s'", $item_id);
+        break;
+    }
+  }
+}
+
+function amazon_media_form_alter(&$form, $form_state) {
+  if ($form['#id'] == 'amazon-storage-settings-form') {
+    $form['amazon_extra_data']['#options']['ABIS_BOOK'] = t('Extended data for books');
+    $form['amazon_extra_data']['#options']['ABIS_DVD'] = t('Extended data for DVDs');
+    $form['amazon_extra_data']['#options']['ABIS_MUSIC'] = t('Extended data for music');
+    $form['amazon_extra_data']['#options']['ABIS_SOFTWARE'] = t('Extended data for software');
+    $form['amazon_extra_data']['#options']['ABIS_VIDEO_GAMES'] = t('Extended data for video games');
+  }
+}
+
+function amazon_media_amazon_item_delete($item_id) {
+  // Sadly, we have to nuke this from all the tables. We'll think
+  // of a better way some other time (cough cough).
+  db_query("DELETE FROM {amazon_book} WHERE asin = '%s'", $item_id);
+  db_query("DELETE FROM {amazon_dvd} WHERE asin = '%s'", $item_id);
+  db_query("DELETE FROM {amazon_music} WHERE asin = '%s'", $item_id);
+  db_query("DELETE FROM {amazon_software} WHERE asin = '%s'", $item_id);
+}
