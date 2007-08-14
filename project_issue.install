@@ -161,6 +161,43 @@ function project_issue_install() {
 }
 
 /**
+ * Implementation of hook_uninstall().
+ */
+function project_issue_uninstall() {
+  $tables = array(
+    'project_issue_projects',
+    'project_issues',
+    'project_comments',
+    'project_subscriptions',
+    'project_issue_state',
+  );
+  foreach ($tables as $table) {
+    if (db_table_exists($table)) {
+      db_query("DROP TABLE {$table}");
+    }
+  }
+
+  $variables = array(
+    'project_issue_default_state',
+    'project_directory_issues',
+    'project_issues_extensions_default',
+    'project_reply_to',
+    'project_issue_digest_last',
+    'project_issue_digest_interval',
+    'project_issue_reminder_last',
+    'project_issue_reminder_interval',
+  );
+  foreach ($variables as $variable) {
+    variable_del($variable);
+  }
+
+  $variables = db_query("SELECT name FROM {variable} WHERE name LIKE 'project_issues_extensions_%%'");
+  while ($variable = db_fetch_object($variables)) {
+    variable_del($variable->name);
+  }
+}
+
+/**
  * Initialize a given issue state in the database.
  */
 function project_issue_init_state($sid, $name, $weight, $author, $query) {
