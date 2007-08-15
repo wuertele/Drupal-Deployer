@@ -102,6 +102,37 @@ function project_release_install() {
 }
 
 /**
+ * Implementation of hook_uninstall().
+ */
+function project_release_uninstall() {
+  $tables = array(
+    'project_release_nodes',
+    'project_release_projects',
+    'project_release_default_versions',
+    'cache_project_release',
+  );
+  foreach ($tables as $table) {
+    if (db_table_exists($table)) {
+      db_query("DROP TABLE {$table}");
+    }
+  }
+
+  $variables = array(
+    'project_release_active_compatibility_tids',
+    'project_release_api_vocabulary',
+    'project_release_browse_versions',
+    'project_release_default_version_format',
+    'project_release_directory',
+    'project_release_download_base',
+    'project_release_overview',
+    'project_release_unmoderate',
+  );
+  foreach ($variables as $variable) {
+    variable_del($variable);
+  }
+}
+
+/**
  * Adds the {project_release_default_versions} table for branch-aware
  * default versions and populates it the best it can.
  */
