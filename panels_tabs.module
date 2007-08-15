@@ -1,0 +1,50 @@
+<?php
+// $Id $
+
+/**
+ * @file
+ * This module provides a configurable "tabs" panel style that can be used
+ * by any Panels module.
+ */
+
+//----------------------------------------------------------------------------
+// Panels hooks.
+
+/**
+ * Implementation of hook_panels_panel_style_info().
+ */
+function panels_tabs_panels_panel_style_info() {
+  return array(
+    'tabs' => array(
+      'label' => t('Tabs'),
+      'panels implementations' => array(),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_panels_panel_style_render().
+ */
+function panels_tabs_panels_panel_style_render($display, $style, $panel_id, $panes) {
+  $output = '';
+
+  switch ($style) {
+    case 'tabs':
+      $tabs = array();
+
+      $tabs["panels-mini-$panel_id"] = array(
+        '#type' => 'tabset',
+      );
+      foreach ($panes as $pos => $pane) {
+        $tabs["panels-mini-$panel_id"]["tab_$pos"] = array(
+          '#type' => 'tabpage',
+          '#title' => $pane->subject,
+          '#content' => $pane->content,
+        );
+      }
+      $output = tabs_render($tabs);
+      break;
+  }
+  
+  return $output;
+}
