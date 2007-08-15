@@ -23,20 +23,87 @@ function panels_tabs_panels_panel_style_info() {
 }
 
 /**
+ * Implementation of hook_panels_panel_style_settings_form().
+ */
+function panels_tabs_panels_panel_style_settings_form($style, $panel_settings) {
+  switch ($style) {
+    case 'tabs':
+      $style_settings = $panel_settings['style_settings'];
+
+      $form = array();
+      $form['filling_tabs'] = array(
+        '#type' => 'radios',
+        '#title' => t('Horizontally filling tabs'),
+        '#options' => array(
+          0 => t('Disabled'),
+          1 => t('Equal width tabs'),
+          2 => t('Equal width scaling tabs'),
+        ),
+        '#description' => t(
+          "Horizontally filling tabs make sure the tabs consume all available
+          horizontal space.<br />
+          Equal width tabs: sets the <em>width</em> property, forcing each tab
+          to be equally wide. If the text doesn't fit in the tab, the overflow
+          will be hidden.<br />
+          Equal width scaling tabs: sets the <em>min-width</em> property,
+          forcing each tab to be equally wide, but allowing the tabs with more
+          text to scale to allow all text to be displayed."
+        ),
+        '#default_value' => (isset($style_settings['filling_tabs'])) ? $style_settings['filling_tabs'] : 0,
+      );
+      return $form;
+  }
+}
+
+/**
+ * Implementation of hook_panels_panel_style_settings_validate().
+ */
+function panels_tabs_panels_panel_style_settings_validate($style, $panel_settings, $form, $form_values) {
+  switch ($style) {
+    case 'tabs':
+      $style_settings = $panel_settings['style_settings'];
+
+      if (!in_array($form_values['filling_tabs'], array(0, 1, 2))) {
+        form_error($form['filling_tabs'], t('Invalid value detected.'));
+      }
+      break;
+  }
+}
+
+/**
  * Implementation of hook_panels_panel_style_render().
  */
 function panels_tabs_panels_panel_style_render($display, $style, $panel_id, $panes) {
   $output = '';
 
+  $panel_settings = unserialize($display->panel_settings);
+  $style_settings = $panel_settings['style_settings'];
+
   switch ($style) {
     case 'tabs':
       $tabs = array();
 
-      $tabs["panels-mini-$panel_id"] = array(
+      $id = "panels-tabs-$panel_id";
+
+      if ($style_settings['filling_tabs'] > 0) {
+        drupal_add_js(drupal_get_path('module', 'panels_tabs') .'/panels_tabs.js');
+      	drupal_add_js(
+      	  array(
+      	    'panels_tabs' => array(
+      	      'filling_tabs' => array(
+      	        $id => $style_settings['filling_tabs'],
+      	      ),
+      	    )
+      	  ),
+      	  'setting'
+      	);
+      }
+
+      $tabs[$id] = array(
         '#type' => 'tabset',
       );
       foreach ($panes as $pos => $pane) {
-        $tabs["panels-mini-$panel_id"]["tab_$pos"] = array(
+        $tabs[$id][$pos] = array(
           '#type' => 'tabpage',
           '#title' => $pane->subject,
           '#content' => $pane->content,
