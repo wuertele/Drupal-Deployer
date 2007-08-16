@@ -25,7 +25,7 @@ function page_title_help($section) {
         <ol><li><em>page title</em> | <em>site name</em></li>
         <li><em>site name</em> | <em>site slogan</em></li></ol>
         <p>#1 is the common case where the visitor is viewing a specific page whereas #2 is used for the default front page.</p>
-        <p>The <strong>Page title</strong> module lets you change these defaults in two ways. First, you can adjust the patterns below using the placeholders given. This will change the way the default page titles are created. Second, on every content creation form, you can have the option of specifying a title that is different than the title of the node. If a value is provided, this will be used to generate the <code>!page_title</code> placeholder. If left blank, <code>!page_title</code> will be the node's title, as is now the case.</p>");
+        <p>The <strong>Page title</strong> module lets you change these defaults in two ways. First, you can adjust the patterns below using the placeholders given. This will change the way the default page titles are created. Second, on every content creation form, you can have the option of specifying a title that is different than the title of the node. If a value is provided, this will be used to generate the <code>!page_title</code> placeholder. If left blank, <code>!page_title</code> will be the node’s title, as is now the case.</p>");
       break;
     case 'admin/content/page_title/types':
       $output = t("<p>By default, a “Page title” field will be displayed (just below the “Title” field) on every content type’s creation form. You may hide this field for each content type below.</p>");
@@ -167,11 +167,17 @@ function page_title_form_alter($form_id, &$form) {
 function page_title_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
   switch ($op) {
     case 'update':
-      db_query("DELETE FROM {page_title} WHERE nid = %d", $node->nid);
-      // fallthrough to insert intentional!
+      if (trim($node->page_title)) {
+        db_query("UPDATE {page_title} SET page_title = '%s' WHERE nid = %d", trim($node->page_title), $node->nid);
+      }
+      else {
+        db_query("DELETE FROM {page_title} WHERE nid = %d", $node->nid);
+      }
+      break;
+
     case 'insert':
-      if (strlen(trim($node->page_title)) > 0) {
-        db_query("INSERT INTO {page_title} VALUES (%d, '%s')", $node->nid, $node->page_title);
+      if (trim($node->page_title)) {
+        db_query("INSERT INTO {page_title} VALUES (%d, '%s')", $node->nid, trim($node->page_title));
       }
       break;
 
@@ -180,9 +186,7 @@ function page_title_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
       break;
 
     case 'load':
-      $object = new stdClass();
-      $object->page_title = page_title_node_get_title($node->nid);
-      return array('page_title' => $object->page_title);
+      return array('page_title' => page_title_node_get_title($node->nid));
 
     case 'view':
       if ($page) {
@@ -220,8 +224,7 @@ function page_title_set_title($title = NULL) {
  *   string The node's page title.
  */
 function page_title_node_get_title($nid) {
-  $row = db_fetch_object(db_query('SELECT page_title FROM {page_title} WHERE nid = %d', $nid));
-  return $row->page_title;
+  return trim(db_result(db_query('SELECT page_title FROM {page_title} WHERE nid = %d', $nid)));
 }
 
 /**
