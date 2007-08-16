@@ -685,14 +685,6 @@ function project_issue_form($node, $param) {
       }
       drupal_set_message($msg, 'warning');
     }
-
-    // Add any cck fields to the form
-    if (function_exists('_content_widget_invoke')) {
-      $db_node = node_load(array('nid' => arg(3), 'type' => 'project_issue'));
-      $type = content_types($db_node->type);
-      _content_widget_invoke('prepare form values', $db_node);
-      $form = array_merge($form, _content_widget_invoke('form', $db_node));
-    }
   }
   else {
     $form['pid'] = array(

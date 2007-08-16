@@ -71,6 +71,14 @@ function project_comment_form($edit, $param = NULL) {
   unset($form['project_issue_form']['#prefix']);
   unset($form['project_issue_form']['#suffix']);
 
+  // Add any CCK fields to the follow-up form.
+  if (function_exists('_content_widget_invoke')) {
+    $db_node = node_load(array('nid' => arg(3), 'type' => 'project_issue'));
+    $type = content_types($db_node->type);
+    _content_widget_invoke('prepare form values', $db_node);
+    $form = array_merge($form, _content_widget_invoke('form', $db_node));
+  }
+
   _project_issue_form_add_required_fields($form['project_issue_form'], FALSE);
   if ($edit->cid) {
     $form['cid']= array('#type' => 'hidden', '#value' => $edit->cid);
