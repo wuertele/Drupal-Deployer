@@ -136,6 +136,9 @@ function project_issue_update_project($pid, $cid = NULL, $rid = NULL) {
   $form = form_builder('component', $form);
   $return['component'] .= drupal_render($form);
 
+  // Set proper content type header for the AJAX call.
+  drupal_set_header('Content-type: text/javascript');
+
   // Translate to js before output, so the calling js can work with the data.
   print drupal_to_js($return);
   exit();
