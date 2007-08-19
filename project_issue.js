@@ -19,7 +19,7 @@ Drupal.projectSwitchAutoAttach = function () {
 
     // Pass new project ID, existing version, existing component.
     var url = Drupal.settings.projectUrl + '/' + pid + '/' + cid + '/' + rid;
-    
+
     // Ajax GET request.
     $.ajax({
       type: 'GET',
@@ -27,8 +27,13 @@ Drupal.projectSwitchAutoAttach = function () {
       success: function (data) {
         // Parse result and insert updated selects.
         var result = Drupal.parseJson(data);
-        $('#edit-rid, #edit-component').parent().remove();
-        $('#edit-pid').parent().after(result.component).after(result.rid);
+        if (result.error) {
+          alert(result.error);
+        }
+        else {
+          $('#edit-rid, #edit-component').parent().remove();
+          $('#edit-pid').parent().after(result.component).after(result.rid);
+        }
       },
       error: function (xmlhttp) {
         alert('An HTTP error '+ xmlhttp.status +' occured.\n'+ url);

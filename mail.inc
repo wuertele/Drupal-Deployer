@@ -4,7 +4,7 @@
 
 function project_issue_mailhandler($node, $result, $i, $header, $mailbox) {
   if ($node->type == 'project') {
-    if (user_access('create project issues')) {
+    if (node_access('create', 'project_issue')) {
       $node->nid = preg_replace('/@.+/', '', $node->nid);
 
       if ($node->nid) {

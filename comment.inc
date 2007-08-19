@@ -7,7 +7,7 @@ function project_comment_page($op, $nid) {
   // Load the parent node.
   $node = node_load($nid);
 
-  if (user_access('create project issues')) {
+  if (node_access('create', 'project_issue')) {
     $edit = (object)$_POST;
 
     if ($_POST['op'] == t('Preview') || $_POST['op'] == t('Submit')) {
