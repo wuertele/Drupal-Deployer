@@ -9,7 +9,7 @@
  * drupal.org, we're not going to periodically scan a directory, we're
  * going to generate releases based on CVS tags. We'll have to
  * research if anyone's still using this behavior who wants it to
- * somehow be ported to the new system. 
+ * somehow be ported to the new system.
  */
 
 /**
