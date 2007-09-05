@@ -1,38 +1,8 @@
 <?php
 // $Id$
 
-/**
- * Implementation of hook_install()
- * just give a message
- */
 function faq_install() {
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      $created = db_query("CREATE TABLE IF NOT EXISTS {faq_weights} (
-        tid INT(10) UNSIGNED NOT NULL DEFAULT '0',
-        nid INT(10) NOT NULL DEFAULT '0',
-        weight TINYINT(4) NOT NULL DEFAULT '0',
-        PRIMARY KEY (tid, nid)
-      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-      break;
-
-    case 'pgsql':
-      $created = db_query('CREATE TABLE {faq_weights} (
-        tid integer NOT NULL DEFAULT 0,
-        nid integer NOT NULL DEFAULT 0,
-        weight smallint NOT NULL DEFAULT 0,
-        PRIMARY KEY (tid, nid)
-      );');
-      break;
-  }
-
-  if ($created) {
-    drupal_set_message(t('FAQ module installed successfully.'));
-  }
-  else {
-    drupal_set_message(t('Table installation for the FAQ module was unsuccessful.'), 'error');
-  }
+  drupal_install_schema('faq');
 }
 
 /**
@@ -64,16 +34,7 @@ function faq_uninstall() {
     node_delete($obj->nid);
   }
 
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      $deleted = db_query("DROP TABLE IF EXISTS {faq_weights}");
-      break;
-
-    case 'pgsql':
-      $deleted = db_query('DROP TABLE {faq_weights}');
-      break;
-  }
+  drupal_uninstall_schema('faq');
 
   // Remove the node type
   node_type_delete('FAQ');
@@ -88,27 +49,17 @@ function faq_uninstall() {
 }
 
 function faq_update_1() {
-  $ret = array();
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      $ret[] = update_sql("CREATE TABLE IF NOT EXISTS {faq_weights} (
-        tid INT(10) UNSIGNED NOT NULL DEFAULT '0',
-        nid INT(10) NOT NULL DEFAULT '0',
-        weight TINYINT(4) NOT NULL DEFAULT '0',
-        PRIMARY KEY (tid, nid)
-      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-      break;
+  $schema['faq_weights'] = array(
+    'fields' => array(
+      'tid' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
+      'nid' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
+      'weight' => array('type' => 'tinyint', 'size' => 'tiny', 'not null' => TRUE, 'default' => 0),
+    ),
+    'primary key' => array('nid', 'tid'),
+  );
 
-    case 'pgsql':
-      $ret[] = update_sql('CREATE TABLE {faq_weights} (
-        tid integer NOT NULL DEFAULT 0,
-        nid integer NOT NULL DEFAULT 0,
-        weight smallint NOT NULL DEFAULT 0,
-        PRIMARY KEY (tid, nid)
-      );');
-      break;
-  }
+  $ret = array();
+  db_create_table($ret, 'faq', $schema['faq']);
 
   return $ret;
 }

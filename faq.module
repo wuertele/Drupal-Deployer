@@ -6,11 +6,11 @@
  * @param section which section of the site we're displaying help
  * @return help text for section
  */
-function faq_help($section='') {
+function faq_help($path, $arg) {
 
   $output = '';
 
-  switch ($section) {
+  switch ($path) {
     case "admin/help#faq":
       $output .= '<p>'. t("This module allows users with the 'administer faq' permission to create question and answer pairs which will be displayed on the 'faq' page.  The 'faq' page is automatically generated from the FAQ nodes configured and the layout of this page can be modified on the settings page.  Users will need the 'view faq' permission in order to view the 'faq' page.") .'</p>'.
         '<p>'. t("To create a question and answer, the user must create a 'FAQ' node (Create content >> FAQ).  This screen allows the user to edit the question and answer text.  If the 'Taxonomy' module is enabled and there are some terms configured for the FAQ node type, it will also be possible to put the questions into different categories when editing.") .'</p>'.
@@ -61,85 +61,78 @@ function faq_access($op, $node) {
 /**
  * Implementation of hook_menu()
  */
-function faq_menu($may_cache) {
+function faq_menu() {
   $items = array();
 
-  if ($may_cache) {
-    $items[] = array('path' => 'admin/settings/faq', 
-      'title' => t('Frequently Asked Questions Settings'),
-      'callback' => 'faq_settings_page',
-      'access' => user_access('administer faq'),
-      'description' => t('Allows the user to configure the layout of questions and answers on a FAQ page.'),
-    );
-    $items[] = array('path' => 'faq', 
-      'title' => variable_get('faq_title', t('Frequently Asked Questions')),
-      'callback' => 'faq_page',
-      'access' => user_access('view faq'),
-      'weight' => 1
-    );
-    $items[] = array(
-      'path' => 'admin/settings/faq/general',
-      'title' => t('General'),
-      'description' => t('Allows the user to configure the header and descriptive text for the FAQ page.'),
-      'callback' => 'drupal_get_form',
-      'callback arguments' => array('faq_general_settings_form'),
-      'access' => user_access('administer faq'),
-      'type' => MENU_DEFAULT_LOCAL_TASK,
-      'weight' => -10,
-    );
-    $items[] = array(
-      'path' => 'admin/settings/faq/questions',
-      'title' => t('Questions'),
-      'description' => t('Allows the user to configure the layout of questions and answers on a FAQ page.'),
-      'callback' => 'drupal_get_form',
-      'callback arguments' => array('faq_questions_settings_form'),
-      'access' => user_access('administer faq'),
-      'type' => MENU_LOCAL_TASK,
-      'weight' => -9,
-    );
-    $items[] = array(
-      'path' => 'admin/settings/faq/categories',
-      'title' => t('Categories'),
-      'description' => t('Allows the user to configure the layout of questions and answers using categories on a FAQ page.'),
-      'callback' => 'drupal_get_form',
-      'callback arguments' => array('faq_categories_settings_form'),
-      'access' => user_access('administer faq'),
-      'type' => MENU_LOCAL_TASK,
-      'weight' => -8,
-    );
-    $items[] = array(
-      'path' => 'admin/settings/faq/weight',
-      'title' => t('Weight'),
-      'description' => t('Allows the user to configure the order of questions and answers on a FAQ page.'),
-      'callback' => 'drupal_get_form',
-      'callback arguments' => array('faq_weight_settings_form'),
-      'access' => user_access('administer faq'),
-      'type' => MENU_LOCAL_TASK,
-      'weight' => -8,
-    );
- 
-    $items[] = array('path' => 'node/add/faq',
-      'title' => t('FAQ'),
-      'access' => user_access('create faq'),
-    );
-    $items[] = array('path' => 'faq', 
-      'title' => variable_get('faq_title', t('Frequently Asked Questions')),
-      'callback' => 'faq_page',
-      'access' => user_access('view faq'),
-      'weight' => 1
-    );
+  $items['admin/settings/faq'] = array(
+    'title' => 'Frequently Asked Questions Settings',
+    'description' => 'Allows the user to configure the layout of questions and answers on a FAQ page.',
+    'page callback' => 'faq_settings_page',
+    'access callback' => 'user_access',
+    'access arguments' => array('administer faq'),
+  );
+  $items['faq'] = array( 
+    'title' => variable_get('faq_title', 'Frequently Asked Questions'),
+    'page callback' => 'faq_page',
+    'access callback' => 'user_access',
+    'access arguments' => array('view faq'),
+    'weight' => 1
+  );
+  $items['admin/settings/faq/general'] = array(
+    'title' => 'General',
+    'description' => 'Allows the user to configure the header and descriptive text for the FAQ page.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('faq_general_settings_form'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer faq'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['admin/settings/faq/questions'] = array(
+    'title' => 'Questions',
+    'description' => 'Allows the user to configure the layout of questions and answers on a FAQ page.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('faq_questions_settings_form'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer faq'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -9,
+  );
+  $items['admin/settings/faq/categories'] = array(
+    'title' => 'Categories',
+    'description' => 'Allows the user to configure the layout of questions and answers using categories on a FAQ page.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('faq_categories_settings_form'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer faq'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -8,
+  );
+  $items['admin/settings/faq/weight'] = array(
+    'title' => 'Weight',
+    'description' => 'Allows the user to configure the order of questions and answers on a FAQ page.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('faq_weight_settings_form'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer faq'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -8,
+  );
 
-    if (arg(0) == 'faq' && is_numeric(arg(1))) {
-      $items[] = array('path' => 'faq/'. arg(1), 
-        'title' => variable_get('faq_title', t('Frequently Asked Questions')),
-        'callback' => 'faq_page',
-        'callback arguments' => array(arg(1)),
-        'access' => user_access('view faq'),
-        'type' => MENU_CALLBACK,
-      );
-    }
+  $items['node/add/faq'] = array(
+    'title' => 'FAQ',
+    'access callback' => 'user_access',
+    'access arguments' => array('create faq'),
+  );
 
-  }
+  $items['faq/%'] = array(
+    'title' => variable_get('faq_title', 'Frequently Asked Questions'),
+    'page callback' => 'faq_page',
+    'page arguments' => array(1),
+    'access callback' => 'user_access',
+    'access arguments' => array('view faq'),
+    'type' => MENU_CALLBACK,
+  );
 
   return $items;
 }
@@ -232,7 +225,7 @@ function faq_view($node, $teaser = FALSE, $page = FALSE) {
 
 function faq_settings_page($op = NULL, $aid = NULL) {
 
-  $output .= drupal_get_form('faq_general_settings_form');
+  $output = drupal_get_form('faq_general_settings_form');
 
   return $output;
 }
@@ -409,7 +402,8 @@ function faq_categories_settings_form() {
 /**
  * Define a form to edit the q/a weights
  */
-function faq_weight_settings_form($form_values = NULL) {
+function faq_weight_settings_form($form_state) {
+  $order = $date_order = '';
 
   drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
   drupal_add_css(drupal_get_path('module', 'faq') .'/faq.css');
@@ -418,7 +412,7 @@ function faq_weight_settings_form($form_values = NULL) {
   if (!$use_categories) {
     $step = "order";
   }
-  elseif (!isset($form_values)) {
+  elseif (!isset($form_state['values'])) {
     $step = "categories";
   }
   else {
@@ -428,9 +422,6 @@ function faq_weight_settings_form($form_values = NULL) {
     '#type' => 'hidden',
     '#value' => $step,
   );
-
-  $form['#multistep'] = TRUE;
-  $form['#redirect'] = FALSE;
 
   // categorized q/a
   if ($step == "categories") {
@@ -453,6 +444,7 @@ function faq_weight_settings_form($form_values = NULL) {
         $form['choose_cat']['search'] = array(
           '#type' => 'submit',
           '#value' => t('Search'),
+          '#submit' => array('faq_weight_settings_choose_cat_form_submit'),
         );
       }
     }
@@ -461,7 +453,10 @@ function faq_weight_settings_form($form_values = NULL) {
 
   else {
     $options = array();
-    $category = $form_values['faq_category'];
+    $category = 0;
+    if (!empty($form_state['values']['faq_category'])) {
+      $category = $form_state['values']['faq_category'];
+    }
     if (empty($category)) {
       $category = 0;
       $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = %d WHERE n.type='faq' AND n.status = 1 ORDER BY weight ASC, n.sticky DESC, n.created DESC", "n", "nid"), $category);
@@ -522,6 +517,7 @@ function faq_weight_settings_form($form_values = NULL) {
       '#value' => t('Update'),
       '#weight' => 3,
       '#attributes' => array('onclick' => 'faq_update_order();'),
+      '#submit' => array('faq_weight_settings_reorder_form_submit'),
     );
   }
 
@@ -529,29 +525,32 @@ function faq_weight_settings_form($form_values = NULL) {
   return $form;
 }
 
-function faq_weight_settings_form_submit($form_id, $form_values) {
-  if ($form_values['op'] == t('Update')) {
+function faq_weight_settings_choose_cat_form_submit($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
+}
 
-    $order = preg_split("/,/", $form_values['faq_node_order']);
+
+function faq_weight_settings_reorder_form_submit($form, &$form_state) {
+  if ($form_state['values']['op'] == t('Update')) {
+
+    $order = preg_split("/,/", $form_state['values']['faq_node_order']);
     switch ($GLOBALS['db_type']) {
       case 'mysql':
       case 'mysqli':
         foreach ($order as $index => $nid) {
-          $result = db_query("REPLACE INTO {faq_weights} (tid, nid, weight) VALUES(%d, %d, %d)", $form_values['faq_category'], $nid, $index);
+          $result = db_query("REPLACE INTO {faq_weights} (tid, nid, weight) VALUES(%d, %d, %d)", $form_state['values']['faq_category'], $nid, $index);
         }
         break;
 
       case 'pgsql':
         foreach ($order as $index => $nid) {
-          $result = db_query("DELETE FROM {faq_weights} WHERE tid = %d AND nid = %d", $form_values['faq_category'], $nid);
-          $result = db_query("INSERT INTO {faq_weights} (tid, nid, weight) VALUES(%d, %d, %d)", $form_values['faq_category'], $nid, $index);
+          $result = db_query("DELETE FROM {faq_weights} WHERE tid = %d AND nid = %d", $form_state['values']['faq_category'], $nid);
+          $result = db_query("INSERT INTO {faq_weights} (tid, nid, weight) VALUES(%d, %d, %d)", $form_state['values']['faq_category'], $nid, $index);
         }
         break;
     }
 
     drupal_set_message(t('Configuration has been updated.'));
-  }
-  else {
   }
 }
 
@@ -561,6 +560,7 @@ function faq_weight_settings_form_submit($form_id, $form_values) {
  * Function to display the faq page
  */
 function faq_page($tid = 0) {
+  $output = $output_answers = '';
   drupal_add_css(drupal_get_path('module', 'faq') .'/faq.css');
   drupal_set_title(variable_get('faq_title', t('Frequently Asked Questions')));
   if (!module_exists("taxonomy")) {
@@ -734,6 +734,7 @@ function _display_faq_by_category($faq_display, $category_display, $term, $displ
 
   // handle indenting of categories
   $depth = 0;
+  if (!isset($term->depth)) $term->depth = 0;
   while ($depth < $term->depth) {
     $display_vars['display_header'] = 1;
     $indent = '<div class="faq_category_indent">';
@@ -785,25 +786,58 @@ function _display_faq_by_category($faq_display, $category_display, $term, $displ
 
 }
 
+function faq_theme() {
+  return array(
+    'questions_top' => array(
+      'arguments' => array('result' => NULL, 'display_vars' => NULL),
+      ),
+    'category_questions_top' => array(
+      'arguments' => array('result' => NULL, 'display_vars' => NULL, 'term' => NULL, 'class' => NULL),
+      ),
+    'hide_answer' => array(
+      'arguments' => array('result' => NULL),
+      ),
+    'category_hide_answer' => array(
+      'arguments' => array('result' => NULL, 'display_vars' => NULL, 'term' => NULL, 'class' => NULL),
+      ),
+    'questions_inline' => array(
+      'arguments' => array('result' => NULL, 'display_vars' => NULL),
+      ),
+    'category_questions_inline' => array(
+      'arguments' => array('result' => NULL, 'display_vars' => NULL, 'term' => NULL, 'class' => NULL),
+      ),
+    'new_page' => array(
+      'arguments' => array('result' => NULL),
+      ),
+    'category_new_page' => array(
+      'arguments' => array('result' => NULL, 'display_vars' => NULL, 'term' => NULL, 'class' => NULL),
+      ),
+    'faq_highlights' => array(
+      'arguments' => array('num' => 5),
+      ),
+  );
+}
+
 function theme_questions_top($result, $display_vars) {
 
   // configure "back to top" link
   $back_to_top = '';
   if (!empty($display_vars['back_to_top'])) {
     $back_to_top = '<p class="faq_top_link">';
-    $back_to_top .= l(t($display_vars['back_to_top']), 'faq', array(), NULL, '') .'</p>';
+    $back_to_top .= l(t($display_vars['back_to_top']), 'faq', array('attributes' => array(), 'query' => NULL, 'fragment' => '')) .'</p>';
   }
 
   // loop through results
   $questions = array();
+  $answers = '';
   while ($node = db_fetch_object($result)) {
     $node_obj = node_load($node->nid);
     if (node_access("view", $node_obj)) {
       $anchor = "n". $node->nid;
 
-      $questions[] = l($node->title, 'faq', NULL, NULL, $anchor);
+      $questions[] = l($node->title, 'faq', array('fragment' => $anchor));
 
-      $answers .= '<dt class="faq_dt_questions_top">'. l($node->title, "node/$node->nid", array("name" => "$anchor")) ."</dt>\n";
+      $answers .= '<dt class="faq_dt_questions_top">'. l($node->title, "node/$node->nid", array("attributes" => array("name" => "$anchor"))) ."</dt>\n";
 
       // should we display teaser or full text
       if ($display_vars['use_teaser']) {
@@ -837,8 +871,10 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
 
   $output = '';
   $output_answers = '';
+  $answers = '';
   $this_page = 'faq';
   $get_sub_terms = 0;
+  $count = 0;
   if (arg(0) == 'faq' && is_numeric(arg(1))) {
     $this_page .= "/". arg(1);
     $get_sub_terms = arg(1);
@@ -848,15 +884,12 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
   $back_to_top = '';
   if (!empty($display_vars['back_to_top'])) {
     $back_to_top = '<p class="faq_top_link">';
-    $back_to_top .= l(t($display_vars['back_to_top']), $this_page, array(), NULL, '') .'</p>';
+    $back_to_top .= l(t($display_vars['back_to_top']), $this_page, array('fragment' => '')) .'</p>';
   }
 
   // get number of questions, and account for hidden sub-cats
-  if ($display_vars['faq_count']) {
-    $count = db_num_rows($result);
-    if ($display_vars['hide_sub_categories']) {
-      $count = taxonomy_term_count_nodes($term->tid, 'faq');
-    }
+  if ($display_vars['faq_count'] && $display_vars['hide_sub_categories']) {
+    $count = taxonomy_term_count_nodes($term->tid, 'faq');
   }
 
   // configure header
@@ -888,6 +921,7 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
 
   // get list of sub-categories if necessary
   $sub_cats = '';
+  $sub_cat_output_answers = '';
   if (($display_vars['show_cat_sub_cats'] || $display_vars['hide_sub_categories']) && $display_vars['category_display'] == 'new_page') {
     $list = taxonomy_get_children($term->tid);
 
@@ -937,13 +971,14 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
     $list = taxonomy_get_children($term->tid);
 
     foreach ($list as $tid => $sub_term) {
+      $sub_term->depth = 1;
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
         $sub_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
         $display_vars['display_header'] = 1;
         $sub_cats .= '<div class="faq_category_indent">';
         $sub_cat_data = theme('category_questions_top', $sub_result, $display_vars, $sub_term, $class);
-        $sub_cats .= $sub_cata_data["output"];
-        $sub_cat_output_answers .= $sub_cata_data["output_answers"];
+        $sub_cats .= $sub_cat_data["output"];
+        $sub_cat_output_answers .= $sub_cat_data["output_answers"];
         $sub_cats .= '</div>';
       }
     }
@@ -951,16 +986,19 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
   }
 
 
-  if (db_num_rows($result)) {
+  if ($result) {
     $questions = array();
     while ($node = db_fetch_object($result)) {
       $node = node_load($node->nid);
       if (node_access("view", $node)) {
+        if (!$display_vars['hide_sub_categories']) {
+          $count++;
+        }
         $anchor = $term->tid ."n". $node->nid;
 
-        $questions[] = l($node->title, $this_page, NULL, NULL, $anchor);
+        $questions[] = l($node->title, $this_page, array('fragment' => $anchor));
 
-        $answers .= '<dt class="faq_dt_questions_top">'. l($node->title, "node/$node->nid", array("name" => "$anchor")) ."</dt>\n";
+        $answers .= '<dt class="faq_dt_questions_top">'. l($node->title, "node/$node->nid", array("attributes" => array("name" => "$anchor"))) ."</dt>\n";
 
         // should we display teaser or full text
         if ($display_vars['use_teaser']) {
@@ -981,9 +1019,6 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
           $answers .= $back_to_top ."</dd>\n";
         }
       }
-      else {
-        $count--;
-      }
     } // end of while
 
     $list_style = variable_get('faq_question_listing', 'ul');
@@ -994,7 +1029,7 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
   if ($display_vars['group_questions_top'] || $display_vars['category_display'] == "hide_qa") {
 
     if ($answer_category_name) {
-      if (db_num_rows($result)) {
+      if ($result) {
         $output .= $ans_hdr;
         $output .= '<dl class="faq_dl_questions_top">'."\n";
         $output .= $answers ."\n</dl>\n";
@@ -1003,7 +1038,7 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
     }
 
     else {
-      if (db_num_rows($result)) {
+      if ($result) {
         $output .= '<dl class="faq_dl_questions_top">'."\n";
         $output .= $answers ."\n</dl>\n";
       }
@@ -1078,6 +1113,7 @@ function theme_hide_answer($result) {
 function theme_category_hide_answer($result, $display_vars, $term, $class) {
 
   $get_sub_terms = 0;
+  $count = 0;
   if (arg(0) == 'faq' && is_numeric(arg(1))) {
     $get_sub_terms = arg(1);
   }
@@ -1085,11 +1121,8 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
   drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
 
   // get number of questions, and account for hidden sub-cats
-  if ($display_vars['faq_count']) {
-    $count = db_num_rows($result);
-    if ($display_vars['hide_sub_categories']) {
-      $count = taxonomy_term_count_nodes($term->tid, 'faq');
-    }
+  if ($display_vars['faq_count'] && $display_vars['hide_sub_categories']) {
+    $count = taxonomy_term_count_nodes($term->tid, 'faq');
   }
 
   // configure header
@@ -1165,6 +1198,7 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
     $list = taxonomy_get_children($term->tid);
 
     foreach ($list as $tid => $sub_term) {
+      $sub_term->depth = 1;
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
         $sub_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
         $display_vars['display_header'] = 1;
@@ -1177,19 +1211,19 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
   }
 
 
-  if (db_num_rows($result)) {
+  if ($result) {
     $output .= '<dl class="faq_dl">'."\n";
 
     while ($node = db_fetch_object($result)) {
       $node = node_load($node->nid);
       if (node_access("view", $node)) {
+        if (!$display_vars['hide_sub_categories']) {
+          $count++;
+        }
         $output .= '<dt class="faq_question">';
         $output .= l($node->title, "node/$node->nid") ."</dt>\n";
         $output .= '<dd class="faq_answer">';
         $output .= check_markup($node->body, $node->format, FALSE) ."</dd>\n";
-      }
-      else {
-        $count--;
       }
     }
     $output .= "</dl>\n";
@@ -1206,7 +1240,7 @@ function theme_questions_inline($result, $display_vars) {
   $back_to_top = '';
   if (!empty($display_vars['back_to_top'])) {
     $back_to_top = '<p class="faq_top_link">';
-    $back_to_top .= l(t($display_vars['back_to_top']), 'faq', array(), NULL, '') .'</p>';
+    $back_to_top .= l(t($display_vars['back_to_top']), 'faq', array('attributes' => array(), 'query' => NULL, 'fragment' => '')) .'</p>';
   }
 
   // configure labels
@@ -1251,6 +1285,7 @@ function theme_questions_inline($result, $display_vars) {
 function theme_category_questions_inline($result, $display_vars, $term, $class) {
   $this_page = 'faq';
   $get_sub_terms = 0;
+  $count = 0;
   if (arg(0) == 'faq' && is_numeric(arg(1))) {
     $this_page .= "/". arg(1);
     $get_sub_terms = arg(1);
@@ -1260,7 +1295,7 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
   $back_to_top = '';
   if (!empty($display_vars['back_to_top'])) {
     $back_to_top = '<p class="faq_top_link">';
-    $back_to_top .= l(t($display_vars['back_to_top']), $this_page, array(), NULL, '') .'</p>';
+    $back_to_top .= l(t($display_vars['back_to_top']), $this_page, array('attributes' => array(), 'query' => NULL, 'fragment' => '')) .'</p>';
   }
 
   // configure labels
@@ -1272,11 +1307,8 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
   }
 
   // get number of questions, and account for hidden sub-cats
-  if ($display_vars['faq_count']) {
-    $count = db_num_rows($result);
-    if ($display_vars['hide_sub_categories']) {
-      $count = taxonomy_term_count_nodes($term->tid, 'faq');
-    }
+  if ($display_vars['faq_count'] && $display_vars['hide_sub_categories']) {
+    $count = taxonomy_term_count_nodes($term->tid, 'faq');
   }
 
   // configure header
@@ -1355,6 +1387,7 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
     $list = taxonomy_get_children($term->tid);
 
     foreach ($list as $tid => $sub_term) {
+      $sub_term->depth = 1;
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
         $sub_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
         $display_vars['display_header'] = 1;
@@ -1367,12 +1400,15 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
   }
 
 
-  if (db_num_rows($result)) {
+  if ($result) {
     $output .= '<dl class="faq_dd_questions_inline">'."\n";
 
     while ($node = db_fetch_object($result)) {
       $node = node_load($node->nid);
       if (node_access("view", $node)) {
+        if (!$display_vars['hide_sub_categories']) {
+          $count++;
+        }
         $output .= '<dt class="faq_dt_questions_inline">';
         $output .= l($que_label . $node->title, "node/$node->nid") ."</dt>\n";
 
@@ -1395,9 +1431,6 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
           $output .= $back_to_top ."</dd>\n";
         }
       }
-      else {
-        $count--;
-      }
     }
     $output .= "</dl>\n";
   }
@@ -1416,7 +1449,7 @@ function theme_new_page($result) {
     }
   }
   $list_style = variable_get('faq_question_listing', 'ul');
-  $output .= theme('item_list', $items, NULL, $list_style, array("class" => "faq_question_listing"));
+  $output = theme('item_list', $items, NULL, $list_style, array("class" => "faq_question_listing"));
 
   return $output;
 }
@@ -1425,16 +1458,14 @@ function theme_new_page($result) {
 function theme_category_new_page($result, $display_vars, $term, $class) {
 
   $get_sub_terms = 0;
+  $count = 0;
   if (arg(0) == 'faq' && is_numeric(arg(1))) {
     $get_sub_terms = arg(1);
   }
 
   // get number of questions, and account for hidden sub-cats
-  if ($display_vars['faq_count']) {
-    $count = db_num_rows($result);
-    if ($display_vars['hide_sub_categories']) {
-      $count = taxonomy_term_count_nodes($term->tid, 'faq');
-    }
+  if ($display_vars['faq_count'] && $display_vars['hide_sub_categories']) {
+    $count = taxonomy_term_count_nodes($term->tid, 'faq');
   }
 
   // configure header
@@ -1508,6 +1539,7 @@ function theme_category_new_page($result, $display_vars, $term, $class) {
     $list = taxonomy_get_children($term->tid);
 
     foreach ($list as $tid => $sub_term) {
+      $sub_term->depth = 1;
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
         $sub_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
         $display_vars['display_header'] = 1;
@@ -1520,15 +1552,15 @@ function theme_category_new_page($result, $display_vars, $term, $class) {
   }
 
 
-  if (db_num_rows($result)) {
+  if ($result) {
     $items = array();
     while ($node = db_fetch_object($result)) {
       $node = node_load($node->nid);
       if (node_access("view", $node)) {
+        if (!$display_vars['hide_sub_categories']) {
+          $count++;
+        }
         $items[] = l($node->title, "node/$node->nid");
-      }
-      else {
-        $count--;
       }
     }
     $list_style = variable_get('faq_question_listing', 'ul');
@@ -1661,6 +1693,7 @@ function _get_indented_faq_terms($vid, $tid, $display_vars) {
         $cur_item = check_plain($term->name) . $desc;
       }
 
+      $term_items = array();
       if (!$display_vars['hide_sub_categories']) {
         $term_items = _get_indented_faq_terms($vid, $term->tid, $display_vars);
       }
