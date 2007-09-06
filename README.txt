@@ -33,6 +33,20 @@ are only visible after one or two clicks normally.
   CSS of your site when Drupal Administration Menu is enabled.
 
 
+-- CUSTOMIZATION --
+
+* You have two options to override the admin menu icon:
+  
+  1) Disable it via CSS in your theme:
+
+     body #admin_menu_icon { display: none; }
+
+  2) Alter the image by overriding the theme function:
+
+     Copy the whole function theme_admin_menu_icon() into your template.php,
+     rename it to f.e. phptemplate_admin_menu_icon() and customize the output.
+
+
 -- AUTHORS --
 
 Daniel F. Kudwien, dev@unleashedmind.com
