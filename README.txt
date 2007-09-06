@@ -47,6 +47,19 @@ are only visible after one or two clicks normally.
      rename it to f.e. phptemplate_admin_menu_icon() and customize the output.
 
 
+-- THEME-SPECIFIC TROUBLESHOOTING --
+
+* Chameleon:
+  Bug: Admin Menu does not use all available width.
+  Fix: You need to create a new region that outputs Admin Menu above the
+       main table#content. Ensure that Admin Menu block is assigned to this
+       region.
+
+* Marvin:
+  Bug: Admin Menu does not use all available width.
+  Fix: Ensure that Admin Menu block is assigned to the header region.
+
+
 -- AUTHORS --
 
 Daniel F. Kudwien, dev@unleashedmind.com
