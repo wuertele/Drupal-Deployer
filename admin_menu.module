@@ -160,6 +160,14 @@ function admin_menu_adjust_items(&$admin_items) {
   // remove 'By task' menu item
   admin_menu_remove_item($admin_items, 'admin/by-task');
 
+  // add logout item
+  $mid_logout = $_menu['path index']['logout'];
+  $admin_items[$mid_logout] = $_menu['items'][$mid_logout];
+  $admin_items[$mid_logout]['class'] = 'admin_menu-action';
+  $mid_admin = $_menu['path index']['admin'];
+  $admin_items[$mid_logout]['pid'] = $mid_admin;
+  array_unshift($admin_items[$mid_admin]['children'], $mid_logout);
+  
   // add create content_type items to Content management > Content
   $mid_content = $_menu['path index']['admin/content/node'];
   if (isset($admin_items[$mid_content]) && isset($_menu['items'][$_menu['path index']['node/add']]['children'])) {
@@ -274,8 +282,15 @@ function theme_admin_menu_tree(&$menu, $pid = 1) {
 }
 
 function theme_admin_menu_item(&$admin_items, $mid, $children = '', $leaf = true) {
-  $output = '<li' . (!$leaf ? ' class="expandable"' : '') . '>';
-  $output.= admin_menu_item_link($admin_items, $mid) . $children . "</li>";
+  $class = array();
+  if (!$leaf) {
+    $class[] = 'expandable';
+  }
+  if (isset($admin_items[$mid]['class'])) {
+    $class[] = $admin_items[$mid]['class'];
+  }
+  $output  = '<li'. (!empty($class) ? ' class="'. implode(' ', $class) .'"' : '') . '>';
+  $output .= admin_menu_item_link($admin_items, $mid) . $children . '</li>';
   return $output;
 }
 
