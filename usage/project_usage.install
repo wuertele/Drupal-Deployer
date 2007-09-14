@@ -66,3 +66,36 @@ function project_usage_uninstall() {
     variable_del($variable);
   }
 }
+
+/**
+ * Make sure that all the timestamps in the tables are GMT.
+ */
+function project_usage_update_5000() {
+  $ret = array();
+
+  // Since this might take a long time, if we're not in 'safe mode', increase
+  // the maximum execution time.
+  if (!ini_get('safe_mode')) {
+    set_time_limit(240);
+  }
+
+  // Key is table name, value is function used to round the timestamp.
+  $tables = array(
+    'project_usage_week_project' => 'project_usage_weekly_timestamp',
+    'project_usage_week_release' => 'project_usage_weekly_timestamp',
+    'project_usage_raw' => 'project_usage_daily_timestamp',
+    'project_usage_day' => 'project_usage_daily_timestamp',
+  );
+  foreach ($tables as $table => $rounding_function) {
+    $query = db_query("SELECT DISTINCT timestamp FROM {$table} ORDER BY timestamp ASC");
+    while ($row = db_fetch_object($query)) {
+      $old = (int) $row->timestamp;
+      $new = (int) $rounding_function($old);
+      if ($old != $new) {
+        $ret[] = update_sql("UPDATE {$table} SET timestamp = $new WHERE timestamp = $old");
+      }
+    }
+  }
+
+  return $ret;
+}
