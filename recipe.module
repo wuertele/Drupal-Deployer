@@ -33,7 +33,7 @@ function recipe_init() {
  * Implementation of hook_perm().
  */
 function recipe_perm() {
-  return array('create recipes', 'edit own recipes');
+  return array(t('create recipes'), t('edit own recipes'));
 }
 
 /**
@@ -145,7 +145,7 @@ function recipe_form(&$node) {
     '#default_value' => $node->body,
     '#cols' => 60,
     '#rows' => 2,
-    '#description' => 'A short description or "teaser" for the recipe.',
+    '#description' => t('A short description or "teaser" for the recipe.'),
     '#required' => TRUE,
   );
   $form['yield'] = array(
@@ -154,7 +154,7 @@ function recipe_form(&$node) {
     '#default_value' => $node->yield,
     '#size' => 10,
     '#maxlength' => 10,
-    '#description' => 'The number of servings the recipe will make.',
+    '#description' => t('The number of servings the recipe will make.'),
     '#attributes' => NULL,
     '#required' => TRUE,
   );
@@ -162,7 +162,7 @@ function recipe_form(&$node) {
     '#type' => 'select',
     '#title' => t("Preparation time"),
     '#default_value' => $node->preptime,
-    '#options' => array (5 => "5 minutes", 10 => "10 minutes", 15 => "15 minutes", 20 => "20 minutes", 30 => "30 minutes", 45 => "45 minutes", 60 => "1 hour", 90 => "1 1/2 hours", 120 => "2 hours", 150 => "2 1/2 hours", 180 => "3 hours", 210 => "3 1/2 hours", 240 => "4 hours", 300 => "5 hours", 360 => "6 hours"),
+    '#options' => array (5 => t('5 minutes'), 10 => t('10 minutes'), 15 => t('15 minutes'), 20 => t('20 minutes'), 30 => t('30 minutes'), 45 => t('45 minutes'), 60 => t('1 hour'), 90 => t('1 1/2 hours'), 120 => t('2 hours'), 150 => t('2 1/2 hours'), 180 => t('3 hours'), 210 => t('3 1/2 hours'), 240 => t('4 hours'), 300 => t('5 hours'), 360 => t('6 hours')),
     '#description' => t("How long does this recipe take to prepare (i.e. elapsed time)"),
   );
   $form["source"] = array(
@@ -179,12 +179,14 @@ function recipe_form(&$node) {
   $system = variable_get('recipe_ingredient_system','complex');
   if ($system == 'complex') {
     $form['ingredients']['headings'] = array(
-      '#value' => '<div><table ><thead><tr><th>Quantity</th><th>Units</th><th>Ingredient Name</th></tr></thead>'."\n".'<tbody>',
+      '#value' => '<div><table ><thead><tr><th>'.t('Quantity').'</th><th>'.
+                  t('Units').'</th><th>'.t('Ingredient Name').
+                  '</th></tr></thead>'."\n".'<tbody>',
     );
   }
   else {
     $form['ingredients']['headings'] = array(
-      '#value' => '<div><table ><thead><tr><th>Ingredients</th></tr></thead>'."\n".'<tbody>',
+      '#value' => '<div><table ><thead><tr><th>'.t('Ingredients').'</th></tr></thead>'."\n".'<tbody>',
     );
   }
   $rows = array();
@@ -341,7 +343,7 @@ function recipe_form(&$node) {
     '#default_value' => $node->instructions,
     '#cols' => 60,
     '#rows' => 10,
-    '#description' => 'Step by step instructions on how to prepare and cook the recipe.',
+    '#description' => t('Step by step instructions on how to prepare and cook the recipe.'),
   );
   $form['notes'] = array(
     '#type' => 'textarea',
@@ -364,7 +366,7 @@ function recipe_admin_settings() {
     '#type' => 'select',
     '#title' => t('Index Depth'),
     '#default_value' => variable_get('recipe_index_depth', 0),
-    '#options' => array(0 => "All Terms", 1 => "1", 2 => "2", 3 => "3", 4 => "4", 5 => "5", 6 => "6"),
+    '#options' => array(0 => t('All Terms'), 1 => "1", 2 => "2", 3 => "3", 4 => "4", 5 => "5", 6 => "6"),
     '#description' => t("Defines how many levels of terms should be displayed on any given recipe index page. For example, if you select 1 then only one level of the Recipe index tree will be displayed at a time."),
   );
   $form['recipe_recent_box_enable'] = array(
@@ -377,7 +379,7 @@ function recipe_admin_settings() {
   );
   $form['recipe_recent_box_title'] = array(
     '#type' => 'textfield',
-    '#title' => 'Box Title',
+    '#title' => t('Box Title'),
     '#default_value' => variable_get('recipe_recent_box_title', t('Latest Recipes')),
     '#size' => 35,
     '#maxlength' => 255,
@@ -456,7 +458,7 @@ function recipe_menu($may_cache) {
     );
     $items[] = array(
       'path' => 'recipe/ingredient/autocomplete',
-      'title' => 'Ingredient autocomplete',
+      'title' => t('Ingredient autocomplete'),
       'callback' => 'recipe_autocomplete_page',
       'type' => MENU_CALLBACK,
       'access' => user_access('access content')
@@ -469,7 +471,7 @@ function recipe_menu($may_cache) {
     );
     $items[] = array(
       'path' => 'recipe/importolddb',
-      'title' => 'import old recipes',
+      'title' => t('import old recipes'),
       'callback' => 'recipe_import_from_46',
       'type' => MENU_SUGGESTED_ITEM,
       'access' => user_access('create recipes')
@@ -542,7 +544,7 @@ function recipe_block($op = 'list', $delta = 0, $edit = array()) {
  */
 function recipe_view(&$node, $teaser = FALSE, $page = FALSE) {
   if ($page) {
-    drupal_set_breadcrumb(array(l(t('Home'), ''), l('Recipes', 'recipe')));
+    drupal_set_breadcrumb(array(l(t('Home'), ''), l(t('Recipes'), 'recipe')));
     drupal_add_css(drupal_get_path('module', 'recipe') . '/recipe.css');
   }
   $node = recipe_node_prepare($node, $teaser);
@@ -870,7 +872,7 @@ function recipe_export($type = 'html', $nid = 0) {
     echo call_user_func($export_function, $nid);
   }
   else {
-    drupal_set_message('Unknown export format');
+    drupal_set_message(t('Unknown export format.'));
     drupal_not_found();
   }
 }
@@ -959,7 +961,7 @@ function recipe_validate(&$node) {
       $ingredient = recipe_parse_ingredient_string($ingredient->name);
     }
     if ($ingredient->name && _in_array($ingredient,$ingredients)) {
-      form_set_error("recipe", "Duplicate ingredients are not allowed.");
+      form_set_error("recipe", t('Duplicate ingredients are not allowed.'));
     }
     else {
       $ingredients[] = $ingredient;
@@ -1440,18 +1442,21 @@ function theme_node_recipe($node, $yield_form = TRUE) {
 
   // Construct the summary
   $summary = '<table>';
-  $summary .= '<tr><th>Yield</th><td>'.$yield.'</td></tr>';
+  $summary .= '<tr><th>'.t('Yield').'</th><td>'.$yield.'</td></tr>';
   if ($node->source) {
-    $summary .= '<tr><th>Source</th><td>'.$node->source.'</td></tr>';
+    $summary .= '<tr><th>'.t('Source').'</th><td>'.$node->source.'</td></tr>';
   }
   if ($node->preptime) {
     if ($node->preptime < 60) {
-      $preptime = t("!n minutes", array ("!n" => $node->preptime));
+      $preptime = format_plural($node->preptime, '1 minute', '@count minutes');
+    }
+    elseif ($node->preptime % 60 == 0) {
+      $preptime = format_plural($node->preptime / 60, '1 hour', '@count hours');
     }
     else {
-      $preptime = t("!n hours", array ("!n" => recipe_ingredient_quantity_from_decimal($node->preptime / 60)));
+      $preptime = t('!time hours', array('!time' => recipe_ingredient_quantity_from_decimal($node->preptime / 60)));
     }
-     $summary .= '<tr><th>Prep Time</th><td>'.$preptime.'</td></tr>';
+    $summary .= '<tr><th>'.t('Prep Time').'</th><td>'.$preptime.'</td></tr>';
   }
   $vocabs = taxonomy_get_vocabularies('recipe');
   if (count($vocabs) > 0) {
@@ -1618,7 +1623,7 @@ function recipe_import_from_46() {
   $old = db_query("SELECT * FROM {recipe_old}");
   while ($o = db_fetch_object($old)) {
     db_query("INSERT INTO {recipe} (nid, source, yield, preptime, notes, instructions) VALUES('%d', '%s', '%d', '%d', '%s', '%s')", $o->nid, $o->source, intval($o->yield), $o->preptime, $o->notes, $o->instructions);
-    $out .= "Imported recipe {$o->nid} <br />";
+    $out .= t('Imported recipe @recipeid', array('@recipeid' => $o->nid)).'<br />';
     $rcount++;
   }
   $out .= "</p>";
@@ -1628,29 +1633,30 @@ function recipe_import_from_46() {
   while ($i = db_fetch_object($ings)) {
     $unitid = 29; // "unknown"
     $quantity = recipe_ingredient_quantity_from_fraction($i->ingredient); // best guess
-    $out .= "\n\nParsing {$i->ingredient}\n";
+    $out .= "\n\n".t('Parsing @ingredient', array('@ingredient' => $i->ingredient))."\n";
     $nmatches = preg_match("/([^a-zA-Z]*)([^ ]*) (.*)/", $i->ingredient, $matches);
     //print_r($matches);
     if ($nmatches > 0) {
       $quantity = recipe_ingredient_quantity_from_fraction($matches[1]);
       $unit = $matches[2];
       $name = $matches[3];
-      $out .= "looking up unit for '".strtolower($unit)."'\n";
+      $out .= t('looking up unit for "@unit"', array('@unit' => strtolower($unit)))."\n";
       $unit_rs = db_query("SELECT id FROM {recipe_unit} WHERE '%s' LIKE CONCAT(LOWER(name),'%%') OR abbreviation='%s'", strtolower($unit), $unit); // allow pints to match pint etc
       if ($unito = db_fetch_object($unit_rs)) {
-        $out .= "Got unit id ".$unito->id."\n";
+        $out .= t('Got unit id @unitid', array('@unitid' => $unito->id))."\n";
         $unitid = $unito->id;
       } else {
         $name = $unit ." ". $name; 
       }
     }
     $iid = recipe_ingredient_id_from_name($name);
-    $out .= "Got id for '{$name}': $iid";
+    $out .= t('Got id for "@name": @iid', array('@name' => $name, '@iid' => $iid));
     db_query("INSERT INTO {recipe_node_ingredient} (nid, unit_id, quantity, ingredient_id) VALUES('%d', '%d', '%f', '%d')", $i->nid, $unitid, $quantity, $iid);
     $icount++;
   }
   $out .= "</pre></p>";
-  $out .= "<p>Imported $rcount recipes and $icount ingredients.</p>";
+  $out .= '<p>'.t('Imported @rcount recipes and @icount ingredients.',
+                  array('@rcount' => $rcount, '@icount' => $icount)).'</p>';
   return $out;
 }
 
