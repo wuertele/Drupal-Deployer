@@ -103,7 +103,9 @@ function project_release_history_generate_all() {
   wd_msg(format_plural($i, 'Generated an XML release history summary for a project.', 'Generated XML release history summaries for @count projects.'));
 
   // Generate XML files based on API compatibility.
-  $query = db_query("SELECT DISTINCT(prn.pid), tn.tid FROM {project_release_nodes} prn INNER JOIN {term_node} tn ON prn.nid = tn.nid WHERE tn.tid IN (%s)", implode(',', array_keys($api_terms)));
+  $tids = array_keys($api_terms);
+  $placeholders = implode(',', array_fill(0, count($tids), '%d'));
+  $query = db_query("SELECT DISTINCT(prn.pid), tn.tid FROM {project_release_nodes} prn INNER JOIN {term_node} tn ON prn.nid = tn.nid WHERE tn.tid IN ($placeholders)", $tids);
   $i = 0;
   while ($project = db_fetch_object($query)) {
     project_release_history_generate_project_xml($project->pid, $project->tid);
