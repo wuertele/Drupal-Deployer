@@ -2,9 +2,7 @@ $Id$
 
 Description
 -----------
-This module provides a "tabs" Panel style that can be used by any Panels
-module.
-
+Configurable 'tabs' panel style.
 
 Dependencies
 ------------
