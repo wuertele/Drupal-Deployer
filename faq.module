@@ -833,6 +833,9 @@ function faq_theme() {
     'faq_highlights' => array(
       'arguments' => array('num' => 5),
       ),
+    'faq_random_highlights' => array(
+      'arguments' => array('num' => 5),
+      ),
   );
 }
 
@@ -1630,6 +1633,7 @@ function faq_block($op = 'list', $delta = 0, $edit = array()) {
       return $blocks;
 
     case 'view':
+      $block = array();
       switch ($delta) {
         case 0:
           // FAQ Categories
@@ -1659,26 +1663,57 @@ function faq_block($op = 'list', $delta = 0, $edit = array()) {
           $block['content'] = theme('faq_highlights', variable_get('faq_block_recent_faq_count', 5));
           break;
 
+        case 2:
+          // Random FAQs
+          $block['subject'] = t('Random FAQs');
+          $block['content'] = theme('faq_random_highlights', variable_get('faq_block_random_faq_count', 5));
+          break;
+
       } // end switch($delta)
+
       return $block;
 
 
     case 'configure':
-      if ($delta == 1) {
-        // Recent FAQs
-        $form['faq_block_recent_faq_count'] = array(
-          '#type' => 'textfield',
-          '#title' => t('Number of FAQs to show'),
-          '#description' => t("This controls the number of FAQs that appear in the 'Recent FAQs' block"),
-          '#default_value' => variable_get('faq_block_recent_faq_count', 5),
-        );
-      }
+      switch ($delta) {
+        case 0:
+          break;
+
+        case 1:
+          // Recent FAQs
+          $form['faq_block_recent_faq_count'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Number of FAQs to show'),
+            '#description' => t("This controls the number of FAQs that appear in the 'Recent FAQs' block"),
+            '#default_value' => variable_get('faq_block_recent_faq_count', 5),
+          );
+          break;
+
+        case 2:
+          // Random FAQs
+          $form['faq_block_random_faq_count'] = array(
+            '#type' => 'textfield',
+            '#title' => t('Number of FAQs to show'),
+            '#description' => t("This controls the number of FAQs that appear in the 'Random FAQs' block"),
+            '#default_value' => variable_get('faq_block_random_faq_count', 5),
+          );
+          break;
+      } // end switch($delta)
       return $form;
 
     case 'save':
-      if ($delta == 1) {
-        variable_set('faq_block_recent_faq_count', $edit['faq_block_recent_faq_count']);
-      }
+      switch ($delta) {
+        case 0:
+          break;
+
+        case 1:
+          variable_set('faq_block_recent_faq_count', $edit['faq_block_recent_faq_count']);
+          break;
+
+        case 2:
+          variable_set('faq_block_random_faq_count', $edit['faq_block_random_faq_count']);
+          break;
+      } // end switch($delta)
       return;
 
   } // end switch($op)
@@ -1688,6 +1723,25 @@ function faq_block($op = 'list', $delta = 0, $edit = array()) {
 function theme_faq_highlights($num = 5) {
 
   $result = db_query_range(db_rewrite_sql("SELECT n.nid, n.title FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid WHERE n.type='faq' AND n.status = 1 ORDER BY n.created DESC", "n", "nid"), 0, $num);
+
+  $items = array();
+  while ($node = db_fetch_object($result)) {
+    $node = node_load(array('nid' => $node->nid));
+    $node = node_prepare($node);
+    if (node_access("view", $node)) {
+      $items[] = l($node->title, 'node/'. $node->nid);
+    }
+  }
+  $list_style = variable_get('faq_question_listing', 'ul');
+  $output = theme('item_list', $items, NULL, $list_style);
+  $output .= l(t('All FAQs'), 'faq');
+
+  return $output;
+}
+
+function theme_faq_random_highlights($num = 5) {
+
+  $result = db_query_range(db_rewrite_sql("SELECT n.nid, n.title FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid WHERE n.type='faq' AND n.status = 1 ORDER BY RAND()", "n", "nid"), 0, $num);
 
   $items = array();
   while ($node = db_fetch_object($result)) {
