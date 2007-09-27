@@ -568,7 +568,7 @@ function project_issue_form($node, $param) {
 
     // Load the project and initialize some support arrays.
     $project = node_load(array('nid' => $pid, 'type' => 'project_project'));
-    if (trim($project->help)) {
+    if (trim($project->help) && empty($_POST)) {
       drupal_set_message(filter_xss($project->help));
     }
     if (module_exists('project_release') &&
