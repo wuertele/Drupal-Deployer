@@ -169,7 +169,7 @@ function project_issue_update_project($pid, $cid = NULL, $rid = NULL) {
  *   Value returned from arg(2)
  */
 function project_issue_build_form_url($url_arg) {
-  $adv_filters = array('text', 'attachment', 'components', 'submitted', 'assigned', 'versions', 'participated', 'states', 'categories', 'priorities');
+  $adv_filters = array('text', 'attachment', 'components', 'submitted', 'assigned', 'versions', 'participated', 'projects', 'states', 'categories', 'priorities');
   $filters = array_slice($adv_filters, 6);
   // Remember this is a request for "my issues"
   if ($url_arg == 'user') {
