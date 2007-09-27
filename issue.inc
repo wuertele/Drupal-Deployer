@@ -831,7 +831,7 @@ function project_issue_comment_validate(&$node) {
   // Set default values.
   empty($node->priority) and $node->priority = 2;
   empty($node->category) and $node->category = arg(4);
-  empty($node->sid) and $node->sid = 1;
+  empty($node->sid) and $node->sid = variable_get('project_issue_default_state', 1);
 
   // Try to find the active project
   if (empty($node->pid)) {

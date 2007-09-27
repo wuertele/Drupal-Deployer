@@ -86,7 +86,7 @@ function project_issue_mailhandler($node, $result, $i, $header, $mailbox) {
       }
 
       if (empty($entry->nid)) {
-        $entry->sid = 1;
+        $entry->sid = variable_get('project_issue_default_state', 1);
         $entry->type = 'project_issue';
         $entry = node_validate($entry, $error);
         $error or ($entry->nid = node_save($entry));
