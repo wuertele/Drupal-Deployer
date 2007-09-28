@@ -32,6 +32,24 @@ are only visible after one or two clicks normally.
   file with the name 'admin_menu.css' in your theme to override or extend the
   CSS of your site when Drupal Administration Menu is enabled.
 
+* If Drupal Administration Menu is not using all available width, not displayed
+  correctly or if admin menu items have an additional border upon hover, you
+  need to create a new region that solely outputs Drupal Administration Menu
+  at the very beginning of a page. You may find these steps helpful:
+
+  1) Open page.tpl.php and add the following line immediately after the opening
+     BODY tag:
+
+     <?php if ($admin_menu) echo $admin_menu; ?>
+
+  2) Open template.php and add the following line to the array of the function
+     <themename>_regions():
+
+     'admin_menu' => t('Admin Menu'),
+
+  3) Go to admin/build/block, assign Admin Menu Block to the new region
+     'Admin Menu' and save the blocks.
+
 
 -- CUSTOMIZATION --
 

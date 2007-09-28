@@ -1,3 +1,4 @@
+/* $Id$ */
 /**
  * Suckerfish Dropdowns, www.htmldog.com
  *
