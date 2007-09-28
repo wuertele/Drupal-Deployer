@@ -37,11 +37,15 @@ function admin_menu_block($op = 'list', $delta = 0) {
         'file' => drupal_get_path('module', 'admin_menu') . '/admin_menu.css',
         'type' => 'module',
       );
-      if (file_exists(path_to_theme() . '/admin_menu.css')) {
-        $css_files[] = array(
-          'file' => path_to_theme() . '/admin_menu.css',
-          'type' => 'theme',
-        );
+      // path_to_theme() invokes init_theme(), thus it must not be invoked in
+      // block settings to allow initializing of the selected theme.
+      if (strpos($_GET['q'], 'admin/build/block') === FALSE) {
+        if (file_exists(path_to_theme() . '/admin_menu.css')) {
+          $css_files[] = array(
+            'file' => path_to_theme() . '/admin_menu.css',
+            'type' => 'theme',
+          );
+        }
       }
       foreach ($css_files as $css_file) {
         drupal_add_css($css_file['file'], $css_file['type'], 'all', false);
