@@ -44,6 +44,21 @@ function project_issue_help($section) {
   }
 }
 
+/**
+ * Implementation of hook_form_alter.
+ */
+function project_issue_form_alter($form_id, &$form) {
+  if ($form_id == 'comment_form') {
+    $node = node_load($form['nid']['#value']);
+    if ($node->type == 'project_issue') {
+      // Comment is not required for project issue followups, we have our own
+      // validate handler.
+      // The 'your name' item just wastes screen estate.
+      unset($form['comment_filter']['comment']['#required'], $form['_author']);
+    }
+  }
+}
+
 function project_issue_node_info() {
   return array(
     'project_issue' => array(
@@ -154,31 +169,6 @@ function project_issue_cron() {
     $comment->sid = 7;
     project_comment_save($comment);
   }
-}
-
-function project_issue_link($type, $node = 0, $main = 0) {
-  $links = array();
-  switch ($type) {
-    case 'node':
-      if ($node->type == 'project_issue' &&
-          !(arg(0) == 'project' && arg(1) == 'comments')) {
-          // Only add the link if we're not already on an issue follow-up.
-            if (node_access('create', 'project_issue')) {
-              $links['project_issue_follow_up'] = array(
-                'title' => t('Follow up'),
-                'href' => "project/comments/add/$node->nid",
-              );
-            }
-            else {
-              $links['project_issue_follow_up_forbidden'] = array(
-                'title' => theme('project_issue_follow_up_forbidden', $node->nid),
-                'html' => TRUE,
-              );
-            }
-      }
-      break;
-  }
-  return $links;
 }
 
 function project_issue_menu($may_cache) {
@@ -509,6 +499,11 @@ function project_issue_issue_nodeapi(&$node, $op, $arg) {
       if (!(user_access('set issue status '. str_replace("'", "", $state->name)) || ($node->sid == variable_get('project_issue_default_state', 1)) || ($state->author_has && ($user->uid == $node->uid)))) {
         form_set_error('sid', t('Invalid issue status %status: you do not have permission to set this status', array('%status' => $state)));
       }
+      break;
+    case 'view':
+      $_GET['mode'] = COMMENT_MODE_FLAT_EXPANDED;
+      $_GET['sort'] = COMMENT_ORDER_OLDEST_FIRST;
+      project_issue_comment_view($node);
       break;
   }
 }

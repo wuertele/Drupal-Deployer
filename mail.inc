@@ -196,6 +196,7 @@ function project_mail_summary($field, $value) {
 }
 
 function project_mail_notify($node) {
+  return; //TODO: rewrite for ifac.
   if (defined('PROJECT_NOMAIL')) {
     return;
   }
