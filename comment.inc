@@ -49,7 +49,7 @@ function project_issue_comment(&$arg, $op) {
       $form['title'] = array(
         '#type' => 'textfield',
         '#title' => t('Issue title'),
-        '#maxlength' => 64,
+        '#maxlength' => 128,
         '#default_value' => $edit->title,
         '#weight' => -30,
         '#required' => TRUE,
