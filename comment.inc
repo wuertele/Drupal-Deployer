@@ -97,6 +97,9 @@ function project_issue_comment(&$arg, $op) {
       if ($project_issue_table) {
         $arg->comment = '<div class="project-issue"><div class="summary">'. $project_issue_table .'</div></div>' . $arg->comment;
       }
+      if (variable_get('project_issue_comment_hide_subject', 1)) {
+        $arg->subject = '';
+      }
       break;
     case 'validate':
       $project = node_load($node->pid);
