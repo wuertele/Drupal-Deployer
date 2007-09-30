@@ -677,6 +677,7 @@ function project_issue_form($node, $param) {
     $form['issue_details']['title'] = array(
       '#type' => 'textfield',
       '#title' => t('Title'),
+      '#default_value' => $node->title,
       '#size' => 60,
       '#maxlength' => 128,
     );
