@@ -909,16 +909,20 @@ function project_issue_insert($node) {
   // table for the original states.
   $original_issue_data = new stdClass();
   $fields = array(
-    'pid',
-    'rid',
-    'component',
-    'category',
-    'priority',
-    'assigned',
-    'sid',
-    'title',
+    'pid' => 0,
+    'rid' => 0,
+    'component' => '',
+    'category' => '',
+    'priority' => 0,
+    'assigned' => 0,
+    'sid' => 0,
+    'title' => '',
   );
-  foreach ($fields as $field) {
+  foreach ($fields as $field => $default) {
+    // Some of the incoming data may not have the correct default.
+    if (!$node->$field) {
+      $node->$field = $default;
+    }
     $original_issue_data->$field = $node->$field;
   }
 
