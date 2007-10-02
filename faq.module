@@ -857,7 +857,7 @@ function theme_questions_top($result, $display_vars) {
 
       $questions[] = l($node->title, 'faq', array('fragment' => $anchor));
 
-      $answers .= '<dt class="faq_dt_questions_top">'. l($node->title, "node/$node->nid", array("attributes" => array("name" => "$anchor"))) ."</dt>\n";
+      $answers .= '<div class="faq_question">'. l($node->title, "node/$node->nid", array("attributes" => array("name" => "$anchor"))) ."</div>\n";
 
       // should we display teaser or full text
       if ($display_vars['use_teaser']) {
@@ -866,23 +866,23 @@ function theme_questions_top($result, $display_vars) {
           $more_link = '<p class="faq_more_link">';
           $more_link .= l(t($display_vars['more_link']), "node/$node->nid") .'</p>';
         }
-        $answers .= '<dd class="faq_dd_questions_top">';
+        $answers .= '<div class="faq_answer">';
         $answers .= check_markup($node->teaser, $node->format, FALSE);
-        $answers .= $more_link . $back_to_top ."</dd>\n";
+        $answers .= $more_link . $back_to_top ."</div>\n";
       }
 
       // full text
       else {
-        $answers .= '<dd class="faq_dd_questions_top">';
+        $answers .= '<div class="faq_answer">';
         $answers .= check_markup($node->body, $node->format, FALSE);
-        $answers .= $back_to_top ."</dd>\n";
+        $answers .= $back_to_top ."</div>\n";
       }
     }
   }
 
   $list_style = variable_get('faq_question_listing', 'ul');
   $output = theme('item_list', $questions, NULL, $list_style, array("class" => "faq_ul_questions_top"));
-  $output .= '<dl class="faq_dl_questions_top">'."\n". $answers ."</dl>\n";
+  $output .= "<div>\n". $answers ."</div>\n";
 
   return $output;
 }
@@ -1018,7 +1018,7 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
 
         $questions[] = l($node->title, $this_page, array('fragment' => $anchor));
 
-        $answers .= '<dt class="faq_dt_questions_top">'. l($node->title, "node/$node->nid", array("attributes" => array("name" => "$anchor"))) ."</dt>\n";
+        $answers .= '<div class="faq_question">'. l($node->title, "node/$node->nid", array("attributes" => array("name" => "$anchor"))) ."</div>\n";
 
         // should we display teaser or full text
         if ($display_vars['use_teaser']) {
@@ -1027,16 +1027,16 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
             $more_link = '<p class="faq_more_link">';
             $more_link .= l(t($display_vars['more_link']), "node/$node->nid") .'</p>';
           }
-          $answers .= '<dd class="faq_dd_questions_top">';
+          $answers .= '<div class="faq_answer">';
           $answers .= check_markup($node->teaser, $node->format, FALSE);
-          $answers .= $more_link . $back_to_top ."</dd>\n";
+          $answers .= $more_link . $back_to_top ."</div>\n";
         }
 
         // full text
         else {
-          $answers .= '<dd class="faq_dd_questions_top">';
+          $answers .= '<div class="faq_answer">';
           $answers .= check_markup($node->body, $node->format, FALSE);
-          $answers .= $back_to_top ."</dd>\n";
+          $answers .= $back_to_top ."</div>\n";
         }
       }
     } // end of while
@@ -1051,16 +1051,14 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
     if ($answer_category_name) {
       if ($result) {
         $output .= $ans_hdr;
-        $output .= '<dl class="faq_dl_questions_top">'."\n";
-        $output .= $answers ."\n</dl>\n";
+        $output .= "<div>\n". $answers ."\n</div>\n";
       }
       $output .= "</div>\n</div>\n";
     }
 
     else {
       if ($result) {
-        $output .= '<dl class="faq_dl_questions_top">'."\n";
-        $output .= $answers ."\n</dl>\n";
+        $output .= "<div>\n". $answers ."\n</div>\n";
       }
       $output .= "</div>\n</div>\n";
     }
@@ -1085,15 +1083,14 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
           $sub_cat_output_answers .= $answers;
           $answers = $sub_cat_output_answers;
         }
-        $output_answers .= $ans_hdr ."<dl>\n". $answers ."\n</dl>\n";
+        $output_answers .= $ans_hdr ."<div>\n". $answers ."\n</div>\n";
       }
     }
     else {
       if (!empty($sub_cat_output_answers)) {
         $output_answers .= $sub_cat_output_answers;
       }
-      $output_answers .= '<dl class="faq_dl_questions_top">'."\n";
-      $output_answers .= $answers ."\n</dl>\n";
+      $output_answers .= "<div>\n". $answers ."\n</div>\n";
     }
     $output_answers .= "</div>\n";
 
@@ -1115,12 +1112,12 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
 function theme_hide_answer($result, $display_vars) {
   drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
 
-  $output = '<dl class="faq_dl">'."\n";
+  $output = "<div>\n";
   while ($node = db_fetch_object($result)) {
     $node_obj = node_load($node->nid);
     if (node_access("view", $node_obj)) {
-      $output .= '<dt class="faq_question">';
-      $output .= l($node->title, "node/$node->nid") ."</dt>\n";
+      $output .= '<div class="faq_question faq_dt_hide_answer">';
+      $output .= l($node->title, "node/$node->nid") ."</div>\n";
       // should we display teaser or full text
       if ($display_vars['use_teaser']) {
         $more_link = '';
@@ -1128,19 +1125,19 @@ function theme_hide_answer($result, $display_vars) {
           $more_link = '<p class="faq_more_link">';
           $more_link .= l(t($display_vars['more_link']), "node/$node->nid") .'</p>';
         }
-        $output .= '<dd class="faq_answer">';
+        $output .= '<div class="faq_answer faq_dd_hide_answer">';
         $output .= check_markup($node->teaser, $node->format, FALSE);
-        $output .= $more_link ."</dd>\n";
+        $output .= $more_link ."</div>\n";
       }
 
       // full text
       else {
-        $output .= '<dd class="faq_answer">';
-        $output .= check_markup($node->body, $node->format, FALSE) ."</dd>\n";
+        $output .= '<div class="faq_answer faq_dd_hide_answer">';
+        $output .= check_markup($node->body, $node->format, FALSE) ."</div>\n";
       }
     }
   }
-  $output .= "</dl>\n";
+  $output .= "</div>\n";
 
   return $output;
 }
@@ -1247,7 +1244,7 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
 
 
   if ($result) {
-    $output .= '<dl class="faq_dl">'."\n";
+    $output .= '<div class="faq_dl_hide_answer">'."\n";
 
     while ($node = db_fetch_object($result)) {
       $node = node_load($node->nid);
@@ -1255,8 +1252,8 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
         if (!$display_vars['hide_sub_categories']) {
           $count++;
         }
-        $output .= '<dt class="faq_question">';
-        $output .= l($node->title, "node/$node->nid") ."</dt>\n";
+        $output .= '<div class="faq_question faq_dt_hide_answer">';
+        $output .= l($node->title, "node/$node->nid") ."</div>\n";
         // should we display teaser or full text
         if ($display_vars['use_teaser']) {
           $more_link = '';
@@ -1264,19 +1261,19 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
             $more_link = '<p class="faq_more_link">';
             $more_link .= l(t($display_vars['more_link']), "node/$node->nid") .'</p>';
           }
-          $output .= '<dd class="faq_answer">';
+          $output .= '<div class="faq_answer faq_dd_hide_answer">';
           $output .= check_markup($node->teaser, $node->format, FALSE);
-          $output .= $more_link ."</dd>\n";
+          $output .= $more_link ."</div>\n";
         }
 
         // full text
         else {
-          $output .= '<dd class="faq_answer">';
-          $output .= check_markup($node->body, $node->format, FALSE) ."</dd>\n";
+          $output .= '<div class="faq_answer faq_dd_hide_answer">';
+          $output .= check_markup($node->body, $node->format, FALSE) ."</div>\n";
         }
       }
     }
-    $output .= "</dl>\n";
+    $output .= "</div>\n";
   }
   $output .= "</div>\n</div>\n";
 
@@ -1301,11 +1298,12 @@ function theme_questions_inline($result, $display_vars) {
     $ans_label = '<strong>'. t($display_vars["faq_answer_label"]) .'</strong> ';
   }
 
-  $output = "<dl>\n";
+  $output = "<div>\n";
   while ($node = db_fetch_object($result)) {
     $node_obj = node_load($node->nid);
     if (node_access("view", $node_obj)) {
-      $output .= "<dt>". l($que_label . $node->title, "node/$node->nid") ."</dt>\n";
+      $output .= '<div class="faq_question>';
+      $output .= l($que_label . $node->title, "node/$node->nid") ."</div>\n";
 
       // should we display teaser or full text
       if ($display_vars['use_teaser']) {
@@ -1314,20 +1312,20 @@ function theme_questions_inline($result, $display_vars) {
           $more_link = '<p class="faq_more_link">';
           $more_link .= l(t($display_vars['more_link']), "node/$node->nid") .'</p>';
         }
-        $output .= '<dd class="faq_dd_questions_inline">';
+        $output .= '<div class="faq_answer">';
         $output .= check_markup($ans_label . $node->teaser, $node->format, FALSE);
-        $output .= $more_link . $back_to_top ."</dd>\n";
+        $output .= $more_link . $back_to_top ."</div>\n";
       }
 
       // full text
       else {
-        $output .= '<dd class="faq_dd_questions_inline">';
+        $output .= '<div class="faq_answer">';
         $output .= check_markup($ans_label . $node->body, $node->format, FALSE);
-        $output .= $back_to_top ."</dd>\n";
+        $output .= $back_to_top ."</div>\n";
       }
     }
   }
-  $output .= "</dl>\n";
+  $output .= "</div>\n";
 
   return $output;
 }
@@ -1451,7 +1449,7 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
 
 
   if ($result) {
-    $output .= '<dl class="faq_dd_questions_inline">'."\n";
+    $output .= "<div>\n";
 
     while ($node = db_fetch_object($result)) {
       $node = node_load($node->nid);
@@ -1459,8 +1457,8 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
         if (!$display_vars['hide_sub_categories']) {
           $count++;
         }
-        $output .= '<dt class="faq_dt_questions_inline">';
-        $output .= l($que_label . $node->title, "node/$node->nid") ."</dt>\n";
+        $output .= '<div class="faq_question">';
+        $output .= l($que_label . $node->title, "node/$node->nid") ."</div>\n";
 
         // should we display teaser or full text
         if ($display_vars['use_teaser']) {
@@ -1469,20 +1467,20 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
             $more_link = '<p class="faq_more_link">';
             $more_link .= l(t($display_vars['more_link']), "node/$node->nid") .'</p>';
           }
-          $output .= '<dd class="faq_dd_questions_inline">';
+          $output .= '<div class="faq_answer">';
           $output .= check_markup($ans_label . $node->teaser, $node->format, FALSE);
-          $output .= $more_link . $back_to_top ."</dd>\n";
+          $output .= $more_link . $back_to_top ."</div>\n";
         }
 
         // full text
         else {
-          $output .= '<dd class="faq_dd_questions_inline">';
+          $output .= '<div class="faq_answer">';
           $output .= check_markup($ans_label . $node->body, $node->format, FALSE);
-          $output .= $back_to_top ."</dd>\n";
+          $output .= $back_to_top ."</div>\n";
         }
       }
     }
-    $output .= "</dl>\n";
+    $output .= "</div>\n";
   }
   $output .= "</div>\n</div>\n";
 

@@ -1,9 +1,9 @@
 if (Drupal.jsEnabled) {
   $(document).ready(function () {
     // hide/show answer to question
-    $('dd.faq_answer').hide();
-    $("dt.faq_question").click(function() {
-      $(this).next("dd.faq_answer").toggle();
+    $('div.faq_dd_hide_answer').hide();
+    $("div.faq_dt_hide_answer").click(function() {
+      $(this).next("div.faq_dd_hide_answer").toggle();
       return false;
     });
 
