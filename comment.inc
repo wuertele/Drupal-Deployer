@@ -98,9 +98,6 @@ function project_issue_comment(&$arg, $op) {
       if ($project_issue_table) {
         $arg->comment = '<div class="project-issue"><div class="summary">'. $project_issue_table .'</div></div>' . $arg->comment;
       }
-      if (variable_get('project_issue_comment_hide_subject', 1)) {
-        $arg->subject = '';
-      }
       break;
     case 'validate':
       // Only validate metadata changes on new followups.
@@ -108,6 +105,14 @@ function project_issue_comment(&$arg, $op) {
         return;
       }
       if ($project) {
+        // Force all comments to be a child of the main issue, to match the
+        // flat display, and also to prevent accidentally deleting a thread.
+        form_set_value(array('#parents' => array('pid')), 0);
+
+        // Auto numbering for comment subjects.
+        $count = db_result(db_query('SELECT COUNT(cid) FROM {project_issue_comments} WHERE nid = %d', $arg['nid'])) + 1;
+        form_set_value(array('#parents' => array('subject')), "#$count");
+
         // Validate version.
         if (module_exists('project_release') && ($releases = project_release_get_releases($project, 0))) {
           $rid = $arg['project_info']['rid'];
