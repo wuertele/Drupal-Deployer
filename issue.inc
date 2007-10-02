@@ -863,7 +863,7 @@ function project_issue_view($node, $teaser = false, $page = false) {
     $rows[] = array(t('Priority:'), project_issue_priority($node->priority));
     $rows[] = array(t('Assigned:'), $assigned);
     $rows[] = array(t('Status:'), project_issue_state($node->sid));
-    if ($node->file_path && file_exists($node->file_path)) {
+    if ($node->file_path) {
       $rows[] = array(t('Attachment:'), '<a href="'. file_create_url($node->file_path). '">'. basename($node->file_path) .'</a> ('. format_size($node->file_size) .')');
     }
     $node->content['project_issue_summary'] = array(
