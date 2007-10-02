@@ -3,7 +3,6 @@
 // $Name$
 
 function project_issue_comment(&$arg, $op) {
-  static $edit;
   // $arg can be a comment object, or a form or form_values.
   if (is_object($arg)) {
     $nid = $arg->nid;
@@ -94,11 +93,9 @@ function project_issue_comment(&$arg, $op) {
         $test = drupal_clone($arg);
         $test->pid = $arg->project_info['pid'];
         $test->component = $arg->project_info['component'];
-        // Add a dummy rid if necessary -- prevents incorrect change data
-        if (!isset($arg->rid)) {
-          $test->rid = 0;
-        }
-        $project_issue_table = _project_issue_comment_table(_project_issue_comment_labels(), $edit, $test);
+        // Add a dummy rid if necessary -- prevents incorrect change data.
+        $test->rid = $arg->project_info['rid'] ? $arg->project_info['rid'] : 0;
+        $project_issue_table = _project_issue_comment_table(_project_issue_comment_labels(), $node, $test);
       }
       if ($project_issue_table) {
         $arg->comment = '<div class="project-issue"><div class="summary">'. $project_issue_table .'</div></div>' . $arg->comment;
