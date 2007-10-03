@@ -841,7 +841,7 @@ function project_issue_validate_file($file) {
 function project_issue_view($node, $teaser = false, $page = false) {
   $node = node_prepare($node, $teaser);
 
-  if (!$teaser && $page) {
+  if (!$teaser && ($page || project_issue_is_comment_reply())) {
 
     $node->content['#prefix'] = '<div class="project-issue">';
     $node->content['#suffix'] = '</div>';
