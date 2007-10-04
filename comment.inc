@@ -259,3 +259,8 @@ function project_issue_update_by_comment($comment_data, $op) {
 function project_issue_is_comment_reply() {
   return arg(0) == 'comment' && arg(1) == 'reply';
 }
+
+function project_issue_comment_pre_render($form_id, &$form) {
+  $suffix = empty($form['#suffix']) ? '' : $form['#suffix'];
+  $form['#suffix'] = $suffix . comment_render(node_load($form['nid']['#value']), 0);
+}
