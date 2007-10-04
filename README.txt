@@ -2,12 +2,14 @@ $Id$
 
 Description
 -----------
-Configurable 'tabs' panel style.
+Configurable 'tabs' panel style, can be used for any Panels implementation
+(this means that it can be used for Panel pages, Mini panels, and so on).
+
 
 Dependencies
 ------------
 * Panels 2 (http://drupal.org/project/panels)
-* Tabs (http://drupal.org/project/jstools)
+* Tabs (part of Javascript Tools, http://drupal.org/project/jstools)
 
 
 Installation
