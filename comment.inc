@@ -262,5 +262,6 @@ function project_issue_is_comment_reply() {
 
 function project_issue_comment_pre_render($form_id, &$form) {
   $suffix = empty($form['#suffix']) ? '' : $form['#suffix'];
-  $form['#suffix'] = $suffix . comment_render(node_load($form['nid']['#value']), 0);
+  $node = node_load($form['nid']['#value']);
+  $form['#suffix'] = $suffix . comment_render($node, 0);
 }
