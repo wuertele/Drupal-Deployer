@@ -23,11 +23,14 @@ function path_redirect_help($section) {
  *
  */
 function path_redirect_init() {
-  // check through the redirects
-  // see if this page is one of those
-  $path = db_escape_string($_GET['q']);
-  $r = db_fetch_object(db_query('SELECT redirect, query, fragment, type FROM {path_redirect} WHERE path = "%s"', $path));
+  // see if this page has a redirect path
+  $query = '';
+  if (isset($_GET['q'])) {
+    $query = $_GET['q'];
+  }
+  $r = db_fetch_object(db_query("SELECT redirect, query, fragment, type FROM {path_redirect} WHERE path = '%s' OR path = '%s'", $query, utf8_encode($query)));
   if ($r) {
+    // if there's a result found, do the redirect
     drupal_goto($r->redirect, ($r->query ? $r->query: NULL), ($r->fragment ? $r->fragment : NULL), $r->type);
   }
 }
@@ -104,7 +107,7 @@ function path_redirect_admin($rid = FALSE, $op = FALSE) {
     }
     else {
       $rid = db_escape_string($rid);
-      $redirect = db_fetch_array(db_query('SELECT * FROM {path_redirect} WHERE rid = %d', $rid));
+      $redirect = db_fetch_array(db_query("SELECT * FROM {path_redirect} WHERE rid = %d", $rid));
       if ($redirect && $op != 'delete') {
         drupal_set_breadcrumb($breadcrumbs);
         return drupal_get_form('path_redirect_edit', $redirect);
@@ -127,7 +130,8 @@ function path_redirect_admin($rid = FALSE, $op = FALSE) {
     $fragment = $r->fragment ? "#$r->fragment" : '';
     $rows[] = array(
       $path,
-      $redirect.$query.$fragment, $types[$r->type]['title'],
+      check_url($redirect . $query . $fragment),
+      $types[$r->type]['title'],
       array('data' => l(t('test'), $r->path, array(), $r->query ? $r->query : NULL, $r->fragment ? $r->fragement : NULL)),
       array('data' => l(t('edit'), 'admin/build/path_redirect/edit/'. $r->rid)),
       array('data' => l(t('delete'), 'admin/build/path_redirect/edit/'. $r->rid .'/delete')),
@@ -177,12 +181,13 @@ function path_redirect_edit($edit = array()) {
     '#prefix' => '<div class="container-inline">',
     '#suffix' => '</div>',
     '#title' => t('To'),
-    '#description' => '<div style="display:block">'. t('Enter a Drupal path, path alias, or external URL to redirect to. Enter (optional) queries after "?" and (optional) anchor after "#". Most redirects will not contain queries or fragment anchors.') .'</div>',
+    '#description' => '<div style="display:block">'. t('Enter a Drupal path, path alias, or external URL to redirect to. Use %front to redirect to the front page.  Enter (optional) queries after "?" and (optional) anchor after "#". Most redirects will not contain queries or fragment anchors.', array('%front' => '<front>')) .'</div>',
   );
   
   $form['redirect']['redirect'] = array(
     '#type' => 'textfield',
     '#size' => 30,
+    '#maxlength' => 255,
     '#default_value' => drupal_get_path_alias($edit['redirect']),
   );
   
@@ -255,11 +260,14 @@ function path_redirect_edit_validate($form_id, &$form_values) {
     form_set_error('path', t('The redirect <strong>from</strong> path does not appear valid. This must be a local Drupal path.'));
   }
   
-  if (!valid_url($form_values['redirect']) && !valid_url($form_values['redirect'], TRUE)) {
+  if (!valid_url($form_values['redirect']) && !valid_url($form_values['redirect'], TRUE) && $form_values['redirect'] != '<front>') {
     form_set_error('redirect', t('The redirect <strong>to</strong> path does not appear valid.'));
   }
   
   $form_values['path'] = drupal_get_normal_path($form_values['path']);
+  if ($form_values['redirect'] == '<front>') {
+    $form_values['redirect'] = variable_get('site_frontpage', 'node');
+  }
   $form_values['redirect'] = drupal_get_normal_path($form_values['redirect']);
   
   //check that there there are no redirect loops
@@ -282,12 +290,19 @@ function path_redirect_save($edit) {
   if (!$edit['rid']) {
     $edit['rid'] = db_next_id('{path_redirect}');
   }
-  path_redirect_delete_do($edit['rid']);
-  return db_query('INSERT INTO {path_redirect} (rid, path, redirect, query, fragment, type) VALUES (%d, "%s", "%s", "%s", "%s", "%s")', $edit['rid'], $edit['path'], $edit['redirect'], $edit['query'], $edit['fragment'], $edit['type']);
+  else {
+    path_redirect_delete_do($edit['rid']);
+  }
+  // remove any other redirects from the same path
+  db_query("DELETE FROM {path_redirect} WHERE path = '%s'", $edit['path']);
+  if ($edit['path'] != $edit['redirect']) {
+    $return = db_query("INSERT INTO {path_redirect} (rid, path, redirect, query, fragment, type) VALUES (%d, '%s', '%s', '%s', '%s', '%s')", $edit['rid'], $edit['path'], $edit['redirect'], $edit['query'], $edit['fragment'], $edit['type']);
+  }
+  return $return;
 }
 
 function path_redirect_delete_do($rid) {
-  return db_query('DELETE FROM {path_redirect} WHERE rid = %d', $rid);
+  return db_query("DELETE FROM {path_redirect} WHERE rid = %d", $rid);
 }
 
 function path_redirect_delete($redirect) {
