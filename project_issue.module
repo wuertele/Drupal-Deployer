@@ -763,11 +763,12 @@ function project_issue_project_insert($node) {
 }
 
 function project_issue_project_delete($node) {
-  // TODO: first we need to DELETE FROM {project_comments} using a
-  // subselect against {project_issues} to map the project nid from
-  // $node to the issue nids in {project_comments}.
+  // Delete all associated issues.
+  $issues = db_query('SELECT nid FROM {project_issues} WHERE pid = %d', $node->nid);
+  while ($issue = db_fetch_object($issues)) {
+    node_delete($issue->nid);
+  }
   db_query('DELETE FROM {project_issue_projects} WHERE nid = %d', $node->nid);
-  db_query('DELETE FROM {project_issues} WHERE pid = %d', $node->nid);
   db_query('DELETE FROM {project_subscriptions} WHERE nid = %d', $node->nid);
 }
 
