@@ -173,16 +173,60 @@ function admin_menu_adjust_items(&$admin_items) {
   array_unshift($admin_items[$mid_admin]['children'], $mid_logout);
   
   // add create content_type items to Content management > Content
+  $mid_node_add = $_menu['path index']['node/add'];
   $mid_content = $_menu['path index']['admin/content/node'];
-  if (isset($admin_items[$mid_content]) && isset($_menu['items'][$_menu['path index']['node/add']]['children'])) {
-    foreach ($_menu['items'][$_menu['path index']['node/add']]['children'] as $mid) {
+  admin_menu_copy_items($admin_items, $mid_node_add, $mid_content, 'Add !title');
+}
+
+/**
+ * Recursively copy menu items from a source parent menu item to a target menu
+ * item.
+ * 
+ * @param admin_items
+ *   The sliced administration menu array.
+ * @param source_pid
+ *   A source parent menu item id from which children shall be copied.
+ * @param target_pid
+ *   A target parent menu item id.
+ * @param title
+ *   An optional string containing the token !title to pass to t().
+ * @param tree
+ *   Whether to rebuild hierarchy from source parent menu item. Defaults to
+ *   true.
+ */
+function admin_menu_copy_items(&$admin_items, $source_pid, $target_pid, $title = NULL, $tree = TRUE) {
+  global $_menu;
+  
+  if (isset($admin_items[$target_pid])) {
+    foreach ($_menu['items'][$source_pid]['children'] as $mid) {
       $admin_items[$mid] = $_menu['items'][$mid];
-      $admin_items[$mid]['title'] = t('Add !content-type', array('!content-type' => $admin_items[$mid]['title']));
-      $admin_items[$mid]['pid'] = $mid_content;
-      $admin_items[$mid_content]['children'][] = $mid;
+      if (isset($title)) {
+        $admin_items[$mid]['title'] = t($title, array('!title' => $admin_items[$mid]['title']));
+      }
+      $admin_items[$mid]['pid'] = $target_pid;
+      // Only add child to target menu item if it does not already exist.
+      if (!in_array($mid, $admin_items[$target_pid]['children'])) {
+        $admin_items[$target_pid]['children'][] = $mid;
+      }
+      
+      // Recurse into children.
+      if (isset($_menu['items'][$mid]['children']) && count($_menu['items'][$mid]['children'])) {
+        if ($tree) {
+          admin_menu_copy_items($admin_items, $mid, $mid, $title);
+        }
+        else {
+          admin_menu_copy_items($admin_items, $mid, $target_pid, $title, FALSE);
+          unset($admin_items[$mid]['children']);
+          // Note:
+          // Uncomment following lines to also optionally remove unnecessary
+          // parent items.
+          // unset($admin_items[$target_pid]['children'][array_search($mid, $admin_items[$target_pid]['children'])]);
+          // unset($admin_items[$mid]);
+        }
+      }
     }
     // sort childs
-    usort($admin_items[$mid_content]['children'], '_menu_sort');
+    usort($admin_items[$target_pid]['children'], '_menu_sort');
   }
 }
 
