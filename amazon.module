@@ -37,6 +37,15 @@ function amazon_menu() {
     'access arguments' => array('administer amazon'),
     'type' => MENU_LOCAL_TASK
   );
+  $items['admin/settings/amazon/test'] = array(
+    'title' => 'Test',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('amazon_test_form'),
+    'file' => 'amazon_admin.inc',
+    'access callback' => 'user_access',
+    'access arguments' => array('access devel information'),
+    'type' => MENU_LOCAL_TASK
+  );
   $items['admin/settings/amazon/upgrade'] = array(
     'page callback' => '_amazon_upgrade',
     'file' => 'amazon_admin.inc',
@@ -62,7 +71,11 @@ function amazon_perm() {
 
 
 function amazon_http_request($operation, $parameters = array(), $locale = NULL) {
-  $locale_data = amazon_locale_data($locale);
+  if (!isset($locale)) {
+    $locale = variable_get('amazon_locale', 'US');
+  }
+  $metadata = amazon_data_cache();
+  $locale_data = $metadata['locales'][$locale];
 
   // Populate the params with default data.
   $parameters += array(
@@ -86,7 +99,6 @@ function amazon_http_request($operation, $parameters = array(), $locale = NULL) 
   }
   module_invoke_all('amazon_request', $parameters);
   $url = $locale_data['url'] .'?'. implode('&', $params);
-
   // Make the request and return a SimpleXML object.
   $results = drupal_http_request($url, array(), 'GET');
   $xml = new SimpleXMLElement($results->data);
@@ -108,9 +120,9 @@ function amazon_item_lookup($item_ids = array(), $force_lookup = TRUE) {
       $items_to_fetch[] = $item_id;
     }
   }
-  $items = amazon_item_lookup_from_web($items_to_fetch);
+  $items_from_web = amazon_item_lookup_from_web($items_to_fetch);
 
-  return $items;
+  return array_merge($items, $items_from_web);
 }
 
 function amazon_item_lookup_from_web($item_ids = array()) {
@@ -122,16 +134,22 @@ function amazon_item_lookup_from_web($item_ids = array()) {
   if (!empty($results->Error)) {
     return FALSE;
   }
+  $items = array();
   if (is_array($results->Items->Item)) {
-    return (array)$results->Items->Item;
+    foreach($results->Items->Item as $xml) {
+      $item = amazon_item_clean_xml($xml);
+      $items[$item->ASIN] = $item;
+    }
   }
   else {
-    return array($results->Items->Item);
+    $item = amazon_item_clean_xml($results->Items->Item);
+    $items[$item->ASIN] = $item;
   }
+  return $items;
 }
 
 function amazon_item_lookup_from_db($item_ids = array()) {
-  $sql = "SELECT * FROM {amazon_item} ai WHERE asin IN (''";
+  $sql = "SELECT * FROM {amazon_item} ai WHERE ai.asin IN (''";
   $params = array();
   foreach ($item_ids as $item_id) {
     $query .= ", '%s'";
@@ -140,107 +158,106 @@ function amazon_item_lookup_from_db($item_ids = array()) {
   $results = db_query($sql, $params);
   $return = array();
   while ($object = db_fetch_object($results)) {
+    _amazon_load_child_data($object);
     module_invoke_all('amazon_item_load', $object);
     $return[$object->asin] = $object;
   }
   return $return;
 }
 
-function amazon_item_preprocess(&$item) {
-  if (isset($item->Feature)) {
-    _amazon_clean_single($item, 'Feature');
+function _amazon_load_child_data(&$object) {
+  $result = db_query("SELECT feature FROM {amazon_item_feature} WHERE asin = '%s'", $object->ASIN);
+  while ($feature = db_fetch_object($result)) {
+    $object->Feature[] = $feature->feature;
   }
 
-  if (isset($item->EditorialReviews)) {
-    _amazon_clean_single($item->EditorialReviews, 'EditorialReview');
+  $result = db_query("SELECT type, participant FROM {amazon_item_participant} WHERE asin = '%s'", $object->ASIN);
+  while ($feature = db_fetch_object($result)) {
+    $object->Feature[] = $feature->feature;
   }
 
-  foreach (_amazon_participant_types() as $type) {
-    if (isset($item->$type)) {
-      _amazon_clean_single($item, $type);
-    }
-  }
-
-  foreach (module_implements('amazon_item_preprocess') as $module) {
-    $function = $module .'_amazon_item_preprocess';
-    $function($item);
+  $result = db_query("SELECT feature FROM {amazon_item_image} WHERE asin = '%s'", $object->ASIN);
+  while ($feature = db_fetch_object($result)) {
+    $object->Feature[] = $feature->feature;
   }
 }
 
-function amazon_item_insert($item, $silent = FALSE) {
-  $sql  = "INSERT INTO {amazon_item} (";
-  $sql .= "asin, title, detailpageurl, salesrank, brand, publisher, ";
-  $sql .= "manufacturer, studio, label, binding, releasedate, ";
-  $sql .= "listpriceamount, listpricecurrencycode, listpriceformattedprice, ";
-  $sql .= "productgroup, producttypename, timestamp) ";
-  $sql .= "VALUES ('%s', '%s', %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, '%s', '%s', '%s', '%s', %d)";
+function amazon_item_clean_xml($xml) {
+  $metadata = amazon_data_cache();
+  $item = new stdClass();
 
-  db_query($sql, $item->ASIN, $item->Title, $item->DetailPageUrl, $item->SalesRank,
-           $item->Brand, $item->Publisher, $item->Manufacturer, $item->Studio, $item->Label,
-           $item->Binding, $item->ReleaseDate,
-           $item->ListPrice->Amount, $item->ListPrice->CurrencyCode, $item->FormattedPrice,
-           $item->ProductGroup, $item->ProductTypeName, time());
+  $item->asin = (string)$xml->ASIN;
+  $item->salesrank = (string)$xml->SalesRank;
+  $item->detailpageurl = (string)$xml->DetailPageURL;
+
+  foreach((array)($xml->ItemAttributes) as $key => $value) {
+    $key = strtolower($key);
+    $item->$key = $value;
+  }
+
+  foreach ($metadata['keys_to_pluralize'] as $type) {
+    if (isset($xml->ItemAttributes->$type)) {
+      _amazon_clean_single($xml->ItemAttributes, $type);
+    }
+  }
+
+  foreach (module_implements('_amazon_item_clean_xml') as $module) {
+    $function = $module .'_amazon_item_clean_xml';
+    $function($item, $xml);
+  }
+  return $item;
+}
+
+function amazon_item_insert($item) {
+  $metadata = amazon_data_cache();
+  drupal_write_record('amazon_item', $item->ItemAttributes);
 
   // Handle the various credits for a product, including Artist, Author,
   // Actor, etc. We map these to a separate table.
-  $sql = "INSERT INTO {amazon_item_participant} (asin, type, participant) VALUES ('%s', '%s', '%s')";
-  foreach (_amazon_participant_types() as $type) {
-    if (isset($item->$type) && in_array($type, amazon_get_cacheable_chunk_list())){
-      foreach($item->$type as $participant) {
-        db_query($sql, $item->ASIN, $type, $participant);
+  foreach ($metadata['participant_types'] as $type) {
+    if (isset($item->ItemAttributes->$type) && in_array($type, amazon_get_cacheable_chunk_list())){
+      foreach($item->ItemAttributes->$type as $participant) {
+        $item_participant = array('asin' => $item->ASIN, 'type' => $type, 'particpant' => $participant);
+        drupal_write_record('amazon_item_participant', $item_participant);
       }
     }
   }
 
   // Clean up the 'Features' data and see if the element exists.
   if (isset($item->Feature) && in_array('Feature', amazon_get_cacheable_chunk_list())) {
-    $sql = "INSERT INTO {amazon_item_feature} (asin, feature) VALUES ('%s', '%s')";
     foreach($item->Feature as $feature) {
-      db_query($sql, $item->ASIN, $feature);
+      $item_feature = array('asin' => $item->ASIN, 'feature' => $feature);
+      drupal_write_record('amazon_item_feature', $item_feature);
     }
   }
 
   // Save the product images if they exist.
-  if (isset($item->Feature) && in_array('ImageSets', amazon_get_cacheable_chunk_list())) {
-    $sql = "INSERT INTO {amazon_item_image} (asin, size, height, width, url) VALUES ('%s', '%s', %d, %d, '%s')";
+  if (isset($item->ImageSets)) {
     foreach($item->ImageSets->ImageSet as $size => $data) {
       if ($size != '@attributes') {
-        db_query($sql, $item->ASIN, $size, $data->Height, $data->Width, $data->URL);
+        $image = (object)array('asin' => $item->ASIN, 'size' => $size, 'height' => $data->Height, 'width' => $data->Width, 'url' => $data->URL);
+        drupal_write_record('amazon_item_image', $image);
       }
     }
   }
 
-  // Save editorial reviews if they exist.
-  if (isset($item->EditorialReviews) && in_array('EditorialReviews', amazon_get_cacheable_chunk_list())) {
-    $sql = "INSERT INTO {amazon_item_editorial_reviews} (asin, source, content) VALUES ('%s', '%s', '%s')";
-    foreach($item->EditorialReviews as $review) {
-      db_query($sql, $item->ASIN, $review->Source, $review->Content);
-    }
-  }
-
-  if (!$silent) {
-    module_invoke_all('amazon_item_insert', $item);
-  }
+  module_invoke_all('amazon_item_insert', $item);
 }
 
-function amazon_item_update($item) {
+function amazon_item_save($item) {
   // We have boatloads of data to insert in here, so we're going to
   // cheat and blow away the old entries and re-insert them in 'silent'
   // mode.
-  amazon_item_delete($item->ASIN, TRUE);
+  amazon_item_delete($item->ASIN);
   amazon_item_insert($item, TRUE);
-
-  module_invoke_all('amazon_item_update', $item);
 }
 
-function amazon_item_delete($item_id, $silent = FALSE) {
-  if (!$silent) {
-    module_invoke_all('amazon_item_delete', $item_id);
-  }
-  db_query("DELETE FROM {amazon_item_participant} WHERE asin = '%s'", $item->asin);
-  db_query("DELETE FROM {amazon_item_feature} WHERE asin = '%s'", $item->asin);
-  db_query("DELETE FROM {amazon_item_editorial_review} WHERE asin = '%s'", $item->asin);
-  db_query("DELETE FROM {amazon_item_image} WHERE asin = '%s'", $item->asin);
+function amazon_item_delete($asin, $silent = FALSE) {
+  module_invoke_all('amazon_item_delete', $asin);
+  db_query("DELETE FROM {amazon_item} WHERE asin = '%s'", $asin);
+  db_query("DELETE FROM {amazon_item_participant} WHERE asin = '%s'", $asin);
+  db_query("DELETE FROM {amazon_item_feature} WHERE asin = '%s'", $asin);
+  db_query("DELETE FROM {amazon_item_image} WHERE asin = '%s'", $asin);
 }
 
 
@@ -270,7 +287,10 @@ function amazon_item_node_delete($asin = NULL, $nid = NULL, $module = NULL) {
     $sql = " AND module = '%s'";
     $params[] = $module;
   }
-  db_query($sql, $params);
+
+  if (count($params)) {
+    db_query($sql, $params);
+  }
 }
 
 /**
@@ -284,33 +304,26 @@ function _amazon_clean_single(&$item, $type) {
   }
 }
 
-function _amazon_participant_types() {
-  return array('Actor', 'Artist', 'Author', 'Director');
-}
-
-function amazon_locale_data($locale = NULL) {
-  $locales = amazon_locale_cache();
-  if (!isset($locale)) {
-    $locale = variable_get('amazon_locale', 'US');
-  }
-  return $locales[$locale];
-}
-
-function amazon_locale_cache($reset = FALSE) {
-  static $locales;
-  if (!isset($locales) || $reset) {
-    if (!$reset && ($cache = cache_get('amazon:locale_data')) && !empty($cache->data)) {
-      $locales = $cache->data;
+function amazon_data_cache($reset = FALSE) {
+  static $data;
+  if (!isset($data) || $reset) {
+    if (!$reset && ($cache = cache_get('amazon:metadata')) && !empty($cache->data)) {
+      $data = $cache->data;
     }
     else {
-      $locales = _amazon_locale_data();
-      cache_set('amazon:locale_data', $locales);
+      $data = array();
+      $data['participant_types'] = array('Actor', 'Artist', 'Author', 'Director');
+      $data['keys_to_pluralize'] = array('Actor', 'Artist', 'Author', 'Director', 'Feature');
+      $data['locales'] = _amazon_default_locales();
+
+      drupal_alter('amazon_metadata', $data);
+      cache_set('amazon:metadata', $data);
     }
   }
-  return $locales;
+  return $data;
 }
 
-function _amazon_locale_data() {
+function _amazon_default_locales() {
   $locales = array();
   $locales['US'] = array(
     'url'     => 'http://ecs.amazonaws.com/onca/xml',
@@ -337,7 +350,6 @@ function _amazon_locale_data() {
     'name'    => t('Canada'),
   );
 
-  drupal_alter('amazon_locale', $locales);
   return $locales;
 }
 
@@ -377,7 +389,7 @@ function amazon_cron() {
 
   if ($items = amazon_item_lookup_from_web($asins)) {
     foreach ($items as $item) {
-      amazon_item_update($item);
+      amazon_item_save($item);
     }
   }
   else {

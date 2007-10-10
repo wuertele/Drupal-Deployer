@@ -1,9 +1,9 @@
 <?php
 
 function amazon_settings_form($form_state) {
-  $locales = amazon_locale_cache();
+  $cache = amazon_data_cache();
   $options = array();
-  foreach ($locales as $locale => $data) {
+  foreach ($cache['locales'] as $locale => $data) {
     $options[$locale] = $data['name'];
   }
   $form['amazon_locale'] = array(
@@ -89,7 +89,6 @@ function amazon_storage_settings_form() {
       'Director' => t('Film directors'),
       'ImageSets' => t('Product images'),
       'Feature' => t('Product features'),
-      'EditorialReviews' => t('Product editorial reviews and descriptions'),
     ),
     '#description' => t('In addition to basic pricing, title, and availability information, Amazon stores detailed data about each product. To store some of that information locally for use on your site, select it from the list above. Keep in mind that information not selected above will be unavailable for use in product listings built using the Views module.'),
   );
@@ -99,4 +98,39 @@ function amazon_storage_settings_form() {
 
 function _amazon_upgrade() {
   // Stub function intended to update from AmazonTools module for Drupal 5
+}
+
+function amazon_test_form($form_state) {
+  $form = array();
+  $form['#cache'] = FALSE; // No sense cluttering up the cache with this.
+
+  $form['asin'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Amazon Product ID'),
+    '#description' => t('The ASIN of a product listed on Amazon.com. For books, this is generally the ISBN number.'),
+    '#required' => TRUE,
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Look Up Product'),
+  );
+
+  if (isset($form_state['amazon_item'])) {
+    $form['item_data'] = array(
+      '#type' => 'markup',
+      '#value' => dprint_r($form_state['amazon_item'], TRUE),
+      '#weight' => 10,
+    );
+  }
+  return $form;
+}
+
+function amazon_test_form_submit($form, &$form_state) {
+  $items = amazon_item_lookup($form_state['values']['asin']);
+  if (is_array($items)) {
+    $item = array_pop($items);
+    amazon_item_save($item);
+    $form_state['amazon_item'] = $item;
+    $form_state['rebuild'] = TRUE;
+  }
 }

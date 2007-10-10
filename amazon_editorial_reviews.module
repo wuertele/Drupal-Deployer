@@ -1,0 +1,60 @@
+<?php
+// $Id$
+
+function amazon_editorial_reviews_form_alter(&$form, $form_state) {
+  if ($form['#id'] == 'amazon-storage-settings-form') {
+    $form['amazon_extra_data']['#options']['EditorialReviews'] = t('Product editorial reviews and descriptions');
+  }
+}
+
+function amazon_editorial_reviews_amazon_item_clean_xml(&$item) {
+  if (isset($item->EditorialReviews)) {
+    _amazon_clean_single($item->EditorialReviews, 'EditorialReview');
+  }
+}
+
+function amazon_editorial_reviews_amazon_item_insert($item) {
+  if (isset($item->EditorialReviews) && in_array('EditorialReviews', amazon_get_cacheable_chunk_list())) {
+    foreach($item->EditorialReviews as $review) {
+      $review->ASIN = $item->ASIN;
+      drupal_write_record('amazon_editorial_review', $review);
+    }
+  }
+}
+
+function amazon_editorial_reviews_amazon_item_load(&$item) {
+  $result = db_query("SELECT * FROM {amazon_editorial_review} WHERE asin = '%s'", $item->ASIN);
+  $item->EditorialReviews = array();
+  while ($review = db_fetch_object($result)) {
+    $item->EditorialReviews[] = $review;
+  }
+}
+
+function amazon_editorial_reviews_amazon_item_delete($asin) {
+  // Sadly, we have to nuke this from all the tables. We'll think
+  // of a better way some other time (cough cough).
+  db_query("DELETE FROM {amazon_editorial_review} WHERE asin = '%s'", $asin);
+}
+
+function amazon_editorial_reviews_theme() {
+  return array(
+    'amazon_editorial_review' => array(
+      'arguments' => array('asin' => NULL, 'source' => NULL, 'content' => NULL),
+    ),
+    'amazon_editorial_review_element' => array(
+      'arguments' => array('element' => array()),
+    ),
+  );
+}
+
+function theme_amazon_editorial_review($asin, $source, $content) {
+  $output  = '<div class="amazon-editorial-review">';
+  $output .= check_markup($content) ."\n";
+  $output .= '<p class="attribution">'. check_markup($content) .'</p>';
+  $output .= '</div>';
+  return $output;
+}
+
+function theme_amazon_editorial_review_element($element) {
+  return theme('amazon_editorial_review', $element['#asin'], $element['#source'], $element['#content']);
+}
