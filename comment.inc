@@ -109,10 +109,6 @@ function project_issue_comment(&$arg, $op) {
         // flat display, and also to prevent accidentally deleting a thread.
         form_set_value(array('#parents' => array('pid')), 0);
 
-        // Auto numbering for comment subjects.
-        $count = db_result(db_query('SELECT COUNT(cid) FROM {project_issue_comments} WHERE nid = %d', $arg['nid'])) + 1;
-        form_set_value(array('#parents' => array('subject')), "#$count");
-
         // Validate version.
         if (module_exists('project_release') && ($releases = project_release_get_releases($project, 0))) {
           $rid = $arg['project_info']['rid'];
