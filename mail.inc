@@ -369,7 +369,7 @@ function project_mail_notify($node) {
   }
 
   project_mail_output($node->title, 0);
-  $node->title = "[$project->title " . t("$node->category") ."] $node->title";
+  $node->title = "[". t($node->category) ."] $node->title";
 
   while ($recipient = db_fetch_object($result)) {
     drupal_mail('project_issue_update', $recipient->mail, $node->title, $body, NULL, $header);
