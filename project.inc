@@ -104,7 +104,7 @@ function project_project_form($node) {
 
   $description = t('E-mail address where the project owner can be contacted.');
   if (module_exists('project_issue')) {
-    $description .= t(' This will be used as the From: address for issue subscription e-mails.');
+    $description .= ' '. t('This will be used as the From: address for issue subscription e-mails.');
   }
 
   $form['project']['mail'] = array(
