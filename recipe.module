@@ -9,26 +9,6 @@
  * @todo
  */
 
-define('RECIPE_MODULE_VERSION', '3.0.0');
-
-/**
- * Implementation of hook_init().
- */
-function recipe_init() {
-  if (variable_get('recipe_installed_version', 0) == 0) {
-      variable_set('recipe_installed_version', RECIPE_MODULE_VERSION);
-  }
-  if (version_compare(variable_get('recipe_installed_version', 0), RECIPE_MODULE_VERSION, '<')) {
-    if (version_compare(variable_get('recipe_installed_version', 0), '2.0.1', '<')) {
-      recipe_upgrade_201();
-    }
-    elseif (version_compare(variable_get('recipe_installed_version', 0), '2.0.1', 'eq')) {
-      variable_set('recipe_installed_version', RECIPE_MODULE_VERSION);
-      drupal_set_message(t('Upgraded recipe module version to @version', array('@version' => RECIPE_MODULE_VERSION)));
-    }
-  }
-}
-
 /**
  * Implementation of hook_perm().
  */
@@ -1352,21 +1332,6 @@ function recipe_tax_get_terms($vid) {
     $tids[] = $term['tid'];
   }
   return array_unique($tids);
-}
-
-/**
- * RECIPE_MODULE_VERSION 2.0.1 database changes update function
- */
-function recipe_upgrade_201() {
-  $old_ingredients = db_query('SELECT * FROM {recipe_ingredients}');
-
-  while ($old_ingredient = db_fetch_object($old_ingredients)) {
-    $ingredient = recipe_parse_ingredient_string($old_ingredient->ingredient);
-    $ingredient->id = recipe_ingredient_id_from_name($ingredient->name);
-    db_query("INSERT INTO {recipe_node_ingredient} (nid,ingredient_id,quantity,unit_id) VALUES (%d,%d,%f,%d)", $old_ingredient->nid, $ingredient->id, $ingredient->quantity, $ingredient->unit_id);
-  }
-  variable_set('recipe_installed_version', RECIPE_MODULE_VERSION);
-  drupal_set_message(t('Upgraded database for recipe module version %version', array('%version' => RECIPE_MODULE_VERSION)));
 }
 
 /**
