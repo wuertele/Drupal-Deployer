@@ -572,7 +572,9 @@ function recipe_ingredient_id_from_name($name) {
 
     if (!$ingredient_id) {
       global $active_db;
-      db_query("INSERT INTO {recipe_ingredient} (name) VALUES ('%s')", $name);
+      $node_link = db_result(db_query("SELECT nid FROM {node} WHERE title = '%s'", $name));
+			
+      db_query("INSERT INTO {recipe_ingredient} (name, link) VALUES ('%s', '%s')", $name, $node_link);
       $ingredient_id = db_result(db_query("SELECT id FROM {recipe_ingredient} WHERE LOWER(name)='%s'", trim(strtolower($name))));
     }
     $cache[$name] = $ingredient_id;
@@ -773,6 +775,7 @@ function recipe_load_ingredients($node) {
   SELECT
     ri.id,
     i.name,
+    i.link,
     ri.quantity,
     ri.unit_id,
     u.abbreviation,
@@ -1398,6 +1401,9 @@ function theme_node_recipe($node, $yield_form = TRUE) {
         }
         if (variable_get('recipe_fraction_display', t('{%d} %d&frasl;%d'))) {
           $ingredient->quantity = recipe_ingredient_quantity_from_decimal($ingredient->quantity);
+        }
+        if (!empty($ingredient->link)) {
+          $ingredient->name = l($ingredient->name, 'node/'. $ingredient->link);
         }
 
         $ingredients[] = $ingredient->quantity.' <acronym title="'.recipe_unit_name($ingredient->unit_id).'">'.$ingredient->abbreviation.'</acronym> '.$ingredient->name;
