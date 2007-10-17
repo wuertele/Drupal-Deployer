@@ -282,7 +282,11 @@ function project_issue_get_newest_comment($comment_data) {
   }
   // No more comments on the issue -- use the original issue metadata.
   else {
+    // nid isn't stored in the original issue data, so capture it here and pass back
+    // into the object.
+    $nid = $comment_data->nid;
     $comment_data = unserialize(db_result(db_query("SELECT original_issue_data FROM {project_issues} WHERE nid = %d", $comment_data->nid)));
+    $comment_data->nid = $nid;
   }
   return $comment_data;
 }
