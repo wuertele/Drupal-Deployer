@@ -112,7 +112,9 @@ function project_issue_update_project($pid, $cid = NULL, $rid = NULL) {
         }
       }
       $form = array();
-      $form['rid'] = array(
+      // Element is tree'd here to match the original form layout.
+      $form['project_info']['#tree'] = TRUE;
+      $form['project_info']['rid'] = array(
         '#type' => 'select',
         '#title' => t('Version'),
         '#default_value' => $default,
@@ -139,7 +141,9 @@ function project_issue_update_project($pid, $cid = NULL, $rid = NULL) {
   }
 
   $form = array();
-  $form['component'] = array(
+  // Element is tree'd here to match the original form layout.
+  $form['project_info']['#tree'] = TRUE;
+  $form['project_info']['component'] = array(
     '#type' => 'select',
     '#title' => t('Component'),
     '#default_value' => $cid,
