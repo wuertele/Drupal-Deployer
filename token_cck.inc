@@ -3,11 +3,11 @@
 
 
 // Two helper functions that generate appropriate tokens for CCK-added fields.
-function content_token_values($type, $object = NULL) {
+function content_token_values($type, $object = NULL, $options = array()) {
   $tokens = array();
   if ($type == 'node') {
     $node = $object;
-    content_view($node);
+    content_view($node, isset($options['teaser']) ? $options['teaser'] : 0);
 
     $field_types = _content_field_types();
 
@@ -65,7 +65,7 @@ if (module_exists('nodereference')) {
     }
   }
 
-  function nodereference_token_values($type, $object = NULL) {
+  function nodereference_token_values($type, $object = NULL, $options = array()) {
     if ($type == 'field') {
       $item = $object[0];
 
@@ -92,7 +92,7 @@ if (module_exists('number')) {
     }
   }
 
-  function number_token_values($type, $object = NULL) {
+  function number_token_values($type, $object = NULL, $options = array()) {
     if ($type == 'field') {
       $item = $object[0];
 
@@ -118,7 +118,7 @@ if (module_exists('text')) {
     }
   }
 
-  function text_token_values($type, $object = NULL) {
+  function text_token_values($type, $object = NULL, $options = array()) {
     if ($type == 'field') {
       $item = $object[0];
       $tokens['raw']  = $item['value'];
@@ -142,7 +142,7 @@ if (module_exists('userreference')) {
     }
   }
 
-  function userreference_token_values($type, $object = NULL) {
+  function userreference_token_values($type, $object = NULL, $options = array()) {
     if ($type == 'field') {
       $item = $object[0];
 
@@ -169,7 +169,7 @@ if (module_exists('link')) {
     }
   }
 
-  function link_token_values($type, $object = NULL) {
+  function link_token_values($type, $object = NULL, $options = array()) {
     if ($type == 'field') {
       $item = $object[0];
 
@@ -202,7 +202,7 @@ if (module_exists('imagefield')) {
     }
   }
 
-  function imagefield_token_values($type, $object = NULL) {
+  function imagefield_token_values($type, $object = NULL, $options = array()) {
     if ($type == 'field') {
       $item = $object[0];
 
@@ -249,17 +249,18 @@ if (module_exists('date')) {
     }
   }
 
-  function date_token_values($type, $object = NULL) {
+  function date_token_values($type, $object = NULL, $options = array()) {
     if ($type == 'field') {
       include_once(drupal_get_path('module', 'date') .'/date.inc');
       $item = $object[0];
-
-      $date = date_make_date(trim($item['value']));
-      $timestamp = date_fuzzy_stamp($date);
       
+      $item['value'] = trim($item['value']);
+      $item_format = (is_numeric($item['value']) ? DATE_UNIX : DATE_ISO);
+      $date = date_make_date($item['value'], 'none', 'local', $item_format);
+
       $tokens['value']          = $item['value'];
       $tokens['view']           = $item['view'];
-      $tokens['timestamp']      = $timestamp;
+      $tokens['timestamp']      = $date->local->timestamp;
       $tokens['yyyy']           = date_show_date($date, 'Y');
       $tokens['yy']             = date_show_date($date, 'y');
       $tokens['month']          = date_show_date($date, 'F');
@@ -274,12 +275,14 @@ if (module_exists('date')) {
       $tokens['d']              = date_show_date($date, 'j');
 
       if (!empty($item['value2'])) {
-        $date = date_make_date(trim($item['value']));
-        $timestamp = date_fuzzy_stamp($date);
-
-        $tokens['to-value']          = $item['value'];
-        $tokens['to-view']           = $item['view'];
-        $tokens['to-timestamp']      = $timestamp;
+      
+        $item['value2'] = trim($item['value2']);
+        $item_format = (is_numeric($item['value2']) ? DATE_UNIX : DATE_ISO);
+        $date = date_make_date($item['value2'], 'none', 'local', $item_format);
+      
+        $tokens['to-value']          = $item['value2'];
+        $tokens['to-view']           = $item['view2'];
+        $tokens['to-timestamp']      = $date->local->timestamp;
         $tokens['to-yyyy']           = date_show_date($date, 'Y');
         $tokens['to-yy']             = date_show_date($date, 'y');
         $tokens['to-month']          = date_show_date($date, 'F');

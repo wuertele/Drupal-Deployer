@@ -48,8 +48,8 @@ function token_include() {
  * @return The modified version of $original, with all substitutions
  *   made.
  **/
-function token_replace($original, $type = 'global', $object = NULL, $leading = '[', $trailing = ']') {
-  $full = token_get_values($type, $object);
+function token_replace($original, $type = 'global', $object = NULL, $leading = '[', $trailing = ']', $options = array()) {
+  $full = token_get_values($type, $object, FALSE, $options);
   return _token_replace_tokens($original, $full->tokens, $full->values, $leading, $trailing);
 }
 
@@ -65,7 +65,7 @@ function token_replace($original, $type = 'global', $object = NULL, $leading = '
  *   An array of substitution classes and optional objects. The key is
  *   a flag indicating the class of substitution tokens to use.
  *   If an object is passed as value, the key should contain the
- *   object's type. For example, 'node', 'comment', or 'user'. The
+ *   object's type. For example, 'node', 'comment', or 'user'. The 
  *   object will be used for building substitution values. If no type
  *   is specified, only 'global' site-wide substitution tokens are built.
  * @param leading
@@ -77,11 +77,11 @@ function token_replace($original, $type = 'global', $object = NULL, $leading = '
  * @return The modified version of $original, with all substitutions
  *   made.
  **/
-function token_replace_multiple($original, $types = array('global' => NULL), $leading = '[', $trailing = ']') {
+function token_replace_multiple($original, $types = array('global' => NULL), $leading = '[', $trailing = ']', $options = array()) {
   $full = new stdClass();
   $full->tokens = $full->values = array();
   foreach ($types as $type => $object) {
-    $temp = token_get_values($type, $object);
+    $temp = token_get_values($type, $object, FALSE, $options);
     $full->tokens = array_merge($full->tokens, $temp->tokens);
     $full->values = array_merge($full->values, $temp->values);
   }
@@ -111,11 +111,9 @@ function _token_replace_tokens($original, $tokens, $values, $leading, $trailing)
  *   A keyed array containing the substitution tokens and the substition
  *   values for the passed-in type and object.
  */
-function token_get_values($type = 'global', $object = NULL, $flush = FALSE) {
-  token_include();
-
+function token_get_values($type = 'global', $object = NULL, $flush = FALSE, $options = array()) {
   static $tokens;
-  static $depth;
+  static $running;
 
   // Flush the static token cache. Useful for processes that need to slog through
   // huge numbers of tokens in a single execution cycle. Flushing it will keep
@@ -127,13 +125,7 @@ function token_get_values($type = 'global', $object = NULL, $flush = FALSE) {
   // Simple recursion check. This is to avoid content_view()'s potential
   // for endless looping when a filter uses tokens, which load the content
   // view, which calls the filter, which uses tokens, which...
-  if (!isset($depth)) {
-    $depth = 1;
-  }
-  elseif ($depth = 1) {
-    $depth++;
-  }
-  else {
+  if ($running) {
     // We'll allow things to get two levels deep, but bail out after that
     // without performing any substitutions.
     $result = new stdClass();
@@ -141,25 +133,17 @@ function token_get_values($type = 'global', $object = NULL, $flush = FALSE) {
     $result->values = array();
     return $result;
   }
+  
+  $running = TRUE;
 
-  $path = drupal_get_path('module', 'token');
-  require_once("$path/token_node.inc");
-  require_once("$path/token_comment.inc");
-  require_once("$path/token_user.inc");
-  if (module_exists('content')) {
-    require_once("$path/token_cck.inc");
-  }
-  if (module_exists('taxonomy')) {
-    require_once("$path/token_taxonomy.inc");
-  }
-
+  token_include();
 
   $id = _token_get_id($type, $object);
   if (isset($tokens[$type][$id])) {
     $tmp_tokens = $tokens[$type][$id];
   }
   else {
-    $tmp_tokens = module_invoke_all('token_values', $type, $object);
+    $tmp_tokens = module_invoke_all('token_values', $type, $object, $options);
     $tokens[$type][$id] = $tmp_tokens;
   }
 
@@ -175,7 +159,7 @@ function token_get_values($type = 'global', $object = NULL, $flush = FALSE) {
   $result->tokens = array_keys($all);
   $result->values = array_values($all);
 
-  $depth--;
+  $running = FALSE;
 
   return $result;
 }

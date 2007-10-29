@@ -4,74 +4,93 @@
 /**
  * Implementation of hook_token_values()
  */
-function node_token_values($type, $object = NULL) {
+function node_token_values($type, $object = NULL, $options = array()) {
   $values = array();
   switch ($type) {
     case 'node':
       $node = $object;
 
-      $values['nid']            = $node->nid;
-      $values['type']           = $node->type;
-      $values['type-name']      = node_get_types('name', $node->type);
-      $values['title']          = check_plain($node->title);
+      $values['nid']              = $node->nid;
+      $values['type']             = $node->type;
+      $values['type-name']        = node_get_types('name', $node->type);
+      $values['title']            = check_plain($node->title);
+      $values['title-raw']        = $node->title;
+      $values['author-uid']       = $node->uid;
+      $values['author-name']      = check_plain($node->name);
+      $values['author-name-raw']  = $node->name;
+      if (isset($node->created)) {
+        $date = (int)$node->created;
+        $values['yyyy']           = date('Y', $date);
+        $values['yy']             = date('y', $date);
+        $values['month']          = date('F', $date);
+        $values['mon']            = date('M', $date);
+        $values['mm']             = date('m', $date);
+        $values['m']              = date('n', $date);
+        $values['ww']             = date('W', $date);
+        $values['date']           = date('N', $date);
+        $values['day']            = date('l', $date);
+        $values['ddd']            = date('D', $date);
+        $values['dd']             = date('d', $date);
+        $values['d']              = date('j', $date);
+      }
 
-      $values['author-uid']     = $node->uid;
-      $values['author-name']    = $node->name;
-
-      $values['yyyy']           = date('Y', $node->created);
-      $values['yy']             = date('y', $node->created);
-      $values['month']          = date('F', $node->created);
-      $values['mon']            = date('M', $node->created);
-      $values['mm']             = date('m', $node->created);
-      $values['m']              = date('n', $node->created);
-      $values['ww']             = date('W', $node->created);
-      $values['date']           = date('N', $node->created);
-      $values['day']            = date('l', $node->created);
-      $values['ddd']            = date('D', $node->created);
-      $values['dd']             = date('d', $node->created);
-      $values['d']              = date('j', $node->created);
-
-      $values['mod-yyyy']       = date('Y', $node->changed);
-      $values['mod-yy']         = date('y', $node->changed);
-      $values['mod-month']      = date('F', $node->changed);
-      $values['mod-mon']        = date('M', $node->changed);
-      $values['mod-mm']         = date('m', $node->changed);
-      $values['mod-m']          = date('n', $node->changed);
-      $values['mod-ww']         = date('W', $node->changed);
-      $values['mod-date']       = date('N', $node->changed);
-      $values['mod-day']        = date('l', $node->changed);
-      $values['mod-ddd']        = date('D', $node->changed);
-      $values['mod-dd']         = date('d', $node->changed);
-      $values['mod-d']          = date('j', $node->changed);
-
+      if (isset($node->changed)) {
+        $date = (int)$node->changed;
+        $values['mod-yyyy']       = date('Y', $date);
+        $values['mod-yy']         = date('y', $date);
+        $values['mod-month']      = date('F', $date);
+        $values['mod-mon']        = date('M', $date);
+        $values['mod-mm']         = date('m', $date);
+        $values['mod-m']          = date('n', $date);
+        $values['mod-ww']         = date('W', $date);
+        $values['mod-date']       = date('N', $date);
+        $values['mod-day']        = date('l', $date);
+        $values['mod-ddd']        = date('D', $date);
+        $values['mod-dd']         = date('d', $date);
+        $values['mod-d']          = date('j', $date);
+      }
+      
       // Now get the menu related information.
       global $_menu;
       $trail = array();
-      $placeholders = array();
-      $mid = token_menu_get_mid('node/'. $node->nid);
+      $trail_raw = array();
+      $original_mid = token_menu_get_mid('node/'.$node->nid);
+      
+      $mid = $original_mid;
+      while ($mid && $_menu['visible'][$mid] && $_menu['visible'][$mid]['pid'] != 0) {
+        array_unshift($trail, check_plain($_menu['visible'][$mid]['title']));
+        $mid = $_menu['visible'][$mid]['pid'];
+      }
 
-      while ($mid && $_menu['visible'][$mid]) {
-        array_unshift($trail, $_menu['visible'][$mid]['title']);
+      // One more time, unfiltered
+      $mid = $original_mid;
+      while ($mid && $_menu['visible'][$mid] && $_menu['visible'][$mid]['pid'] != 0) {
+        array_unshift($trail_raw, $_menu['visible'][$mid]['title']);
         $mid = $_menu['visible'][$mid]['pid'];
       }
 
       if (isset($trail)) {
         $values['menupath']     = implode('/', $trail);
-        $values['menu']         = array_shift($trail);
+        $values['menupath-raw'] = implode('/', $trail_raw);
+        $values['menu']         = check_plain($_menu['visible'][$mid]['title']);
+        $values['menu-raw']     = $_menu['visible'][$mid]['title'];
       }
       else {
         $values['menu']         = '';
+        $values['menu-raw']     = '';
         $values['menupath']     = '';
+        $values['menupath-raw'] = '';
       }
 
       // And now taxonomy, which is a bit more work. This code is adapted from
       // pathauto's handling code; it's intended for compatability with it.
       if (module_exists('taxonomy') && !empty($node->taxonomy) && is_array($node->taxonomy)) {
         foreach ($node->taxonomy as $term) {
+          $original_term = $term;
           if ((object)$term) {
             // With freetagging it's somewhat hard to get the tid, vid, name values
             // Rather than duplicating taxonomy.module code here you should make sure your calling module
-            // has a weight of at least 1 which will run after taxonomy has saved the data which allows us to
+            // has a weight of at least 1 which will run after taxonomy has saved the data which allows us to 
             // pull it out of the db here.
             if (!isset($term->name) || !isset($term->tid)) {
               $vid = db_result(db_query("SELECT t.vid FROM {term_node} r INNER JOIN {term_data} t ON r.tid = t.tid INNER JOIN {vocabulary} v ON t.vid = v.vid WHERE r.nid = %d ORDER BY v.weight, t.weight, t.name LIMIT 1", $object->nid));
@@ -79,32 +98,51 @@ function node_token_values($type, $object = NULL) {
               $term->vid = $vid;
             }
 
-            $values['term'] = $term->name;
+            // Ok, if we still don't have a term name maybe this is a pre-taxonomy submit node
+            // So if it's a number we can get data from it
+            if(!isset($term->name) && is_array($original_term)) {
+              $tid = array_shift($original_term);
+              if (is_numeric($tid)) {
+                $term = taxonomy_get_term($tid);
+              }
+            }
+            $values['term'] = check_plain($term->name);
+            $values['term-raw'] = $term->name;
             $values['term-id'] = $term->tid;
             $vid = $term->vid;
 
-            if (!empty($vid)) {
+            if(!empty($vid)) {
               $vocabulary = taxonomy_get_vocabulary($vid);
-              $values['vocab'] = $vocabulary->name;
-              $values['vocab-id'] = $vocabulary->name;
+              $values['vocab'] = check_plain($vocabulary->name);
+              $values['vocab-raw'] = $vocabulary->name;
+              $values['vocab-id'] = $vocabulary->vid;
             }
 
+            // The 'catpath' (and 'cat') tokens have been removed, as they caused quite a bit of confusion,
+            // and the catpath was a relatively expensive query when the taxonomy tree was deep.
+            //
+            // It existed only to provide forward-compatability with pathauto module, and
+            // for most uses of token.module, it was a relatively useless token -- it exposed
+            // a list of term names formatted as a URL/path string. Once pathauto supports
+            // tokens, *it* should handle this catpath alias as it's the primary consumer.
             break;
           }
         }
-      }
-      // It's possible to leave that block and still not have good data.
+      } 
+      // It's possible to leave that block and still not have good data.  
       // So, we test for these and if not set, set them.
       if (!isset($values['term'])) {
         $values['term'] = '';
+        $values['term-raw'] = '';
         $values['term-id'] = '';
         $values['vocab'] = '';
+        $values['vocab-raw'] = '';
         $values['vocab-id'] = '';
       }
 
       break;
   }
-
+  
   return $values;
 }
 
@@ -117,13 +155,17 @@ function node_token_list($type = 'all') {
     $tokens['node']['type']           = t('Node type');
     $tokens['node']['type-name']      = t('Node type (user-friendly version)');
     $tokens['node']['title']          = t('Node title');
+    $tokens['node']['title-raw']      = t('Unfiltered node title. WARNING - raw user input.');
 
     $tokens['node']['author-uid']     = t("Node author's user id");
     $tokens['node']['author-name']    = t("Node author's user name");
+    $tokens['node']['author-name-raw']    = t("Node author's user name. WARNING - raw user input.");
 
     $tokens['node']['term']           = t("Name of top taxonomy term");
+    $tokens['node']['term-raw']       = t("Unfiltered name of top taxonomy term. WARNING - raw user input.");
     $tokens['node']['term-id']        = t("ID of top taxonomy term");
     $tokens['node']['vocab']          = t("Name of top term's vocabulary");
+    $tokens['node']['vocab-raw']      = t("Unfiltered name of top term's vocabulary. WARNING - raw user input.");
     $tokens['node']['vocab-id']       = t("ID of top term's vocabulary");
 
     // Temporarily disabled -- see notes in node_token_values.
@@ -144,14 +186,15 @@ function node_token_list($type = 'all') {
     $tokens['node']['mod-????']       = t('All tokens for node creation dates can also be used with with the "mod-" prefix; doing so will use the modification date rather than the creation date.');
 
     $tokens['node']['menu']           = t("The name of the menu the node belongs to.");
+    $tokens['node']['menu-raw']       = t("The name of the menu the node belongs to. WARNING - raw user input.");
     $tokens['node']['menupath']       = t("The menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /.");
-
+    $tokens['node']['menupath-raw']   = t("The unfiltered menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /. WARNING - raw user input.");
     return $tokens;
   }
 }
 
 // Handle book nodes.
-function book_token_values($type, $object = NULL) {
+function book_token_values($type, $object = NULL, $options = array()) {
   if ($type == 'node') {
     $node = $object;
 
@@ -159,24 +202,30 @@ function book_token_values($type, $object = NULL) {
     if ($node->parent) {
       $path = book_location($node);
       $tokens['book'] = check_plain($path[0]->title);
+      $tokens['book-raw'] = $path[0]->title;
       $tokens['book_id'] = $node->parent;
 
       $bookhierarchy = book_location($node);
       $bookpath = '';
+      $bookpath_raw = '';
       foreach ($bookhierarchy as $bookelement) {
         if ($bookpath == '') {
           $bookpath = check_plain($bookelement->title);
-        }
+          $bookpath_raw = $bookelement->title;
+        } 
         else {
-          $bookpath = $bookpath .'/'. check_plain($bookelement->title);
+          $bookpath = $bookpath . '/' . check_plain($bookelement->title);
+          $bookpath_raw = $bookpath_raw . '/' . $bookelement->title;
         }
       }
       $tokens['bookpath'] = $bookpath;
-    }
+      $tokens['bookpath-raw'] = $bookpath_raw;
+    } 
     else {
       $tokens['book'] = '';
       $tokens['book_id'] = '';
       $tokens['bookpath'] = '';
+      $tokens['bookpath-raw'] = '';
     }
     return $tokens;
   }
@@ -184,9 +233,13 @@ function book_token_values($type, $object = NULL) {
 
 function book_token_list($type) {
   if ($type == 'node' || $type == 'all') {
-    $list['book']['book'] = t("The title of the node's book parent.");
-    $list['book']['book_id'] = t("The id of the node's book parent.");
-    $list['book']['bookpath'] = t("The titles of all parents in the node's book hierarchy.");
+    $list['book']['book']           = t("The title of the node's book parent.");
+    $list['book']['book_id']        = t("The id of the node's book parent.");
+    $list['book']['bookpath']       = t("The titles of all parents in the node's book hierarchy.");
+
+    $list['book']['book-raw']       = t("The unfiltered title of the node's book parent. WARNING - raw user input.");
+    $list['book']['bookpath-raw']   = t("The unfiltered titles of all parents in the node's book hierarchy. WARNING - raw user input.");
+
     return $list;
   }
 }
@@ -219,3 +272,4 @@ function token_menu_get_mid($in) {
 
   return $mid;
 }
+
