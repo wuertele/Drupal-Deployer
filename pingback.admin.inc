@@ -1,5 +1,5 @@
 <?php
-; $Id$
+// $Id$
 
 function pingback_settings_form() {
   $form = array();
