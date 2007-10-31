@@ -833,3 +833,26 @@ function project_issue_comment_mass_update($form_id, $form_values) {
     project_issue_update_by_comment($issue_comment, 'update');
   }
 }
+
+/**
+ * Set the breadcrumb trail for project issues and issue followups.
+ *
+ * Since the comment form and a full node view of an issue can appear
+ * on both full issue pages and comment reply pages, this function checks
+ * to see which page is being loaded, and sets the breadcrumb appropriately.
+ *
+ * @param $node
+ *   The issue node object.
+ * @param $project
+ *   The project node object.
+ */
+function project_issue_set_breadcrumb($node, $project) {
+  $extra = array();
+  $extra[] = l($project->title, 'node/'. $project->nid);
+  $extra[] = l('Issues', 'project/issues/'. $project->uri);
+  // Add the issue title if we're on a comment reply page.
+  if (project_issue_is_comment_reply()) {
+    $extra[] = l($node->title, 'node/'. $node->nid);
+  }
+  project_project_set_breadcrumb($project, $extra);
+}

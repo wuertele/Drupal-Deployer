@@ -841,17 +841,7 @@ function project_issue_view($node, $teaser = false, $page = false) {
       '#weight' => -3,
     );
 
-    // Breadcrumb navigation
-    $breadcrumb[] = array('path' => 'project', 'title' => t('Projects'));
-    if (project_use_taxonomy()) {
-      $taxonomy_terms = taxonomy_node_get_terms($node->pid);
-      $term = reset($taxonomy_terms);
-      $breadcrumb[] = array('path' => 'project/'. $term->name, 'title' => $term->name);
-    }
-    $breadcrumb[] = array('path' => 'node/'. $project->nid, 'title' => $project->title);
-    $breadcrumb[] = array('path' => 'project/issues/'. $project->uri, 'title' => t('Issues'));
-    $breadcrumb[] = array('path' => 'node/'. $node->nid);
-    menu_set_location($breadcrumb);
+    project_issue_set_breadcrumb($node, $project);
   }
   return $node;
 }
