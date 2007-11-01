@@ -266,7 +266,7 @@ function project_mail_notify($nid) {
   // Mail summary (status values).
   foreach ($fields as $field => $text) {
     $text = str_pad("$text:", 14);
-    if (isset($previous) && $previous->$field != $entry->$field) {
+    if (isset($previous) && $previous->$field != $entry->$field && $field != 'updator') {
       $summary .= "-$text". project_mail_summary($field, $previous->$field) ."\n";
       $summary .= "+$text". project_mail_summary($field, $entry->$field) ."\n";
     }
