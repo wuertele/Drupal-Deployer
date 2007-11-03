@@ -255,6 +255,9 @@ function project_issue_update_by_comment($comment_data, $op) {
       $comment_data['rid'] = $comment_data['project_info']['rid'];
       unset ($comment_data['project_info']);
       $comment_data = (object) $comment_data;
+      // Mark the node for email notification during hook_exit(), so all issue
+      // and file data is in a consistent state before we generate the email.
+      project_issue_set_mail_notify($comment_data->nid);
       break;
     case 'update':
       $comment_data = (object) $comment_data;
