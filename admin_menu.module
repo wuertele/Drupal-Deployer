@@ -177,7 +177,7 @@ function admin_menu_adjust_items(&$admin_items) {
   // add create content_type items to Content management > Content
   $mid_node_add = $_menu['path index']['node/add'];
   $mid_content = $_menu['path index']['admin/content/node'];
-  admin_menu_copy_items($admin_items, $mid_node_add, $mid_content, 'Add !title');
+  admin_menu_copy_items($admin_items, $mid_node_add, $mid_content, t('Add !title'));
 }
 
 /**
@@ -191,7 +191,8 @@ function admin_menu_adjust_items(&$admin_items) {
  * @param target_pid
  *   A target parent menu item id.
  * @param title
- *   An optional string containing the token !title to pass to t().
+ *   An optional string containing the token !title, that has already been
+ *   passed through t().
  * @param tree
  *   Whether to rebuild hierarchy from source parent menu item. Defaults to
  *   true.
@@ -203,7 +204,7 @@ function admin_menu_copy_items(&$admin_items, $source_pid, $target_pid, $title =
     foreach ($_menu['items'][$source_pid]['children'] as $mid) {
       $admin_items[$mid] = $_menu['items'][$mid];
       if (isset($title)) {
-        $admin_items[$mid]['title'] = t($title, array('!title' => $admin_items[$mid]['title']));
+        $admin_items[$mid]['title'] = check_plain(strtr($title, array('!title' => $admin_items[$mid]['title'])));
       }
       $admin_items[$mid]['pid'] = $target_pid;
       // Only add child to target menu item if it does not already exist.
