@@ -51,6 +51,16 @@ are only visible after one or two clicks normally.
      'Admin Menu' and save the blocks.
 
 
+-- FAQ --
+
+Q: I enabled "Aggregate and compress CSS files", but I found admin_menu.css is
+   still there, is it normal?
+
+A: Yes, this is the intended behavior. Since admin_menu is only visible for
+   logged-on administrative users, it would not make sense to load its
+   stylesheet for all, including anonymous users.
+
+
 -- CUSTOMIZATION --
 
 * You have two options to override the admin menu icon:
