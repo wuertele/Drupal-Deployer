@@ -172,13 +172,13 @@ function _amazon_load_child_data(&$object) {
   }
 
   $result = db_query("SELECT type, participant FROM {amazon_item_participant} WHERE asin = '%s'", $object->ASIN);
-  while ($feature = db_fetch_object($result)) {
-    $object->Feature[] = $feature->feature;
+  while ($participant = db_fetch_object($result)) {
+    $object->{$participant->type}[] = $participant;
   }
 
   $result = db_query("SELECT feature FROM {amazon_item_image} WHERE asin = '%s'", $object->ASIN);
-  while ($feature = db_fetch_object($result)) {
-    $object->Feature[] = $feature->feature;
+  while ($image = db_fetch_object($result)) {
+    $object['Images'][$image->width .'x'. $image->height] = $image;
   }
 }
 
@@ -261,6 +261,7 @@ function amazon_item_delete($asin, $silent = FALSE) {
 }
 
 
+
 /**
  * Utility functions for managing AmazonItem/Node relationships
  */
@@ -292,6 +293,7 @@ function amazon_item_node_delete($asin = NULL, $nid = NULL, $module = NULL) {
     db_query($sql, $params);
   }
 }
+
 
 /**
  * Misc. helper functions for managing the wide array of Amazon
