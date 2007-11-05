@@ -190,31 +190,22 @@ function faq_view($node, $teaser = FALSE, $page = FALSE) {
 
   if ($page) {
     $breadcrumb = array();
-    $breadcrumb[] = array('path' => 'node/'. $node->nid); 
 
     if (module_exists("taxonomy") && $node->taxonomy) {
       foreach ($node->taxonomy as $term) {
         $current = $term;
         continue;
       }
-      $breadcrumb[] = array(
-        'path' => 'faq/'. $current->tid, 
-        'title' => $current->name,
-      );
+      $breadcrumb[] = l($current->name, 'faq/'. $current->tid);
       while ($parents = taxonomy_get_parents($current->tid)) {
         $current = array_shift($parents);
-        $breadcrumb[] = array(
-          'path' => 'faq/'. $current->tid,
-          'title' => $current->name,
-        );
+        $breadcrumb[] = l($current->name, 'faq/'. $current->tid);
       }
     }
-    $breadcrumb[] = array(
-      'path' => 'faq', 
-      'title' => variable_get('faq_title', t('Frequently Asked Questions')),
-    );
+    $breadcrumb[] = l(t(variable_get('faq_title', 'Frequently Asked Questions')), 'faq');
+    $breadcrumb[] = l(t('Home'), NULL);
     $breadcrumb = array_reverse($breadcrumb);
-    menu_set_location($breadcrumb);
+    drupal_set_breadcrumb($breadcrumb);
   }
 
   $node = node_prepare($node, $teaser);
