@@ -915,32 +915,39 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
     $count = taxonomy_term_count_nodes($term->tid, 'faq');
   }
 
+  // get taxonomy image
+  $term_img = '';
+  if (module_exists('taxonomy_image')) {
+    $term_img = taxonomy_image_display($term->tid, 'class="faq_tax_image"');
+  }
+  
+
   // configure header
   $hdr = "h5";
   if ($term->depth > 0) $hdr = "h6";
+  $header = "<$hdr class=\"faq_header\">";
+  $header .= $term_img;
   if ($display_vars['category_display'] == 'hide_qa') {
-    $header = "<$hdr class=\"faq_header\">";
     $header .= l($term->name, "faq/$term->tid");
-    if ($display_vars['faq_count']) $header .= " (%%FAQ_COUNT%%)";
-    $header .= "</$hdr>\n";
-    $ans_hdr = "<$hdr class=\"faq_header\">";
-    $ans_hdr .= check_plain($term->name) ."</$hdr>\n";
   }
   else {
-    $header = "<$hdr class=\"faq_header\">";
     $header .= check_plain($term->name);
-    if ($display_vars['faq_count']) $header .= " (%%FAQ_COUNT%%)";
-    $header .= "</$hdr>\n";
-    $ans_hdr = "<$hdr class=\"faq_header\">";
-    $ans_hdr .= check_plain($term->name) ."</$hdr>\n";
   }
+  if ($display_vars['faq_count']) $header .= " (%%FAQ_COUNT%%)";
+  $header .= "</$hdr>\n";
+  $ans_hdr = "<$hdr class=\"faq_header\">";
+  $ans_hdr .= $term_img;
+  $ans_hdr .= check_plain($term->name) ."</$hdr>\n";
+  $ans_hdr .= '<div class="clear-block"></div>';
 
+  // configure category description
   $answer_category_name = variable_get('faq_answer_category_name', FALSE);
   $desc = '';
   if (!empty($term->description)) {
     $desc = '<div class="faq_qa_description"><p>';
     $desc .= $term->description ."</p></div>\n";
   }
+  $desc .= '<div class="clear-block"></div>';
 
   // get list of sub-categories if necessary
   $sub_cats = '';
@@ -952,19 +959,31 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
     foreach ($list as $tid => $sub_term) {
       $sub_count = taxonomy_term_count_nodes($sub_term->tid, 'faq');
       if ($sub_count) {
+
+        // configure sub cat description
         $sub_cat_desc = '';
         if (!empty($sub_term->description)) {
           $sub_cat_desc = '<div class="faq_qa_description"><p>';
           $sub_cat_desc .= $sub_term->description ."</p></div>";
         }
-        // get number of questions, and account for hidden sub-cats
+
+        // get taxonomy image
+        $sub_term_img = '';
+        if (module_exists('taxonomy_image')) {
+          $sub_term_img = taxonomy_image_display($sub_term->tid, 'class="faq_tax_image"');
+        }
+
+        // configure sub cat header
         if ($display_vars['faq_count']) {
-          $scats[] = l($sub_term->name, "faq/$sub_term->tid")
-            ." ($sub_count) $sub_cat_desc";
+          $scats_hdr = l($sub_term->name, "faq/$sub_term->tid") ." ($sub_count) $sub_cat_desc";
+          $scats_hdr .= '<div class="clear-block"></div>';
         }
         else {
-          $scats[] = l($sub_term->name, "faq/$sub_term->tid") . $sub_cat_desc;
+          $scats_hdr = l($sub_term->name, "faq/$sub_term->tid") . $sub_cat_desc;
+          $scats_hdr .= '<div class="clear-block"></div>';
         }
+
+        $scats[] = $scats_hdr;
       }
     }
     $list_style = variable_get('faq_category_listing', 'ul');
@@ -977,7 +996,7 @@ function theme_category_questions_top($result, $display_vars, $term, $class) {
     $output .= '<div class="faq_qa_header">'. $header . $desc ."</div>\n";
   }
   else {
-    $output .= '<div class="faq_qa_header">'. $desc ."</div>\n";
+    $output .= '<div class="faq_qa_header">'. $term_img . $desc ."</div>\n";
   }
   $output .= $sub_cats;
   $sub_cats = '';
@@ -1160,27 +1179,33 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
     $count = taxonomy_term_count_nodes($term->tid, 'faq');
   }
 
+  // get taxonomy image
+  $term_img = '';
+  if (module_exists('taxonomy_image')) {
+    $term_img = taxonomy_image_display($term->tid, 'class="faq_tax_image"');
+  }
+
   // configure header
   $hdr = "h5";
   if ($term->depth > 0) $hdr = "h6";
+  $header = "<$hdr class=\"faq_header\">";
+  $header .= $term_img;
   if ($display_vars['category_display'] == 'hide_qa') {
-    $header = "<$hdr class=\"faq_header\">";
     $header .= l($term->name, "faq/$term->tid");
-    if ($display_vars['faq_count']) $header .= " (%%FAQ_COUNT%%)";
-    $header .= "</$hdr>\n";
   }
   else {
-    $header = "<$hdr class=\"faq_header\">";
     $header .= check_plain($term->name);
-    if ($display_vars['faq_count']) $header .= " (%%FAQ_COUNT%%)";
-    $header .= "</$hdr>\n";
   }
+  if ($display_vars['faq_count']) $header .= " (%%FAQ_COUNT%%)";
+  $header .= "</$hdr>\n";
 
+  // configure category description
   $desc = '';
   if (!empty($term->description)) {
     $desc = '<div class="faq_qa_description"><p>';
     $desc .= $term->description ."</p></div>\n";
   }
+  $desc .= '<div class="clear-block"></div>';
 
   // get list of sub-categories if necessary
   $sub_cats = '';
@@ -1191,18 +1216,31 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
     foreach ($list as $tid => $sub_term) {
       $sub_count = taxonomy_term_count_nodes($sub_term->tid, 'faq');
       if ($sub_count) {
+
+        // configure sub cat description
         $sub_cat_desc = '';
         if (!empty($sub_term->description)) {
           $sub_cat_desc = '<div class="faq_qa_description"><p>';
           $sub_cat_desc .= $sub_term->description ."</p></div>";
         }
+
+        // get taxonomy image
+        $sub_term_img = '';
+        if (module_exists('taxonomy_image')) {
+          $sub_term_img = taxonomy_image_display($sub_term->tid, 'class="faq_tax_image"');
+        }
+        
+        // configure sub cat header
         if ($display_vars['faq_count']) {
-          $scats[] = l($sub_term->name, "faq/$sub_term->tid") 
-            ." ($sub_count) $sub_cat_desc";
+          $scats_hdr = l($sub_term->name, "faq/$sub_term->tid") ." ($sub_count) $sub_cat_desc";
+          $scats_hdr .= '<div class="clear-block"></div>';
         }
         else {
-          $scats[] = l($sub_term->name, "faq/$sub_term->tid") . $sub_cat_desc;
+          $scats_hdr = l($sub_term->name, "faq/$sub_term->tid") . $sub_cat_desc;
+          $scats_hdr .= '<div class="clear-block"></div>';
         }
+
+        $scats[] = $scats_hdr;
       }
     }
     $list_style = variable_get('faq_category_listing', 'ul');
@@ -1215,7 +1253,7 @@ function theme_category_hide_answer($result, $display_vars, $term, $class) {
     $output .= '<div class="faq_qa_header">'. $header . $desc ."</div>\n";
   }
   else {
-    $output .= '<div class="faq_qa_header">'. $desc ."</div>\n";
+    $output .= '<div class="faq_qa_header">'. $term_img . $desc ."</div>\n";
   }
   $output .= $sub_cats;
   $sub_cats = '';
@@ -1362,21 +1400,25 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
     $count = taxonomy_term_count_nodes($term->tid, 'faq');
   }
 
+  // get taxonomy image
+  $term_img = '';
+  if (module_exists('taxonomy_image')) {
+    $term_img = taxonomy_image_display($term->tid, 'class="faq_tax_image"');
+  }
+
   // configure header
   $hdr = "h5";
   if ($term->depth > 0) $hdr = "h6";
+  $header = "<$hdr class=\"faq_header\">";
+  $header .= $term_img;
   if ($display_vars['category_display'] == 'hide_qa') {
-    $header = "<$hdr class=\"faq_header\">";
     $header .= l($term->name, "faq/$term->tid");
-    if ($display_vars['faq_count']) $header .= " (%%FAQ_COUNT%%)";
-    $header .= "</$hdr>\n";
   }
   else {
-    $header = "<$hdr class=\"faq_header\">";
     $header .= check_plain($term->name);
-    if ($display_vars['faq_count']) $header .= " (%%FAQ_COUNT%%)";
-    $header .= "</$hdr>\n";
   }
+  if ($display_vars['faq_count']) $header .= " (%%FAQ_COUNT%%)";
+  $header .= "</$hdr>\n";
 
   // configure category description
   $desc = '';
@@ -1384,6 +1426,7 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
     $desc = '<div class="faq_qa_description"><p>';
     $desc .= $term->description ."</p></div>\n";
   }
+  $desc .= '<div class="clear-block"></div>';
 
 
   // get list of sub-categories if necessary
@@ -1395,18 +1438,32 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
     foreach ($list as $tid => $sub_term) {
       $sub_count = taxonomy_term_count_nodes($sub_term->tid, 'faq');
       if ($sub_count) {
+
+        // configure sub cat description
         $sub_cat_desc = '';
         if (!empty($sub_term->description)) {
           $sub_cat_desc = '<div class="faq_qa_description"><p>';
           $sub_cat_desc .= $sub_term->description ."</p></div>";
         }
+
+        // get taxonomy image
+        $sub_term_img = '';
+        if (module_exists('taxonomy_image')) {
+          $sub_term_img = taxonomy_image_display($sub_term->tid, 'class="faq_tax_image"');
+
+        }
+
+        // configure sub cat header
         if ($display_vars['faq_count']) {
-          $scats[] = l($sub_term->name, "faq/$sub_term->tid") 
-            ." ($sub_count) $sub_cat_desc";
+          $scats_hdr = l($sub_term->name, "faq/$sub_term->tid") ." ($sub_count) $sub_cat_desc";
+          $scats_hdr .= '<div class="clear-block"></div>';
         }
         else {
-          $scats[] = l($sub_term->name, "faq/$sub_term->tid") . $sub_cat_desc;
+          $scats_hdr = l($sub_term->name, "faq/$sub_term->tid") . $sub_cat_desc;
+          $scats_hdr .= '<div class="clear-block"></div>';
         }
+
+        $scats[] = $scats_hdr;
       }
     }
     $list_style = variable_get('faq_category_listing', 'ul');
@@ -1420,7 +1477,7 @@ function theme_category_questions_inline($result, $display_vars, $term, $class) 
     $output .= '<div class="faq_qa_header">'. $header . $desc ."</div>\n";
   }
   else {
-    $output .= '<div class="faq_qa_header">'. $desc ."</div>\n";
+    $output .= '<div class="faq_qa_header">'. $term_img . $desc ."</div>\n";
   }
   $output .= $sub_cats;
   $sub_cats = '';
@@ -1519,27 +1576,33 @@ function theme_category_new_page($result, $display_vars, $term, $class) {
     $count = taxonomy_term_count_nodes($term->tid, 'faq');
   }
 
+  // get taxonomy image
+  $term_img = '';
+  if (module_exists('taxonomy_image')) {
+    $term_img = taxonomy_image_display($term->tid, 'class="faq_tax_image"');
+  }
+
   // configure header
   $hdr = "h5";
   if ($term->depth > 0) $hdr = "h6";
+  $header = "<$hdr class=\"faq_header\">";
+  $header .= $term_img;
   if ($display_vars['category_display'] == 'hide_qa') {
-    $header = "<$hdr class=\"faq_header\">";
     $header .= l($term->name, "faq/$term->tid");
-    if ($display_vars['faq_count']) $header .= " (%%FAQ_COUNT%%)";
-    $header .= "</$hdr>\n";
   }
   else {
-    $header = "<$hdr class=\"faq_header\">";
     $header .= check_plain($term->name);
-    if ($display_vars['faq_count']) $header .= " (%%FAQ_COUNT%%)";
-    $header .= "</$hdr>\n";
   }
+  if ($display_vars['faq_count']) $header .= " (%%FAQ_COUNT%%)";
+  $header .= "</$hdr>\n";
 
+  // configure category description
   $desc = '';
   if (!empty($term->description)) {
     $desc = '<div class="faq_qa_description"><p>';
     $desc .= $term->description ."</p></div>\n";
   }
+  $desc .= '<div class="clear-block"></div>';
 
   // get list of sub-categories if necessary
   $sub_cats = '';
@@ -1550,18 +1613,31 @@ function theme_category_new_page($result, $display_vars, $term, $class) {
     foreach ($list as $tid => $sub_term) {
       $sub_count = taxonomy_term_count_nodes($sub_term->tid, 'faq');
       if ($sub_count) {
+
+        // configure sub cat description
         $sub_cat_desc = '';
         if (!empty($sub_term->description)) {
           $sub_cat_desc = '<div class="faq_qa_description"><p>';
           $sub_cat_desc .= $sub_term->description ."</p></div>";
         }
+
+        // get taxonomy image
+        $sub_term_img = '';
+        if (module_exists('taxonomy_image')) {
+          $sub_term_img = taxonomy_image_display($sub_term->tid, 'class="faq_tax_image"');
+        }
+
+        // configure sub cat header
         if ($display_vars['faq_count']) {
-          $scats[] = l($sub_term->name, "faq/$sub_term->tid") 
-            ." ($sub_count) $sub_cat_desc";
+          $scats_hdr = l($sub_term->name, "faq/$sub_term->tid") ." ($sub_count) $sub_cat_desc";
+          $scats_hdr .= '<div class="clear-block"></div>';
         }
         else {
-          $scats[] = l($sub_term->name, "faq/$sub_term->tid") . $sub_cat_desc;
+          $scats_hdr = l($sub_term->name, "faq/$sub_term->tid") . $sub_cat_desc;
+          $scats_hdr .= '<div class="clear-block"></div>';
         }
+
+        $scats[] = $scats_hdr;
       }
     }
     $list_style = variable_get('faq_category_listing', 'ul');
@@ -1574,7 +1650,7 @@ function theme_category_new_page($result, $display_vars, $term, $class) {
     $output .= '<div class="faq_qa_header">'. $header . $desc ."</div>\n";
   }
   else {
-    $output .= '<div class="faq_qa_header">'. $desc ."</div>\n";
+    $output .= '<div class="faq_qa_header">'. $term_img . $desc ."</div>\n";
   }
   $output .= $sub_cats;
   $sub_cats = '';
@@ -1769,6 +1845,12 @@ function _get_indented_faq_terms($vid, $tid, $display_vars) {
     $tree_count = taxonomy_term_count_nodes($term->tid, 'faq');
 
     if ($tree_count) {
+      // get taxonomy image
+      $term_img = '';
+      if (module_exists('taxonomy_image')) {
+        $term_img = taxonomy_image_display($term->tid, 'class="faq_tax_image"');
+      }
+
       // get term description
       $desc = '';
       if (!empty($term->description)) {
@@ -1786,15 +1868,16 @@ function _get_indented_faq_terms($vid, $tid, $display_vars) {
           if ($display_vars['hide_sub_categories']) {
             $count = $tree_count;
           }
-          $cur_item = l($term->name, "faq/$term->tid") ." ($count) ". $desc;
+          $cur_item = $term_img . l($term->name, "faq/$term->tid") ." ($count) ". $desc;
         }
         else {
-          $cur_item = l($term->name, "faq/$term->tid") . $desc;
+          $cur_item = $term_img . l($term->name, "faq/$term->tid") . $desc;
         }
       }
       else {
-        $cur_item = check_plain($term->name) . $desc;
+        $cur_item = $term_img . check_plain($term->name) . $desc;
       }
+      $cur_item .= '<div class="clear-block"></div>';
 
       $term_items = array();
       if (!$display_vars['hide_sub_categories']) {
