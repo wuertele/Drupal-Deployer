@@ -253,7 +253,7 @@ function project_mail_notify($nid) {
   // to satisfy RFC2822 <http://www.faqs.org/rfcs/rfc2822.html>,
   // which requires double quotes when special characters (including
   // some punctuation) are used.  See example in Appendix A.1.2.
-  $from = "\"$sender->name \"<$sender->mail>";
+  $from = "\"$sender->name\" <$sender->mail>";
   $domain = preg_replace('|.+://([a-zA-Z0-9\._-]+).*|', '\1', $base_url);
   $header = array(
     'Return-Path' => "<$sender->mail>",
