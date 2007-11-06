@@ -493,6 +493,10 @@ function project_mail_format_entry($entry, $display_files, $is_original = FALSE)
 function project_mail_reminder() {
   global $base_url;
 
+  if (defined('PROJECT_NOMAIL')) {
+    return;
+  }
+
   $projects = array();
   $result = db_query(db_rewrite_sql('SELECT p.nid, n.title FROM {project_issue_projects} p INNER JOIN {node} n ON p.nid = n.nid WHERE p.mail_reminder = 1 AND n.status = 1', 'p'));
   while ($project = db_fetch_object($result)) {
@@ -545,6 +549,10 @@ function project_mail_reminder() {
 
 function project_mail_digest() {
   global $base_url;
+
+  if (defined('PROJECT_NOMAIL')) {
+    return;
+  }
 
   $body = array();
   $header = array(
