@@ -318,7 +318,7 @@ function project_mail_notify($nid) {
   }
 
   if ($project->mail_copy) {
-    drupal_mail('project_issue_update', $project->mail_copy, $node->title, $body, NULL, $header);
+    drupal_mail('project_issue_update', $project->mail_copy, $subject, $body, $from, $header);
   }
 }
 
