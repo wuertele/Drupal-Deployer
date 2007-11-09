@@ -26,6 +26,6 @@ Drupal.service = function(service_method, args, success) {
   }
   $.post(Drupal.settings.baseurl + "?q=services/json", args_done, function(unparsed_data) {
     parsed_data = Drupal.parseJson(unparsed_data);
-    success(parsed_data['#error'], parsed_data['#data']);
+    success(!parsed_data['#error'], parsed_data['#data']);
   });
 };

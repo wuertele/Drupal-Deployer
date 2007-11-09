@@ -8,7 +8,14 @@ function json_server_server_info() {
   );
 }
 
+function json_server_server_error($message) {
+  return array("#error" => TRUE, "#message" => $message);
+}
+
 function json_server_server() {
+  if (!isset($_POST))
+    return drupal_to_js(array('#error' => TRUE, '#data' => "JSON server accepts POST requests only."));
+
   $methods = services_get_all();
   $request = drupal_parse_json($_POST['method']);
   $args = array();
@@ -28,10 +35,15 @@ function json_server_server() {
           $args[$arg['#name']] = '';
         }
       }
-      return drupal_to_js(array('#error' => FALSE, '#data' => services_method_call($method['#method'], $args)));
+      $result = services_method_call($method['#method'], $args);
+      if (is_array($result) && $result['#error'] === TRUE)
+        return drupal_to_js(array('#error' => TRUE, '#data' => $result['#message']));
+      
+      return drupal_to_js(array('#error' => FALSE, '#data' => $result));
     }
   }
-  return "error";
+
+  return drupal_to_js(array('#error' => TRUE, '#data' => "Invalid method $request"));
 }
 
 function json_load() {
