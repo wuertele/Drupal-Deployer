@@ -13,14 +13,15 @@ function json_server_server_error($message) {
 }
 
 function json_server_server() {
-  if (!isset($_POST))
+  if (!isset($_POST)) {
     return drupal_to_js(array('#error' => TRUE, '#data' => "JSON server accepts POST requests only."));
-
+  }
+  
   $methods = services_get_all();
   $request = drupal_parse_json($_POST['method']);
   $args = array();
-  foreach($methods as $method) {
-    if($method['#method'] == $request) {
+  foreach ($methods as $method) {
+    if ($method['#method'] == $request) {
       unset($_POST['q']);
       unset($_POST['method']);
       $args = array();
@@ -54,15 +55,26 @@ function json_load() {
 }
 
 function drupal_parse_json($v) {
-  if($v{0} == '"') {
+  // PHP 5 only
+  if (function_exists('json_decode')) {
+    return json_decode($v);
+  }
+  if ($v{0} == '"') {
     $v = substr($v, 1, -1);
   }
-  elseif($v{0} == '{') {
+  elseif ($v{0} == '{') {
     $var = explode(",", substr($v, 1, -2));
     $v = array();
-    foreach($var as $value) {
+    foreach ($var as $value) {
       $va = explode(":", $value);
-      $v[] = drupal_parse_json($va[1]);
+      $v[$va[0]] = drupal_parse_json($va[1]);
+    }
+  }
+  elseif ($v{0} == '[') {
+    $var = explode(",", substr($v, 1, -2));
+    $v = array();
+    foreach ($var as $value) {
+      $v[] = drupal_parse_json($va[0]);
     }
   }
   return $v;
