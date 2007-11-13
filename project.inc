@@ -101,21 +101,6 @@ function project_project_form($node) {
     '#description' => t('This will be used to generate a /project/&lt;shortname&gt;/ URL for your project.'),
     '#required' => TRUE,
   );
-
-  $description = t('E-mail address where the project owner can be contacted.');
-  if (module_exists('project_issue')) {
-    $description .= ' '. t('This will be used as the From: address for issue subscription e-mails.');
-  }
-
-  $form['project']['mail'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Project e-mail'),
-    '#default_value' => isset($node->mail) ? $node->mail : $user->mail,
-    '#size' => 40,
-    '#maxlength' => 255,
-    '#description' => $description,
-    '#required' => TRUE,
-  );
   $form['project']['homepage'] = array(
     '#type' => 'textfield',
     '#title' => t('Homepage'),
@@ -217,14 +202,6 @@ function project_project_validate(&$node) {
   // We need a description.
   if (empty($node->body)) {
     form_set_error('body', t('You must add a project description.'));
-  }
-
-  // Validate email.
-  if (empty($node->mail)) {
-    form_set_error('mail', t('You must specify a project e-mail.'));
-  }
-  elseif ($data = user_validate_mail($node->mail)) {
-    form_set_error('mail', $data);
   }
 
   // Make sure all URL fields actually contain URLs.
@@ -408,12 +385,12 @@ function project_project_nodeapi(&$node, $op, $arg) {
 }
 
 function project_project_insert($node) {
-  db_query("INSERT INTO {project_projects} (nid, uri, homepage, changelog, cvs, demo, release_directory, mail, version, screenshots, documentation, license) VALUES (%d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, '%s', '%s', '%s')", $node->nid, $node->uri, $node->homepage, $node->changelog, $node->cvs, $node->demo, $node->release_directory, $node->mail, $node->version, $node->screenshots, $node->documentation, $node->license);
+  db_query("INSERT INTO {project_projects} (nid, uri, homepage, changelog, cvs, demo, release_directory, version, screenshots, documentation, license) VALUES (%d, '%s', '%s', '%s', '%s', '%s', '%s', %d, '%s', '%s', '%s')", $node->nid, $node->uri, $node->homepage, $node->changelog, $node->cvs, $node->demo, $node->release_directory, $node->version, $node->screenshots, $node->documentation, $node->license);
 //  project_release_scan_directory($node->uri);
 }
 
 function project_project_update($node) {
-  db_query("UPDATE {project_projects} SET uri = '%s', homepage = '%s', changelog = '%s', cvs = '%s', demo = '%s', release_directory = '%s', mail = '%s', version = %d, screenshots = '%s', documentation = '%s', license = '%s' WHERE nid = %d", $node->uri, $node->homepage, $node->changelog, $node->cvs, $node->demo, $node->release_directory, $node->mail, $node->version, $node->screenshots, $node->documentation, $node->license, $node->nid);
+  db_query("UPDATE {project_projects} SET uri = '%s', homepage = '%s', changelog = '%s', cvs = '%s', demo = '%s', release_directory = '%s', version = %d, screenshots = '%s', documentation = '%s', license = '%s' WHERE nid = %d", $node->uri, $node->homepage, $node->changelog, $node->cvs, $node->demo, $node->release_directory, $node->version, $node->screenshots, $node->documentation, $node->license, $node->nid);
 //  project_release_scan_directory($node->uri);
 }
 
