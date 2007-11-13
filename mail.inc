@@ -248,7 +248,8 @@ function project_mail_notify($nid) {
 
   // Create mail header
   $sender->name = mime_header_encode(t('!name (!site)', array('!name' => $user->name, '!site' => variable_get('site_name', 'Drupal'))));
-  $sender->mail = $project->mail;
+  $sender->mail = strtr(variable_get('project_issue_reply_to', variable_get('site_mail', ini_get('sendmail_from'))), array('%project' => $project->uri));
+
   // The sender name is enclosed by double quotes below
   // to satisfy RFC2822 <http://www.faqs.org/rfcs/rfc2822.html>,
   // which requires double quotes when special characters (including
