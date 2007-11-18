@@ -16,53 +16,48 @@ function admin_menu_perm() {
 }
 
 /**
- * Implementation of hook_block().
+ * Implementation of hook_menu().
+ *
+ * PHP-only based themes like chameleon load and output scripts and stylesheets
+ * in front of theme_closure(), so we ensure Admin menu's styles and scripts are
+ * loaded on all pages via hook_menu().
  */
-function admin_menu_block($op = 'list', $delta = 0) {
-  $block = array();
-  switch ($op) {
-    case 'list':
-      $block[0]['info'] = t('Admin menu');
-      $block[0]['status'] = 1;
-      $block[0]['region'] = 'header';
-      return $block;
-
-    case 'view':
-      if (!user_access('access administration menu')) {
-        return;
-      }
-      
-      $css_files = array();
-      $css_files[] = array(
-        'file' => drupal_get_path('module', 'admin_menu') . '/admin_menu.css',
-        'type' => 'module',
-      );
-      // path_to_theme() invokes init_theme(), thus it must not be invoked in
-      // block settings to allow initializing of the selected theme.
-      if (strpos($_GET['q'], 'admin/build/block') === FALSE) {
-        if (file_exists(path_to_theme() . '/admin_menu.css')) {
-          $css_files[] = array(
-            'file' => path_to_theme() . '/admin_menu.css',
-            'type' => 'theme',
-          );
-        }
-      }
-      foreach ($css_files as $css_file) {
-        drupal_add_css($css_file['file'], $css_file['type'], 'all', false);
-      }
-      
-      // IE fix
-      $ie_header  = '<!--[if lt IE 7]>';
-      $ie_header .= '<script type="text/javascript" src="' . base_path() . drupal_get_path('module', 'admin_menu') . '/admin_menu.js' . '"></script>';
-      $ie_header .= '<![endif]-->';
-      drupal_set_html_head($ie_header);
-      
-      $block['content']  = '<div id="admin_menu">';
-      $block['content'] .= theme('admin_menu_icon');
-      $block['content'] .= admin_menu_get_menu();
-      $block['content'] .= '</div>';
-      return $block;
+function admin_menu_menu($may_cache) {
+  $items = array();
+  
+  if (!user_access('access administration menu')) {
+    return $items;
   }
+  
+  $path = drupal_get_path('module', 'admin_menu');
+  drupal_add_css($path .'/admin_menu.css', 'module', 'screen', false);
+  
+  // IE fix.
+  $ie_header  = '<!--[if lt IE 7]>';
+  $ie_header .= '<script type="text/javascript" src="' . base_path() . $path .'/admin_menu.js' . '"></script>';
+  $ie_header .= '<![endif]-->';
+  drupal_set_html_head($ie_header);
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_footer().
+ *
+ * Admin menu was previously output via hook_block(), but suffered from
+ * theme-specific stylesheets that may be applied to layout blocks. We now
+ * output Admin menu in the footer to circumvent this.
+ */
+function admin_menu_footer($main) {
+  if (!user_access('access administration menu')) {
+    return;
+  }
+  
+  $content  = '<div id="admin_menu">';
+  $content .= theme('admin_menu_icon');
+  $content .= admin_menu_get_menu();
+  $content .= '</div>';
+  return $content;
 }
 
 /**
