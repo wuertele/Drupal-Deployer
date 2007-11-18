@@ -52,10 +52,20 @@ function admin_menu_footer($main) {
   if (!user_access('access administration menu')) {
     return;
   }
+  global $user, $locale;
   
+  $cid = $user->uid .':'. $locale .':admin_menu';
+  $cache = cache_get($cid, 'cache_menu');
+  if ($cache) {
+    $admin_menu = $cache->data;
+  }
+  else {
+    $admin_menu = admin_menu_get_menu();
+    cache_set($cid, 'cache_menu', $admin_menu, time() + (60 * 60 * 24));
+  }
   $content  = '<div id="admin_menu">';
   $content .= theme('admin_menu_icon');
-  $content .= admin_menu_get_menu();
+  $content .= $admin_menu;
   $content .= '</div>';
   return $content;
 }
