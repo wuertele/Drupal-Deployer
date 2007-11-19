@@ -51,6 +51,19 @@ None.
 
 -- FAQ --
 
+Q: After upgrading to 5.x-1.2, admin_menu disappeared. Why?
+
+A: Prior to release 5.x-1.2, Drupal Administration Menu was output in a block.
+   Since 5.x-1.2, it is output via hook_footer(). Some custom themes may not
+   (yet) output $closure, so admin_menu could no longer be displayed. If you
+   decided to move the 'administer' tree into a new menu and disabled that menu
+   block, a site could become (temporarily) unmaintainable. Either way, you
+   should fix your theme by adding the following code in front of the closing
+   HTML (</html>) tag:
+<code>
+   <?php echo $closure; ?>
+</code>
+
 Q: I enabled "Aggregate and compress CSS files", but I found admin_menu.css is
    still there, is it normal?
 
