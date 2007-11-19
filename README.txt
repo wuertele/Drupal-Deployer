@@ -64,6 +64,17 @@ A: Prior to release 5.x-1.2, Drupal Administration Menu was output in a block.
    <?php echo $closure; ?>
 </code>
 
+Q: After upgrading to 5.x-1.2, the menu item 'administer' is no longer removed.
+   Why?
+
+A: Prior to release 5.x-1.2, Drupal Administration Menu was output via
+   hook_block(), which allowed to alter the global menu array. Since 5.x-1.2, it
+   is output via hook_footer() and thus no longer able to alter the menu. As
+   long as there will be no built-in solution in an upcoming release, you may
+   perform the following steps as a workaround:
+   - Create a new menu.
+   - Edit the menu item 'administer' and select the new menu as parent.
+
 Q: I enabled "Aggregate and compress CSS files", but I found admin_menu.css is
    still there, is it normal?
 
