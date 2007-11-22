@@ -100,6 +100,7 @@ function path_redirect_admin_form(&$edit, $edit = array('path' => '', 'redirect'
     '#type' => 'textfield',
     '#title' => t('From'),
     '#description' => t('Enter a Drupal path or path alias to redirect'),
+    '#maxlength' => 255,
     '#default_value' => $edit['path'],
   );
 
@@ -125,6 +126,7 @@ function path_redirect_admin_form(&$edit, $edit = array('path' => '', 'redirect'
   $form['redirect']['query'] = array(
     '#type' => 'textfield',
     '#size' => 12,
+    '#maxlength' => 50,
     '#default_value' => $edit['query'],
   );
 
@@ -135,6 +137,7 @@ function path_redirect_admin_form(&$edit, $edit = array('path' => '', 'redirect'
   $form['redirect']['fragment'] = array(
     '#type' => 'textfield',
     '#size' => 12,
+    '#maxlength' => 50,
     '#default_value' => $edit['fragment'],
   );
 
