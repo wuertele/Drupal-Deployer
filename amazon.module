@@ -9,7 +9,11 @@
  * save configuration and setup.
  */
 
-define('AMAZON_ECS_SCHEMA', '2007-07-16');
+define('AMAZON_ECS_SCHEMA', '2007-10-29');
+define('AMAZON_PARTICIPANT_TYPES', 'Author,Artist,Actor,Director,Creator');
+
+// Other common sizes include SwatchImage, TinyImage, and ThumbnailImage.
+define('AMAZON_IMAGE_SIZES', 'SmallImage,MediumImage,LargeImage');
 
 /**
  * Implementation of hook_menu. Adds the url path for the Amazon
@@ -121,7 +125,6 @@ function amazon_item_lookup($item_ids = array(), $force_lookup = TRUE) {
     }
   }
   $items_from_web = amazon_item_lookup_from_web($items_to_fetch);
-
   return array_merge($items, $items_from_web);
 }
 
@@ -138,12 +141,17 @@ function amazon_item_lookup_from_web($item_ids = array()) {
   if (is_array($results->Items->Item)) {
     foreach($results->Items->Item as $xml) {
       $item = amazon_item_clean_xml($xml);
-      $items[$item->ASIN] = $item;
+      $items[$item['asin']] = $item;
     }
   }
   else {
     $item = amazon_item_clean_xml($results->Items->Item);
-    $items[$item->ASIN] = $item;
+    $items[$item['asin']] = $item;
+  }
+
+  // Attempt to persist Amazon data.
+  foreach($items as $item) {
+    amazon_item_save($item);
   }
   return $items;
 }
@@ -166,17 +174,17 @@ function amazon_item_lookup_from_db($item_ids = array()) {
 }
 
 function _amazon_load_child_data(&$object) {
-  $result = db_query("SELECT feature FROM {amazon_item_feature} WHERE asin = '%s'", $object->ASIN);
+  $result = db_query("SELECT feature FROM {amazon_item_feature} WHERE asin = '%s'", $object->asin);
   while ($feature = db_fetch_object($result)) {
     $object->Feature[] = $feature->feature;
   }
 
-  $result = db_query("SELECT type, participant FROM {amazon_item_participant} WHERE asin = '%s'", $object->ASIN);
+  $result = db_query("SELECT type, participant FROM {amazon_item_participant} WHERE asin = '%s'", $object->asin);
   while ($participant = db_fetch_object($result)) {
     $object->{$participant->type}[] = $participant;
   }
 
-  $result = db_query("SELECT feature FROM {amazon_item_image} WHERE asin = '%s'", $object->ASIN);
+  $result = db_query("SELECT feature FROM {amazon_item_image} WHERE asin = '%s'", $object->asin);
   while ($image = db_fetch_object($result)) {
     $object['Images'][$image->width .'x'. $image->height] = $image;
   }
@@ -184,23 +192,59 @@ function _amazon_load_child_data(&$object) {
 
 function amazon_item_clean_xml($xml) {
   $metadata = amazon_data_cache();
-  $item = new stdClass();
+  $item = array();
 
-  $item->asin = (string)$xml->ASIN;
-  $item->salesrank = (string)$xml->SalesRank;
-  $item->detailpageurl = (string)$xml->DetailPageURL;
+  // Pull the absolute basic information Amazon keeps at the top level
+  // of the XML tree, cast to string, and move on.
+  $item['asin'] = (string)$xml->ASIN;
+  $item['salesrank'] = (string)$xml->SalesRank;
+  $item['detailpageurl'] = (string)$xml->DetailPageURL;
 
+  $participant_types = split(',', AMAZON_PARTICIPANT_TYPES);
+
+  // Pull in the basics of the ItemAttributes collection.
   foreach((array)($xml->ItemAttributes) as $key => $value) {
-    $key = strtolower($key);
-    $item->$key = $value;
-  }
-
-  foreach ($metadata['keys_to_pluralize'] as $type) {
-    if (isset($xml->ItemAttributes->$type)) {
-      _amazon_clean_single($xml->ItemAttributes, $type);
+    if (is_string($value) && !in_array($key, $participant_types)) {
+      $key = strtolower($key);
+      $item[$key] = $value;
     }
   }
 
+  // Handle the Authors/Artists/Etc. This is a little bit ugly, but it's kind of
+  // unavoidable given Amazon's penchant for using a duplicate element types
+  // rather than wrapper elements.
+  foreach ($participant_types as $key) {
+    if (isset($xml->ItemAttributes->$key)) {
+      if (is_array($xml->ItemAttributes->$key)) {
+        foreach($xml->ItemAttributes->$key as $value) {
+          $item[strtolower($key)][] = $value;
+        }
+      }
+      else {
+        $item[strtolower($key)] = array((string)$xml->ItemAttributes->$key);
+      }
+    }
+  }
+
+  // Handle the product images. In theory, there could be a million different
+  // product image types. We're only going to check for the most common ones
+  // and ignore the rest for now.
+  $supported_sizes = split(',', AMAZON_IMAGE_SIZES);
+  if (isset($xml->ImageSets->ImageSet)) {
+    foreach((array)$xml->ImageSets->ImageSet as $key => $data) {
+      if (in_array($key, $supported_sizes)) {
+        $item['imagesets'][strtolower($key)] = array(
+          'url' => (string)$data->URL,
+          'height' => (string)$data->Height,
+          'width' => (string)$data->Width,
+        );
+      }
+    }
+  }
+
+  
+  // Give other modules an opportunity to pull out other bits of Amazon data
+  // that would otherwise be ignored.
   foreach (module_implements('_amazon_item_clean_xml') as $module) {
     $function = $module .'_amazon_item_clean_xml';
     $function($item, $xml);
@@ -210,32 +254,27 @@ function amazon_item_clean_xml($xml) {
 
 function amazon_item_insert($item) {
   $metadata = amazon_data_cache();
-  drupal_write_record('amazon_item', $item->ItemAttributes);
+  drupal_write_record('amazon_item', $item);
 
   // Handle the various credits for a product, including Artist, Author,
   // Actor, etc. We map these to a separate table.
-  foreach ($metadata['participant_types'] as $type) {
-    if (isset($item->ItemAttributes->$type) && in_array($type, amazon_get_cacheable_chunk_list())){
-      foreach($item->ItemAttributes->$type as $participant) {
-        $item_participant = array('asin' => $item->ASIN, 'type' => $type, 'particpant' => $participant);
-        drupal_write_record('amazon_item_participant', $item_participant);
+  if (in_array('creators', variable_get('amazon_core_data', array('creators', 'images')))) {
+    $participant_types = split(',', AMAZON_PARTICIPANT_TYPES);
+    foreach ($participant_types as $type) {
+      if (isset($item[strtolower($type)])){
+        foreach($item[strtolower($type)] as $participant) {
+          $item_participant = array('asin' => $item['asin'], 'type' => strtolower($type), 'participant' => $participant);
+          drupal_write_record('amazon_item_participant', $item_participant);
+        }
       }
     }
   }
 
-  // Clean up the 'Features' data and see if the element exists.
-  if (isset($item->Feature) && in_array('Feature', amazon_get_cacheable_chunk_list())) {
-    foreach($item->Feature as $feature) {
-      $item_feature = array('asin' => $item->ASIN, 'feature' => $feature);
-      drupal_write_record('amazon_item_feature', $item_feature);
-    }
-  }
-
   // Save the product images if they exist.
-  if (isset($item->ImageSets)) {
-    foreach($item->ImageSets->ImageSet as $size => $data) {
-      if ($size != '@attributes') {
-        $image = (object)array('asin' => $item->ASIN, 'size' => $size, 'height' => $data->Height, 'width' => $data->Width, 'url' => $data->URL);
+  if (in_array('images', variable_get('amazon_core_data', array('creators', 'images')))) {
+    if (isset($item['imagesets'])) {
+      foreach($item['imagesets'] as $size => $data) {
+        $image = array('asin' => $item['asin'], 'size' => $size, 'height' => $data['height'], 'width' => $data['width'], 'url' => $data['url']);
         drupal_write_record('amazon_item_image', $image);
       }
     }
@@ -245,22 +284,22 @@ function amazon_item_insert($item) {
 }
 
 function amazon_item_save($item) {
-  // We have boatloads of data to insert in here, so we're going to
-  // cheat and blow away the old entries and re-insert them in 'silent'
-  // mode.
-  amazon_item_delete($item->ASIN);
-  amazon_item_insert($item, TRUE);
+  // Only save if the user has turned on local persistence.
+  if (variable_get('amazon_cache', TRUE) || $force_save) {
+    // We have boatloads of data to insert in here, so we're going to
+    // cheat and blow away the old entries and re-insert them in 'silent'
+    // mode.
+    amazon_item_delete($item['asin']);
+    amazon_item_insert($item, TRUE);
+  }
 }
 
 function amazon_item_delete($asin, $silent = FALSE) {
   module_invoke_all('amazon_item_delete', $asin);
   db_query("DELETE FROM {amazon_item} WHERE asin = '%s'", $asin);
   db_query("DELETE FROM {amazon_item_participant} WHERE asin = '%s'", $asin);
-  db_query("DELETE FROM {amazon_item_feature} WHERE asin = '%s'", $asin);
   db_query("DELETE FROM {amazon_item_image} WHERE asin = '%s'", $asin);
 }
-
-
 
 /**
  * Utility functions for managing AmazonItem/Node relationships
@@ -300,12 +339,6 @@ function amazon_item_node_delete($asin = NULL, $nid = NULL, $module = NULL) {
  * data bitsies.
  */
 
-function _amazon_clean_single(&$item, $type) {
-  if (isset($item->{$type}) && is_string($item->{$type})) {
-    $item->{$type} = array($item->{$type});
-  }
-}
-
 function amazon_data_cache($reset = FALSE) {
   static $data;
   if (!isset($data) || $reset) {
@@ -314,8 +347,6 @@ function amazon_data_cache($reset = FALSE) {
     }
     else {
       $data = array();
-      $data['participant_types'] = array('Actor', 'Artist', 'Author', 'Director');
-      $data['keys_to_pluralize'] = array('Actor', 'Artist', 'Author', 'Director', 'Feature');
       $data['locales'] = _amazon_default_locales();
 
       drupal_alter('amazon_metadata', $data);
@@ -371,13 +402,6 @@ function amazon_get_associate_id() {
   }
 }
 
-function amazon_get_cacheable_chunk_list() {
-  $defaults = array(
-    'Author', 'ImageSets', 'Artist'
-  );
-  return variable_get('amazon_extra_data', $defaults);
-}
-
 function amazon_cron() {
   // Here, we're going to chug through all the existing ASINs and update them.
   // We'll grab 20 at a time to avoid thrashing things.
@@ -385,8 +409,8 @@ function amazon_cron() {
   $result = db_query_range($sql, time() - variable_get('amazon_refresh_schedule', 86400), 1, 20);
   $asins = array();
 
-  while($item = db_fetch_object($result)) {
-    $asins[] = $item->asin;
+  while($item = db_fetch_array($result)) {
+    $asins[] = $item['asin'];
   }
 
   if ($items = amazon_item_lookup_from_web($asins)) {

@@ -46,63 +46,62 @@ function amazon_settings_form($form_state) {
     '#default_value' => variable_get('amazon_aws_access_key', '0CD9RCQYM0TBVH55NB82'),
   );
 
-  // Now add the Javascript that does the fancy hide/show effect on
-  // The associate ID field.
-  $js = <<<JSCRIPT
-jQuery(
-  function(){ jQuery("#edit-amazon-associate-setting").bind("change", function() {
-  if (this.value == 'custom') {
-    $("#amazon-associate-id-wrapper").show('fast');
-  }
-  else {
-    $("#amazon-associate-id-wrapper").hide('fast');
-  }
-  return false;
-})
-});
-JSCRIPT;
-
-  drupal_add_js($js, 'inline');
+  // Now add the Javascript that does the fancy hide/show effects.
+  drupal_add_js(drupal_get_path('module', 'amazon') .'/amazon-admin.js');
 
   return system_settings_form($form);
 }
 
 function amazon_storage_settings_form() {
+  $form['amazon_explain'] = array(
+    '#type' => 'markup',
+    '#value' => t("Storing Amazon product information in the Drupal database can speed up the display of commonly viewed products. In addition, stored product data can be included in content displayed by the Views module. On some sites, though, this functionality is unecessary and can be disabled."),
+  );
+
+  $form['amazon_cache'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Store Amazon data locally'),
+    '#default_value' => variable_get('amazon_cache', TRUE),
+  );
+
+  if (!variable_get('amazon_cache', TRUE)) {
+    $form['details']['#prefix'] = '<div id="amazon-storage-details" class="js-hide">';
+  }
+  else {
+   $form['details']['#prefix'] = '<div id="amazon-storage-details">';
+  }
+
+  $form['details']['#suffix'] = '</div>';
+
   $period = array(0 => t('Never'));
   $period += drupal_map_assoc(array(43200, 86400, 604800), 'format_interval');
-  $form['amazon_refresh_schedule'] = array(
+  $form['details']['amazon_refresh_schedule'] = array(
     '#type' => 'select',
     '#title' => t('Amazon refresh schedule'),
-    '#description' => t('Locally cached information on Amazon items must be refreshed regularly to keep pricing and stock information up to date. Cron must be enabled for this function to work properly.'),
+    '#description' => t('Cached information on Amazon items must be refreshed regularly to keep pricing and stock information up to date. Cron must be enabled for this function to work properly.'),
     '#default_value' => variable_get('amazon_refresh_schedule', 86400),
     '#options' => $period
   );
 
-  $form['amazon_extra_data'] = array(
+  $form['details']['amazon_core_data'] = array(
     '#type' => 'checkboxes',
-    '#title' => t('Store extra data'),
-    '#default_value' => amazon_get_cacheable_chunk_list(),
+    '#title' => t('Store extended product data'),
+    '#default_value' => variable_get('amazon_core_data', array('creators', 'images')),
     '#options' => array(
-      'Author' => t('Book authors'),
-      'Artist' => t('Musical artists'),
-      'Actor' => t('Film actors'),
-      'Director' => t('Film directors'),
-      'ImageSets' => t('Product images'),
-      'Feature' => t('Product features'),
+      'creators' => t('Book authors, film actors, etc.'),
+      'images' => t('Product images'),
     ),
-    '#description' => t('In addition to basic pricing, title, and availability information, Amazon stores detailed data about each product. To store some of that information locally for use on your site, select it from the list above. Keep in mind that information not selected above will be unavailable for use in product listings built using the Views module.'),
   );
+
+  // Now add the Javascript that does the fancy hide/show effects.
+  drupal_add_js(drupal_get_path('module', 'amazon') .'/amazon-admin.js');
 
   return system_settings_form($form);
 }
 
-function _amazon_upgrade() {
-  // Stub function intended to update from AmazonTools module for Drupal 5
-}
 
 function amazon_test_form($form_state) {
   $form = array();
-  $form['#cache'] = FALSE; // No sense cluttering up the cache with this.
 
   $form['asin'] = array(
     '#type' => 'textfield',
@@ -118,7 +117,7 @@ function amazon_test_form($form_state) {
   if (isset($form_state['amazon_item'])) {
     $form['item_data'] = array(
       '#type' => 'markup',
-      '#value' => dprint_r($form_state['amazon_item'], TRUE),
+      '#value' => $form_state['amazon_item'],
       '#weight' => 10,
     );
   }
@@ -129,8 +128,13 @@ function amazon_test_form_submit($form, &$form_state) {
   $items = amazon_item_lookup($form_state['values']['asin']);
   if (is_array($items)) {
     $item = array_pop($items);
+    amazon_item_delete($item['asin']);
     amazon_item_save($item);
-    $form_state['amazon_item'] = $item;
+    
+    // We could probably be sneaky and put the Amazon data in here directly,
+    // but SimpleXML objects can't be serialized, and setting rebuild = TRUE
+    // causes a serialization operation. Whoops.
+    $form_state['amazon_item'] = dprint_r($item, TRUE);
     $form_state['rebuild'] = TRUE;
   }
 }

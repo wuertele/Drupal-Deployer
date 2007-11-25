@@ -1,78 +1,70 @@
 <?php
 
-
 function amazon_media_form_alter(&$form, $form_state) {
   if ($form['#id'] == 'amazon-storage-settings-form') {
-    $form['amazon_extra_data']['#options']['ABIS_BOOK'] = t('Extended data for books');
-    $form['amazon_extra_data']['#options']['ABIS_DVD'] = t('Extended data for DVDs');
-    $form['amazon_extra_data']['#options']['ABIS_MUSIC'] = t('Extended data for music');
-    $form['amazon_extra_data']['#options']['ABIS_SOFTWARE'] = t('Extended data for software');
-    $form['amazon_extra_data']['#options']['ABIS_VIDEO_GAMES'] = t('Extended data for video games');
+    $form['details']['amazon_media_data'] = array(
+      '#type' => 'checkboxes',
+      '#title' => t('Store media and software details'),
+      '#options' => array(
+         'ABIS_BOOK' => t('Book publication details'),
+         'ABIS_DVD' => t('DVD release details'),
+         'ABIS_MUSIC' => t('Music recording details'),
+         'ABIS_SOFTWARE' => t('Software platform information'),
+         'ABIS_VIDEO_GAMES' => t('Video game platform information'),
+      ),
+      '#default_value' => variable_get('amazon_media_data', array('ABIS_BOOK', 'ABIS_DVD', 'ABIS_MUSIC')),
+    );
   }
 }
 
-
-
 function amazon_media_amazon_item_load(&$item) {
-  if (in_array($item->ProductTypeName, amazon_get_cacheable_chunk_list())) {
-    switch ($item->ProducTypeName) {
+  if (in_array($item['producttypename'], variable_get('amazon_media_data', array('ABIS_BOOK', 'ABIS_DVD', 'ABIS_MUSIC')))) {
+    switch ($item['producttypename']) {
       case 'ABIS_BOOK':
-        $object = db_fetch_object(db_query("SELECT * FROM {amazon_book} WHERE asin = '%s'", $item->ASIN));
+        $additions = db_fetch_array(db_query("SELECT * FROM {amazon_book} WHERE asin = '%s'", $item['asin']));
         break;
       case 'ABIS_DVD':
-        $object = db_fetch_object(db_query("SELECT * FROM {amazon_dvd} WHERE asin = '%s'", $item->ASIN));
+        $additions = db_fetch_array(db_query("SELECT * FROM {amazon_dvd} WHERE asin = '%s'", $item['asin']));
         break;
       case 'ABIS_MUSIC':
-        $object = db_fetch_object(db_query("SELECT * FROM {amazon_music} WHERE asin = '%s'", $item->ASIN));
+        $additions = db_fetch_array(db_query("SELECT * FROM {amazon_music} WHERE asin = '%s'", $item['asin']));
         break;
       case 'ABIS_VIDEO_GAMES':
       case 'ABIS_SOFTWARE':
-        $object = db_fetch_object(db_query("SELECT * FROM {amazon_software} WHERE asin = '%s'", $item->ASIN));
+        $additions = db_fetch_array(db_query("SELECT * FROM {amazon_software} WHERE asin = '%s'", $item['asin']));
         break;
     }
-    if (isset($object)) {
-      foreach ($object as $property => $value) {
-        $item->$property = $value;
-      }
+    if (isset($additions)) {
+      $item += $additions;
     }
   }
 }
 
 function amazon_media_amazon_item_insert($item) {
-  if (in_array($item->ProductTypeName, amazon_get_cacheable_chunk_list())) {
-    $item->ItemAttributes->ASIN = $item->ASIN;
-    switch ($item->ProducTypeName) {
+  if (in_array($item['producttypename'], variable_get('amazon_media_data', array('ABIS_BOOK', 'ABIS_DVD', 'ABIS_MUSIC')))) {
+    switch ($item['producttypename']) {
       case 'ABIS_BOOK':
-        drupal_write_record('amazon_book', $item->ItemAttributes);
+        drupal_write_record('amazon_book', $item);
         break;
       case 'ABIS_DVD':
-        drupal_write_record('amazon_dvd', $item->ItemAttributes);
+        drupal_write_record('amazon_dvd', $item);
         break;
       case 'ABIS_MUSIC':
-        drupal_write_record('amazon_music', $item->ItemAttributes);
+        drupal_write_record('amazon_music', $item);
         break;
       case 'ABIS_VIDEO_GAMES':
       case 'ABIS_SOFTWARE':
-        drupal_write_record('amazon_software', $item->ItemAttributes);
+        drupal_write_record('amazon_software', $item);
         break;
     }
   }
 }
 
-function amazon_media_amazon_item_delete($item) {
-  switch ($item->ProducTypeName) {
-    case 'ABIS_BOOK':
-      db_query("DELETE FROM {amazon_book} WHERE asin = '%s'", $item->ASIN);
-      break;
-    case 'ABIS_DVD':
-      db_query("DELETE FROM {amazon_dvd} WHERE asin = '%s'", $item->ASIN);
-      break;
-    case 'ABIS_MUSIC':
-      db_query("DELETE FROM {amazon_music} WHERE asin = '%s'", $item->ASIN);
-      break;
-    case 'ABIS_VIDEO_GAMES':
-    case 'ABIS_SOFTWARE':
-      db_query("DELETE FROM {amazon_software} WHERE asin = '%s'", $item->ASIN);
-      break;
-  }
+function amazon_media_amazon_item_delete($asin) {
+  // This is pretty inefficient; we're going to thrash these tables
+  // every time a product gets deleted or updated. We'll solve it later.
+  db_query("DELETE FROM {amazon_book} WHERE asin = '%s'", $asin);
+  db_query("DELETE FROM {amazon_dvd} WHERE asin = '%s'", $asin);
+  db_query("DELETE FROM {amazon_music} WHERE asin = '%s'", $asin);
+  db_query("DELETE FROM {amazon_software} WHERE asin = '%s'", $asin);
 }
