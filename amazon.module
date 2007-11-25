@@ -73,6 +73,56 @@ function amazon_perm() {
   return array('administer amazon');
 }
 
+function amazon_theme() {
+  return array(
+    'amazon_item' => array(
+      'arguments' => array('item' => array(), 'detail' => 'summary', 'imagesize' => 'none'),
+      'template' => 'amazon-item',
+    ),
+  );
+}
+
+function amazon_preprocess_amazon_item(&$variables) {
+  $item = $variables['item'];
+  
+  // Do a quick cycle through the simple keys on the item, check_plain() them,
+  // and stick them in the variables collection.
+  foreach($item as $key => $value) {
+    if (is_string($value)) {
+      $variables[$key] = check_plain($value);
+    }
+  }
+  $variables['detailpageurl'] = check_url($item['detailpageurl']);
+  $variables['editorialreview'] = isset($item['editorialreviews']) ? check_markup($item['editorialreviews'][0]['content']) : '';
+
+  if (isset($item['participants'])) {
+    foreach($item['participants'] as $participant) {
+      $variables['participants'][] = check_plain($participant);
+    }
+  }
+  else {
+    $variables['participants'] = array();
+  }
+
+  if (isset($item['imagesets'])) {
+    foreach($item['imagesets'] as $key => $image) {
+      $variables[$key] = theme('image', $image['url'], t('Image of') .' '. $item['title'], $item['title'], array('height' => $image['height'], 'width' => $image['width']), FALSE);
+    }
+  }
+
+  if ($variables['imagesize'] != 'none') {
+    $image_key = 'image'. $variables['imagesize'];
+    $variables['image'] = $variables[$image_key];
+  }
+  else {
+    $variables['image'] = '';
+  }
+
+  // A set of more specific templates to use when displaying items.
+  $variables['template_files'][] = 'amazon-item-'. $variables['detail'];
+  $variables['template_files'][] = 'amazon-item-'. strtolower($item['productgroup']);
+  $variables['template_files'][] = 'amazon-item-'. strtolower($item['productgroup']) .'-'. $variables['detail'];
+}
 
 function amazon_http_request($operation, $parameters = array(), $locale = NULL) {
   if (!isset($locale)) {
@@ -138,21 +188,12 @@ function amazon_item_lookup_from_web($item_ids = array()) {
     return FALSE;
   }
   $items = array();
-  if (is_array($results->Items->Item)) {
-    foreach($results->Items->Item as $xml) {
-      $item = amazon_item_clean_xml($xml);
-      $items[$item['asin']] = $item;
-    }
-  }
-  else {
-    $item = amazon_item_clean_xml($results->Items->Item);
+  foreach($results->Items->Item as $xml) {
+    $item = amazon_item_clean_xml($xml);
+    amazon_item_save($item);
     $items[$item['asin']] = $item;
   }
 
-  // Attempt to persist Amazon data.
-  foreach($items as $item) {
-    amazon_item_save($item);
-  }
   return $items;
 }
 
@@ -173,20 +214,21 @@ function amazon_item_lookup_from_db($item_ids = array()) {
   return $return;
 }
 
-function _amazon_load_child_data(&$object) {
-  $result = db_query("SELECT feature FROM {amazon_item_feature} WHERE asin = '%s'", $object->asin);
-  while ($feature = db_fetch_object($result)) {
-    $object->Feature[] = $feature->feature;
+function _amazon_load_child_data(&$item) {
+  $result = db_query("SELECT type, participant FROM {amazon_item_participant} WHERE asin = '%s'", $item['asin']);
+  while ($participant = db_fetch_array($result)) {
+    $item[$participant['type']][] = $participant['participant'];
+    $item['participants'][] = $participant['participant'];
   }
 
-  $result = db_query("SELECT type, participant FROM {amazon_item_participant} WHERE asin = '%s'", $object->asin);
-  while ($participant = db_fetch_object($result)) {
-    $object->{$participant->type}[] = $participant;
+  $result = db_query("SELECT * FROM {amazon_item_image} WHERE asin = '%s'", $item['asin']);
+  while ($image = db_fetch_array($result)) {
+    $object['imagesets'][$image['size']] = $image;
   }
 
-  $result = db_query("SELECT feature FROM {amazon_item_image} WHERE asin = '%s'", $object->asin);
-  while ($image = db_fetch_object($result)) {
-    $object['Images'][$image->width .'x'. $image->height] = $image;
+  $result = db_query("SELECT * FROM {amazon_item_editorial_review} WHERE asin = '%s'", $item['asin']);
+  while ($review = db_fetch_array($result)) {
+    $object['editorialreviews'][] = $review;
   }
 }
 
@@ -218,10 +260,12 @@ function amazon_item_clean_xml($xml) {
       if (is_array($xml->ItemAttributes->$key)) {
         foreach($xml->ItemAttributes->$key as $value) {
           $item[strtolower($key)][] = $value;
+          $item['participants'][] = (string)$xml->ItemAttributes->$key;
         }
       }
       else {
         $item[strtolower($key)] = array((string)$xml->ItemAttributes->$key);
+        $item['participants'][] = (string)$xml->ItemAttributes->$key;
       }
     }
   }
@@ -242,7 +286,16 @@ function amazon_item_clean_xml($xml) {
     }
   }
 
-  
+  // Handle the editorial reviews.
+  if (isset($xml->EditorialReviews)) {
+    foreach($xml->EditorialReviews->EditorialReview as $data) {
+      $item['editorialreviews'][] = array(
+        'source' => (string)$data->Source,
+        'content' => (string)$data->Content,
+      );
+    }
+  }
+
   // Give other modules an opportunity to pull out other bits of Amazon data
   // that would otherwise be ignored.
   foreach (module_implements('_amazon_item_clean_xml') as $module) {
@@ -280,6 +333,16 @@ function amazon_item_insert($item) {
     }
   }
 
+  // Save the editorial reviews if they exist.
+  if (in_array('editorial_reviews', variable_get('amazon_core_data', array('creators', 'images')))) {
+    if (isset($item['editorialreviews'])) {
+      foreach($item['editorialreviews'] as $data) {
+        $review = array('asin' => $item['asin'], 'source' => $data['source'], 'content' => $data['content']);
+        drupal_write_record('amazon_item_editorial_review', $review);
+      }
+    }
+  }
+
   module_invoke_all('amazon_item_insert', $item);
 }
 
@@ -299,6 +362,7 @@ function amazon_item_delete($asin, $silent = FALSE) {
   db_query("DELETE FROM {amazon_item} WHERE asin = '%s'", $asin);
   db_query("DELETE FROM {amazon_item_participant} WHERE asin = '%s'", $asin);
   db_query("DELETE FROM {amazon_item_image} WHERE asin = '%s'", $asin);
+  db_query("DELETE FROM {amazon_item_editorial_review} WHERE asin = '%s'", $asin);
 }
 
 /**

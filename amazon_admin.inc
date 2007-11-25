@@ -90,6 +90,7 @@ function amazon_storage_settings_form() {
     '#options' => array(
       'creators' => t('Book authors, film actors, etc.'),
       'images' => t('Product images'),
+      'editorial_reviews' => t('Editorial reviews'),
     ),
   );
 
@@ -115,9 +116,15 @@ function amazon_test_form($form_state) {
   );
 
   if (isset($form_state['amazon_item'])) {
+    $form['item_themed'] = array(
+      '#type' => 'markup',
+      '#value' => theme('amazon_item', $form_state['amazon_item']),
+      '#weight' => 5,
+    );
+
     $form['item_data'] = array(
       '#type' => 'markup',
-      '#value' => $form_state['amazon_item'],
+      '#value' => dprint_r($form_state['amazon_item'], TRUE),
       '#weight' => 10,
     );
   }
@@ -134,7 +141,7 @@ function amazon_test_form_submit($form, &$form_state) {
     // We could probably be sneaky and put the Amazon data in here directly,
     // but SimpleXML objects can't be serialized, and setting rebuild = TRUE
     // causes a serialization operation. Whoops.
-    $form_state['amazon_item'] = dprint_r($item, TRUE);
+    $form_state['amazon_item'] = $item;
     $form_state['rebuild'] = TRUE;
   }
 }
