@@ -51,9 +51,10 @@ function path_redirect_admin($rid = FALSE, $op = FALSE) {
     array('data' => t('Operations'), 'colspan' => '3')
   );
 
-  $result = pager_query('SELECT rid, path, redirect, query, fragment, type FROM {path_redirect}' . tablesort_sql($header), 50);
+  $result = pager_query('SELECT rid, path, redirect, query, fragment, type FROM {path_redirect}'. tablesort_sql($header), 50);
   $count = 0;
   $types = path_redirect_error_list();
+  $destination = drupal_get_destination();
   while ($r = db_fetch_object($result)) {
     $path = $r->path;
     $redirect = $r->redirect;
@@ -64,8 +65,8 @@ function path_redirect_admin($rid = FALSE, $op = FALSE) {
       check_url($redirect . $query . $fragment),
       $types[$r->type]['title'],
       array('data' => l(t('test'), $r->path, array(), $r->query ? $r->query : NULL, $r->fragment ? $r->fragment : NULL)),
-      array('data' => l(t('edit'), 'admin/build/path_redirect/edit/'. $r->rid)),
-      array('data' => l(t('delete'), 'admin/build/path_redirect/delete/'. $r->rid)),
+      array('data' => l(t('edit'), 'admin/build/path_redirect/edit/'. $r->rid, array('query' => $destination))),
+      array('data' => l(t('delete'), 'admin/build/path_redirect/delete/'. $r->rid, array('query' => $destination))),
     );
     $count++;
   }
@@ -194,20 +195,17 @@ function path_redirect_admin_form_validate($form, &$form_state) {
     form_set_error('redirect', t('The redirect <strong>to</strong> path does not appear valid.'));
   }
 
-  $form_state['values']['path'] = drupal_get_normal_path($form_state['values']['path']);
   if ($form_state['values']['redirect'] == '<front>') {
     $form_state['values']['redirect'] = variable_get('site_frontpage', 'node');
   }
-  $form_state['values']['redirect'] = drupal_get_normal_path($form_state['values']['redirect']);
 
   //check that there there are no redirect loops
-  if ($form_state['values']['path'] == $form_state['values']['redirect']) {
+  if ($form_state['values']['path'] === $form_state['values']['redirect']) {
     form_set_error('redirect', t('You are attempting to redirect the page to itself. This will result in an infinite loop -- so don\'t do it!'));
   }
 
-  // per issue #119249 FIXME: More descriptive comment.
+  // Allow spaces in "from" path
   $form_state['values']['path'] = str_replace("+", " ", $form_state['values']['path']);
-
 }
 
 function path_redirect_admin_form_submit($form, &$form_state) {
