@@ -44,9 +44,16 @@ None.
 
 -- TROUBLESHOOTING --
 
-* If your theme uses absolute or fixed positioned elements and the default
+* If your theme uses absolute or fixed positioned elements, and the default
   margin-top for <BODY> is not sufficient, you need to override admin_menu's
   stylesheet in your theme.
+
+* If menu entries in admin_menu are rendered behind a flash movie object, you
+  need to add the following property to your flash object:
+<code>
+<param name="wmode" value="transparent" />
+</code>
+  See http://drupal.org/node/195386 for further information.
 
 
 -- FAQ --
