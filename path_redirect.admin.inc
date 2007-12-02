@@ -64,7 +64,7 @@ function path_redirect_admin($rid = FALSE, $op = FALSE) {
       $path,
       check_url($redirect . $query . $fragment),
       $types[$r->type]['title'],
-      array('data' => l(t('test'), $r->path, array(), $r->query ? $r->query : NULL, $r->fragment ? $r->fragment : NULL)),
+      array('data' => l(t('test'), $r->path, array())),
       array('data' => l(t('edit'), 'admin/build/path_redirect/edit/'. $r->rid, array('query' => $destination))),
       array('data' => l(t('delete'), 'admin/build/path_redirect/delete/'. $r->rid, array('query' => $destination))),
     );
