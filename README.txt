@@ -2,10 +2,12 @@
 
 -- SUMMARY --
 
-Drupal Administration Menu is re-building and automagically slicing the whole
-menu tree below /admin including all invisible local tasks into the Drupal
-Administration Menu. So administrators need less time to access pages which
-are only visible after one or two clicks normally.
+Drupal Administration Menu displays the whole menu tree below /admin including
+all invisible local tasks in a drop-down menu. So administrators need less time
+to access pages which are only visible after one or two clicks normally.
+
+Admin menu also provides hook_admin_menu() that allows other modules to add or
+alter menu items.
 
 For a full description visit the project page:
   http://drupal.org/project/admin_menu
@@ -23,9 +25,16 @@ None.
 * Copy admin_menu module to your modules directory and enable it on the admin
   modules page.
 
-* Drupal 4.7: If "Admin Menu Block" is not automatically activated after module
-  installation, make sure you visit the block configuration page (admin/block)
-  for each theme you want to have admin_menu activated for.
+
+-- CONFIGURATION --
+
+* Go to Administer -> User management -> Access control and assign permissions
+  for Drupal Administration Menu:
+
+  - access administration menu: Displays Drupal Administration Menu.
+
+  - display drupal links: Displays additional links to Drupal.org and issue
+    queues of all enabled contrib modules in the Drupal Administration Menu icon.
 
 
 -- CUSTOMIZATION --
@@ -34,22 +43,29 @@ None.
   
   1) Disable it via CSS in your theme:
 
-     body #admin_menu_icon { display: none; }
+     body #admin_menu-icon { display: none; }
 
   2) Alter the image by overriding the theme function:
 
      Copy the whole function theme_admin_menu_icon() into your template.php,
-     rename it to f.e. phptemplate_admin_menu_icon() and customize the output.
+     rename it to f.e. phptemplate_admin_menu_icon() and customize the output
+     according to your needs.
 
 
 -- TROUBLESHOOTING --
 
+* If admin menu is not displayed, check the following steps:
+
+  - Is the 'access administration menu' permission enabled?
+
+  - Does your theme output $closure? (See FAQ below for more info)
+
 * If your theme uses absolute or fixed positioned elements, and the default
-  margin-top for <BODY> is not sufficient, you need to override admin_menu's
+  margin-top for <BODY> is not sufficient, you need to override admin menu's
   stylesheet in your theme.
 
-* If menu entries in admin_menu are rendered behind a flash movie object, you
-  need to add the following property to your flash object:
+* If admin menu is rendered behind a flash movie object, you need to add the
+  following property to your flash object(s):
 <code>
 <param name="wmode" value="transparent" />
 </code>
@@ -58,7 +74,12 @@ None.
 
 -- FAQ --
 
-Q: After upgrading to 5.x-1.2, admin_menu disappeared. Why?
+Q: After upgrading to 5.x-2.x, admin_menu disappeared. Why?
+
+A: This should not happen. If it did, visit
+   http://<yoursitename>/admin/build/menu to re-generate your menu cache.
+
+Q: After upgrading, admin_menu disappeared. Why?
 
 A: Prior to release 5.x-1.2, Drupal Administration Menu was output in a block.
    Since 5.x-1.2, it is output via hook_footer(). Some custom themes may not
@@ -71,8 +92,7 @@ A: Prior to release 5.x-1.2, Drupal Administration Menu was output in a block.
    <?php echo $closure; ?>
 </code>
 
-Q: After upgrading to 5.x-1.2, the menu item 'administer' is no longer removed.
-   Why?
+Q: After upgrading, the menu item 'administer' is no longer removed. Why?
 
 A: Prior to release 5.x-1.2, Drupal Administration Menu was output via
    hook_block(), which allowed to alter the global menu array. Since 5.x-1.2, it
@@ -88,11 +108,6 @@ Q: I enabled "Aggregate and compress CSS files", but I found admin_menu.css is
 A: Yes, this is the intended behavior. Since admin_menu is only visible for
    logged-on administrative users, it would not make sense to load its
    stylesheet for all, including anonymous users.
-
-
--- THEME-SPECIFIC TROUBLESHOOTING --
-
-No more troubleshooting since release 5.x-1.2. :)
 
 
 -- CONTACT --
