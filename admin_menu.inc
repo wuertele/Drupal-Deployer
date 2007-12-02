@@ -33,7 +33,7 @@ function admin_menu_build($mid_admin) {
   }
   
   // Copy admin menu items into a new menu tree.
-  $_admin_menu['index']['admin'] = $mid_admin;
+  $_admin_menu['index'] = $_menu['path index'];
   $_admin_menu[$mid_admin] = $_menu['items'][$mid_admin];
   _admin_menu_get_children($_admin_menu, $_admin_menu[$mid_admin]);
   
@@ -195,22 +195,21 @@ function admin_menu_adjust_items(&$_admin_menu) {
  *   passed through t(), which will be used to dynamically replace previous
  *   menu item titles.
  * @param bool $tree
- *   Whether to rebuild the complete hierarchy from the source parent menu item.
- *   Defaults to TRUE.
+ *   Whether to rebuild the complete hierarchy from the source parent menu item
+ *   or copy menu items flattened. Defaults to TRUE.
  */
 function admin_menu_copy_items(&$_admin_menu, $source_pid, $target_pid, $title = NULL, $tree = TRUE) {
   global $_menu;
   
-  if (isset($_admin_menu[$target_pid]) && isset($_menu['items'][$source_pid]['children'])) {
+  if (isset($_menu['items'][$source_pid]['children']) && isset($_admin_menu[$target_pid])) {
     foreach ($_menu['items'][$source_pid]['children'] as $mid) {
-      $_admin_menu[$mid] = $_menu['items'][$mid];
+      $item = $_menu['items'][$mid];
       if (isset($title)) {
-        $_admin_menu[$mid]['title'] = check_plain(strtr($title, array('!title' => $_admin_menu[$mid]['title'])));
+        $item['title'] = check_plain(strtr($title, array('!title' => $_menu['items'][$mid]['title'])));
       }
-      $_admin_menu[$mid]['pid'] = $target_pid;
       // Only add child to target if it does not already exist.
       if (!in_array($mid, $_admin_menu[$target_pid]['children'])) {
-        $_admin_menu[$target_pid]['children'][] = $mid;
+        admin_menu_add_item($_admin_menu, $target_pid, $item);
       }
       
       // Recurse into children.
