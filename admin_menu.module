@@ -37,21 +37,16 @@ function admin_menu_perm() {
  * all pages via hook_menu().
  */
 function admin_menu_menu($may_cache) {
-  $items = array();
-  if (!user_access('access administration menu') || $may_cache) {
-    return $items;
+  if (!$may_cache && user_access('access administration menu')) {
+    $path = drupal_get_path('module', 'admin_menu');
+    drupal_add_css($path .'/admin_menu.css', 'module', 'screen', FALSE);
+
+    // IE6 fix.
+    $ie_header  = '<!--[if lt IE 7]>';
+    $ie_header .= '<script type="text/javascript" src="'. base_path() . $path .'/admin_menu.js' . '"></script>';
+    $ie_header .= '<![endif]-->';
+    drupal_set_html_head($ie_header);
   }
-  
-  $path = drupal_get_path('module', 'admin_menu');
-  drupal_add_css($path .'/admin_menu.css', 'module', 'screen', FALSE);
-  
-  // IE6 fix.
-  $ie_header  = '<!--[if lt IE 7]>';
-  $ie_header .= '<script type="text/javascript" src="'. base_path() . $path .'/admin_menu.js' . '"></script>';
-  $ie_header .= '<![endif]-->';
-  drupal_set_html_head($ie_header);
-  
-  return $items;
 }
 
 /**
@@ -290,7 +285,8 @@ function admin_menu_admin_menu(&$admin_menu, $may_cache) {
     $mid_admin  = $admin_menu['index']['admin'];
     $count_anon = db_result(db_query("SELECT COUNT(uid) FROM {sessions} WHERE uid = 0 AND timestamp >= %d", time() - 30 * 60));
     $count_auth = db_result(db_query("SELECT COUNT(DISTINCT uid) FROM {sessions} WHERE uid > 0 AND timestamp >= %d", time() - 30 * 60));
-    $icon_users = '<img src="'. base_path() . drupal_get_path('module', 'admin_menu') .'/icon_users.png" width="16" height="15" alt="'. t('Current anonymous / authenticated users') .'" />';
+    $title = t('Current anonymous / authenticated users');
+    $icon_users = '<img src="'. base_path() . drupal_get_path('module', 'admin_menu') .'/icon_users.png" width="16" height="15" alt="'. $title .'" title="'. $title .'" />';
     admin_menu_add_item($admin_menu, $mid_admin, array(
       'title' => $count_anon .' / '. $count_auth .' '. $icon_users,
       'path' => user_access('administer users') ? 'admin/user/user' : drupal_get_normal_path(variable_get('site_frontpage', 'node')),
