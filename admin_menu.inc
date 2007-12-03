@@ -111,7 +111,7 @@ function _admin_menu_get_children(&$_admin_menu, &$item) {
  *   reference.
  */
 function admin_menu_adjust_items(&$_admin_menu) {
-  global $_menu, $user;
+  global $_menu, $user, $base_url;
   
   // Add the icon containing special links.
   $mid_admin = $_admin_menu['index']['admin'];
@@ -140,9 +140,9 @@ function admin_menu_adjust_items(&$_admin_menu) {
   admin_menu_remove_item($_admin_menu, 'admin/by-task');
   
   // Add system update links.
-  admin_menu_add_item($_admin_menu, $mid_icon, array('title' => t('Run cron'), 'path' => 'admin/logs/status/run-cron', 'weight' => 50));
+  admin_menu_add_item($_admin_menu, $mid_icon, array('title' => t('Run cron'), 'path' => 'admin/logs/status/run-cron', 'weight' => 50, 'query' => drupal_get_destination()));
   if ($user->uid == 1) {
-    admin_menu_add_item($_admin_menu, $mid_icon, array('title' => t('Run updates'), 'path' => 'update.php', 'weight' => 50));
+    admin_menu_add_item($_admin_menu, $mid_icon, array('title' => t('Run updates'), 'path' => $base_url .'/update.php', 'weight' => 50));
   }
   
   // Add links to drupal.org.
