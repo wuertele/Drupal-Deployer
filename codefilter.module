@@ -14,12 +14,11 @@ function codefilter_filter_tips($delta, $format, $long = false) {
 }
 
 /**
- * Implementation of hook_menu()
+ * Implementation of hook_init()
+ * Adds the codefilter stylesheet to the page
  */
-function codefilter_menu($may_cache) {
-  if (!$may_cache) {
-    drupal_add_css(drupal_get_path('module', 'codefilter') . '/codefilter.css');
-  }
+function codefilter_init() {
+  drupal_add_css(drupal_get_path('module', 'codefilter') .'/codefilter.css', 'module', 'all', FALSE);
 }
 
 /**
@@ -87,6 +86,9 @@ function codefilter_escape($text) {
   return str_replace(array("\r", "\n"), array('', '&#10;'), check_plain(str_replace('\"', '"', $text)));
 }
 
+/**
+ * Implementation of hook_filter()
+ */
 function codefilter_filter($op, $delta = 0, $format = -1, $text = '') {
   switch ($op) {
     case 'list':
@@ -102,7 +104,7 @@ function codefilter_filter($op, $delta = 0, $format = -1, $text = '') {
       $text = preg_replace('@[\[<](\?php|%)(.+?)(\?|%)[\]>]@se', "'\xFEphp\xFF'. codefilter_escape('\\2') .'\xFE/php\xFF'", $text);
       return $text;
 
-    case "process":
+    case 'process':
       $text = preg_replace('@\xFEcode\xFF(.+?)\xFE/code\xFF@se', "codefilter_process_code('$1')", $text);
       $text = preg_replace('@\xFEphp\xFF(.+?)\xFE/php\xFF@se', "codefilter_process_php('$1')", $text);
       return $text;
