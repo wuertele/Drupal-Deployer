@@ -1,0 +1,140 @@
+<?php
+// $Id$
+
+/**
+ * Implementation of hook_nodeapi().
+ */
+function htmlpurifier_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  if ($op == 'submit' && htmlpurifier_filter_active($node->format)) {
+    $node->teaser = htmlpurifier_purify($node->teaser, $node->format);
+    $node->body = htmlpurifier_purify($node->body, $node->format);
+  }
+}
+
+/**
+ * Implementation of hook_comment().
+ */
+function htmlpurifier_comment(&$edit, $op) {
+  if (($op == 'update' || $op == 'insert') && htmlpurifier_filter_active($edit['format'])) {
+    $edit['comment'] = htmlpurifier_purify($edit['comment'], $edit['format']);
+  }
+}
+
+/**
+ * Implementation of hook_filter().
+ */
+function htmlpurifier_filter($op, $delta = 0, $format = -1, $text = '') {
+  switch ($op) {
+    case 'list':
+      return array(0 => t('HTML Purifier'));
+
+    case 'no cache':
+      // allow the output of HTML Purifier to be cached for performance
+      return FALSE;
+
+    case 'description':
+      return t('Removes malicious HTML code and ensures that the output is standards compliant.');
+
+    case 'prepare':
+      return $text;
+
+    case 'process':
+      if (variable_get("htmlpurifier_outputfilter_$format", FALSE)) {
+        return htmlpurifier_purify($text, $format);
+      }
+      return $text;
+
+    case 'settings':
+      return _htmlpurifier_settings($format);
+
+    default:
+      return NULL;
+  }
+}
+
+function htmlpurifier_purify($text, $format = NULL) {
+  $purifier_path = drupal_get_path('module', 'htmlpurifier') .'/library';
+
+  // add the HTML Purifier directory to the include path so that all classes
+  // can be loaded properly
+  set_include_path($purifier_path . PATH_SEPARATOR . get_include_path());
+  require_once 'HTMLPurifier.php';
+
+  $config = _htmlpurifier_get_config($format);
+  $purifier = new HTMLPurifier($config);
+  _htmlpurifier_add_filters($format, $purifier);
+
+  return $purifier->purify($text);
+}
+
+function _htmlpurifier_settings($format) {
+  $form = array();
+
+  $form['htmlpurifier'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('HTML Purifier'),
+    '#collapsible' => TRUE,
+  );
+  $form['htmlpurifier']["htmlpurifier_outputfilter_$format"] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Run filter on output'),
+    '#default_value' => variable_get("htmlpurifier_outputfilter_$format", FALSE),
+    '#description' => t('If enabled, runs the HTMLPurifier whenever content is displayed. This is the most secure but because the filter is very heavy on resources, it generally isn\'t a good idea.'),
+  );
+  $form['htmlpurifier']["htmlpurifier_enableattrid_$format"] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Allow the ID attribute in HTML'),
+    '#default_value' => variable_get("htmlpurifier_enableattrid_$format", FALSE),
+    '#description' => t('If enabled, allows the use of ID attributes in HTML tags. This is disabled by default due to the fact that without proper configuration user input can easily break the validation of a webpage by specifying an ID that is already on the surrounding HTML.'),
+  );
+  $form['htmlpurifier']["htmlpurifier_preserveyoutube_$format"] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Preserve embedded YouTube videos'),
+    '#default_value' => variable_get("htmlpurifier_preserveyoutube_$format", FALSE),
+    '#description' => t('If enabled, allows the use of embedded YouTube videos. See !url for more information.', array('!url' => l('Embedding YouTube Videos', 'http://hp.jpsband.org/live/docs/enduser-youtube.html'))),
+  );
+  $form['htmlpurifier']["htmlpurifier_help_$format"] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Display help text'),
+    '#default_value' => variable_get("htmlpurifier_help_$format", TRUE),
+    '#description' => t('If enabled, a short note will be added to the filter tips explaining that HTML will be transformed to conform with HTML standards. You may want to disable this option when the HTML Purifier is used to check the output of another filter like BBCode.'),
+  );
+
+  return $form;
+}
+
+/**
+ * Check whether or not the htmlpurifier is enabled on the given input format
+ */
+function htmlpurifier_filter_active($format) {
+  $filters = filter_list_format($format);
+
+  foreach ($filters as $filter) {
+    if ($filter->module == 'htmlpurifier' && $filter->delta == 0) return TRUE;
+  }
+
+  return FALSE;
+}
+
+function _htmlpurifier_get_config($format) {
+  $config = array(
+    'HTML.EnableAttrID' => variable_get("htmlpurifier_enableattrid_$format", FALSE),
+  );
+  return $config;
+}
+
+function _htmlpurifier_add_filters($format, &$purifier) {
+  if (variable_get("htmlpurifier_preserveyoutube_$format", FALSE) && version_compare($purifier->version, '1.4.1', '>=')) {
+    require_once 'HTMLPurifier/Filter/YouTube.php';
+    $purifier->addFilter(new HTMLPurifier_Filter_YouTube());
+  }
+}
+
+/**
+ * Implementation of hook_filter_tips().
+ */
+function htmlpurifier_filter_tips($delta, $format, $long = FALSE) {
+  if (variable_get("htmlpurifier_help_$format", TRUE)) {
+    return t('HTML tags will be transformed to conform to HTML standards.');
+  }
+}
