@@ -2,22 +2,17 @@
 // $Id$
 
 /**
- * Implementation of hook_nodeapi().
+ * Implementation of hook_help().
+ *
+ * Used by drupal 4.7
  */
-function htmlpurifier_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
-  if ($op == 'submit' && htmlpurifier_filter_active($node->format)) {
-    $node->teaser = htmlpurifier_purify($node->teaser, $node->format);
-    $node->body = htmlpurifier_purify($node->body, $node->format);
+function htmlpurifier_help($section) {
+  switch ($section) {
+    case 'admin/modules#description':
+      $output = t('Filter that removes malicious HTML and ensures standards compliant output.');
+      break;
   }
-}
-
-/**
- * Implementation of hook_comment().
- */
-function htmlpurifier_comment(&$edit, $op) {
-  if (($op == 'update' || $op == 'insert') && htmlpurifier_filter_active($edit['format'])) {
-    $edit['comment'] = htmlpurifier_purify($edit['comment'], $edit['format']);
-  }
+  return $output;
 }
 
 /**
@@ -29,20 +24,22 @@ function htmlpurifier_filter($op, $delta = 0, $format = -1, $text = '') {
       return array(0 => t('HTML Purifier'));
 
     case 'no cache':
-      // allow the output of HTML Purifier to be cached for performance
+      // caching HTML Purifier's output is STRONGLY recommended due to 
+      // HTML Purifier's data-intensive nature
       return FALSE;
 
     case 'description':
+      // TODO: Include description of what tags and properties are active
       return t('Removes malicious HTML code and ensures that the output is standards compliant.');
 
     case 'prepare':
       return $text;
 
     case 'process':
-      if (variable_get("htmlpurifier_outputfilter_$format", FALSE)) {
-        return htmlpurifier_purify($text, $format);
-      }
-      return $text;
+      $config = _htmlpurifier_get_config($format);
+      $purifier = htmlpurifier_create_purifier($config);
+      _htmlpurifier_add_filters($format, $purifier);
+      return $purifier->purify($text);
 
     case 'settings':
       return _htmlpurifier_settings($format);
@@ -52,19 +49,31 @@ function htmlpurifier_filter($op, $delta = 0, $format = -1, $text = '') {
   }
 }
 
-function htmlpurifier_purify($text, $format = NULL) {
-  $purifier_path = drupal_get_path('module', 'htmlpurifier') .'/library';
-
-  // add the HTML Purifier directory to the include path so that all classes
-  // can be loaded properly
-  set_include_path($purifier_path . PATH_SEPARATOR . get_include_path());
-  require_once 'HTMLPurifier.php';
-
-  $config = _htmlpurifier_get_config($format);
-  $purifier = new HTMLPurifier($config);
-  _htmlpurifier_add_filters($format, $purifier);
-
+function htmlpurifier_purify($text, $config) {
+  $purifier = htmlpurifier_create_purifier($config);
   return $purifier->purify($text);
+}
+
+function htmlpurifier_create_purifier($config) {
+  // Load HTML Purifier library
+  $module_path = drupal_get_path('module', 'htmlpurifier');
+  require_once "$module_path/library/HTMLPurifier.auto.php";
+
+  // Overload HTML Purifiers default cache handler with our own so that
+  // Drupals built-in cache is used
+  require_once "$module_path/HTMLPurifier_DefinitionCache_Drupal.php";
+  $factory =& HTMLPurifier_DefinitionCacheFactory::instance();
+  if (method_exists($factory, 'register')) {
+    $factory->register('Drupal', 'HTMLPurifier_DefinitionCache_Drupal');
+  } else {
+    // Brittle, used for previous HTML Purifier version compatibility
+    $factory->caches['Drupal']['HTML'] = new HTMLPurifier_DefinitionCache_Drupal('HTML');
+    $factory->caches['Drupal']['CSS']  = new HTMLPurifier_DefinitionCache_Drupal('CSS');
+    $factory->caches['Drupal']['URI']  = new HTMLPurifier_DefinitionCache_Drupal('URI');
+  }
+  $config['Cache.DefinitionImpl'] = 'Drupal';
+
+  return new HTMLPurifier($config);
 }
 
 function _htmlpurifier_settings($format) {
@@ -74,12 +83,6 @@ function _htmlpurifier_settings($format) {
     '#type' => 'fieldset',
     '#title' => t('HTML Purifier'),
     '#collapsible' => TRUE,
-  );
-  $form['htmlpurifier']["htmlpurifier_outputfilter_$format"] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Run filter on output'),
-    '#default_value' => variable_get("htmlpurifier_outputfilter_$format", FALSE),
-    '#description' => t('If enabled, runs the HTMLPurifier whenever content is displayed. This is the most secure but because the filter is very heavy on resources, it generally isn\'t a good idea.'),
   );
   $form['htmlpurifier']["htmlpurifier_enableattrid_$format"] = array(
     '#type' => 'checkbox',
@@ -101,19 +104,6 @@ function _htmlpurifier_settings($format) {
   );
 
   return $form;
-}
-
-/**
- * Check whether or not the htmlpurifier is enabled on the given input format
- */
-function htmlpurifier_filter_active($format) {
-  $filters = filter_list_format($format);
-
-  foreach ($filters as $filter) {
-    if ($filter->module == 'htmlpurifier' && $filter->delta == 0) return TRUE;
-  }
-
-  return FALSE;
 }
 
 function _htmlpurifier_get_config($format) {
