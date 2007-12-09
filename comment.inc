@@ -72,11 +72,7 @@ function project_issue_comment(&$arg, $op) {
       $form['original_issue']['project_info'] = $form['project_info'];
       $form['original_issue']['issue_info'] = $form['issue_info'];
       unset($form['project_info'], $form['issue_info']);
-
-      // Mark necessary required fields now, as these aren't added in the initial
-      // building of the project issue form.
-      _project_issue_form_add_required_fields($form, FALSE);
-      unset($form['page'], $form['issue_details'], $form['project_help']);
+      unset($form['issue_details'], $form['project_help']);
       return $form;
     case 'insert':
       // Get a lock on the issue in order to generate the next comment ID.
