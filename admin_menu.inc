@@ -1,6 +1,10 @@
 <?php
 // $Id$
 
+/**
+ * @file
+ * Cached builder functions for Drupal Administration Menu.
+ */
 
 /**
  * Build the administration menu tree.
@@ -124,7 +128,7 @@ function admin_menu_adjust_items(&$_admin_menu) {
   
   // Add 'administer' item to the icon menu.
   $mid_icon_admin = admin_menu_add_item($_admin_menu, $mid_icon, array('title' => t('Administer'), 'path' => 'admin', 'weight' => 10));
-  // Reset 'administer' menu item id in path index.
+  // ...and reset 'administer' menu item id in path index.
   $_admin_menu['index']['admin'] = $mid_admin;
   
   // Move 'By module' item if accessible, or remove it.
@@ -157,7 +161,8 @@ function admin_menu_adjust_items(&$_admin_menu) {
         continue;
       }
       $url = 'http://drupal.org/project/issues/'. $module;
-      // See http://drupal.org/node/97569
+      // Filter project versions via query string not yet supported.
+      // @see http://drupal.org/node/97569
       // $url .= !empty($info['version']) ? '/'. $info['version'] : '';
       admin_menu_add_item($_admin_menu, $mid_drupal, array('title' => t('@title issue queue', array('@title' => $info['name'])), 'path' => $url));
     }
