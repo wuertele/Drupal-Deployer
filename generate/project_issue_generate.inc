@@ -1,4 +1,5 @@
 <?php
+// $Id$
 
 // If not in 'safe mode', increase the maximum execution time :
 if (!ini_get('safe_mode')) {
