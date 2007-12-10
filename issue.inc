@@ -563,10 +563,12 @@ function project_issue_pick_project_form_submit($form_id, $form_values) {
 function project_issue_form($node) {
   global $user;
 
-  $breadcrumb = array();
-  $breadcrumb[] = l(t('Home'), NULL);
-  $breadcrumb[] = l(t('Create content'), 'node/add');
-  drupal_set_breadcrumb($breadcrumb);
+  if (arg(0) == 'node' && arg(1) == 'add') {
+    $breadcrumb = array();
+    $breadcrumb[] = l(t('Home'), NULL);
+    $breadcrumb[] = l(t('Create content'), 'node/add');
+    drupal_set_breadcrumb($breadcrumb);
+  }
 
   $default_state = variable_get('project_issue_default_state', 1);
 
