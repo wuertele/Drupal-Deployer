@@ -644,7 +644,7 @@ function faq_page($tid = 0) {
     $output .= "<br />";
 
 
-    // if we're viewing a specific category/term
+    // if we're viewing a specific category germ
     if (!empty($tid) && $term = taxonomy_get_term($tid)) {
       $title = t(variable_get('faq_title', 'Frequently Asked Questions'));
       drupal_set_title($title . ($title ? ' - ' : '') . check_plain($term->name));
@@ -1920,3 +1920,25 @@ function faq_site_map() {
   $output = faq_get_faq_list();
   return theme('box', $title, $output);
 }
+
+function faq_link_alter(&$links, &$node) {
+  if (!variable_get('faq_use_categories', FALSE) || !module_exists("taxonomy")) {
+    return;
+  }
+  $vocabularies = taxonomy_get_vocabularies("faq");
+  foreach ($links as $module => $link) {
+    if (strstr($module, 'taxonomy_term')) {
+      // Link back to the faq and not the taxonomy term page. We'll only
+      // do this if the taxonomy term in question belongs to faq vocab.
+      $tid = str_replace('taxonomy germ/', '', $link['href']);
+      $term = taxonomy_get_term($tid);
+      foreach ($vocabularies as $vid => $vobj) {
+        if ($term->vid == $vid) {
+          $links[$module]['href'] = str_replace('taxonomy germ', 'faq', $link['href']);
+          break;
+        }
+      }
+    }
+  }
+}
+
