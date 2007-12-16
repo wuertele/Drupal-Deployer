@@ -23,7 +23,7 @@ function path_redirect_admin_edit($rid = 0) {
  * @param $rid
  *  redirect id
  * @param $op
- *  operation: delete
+ *  operation: edit, delete
  * @return
  *  themed output for page
  */
@@ -37,7 +37,7 @@ function path_redirect_admin($rid = FALSE, $op = FALSE) {
       return drupal_get_form('path_redirect_admin_form', $redirect);
     }
     elseif ($redirect && $op == 'delete') {
-      return drupal_get_form('path_redirect_delete', $redirect);
+      return drupal_get_form('path_redirect_delete_confirm', $redirect);
     }
     else {
       drupal_not_found();
@@ -84,7 +84,6 @@ function path_redirect_admin($rid = FALSE, $op = FALSE) {
   $output .= theme('pager');
 
   return $output;
-
 }
 
 function path_redirect_admin_form(&$edit, $edit = array('path' => '', 'redirect' => '', 'query' => '', 'fragment' => '', 'type' => '301', 'rid' => NULL)) {
@@ -227,8 +226,8 @@ function path_redirect_admin_delete_confirm($form_state, $rid) {
 
 function path_redirect_admin_delete_confirm_submit($form, $form_state) {
   if ($form_state['values']['confirm']) {
-    path_redirect_delete($form_state['values']['rid']);
-    $form_state['redirect'] = 'admin/build/path_redirect';
+    path_redirect_delete(NULL, NULL, $form_state['values']['rid']);
+    drupal_set_message(t('The redirect has been deleted.'));
   }
 }
 

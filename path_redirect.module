@@ -20,13 +20,12 @@ function path_redirect_help($path, $arg) {
  * 
  * Early checking of URL requested.
  * If a match is found, user is redirected using drupal_goto()
- *
  */
 function path_redirect_init() {
   // see if this page has a redirect path
   $query = '';
   if (isset($_SERVER['QUERY_STRING'])) {
-    $query = preg_replace('/^q=/', '', $_SERVER['QUERY_STRING']);
+    $query = preg_replace('/^q=([^&]*).*$/', '\1', $_SERVER['QUERY_STRING']);
   }
   $r = db_fetch_object(db_query("SELECT redirect, query, fragment, type FROM {path_redirect} WHERE path = '%s' OR path = '%s'", $query, utf8_encode($query)));
   if ($r) {
@@ -37,7 +36,6 @@ function path_redirect_init() {
 
 /**
  * Implementation of hook_menu
- *
  */
 function path_redirect_menu() {
   $items['admin/build/path_redirect'] = array(
@@ -104,7 +102,38 @@ function path_redirect_load($rid) {
   return db_fetch_array(db_query("SELECT rid, path, redirect, query, fragment, type FROM {path_redirect} WHERE rid = %d", $rid));
 }
 
-function path_redirect_delete($rid) {
-  return db_query("DELETE FROM {path_redirect} WHERE rid = %d", $rid);
-  drupal_set_message(t('The redirect has been deleted.'));
+/**
+ * Delete the specified path redirect. This will delete as specifically as
+ * possible, in order: by $rid, by ($from, $to), by $from, or by $to.
+ * Multiple redirects may be deleted if the $to parameter matches more than
+ * one entry.
+ *
+ * This function is part of an API available for external code to use.
+ *
+ * @param $from
+ *   Source path of redirect to delete.
+ * @param $to
+ *   Destination path or URL of redirect to delete.
+ * @param $rid
+ *   Unique ID of redirect to delete.
+ * @return
+ *   The result of the deletion query.
+ */
+function path_redirect_delete($from = NULL, $to = NULL, $rid = NULL) {
+  if (!empty($rid)) {
+    $result = db_query("DELETE FROM {path_redirect} WHERE rid = %d", $rid);
+  }
+  else if (!empty($from)) {
+    if (!empty($to)) {
+      $result = db_query("DELETE FROM {path_redirect} WHERE path = '%s' AND redirect = '%s'", $from, $to);
+    }
+    else {
+      $result = db_query("DELETE FROM {path_redirect} WHERE path = '%s'", $from);
+    }
+  }
+  else if (!empty($to)) {
+    $result = db_query("DELETE FROM {path_redirect} WHERE redirect = '%s'", $to);
+  }
+  return $result;
 }
+
