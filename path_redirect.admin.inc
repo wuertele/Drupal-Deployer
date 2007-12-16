@@ -243,7 +243,7 @@ function path_redirect_error_list() {
     303 => array('title' => t('303 See Other'), 'description' => t('See Other/Redirect. A preferred alternative source should be used at present.')),
     304 => array('title' => t('304 Not Modified'), 'description' => t('The server has identified from the request information that the client\'s copy of the information is up-to-date and the requested information does not need to be sent again.')),
     305 => array('title' => t('305 Use Proxy'), 'description' => t('The request must be sent through the indicated proxy server.')),
-    306 => array('title' => t('307 Temporary Redirect'), 'description' => t('The resource has temporarily moved elsewhere, the response indicates where it is at present. Client should still use this URL.')),
+    307 => array('title' => t('307 Temporary Redirect'), 'description' => t('The resource has temporarily moved elsewhere, the response indicates where it is at present. Client should still use this URL.')),
   );
 
   return $errors;
