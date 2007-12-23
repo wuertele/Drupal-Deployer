@@ -86,15 +86,8 @@ function path_redirect_admin($rid = FALSE, $op = FALSE) {
   return $output;
 }
 
-function path_redirect_admin_form(&$edit, $edit = array('path' => '', 'redirect' => '', 'query' => '', 'fragment' => '', 'type' => '301', 'rid' => NULL)) {
+function path_redirect_admin_form(&$form_state, $edit = array('path' => '', 'redirect' => '', 'query' => '', 'fragment' => '', 'type' => '301', 'rid' => NULL)) {
   $default_type = 301;
-
-  if (!empty($edit)) {
-    $form['rid'] = array(
-      '#type' => 'hidden',
-      '#value' => $edit['rid'],
-    );
-  }
 
   $form['path'] = array(
     '#type' => 'textfield',
@@ -166,10 +159,22 @@ function path_redirect_admin_form(&$edit, $edit = array('path' => '', 'redirect'
     '#value' => t('<p>Find more information about http redirect codes <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3">here</a>.</p>'),
   );
 
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Submit'),
-  );
+  if ($edit['rid']) {
+    $form['rid'] = array(
+      '#type' => 'hidden',
+      '#value' => $edit['rid'],
+    );
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Update redirect'),
+    );
+  }
+  else {
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Create new redirect'),
+    );
+  }
 
   return $form;
 }
