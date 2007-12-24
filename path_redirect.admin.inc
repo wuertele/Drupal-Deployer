@@ -71,16 +71,12 @@ function path_redirect_admin($rid = FALSE, $op = FALSE) {
     $count++;
   }
 
-  $output = "";
-  if ($count) {
-    $output .= '<p>'. theme('table', $header, $rows) .'</p>';
-  }
-  else {
-    $output .= '<p>'. t('No entries found.') .'</p>';
+  if (!$count) {
+    $rows[] = array(array('data' => t('No redirects have been defined.'), 'colspan' => '6'));
   }
 
+  $output = theme('table', $header, $rows);
   $output .= '<p>'. l(t('Add new redirect'), 'admin/build/path_redirect/add') .'</p>';
-
   $output .= theme('pager');
 
   return $output;
@@ -92,7 +88,7 @@ function path_redirect_admin_form(&$form_state, $edit = array('path' => '', 'red
   $form['path'] = array(
     '#type' => 'textfield',
     '#title' => t('From'),
-    '#description' => t('Enter a Drupal path or path alias to redirect'),
+    '#description' => t('Enter a Drupal path or path alias to redirect. Query strings <em>?foo=bar</em> and fragment anchors <em>#baz</em> are <strong>not</strong> allowed.'),
     '#maxlength' => 255,
     '#default_value' => $edit['path'],
   );
@@ -159,22 +155,15 @@ function path_redirect_admin_form(&$form_state, $edit = array('path' => '', 'red
     '#value' => t('<p>Find more information about http redirect codes <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3">here</a>.</p>'),
   );
 
-  if ($edit['rid']) {
-    $form['rid'] = array(
-      '#type' => 'hidden',
-      '#value' => $edit['rid'],
-    );
-    $form['submit'] = array(
-      '#type' => 'submit',
-      '#value' => t('Update redirect'),
-    );
-  }
-  else {
-    $form['submit'] = array(
-      '#type' => 'submit',
-      '#value' => t('Create new redirect'),
-    );
-  }
+  $form['rid'] = array(
+    '#type' => 'hidden',
+    '#value' => $edit['rid'],
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => $edit['rid'] ? t('Update redirect') : t('Create new redirect'),
+  );
 
   return $form;
 }
@@ -183,16 +172,30 @@ function path_redirect_admin_form_validate($form, &$form_state) {
   if (trim($form_state['values']['path']) == '') {
     form_set_error('path', t('You must enter a <strong>from</strong> path.'));
   }
+  else {
+    $path_error = '';
 
-  //check that the from url is valid and contains no # or ?
-  elseif (strstr($form_state['values']['path'], '#')) {
-    form_set_error('path', t('You cannot redirect from a fragment anchor.'));
-  }
-  elseif (strstr($form_state['values']['path'], '?')) {
-    form_set_error('path', t('You cannot currently include a query in your redirect <strong>from</strong> path.'));
-  }
-  elseif (!valid_url($form_state['values']['path'])) {
-    form_set_error('path', t('The redirect <strong>from</strong> path does not appear valid. This must be a local Drupal path.'));
+    // The "from" path should not conflict with another redirect
+    $result = path_redirect_load(NULL, preg_replace('/[?#].*/', '', $form_state['values']['path']));
+    if ($result && (!$form_state['values']['rid'] || ($form_state['values']['rid'] !== $result['rid']))) {
+      $path_error .= ' '. t('The <strong>from</strong> path you entered is already redirected. You can <a href="@edit-page">edit this redirect</a> instead.', array('@edit-page' => url('admin/build/path_redirect/edit/'. $result['rid'])));
+    }
+    // Check that the "from" path is valid and contains no # or ?
+    if (strstr($form_state['values']['path'], '#')) {
+      $path_error .= ' '. t('You cannot redirect from a fragment anchor.');
+    }
+    // No query string allowed in "from" (but see #174961)
+    if (strstr($form_state['values']['path'], '?')) {
+      $path_error .= ' '. t('You cannot currently include a query in your redirect <strong>from</strong> path.');
+    }
+    // Make sure "from" has the form of a local Drupal path
+    if (!valid_url($form_state['values']['path'])) {
+      $path_error .= ' '. t('The redirect <strong>from</strong> path does not appear valid. This must be a local Drupal path.');
+    }
+
+    if (!empty($path_error)) {
+      form_set_error('path', $path_error);
+    }
   }
 
   if (!valid_url($form_state['values']['redirect']) && !valid_url($form_state['values']['redirect'], TRUE) && $form_state['values']['redirect'] != '<front>') {
@@ -203,9 +206,9 @@ function path_redirect_admin_form_validate($form, &$form_state) {
     $form_state['values']['redirect'] = variable_get('site_frontpage', 'node');
   }
 
-  //check that there there are no redirect loops
+  // check that there there are no redirect loops
   if ($form_state['values']['path'] === $form_state['values']['redirect']) {
-    form_set_error('redirect', t('You are attempting to redirect the page to itself. This will result in an infinite loop -- so don\'t do it!'));
+    form_set_error('redirect', t('You are attempting to redirect the page to itself. This will result in an infinite loop.'));
   }
 
   // Allow spaces in "from" path
@@ -219,9 +222,9 @@ function path_redirect_admin_form_submit($form, &$form_state) {
 }
 
 function path_redirect_admin_delete_confirm($form_state, $rid) {
-  $redirect = path_redirect_load($rid);
   if (user_access('administer redirects')) {
     $form['rid'] = array('#type' => 'value', '#value' => $rid);
+    $redirect = path_redirect_load($rid);
     $output = confirm_form($form,
       t('Are you sure you want to delete the redirect from %path to %redirect?', array('%path' => $redirect['path'], '%redirect' => $redirect['redirect'])),
       isset($_GET['destination']) ? $_GET['destination'] : 'admin/build/path_redirect');
