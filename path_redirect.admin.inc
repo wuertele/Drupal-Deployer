@@ -98,7 +98,7 @@ function path_redirect_admin_form(&$form_state, $edit = array('path' => '', 'red
     '#prefix' => '<div class="container-inline">',
     '#suffix' => '</div>',
     '#title' => t('To'),
-    '#description' => '<div style="display:block">'. t('Enter a Drupal path, path alias, or external URL to redirect to. Use %front to redirect to the front page.  Enter (optional) queries after "?" and (optional) anchor after "#". Most redirects will not contain queries or fragment anchors.', array('%front' => '<front>')) .'</div>',
+    '#description' => '<div style="display:block">'. t('Enter a Drupal path, path alias, or external URL to redirect to. Use %front to redirect to the front page. Enter (optional) queries after "?" and (optional) anchor after "#". Most redirects will not contain queries or fragment anchors.', array('%front' => '<front>')) .'</div>',
   );
 
   $form['redirect']['redirect'] = array(
