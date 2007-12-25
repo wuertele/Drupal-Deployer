@@ -64,9 +64,9 @@ function path_redirect_admin($rid = FALSE, $op = FALSE) {
       $path,
       check_url($redirect . $query . $fragment),
       $types[$r->type]['title'],
-      array('data' => l(t('test'), $r->path, array())),
-      array('data' => l(t('edit'), 'admin/build/path_redirect/edit/'. $r->rid, array('query' => $destination))),
-      array('data' => l(t('delete'), 'admin/build/path_redirect/delete/'. $r->rid, array('query' => $destination))),
+      array('data' => l(t('Test'), $r->path, array())),
+      array('data' => l(t('Edit'), 'admin/build/path_redirect/edit/'. $r->rid, array('query' => $destination))),
+      array('data' => l(t('Delete'), 'admin/build/path_redirect/delete/'. $r->rid, array('query' => $destination))),
     );
     $count++;
   }
@@ -152,7 +152,7 @@ function path_redirect_admin_form(&$form_state, $edit = array('path' => '', 'red
   }
   $form['type']['link'] = array(
     '#type' => 'markup',
-    '#value' => t('<p>Find more information about http redirect codes <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3">here</a>.</p>'),
+    '#value' => '<p>'. t('Find more information about http redirect codes <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3">here</a>.') .'</p>',
   );
 
   $form['rid'] = array(
@@ -247,9 +247,9 @@ function path_redirect_error_list() {
   $errors = array(
     300 => array('title' => t('300 Multiple Choices'), 'description' => t('The request is ambiguous and needs clarification as to which resource was requested.')),
     301 => array('title' => t('301 Moved Permanently'), 'description' => t('Moved Permanently. The resource has permanently moved elsewhere, the response indicates where it has gone to. <strong>Recommended.</strong>')),
-    302 => array('title' => t('302 Found'), 'description' => t('The resource has temporarily moved elsewhere, the response indicates where it is at present. <strong>This is Drupal\'s default redirect type.</strong>')),
+    302 => array('title' => t('302 Found'), 'description' => t("The resource has temporarily moved elsewhere, the response indicates where it is at present. <strong>This is Drupal's default redirect type.</strong>")),
     303 => array('title' => t('303 See Other'), 'description' => t('See Other/Redirect. A preferred alternative source should be used at present.')),
-    304 => array('title' => t('304 Not Modified'), 'description' => t('The server has identified from the request information that the client\'s copy of the information is up-to-date and the requested information does not need to be sent again.')),
+    304 => array('title' => t('304 Not Modified'), 'description' => t("The server has identified from the request information that the client's copy of the information is up-to-date and the requested information does not need to be sent again.")),
     305 => array('title' => t('305 Use Proxy'), 'description' => t('The request must be sent through the indicated proxy server.')),
     307 => array('title' => t('307 Temporary Redirect'), 'description' => t('The resource has temporarily moved elsewhere, the response indicates where it is at present. Client should still use this URL.')),
   );
