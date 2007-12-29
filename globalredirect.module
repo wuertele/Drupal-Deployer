@@ -24,25 +24,30 @@ function globalredirect_init() {
       $query_string = NULL;
     }
 
-    // If current path is also the frontpage, redirect to http://www.mysite.com.
+    // If current path is also the frontpage, redirect to http://www.example.com
     if (!empty($_REQUEST['q']) && drupal_is_front_page()) {
       drupal_goto('', $query_string, NULL, 301);
     }
 
-    // Get the request string (minus trailing slash e.g. node/123/)
+    // Trim any trailing slash off the end (eg, 'node/1/' to 'node/1')
     $request = trim($_REQUEST['q'], '/');
     
-    // Check the path (eg, node/123) for an alias. If one is found, redirect.
-    if ($alias = drupal_get_path_alias($request)) {
-      // If alias is different to the request, redirect...
-      if ($alias != $request) {
-        drupal_goto($alias, $query_string, NULL, 301);
-      }
+    // Check the path (eg, node/123) for a request
+    $alias = drupal_get_path_alias($request);
+    
+    // If alias is different to the request, redirect...
+    if ($alias != $request) {
+      drupal_goto($alias, $query_string, NULL, 301);
+    }
 
-      // If the request produced by the trim above differs to the urls request, redirect (basically, de-slash)
-      if ($request != $_REQUEST['q']) {
-        drupal_goto($request, $query_string, NULL, 301);
-      }
+    // If the trimmed request differs to the request then redirect (basically, de-slash the source path)
+    if ($request != $_REQUEST['q']) {
+      drupal_goto($request, $query_string, NULL, 301);
+    }
+
+    //If no alias was returned, the final check is to direct non-clean to clean - if clean is enabled
+    if ((bool)variable_get('clean_url', 0) && strpos(request_uri(), '?q=')) {
+      drupal_goto($request, $query_string, NULL, 301);
     }
   }
 }
