@@ -25,12 +25,12 @@ PERMISSIONS:
 INSTALLATION:
 
 1. Place the entire page_title directory into your Drupal modules/
-   directory.
+   directory or the sites modules directory (eg site/default/modules)
 
 
 2. Enable this module by navigating to:
 
-     administer > modules
+     Administer > Build > Modules
 
    At this point the Drupal install system will attempt to create the database
    table page_title. You should see a message confirming success or
@@ -46,7 +46,7 @@ INSTALLATION:
 
 3. Optionally configure the two variations of page title by visiting:
 
-    administer > settings > page_title
+    Administer > Content management > Page titles
 
 4. The page title is ultimately set at the theme level. To let your PHPTemplate
    based theme interact with this module, you need to add some code to the template.php
