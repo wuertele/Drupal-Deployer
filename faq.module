@@ -429,6 +429,9 @@ function faq_weight_settings_form($form_state) {
     foreach ($vocabularies as $vid => $vobj) {
       $tree = taxonomy_get_tree($vid);
       foreach ($tree as $term) {
+        if (!taxonomy_term_count_nodes($term->tid, 'faq')) {
+          continue;
+        }
         $options[$term->tid] = $term->name;
         $form['choose_cat']['faq_category'] = array(
           '#type' => 'select',
@@ -1716,7 +1719,9 @@ function faq_block($op = 'list', $delta = 0, $edit = array()) {
             $terms = array();
             foreach (taxonomy_get_vocabularies('faq') as $vocab) {
               foreach (taxonomy_get_tree($vocab->vid) as $term) {
-                $terms[$term->name] = $term->tid;
+                if (taxonomy_term_count_nodes($term->tid, 'faq')) {
+                  $terms[$term->name] = $term->tid;
+                }
               }
             }
             if (sizeof($terms) > 0) {
@@ -1943,7 +1948,7 @@ function faq_link_alter(&$links, &$node) {
       $tid = str_replace('taxonomy germ/', '', $link['href']);
       $term = taxonomy_get_term($tid);
       foreach ($vocabularies as $vid => $vobj) {
-        if ($term->vid == $vid) {
+        if ($term->vid == $vid && taxonomy_term_count_nodes($term->tid, 'faq')) {
           $links[$module]['href'] = str_replace('taxonomy germ', 'faq', $link['href']);
           break;
         }
