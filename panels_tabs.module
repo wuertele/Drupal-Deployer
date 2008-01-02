@@ -37,19 +37,18 @@ function theme_panels_tabs_style_render_panel($display, $panel_id, $panes, $sett
   $tabs = array();
   $id = $display->css_id .'-'. $panel_id;
 
-  if ($settings['filling_tabs'] > 0) {
-    drupal_add_js(drupal_get_path('module', 'panels_tabs') .'/panels_tabs.js');
-    drupal_add_js(
-      array(
-        'panels_tabs' => array(
-          'filling_tabs' => array(
-            $id => $settings['filling_tabs'],
-          ),
-        )
-      ),
-      'setting'
-    );
-  }
+  // Add the Javascript to the page, and save the settings for this panel.
+  panels_tabs_add_js();
+  drupal_add_js(
+    array(
+      'panelsTabs' => array(
+        $display->css_id => array(
+          'fillingTabs' => $settings['filling_tabs'],
+        ),
+      )
+    ),
+    'setting'
+  );
 
   $tabs[$id] = array(
     '#type' => 'tabset',
@@ -80,9 +79,9 @@ function panels_tabs_style_settings_form($style_settings) {
     '#type' => 'radios',
     '#title' => t('Horizontally filling tabs'),
     '#options' => array(
-      0 => t('Disabled'),
-      1 => t('Equal width tabs'),
-      2 => t('Equal width scaling tabs'),
+      'disabled' => t('Disabled'),
+      'equal' => t('Equal width tabs'),
+      'smart' => t('Equal width scaling tabs'),
     ),
     '#description' => t(
       "Horizontally filling tabs make sure the tabs consume all available
@@ -90,11 +89,12 @@ function panels_tabs_style_settings_form($style_settings) {
       Equal width tabs: sets the <em>width</em> property, forcing each tab
       to be equally wide. If the text doesn't fit in the tab, the overflow
       will be hidden.<br />
-      Equal width scaling tabs: sets the <em>min-width</em> property,
-      forcing each tab to be equally wide, but allowing the tabs with more
-      text to scale to allow all text to be displayed."
+      Horizontally filling, smart width tabs: calculates the length of the
+      text in each tab and compares this to the total length of the text on
+      all tabs. It then sets the width property of each tab according to the
+      percentage of text the tab contains."
     ),
-    '#default_value' => (isset($style_settings['filling_tabs'])) ? $style_settings['filling_tabs'] : 0,
+    '#default_value' => (isset($style_settings['filling_tabs'])) ? $style_settings['filling_tabs'] : 'disabled',
   );
   return $form;
 }
@@ -103,7 +103,23 @@ function panels_tabs_style_settings_form($style_settings) {
  * Settings form validation callback.
  */
 function panels_tabs_style_settings_validate($style_settings, $form, $form_values) {
-  if (!in_array($form_values['filling_tabs'], array(0, 1, 2))) {
+  if (!in_array($form_values['filling_tabs'], array('disabled', 'equal', 'smart'))) {
     form_error($form['filling_tabs'], t('Invalid value detected.'));
+  }
+}
+
+
+//----------------------------------------------------------------------------
+// Private functions.
+
+/**
+ * Adds the .js file only once per page load.
+ */
+function panels_tabs_add_js() {
+  static $added = FALSE;
+
+  if (!$added) {
+    drupal_add_js(drupal_get_path('module', 'panels_tabs') .'/panels_tabs.js');
+    $added = TRUE;
   }
 }

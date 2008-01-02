@@ -2,8 +2,15 @@ $Id$
 
 Description
 -----------
-Configurable 'tabs' panel style, can be used for any Panels implementation
-(this means that it can be used for Panel pages, Mini panels, and so on).
+Configurable 'tabs' panel style. Provides 3 kinds of tabs:
+- Normal tabs (horizontal filling disabled).
+- Horizontally filling, equal width tabs: sets the width property, forcing
+  each tab to be equally wide. If the text doesn't fit in the tab, the
+  overflow will be hidden.
+- Horizontally filling, smart width tabs: calculates the length of the text in
+  each tab and compares this to the total length of the text on all tabs. It
+  then sets the width property of each tab according to the percentage of text
+  the tab contains.
 
 
 Dependencies
@@ -18,6 +25,9 @@ Installation
 "sites/all/modules/").
 
 2) Enable the module.
+
+3) Go to the "Layout settings" tab of the Panels page, Mini panel, ... on
+which you want to apply this style.
 
 
 Sponsor
