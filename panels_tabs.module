@@ -3,7 +3,7 @@
 
 /**
  * @file
- * Configurable 'tabs' panel style.
+ * Definition of the 'tabs' panel style.
  */
 
 //----------------------------------------------------------------------------
@@ -15,57 +15,21 @@
 function panels_tabs_panels_styles() {
   return array(
     'tabs' => array(
-      'title' => t('Tabs'),
-      'description' => t('Presents the panes in tabs.'),
-      'render panel' => 'panels_tabs_style_render_panel',
-      'settings form' => 'panels_tabs_style_settings_form',
+      'title'             => t('Tabs'),
+      'description'       => t('Presents the panes in tabs.'),
+      'render panel'      => 'panels_tabs_style_render_panel',
+      'settings form'     => 'panels_tabs_style_settings_form',
       'settings validate' => 'panels_tabs_style_settings_validate',
     ),
   );
 }
 
+
 //----------------------------------------------------------------------------
-// Panels callbacks.
-
-
-/**
- * Panel style settings form callback.
- */
-function panels_tabs_style_settings_form($style_settings) {
-  $form['filling_tabs'] = array(
-    '#type' => 'radios',
-    '#title' => t('Horizontally filling tabs'),
-    '#options' => array(
-      0 => t('Disabled'),
-      1 => t('Equal width tabs'),
-      2 => t('Equal width scaling tabs'),
-    ),
-    '#description' => t(
-      "Horizontally filling tabs make sure the tabs consume all available
-      horizontal space.<br />
-      Equal width tabs: sets the <em>width</em> property, forcing each tab
-      to be equally wide. If the text doesn't fit in the tab, the overflow
-      will be hidden.<br />
-      Equal width scaling tabs: sets the <em>min-width</em> property,
-      forcing each tab to be equally wide, but allowing the tabs with more
-      text to scale to allow all text to be displayed."
-    ),
-    '#default_value' => (isset($style_settings['filling_tabs'])) ? $style_settings['filling_tabs'] : 0,
-  );
-  return $form;
-}
+// Panels style plugin callbacks.
 
 /**
- * Panel style settings form validation callback.
- */
-function panels_tabs_style_settings_validate($style_settings, $form, $form_values) {
-  if (!in_array($form_values['filling_tabs'], array(0, 1, 2))) {
-    form_error($form['filling_tabs'], t('Invalid value detected.'));
-  }
-}
-
-/**
- * Panel style render callback.
+ * Render callback.
  */
 function theme_panels_tabs_style_render_panel($display, $panel_id, $panes, $settings) {
   $output = '';
@@ -106,4 +70,40 @@ function theme_panels_tabs_style_render_panel($display, $panel_id, $panes, $sett
   $output = tabs_render($tabs);
   
   return $output;
+}
+
+/**
+ * Settings form callback.
+ */
+function panels_tabs_style_settings_form($style_settings) {
+  $form['filling_tabs'] = array(
+    '#type' => 'radios',
+    '#title' => t('Horizontally filling tabs'),
+    '#options' => array(
+      0 => t('Disabled'),
+      1 => t('Equal width tabs'),
+      2 => t('Equal width scaling tabs'),
+    ),
+    '#description' => t(
+      "Horizontally filling tabs make sure the tabs consume all available
+      horizontal space.<br />
+      Equal width tabs: sets the <em>width</em> property, forcing each tab
+      to be equally wide. If the text doesn't fit in the tab, the overflow
+      will be hidden.<br />
+      Equal width scaling tabs: sets the <em>min-width</em> property,
+      forcing each tab to be equally wide, but allowing the tabs with more
+      text to scale to allow all text to be displayed."
+    ),
+    '#default_value' => (isset($style_settings['filling_tabs'])) ? $style_settings['filling_tabs'] : 0,
+  );
+  return $form;
+}
+
+/**
+ * Settings form validation callback.
+ */
+function panels_tabs_style_settings_validate($style_settings, $form, $form_values) {
+  if (!in_array($form_values['filling_tabs'], array(0, 1, 2))) {
+    form_error($form['filling_tabs'], t('Invalid value detected.'));
+  }
 }
