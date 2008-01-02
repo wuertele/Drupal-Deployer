@@ -90,12 +90,17 @@ function theme_panels_tabs_style_render_panel($display, $panel_id, $panes, $sett
   $tabs[$id] = array(
     '#type' => 'tabset',
   );
-  foreach ($panes as $pos => $pane) {
-    $tabs[$id][$pos] = array(
+  foreach ($panes as $pane_id => $content) {
+    // Remove the title from the content. We don't want titles in both the tab
+    // and the content associated with the tab.
+    $content_without_title = drupal_clone($content);
+    unset($content_without_title->title);
+
+    $tabs[$id][$pane_id] = array(
       '#type' => 'tabpage',
-      '#title' => $pane->title,
-      '#content' => $pane->content,
-      '#weight' => $pos,
+      '#title' => $content->title,
+      '#content' => theme('panels_pane', $content_without_title, $display->content[$pane_id], $display),
+      '#weight' => $pane_id,
     );
   }
   $output = tabs_render($tabs);
