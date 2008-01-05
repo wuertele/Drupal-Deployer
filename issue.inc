@@ -528,7 +528,7 @@ function project_issue_pick_project_form() {
   if (count($projects) == 1) {
     drupal_set_message(t('You do not have access to any projects.'), 'error');
   }
-  
+
   $form['pid'] = array(
     '#type' => 'select',
     '#title' => t('Project'),
@@ -1043,7 +1043,8 @@ function project_issue_default_states() {
 }
 
 function project_issue_priority($priority = 0) {
-  $priorities = array(1 => t('critical'), t('normal'), t('minor'));
+  // NOTE: these values should not be translated!
+  $priorities = array(1 => 'critical', 'normal', 'minor');
   return $priority ? $priorities[$priority] : $priorities;
 }
 
