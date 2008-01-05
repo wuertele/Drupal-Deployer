@@ -1,0 +1,59 @@
+<?php
+// $Id$
+
+/**
+ * Implementation of hook_server_info()
+ */
+function rest_server_server_info() {
+  return array(
+    '#name' => 'REST',
+    '#path' => 'rest',
+  );
+} // function rest_server_server_info
+
+/**
+ * Implementation of hook_server()
+ */
+function rest_server_server() {
+  // Initiate the server and the request
+  if (zend_initialize('Zend_Rest_Server')) {
+    $request = $_REQUEST;
+    $server = new Zend_Rest_Server();
+    
+    // Check for which service we're calling
+    foreach (services_get_all() as $method) {
+      if ($method['#method'] == $request['method']) {
+        $request['method'] = $method['#callback'];
+        $server->addFunction($method['#callback']);
+        
+        // Special use cases for arguments of certain types
+        foreach ($method['#args'] as $argument) {
+          $argname = $argument['#name'];
+          switch ($argument['#type']) {
+            case 'array' :
+              if (empty($request[$argname])) {
+                $request[$argname] = array();
+              }
+              else {
+                $request[$argname] = explode(',', $request[$argname]);
+              }
+              break;
+          }
+        }
+        
+        // Found method to call, so exit
+        break;
+      }
+    }
+    try {
+      echo $server->handle($request);
+    }
+    catch (Exception $e) {
+      echo $e->getMessage();
+    }
+  }
+  else {
+    drupal_set_message(t('The <em>REST Server</em> requires proper configuration of the <a href="@url" target="_blank">Zend Framework</a>. Please <a href="@configure">configure it</a> correctly and try again.', array('@url' => 'http://framework.zend.com', '@configure' => url('admin/settings/zend'))), 'error');
+    drupal_goto(variable_get('site_frontpage', 'node'));
+  }
+} // function rest_server_server
