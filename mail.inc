@@ -170,7 +170,7 @@ function project_mail_summary($field, $value) {
       $project = node_load(array('nid' => $value, 'type' => 'project_project'));
       return $project->title;
     case 'category':
-      return $value ? project_issue_category($value) : t('<none>');
+      return $value ? project_issue_category($value, 0) : t('<none>');
     case 'priority':
       return $value ? project_issue_priority($value) : t('<none>');
     case 'rid':
