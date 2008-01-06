@@ -1,18 +1,28 @@
 /* $Id$ */
-/**
- * Suckerfish Dropdowns, www.htmldog.com
- *
- * IE fix.
- */
-sfHover = function() {
-	sfEls = document.getElementById("admin_menu").getElementsByTagName("LI");
-	for (var i=0; i<sfEls.length; i++) {
-		sfEls[i].onmouseover=function() {
-			this.className+=" sfhover";
-		}
-		sfEls[i].onmouseout=function() {
-			this.className=this.className.replace(new RegExp(" sfhover\\b"), "");
-		}
-	}
-}
-if (window.attachEvent) window.attachEvent("onload", sfHover);
+
+$(document).ready(function() {
+  // Hover emulation for IE 6.
+  if ($.browser.msie && parseInt(jQuery.browser.version) == 6) {
+    $('#admin_menu li').hover(function() {
+      $(this).addClass('iehover');
+    }, function() {
+      $(this).removeClass('iehover');
+    });
+  }
+  
+  // Delayed mouseout.
+  $('#admin_menu li').hover(function() {
+    // Stop the timer.
+    clearTimeout(this.sfTimer);
+    // Display child lists.
+    $('> ul', this).css('left', 'auto')
+      // Immediately hide nephew lists.
+      .parent().siblings('li').children('ul').css('left', '-999em');
+  }, function() {
+    // Start the timer.
+    var uls = $('> ul', this);
+    this.sfTimer = setTimeout(function() {
+      uls.css('left', '-999em');
+    }, 1000);
+  });
+});
