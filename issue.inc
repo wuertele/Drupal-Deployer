@@ -1043,8 +1043,7 @@ function project_issue_default_states() {
 }
 
 function project_issue_priority($priority = 0) {
-  // NOTE: these values should not be translated!
-  $priorities = array(1 => 'critical', 'normal', 'minor');
+  $priorities = array(1 => t('critical'), t('normal'), t('minor'));
   return $priority ? $priorities[$priority] : $priorities;
 }
 
