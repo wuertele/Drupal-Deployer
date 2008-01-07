@@ -186,6 +186,9 @@ function mimedetect_mime($file) {
   if (!$mime && $filebin = variable_get('mimedetect_file_binary', '/usr/bin/file') && is_executable($filebin)) {
     $command = $filebin .' -bi '. escapeshellarg($file->filepath);
     $mime = trim(exec($command, $out));
+    // with text we often get charset like 'text/plain; charset=us-ascii'
+    $mime = split(';', $mime);
+    $mime = trim($mime[0]);
   }
 
   // Trust the browser...  ack!
