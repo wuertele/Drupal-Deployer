@@ -51,6 +51,10 @@ None.
      rename it to f.e. phptemplate_admin_menu_icon() and customize the output
      according to your needs.
 
+  Please bear in mind that admin_menu's output is cached. You need to clear your
+  site's cache (probably best using Devel module, or by manually truncating the
+  cache_menu database table) to see any changes of your theme override function.
+
 
 -- TROUBLESHOOTING --
 
