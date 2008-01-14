@@ -138,6 +138,10 @@ if (!chdir($drupal_root)) {
   exit(1);
 }
 
+// Force the right umask while this script runs, so that everything is created
+// with sane file permissions.
+umask(0022);
+
 require_once 'includes/bootstrap.inc';
 drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
 
