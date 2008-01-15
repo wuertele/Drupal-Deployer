@@ -2,16 +2,16 @@ if (Drupal.jsEnabled) {
   $(document).ready(function () {
     // hide/show answer to question
     $('div.faq_dd_hide_answer').hide();
-    $("div.faq_dt_hide_answer").click(function() {
-      $(this).next("div.faq_dd_hide_answer").toggle();
+    $('div.faq_dt_hide_answer').click(function() {
+      $(this).next('div.faq_dd_hide_answer').toggle();
       return false;
     });
 
 
     // hide/show q/a for a category
     $('div.faq_qa_hide').hide();
-    $(".faq_qa_header").click(function() {
-      $(this).next("div.faq_qa_hide").toggle();
+    $('div.faq_qa_header .faq_header').click(function() {
+      $(this).parent().next('div.faq_qa_hide').toggle();
       return false;
     });
 
