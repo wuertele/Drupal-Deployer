@@ -1924,6 +1924,41 @@ function project_issue_query_rss($result, $project) {
   node_feed($result, $channel);
 }
 
+/**
+ * Provide an array of project issue summary fields.
+ * @param $context
+ *   The context in which the fields will be displayed.
+ *     'web' for project_issue node and comment summary tables.
+ *     'email' for project_issue notification e-mail messages.
+ */
+function project_issue_field_labels($context) {
+
+  if ($context == 'web') {
+    $labels = array('title' => t('Title'));
+  }
+  else {
+    $labels = array();
+  }
+
+  $labels += array(
+    'pid' => t('Project'),
+    'rid' => t('Version'),
+    'component' => t('Component'),
+    'category' => t('Category'),
+    'priority' => t('Priority'),
+    'assigned' => t('Assigned to'),
+    'sid' => t('Status'),
+  );
+
+  if ($context == 'email') {
+    $labels +=  array(
+      'name' => t('Reported by'),
+      'updator' => t('Updated by'),
+    );
+  }
+  return $labels;
+}
+
 function theme_project_issue_follow_up_forbidden($nid) {
   global $user;
   if ($user->uid) {
