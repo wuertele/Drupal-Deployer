@@ -13,7 +13,7 @@ function project_issue_comment(&$arg, $op) {
   $node = node_load($nid);
   // Make a copy here so we have all the original metadata, since some
   // of it can change below.
-  $original_node = $node;
+  $original_node = drupal_clone($node);
 
   if ($node->type != 'project_issue') {
     return;
