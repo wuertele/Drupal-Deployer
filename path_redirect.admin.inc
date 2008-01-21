@@ -29,7 +29,7 @@ function path_redirect_admin_edit($rid = 0) {
  */
 function path_redirect_admin($rid = FALSE, $op = FALSE) {
   if ($rid) {
-    $breadcrumbs = array(l(t('Home'), '/'), l(t('Administer'), 'admin'), l(t('URL redirects'), 'admin/build/path_redirect'));
+    $breadcrumbs = array(l(t('Home'), '/'), l(t('Administer'), 'admin'), l(t('URL redirects'), 'admin/build/path-redirect'));
     $rid = db_escape_string($rid);
     $redirect = path_redirect_load($rid);
     if ($redirect && $op != 'delete') {
@@ -53,7 +53,7 @@ function path_redirect_admin($rid = FALSE, $op = FALSE) {
 
   $result = pager_query('SELECT rid, path, redirect, query, fragment, type FROM {path_redirect}'. tablesort_sql($header), 50);
   $count = 0;
-  $types = path_redirect_error_list();
+  $types = path_redirect_status_codes();
   $destination = drupal_get_destination();
   while ($r = db_fetch_object($result)) {
     $path = $r->path;
@@ -64,9 +64,9 @@ function path_redirect_admin($rid = FALSE, $op = FALSE) {
       $path,
       check_url($redirect . $query . $fragment),
       $types[$r->type]['title'],
-      array('data' => l(t('Test'), $r->path, array())),
-      array('data' => l(t('Edit'), 'admin/build/path_redirect/edit/'. $r->rid, array('query' => $destination))),
-      array('data' => l(t('Delete'), 'admin/build/path_redirect/delete/'. $r->rid, array('query' => $destination))),
+      array('data' => l(t('test'), $r->path, array())),
+      array('data' => l(t('edit'), 'admin/build/path-redirect/edit/'. $r->rid, array('query' => $destination))),
+      array('data' => l(t('delete'), 'admin/build/path-redirect/delete/'. $r->rid, array('query' => $destination))),
     );
     $count++;
   }
@@ -76,7 +76,7 @@ function path_redirect_admin($rid = FALSE, $op = FALSE) {
   }
 
   $output = theme('table', $header, $rows);
-  $output .= '<p>'. l(t('Add new redirect'), 'admin/build/path_redirect/add') .'</p>';
+  $output .= '<p>'. l(t('Add new redirect'), 'admin/build/path-redirect/add') .'</p>';
   $output .= theme('pager');
 
   return $output;
@@ -89,8 +89,10 @@ function path_redirect_admin_form(&$form_state, $edit = array('path' => '', 'red
     '#type' => 'textfield',
     '#title' => t('From'),
     '#description' => t('Enter a Drupal path or path alias to redirect. Query strings <em>?foo=bar</em> and fragment anchors <em>#baz</em> are <strong>not</strong> allowed.'),
+    '#size' => 42,
     '#maxlength' => 255,
     '#default_value' => $edit['path'],
+    '#field_prefix' => url(NULL, array('absolute' => TRUE)) . (variable_get('clean_url', 0) ? '' : '?q='),
   );
 
   $form['redirect'] = array(
@@ -141,7 +143,7 @@ function path_redirect_admin_form(&$form_state, $edit = array('path' => '', 'red
     '#collapsed' => ($edit['type'] == $default_type),
   );
 
-  foreach (path_redirect_error_list() as $key => $info) {
+  foreach (path_redirect_status_codes() as $key => $info) {
     $form['type'][]['type'] = array(
       '#type' => 'radio',
       '#title' => $info['title'],
@@ -178,7 +180,7 @@ function path_redirect_admin_form_validate($form, &$form_state) {
     // The "from" path should not conflict with another redirect
     $result = path_redirect_load(NULL, preg_replace('/[?#].*/', '', $form_state['values']['path']));
     if ($result && (!$form_state['values']['rid'] || ($form_state['values']['rid'] !== $result['rid']))) {
-      $path_error .= ' '. t('The <strong>from</strong> path you entered is already redirected. You can <a href="@edit-page">edit this redirect</a> instead.', array('@edit-page' => url('admin/build/path_redirect/edit/'. $result['rid'])));
+      $path_error .= ' '. t('The <strong>from</strong> path you entered is already redirected. You can <a href="@edit-page">edit this redirect</a> instead.', array('@edit-page' => url('admin/build/path-redirect/edit/'. $result['rid'])));
     }
     // Check that the "from" path is valid and contains no # or ?
     if (strstr($form_state['values']['path'], '#')) {
@@ -218,7 +220,7 @@ function path_redirect_admin_form_validate($form, &$form_state) {
 function path_redirect_admin_form_submit($form, &$form_state) {
   path_redirect_save($form_state['values']);
   drupal_set_message(t('Redirect has been saved.'));
-  drupal_goto('admin/build/path_redirect');
+  drupal_goto('admin/build/path-redirect');
 }
 
 function path_redirect_admin_delete_confirm($form_state, $rid) {
@@ -227,7 +229,7 @@ function path_redirect_admin_delete_confirm($form_state, $rid) {
     $redirect = path_redirect_load($rid);
     $output = confirm_form($form,
       t('Are you sure you want to delete the redirect from %path to %redirect?', array('%path' => $redirect['path'], '%redirect' => $redirect['redirect'])),
-      isset($_GET['destination']) ? $_GET['destination'] : 'admin/build/path_redirect');
+      isset($_GET['destination']) ? $_GET['destination'] : 'admin/build/path-redirect');
   }
   return $output;
 }
@@ -240,11 +242,11 @@ function path_redirect_admin_delete_confirm_submit($form, $form_state) {
 }
 
 /**
- * Return an array of 300-range error codes
+ * Return an array of 300-range status codes
  * placed here for clarity
  */
-function path_redirect_error_list() {
-  $errors = array(
+function path_redirect_status_codes() {
+  $codes = array(
     300 => array('title' => t('300 Multiple Choices'), 'description' => t('The request is ambiguous and needs clarification as to which resource was requested.')),
     301 => array('title' => t('301 Moved Permanently'), 'description' => t('Moved Permanently. The resource has permanently moved elsewhere, the response indicates where it has gone to. <strong>Recommended.</strong>')),
     302 => array('title' => t('302 Found'), 'description' => t("The resource has temporarily moved elsewhere, the response indicates where it is at present. <strong>This is Drupal's default redirect type.</strong>")),
@@ -254,5 +256,5 @@ function path_redirect_error_list() {
     307 => array('title' => t('307 Temporary Redirect'), 'description' => t('The resource has temporarily moved elsewhere, the response indicates where it is at present. Client should still use this URL.')),
   );
 
-  return $errors;
+  return $codes;
 }
