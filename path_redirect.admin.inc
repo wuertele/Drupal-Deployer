@@ -2,48 +2,9 @@
 //$Id$
 
 /**
- * Menu callback for edit pages
+ * Render a list of redirects for the main admin page.
  */
-function path_redirect_admin_edit($rid = 0) {
-  if ($rid) {
-    $redirect = path_redirect_load($pid);
-    drupal_set_title(check_plain($redirect['path']));
-    $output = drupal_get_form('path_redirect_admin_form', $alias);
-  }
-  else {
-    $output = drupal_get_form('path_redirect_admin_form');
-  }
-
-  return $output;
-}
-
-/**
- * Callback for administration pages
- *
- * @param $rid
- *  redirect id
- * @param $op
- *  operation: edit, delete
- * @return
- *  themed output for page
- */
-function path_redirect_admin($rid = FALSE, $op = FALSE) {
-  if ($rid) {
-    $breadcrumbs = array(l(t('Home'), '/'), l(t('Administer'), 'admin'), l(t('URL redirects'), 'admin/build/path-redirect'));
-    $rid = db_escape_string($rid);
-    $redirect = path_redirect_load($rid);
-    if ($redirect && $op != 'delete') {
-      drupal_set_breadcrumb($breadcrumbs);
-      return drupal_get_form('path_redirect_admin_form', $redirect);
-    }
-    elseif ($redirect && $op == 'delete') {
-      return drupal_get_form('path_redirect_delete_confirm', $redirect);
-    }
-    else {
-      drupal_not_found();
-    }
-  }
-
+function path_redirect_admin($rid = FALSE) {
   $header = array(
     array('data' => t('From'), 'field' => 'path', 'sort' => 'asc'),
     array('data' => t('To'), 'field' => 'redirect'),
@@ -64,7 +25,7 @@ function path_redirect_admin($rid = FALSE, $op = FALSE) {
       $path,
       check_url($redirect . $query . $fragment),
       $types[$r->type]['title'],
-      array('data' => l(t('test'), $r->path, array())),
+      array('data' => l(t('test'), preg_replace('/\?.*/', '', $r->path), array('query' => strstr($r->path, '?') ? preg_replace('/.*\?/', '', $r->path) : NULL))),
       array('data' => l(t('edit'), 'admin/build/path-redirect/edit/'. $r->rid, array('query' => $destination))),
       array('data' => l(t('delete'), 'admin/build/path-redirect/delete/'. $r->rid, array('query' => $destination))),
     );
@@ -75,20 +36,39 @@ function path_redirect_admin($rid = FALSE, $op = FALSE) {
     $rows[] = array(array('data' => t('No redirects have been defined.'), 'colspan' => '6'));
   }
 
-  $output = theme('table', $header, $rows);
+  $output = theme('table', $header, $rows, array('class' => 'path-redirects'));
   $output .= '<p>'. l(t('Add new redirect'), 'admin/build/path-redirect/add') .'</p>';
   $output .= theme('pager');
 
   return $output;
 }
 
-function path_redirect_admin_form(&$form_state, $edit = array('path' => '', 'redirect' => '', 'query' => '', 'fragment' => '', 'type' => '301', 'rid' => NULL)) {
+/**
+ * Callback for add and edit pages.
+ *
+ * @return
+ *   A form for drupal_get_form.
+ */
+function path_redirect_edit($form_state, $rid = FALSE) {
+  if ($rid) {
+    $redirect = path_redirect_load($rid);
+    drupal_set_title(check_plain($redirect['path']));
+    $output = path_redirect_edit_form($form_state, $redirect);
+  }
+  else {
+    drupal_set_title(t('Add redirect'));
+    $output = path_redirect_edit_form($form_state);
+  }
+  return $output;
+}
+
+function path_redirect_edit_form(&$form_state, $edit = array('path' => '', 'redirect' => '', 'query' => '', 'fragment' => '', 'type' => '301', 'rid' => NULL)) {
   $default_type = 301;
 
   $form['path'] = array(
     '#type' => 'textfield',
     '#title' => t('From'),
-    '#description' => t('Enter a Drupal path or path alias to redirect. Query strings <em>?foo=bar</em> and fragment anchors <em>#baz</em> are <strong>not</strong> allowed.'),
+    '#description' => t('Enter a Drupal path or path alias to redirect. Fragment anchors <em>#foo</em> are <strong>not</strong> allowed.'),
     '#size' => 42,
     '#maxlength' => 255,
     '#default_value' => $edit['path'],
@@ -170,7 +150,7 @@ function path_redirect_admin_form(&$form_state, $edit = array('path' => '', 'red
   return $form;
 }
 
-function path_redirect_admin_form_validate($form, &$form_state) {
+function path_redirect_edit_validate($form, &$form_state) {
   if (trim($form_state['values']['path']) == '') {
     form_set_error('path', t('You must enter a <strong>from</strong> path.'));
   }
@@ -178,17 +158,13 @@ function path_redirect_admin_form_validate($form, &$form_state) {
     $path_error = '';
 
     // The "from" path should not conflict with another redirect
-    $result = path_redirect_load(NULL, preg_replace('/[?#].*/', '', $form_state['values']['path']));
+    $result = path_redirect_load(NULL, $form_state['values']['path']);
     if ($result && (!$form_state['values']['rid'] || ($form_state['values']['rid'] !== $result['rid']))) {
       $path_error .= ' '. t('The <strong>from</strong> path you entered is already redirected. You can <a href="@edit-page">edit this redirect</a> instead.', array('@edit-page' => url('admin/build/path-redirect/edit/'. $result['rid'])));
     }
-    // Check that the "from" path is valid and contains no # or ?
+    // Check that the "from" path is valid and contains no # fragment
     if (strstr($form_state['values']['path'], '#')) {
       $path_error .= ' '. t('You cannot redirect from a fragment anchor.');
-    }
-    // No query string allowed in "from" (but see #174961)
-    if (strstr($form_state['values']['path'], '?')) {
-      $path_error .= ' '. t('You cannot currently include a query in your redirect <strong>from</strong> path.');
     }
     // Make sure "from" has the form of a local Drupal path
     if (!valid_url($form_state['values']['path'])) {
@@ -217,24 +193,24 @@ function path_redirect_admin_form_validate($form, &$form_state) {
   $form_state['values']['path'] = str_replace("+", " ", $form_state['values']['path']);
 }
 
-function path_redirect_admin_form_submit($form, &$form_state) {
+function path_redirect_edit_submit($form, &$form_state) {
   path_redirect_save($form_state['values']);
   drupal_set_message(t('Redirect has been saved.'));
   drupal_goto('admin/build/path-redirect');
 }
 
-function path_redirect_admin_delete_confirm($form_state, $rid) {
-  if (user_access('administer redirects')) {
-    $form['rid'] = array('#type' => 'value', '#value' => $rid);
-    $redirect = path_redirect_load($rid);
-    $output = confirm_form($form,
-      t('Are you sure you want to delete the redirect from %path to %redirect?', array('%path' => $redirect['path'], '%redirect' => $redirect['redirect'])),
-      isset($_GET['destination']) ? $_GET['destination'] : 'admin/build/path-redirect');
-  }
-  return $output;
+function path_redirect_delete_confirm($form_state, $rid) {
+  $form['rid'] = array(
+    '#type' => 'value',
+    '#value' => $rid,
+  );
+  $redirect = path_redirect_load($rid);
+  return confirm_form($form,
+    t('Are you sure you want to delete the redirect from %path to %redirect?', array('%path' => $redirect['path'], '%redirect' => $redirect['redirect'])),
+    isset($_GET['destination']) ? $_GET['destination'] : 'admin/build/path-redirect');
 }
 
-function path_redirect_admin_delete_confirm_submit($form, $form_state) {
+function path_redirect_delete_confirm_submit($form, $form_state) {
   if ($form_state['values']['confirm']) {
     path_redirect_delete(NULL, NULL, $form_state['values']['rid']);
     drupal_set_message(t('The redirect has been deleted.'));
@@ -249,9 +225,9 @@ function path_redirect_status_codes() {
   $codes = array(
     300 => array('title' => t('300 Multiple Choices'), 'description' => t('The request is ambiguous and needs clarification as to which resource was requested.')),
     301 => array('title' => t('301 Moved Permanently'), 'description' => t('Moved Permanently. The resource has permanently moved elsewhere, the response indicates where it has gone to. <strong>Recommended.</strong>')),
-    302 => array('title' => t('302 Found'), 'description' => t("The resource has temporarily moved elsewhere, the response indicates where it is at present. <strong>This is Drupal's default redirect type.</strong>")),
+    302 => array('title' => t('302 Found'), 'description' => t('The resource has temporarily moved elsewhere, the response indicates where it is at present. <strong>This is Drupal\'s default redirect type.</strong>')),
     303 => array('title' => t('303 See Other'), 'description' => t('See Other/Redirect. A preferred alternative source should be used at present.')),
-    304 => array('title' => t('304 Not Modified'), 'description' => t("The server has identified from the request information that the client's copy of the information is up-to-date and the requested information does not need to be sent again.")),
+    304 => array('title' => t('304 Not Modified'), 'description' => t('The server has identified from the request information that the client\'s copy of the information is up-to-date and the requested information does not need to be sent again.')),
     305 => array('title' => t('305 Use Proxy'), 'description' => t('The request must be sent through the indicated proxy server.')),
     307 => array('title' => t('307 Temporary Redirect'), 'description' => t('The resource has temporarily moved elsewhere, the response indicates where it is at present. Client should still use this URL.')),
   );
