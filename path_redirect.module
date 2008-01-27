@@ -1,6 +1,9 @@
 <?php
 //$Id$
 
+// The default HTTP status code for redirects is "moved permanently"
+define('PATH_REDIRECT_DEFAULT_TYPE', 301);
+
 /**
  * Implementation of hook_help
  */
@@ -100,6 +103,16 @@ function path_redirect_perm() {
 }
 
 function path_redirect_save($edit) {
+  if (empty($edit['type'])) {
+    $edit['type'] = PATH_REDIRECT_DEFAULT_TYPE;
+  }
+  if (empty($edit['query'])) {
+    $edit['query'] = '';
+  }
+  if (empty($edit['fragment'])) {
+    $edit['fragment'] = '';
+  }
+
   if (!empty($edit['rid'])) {
     $return = db_query("UPDATE {path_redirect} SET path = '%s', redirect = '%s', query = '%s', fragment = '%s', type = %d WHERE rid = %d", $edit['path'], $edit['redirect'], $edit['query'], $edit['fragment'], $edit['type'], $edit['rid']);
   }

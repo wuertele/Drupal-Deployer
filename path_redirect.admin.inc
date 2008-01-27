@@ -62,9 +62,7 @@ function path_redirect_edit($form_state, $rid = FALSE) {
   return $output;
 }
 
-function path_redirect_edit_form(&$form_state, $edit = array('path' => '', 'redirect' => '', 'query' => '', 'fragment' => '', 'type' => '301', 'rid' => NULL)) {
-  $default_type = 301;
-
+function path_redirect_edit_form(&$form_state, $edit = array('path' => '', 'redirect' => '', 'query' => '', 'fragment' => '', 'type' => PATH_REDIRECT_DEFAULT_TYPE, 'rid' => NULL)) {
   $form['path'] = array(
     '#type' => 'textfield',
     '#title' => t('From'),
@@ -120,7 +118,7 @@ function path_redirect_edit_form(&$form_state, $edit = array('path' => '', 'redi
     '#type' => 'fieldset',
     '#title' => t('Redirect Type'),
     '#collapsible' => true,
-    '#collapsed' => ($edit['type'] == $default_type),
+    '#collapsed' => ($edit['type'] == PATH_REDIRECT_DEFAULT_TYPE),
   );
 
   foreach (path_redirect_status_codes() as $key => $info) {
