@@ -34,7 +34,11 @@ function path_redirect_init() {
     $path = preg_replace('/\?.*/', '', $path);
     $r = db_fetch_object(db_query("SELECT redirect, query, fragment, type FROM {path_redirect} WHERE path = '%s' OR path = '%s'", $path, utf8_encode($path)));
   }
-  if ($r) {
+  if ($r && variable_get('path_redirect_allow_bypass', 0)
+      && (empty($_GET['redirect']) || $_GET['redirect'] !== 'no')) {
+    if (variable_get('path_redirect_redirect_warning', 0)) {
+      drupal_set_message(t('This page has been moved. You may want to update your bookmarks.'));     
+    }                
     if (function_exists('drupal_goto')) {
       // if there's a result found, do the redirect
       unset($_REQUEST['destination']);
@@ -44,6 +48,9 @@ function path_redirect_init() {
       // page caching is turned on so drupal_goto() (common.inc) hasn't been loaded
       path_redirect_goto($r->redirect, ($r->query ? $r->query: NULL), ($r->fragment ? $r->fragment : NULL), $r->type);
     }
+  }
+  else if ($r && variable_get('path_redirect_allow_bypass', 0) && !empty($_GET['redirect']) && $_GET['redirect'] === 'no') {      
+    drupal_set_message(t('This page is redirected to:'). ' <code>'.  l($r->redirect, $r->redirect, array('query' => ($r->query ? $r->query: NULL), 'fragment' => ($r->fragment ? $r->fragment : NULL))). '</code>'); 
   }
 }
 
@@ -90,6 +97,14 @@ function path_redirect_menu() {
     'page arguments' => array('path_redirect_delete_confirm'),
     'access arguments' => array('administer redirects'),
     'type' => MENU_CALLBACK,
+    'file' => 'path_redirect.admin.inc',
+  );
+  $items['admin/settings/path-redirect'] = array(
+    'title' => 'URL redirects',
+    'description' => t('Configure behavior for URL redirects'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('path_redirect_settings'),
+    'access arguments' => array('administer redirects'),
     'file' => 'path_redirect.admin.inc',
   );
   return $items;

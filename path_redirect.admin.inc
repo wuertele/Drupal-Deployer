@@ -215,6 +215,26 @@ function path_redirect_delete_confirm_submit($form, $form_state) {
   }
 }
 
+function path_redirect_settings() {
+  $form['path_redirect_redirect_warning'] = array(
+    '#type' => 'radios',
+    '#title' => t('Warn on redirect'),
+    '#default_value' => variable_get('path_redirect_redirect_warning', 0),
+    '#options' => array(t('Disabled'), t('Enabled')),
+    '#description' => t('Display a warning message to users when a redirect takes place.'),
+  );
+
+  $form['path_redirect_allow_bypass'] = array(
+    '#type' => 'radios',
+    '#title' => t('Allow bypassing'),
+    '#default_value' => variable_get('path_redirect_allow_bypass', 0),
+    '#options' => array(t('Disabled'), t('Enabled')),
+    '#description' => t('Allow users to bypass redirects by appending <code>?redirect=no</code> to the URL.'),
+  );
+
+  return system_settings_form($form);
+}
+
 /**
  * Return an array of 300-range status codes
  * placed here for clarity
