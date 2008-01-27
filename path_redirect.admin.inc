@@ -1,5 +1,5 @@
 <?php
-//$Id$
+// $Id$
 
 /**
  * Render a list of redirects for the main admin page.

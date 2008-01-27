@@ -1,5 +1,5 @@
 <?php
-//$Id$
+// $Id$
 
 // The default HTTP status code for redirects is "moved permanently"
 define('PATH_REDIRECT_DEFAULT_TYPE', 301);
@@ -25,7 +25,7 @@ function path_redirect_help($path, $arg) {
  */
 function path_redirect_init() {
   // see if this page has a redirect path
-  $path = substr($_SERVER['REQUEST_URI'], strlen(base_path()));
+  $path = substr(request_uri(), strlen(base_path()));
   if (preg_match('/^\?q=/', $path)) {
     $path = preg_replace(array('/^\?q=/', '/&/'), array('', '?'), $path, 1);
   }
@@ -50,7 +50,7 @@ function path_redirect_init() {
     }
   }
   else if ($r && variable_get('path_redirect_allow_bypass', 0) && !empty($_GET['redirect']) && $_GET['redirect'] === 'no') {      
-    drupal_set_message(t('This page is redirected to:'). ' <code>'.  l($r->redirect, $r->redirect, array('query' => ($r->query ? $r->query: NULL), 'fragment' => ($r->fragment ? $r->fragment : NULL))). '</code>'); 
+    drupal_set_message(t('This page is redirected to:') .' <code>'. l($r->redirect, $r->redirect, array('query' => ($r->query ? $r->query: NULL), 'fragment' => ($r->fragment ? $r->fragment : NULL))) .'</code>'); 
   }
 }
 
@@ -143,7 +143,8 @@ function path_redirect_save($edit) {
 function path_redirect_load($rid = NULL, $from = NULL) {
   if (!empty($rid)) {
     $result = db_fetch_array(db_query("SELECT rid, path, redirect, query, fragment, type FROM {path_redirect} WHERE rid = %d", $rid));
-  } else if (!empty($from)) {
+  }
+  else if (!empty($from)) {
     $result = db_fetch_array(db_query("SELECT rid, path, redirect, query, fragment, type FROM {path_redirect} WHERE path = '%s'", $from));
   }
   return $result;
@@ -194,11 +195,11 @@ function path_redirect_goto($path = '', $query = NULL, $fragment = NULL, $http_r
   // Make the given path or URL absolute
   if (!preg_match('/^[a-z]+:\/\//', $url)) {
     global $base_url;
-    $url = $base_url . '/' . $url;
+    $url = $base_url .'/'. $url;
   }
 
-  $url .= (empty($query)    ? '' : '?' . $query);
-  $url .= (empty($fragment) ? '' : '#' . $fragment);
+  $url .= (empty($query)    ? '' : '?'. $query);
+  $url .= (empty($fragment) ? '' : '#'. $fragment);
 
   // Remove newlines from the URL to avoid header injection attacks.
   $url = str_replace(array("\n", "\r"), '', $url);
