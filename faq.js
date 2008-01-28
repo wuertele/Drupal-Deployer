@@ -1,3 +1,4 @@
+/* $Id$ */
 if (Drupal.jsEnabled) {
   $(document).ready(function () {
     // hide/show answer to question
