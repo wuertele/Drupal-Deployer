@@ -12,6 +12,17 @@ function faq_schema() {
     'primary key' => array('nid', 'tid'),
   );
 
+  $schema['faq_questions'] = array(
+    'description' => t('A table containing the long question text of each faq node revision.'),
+    'fields' => array(
+      'nid' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0, 'description' => t('The primary identifier for a node.')),
+      'vid' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0, 'description' => t('The primary identifier for a node revision.')),
+      'question' => array('type' => 'text', 'size' => 'normal', 'not null' => TRUE, 'description' => t('The faq long question text.')),
+    ),
+    'primary key' => array('nid', 'vid'),
+  );
+
+
   return $schema;
 }
 
@@ -61,6 +72,7 @@ function faq_uninstall() {
 
 function faq_update_1() {
   $schema['faq_weights'] = array(
+    'description' => t('A table containing the weight of each faq node by category.'),
     'fields' => array(
       'tid' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
       'nid' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
@@ -75,4 +87,21 @@ function faq_update_1() {
   return $ret;
 }
 
+function faq_update_2() {
+  $schema['faq_questions'] = array(
+    'description' => t('A table containing the long question text of each faq node revision.'),
+    'fields' => array(
+      'nid' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0, 'description' => t('The primary identifier for a node.')),
+      'vid' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0, 'description' => t('The primary identifier for a node revision.')),
+      'question' => array('type' => 'text', 'size' => 'normal', 'not null' => TRUE, 'description' => t('The faq long question text.')),
+    ),
+    'primary key' => array('nid', 'vid'),
+  );
 
+  $ret = array();
+  db_create_table($ret, 'faq_questions', $schema['faq_questions']);
+
+  $result = db_query("INSERT INTO {faq_questions} (nid, vid, question) SELECT r.nid, r.vid, r.title FROM {node_revisions} r, {node} n WHERE n.nid = r.nid AND n.type = 'faq'");
+
+  return $ret;
+}

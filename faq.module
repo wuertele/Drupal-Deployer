@@ -163,11 +163,12 @@ function faq_form(&$node) {
 
   // question
   $form['title'] = array(
-    '#type' => 'textfield',
+    '#type' => 'textarea',
     '#title' => check_plain($type->title_label),
-    '#default_value' => $node->title,
+    '#default_value' => empty($node->question) ? $node->title : $node->question,
     '#required' => TRUE,
     '#weight' => 0,
+    '#rows' => 3,
     '#description' => t('Question to be answered'),
   );
 
@@ -178,9 +179,39 @@ function faq_form(&$node) {
   return $form;
 }
 
+
+function faq_insert($node) {
+  $ret = db_query("INSERT INTO {faq_questions} (nid, vid, question) VALUES(%d, %d, '%s')", $node->nid, $node->vid, $node->title);
+}
+
+function faq_update($node) {
+  if ($node->revision) {
+    faq_insert($node);
+  }
+  else {
+    db_query("UPDATE {faq_questions} SET question = '%s' WHERE nid = %d AND vid = %d", $node->title, $node->nid, $node->vid);
+  }
+}
+
 function faq_delete(&$node) {
   db_query("DELETE FROM {faq_weights} WHERE nid = '%d'", $node->nid);   
+  db_query("DELETE FROM {faq_questions} WHERE nid = '%d'", $node->nid);   
 }
+
+function faq_load($node) {
+  $result = db_fetch_object(db_query('SELECT question FROM {faq_questions} WHERE nid = %d', $node->nid));
+  $node->question = $result->question;
+  $node->title = $node->question;
+}
+
+function faq_nodeapi(&$node, $op, $teaser, $page) {
+  switch ($op) {
+    case 'delete revision':
+      db_query('DELETE FROM {faq_questions} WHERE nid = %d AND vid = %d', $node->nid, $node->vid);
+      break;
+  }
+}
+
 
 function faq_view($node, $teaser = FALSE, $page = FALSE) {
 
@@ -459,13 +490,14 @@ function faq_weight_settings_form($form_state) {
       $date_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d 'WHERE n.type='faq' AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $category);
     } 
     else {
-      $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON r.nid = n.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d' WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight ASC, n.sticky DESC, n.created DESC", "n", "nid"), $category, $category);
-      $date_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON r.nid = n.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d' WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $category, $category);
+      $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d' WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight ASC, n.sticky DESC, n.created DESC", "n", "nid"), $category, $category);
+      $date_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d' WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $category, $category);
     }
 
 
     while ($node = db_fetch_object($result)) {
-      $options[$node->nid] = $node->title;
+      $title = (strlen($node->title) <= 64) ? $node->title : substr_replace($node->title, "...", 63);
+      $options[$node->nid] = $title;
       $order .= "$node->nid,";
     }
     $order = rtrim($order, ",");
@@ -613,7 +645,7 @@ function faq_page($tid = 0) {
 
   // non-categorized questions and answers
   if (!$use_categories) {
-    $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid LEFT JOIN {faq_weights} w ON w.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND (w.tid = 0 OR w.tid IS NULL) ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"));
+    $result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {faq_weights} w ON w.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND (w.tid = 0 OR w.tid IS NULL) ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"));
 
     switch ($faq_display) {
       case 'questions_top':
@@ -638,7 +670,7 @@ function faq_page($tid = 0) {
 
   // categorize questions
   else {
-    $category_display=variable_get('faq_category_display', 'categories_inline');
+    $category_display = variable_get('faq_category_display', 'categories_inline');
     $hide_sub_categories = variable_get('faq_hide_sub_categories', FALSE);
     $output .= "<br />";
 
@@ -650,8 +682,7 @@ function faq_page($tid = 0) {
       if ($category_display == 'hide_qa') {
         drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
       }
-      _display_faq_by_category($faq_display, $category_display, $term, 0, 
-        $output, $output_answers);
+      _display_faq_by_category($faq_display, $category_display, $term, 0, $output, $output_answers);
       $output = '<div class="content"><div class="faq">'. $output;
       $output .= $output_answers .'</div></div>';
       return $output;
@@ -687,8 +718,7 @@ function faq_page($tid = 0) {
 
             case 'categories_inline':
               if (taxonomy_term_count_nodes($term->tid, 'faq')) {
-                _display_faq_by_category($faq_display, $category_display, $term,
-                  1, $output, $output_answers);
+                _display_faq_by_category($faq_display, $category_display, $term, 1, $output, $output_answers);
               }
               break;
 
@@ -721,8 +751,8 @@ function faq_page($tid = 0) {
 
 function _display_faq_by_category($faq_display, $category_display, $term, $display_header, &$output, &$output_answers) {
 
-  $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $term->tid);
-  $result_copy = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $term->tid);
+  $result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $term->tid);
+  $result_copy = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $term->tid);
 
   $display_vars['display_header'] = $display_header;
   $display_vars['faq_display'] = $faq_display;
@@ -851,14 +881,14 @@ function template_preprocess_faq_questions_top(&$variables) {
   $questions = array();
   $answers = array();
   $key = 0;
-  while ($node = db_fetch_object($result)) {
-    $node_obj = node_load($node->nid);
-    if (node_access("view", $node_obj)) {
+  while ($row = db_fetch_object($result)) {
+    $node = node_load($row->nid);
+    if (node_access("view", $node)) {
       $anchor = "n". $node->nid;
-      $questions[$key] = l($node->title, 'faq', array('fragment' => $anchor));
+      $questions[$key] = l($node->question, 'faq', array('fragment' => $anchor));
 
 
-      $answers[$key]['link'] = l($node->title, "node/$node->nid", array("attributes" => array("name" => "$anchor")));
+      $answers[$key]['link'] = l($node->question, "node/$node->nid", array("attributes" => array("name" => "$anchor")));
 
       // should we display teaser or full text
       if ($display_vars['use_teaser']) {
@@ -982,7 +1012,7 @@ function template_preprocess_faq_category_questions_top(&$variables) {
     foreach ($list as $tid => $sub_term) {
       $sub_term->depth = $term->depth + 1;
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
+        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
         $display_vars['display_header'] = 1;
         $sub_cat_htmls[] = theme('faq_category_questions_top', $sub_result, $display_vars, $sub_term, $variables['class']);
       }
@@ -997,15 +1027,15 @@ function template_preprocess_faq_category_questions_top(&$variables) {
 
   $questions = array();
   $nodes = array();
-  while ($node = db_fetch_object($result)) {
-    $node_obj = node_load($node->nid);
-    if (node_access("view", $node_obj)) {
+  while ($row = db_fetch_object($result)) {
+    $node = node_load($row->nid);
+    if (node_access("view", $node)) {
       if (!$display_vars['hide_sub_categories']) {
         $count++;
       }
       $anchor = $term->tid ."n". $node->nid;
       $node_var = array();
-      $node_var['link'] = l($node->title, "node/$node->nid", array("attributes" => array("name" => "$anchor")));
+      $node_var['link'] = l($node->question, "node/$node->nid", array("attributes" => array("name" => "$anchor")));
 
       // Should we display teaser or full text?
       if ($display_vars['use_teaser']) {
@@ -1019,7 +1049,7 @@ function template_preprocess_faq_category_questions_top(&$variables) {
       }
 
       $nodes[] = $node_var;
-      $questions[] = l($node->title, $this_page, array('fragment' => $anchor));
+      $questions[] = l($node->question, $this_page, array('fragment' => $anchor));
     }
   }
   $variables['question_count'] = $count;
@@ -1084,7 +1114,7 @@ function template_preprocess_faq_category_questions_top_answers(&$variables) {
     foreach ($list as $tid => $sub_term) {
       $sub_term->depth = $term->depth + 1;
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
+        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
         $display_vars['display_header'] = 1;
         $sub_cat_htmls[] = theme('faq_category_questions_top_answers', $sub_result, $display_vars, $sub_term, $variables['class']);
       }
@@ -1094,12 +1124,12 @@ function template_preprocess_faq_category_questions_top_answers(&$variables) {
 
 
   $nodes = array();
-  while ($node = db_fetch_object($result)) {
-    $node_obj = node_load($node->nid);
-    if (node_access("view", $node_obj)) {
+  while ($row = db_fetch_object($result)) {
+    $node = node_load($row->nid);
+    if (node_access("view", $node)) {
       $anchor = $term->tid ."n". $node->nid;
       $node_var = array();
-      $node_var['link'] = l($node->title, "node/$node->nid", array("attributes" => array("name" => "$anchor")));
+      $node_var['link'] = l($node->question, "node/$node->nid", array("attributes" => array("name" => "$anchor")));
 
       // Should we display teaser or full text?
       if ($display_vars['use_teaser']) {
@@ -1133,10 +1163,10 @@ function template_preprocess_faq_hide_answer(&$variables) {
 
   $nodes = array();
   $count = 0;
-  while ($node = db_fetch_object($result)) {
-    $node_obj = node_load($node->nid);
-    if (node_access("view", $node_obj)) {
-      $nodes[$count]['link'] = l($node->title, "node/$node->nid");
+  while ($row = db_fetch_object($result)) {
+    $node = node_load($row->nid);
+    if (node_access("view", $node)) {
+      $nodes[$count]['link'] = l($node->question, "node/$node->nid");
       // should we display teaser or full text
       if ($display_vars['use_teaser']) {
         $more_link = '';
@@ -1240,7 +1270,7 @@ function template_preprocess_faq_category_hide_answer(&$variables) {
     foreach ($list as $tid => $sub_term) {
       $sub_term->depth = $term->depth + 1;
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
+        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
         $display_vars['display_header'] = 1;
         $sub_cat_htmls[] = theme('faq_category_hide_answer', $sub_result, $display_vars, $sub_term, $variables['class']);
       }
@@ -1254,14 +1284,14 @@ function template_preprocess_faq_category_hide_answer(&$variables) {
   }
 
   $nodes = array();
-  while ($node = db_fetch_object($result)) {
-    $node_obj = node_load($node->nid);
-    if (node_access("view", $node_obj)) {
+  while ($row = db_fetch_object($result)) {
+    $node = node_load($row->nid);
+    if (node_access("view", $node)) {
       if (!$display_vars['hide_sub_categories']) {
         $count++;
       }
       $node_var = array();
-      $node_var['link'] = l($node->title, "node/$node->nid");
+      $node_var['link'] = l($node->question, "node/$node->nid");
 
       // Should we display teaser or full text?
       if ($display_vars['use_teaser']) {
@@ -1305,10 +1335,10 @@ function template_preprocess_faq_questions_inline(&$variables) {
 
   $nodes = array();
   $count = 0;
-  while ($node = db_fetch_object($result)) {
-    $node_obj = node_load($node->nid);
-    if (node_access("view", $node_obj)) {
-      $nodes[$count]['link'] = l($node->title, "node/$node->nid");
+  while ($row = db_fetch_object($result)) {
+    $node = node_load($row->nid);
+    if (node_access("view", $node)) {
+      $nodes[$count]['link'] = l($node->question, "node/$node->nid");
 
       // Should we display teaser or full text?
       if ($display_vars['use_teaser']) {
@@ -1427,7 +1457,7 @@ function template_preprocess_faq_category_questions_inline(&$variables) {
     foreach ($list as $tid => $sub_term) {
       $sub_term->depth = $term->depth + 1;
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
+        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
         $display_vars['display_header'] = 1;
         $sub_cat_htmls[] = theme('faq_category_questions_inline', $sub_result, $display_vars, $sub_term, $variables['class']);
       }
@@ -1441,14 +1471,14 @@ function template_preprocess_faq_category_questions_inline(&$variables) {
   }
 
   $nodes = array();
-  while ($node = db_fetch_object($result)) {
-    $node_obj = node_load($node->nid);
-    if (node_access("view", $node_obj)) {
+  while ($row = db_fetch_object($result)) {
+    $node = node_load($row->nid);
+    if (node_access("view", $node)) {
       if (!$display_vars['hide_sub_categories']) {
         $count++;
       }
       $node_var = array();
-      $node_var['link'] = l($node->title, "node/$node->nid");
+      $node_var['link'] = l($node->question, "node/$node->nid");
 
       // Should we display teaser or full text?
       if ($display_vars['use_teaser']) {
@@ -1471,11 +1501,11 @@ function template_preprocess_faq_category_questions_inline(&$variables) {
 
 function template_preprocess_faq_new_page(&$variables) {
   $items = array();
-  while ($node = db_fetch_object($variables['result'])) {
-    $node_obj = node_load($node->nid);
-    if (node_access("view", $node_obj)) {
+  while ($row = db_fetch_object($variables['result'])) {
+    $node = node_load($row->nid);
+    if (node_access("view", $node)) {
       // The l() function is considered to be safe for user input.
-      $items[] = l($node->title, "node/$node->nid");
+      $items[] = l($node->question, "node/$node->nid");
     }
   }
   $list_style = variable_get('faq_question_listing', 'ul');
@@ -1563,7 +1593,7 @@ function template_preprocess_faq_category_new_page(&$variables) {
     foreach ($list as $tid => $sub_term) {
       $sub_term->depth = $term->depth + 1;
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, r.body, r.teaser, r.format, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
+        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n INNER JOIN {term_node} tn ON n.nid = tn.nid LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
         $display_vars['display_header'] = 1;
         $sub_cat_htmls[] = theme('faq_category_new_page', $sub_result, $display_vars, $sub_term, $variables['class']);
       }
@@ -1577,13 +1607,13 @@ function template_preprocess_faq_category_new_page(&$variables) {
   }
 
   $nodes = array();
-  while ($node = db_fetch_object($result)) {
-    $node_obj = node_load($node->nid);
-    if (node_access("view", $node_obj)) {
+  while ($row = db_fetch_object($result)) {
+    $node = node_load($row->nid);
+    if (node_access("view", $node)) {
       if (!$display_vars['hide_sub_categories']) {
         $count++;
       }
-      $nodes[] = l($node->title, "node/$node->nid");
+      $nodes[] = l($node->question, "node/$node->nid");
     }
   }
   $variables['question_list'] = $nodes;
@@ -1693,14 +1723,14 @@ function faq_block($op = 'list', $delta = 0, $edit = array()) {
 
 function theme_faq_highlights($num = 5) {
 
-  $result = db_query_range(db_rewrite_sql("SELECT n.nid, n.title FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid WHERE n.type='faq' AND n.status = 1 ORDER BY n.created DESC", "n", "nid"), 0, $num);
+  $result = db_query_range(db_rewrite_sql("SELECT n.nid FROM {node} n WHERE n.type='faq' AND n.status = 1 ORDER BY n.created DESC", "n", "nid"), 0, $num);
 
   $items = array();
-  while ($node = db_fetch_object($result)) {
-    $node = node_load(array('nid' => $node->nid));
+  while ($row = db_fetch_object($result)) {
+    $node = node_load(array('nid' => $row->nid));
     $node = node_prepare($node);
     if (node_access("view", $node)) {
-      $items[] = l($node->title, 'node/'. $node->nid);
+      $items[] = l($node->question, 'node/'. $node->nid);
     }
   }
   $list_style = variable_get('faq_question_listing', 'ul');
@@ -1712,14 +1742,14 @@ function theme_faq_highlights($num = 5) {
 
 function theme_faq_random_highlights($num = 5) {
 
-  $result = db_query_range(db_rewrite_sql("SELECT n.nid, n.title FROM {node} n LEFT JOIN {node_revisions} r ON n.nid = r.nid AND r.vid = n.vid WHERE n.type='faq' AND n.status = 1 ORDER BY RAND()", "n", "nid"), 0, $num);
+  $result = db_query_range(db_rewrite_sql("SELECT n.nid FROM {node} n WHERE n.type='faq' AND n.status = 1 ORDER BY RAND()", "n", "nid"), 0, $num);
 
   $items = array();
-  while ($node = db_fetch_object($result)) {
-    $node = node_load(array('nid' => $node->nid));
+  while ($row = db_fetch_object($result)) {
+    $node = node_load(array('nid' => $row->nid));
     $node = node_prepare($node);
     if (node_access("view", $node)) {
-      $items[] = l($node->title, 'node/'. $node->nid);
+      $items[] = l($node->question, 'node/'. $node->nid);
     }
   }
   $list_style = variable_get('faq_question_listing', 'ul');
@@ -1807,11 +1837,11 @@ function faq_get_faq_list() {
 
   // otherwise return list of weighted FAQ nodes
   $items = array();
-  $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {faq_weights} w ON w.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND (w.tid = 0 OR w.tid IS NULL) ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"));
-  while ($node = db_fetch_object($result)) {
-    $node_obj = node_load($node->nid);
-    if (node_access("view", $node_obj)) {
-      $items[] = l($node->title, "node/$node->nid");
+  $result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), 0, w.weight) as weight FROM {node} n LEFT JOIN {faq_weights} w ON w.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND (w.tid = 0 OR w.tid IS NULL) ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"));
+  while ($row = db_fetch_object($result)) {
+    $node = node_load($row->nid);
+    if (node_access("view", $node)) {
+      $items[] = l($node->question, "node/$node->nid");
     }
   }
 
