@@ -12,7 +12,7 @@ alter menu items.
 For a full description visit the project page:
   http://drupal.org/project/admin_menu
 Bug reports, feature suggestions and latest developments:
-  http://drupal.org/project/admin_menu/issues
+  http://drupal.org/project/issues/admin_menu
 
 
 -- REQUIREMENTS --
