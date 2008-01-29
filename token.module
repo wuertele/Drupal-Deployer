@@ -167,7 +167,7 @@ function token_replace($original, $type = 'global', $object = NULL, $leading = '
  *   An array of substitution classes and optional objects. The key is
  *   a flag indicating the class of substitution tokens to use.
  *   If an object is passed as value, the key should contain the
- *   object's type. For example, 'node', 'comment', or 'user'. The 
+ *   object's type. For example, 'node', 'comment', or 'user'. The
  *   object will be used for building substitution values. If no type
  *   is specified, only 'global' site-wide substitution tokens are built.
  * @param leading
@@ -226,7 +226,9 @@ function token_get_values($type = 'global', $object = NULL, $flush = FALSE, $opt
 
   // Since objects in PHP5 are always passed by reference, we ensure we're
   // working on a copy of the object.
-  $object = drupal_clone($object);
+  if (is_object($object)) {
+    $object = drupal_clone($object);
+  }
 
   // Simple recursion check. This is to avoid content_view()'s potential
   // for endless looping when a filter uses tokens, which load the content
@@ -239,7 +241,7 @@ function token_get_values($type = 'global', $object = NULL, $flush = FALSE, $opt
     $result->values = array();
     return $result;
   }
-  
+
   $running = TRUE;
 
   token_include();
