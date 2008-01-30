@@ -185,9 +185,9 @@ function _project_issue_comment_table($comment_changes) {
   foreach ($comment_changes as $field => $change) {
     if (!empty($change['label']) && isset($change['old']) && isset($change['new'])) {
       $rows[] = array(
-        $change['label']. ':',
-        project_issue_change_summary($field, $change['old']),
-        '&raquo; '. project_issue_change_summary($field, $change['new']),
+        check_plain($change['label']) .':',
+        check_plain(project_issue_change_summary($field, $change['old'])),
+        '&raquo; '. check_plain(project_issue_change_summary($field, $change['new'])),
       );
     }
   }
