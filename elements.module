@@ -1,0 +1,86 @@
+<?php
+// $Id$
+
+/**
+ * Provide a list of additional form element-types.
+ *
+ * Implementation of hook_elements.
+ *
+ * @return array
+ *   An array of element types.
+ */
+function elements_elements() {
+  $types['tableselect'] = array('#input' => TRUE, '#advanced_select' => TRUE, '#multiple' => TRUE, '#process' => array('_elements_expand_tableselect' => array()));
+  $type['imagebutton'] = array('#input' => TRUE, '#button_type' => 'submit',);
+  return $types;
+}
+
+
+function theme_imagebutton($element) {
+  return '<input type="image" class="form-'. $element['#button_type'] .'" name="'. $element['#name'] .'" value="'. check_plain($element['#default_value']) .'" '. drupal_attributes($element['#attributes']) . ' src="' . $element['#image'] . '" alt="' . $element['#title'] . '" title="' . $element['#title'] . "\" />\n";
+}
+
+function imagebutton_value() {
+  // null function guarantees default_value doesn't get moved to #value.
+}
+
+/**
+ * Create the right amount of checkboxes or radios to populate the table.
+ *
+ * @param unknown_type $element
+ * @return unknown
+ */
+function _elements_expand_tableselect($element) {
+
+  if ($element['#multiple']) {
+    $value = is_array($element['#value']) ? $element['#value'] : array();
+  }
+  else {
+    // Advanced select is only possible if #multiple is true.
+    $element['#advanced_select'] = FALSE;
+  }
+
+  $element['#tree'] = TRUE;
+
+  if (count($element['#options']) > 0) {
+    if (!isset($element['#default_value']) || $element['#default_value'] === 0) {
+      $element['#default_value'] = array();
+    }
+
+    foreach ($element['#options'] as $key => $choice) {
+      if ($element['#multiple']) {
+        $element[$key] = array('#type' => 'checkbox', '#processed' => TRUE, '#title' => '', '#return_value' => $key, '#default_value' => isset($value[$key]), '#attributes' => $element['#attributes']);
+      }
+      else {
+        $element[$key] = array('#type' => 'radio', '#title' => '', '#return_value' => $key, '#default_value' => ($element['#default_value'] == $key) ? $key : NULL, '#attributes' => $element['#attributes'], '#parents' => $element['#parents'], '#spawned' => TRUE);
+      }
+    }
+  }
+  return $element;
+}
+
+/**
+ * Generate a table with radios or checkboxes in the first column.
+ *
+ * @param unknown_type $element
+ * @return unknown
+ */
+function theme_tableselect($element) {
+  $rows = array();
+  foreach ($element['#options'] as $key => $value) {
+    $row = array();
+    if ($element['#multiple']) {
+      $row[] = theme('checkbox', $element[$key]);
+    }
+    else {
+      $row[] = theme('radio', $element[$key]);
+    }
+    foreach ($element['#header'] as $fieldname => $title) {
+      $row[] = $element['#options'][$key][$fieldname];
+    }
+    $rows[] = $row;
+  }
+  $first_col = $element['#advanced_select'] ? array(theme('table_select_header_cell')) : array('');
+  $header = array_merge($first_col, $element['#header']);
+  return theme('table', $header, $rows);
+}
