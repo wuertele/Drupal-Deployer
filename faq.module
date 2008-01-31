@@ -420,6 +420,26 @@ function faq_categories_settings_form() {
     '#default_value' => variable_get('faq_show_cat_sub_cats', FALSE),
   );
 
+  $form['faq_category_advanced'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Advanced category settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $vocab_options = array();
+  $vocabularies = taxonomy_get_vocabularies('faq');
+  foreach ($vocabularies as $vid => $vobj) {
+    $vocab_options[$vid] = $vobj->name;
+  }
+  $form['faq_category_advanced']['faq_omit_vocabulary'] = array(
+    '#type' => 'select',
+    '#title' => t('Omit vocabulary'),
+    '#description' => t("Terms from these vocabularies will be excluded from the FAQ pages."),
+    '#default_value' => variable_get('faq_omit_vocabulary', 0),
+    '#options' => $vocab_options,
+    '#multiple' => TRUE,
+  );
+
   return system_settings_form($form);
 }
 
@@ -451,7 +471,7 @@ function faq_weight_settings_form($form_state) {
   if ($step == "categories") {
 
     // get list of categories
-    $vocabularies = taxonomy_get_vocabularies("faq");
+    $vocabularies = taxonomy_get_vocabularies('faq');
     $options = array();
     foreach ($vocabularies as $vid => $vobj) {
       $tree = taxonomy_get_tree($vid);
@@ -675,7 +695,7 @@ function faq_page($tid = 0) {
     $output .= "<br />";
 
 
-    // if we're viewing a specific category germ
+    // if we're viewing a specific category/term
     if (!empty($tid) && $term = taxonomy_get_term($tid)) {
       $title = t(variable_get('faq_title', 'Frequently Asked Questions'));
       drupal_set_title($title . ($title ? ' - ' : '') . check_plain($term->name));
@@ -690,7 +710,9 @@ function faq_page($tid = 0) {
 
 
     $list_style = variable_get('faq_category_listing', 'ul');
-    $vocabularies = taxonomy_get_vocabularies("faq");
+    $vocabularies = taxonomy_get_vocabularies('faq');
+    $vocab_omit = variable_get('faq_omit_vocabulary', array());
+    $vocabularies = array_diff_key($vocabularies, $vocab_omit);
     $items = array();
     $vocab_items = array();
     foreach ($vocabularies as $vid => $vobj) {
@@ -1638,7 +1660,10 @@ function faq_block($op = 'list', $delta = 0, $edit = array()) {
           // FAQ Categories
           if (module_exists("taxonomy")) {
             $terms = array();
-            foreach (taxonomy_get_vocabularies('faq') as $vocab) {
+            $vocabularies = taxonomy_get_vocabularies('faq');
+            $vocab_omit = variable_get('faq_omit_vocabulary', array());
+            $vocabularies = array_diff_key($vocabularies, $vocab_omit);
+            foreach ($vocabularies as $vocab) {
               foreach (taxonomy_get_tree($vocab->vid) as $term) {
                 if (taxonomy_term_count_nodes($term->tid, 'faq')) {
                   $terms[$term->name] = $term->tid;
@@ -1820,7 +1845,9 @@ function faq_get_terms() {
   $display_vars['faq_count'] = variable_get('faq_count', FALSE);
   $display_vars['hide_sub_categories'] = variable_get('faq_hide_sub_categories', FALSE);
   $items = array();
-  $vocabularies = taxonomy_get_vocabularies("faq");
+  $vocabularies = taxonomy_get_vocabularies('faq');
+  $vocab_omit = variable_get('faq_omit_vocabulary', array());
+  $vocabularies = array_diff_key($vocabularies, $vocab_omit);
   foreach ($vocabularies as $vid => $vobj) {
     $vocab_items = _get_indented_faq_terms($vid, 0, $display_vars);
     $items = array_merge($items, $vocab_items);
@@ -1857,21 +1884,23 @@ function faq_site_map() {
   return theme('box', $title, $output);
 }
 
-function faq_link_alter(&$links, &$node) {
+function faq_link_alter(&$links, $node) {
   if (!variable_get('faq_use_categories', FALSE) || !module_exists("taxonomy")) {
     return;
   }
-  $vocabularies = taxonomy_get_vocabularies("faq");
+  $vocabularies = taxonomy_get_vocabularies('faq');
+  $vocab_omit = variable_get('faq_omit_vocabulary', array());
+  $vocabularies = array_diff_key($vocabularies, $vocab_omit);
   foreach ($links as $module => $link) {
     if (strstr($module, 'taxonomy_term')) {
       // Link back to the faq and not the taxonomy term page. We'll only
       // do this if the taxonomy term in question belongs to faq vocab.
-      $tid = str_replace('taxonomy germ/', '', $link['href']);
+      $tid = str_replace('taxonomy/term/', '', $link['href']);
       $term = taxonomy_get_term($tid);
       if (!is_object($term)) return;
       foreach ($vocabularies as $vid => $vobj) {
         if ($term->vid == $vid && taxonomy_term_count_nodes($term->tid, 'faq')) {
-          $links[$module]['href'] = str_replace('taxonomy germ', 'faq', $link['href']);
+          $links[$module]['href'] = str_replace('taxonomy/term', 'faq', $link['href']);
           break;
         }
       }
