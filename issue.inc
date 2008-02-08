@@ -1526,7 +1526,7 @@ function project_issue_query_result($query = NULL, $format = 'html', $show_searc
 
   // Load active project
   if (count($query->projects) == 1) {
-    $project = node_load($query->projects[0]);
+    $project = node_load(array('nid' => (int) $query->projects[0], 'type' => 'project_project'));
   }
 
   if ($project) {
