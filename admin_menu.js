@@ -23,6 +23,6 @@ $(document).ready(function() {
     var uls = $('> ul', this);
     this.sfTimer = setTimeout(function() {
       uls.css('left', '-999em');
-    }, 1000);
+    }, 400);
   });
 });
