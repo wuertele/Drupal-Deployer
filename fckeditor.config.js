@@ -75,4 +75,4 @@ var _QuickUploadLanguage	= 'php' ;
 FCKConfig.IndentClasses = ['rteindent1','rteindent2','rteindent3','rteindent4'] ;
 
 // [ Left, Center, Right, Justified ]
-FCKConfig.JustifyClasses = ['rteleft','rtecenter','rteright','rtejustified'] ;
+FCKConfig.JustifyClasses = ['rteleft','rtecenter','rteright','rtejustify'] ;

@@ -4,6 +4,7 @@ var fckIsLaunching = new Array;
 var fckLaunchedTextareaId = new Array;
 var fckLaunchedJsId = new Array;
 var fckFirstrun = new Array;
+var fckIsIE = ( /*@cc_on!@*/false ) ? true : false ;
 
 function Toggle(js_id, textareaID, textTextarea, TextRTE)
 {
@@ -34,7 +35,6 @@ function Toggle(js_id, textareaID, textTextarea, TextRTE)
     document.getElementById('switch_' + js_id).innerHTML = textTextarea;
 
     // Switch the DIVs display.
-    eTextarea.style.display = 'none';
     eFCKeditorDiv.style.display = '';
 
     text = eTextarea.value;
@@ -47,6 +47,7 @@ function Toggle(js_id, textareaID, textTextarea, TextRTE)
     if ( text.length ) {
       oEditor.SetHTML( text, false);
     }
+    eTextarea.style.display = 'none';
 
     // This is a hack for Gecko 1.0.x ... it stops editing when the editor is hidden.
     if (oEditor && !document.all)
@@ -130,6 +131,7 @@ function FCKeditor_OnComplete( editorInstance )
         }
         else {
           $('#edit-teaser-js').val('');
+          $('#edit-teaser-js').attr('disabled', 'disabled');
           document.getElementById( fckLaunchedTextareaId[i] ).value = text;
           if ($('input[@class=teaser-button]').attr('value') == Drupal.t('Join summary')) {
             try {$('input[@class=teaser-button]').click();} catch(e) {$('input[@class=teaser-button]').val(Drupal.t('Join summary'));}
@@ -144,6 +146,9 @@ function FCKeditor_OnComplete( editorInstance )
   $('#edit-teaser-js').parent().hide();
   $('#edit-teaser-include').parent().show();
 
+	//Img_Assist integration
+	//IntegrateWithImgAssist();
+	  
   // -- some hacks for IE
   var oldCheckAndRemovePaddingNode = editorInstance.EditorWindow.parent.FCKDomTools.CheckAndRemovePaddingNode ;
 
@@ -168,4 +173,14 @@ function FCKeditor_OnComplete( editorInstance )
   }
   // -- some hacks for IE
 }
-
+/*
+function IntegrateWithImgAssist()
+{
+	var link = document.getElementsByTagName("a");
+	for (var i = 0; i < link.length; i++) {
+		cl = link[i].getAttribute("class");
+		if ( cl == "img_assist-link") {
+			link[i].href = link[i].href.replace("/load/textarea", "/load/fckeditor");
+		}
+	}
+}*/

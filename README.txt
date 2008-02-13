@@ -8,11 +8,6 @@ This HTML text editor brings many of the powerful functions of known
 desktop editors like Word to the web. It's relatively lightweight and
 doesn't require any kind of installation on the client computer.
 
-Compatibility
--------------
-The integrated File Browser needs a bit of manual configuration,
-more information about this in the included in this readme.txt file
-
 Required components
 -------------------
 To use FCKeditor in Drupal, you will need to download the FCKeditor
@@ -28,6 +23,7 @@ Licensed under the terms of the GNU Lesser General Public License:
 
 For further information visit:
     http://www.fckeditor.net/
+    http://drupal.fckeditor.net
 
 Requirements
 ------------
@@ -35,171 +31,113 @@ Requirements
   - PHP 4.3.0 or greater
   - FCKeditor 2.3.x or greater (http://www.fckeditor.net/)
 
-Installation
-------------
-  1. Copy the module fckeditor folder to modules/.
-  2. Download FCKeditor from http://www.fckeditor.net and copy
-     the distribution files (the contents of the "fckeditor" directory
-     from the FCKeditor distribution file) to
-     modules/fckeditor/fckeditor.
-     
-     A quick check to see if it is correct: the files 'COPY_HERE.txt',
-     'fckconfig.js' and also the directory 'editor' must exist in the
-     same directory,
-     
-     The correct directory structure is as follows:
-     
-      modules
-      |--fckeditor
-         |--fckeditor
-            |--_samples
-            |--editor
-     
-  3. See 'How to enable the File Browser' for additional instructions.
-
-     Also read the security note in this readme
-
-     Alternatives to the built-in file browser are the IMCE module and
-     copying the image url into the url textfield.
-
 Configuration
--------------
-  1. Modify the fckeditor.config.js file to customize the toolbars to
-     your needs (optional).
+-------------------
+   1. Enable the module as usual from Drupal's admin pages.
+   2. Grant permissions for use of FCKeditor in Administer > User Management > Access Control
+   3. Under Administer > Settings > FCKeditor, create the fckeditor profiles. 
+      In each profile you can choose which textareas will be replaced by FCKeditor, 
+      select default toolbar and configure some more advanced settings
+   4. For the Rich Text Editing to work you also need to configure your filters for the users that may access Rich Text Editing. 
+      Either grant those users Full HTML access or use the following:
+      <a> <p> <span> <div> <h1> <h2> <h3> <h4> <h5> <h6> <img> <map> <area> <hr> 
+      <br> <br /> <ul> <ol> <li> <dl> <dt> <dd> <table> <tr> <td> <em> <b> <u> <i> <strong> 
+      <font> <del> <ins> <sub> <sup> <quote> <blockquote> <pre> <address> <code> 
+      <cite> <embed> <object> <strike> <caption>.
+   5. To have a better control over line breaks, you may disable Line break converter in the chosen filter (recommended).
+   6. Modify the fckeditor.config.js file to custom your needs (optional).
+      You may copy the needed configuration lines from the default FCKeditor configuration settings (modules/fckeditor/fckeditor/fckconfig.js), 
+      the lines in fckeditor.config.js will override most settings.
 
-     You may also copy the needed configuration lines from the default
-     FCKeditor configuration settings
-     (modules/fckeditor/fckeditor/fckconfig.js), the lines in
-     fckeditor.config.js will override most settings.
+Installation troubleshooting
+----------------------------
+If your FCKeditor does not show you must check if all files are extracted correctly. 
+The directory /drupal5b/modules/fckeditor/fckeditor/ should have the following files:
+fckeditor.js, fckconfig.js, fckstyles.xml, fcktemplates.xml and a directory named editor.
+The correct directory structure is as follows:
 
-     It is not advised to change the default toolbars in the
-     configuration settings (modules/fckeditor/fckeditor/fckconfig.js)
-     because those are included in the FCKeditor package and might
-     change without notice when you update the editor.
-  
-  2. Enable the module as usual from Drupal's admin pages.
-  
-  3. Grant permissions for use of FCKeditor in
-     Administer > User Management > Access Control
-     
-  4. Under Administer > Settings > FCKeditor, create the fckeditor
-     profiles. In each profile you can choose which textareas will be replaced by
-     FCKeditor, select default toolbar and configure some more advanced
-     settings.
+    modules
+       fckeditor
+          fckeditor.module
+          fckeditor
+             _samples
+             editor
+             COPY_HERE.txt
+             fckconfig.js
+             ...
 
-  5. For the Rich Text Editing to work you also need to configure your
-     filters for the users that may access Rich Text Editing. Either
-     grant those users Full HTML access or use the following:                   
-      
-      <a> <p> <span> <div> <h1> <h2> <h3> <h4> <h5> <h6> <img> <map> <area> 
-      <hr> <br> <br /> <ul> <ol> <li> <dl> <dt> <dd> <table> <tr> <td> <em> 
-      <b> <u> <i> <strong> <font> <del> <ins> <sub> <sup> <quote> <blockquote> 
-      <pre> <address> <code> <cite> <embed> <object> <strike> <caption>
-      
-  6. To have a better control over line breaks, you may disable "Line break converter" 
-     in the chosen filter.
-      
-How to enable the File Browser 
----------------------------------------------------
-The editor gives the end user the flexibility to create a custom file
-browser that can be integrated on it. The included file browser allows
-users to view the content of a specific directory on the server and
-add new content to that directory (create folders and upload files).
-
-To enable the file browser you need to edit the connector
-configuration file in your fckeditor module directory, the file should
-be in:
-/modules/fckeditor/fckeditor/editor/filemanager/browser/default/connectors/php/config.php
-and
-/modules/fckeditor/fckeditor/editor/filemanager/upload/php/config.php
-(FCKeditor 2.3.x - 2.4.x)
-
-or
-
-/modules/fckeditor/fckeditor/editor/filemanager/connectors/php/config.php
-(FCKeditor 2.5+)
-
-In this file you will need to enable the file browser:
-$Config['Enabled'] = true ;
-
-To use the drupal files directory you also need to adjust the following 
-variables in the connector configuration:
-  $Config['UserFilesPath']
-and:
-  $Config['UserFilesAbsolutePath']
-    
-Furthermore, you will need to create a "File", "Image", "Flash" and
-"Media" subdirectory in your drupal files directory. These directories
-must have the same privileges as the drupal files directory. In some
-cases these directories must be world writable (chmod 0777).
-
-Security
---------
-Note that enabling file uploads is a security risk. That's why there
-is a separate permission in Administer > Access Control for enabling
-the file browser to certain groups.
-
-Making File Browser more secure
--------------------------------
-Please be aware that enabling file browser simply by setting
- $Config['Enabled'] = true ;
-theoretically enables it for each user (with a little bit of hackery, 
-it is possible to use file browser without appropiate Drupal permissions).
-The more secure way of enabling file browser:
-
-  1. instead of setting
-       $Config['Enabled'] = true ;
-     add the following code: 
-
-       $drupal_path = "../../../../../../../../..";
-       if(!file_exists($drupal_path . '/includes/bootstrap.inc')) {
-         $drupal_path = "../..";
-         do {
-           $drupal_path .= "/..";
-           $depth = substr_count($drupal_path, "..");
-           false;
-         }
-         while(!($bootstrapFileFound = file_exists($drupal_path . '/includes/bootstrap.inc')) && $depth<10);
-       }
-       if (!isset($bootstrapFileFound) || $bootstrapFileFound) {
-         $cwd = getcwd();
-         chdir($drupal_path);
-         require_once './includes/bootstrap.inc';
-         drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
-         $Config['Enabled'] = user_access('allow fckeditor file uploads');
-         chdir($cwd);
-       }
-
-     straight after 
-       $Config['Enabled'] = false ;
-         
-     This code enables file browser only to users that have "allow fckeditor file uploads" permission.
-     note: if you don't set $drupal_path correctly, FCKeditor will find it out by itself.
-  
-  2. as of Drupal 5.2, additional step is required:
-     locate file named settings.php inside your drupal directory
-     (usually sites/default/settings.php)
-     and set $cookie_domain variable to the appropiate domain.
-     (remember to uncomment that line)
-     
 Plugins: Teaser break and Pagebreak
 -----------------------------------
-By default, FCKeditor module comes with two plugins that can handle teaser break (<!--break-->) and pagebreak (<!--pagebreak-->).
+By default, FCKeditor module comes with two plugins that can handle teaser break (<!--break-->) and pagebreak (<!--pagebreak-->). 
 You can enable any (or even both) of them.
-To do this, open fckeditor.config.js and uncomment these three lines:
 
-	FCKConfig.PluginsPath = '../../plugins/' ;
-	FCKConfig.Plugins.Add( 'drupalbreak' ) ;
-	FCKConfig.Plugins.Add( 'drupalpagebreak' ) 
-	
-The second step is to add the buttons to toolbar (in the same file).
-The button names are: DrupalBreak, DrupalPageBreak;
+   1. Open /drupal5b/modules/fckeditor/fckeditor.config.js and uncomment these three lines:
 
-For example if you have a toolbar with an array of buttons defined as follows:
-  ['Image','Flash','Table','Rule','SpecialChar']
-simply add those two buttons at the end of array:
-  ['Image','Flash','Table','Rule','SpecialChar', 'DrupalBreak', 'DrupalPageBreak']
-(remember about single quotes).
+            FCKConfig.PluginsPath = '../../plugins/' ;
+            FCKConfig.Plugins.Add( 'drupalbreak' ) ;
+            FCKConfig.Plugins.Add( 'drupalpagebreak' ) ;
+            
+
+   2. The second step is to add buttons to the toolbar (in the same file). 
+      The button names are: DrupalBreak, DrupalPageBreak. 
+      For example if you have a toolbar with an array of buttons defined as follows:
+
+      ['Image','Flash','Table','Rule','SpecialChar']
+
+      simply add those two buttons at the end of array:
+
+      ['Image','Flash','Table','Rule','SpecialChar', 'DrupalBreak', 'DrupalPageBreak']
+
+      (remember about single quotes).
+
+Uploading images and files
+--------------------------
+
+There are three ways of uploading files: By using the built-in file browser, by using a module like IMCE or using the core upload module.
+
+How to enable the file browser
+------------------------------
+The editor gives the end user the flexibility to create a custom file browser that can be integrated on it. 
+The included file browser allows users to view the content of a specific directory on 
+the server and add new content to that directory (create folders and upload files).
+
+   1. To enable file browsing you need to edit the connector configuration file in your fckeditor module directory, the file should be in:
+
+          /drupal5b/modules/fckeditor/fckeditor/editor/filemanager/connectors/php/config.php
+          (FCKeditor 2.5+)
+
+          or
+
+          /drupal5b/modules/fckeditor/fckeditor/editor/filemanager/browser/default/connectors/php/config.php
+          and
+          /drupal5b/modules/fckeditor/fckeditor/editor/filemanager/upload/php/config.php
+          (FCKeditor 2.3.x - 2.4.x)
+
+      In this file(s) you will need to enable the file browser by adding one line that includes file with the special authentication function for Drupal (filemanager.config.php). Add this code:
+
+          require_once "../../../../../filemanager.config.php";
+          (FCKeditor 2.5+)
+
+      or
+
+          require_once "D:\\xampp\\htdocs\\drupal5b\\modules\\fckeditor\\filemanager.config.php"
+          (FCKeditor 2.3.x - 2.4.x)
+
+      straight below this line:
+
+          $Config['UserFilesAbsolutePath'] = '' ;
+
+      The config.php file also holds some other important settings, please take a look at it and adjust it to your needs (optional).
+      
+   2. As of Drupal 5.2, additional step is required: locate file named settings.php inside 
+      your drupal directory (usually sites/default/settings.php) and set $cookie_domain variable to the appropiate domain (remember to uncomment that line). If you not do this, FCKeditor will claim that file browser is disabled
+   3. Enabling file uploads is a security risk. That's why you have to grant a separate permission to enable the file browser to certain groups.
+   4. Lastly, adjust the File browser settings for each profile.
+
+Modules: Image Assist
+---------------------
+Image Assist can be integrated with FCKeditor. 
+To do this, simply copy the modules/fckeditor/img_assist_fckeditor.js file to modules/img_assist/img_assist_fckeditor.js.
 
 Help & Contribution
 -------------------
