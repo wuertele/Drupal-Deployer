@@ -76,7 +76,7 @@ function amazon_perm() {
 function amazon_theme() {
   return array(
     'amazon_item' => array(
-      'arguments' => array('item' => array(), 'detail' => 'summary', 'imagesize' => 'none'),
+      'arguments' => array('item' => array(), 'variation' => 'overview'),
       'template' => 'amazon-item',
     ),
   );
@@ -84,7 +84,7 @@ function amazon_theme() {
 
 function amazon_preprocess_amazon_item(&$variables) {
   $item = $variables['item'];
-  
+
   // Do a quick cycle through the simple keys on the item, check_plain() them,
   // and stick them in the variables collection.
   foreach($item as $key => $value) {
@@ -111,18 +111,12 @@ function amazon_preprocess_amazon_item(&$variables) {
     }
   }
 
-  if ($variables['imagesize'] != 'none') {
-    $image_key = $variables['imagesize'] .'image';
-    $variables['image'] = $variables[$image_key];
-  }
-  else {
-    $variables['image'] = '';
-  }
+  $variables['image'] = $variables['mediumimage'];
 
   // A set of more specific templates to use when displaying items.
-  $variables['template_files'][] = 'amazon-item-'. $variables['detail'];
+  $variables['template_files'][] = 'amazon-item-'. $variables['variation'];
   $variables['template_files'][] = 'amazon-item-'. strtolower($variables['type']);
-  $variables['template_files'][] = 'amazon-item-'. strtolower($variables['type']) .'-'. $variables['detail'];
+  $variables['template_files'][] = 'amazon-item-'. strtolower($variables['type']) .'-'. $variables['variation'];
 }
 
 
@@ -161,11 +155,19 @@ function amazon_http_request($operation, $parameters = array(), $locale = NULL) 
   $url = $locale_data['url'] .'?'. implode('&', $params);
   // Make the request and return a SimpleXML object.
   $results = drupal_http_request($url, array(), 'GET');
-  $xml = new SimpleXMLElement($results->data);
-  return $xml;
+  if ($results->code == '200') {
+    $xml = new SimpleXMLElement($results->data);
+    return $xml;
+  }
+  else {
+    return FALSE;
+  }
 }
 
-function amazon_item_lookup($item_ids = array(), $force_lookup = TRUE) {
+function amazon_item_lookup($item_ids = array(), $force_lookup = FALSE) {
+  if (empty($item_ids)) {
+    return array();
+  }
   if (is_string($item_ids)) {
     $item_ids = array($item_ids);
   }
@@ -185,39 +187,56 @@ function amazon_item_lookup($item_ids = array(), $force_lookup = TRUE) {
 }
 
 function amazon_item_lookup_from_web($item_ids = array()) {
-  $params = array(
-    'ItemId' => implode(',', $item_ids),
-    'ResponseGroup' => 'Large',
-  );
-  $results = amazon_http_request('ItemLookup', $params);
-  if (!empty($results->Error)) {
-    return FALSE;
+  // We do this to avoid bombing Amazon.com with 1000 item requests.
+  $amazon_limit = 10;
+  $asins = array();
+  $results = array();
+  foreach ($item_ids as $asin) {
+    $asins[] = $asin;
+    if (count($asins) >= $amazon_limit || count($asins) == count($item_ids)) {
+      $results += _amazon_item_batch_lookup_from_web($asins);
+      $asins = array();
+    }
   }
-  $items = array();
-  foreach($results->Items->Item as $xml) {
-    $item = amazon_item_clean_xml($xml);
-    amazon_item_save($item);
-    $items[$item['asin']] = $item;
-  }
+  return $results;
+}
 
-  return $items;
+function _amazon_item_batch_lookup_from_web($item_ids = array()) {
+  if (!empty($item_ids)) {
+    $params = array(
+      'ItemId' => implode(',', $item_ids),
+      'ResponseGroup' => 'Large',
+    );
+    $results = amazon_http_request('ItemLookup', $params);
+    if (!empty($results->Error)) {
+      return FALSE;
+    }
+    $items = array();
+    foreach($results->Items->Item as $xml) {
+      $item = amazon_item_clean_xml($xml);
+      amazon_item_save($item);
+      $items[$item['asin']] = $item;
+    }
+
+    return $items;
+  }
+  return array();
 }
 
 function amazon_item_lookup_from_db($item_ids = array()) {
-  $sql = "SELECT * FROM {amazon_item} ai WHERE ai.asin IN (''";
-  $params = array();
-  foreach ($item_ids as $item_id) {
-    $query .= ", '%s'";
-    $params[] = $item_id;
+  if (!empty($item_ids)) {
+    $sql  = "SELECT * FROM {amazon_item} ai WHERE ai.asin IN (";
+    $sql .= implode(',', array_fill(0, count($item_ids), "'%s'")) .')';
+    $results = db_query($sql, $item_ids);
+    $items = array();
+    while ($item = db_fetch_array($results)) {
+      _amazon_load_child_data($item);
+      $item += module_invoke_all('amazon_item_load', $item);
+      $items[$item['asin']] = $item;
+    }
+    return $items;
   }
-  $results = db_query($sql, $params);
-  $return = array();
-  while ($object = db_fetch_object($results)) {
-    _amazon_load_child_data($object);
-    module_invoke_all('amazon_item_load', $object);
-    $return[$object->asin] = $object;
-  }
-  return $return;
+  return array();
 }
 
 function _amazon_load_child_data(&$item) {
@@ -229,12 +248,12 @@ function _amazon_load_child_data(&$item) {
 
   $result = db_query("SELECT * FROM {amazon_item_image} WHERE asin = '%s'", $item['asin']);
   while ($image = db_fetch_array($result)) {
-    $object['imagesets'][$image['size']] = $image;
+    $item['imagesets'][$image['size']] = $image;
   }
 
   $result = db_query("SELECT * FROM {amazon_item_editorial_review} WHERE asin = '%s'", $item['asin']);
   while ($review = db_fetch_array($result)) {
-    $object['editorialreviews'][] = $review;
+    $item['editorialreviews'][] = $review;
   }
 }
 
@@ -375,9 +394,9 @@ function amazon_item_delete($asin, $silent = FALSE) {
  * Utility functions for managing AmazonItem/Node relationships
  */
 
-function amazon_item_node_save($asin, $nid, $module = 'amazon', $weight = 0) {
+function amazon_item_node_save($asin, $node, $module = 'amazon', $weight = 0) {
   amazon_item_node_delete($asin, $nid, $module);
-  db_query("INSERT INTO {amazon_item_node} (asin, nid, module, weight) VALUES ('%s', %d, '%s', %d)", $asin, $nid, $module, $weight);
+  db_query("INSERT INTO {amazon_item_node} (asin, vid, nid, module, weight) VALUES ('%s', %d, '%s', %d)", $asin, $nid, $module, $weight);
 }
 
 function amazon_item_node_delete($asin = NULL, $nid = NULL, $module = NULL) {
@@ -474,9 +493,9 @@ function amazon_get_associate_id() {
 
 function amazon_cron() {
   // Here, we're going to chug through all the existing ASINs and update them.
-  // We'll grab 20 at a time to avoid thrashing things.
+  // We'll grab 50 at a time to avoid thrashing things.
   $sql = "SELECT asin FROM {amazon_item} WHERE timestamp < %d";
-  $result = db_query_range($sql, time() - variable_get('amazon_refresh_schedule', 86400), 1, 20);
+  $result = db_query_range($sql, time() - variable_get('amazon_refresh_schedule', 86400), 0, 50);
   $asins = array();
 
   while($item = db_fetch_array($result)) {

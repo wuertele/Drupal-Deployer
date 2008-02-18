@@ -22,8 +22,4 @@
  * - $variation: The level of detail requested by the calling function.
  */
 ?>
-<div class="amazon-item amazon-item-field amazon-item-<?php print strtolower($type); ?>">
-<?php print l($image, $detailpageurl, array('class' => 'amazon-image-link', 'html' => TRUE, 'absolute' => TRUE)); ?>
-<div class="amazon-item-title"><?php print $title ?></div>
-<div class="amazon-item-participants"><?php if($participants) { print 'by '. implode(', ', $participants); } ?></div>
-</div>
+<span class="amazon-item amazon-item-<?php print strtolower($type); ?>"><?php print l($title, $detailpageurl, array('class' => 'amazon-link')); ?><?php if($participants) { print ' (by '. implode(', ', $participants) .')'; } ?></span>
