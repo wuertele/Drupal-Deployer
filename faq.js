@@ -4,7 +4,7 @@ if (Drupal.jsEnabled) {
     // hide/show answer to question
     $('div.faq_dd_hide_answer').hide();
     $('div.faq_dt_hide_answer').click(function() {
-      $(this).next('div.faq_dd_hide_answer').toggle();
+      $(this).next('div.faq_dd_hide_answer').slideToggle();
       return false;
     });
 
@@ -12,7 +12,7 @@ if (Drupal.jsEnabled) {
     // hide/show q/a for a category
     $('div.faq_qa_hide').hide();
     $('div.faq_qa_header .faq_header').click(function() {
-      $(this).parent().next('div.faq_qa_hide').toggle();
+      $(this).parent().next('div.faq_qa_hide').slideToggle();
       return false;
     });
 
