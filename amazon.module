@@ -74,12 +74,34 @@ function amazon_perm() {
 }
 
 function amazon_theme() {
-  return array(
+  $templates = array(
     'amazon_item' => array(
-      'arguments' => array('item' => array(), 'variation' => 'overview'),
-      'template' => 'amazon-item',
+      'arguments' => array('item' => array(), 'style' => 'default'),
+      'file' => 'amazon.theme.inc',
+    ),
+    'amazon_item_default' => array(
+      'arguments' => array('item' => array()),
+      'pattern' => 'amazon_item__',
+      'file' => 'amazon.theme.inc',
+    ),
+    'amazon_item_full' => array(
+      'arguments' => array('item' => array()),
+      'pattern' => 'amazon_item_full__',
+      'file' => 'amazon.theme.inc',
+    ),
+    'amazon_item_inline' => array(
+      'arguments' => array('item' => array()),
+      'pattern' => 'amazon_item_inline__',
+      'file' => 'amazon.theme.inc',
+    ),
+    'amazon_item_thumbnail' => array(
+      'arguments' => array('item' => array()),
+      'pattern' => 'amazon_item_thumbnail__',
+      'file' => 'amazon.theme.inc',
     ),
   );
+  $templates += drupal_find_theme_functions($templates, array('theme'));
+  return $templates;
 }
 
 function amazon_preprocess_amazon_item(&$variables) {
@@ -121,8 +143,13 @@ function amazon_preprocess_amazon_item(&$variables) {
 
 
 function _amazon_clean_type($type) {
-  return check_plain(strtolower(str_replace(array('ABIS_', '_', ' '), array('', '-', '-'), $type)));
+  return check_plain(strtolower(str_replace(array('ABIS_', ' '), array('', '_'), $type)));
 }
+
+function _amazon_item_classes($item) {
+  return 'amazon-item amazon-item-'. str_replace('_', '-', _amazon_clean_type($item['producttypename']));
+}
+
 
 function amazon_http_request($operation, $parameters = array(), $locale = NULL) {
   if (!isset($locale)) {
