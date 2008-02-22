@@ -26,7 +26,7 @@ function amazon_menu() {
     'description' => 'Global settings for the Amazon Ecommerce API.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('amazon_settings_form'),
-    'file' => 'amazon_admin.inc',
+    'file' => 'amazon.admin.inc',
     'access callback' => 'user_access',
     'access arguments' => array('administer amazon'),
     'type' => MENU_NORMAL_ITEM
@@ -36,7 +36,7 @@ function amazon_menu() {
     'description' => 'Local data storage settings for Amazon products.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('amazon_storage_settings_form'),
-    'file' => 'amazon_admin.inc',
+    'file' => 'amazon.admin.inc',
     'access callback' => 'user_access',
     'access arguments' => array('administer amazon'),
     'type' => MENU_LOCAL_TASK
@@ -45,14 +45,14 @@ function amazon_menu() {
     'title' => 'Test',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('amazon_test_form'),
-    'file' => 'amazon_admin.inc',
+    'file' => 'amazon.admin.inc',
     'access callback' => 'user_access',
     'access arguments' => array('access devel information'),
     'type' => MENU_LOCAL_TASK
   );
   $items['admin/settings/amazon/upgrade'] = array(
     'page callback' => '_amazon_upgrade',
-    'file' => 'amazon_admin.inc',
+    'file' => 'amazon.admin.inc',
     'access callback' => 'user_access',
     'access arguments' => array('administer amazon'),
     'type' => MENU_CALLBACK
@@ -509,5 +509,43 @@ function amazon_cron() {
   }
   else {
     watchdog('Amazon', t('Amazon items could not be updated.'));
+  }
+}
+
+
+function amazon_token_list($type = 'all') {
+  if ($type == 'amazon_item' || $type == 'all') {
+    $tokens['amazon_item']['asin']             = t('Product ID');
+    $tokens['amazon_item']['detailpageurl']             = t('The detail page URL for the item');
+    $tokens['amazon_item']['salesrank']             = t("The product's sales rank");
+    $tokens['amazon_item']['brand']             = t("The product's brand");
+    $tokens['amazon_item']['publisher']             = t("The product's publisher");
+    $tokens['amazon_item']['manufacturer']             = t("The product's manufacturer");
+    $tokens['amazon_item']['studio']             = t("The product's studio");
+    $tokens['amazon_item']['label']             = t("The product's label");
+    $tokens['amazon_item']['binding']             = t("The product's binding type");
+    $tokens['amazon_item']['releasedate']             = t("The product's release date");
+    $tokens['amazon_item']['listprice']             = t("The product's list price");
+    $tokens['amazon_item']['producttype']             = t("The product's Amazon product type");
+    return $tokens;
+  }
+}
+
+function amazon_token_values($type, $object = NULL, $options = array()) {
+  if ($type == 'amazon_item' || $type == 'all') {
+    $item = (array)$object;
+    $values['asin']             = check_plain($item['asin']);
+    $values['detailpageurl']             = check_url($item['detailpageurl']);
+    $values['salesrank']             = check_plain($item['salesrank']);
+    $values['brand']             = check_plain($item['brand']);
+    $values['publisher']             = check_plain($item['publisher']);
+    $values['manufacturer']             = check_plain($item['manufacturer']);
+    $values['studio']             = check_plain($item['studio']);
+    $values['label']             = check_plain($item['label']);
+    $values['binding']             = check_plain($item['binding']);
+    $values['releasedate']             = check_plain($item['releasedate']);
+    $values['listprice']             = check_plain($item['listpriceformattedprice']);
+    $values['producttype']             = check_plain($item['producttype']);
+    return $values;
   }
 }
