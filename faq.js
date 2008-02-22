@@ -47,10 +47,12 @@ function faq_display_handler(event) {
   if ($("input[@name=faq_display]:checked").val() != "new_page") {
     $("input[@name=faq_use_teaser]").removeAttr("disabled");
     $("input[@name=faq_more_link]").removeAttr("disabled");
+    $("input[@name=faq_disable_node_links]").removeAttr("disabled");
   }
   else {
     $("input[@name=faq_use_teaser]").attr("disabled", "disabled");
     $("input[@name=faq_more_link]").attr("disabled", "disabled");
+    $("input[@name=faq_disable_node_links]").attr("disabled", "disabled");
   }
   teaser_handler(event);
 

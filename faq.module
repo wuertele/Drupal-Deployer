@@ -425,6 +425,13 @@ function faq_questions_settings_form() {
     '#default_value' => variable_get('faq_back_to_top', 'Back to Top'),
     );
 
+  $form['faq_questions_misc']['faq_disable_node_links'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Disable question links to nodes'),
+    '#description' => t('This allows the user to prevent the questions being links to the faq node in all layouts except "Clicking on question opens the answer in a new page".'),
+    '#default_value' => variable_get('faq_disable_node_links', false),
+    );
+
   return system_settings_form($form);
 }
 
@@ -1061,6 +1068,7 @@ function template_preprocess_faq_questions_top(&$variables) {
     $back_to_top = l(t($display_vars['back_to_top']), 'faq', array('attributes' => array(), 'query' => NULL, 'fragment' => ' ', 'html' => TRUE));
   }
   $variables['back_to_top'] = $back_to_top;
+  $disable_node_links = variable_get('faq_disable_node_links', false);
 
   // Loop through results.
   $questions = array();
@@ -1073,7 +1081,12 @@ function template_preprocess_faq_questions_top(&$variables) {
       $questions[$key] = l($node->question, 'faq', array('fragment' => $anchor));
 
 
-      $answers[$key]['link'] = l($node->question, "node/$node->nid", array("attributes" => array("name" => "$anchor")));
+      if ($disable_node_links) {
+        $answers[$key]['link'] = l("", "", array("attributes" => array("name" => "$anchor"))) . $node->question;
+      }
+      else {
+        $answers[$key]['link'] = l($node->question, "node/$node->nid", array("attributes" => array("name" => "$anchor")));
+      }
 
       // Should we display teaser or full text.
       if ($display_vars['use_teaser']) {
@@ -1115,6 +1128,7 @@ function template_preprocess_faq_category_questions_top(&$variables) {
   $display_vars = $variables['display_vars'];
   $term = $variables['term'];
   $class = $variables['class'];
+  $disable_node_links = variable_get('faq_disable_node_links', false);
 
   $this_page = 'faq';
   $get_sub_terms = 0;
@@ -1227,7 +1241,12 @@ function template_preprocess_faq_category_questions_top(&$variables) {
       }
       $anchor = $term->tid ."n". $node->nid;
       $node_var = array();
-      $node_var['link'] = l($node->question, "node/$node->nid", array("attributes" => array("name" => "$anchor")));
+      if ($disable_node_links) {
+        $node_var['link'] = l("", "", array("attributes" => array("name" => "$anchor"))) . $node->question;
+      }
+      else {
+        $node_var['link'] = l($node->question, "node/$node->nid", array("attributes" => array("name" => "$anchor")));
+      }
 
       // Should we display teaser or full text?
       if ($display_vars['use_teaser']) {
@@ -1271,6 +1290,7 @@ function template_preprocess_faq_category_questions_top_answers(&$variables) {
   $display_vars = $variables['display_vars'];
   $term = $variables['term'];
   $class = $variables['class'];
+  $disable_node_links = variable_get('faq_disable_node_links', false);
 
   if ($display_vars['group_questions_top'] || $display_vars['category_display'] == "hide_qa") {
     $variables['display_answers'] = false;
@@ -1328,7 +1348,12 @@ function template_preprocess_faq_category_questions_top_answers(&$variables) {
     if (node_access("view", $node)) {
       $anchor = $term->tid ."n". $node->nid;
       $node_var = array();
-      $node_var['link'] = l($node->question, "node/$node->nid", array("attributes" => array("name" => "$anchor")));
+      if ($disable_node_links) {
+        $node_var['link'] = l("", "", array("attributes" => array("name" => "$anchor"))) . $node->question;
+      }
+      else {
+        $node_var['link'] = l($node->question, "node/$node->nid", array("attributes" => array("name" => "$anchor")));
+      }
 
       // Should we display teaser or full text?
       if ($display_vars['use_teaser']) {
@@ -1365,6 +1390,7 @@ function template_preprocess_faq_category_questions_top_answers(&$variables) {
 function template_preprocess_faq_hide_answer(&$variables) {
   $result = $variables['result'];
   $display_vars = $variables['display_vars'];
+  $disable_node_links = variable_get('faq_disable_node_links', false);
   drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
 
   $nodes = array();
@@ -1372,7 +1398,12 @@ function template_preprocess_faq_hide_answer(&$variables) {
   while ($row = db_fetch_object($result)) {
     $node = node_load($row->nid);
     if (node_access("view", $node)) {
-      $nodes[$count]['link'] = l($node->question, "node/$node->nid");
+      if ($disable_node_links) {
+        $nodes[$count]['link'] = l($node->question, "faq");
+      }
+      else {
+        $nodes[$count]['link'] = l($node->question, "node/$node->nid");
+      }
       // Should we display teaser or full text?
       if ($display_vars['use_teaser']) {
         $more_link = '';
@@ -1407,6 +1438,7 @@ function template_preprocess_faq_category_hide_answer(&$variables) {
   $display_vars = $variables['display_vars'];
   $term = $variables['term'];
   $class = $variables['class'];
+  $disable_node_links = variable_get('faq_disable_node_links', false);
 
   $get_sub_terms = 0;
   if (arg(0) == 'faq' && is_numeric(arg(1))) {
@@ -1504,7 +1536,12 @@ function template_preprocess_faq_category_hide_answer(&$variables) {
         $count++;
       }
       $node_var = array();
-      $node_var['link'] = l($node->question, "node/$node->nid");
+      if ($disable_node_links) {
+        $node_var['link'] = l($node->question, "faq/". arg(1));
+      }
+      else {
+        $node_var['link'] = l($node->question, "node/$node->nid");
+      }
 
       // Should we display teaser or full text?
       if ($display_vars['use_teaser']) {
@@ -1534,6 +1571,7 @@ function template_preprocess_faq_category_hide_answer(&$variables) {
 function template_preprocess_faq_questions_inline(&$variables) {
   $result = $variables['result'];
   $display_vars = $variables['display_vars'];
+  $disable_node_links = variable_get('faq_disable_node_links', false);
 
   // Configure "back to top" link.
   $back_to_top = '';
@@ -1557,7 +1595,12 @@ function template_preprocess_faq_questions_inline(&$variables) {
   while ($row = db_fetch_object($result)) {
     $node = node_load($row->nid);
     if (node_access("view", $node)) {
-      $nodes[$count]['link'] = l($node->question, "node/$node->nid");
+      if ($disable_node_links) {
+        $nodes[$count]['link'] = $node->question;
+      }
+      else {
+        $nodes[$count]['link'] = l($node->question, "node/$node->nid");
+      }
 
       // Should we display teaser or full text?
       if ($display_vars['use_teaser']) {
@@ -1593,6 +1636,7 @@ function template_preprocess_faq_category_questions_inline(&$variables) {
   $display_vars = $variables['display_vars'];
   $term = $variables['term'];
   $class = $variables['class'];
+  $disable_node_links = variable_get('faq_disable_node_links', false);
 
   $this_page = 'faq';
   $get_sub_terms = 0;
@@ -1704,7 +1748,12 @@ function template_preprocess_faq_category_questions_inline(&$variables) {
         $count++;
       }
       $node_var = array();
-      $node_var['link'] = l($node->question, "node/$node->nid");
+      if ($disable_node_links) {
+        $node_var['link'] = $node->question;
+      }
+      else {
+        $node_var['link'] = l($node->question, "node/$node->nid");
+      }
 
       // Should we display teaser or full text?
       if ($display_vars['use_teaser']) {
@@ -2196,5 +2245,5 @@ if (!function_exists('array_diff_key')) {
       }
     }
     return $result;
-   }
+  }
 }
