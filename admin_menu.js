@@ -1,6 +1,11 @@
 /* $Id$ */
 
 $(document).ready(function() {
+  // Apply margin-top if enabled.
+  if (Drupal.settings.admin_menu_margin_top == 1) {
+  	$('body').css('marginTop', '20px');
+  }
+
   // Hover emulation for IE 6.
   if ($.browser.msie && parseInt(jQuery.browser.version) == 6) {
     $('#admin_menu li').hover(function() {

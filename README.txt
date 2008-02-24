@@ -28,6 +28,9 @@ None.
 
 -- CONFIGURATION --
 
+* Configure module settings in administer -> Site configuration ->
+  Administration Menu.
+
 * Go to Administer -> User management -> Access control and assign permissions
   for Drupal Administration Menu:
 
@@ -42,8 +45,9 @@ None.
 * You have two options to override the admin menu icon:
   
   1) Disable it via CSS in your theme:
-
-     body #admin_menu-icon { display: none; }
+<code>
+body #admin_menu-icon { display: none; }
+</code>
 
   2) Alter the image by overriding the theme function:
 
@@ -63,10 +67,6 @@ None.
   - Is the 'access administration menu' permission enabled?
 
   - Does your theme output $closure? (See FAQ below for more info)
-
-* If your theme uses absolute or fixed positioned elements, and the default
-  margin-top for <BODY> is not sufficient, you need to override admin menu's
-  stylesheet in your theme.
 
 * If admin menu is rendered behind a flash movie object, you need to add the
   following property to your flash object(s):
