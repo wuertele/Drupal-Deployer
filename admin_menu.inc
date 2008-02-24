@@ -125,7 +125,7 @@ function admin_menu_adjust_items(&$_admin_menu) {
     'title' => theme('admin_menu_icon'),
     'path' => drupal_get_normal_path(variable_get('site_frontpage', 'node')),
     'weight' => -100,
-    'class' => 'admin_menu-icon',
+    'class' => 'admin-menu-icon',
   ));
   $_admin_menu['index']['admin_menu_icon'] = $mid_icon;
   
@@ -178,7 +178,7 @@ function admin_menu_adjust_items(&$_admin_menu) {
       'title' => t('Logout @name', array('@name' => $user->name)),
       'path' => $_menu['items'][$mid_logout]['path'],
       'weight' => -100,
-      'class' => 'admin_menu-action admin_menu-logout',
+      'class' => 'admin-menu-action admin-menu-logout',
     ));
   }
   
@@ -315,6 +315,6 @@ function admin_menu_remove_item(&$_admin_menu, $path) {
  * @ingroup themeable
  */
 function theme_admin_menu_icon() {
-  return '<img class="admin_menu-icon" src="'. (theme_get_setting('favicon') ? theme_get_setting('favicon') : url('misc/favicon.ico')) .'" width="16" height="16" alt="" />';
+  return '<img class="admin-menu-icon" src="'. (theme_get_setting('favicon') ? theme_get_setting('favicon') : url('misc/favicon.ico')) .'" width="16" height="16" alt="" />';
 }
 
