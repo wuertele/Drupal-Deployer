@@ -39,6 +39,7 @@ function admin_menu_build($mid_admin) {
   // Copy admin menu items into a new menu tree.
   $_admin_menu['index'] = $_menu['path index'];
   $_admin_menu[$mid_admin] = $_menu['items'][$mid_admin];
+  admin_menu_item_url($_admin_menu, $mid_admin);
   _admin_menu_get_children($_admin_menu, $_admin_menu[$mid_admin]);
   
   // Adjust some menu items for better user experience.
@@ -84,6 +85,7 @@ function _admin_menu_get_children(&$_admin_menu, &$item) {
       //   && !($_menu['items'][$child]['type'] & MENU_LINKS_TO_PARENT)
       if ($item_is_accessible && $item_is_visible) {
         $_admin_menu[$child] = $_menu['items'][$child];
+        admin_menu_item_url($_admin_menu, $child);
         
         // Recurse to child menu items.
         if (isset($_menu['items'][$child]['children'])) {
@@ -133,7 +135,7 @@ function admin_menu_adjust_items(&$_admin_menu) {
   $_admin_menu['index']['admin'] = $mid_admin;
   
   // Move 'By module' item if accessible, or remove it.
-  $mid_bymodule = $_menu['path index']['admin/by-module'];
+  $mid_bymodule = $_admin_menu['index']['admin/by-module'];
   if (user_access('administer site configuration')) {
     admin_menu_move_item($_admin_menu, $mid_bymodule, $mid_icon_admin);
   }
@@ -265,8 +267,10 @@ function admin_menu_move_item(&$_admin_menu, $mid, $pid) {
   global $_menu;
   
   if (isset($_admin_menu[$mid]) && isset($_admin_menu[$pid])) {
-    // Remove current child pointer.
-    admin_menu_remove_item($_admin_menu, $_admin_menu[$mid]['path']);
+    // Remove current child pointer. Determine the path from the index
+    // because it contains the unprocessed urls.
+    $index = array_flip($_admin_menu['index']);
+    admin_menu_remove_item($_admin_menu, $index[$mid]);
     
     // Insert new child pointer.
     $_admin_menu[$mid]['pid'] = $pid;
@@ -290,7 +294,7 @@ function admin_menu_move_item(&$_admin_menu, $mid, $pid) {
 function admin_menu_remove_item(&$_admin_menu, $path) {
   global $_menu;
   
-  $mid = $_menu['path index'][$path];
+  $mid = $_admin_menu['index'][$path];
   if (isset($_admin_menu[$mid])) {
     $pid = $_admin_menu[$mid]['pid'];
     $child_key = array_search($mid, $_admin_menu[$pid]['children']);

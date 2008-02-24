@@ -143,42 +143,14 @@ function theme_admin_menu_tree($pid = 1) {
  *   A boolean indicating whether this menu item is a leaf.
  */
 function theme_admin_menu_item($mid, $children = '', $leaf = TRUE) {
-  $_admin_menu = admin_menu_get_menu();
-  
-  $class = array();
-  if (!$leaf) {
-    $class[] = 'expandable';
-  }
-  if (isset($_admin_menu[$mid]['class'])) {
-    $class[] = $_admin_menu[$mid]['class'];
-  }
-  $output  = '<li'. (!empty($class) ? ' class="'. implode(' ', $class) .'"' : '') .'>';
-  $output .= admin_menu_item_link($mid) . $children .'</li>';
-  return $output;
-}
-
-/**
- * Returns the rendered link to a menu item.
- *
- * @param $mid
- *   The menu item id to render.
- *
- * @see menu_item_link()
- */
-function admin_menu_item_link($mid) {
   static $display_option;
+
   $_admin_menu = admin_menu_get_menu();
+  $item = $_admin_menu[$mid];
   
   if (!isset($display_option)) {
     $display_option = variable_get('admin_menu_display', 0);
   }
-  $item = $_admin_menu[$mid];
-  $link_item = $item;
-  
-  while ($link_item['type'] & MENU_LINKS_TO_PARENT) {
-    $link_item = menu_get_item($link_item['pid']);
-  }
-  
   // Display extra information about menu items if enabled (devel).
   if ($display_option) {
     if ($display_option == 'mid') {
@@ -189,26 +161,16 @@ function admin_menu_item_link($mid) {
     }
   }
   
-  // Remove menu item tooltips due to mouseover clashes.
-  unset($item['description']);
-  
-  return theme_admin_menu_item_link($item, $link_item);
-}
-
-/**
- * Generate the HTML representing a given menu item ID.
- *
- * Allows HTML in links.
- *
- * @param $item
- *   The menu item to render.
- * @param $link_item
- *   The menu item which should be used to find the correct path.
- *
- * @see theme_menu_item_link()
- */
-function theme_admin_menu_item_link($item, $link_item) {
-  return l($item['title'], $link_item['path'], !isset($item['description']) ? array('title' => $item['description']) : array(), isset($item['query']) ? $item['query'] : NULL, NULL, FALSE, TRUE);
+  $class = array();
+  if (!$leaf) {
+    $class[] = 'expandable';
+  }
+  if (isset($item['class'])) {
+    $class[] = $item['class'];
+  }
+  $output  = '<li'. (!empty($class) ? ' class="'. implode(' ', $class) .'"' : '') .'>';
+  $output .= '<a href="'. check_url($item['path']) .'"'. drupal_attributes($item['attributes']) .'>'. filter_xss_admin($item['title']) .'</a>'. $children .'</li>';
+  return $output;
 }
 
 /**
@@ -231,6 +193,33 @@ function _admin_menu_sort($a, $b) {
   }
   else {
     return 1;
+  }
+}
+
+/**
+ * Adjust the menu item path.
+ *
+ * Adjust the path of local tasks and let them point to their parent item.
+ * Finally build the url. These functions have been moved here to be able
+ * to cache the final results.
+ *
+ * @param &$item
+ *   An admin menu item.
+ */
+function admin_menu_item_url(&$_admin_menu, $mid) {
+  $link_item = $mid;
+  while ($_admin_menu[$link_item]['type'] & MENU_LINKS_TO_PARENT) {
+    $link_item = $_admin_menu[$link_item]['pid'];
+  }
+
+  if (!isset($_admin_menu[$link_item]['processed'])) {
+    $_admin_menu[$mid]['path'] = url($_admin_menu[$link_item]['path'], isset($_admin_menu[$mid]['query']) ? $_admin_menu[$mid]['query'] : NULL);
+    $_admin_menu[$link_item]['processed'] = TRUE;
+  }
+  else {
+    // Copy the already processed path of the parent item to the
+    // default local task.
+    $_admin_menu[$mid]['path'] = $_admin_menu[$link_item]['path'];
   }
 }
 
@@ -260,7 +249,8 @@ function admin_menu_add_item(&$_admin_menu, $pid, $item) {
   $_admin_menu[$id] = $item;
   $_admin_menu[$pid]['children'][] = $id;
   $_admin_menu['index'][$item['path']] = $id;
-  
+  admin_menu_item_url($_admin_menu, $id);
+
   return $id;
 }
 
