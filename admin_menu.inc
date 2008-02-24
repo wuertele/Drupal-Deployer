@@ -125,6 +125,7 @@ function admin_menu_adjust_items(&$_admin_menu) {
     'weight' => -100,
     'class' => 'admin_menu-icon',
   ));
+  $_admin_menu['index']['admin_menu_icon'] = $mid_icon;
   
   // Add 'administer' item to the icon menu.
   $mid_icon_admin = admin_menu_add_item($_admin_menu, $mid_icon, array('title' => t('Administer'), 'path' => 'admin', 'weight' => 10));
@@ -180,8 +181,20 @@ function admin_menu_adjust_items(&$_admin_menu) {
   }
   
   // Add 'Create <content_type>' menu items to Content management > Content.
+  // If an user does not have 'administer nodes' permission, we need to copy
+  // the 'Create content' item from the Navigation menu into 'Content
+  // management' and append node/add/* items there instead.
+  if (!user_access('administer nodes')) {
+    $mid_content_management = $_admin_menu['index']['admin/content'];
+    $mid_node_add = $_menu['path index']['node/add'];
+    $create_content = $_menu['items'][$mid_node_add];
+    $create_content['weight'] = 0;
+    $mid_content = admin_menu_add_item($_admin_menu, $mid_content_management, $create_content);
+  }
+  else {
+    $mid_content = $_admin_menu['index']['admin/content/node'];
+  }
   $mid_node_add = $_menu['path index']['node/add'];
-  $mid_content = $_menu['path index']['admin/content/node'];
   admin_menu_copy_items($_admin_menu, $mid_node_add, $mid_content, t('Add !title'));
 }
 
@@ -209,6 +222,9 @@ function admin_menu_copy_items(&$_admin_menu, $source_pid, $target_pid, $title =
   if (isset($_menu['items'][$source_pid]['children']) && isset($_admin_menu[$target_pid])) {
     foreach ($_menu['items'][$source_pid]['children'] as $mid) {
       $item = $_menu['items'][$mid];
+      if (!$item['access']) {
+        continue;
+      }
       if (isset($title)) {
         $item['title'] = check_plain(strtr($title, array('!title' => $_menu['items'][$mid]['title'])));
       }
