@@ -1,9 +1,9 @@
 /* $Id$ */
 
 $(document).ready(function() {
-  // Apply margin-top if enabled.
+  // Apply margin-top if enabled; directly applying marginTop doesn't work in IE.
   if (Drupal.settings.admin_menu_margin_top == 1) {
-  	$('body').css('marginTop', '20px');
+    $('body').addClass('admin-menu');
   }
 
   // Hover emulation for IE 6.

@@ -48,7 +48,7 @@ None.
   
   1) Disable it via CSS in your theme:
 <code>
-body #admin_menu-icon { display: none; }
+body #admin-menu-icon { display: none; }
 </code>
 
   2) Alter the image by overriding the theme function:
