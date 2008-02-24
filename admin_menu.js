@@ -8,7 +8,7 @@ $(document).ready(function() {
 
   // Hover emulation for IE 6.
   if ($.browser.msie && parseInt(jQuery.browser.version) == 6) {
-    $('#admin_menu li').hover(function() {
+    $('#admin-menu li').hover(function() {
       $(this).addClass('iehover');
     }, function() {
       $(this).removeClass('iehover');
@@ -16,7 +16,7 @@ $(document).ready(function() {
   }
   
   // Delayed mouseout.
-  $('#admin_menu li').hover(function() {
+  $('#admin-menu li').hover(function() {
     // Stop the timer.
     clearTimeout(this.sfTimer);
     // Display child lists.
