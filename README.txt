@@ -39,7 +39,10 @@ None.
   - display drupal links: Displays additional links to Drupal.org and issue
     queues of all enabled contrib modules in the Drupal Administration Menu icon.
 
-  Please bear in mind that the displayed menu items in Drupal Administration Menu depend on the actual permissions of a user.  For example, if a user does not have the permission 'administer access control' and 'administer users', the whole 'User management' menu item will not be displayed.
+  Please bear in mind that the displayed menu items in Drupal Administration Menu
+  depend on the actual permissions of a user.  For example, if a user does not
+  have the permission 'administer access control' and 'administer users', the
+  whole 'User management' menu item will not be displayed.
 
 
 -- CUSTOMIZATION --
