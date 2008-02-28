@@ -47,9 +47,9 @@ else {
   $hdr = 'h5';
 }
 
-?><div class="faq_category_group">
+?><div class="faq_category_menu">
 
-  <?php // category header with title, link, image, description, and count of questions inside ?>
+  <!-- category header with title, link, image, description, and count of questions inside -->
   <div class="faq_qa_header">
   <?php if ($display_header): ?>
     <<?php print $hdr; ?> class="faq_header">
@@ -66,10 +66,11 @@ else {
     <div class="faq_qa_description"><p><?php print $description ?></p></div>
   <?php endif; ?>
   <div class="clear-block"></div>
-  </div>
+  </div> <!-- Close div: faq_qa_header -->
 
-  <?php // list subcategories, with title, link, description, count ?>
+
   <?php if (!empty($subcat_list)): ?>
+    <!-- list subcategories, with title, link, description, count -->
     <div class="item-list">
     <<?php print $subcat_list_style; ?> class="faq_category_list">
     <?php foreach ($subcat_list as $i => $subcat): ?>
@@ -85,7 +86,7 @@ else {
       </li>
     <?php endforeach; ?>
     </<?php print $subcat_list_style; ?>>
-  </div>
+  </div> <!-- Close div: item-list -->
   <?php endif; ?>
 
   <div class="<?php print $container_class; ?>">
@@ -105,11 +106,13 @@ else {
       </li>
     <?php endforeach; ?>
     </<?php print $question_list_style; ?>>
-  </div>
+  </div> <!-- Close div: item-list -->
   <?php endif; ?>
+  </div> <!-- Close div: faq_qa / faq_qa_hide -->
+  </div> <!-- Close div: faq_category_menu -->
 
-  <?php //display header before answers in some layouts ?>
   <?php if ($answer_category_name): ?>
+    <!-- display header before answers in some layouts -->
     <<?php print $hdr; ?> class="faq_header">
     <?php print $term_img; ?>
     <?php print $category_name; ?>
@@ -118,11 +121,15 @@ else {
   <?php endif; ?>
 
   <?php // list questions (in title link) and answers (in body) ?>
+  <div class="faq_category_group">
   <div>
+
   <?php foreach ($nodes as $i => $node): ?>
+
     <div class="faq_question"><?php //strong question label here? ?>
     <?php print $node['link']; ?>
-    </div>
+    </div> <!-- Close div: faq_question -->
+
     <div class="faq_answer">
     <strong><?php print $answer_label; ?></strong>
     <?php print $node['body']; ?>
@@ -132,10 +139,8 @@ else {
     <?php if (!empty($back_to_top)): ?>
       <p class="faq_top_link"><?php print $back_to_top; ?></p>
     <?php endif; ?>
-    </div>
+    </div> <!-- Close div: faq_answer -->
   <?php endforeach; ?>
-  </div>
 
-  </div>
-
-</div>
+  </div> <!-- Close div -->
+</div> <!-- Close div: faq_category_group -->

@@ -32,7 +32,7 @@ $depth = 0;
     <?php $depth++; endwhile; ?>
   <?php endif; ?>
 
-  <div class="faq_category_group">
+  <div class="faq_category_menu">
 
   <?php if ($display_header): ?>
     <<?php print $hdr; ?> class="faq_header">
@@ -40,25 +40,29 @@ $depth = 0;
     <?php print $category_name; ?>
     </<?php print $hdr; ?>>
     <div class="clear-block"></div>
+    <div class="faq_category_group">
     <div>
   <?php endif; ?>
 
   <?php if (!$answer_category_name || $display_header): ?>
 
-    <?php // include subcategories ?>
+    <!-- include subcategories -->
     <?php foreach ($subcat_body_list as $i => $subcat_html): ?>
       <?php print $subcat_html; ?>
     <?php endforeach; ?>
 
     <?php if (!$display_header): ?>
+      <div class="faq_category_group">
       <div>
     <?php endif; ?>
 
-    <?php // list questions (in title link) and answers (in body) ?>
+    <!-- list questions (in title link) and answers (in body) -->
     <?php foreach ($nodes as $i => $node): ?>
+
       <div class="faq_question"><?php //strong question label here? ?>
       <?php print $node['link']; ?>
-      </div>
+      </div> <!-- Close div: faq_question -->
+
       <div class="faq_answer">
       <strong><?php print $answer_label; ?></strong>
       <?php print $node['body']; ?>
@@ -68,17 +72,18 @@ $depth = 0;
       <?php if (!empty($back_to_top)): ?>
         <p class="faq_top_link"><?php print $back_to_top; ?></p>
       <?php endif; ?>
-      </div>
+      </div> <!-- Close div: faq_answer -->
+
     <?php endforeach; ?>
-    </div>
 
   <?php endif; ?>
 
-  </div>
+  </div> <!-- Close div -->
+  </div> <!-- Close div: faq_category_group -->
 
   <?php if ($answer_category_name): ?>
     <?php while ($depth > 0): ?>
-      </div>
+      </div> <!-- Close div: faq_category_indent -->
     <?php $depth--; endwhile; ?>
   <?php endif; ?>
 <?php endif; //if display_answers ?>
