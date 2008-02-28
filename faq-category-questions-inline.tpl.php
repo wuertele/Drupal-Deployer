@@ -43,7 +43,8 @@ else {
 }
 
 ?><div class="faq_category_group">
-  <?php // category header with title, link, image, description, and count of questions inside ?>
+  <!-- category header with title, link, image, description, and count of
+  questions inside -->
   <div class="faq_qa_header">
   <?php if ($display_header): ?>
     <<?php print $hdr; ?> class="faq_header">
@@ -53,16 +54,18 @@ else {
       (<?php print $question_count; ?>)
     <?php endif; ?>
     </<?php print $hdr; ?>>
+
   <?php else: ?>
     <?php print $term_img; ?>
   <?php endif; ?>
+
   <?php if (!empty($description)): ?>
     <div class="faq_qa_description"><p><?php print $description ?></p></div>
   <?php endif; ?>
   <div class="clear-block"></div>
-  </div>
+  </div> <!-- Close div: faq_qa_header -->
 
-  <?php // list subcategories, with title, link, description, count ?>
+  <!-- list subcategories, with title, link, description, count -->
   <?php if (!empty($subcat_list)): ?>
     <div class="item-list">
     <<?php print $subcat_list_style; ?> class="faq_category_list">
@@ -79,23 +82,24 @@ else {
       </li>
     <?php endforeach; ?>
     </<?php print $subcat_list_style; ?>>
-  </div>
+  </div> <!-- Close div: item-list -->
   <?php endif; ?>
 
   <div class="<?php print $container_class; ?>">
 
-  <?php // include subcategories ?>
+  <!-- include subcategories -->
   <?php foreach ($subcat_body_list as $i => $subcat_html): ?>
     <div class="faq_category_indent"><?php print $subcat_html; ?></div>
   <?php endforeach; ?>
 
-  <?php // list questions (in title link) and answers (in body) ?>
+  <!-- list questions (in title link) and answers (in body) -->
   <div>
   <?php foreach ($nodes as $i => $node): ?>
     <div class="faq_question">
     <strong><?php print $question_label; ?></strong>
     <?php print $node['link']; ?>
-    </div>
+    </div> <!-- Close div: faq_question -->
+
     <div class="faq_answer">
     <strong><?php print $answer_label; ?></strong>
     <?php print $node['body']; ?>
@@ -105,10 +109,10 @@ else {
     <?php if (!empty($back_to_top)): ?>
       <p class="faq_top_link"><?php print $back_to_top; ?></p>
     <?php endif; ?>
-    </div>
+    </div> <!-- Close div: faq_answer -->
   <?php endforeach; ?>
-  </div>
+  </div> <!-- Close div -->
 
-  </div>
+  </div> <!-- Close div: faq_qa / faq_qa_hide -->
 
-</div>
+</div> <!-- Close div: faq_category_group -->

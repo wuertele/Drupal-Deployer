@@ -23,7 +23,8 @@
   <?php // Cycle through all the answers and "more" links. $key will represent the applicable position in the arrays. ?>
   <div class="faq_question">
   <?php print $answers[$key]['link']; ?>
-  </div>
+  </div> <!-- Close div: faq_question -->
+
   <div class="faq_answer">
   <?php print $answers[$key]['body']; ?>
   <p class="faq_top_link">
@@ -32,9 +33,9 @@
   <?php if (isset($more_link)): ?>
     <div class="faq_more_link">
     <?php print $more_link[$key]; ?>
-    </div>
+    </div> <!-- Close div: faq_more_link -->
   <?php endif; ?>
-  </div>
+  </div> <!-- Close div: faq_answer -->
   <?php // Increment $key to move on to the next position. ?>
   <?php $key++; ?>
 <?php endwhile; ?>

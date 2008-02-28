@@ -39,7 +39,8 @@ else {
 }
 
 ?><div class="faq_category_group">
-  <?php // category header with title, link, image, description, and count of questions inside ?>
+  <!-- category header with title, link, image, description, and count of
+  questions inside -->
   <div class="faq_qa_header">
   <?php if ($display_header): ?>
     <<?php print $hdr; ?> class="faq_header">
@@ -49,17 +50,19 @@ else {
       (<?php print $question_count; ?>)
     <?php endif; ?>
     </<?php print $hdr; ?>>
+
   <?php else: ?>
     <?php print $term_img; ?>
   <?php endif; ?>
+
   <?php if (!empty($description)): ?>
     <div class="faq_qa_description"><p><?php print $description ?></p></div>
   <?php endif; ?>
   <div class="clear-block"></div>
-  </div>
+  </div> <!-- Close div: faq_qa_header -->
 
-  <?php // list subcategories, with title, link, description, count ?>
   <?php if (!empty($subcat_list)): ?>
+    <!-- list subcategories, with title, link, description, count -->
     <div class="item-list">
     <<?php print $subcat_list_style; ?> class="faq_category_list">
     <?php foreach ($subcat_list as $i => $subcat): ?>
@@ -75,31 +78,32 @@ else {
       </li>
     <?php endforeach; ?>
     </<?php print $subcat_list_style; ?>>
-  </div>
+  </div> <!-- Close div: item-list -->
   <?php endif; ?>
 
   <div class="<?php print $container_class; ?>">
 
-  <?php // include subcategories ?>
+  <!-- include subcategories -->
   <?php foreach ($subcat_body_list as $i => $subcat_html): ?>
     <div class="faq_category_indent"><?php print $subcat_html; ?></div>
   <?php endforeach; ?>
 
-  <?php // list questions (in title link) and answers (in body) ?>
+  <!-- list questions (in title link) and answers (in body) -->
   <div class="faq_dl_hide_answer">
   <?php foreach ($nodes as $i => $node): ?>
     <div class="faq_question faq_dt_hide_answer">
     <?php print $node['link']; ?>
-    </div>
+    </div> <!-- Close div: faq_question faq_dt_hide_answer -->
+
     <div class="faq_answer faq_dd_hide_answer">
     <?php print $node['body']; ?>
     <?php if (!empty($node['more_link'])): ?>
       <p class="faq_more_link"><?php print $node['more_link']; ?></p>
     <?php endif; ?>
-    </div>
+    </div> <!-- Close div: faq_answer faq_dd_hide_answer -->
   <?php endforeach; ?>
-  </div>
+  </div> <!-- Close div: faq_dl_hide_answer -->
 
-  </div>
+  </div> <!-- Close div: faq_qa / faq_qa_hide -->
 
-</div>
+</div> <!-- Close div: faq_category_group -->

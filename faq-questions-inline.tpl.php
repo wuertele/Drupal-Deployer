@@ -22,7 +22,8 @@
   <?php print $question_label; ?>
   </strong>
   <?php print $node['link']; ?>
-  </div>
+  </div> <!-- Close div: faq_question -->
+
   <div class="faq_answer">
   <strong>
   <?php print $answer_label; ?>
@@ -36,6 +37,6 @@
     <?php print $node['more_link']; ?>
     </p>
   <?php endif; ?>
-  </div>
+  </div> <!-- Close div: faq_answer -->
 <?php endforeach; ?>
-</div>
+</div> <!-- Close div -->

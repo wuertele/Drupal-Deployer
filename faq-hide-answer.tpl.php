@@ -16,7 +16,8 @@
   <?php // Cycle through each of the nodes. We now have the variable $node to work with. ?>
   <div class="faq_question faq_dt_hide_answer">
   <?php print $node['link']; ?>
-  </div>
+  </div> <!-- Close div: faq_question faq_dt_hide_answer -->
+
   <div class="faq_answer faq_dd_hide_answer">
   <?php print $node['body']; ?>
   <?php if (!empty($node['more_link'])): ?>
@@ -24,6 +25,6 @@
     <?php print $node['more_link']; ?>
     </p>
   <?php endif; ?>
-  </div>
+  </div> <!-- Close div: faq_answer faq_dd_hide_answer -->
 <?php endforeach; ?>
-</div>
+</div> <!-- Close div -->
