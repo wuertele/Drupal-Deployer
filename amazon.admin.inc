@@ -116,15 +116,9 @@ function amazon_test_form($form_state) {
   );
 
   if (isset($form_state['amazon_item'])) {
-    $form['item_themed'] = array(
-      '#type' => 'markup',
-      '#value' => theme('amazon_item', $form_state['amazon_item']),
-      '#weight' => 5,
-    );
-
     $form['item_data'] = array(
       '#type' => 'markup',
-      '#value' => dprint_r($form_state['amazon_item'], TRUE),
+      '#value' => '<pre>'. print_r($form_state['amazon_item'], TRUE) .'</pre>',
       '#weight' => 10,
     );
   }
