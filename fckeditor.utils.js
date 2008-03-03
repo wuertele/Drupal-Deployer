@@ -116,7 +116,10 @@ function FCKeditor_OnComplete( editorInstance )
   fckFirstrun[editorInstance.Name] = true;
 
   // Enable the switch button. It is disabled at startup, waiting the editor to be loaded.
-  document.getElementById('switch_' + editorInstance.Name).style.display = '' ;
+  var oElem = document.getElementById('switch_' + editorInstance.Name);
+  if (oElem != null) {
+	oElem.style.display = '';
+  }
 
   // If the textarea isn't visible update the content from the editor.
   editorInstance.LinkedField.form.onsubmit = function() {
