@@ -156,7 +156,14 @@ function project_issue_comment(&$arg, $op) {
           if ($rid && !in_array($rid, array_keys($releases))) {
             $rid = 0;
           }
-          empty($rid) and form_set_error('project_info][rid', t('You have to specify a valid version.'));
+          // Check to make sure this release is not marked as an invalid
+          // release node for user selection.
+          if (in_array($node->rid, variable_get('project_issue_invalid_releases', array()))) {
+            form_set_error('project_info][rid', t('%version is not a valid version, please select a different value.', array('%version' => $releases[$node->rid])));
+          }
+          elseif (empty($rid)) {
+            form_set_error('project_info][rid', t('You have to specify a valid version.'));
+          }
         }
         // Validate component.
         $component = $arg['project_info']['component'];

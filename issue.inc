@@ -668,6 +668,10 @@ function project_issue_form($node) {
       $releases = project_release_get_releases($project, 0)) {
     $releases = array(t('<none>')) + $releases;
   }
+  // Remove releases marked as invalid release nodes for user selection.
+  foreach (variable_get('project_issue_invalid_releases', array()) as $rid) {
+    unset($releases[$rid]);
+  }
   $components = array();
   if ($project->components) {
     $components = array(t('<none>'));
