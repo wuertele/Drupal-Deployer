@@ -158,7 +158,10 @@ function project_issue_comment(&$arg, $op) {
           }
           // Check to make sure this release is not marked as an invalid
           // release node for user selection.
-          if (in_array($node->rid, variable_get('project_issue_invalid_releases', array()))) {
+          $invalid_rids = variable_get('project_issue_invalid_releases', array());
+          if (!empty($invalid_rids) &&
+              ((empty($rid) && in_array($node->rid, $invalid_rids))
+               || in_array($rid, $invalid_rids))) {
             form_set_error('project_info][rid', t('%version is not a valid version, please select a different value.', array('%version' => $releases[$node->rid])));
           }
           elseif (empty($rid)) {
