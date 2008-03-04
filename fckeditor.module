@@ -440,6 +440,11 @@ function fckeditor_admin($arg = NULL) {
       $output = fckeditor_profile_overview();
   }
 
+  $fckeditor_roles = db_result(db_query("SELECT name FROM {fckeditor_role} LIMIT 1"));
+  if (!$fckeditor_roles) {
+    drupal_set_message(t('There is currently no role associated with FCKeditor profiles. At this moment, nobody is able to use FCKeditor.'), "error");
+  }
+  
   return $output;
 }
 
@@ -570,7 +575,6 @@ function fckeditor_process_textarea($element) {
   static $is_running = FALSE;
   static $num = 1;
   global $user, $fckeditor_simple_toolbar_ids;
-  static $profile_name;
 
   //skip this one, surely nobody wants WYSIWYG here
 
@@ -590,24 +594,11 @@ function fckeditor_process_textarea($element) {
   if (isset($element['#attributes']['disabled']) && $element['#attributes']['disabled'] == 'disabled') {
     return $element;
   }
-
-  // Since fckeditor_profile_load() makes a db hit, only call it when we're pretty sure
-  // we're gonna render fckeditor.
-  if (!$profile_name) {
-    $sorted_roles = fckeditor_sorted_roles();
-    foreach ($sorted_roles as $rid => $name) {
-      if (isset($user->roles[$rid])) {
-        break;
-      }
-    }
-
-    $profile_name = db_result(db_query("SELECT s.name FROM {fckeditor_settings} s INNER JOIN {fckeditor_role} r ON r.name = s.name WHERE r.rid='%s'", $rid));
-    if (!$profile_name) {
-      return $element;
-    }
+  
+  $profile = fckeditor_user_get_profile($user);
+  if (!$profile) {
+    return $element;
   }
-
-  $profile = fckeditor_profile_load($profile_name);
 
   $conf = array();
   $conf = $profile->settings;
@@ -1278,6 +1269,14 @@ function fckeditor_profile_form_build($sth, $edit) {
   // profile per role.
   $orig_roles = user_roles(FALSE, 'access fckeditor');
   $roles = $orig_roles;
+
+  if ($edit->rids && !user_roles(false, 'access fckeditor')) {
+    drupal_set_message(t('You haven\'t assigned <code>!access1</code> !permissions yet.<br/>It is recommended to assign the <code>!access1</code> !permissions before updating FCKeditor profiles.', 
+    array(
+    '!access1' => t('access fckeditor'), 
+    '!permissions' => l(t('permissions'), 'admin/user/permissions'))), 'warning');
+  }
+  
   if (arg(3) == 'add') {
     drupal_set_breadcrumb(array(l(t('administer'), 'admin'), l(t('fckeditor'), 'admin/settings/fckeditor'), l(t('Add new FCKeditor profile'), 'admin/settings/fckeditor/add')));
 
@@ -1754,14 +1753,33 @@ function fckeditor_user_get_setting($user, $profile, $setting) {
   return $status;
 }
 
-function fckeditor_user_get_profile($account) {
-  $profile_name = db_result(db_query('SELECT s.name FROM {fckeditor_settings} s INNER JOIN {fckeditor_role} r ON r.name = s.name WHERE r.rid IN (%s)', implode(',', array_keys($account->roles))));
-  if ($profile_name) {
-    return fckeditor_profile_load($profile_name);
+function fckeditor_user_get_profile($user) {
+  static $profile_name;
+
+  // Since fckeditor_profile_load() makes a db hit, only call it when we're pretty sure
+  // we're gonna render fckeditor.
+  if (!isset($profile_name[$user->uid])) {
+    $sorted_roles = fckeditor_sorted_roles();
+    foreach ($sorted_roles as $rid => $name) {
+      if (isset($user->roles[$rid])) {
+        break;
+      }
+    }
+
+    if (isset($user->roles[$rid])) {
+      $profile_name[$user->uid] = db_result(db_query("SELECT s.name FROM {fckeditor_settings} s INNER JOIN {fckeditor_role} r ON r.name = s.name WHERE r.rid='%s'", $rid));
+    }
+    else if ($user->uid == "1") {
+      $profile_name[$user->uid] = db_result(db_query("SELECT s.name FROM {fckeditor_settings} s INNER JOIN {fckeditor_role} r ON r.name = s.name WHERE r.rid IN ('%s') ORDER BY r.rid DESC LIMIT 1", implode("','", array_keys($user->roles))));
+    }
   }
-  else {
-    return FALSE;
+  
+  if (isset($profile_name[$user->uid]) && $profile_name[$user->uid]) {
+    $profile = fckeditor_profile_load($profile_name[$user->uid]);
+    return $profile;
   }
+  
+  return false;
 }
 
 function fckeditor_init() {
