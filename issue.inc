@@ -872,13 +872,19 @@ function project_issue_validate(&$node) {
     elseif ($project = node_load($node->pid)) {
       if (module_exists('project_release') &&
           $releases = project_release_get_releases($project, 0)) {
-        empty($node->rid) and form_set_error('rid', t('You have to specify a valid version.'));
+        if (empty($node->rid)) {
+          form_set_error('rid', t('You have to specify a valid version.'));
+        }
       }
       if (isset($node->component) && !in_array($node->component, $project->components)) {
         $node->component = 0;
       }
-      empty($node->component) && form_set_error('component', t('You have to specify a valid component.'));
-      empty($node->category) && form_set_error('category', t('You have to specify a valid category.'));
+      if (empty($node->component)) {
+        form_set_error('component', t('You have to specify a valid component.'));
+      }
+      if (empty($node->category)) {
+        form_set_error('category', t('You have to specify a valid category.'));
+      }
     }
   }
 }
