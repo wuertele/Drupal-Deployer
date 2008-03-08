@@ -95,7 +95,7 @@ function path_redirect_edit_form(&$form_state, $edit = array('path' => '', 'redi
   $form['redirect']['query'] = array(
     '#type' => 'textfield',
     '#size' => 12,
-    '#maxlength' => 50,
+    '#maxlength' => 255,
     '#default_value' => $edit['query'],
   );
 
