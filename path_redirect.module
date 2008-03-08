@@ -29,14 +29,14 @@ function path_redirect_init() {
   if (preg_match('/^\?q=/', $path)) {
     $path = preg_replace(array('/^\?q=/', '/&/'), array('', '?'), $path, 1);
   }
-  $r = db_fetch_object(db_query("SELECT redirect, query, fragment, type FROM {path_redirect} WHERE path = '%s' OR path = '%s'", $path, utf8_encode($path)));
+  $r = db_fetch_object(db_query("SELECT rid, redirect, query, fragment, type FROM {path_redirect} WHERE path = '%s' OR path = '%s'", $path, utf8_encode($path)));
   if (!$r) {
     $path = preg_replace('/\?.*/', '', $path);
-    $r = db_fetch_object(db_query("SELECT redirect, query, fragment, type FROM {path_redirect} WHERE path = '%s' OR path = '%s'", $path, utf8_encode($path)));
+    $r = db_fetch_object(db_query("SELECT rid, redirect, query, fragment, type FROM {path_redirect} WHERE path = '%s' OR path = '%s'", $path, utf8_encode($path)));
   }
 
   // only redirect if allow_bypass is off or bypass is not requested
-  if ($r && !(variable_get('path_redirect_allow_bypass', 0) && !empty($_GET['redirect']) && $_GET['redirect'] == 'no')) {
+  if ($r && !(variable_get('path_redirect_allow_bypass', 0) && !empty($_GET['redirect']) && $_GET['redirect'] == 'no') && url($r->redirect) != url($path)) {
     if (variable_get('path_redirect_redirect_warning', 0)) {
       drupal_set_message(t('This page has been moved. You may want to update your bookmarks.'));
     }
@@ -49,6 +49,9 @@ function path_redirect_init() {
       // page caching is turned on so drupal_goto() (common.inc) hasn't been loaded
       path_redirect_goto($r->redirect, ($r->query ? $r->query: NULL), ($r->fragment ? $r->fragment : NULL), $r->type);
     }
+  }
+  else if ($r && url($r->redirect) == url($path)) {
+    watchdog('path_redirect', 'Redirect to <code>%redirect</code> is causing an infinite loop; redirect cancelled.', array('%redirect' => $r->redirect), WATCHDOG_WARNING, l(t('edit'), 'admin/build/path-redirect/edit/'. $r->rid));
   }
   else if ($r && variable_get('path_redirect_allow_bypass', 0) && !empty($_GET['redirect']) && $_GET['redirect'] === 'no') {
     drupal_set_message(t('This page is redirected to:') .' <code>'. l($r->redirect, $r->redirect, array('query' => ($r->query ? $r->query: NULL), 'fragment' => ($r->fragment ? $r->fragment : NULL))) .'</code>');
