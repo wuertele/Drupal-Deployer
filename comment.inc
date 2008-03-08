@@ -283,17 +283,17 @@ function theme_project_issue_comment_table_row($field, $change) {
     }
 
     $row = array(
-      filter_xss(($change['label']), $allowed_tags) .':',
-      filter_xss(check_plain(implode(', ', $removed)), $allowed_tags),
-      filter_xss((implode(', ', $added)), $allowed_tags),
+      filter_xss($change['label'], $allowed_tags) .':',
+      filter_xss(implode(', ', $removed), $allowed_tags),
+      filter_xss(implode(', ', $added), $allowed_tags),
     );
     return $row;
   }
   else {
     $row = array(
-      filter_xss(($change['label']), $allowed_tags) .':',
-      filter_xss((project_issue_change_summary($field, $change['old'])), $allowed_tags),
-      '&raquo; '. filter_xss((project_issue_change_summary($field, $change['new'])), $allowed_tags),
+      filter_xss($change['label'], $allowed_tags) .':',
+      filter_xss(project_issue_change_summary($field, $change['old']), $allowed_tags),
+      '&raquo; '. filter_xss(project_issue_change_summary($field, $change['new']), $allowed_tags),
     );
     return $row;
   }
