@@ -125,6 +125,17 @@ function project_issue_form_alter($form_id, &$form) {
       }
       break;
 
+    case 'update_script_selection_form':
+      $schema_num = db_result(db_query("SELECT schema_version FROM {system} WHERE name = 'project_issue'"));
+      if ($schema_num >= 5200 && $schema_num < 5204) {
+        // The only time the schema number will be inside this range is if
+        // 5200 was aborted due to missing module dependencies. Since core is
+        // evil and always increments the schema number, yet we want to force
+        // them to start over at 5200, we can just set the default we want.
+        $form['start']['project_issue']['#default_value'] = 5200;
+      }
+      break;
+
   }
 }
 
