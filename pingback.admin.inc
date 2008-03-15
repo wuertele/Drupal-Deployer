@@ -61,23 +61,12 @@ function pingback_settings_form() {
   return system_settings_form($form);
 }
 
-
-function pingback_settings_form_validate($form_id, $form_values) {
+function pingback_settings_form_validate($form, &$form_state) {
   $formats = filter_formats();
-  $f = $formats[$form_values['pingback_input_format']];
+  $f = $formats[$form_state['values']['pingback_input_format']];
   //dpm($f);
   //note: this role-matching is dependent of current implementation of filter.module
-  if (strpos($f->roles, ',' . DRUPAL_ANONYMOUS_RID . ',') === FALSE) {
+  if (strpos($f->roles, ','. DRUPAL_ANONYMOUS_RID .',') === FALSE) {
     form_set_error('pingback_input_format', t('The input format has to be usable by anonymous users.'));
   }
 }
-/*
-function pingback_test() {
-  $o = '--- ';
-  $o .= (pingback_send(12, 'http://localhost/drupal5/node/13') ? 'Y!!!!' : 'F');
-  //_pingback_nodevar_set(13, '_oy_another_test', uniqid());
-  //_pingback_nodevar_set(13, '_oy_other_test', uniqid());
-  //$o .= _pingback_url_to_nid('http://localhost/drupal5/node/11');
-  return $o;
-}
-*/

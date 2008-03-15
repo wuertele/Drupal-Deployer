@@ -1,47 +1,32 @@
 <?php
 // $Id$
 
+/**
+ * Implementation of hook_perm().
+ */
 function pingback_perm() {
   return array('administer pingbacks');
 }
 
-
-function pingback_menu($may_cache) {
-  $items = array();
-  if ($may_cache) {
-    $items[] = array(
-      'path' => 'admin/settings/pingback',
-      'title' => t('Pingback'),
-      'description' => t('Configure pingbacks.'),
-      'callback' => 'drupal_get_form',
-      'callback arguments' => array('pingback_settings_form'),
-      'access' => user_access('administer pingbacks'),
-    );
-    /*
-    $items[] = array(
-      'path' => 'admin/settings/pingback/test',
-      'title' => t('Pingback test'),
-      'description' => t('Test pingbacks.'),
-      'callback' => 'pingback_test',
-      'access' => user_access('administer pingbacks'),
-    );
-    */
-  }
-  else {
-    //I developed this module with Drupal 6 pattern/convention, so page callbacks are on their own files
-    //unconditionally load those files in Drupal 5
-    require_once drupal_get_path('module', 'pingback') . '/pingback.admin.inc';
-    //set the server autodiscovery
-    //paths like node/10/edit are NOT pingback-enabled
-    if (arg(0) == 'node' && is_numeric(arg(1)) && arg(3) == NULL) {
-      drupal_set_header('X-Pingback: ' .$GLOBALS['base_url'] . '/xmlrpc.php');
-      //drupal_set_html_head();
-    }
-  }
+/**
+ * Implementation of hook_menu().
+ */
+function pingback_menu() {
+  $items['admin/settings/pingback'] = array(
+    'title' => 'Pingback',
+    'description' => 'Configure pingbacks',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('pingback_settings_form'),
+    'access arguments' => array('administer pingbacks'),
+    'file' => 'pingback.admin.inc',
+  );
   return $items;
 }
 
-function pingback_form_alter($form_id, &$form) {
+/**
+ * Implementation of hook_form_alter().
+ */
+function pingback_form_alter(&$form, &$form_state, $form_id) {
   global $user;
   if ($form_id == 'node_type_form' && isset($form['identity']['type'])) {
     $type = $form['#node_type']->type;
@@ -85,20 +70,50 @@ function pingback_form_alter($form_id, &$form) {
     //&& (isset($GLOBALS['pingback_bypass_format_hiding']) ? !$GLOBALS['pingback_bypass_format_hiding'] : TRUE)
   ) {
     //dpm($form);
+    $alternate_formats = array();
     foreach ($form['comment_filter']['format'] as $k => $v) {
       //dpm($k);
-      if (!element_property($k) && isset($v['#return_value']) && $v['#return_value'] == variable_get('pingback_input_format', FILTER_FORMAT_DEFAULT)) {
-        unset($form['comment_filter']['format'][$k]);
-        break;
+      if (!element_property($k) && isset($v['#return_value'])) {
+        if ($v['#return_value'] == variable_get('pingback_input_format', FILTER_FORMAT_DEFAULT)) {
+          unset($form['comment_filter']['format'][$k]);
+        }
+        else {
+          // Make a list of alternate formats for the comment form.
+          $alternate_formats[] = $k;
+        }
       }
+    }
+    if (count($alternate_formats) == 1) {
+      // There is only one available format. Remove fieldset and go back to hidden form field.
+      $new_form[$alternate_formats[0]] = array(
+        '#type' => 'value',
+        '#value' => $alternate_formats[0],
+        '#parents' => $form['comment_filter']['format'][$alternate_formats[0]]['#parents'],
+      );
+      $new_form['format']['guidelines'] = array(
+        '#title' => t('Formatting guidelines'),
+        '#value' => $form['comment_filter']['format'][$alternate_formats[0]]['#description'],
+      );
+      $form['comment_filter']['format'] = $new_form;
     }
   }
 }
 
+/**
+ * Implementation of hook_theme().
+ */
+function pingback_theme() {
+  return array(
+    'pingback' => array(
+      'file' => 'pingback.module',
+      'function' => 'theme_pingback',
+    )
+  );
+}
 
 /**
  * Menu callback: lists pingbacks.  TODO: ability to delete them!
- */ 
+ */
  //pingback_list_pingbacks() a better name?
 function pingback_list_page() {
   //$result = db_query("SELECT ");
@@ -113,8 +128,8 @@ function pingback_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
       case 'insert':
       case 'update':
           if (variable_get('pingback_mode', 'off') == 'submit') {
-            global $pingback_nid;
-            $pingback_nid = $node->nid;
+            global $_pingback_nid;
+            $_pingback_nid = $node->nid;
           }
           else { //mode == 'cron'
             //queue this nid in variable pingback_nid_queue, but take care for not queuing existing nids
@@ -125,12 +140,19 @@ function pingback_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
             }
           }
         break;
-        
+      case 'view':
+        // Insert pingback header when a node is being viewed.
+        if (arg(0) == 'node' && is_numeric(arg(1)) && arg(3) == NULL) {
+          drupal_set_header('X-Pingback: '. $GLOBALS['base_url'] .'/xmlrpc.php');
+        }
+        break;
     }
   }
 }
 
-
+/**
+ * Implementation of hook_cron().
+ */
 function pingback_cron() {
   $q = variable_get('pingback_nid_queue', array());
   $limit = variable_get('pingback_check_per_cron', 30);
@@ -144,11 +166,11 @@ function pingback_cron() {
 }
 
 function pingback_exit() {
-  global $pingback_nid;
-  if (isset($pingback_nid)) {
+  global $_pingback_nid;
+  if (isset($_pingback_nid)) {
     //reset the node_load() cache
-    node_load($pingback_nid, NULL, TRUE);
-    pingback_send_by_nid($pingback_nid, variable_get('pingback_notify_successful_pings', 1));
+    node_load($_pingback_nid, NULL, TRUE);
+    pingback_send_by_nid($_pingback_nid, variable_get('pingback_notify_successful_pings', 1));
   }
 }
 
@@ -181,8 +203,8 @@ function pingback_receive($pagelinkedfrom, $pagelinkedto) {
   $error_code = -1;
 
   // Check if the page linked to is in our site
-  $pos1 = strpos($pagelinkedto, str_replace(array('http://www.','http://','https://www.','https://'), '', $GLOBALS['base_url']));
-  if( !$pos1 ) {
+  $pos1 = strpos($pagelinkedto, str_replace(array('http://www.', 'http://', 'https://www.', 'https://'), '', $GLOBALS['base_url']));
+  if (!$pos1) {
     return new xmlrpc_server_error(0, t('Is there no link to us?'));
   }
   
@@ -205,9 +227,9 @@ function pingback_receive($pagelinkedfrom, $pagelinkedto) {
     return xmlrpc_server_error(33, t("The specified target URL cannot be used as a target. It either doesn't exist, or it is not a pingback-enabled resource."));
 
   // Let's check that the remote site didn't already pingback this entry
-  $result = db_query("SELECT cid FROM {comments} WHERE  nid = %d AND homepage = '%s' AND format = %d", $nid, $pagelinkedfrom, variable_get('pingback_input_format', FILTER_FORMAT_DEFAULT));
+  $result = db_result(db_query("SELECT COUNT(*) FROM {comments} WHERE  nid = %d AND homepage = '%s' AND format = %d", $nid, $pagelinkedfrom, variable_get('pingback_input_format', FILTER_FORMAT_DEFAULT)));
 
-  if (db_num_rows($result)) // We already have a Pingback from this URL
+  if ($result > 0) // We already have a Pingback from this URL
       return xmlrpc_server_error(48, 'The pingback has already been registered.');
 
   // very stupid, but gives time to the 'from' server to publish !
@@ -238,7 +260,7 @@ function pingback_receive($pagelinkedfrom, $pagelinkedto) {
 
   foreach ( $p as $para ) {
     if ( strpos($para, $pagelinkedto) !== false ) { // it exists, but is it a link?
-      preg_match("|<a[^>]+?".$preg_target."[^>]*>([^>]+?)</a>|", $para, $context);
+      preg_match("|<a[^>]+?". $preg_target ."[^>]*>([^>]+?)</a>|", $para, $context);
 
       // If the URL isn't in a link context, keep looking
       if (empty($context)) continue;
@@ -250,10 +272,10 @@ function pingback_receive($pagelinkedfrom, $pagelinkedto) {
 
       // prevent really long link text
       if ( strlen($context[1]) > 100 )
-        $context[1] = substr($context[1], 0, 100) . '...';
+        $context[1] = substr($context[1], 0, 100) .'...';
       
       
-      $marker = '<dpcontext>'.$context[1].'</dpcontext>';    // set up our marker
+      $marker = '<dpcontext>'. $context[1] .'</dpcontext>';    // set up our marker
       $excerpt = str_replace($context[0], $marker, $excerpt); // swap out the link for our marker
       $excerpt = strip_tags($excerpt, '<dpcontext>');        // strip all tags but our context marker
       $excerpt = trim($excerpt);
@@ -276,8 +298,8 @@ function pingback_receive($pagelinkedfrom, $pagelinkedto) {
   $edit = array(
     'nid' => $nid,
     'subject' => t('Pingback'),
-    'comment' => '[...] ' . $excerpt . ' [...]',
-    'hostname' => $_SERVER['REMOTE_ADDR'],
+    'comment' => '[...] '. $excerpt .' [...]',
+    'hostname' => ip_address(),
     'format' => variable_get('pingback_input_format', FILTER_FORMAT_DEFAULT),
     'name' => $title,
     'homepage' => $pagelinkedfrom,
@@ -296,21 +318,13 @@ function pingback_receive($pagelinkedfrom, $pagelinkedto) {
   return $message;
 }
 
-
-
-
-
-/*--- theme_pingback_* ---*/
+/* --- theme_pingback_* --- */
 
 function theme_pingback($pb, $links = 0) {
   return theme('comment', $pb, $links);
 }
 
-
-
-
-
-/*--- APIs ---*/
+/* --- APIs --- */
 
 /**
  * Discover a pingback server with pingback autodiscovery schemes.
@@ -349,21 +363,28 @@ function pingback_discover($target) {
  * @param $nid the source node ID.
  * @param $target the target absolute URL.
  * @param $source_is_absolute if this value is set to TRUE, $nid is interpreted as an absolute URL (which may originate not from the host site).
- * @return TRUE on success, FALSE otherwise. 
-*/
+ * @return TRUE on success, FALSE otherwise.
+ */
 function pingback_send($nid, $target, $source_is_absolute = FALSE) {
-  if (!valid_url($target, TRUE)) return FALSE;
+  if (!valid_url($target, TRUE)) {
+    watchdog('pingback', 'Target not valid URL: @url', array('@url' => $target), WATCHDOG_WARNING);
+    return FALSE;
+  }
   if (!$source_is_absolute) {
-    $source = url("node/$nid", NULL, NULL, TRUE);
-    $result = db_query("SELECT nid FROM {pingback_sent} WHERE nid = %d AND url = '%s'", $nid, $target);
-    if (db_num_rows($result) > 0) {
+    $source = url("node/$nid", array('absolute' => TRUE));
+    $result = db_result(db_query("SELECT COUNT(*) FROM {pingback_sent} WHERE nid = %d AND url = '%s'", $nid, $target));
+    if ($result > 0) {
+      watchdog('pingback', 'Pingback already sent for: @nid', array('@nid' => $nid), WATCHDOG_WARNING);
       //dpm('oops already sent');
       return FALSE;
     }
   }
   else {
     $source = $nid;
-    if (!valid_url($source)) return FALSE;
+    if (!valid_url($source)) {
+      watchdog('pingback', 'Source not valid URL: @url', array('@url' => $source), WATCHDOG_WARNING);
+      return FALSE;
+    }
   }
   //dpm($source);
   $retval = FALSE;
@@ -373,18 +394,19 @@ function pingback_send($nid, $target, $source_is_absolute = FALSE) {
   //dpm($server);
   
   if (!empty($server)) {
-    if(xmlrpc($server, 'pingback.ping', $source, $target)) {
+    if (xmlrpc($server, 'pingback.ping', $source, $target)) {
       if (!$source_is_absolute) {
         db_query("INSERT INTO {pingback_sent} (nid, url, timestamp) VALUES (%d, '%s', %d)", $nid, $target, time());
       }
-      watchdog('pingback', t('Pingback to %target from %source succeeded.', array('%source' => $source, '%target' => $target)));
+      watchdog('pingback', 'Pingback to %target from %source succeeded.', array('%source' => $source, '%target' => $target));
       return TRUE;
     }
     else {
-      watchdog('pingback', t('Pingback to %target from %source failed. Error @errno: @description', array('%source' => $source, '%target' => $target, '@errno' => xmlrpc_errno(), '@description' => xmlrpc_error_msg())), WATCHDOG_WARNING);
+      watchdog('pingback', 'Pingback to %target from %source failed. Error @errno: @description', array('%source' => $source, '%target' => $target, '@errno' => xmlrpc_errno(), '@description' => xmlrpc_error_msg()), WATCHDOG_WARNING);
       return FALSE;
     }
   }
+  // watchdog('pingback', 'Server not found', array(), WATCHDOG_WARNING);
   return FALSE;
 }
 
@@ -405,7 +427,11 @@ function pingback_send_by_nid($nid, $message = TRUE) {
     //dpm("Sending to " . check_plain($url));
     if (pingback_send($node->nid, $url)) {
       //dpm('success!');
+      // watchdog('pingback', 'Pingback successful for: @url', array('@url' => $url));
       if ($message) $successful[] = "<a href=\"$url\">$url</a>";
+    }
+    else {
+      // watchdog('pingback', 'Pingback failed for: @url', array('@url' => $url), WATCHDOG_WARNING);
     }
   }
   
@@ -420,7 +446,7 @@ function pingback_comment_is_pingback($comment) {
   return $comment->format == variable_get('pingback_input_format', FILTER_FORMAT_DEFAULT);
 }
 
-/*--- private functions ---*/
+/* --- private functions --- */
 
 function _pingback_valid_for_node_type($type) {
   return variable_get("pingback_$type", ($type == 'story' || $type == 'blog') ? 1 : 0);
@@ -440,9 +466,13 @@ function _pingback_extract_urls($text) {
 //can also be used to check whether an absolute path is in the site and points to a node (e.g. node/1)
 function _pingback_url_to_nid($url) {
   //first check if the url is really in our site, as well as getting the non-base-url part
-  if (preg_match($a = '#^' . preg_quote($GLOBALS['base_url'], '#') . '/(.+)$#', $url, $matches)) {
+  if (preg_match($a = '#^'. preg_quote($GLOBALS['base_url'], '#') .'/(.+)$#', $url, $matches)) {
     //dpm($matches[1]);
     //dpm(drupal_get_normal_path($matches[1]));
+    if (!variable_get('clean_url', 0)) {
+      // Clean URLs not enabled. Strip '?q=' from URL.
+      $matches[1] = str_replace('?q=', '', $matches[1]);
+    }
     if (preg_match($b = '#^node/([0-9]+)$#', drupal_get_normal_path($matches[1]), $matches2)) {
       return $matches2[1];
     } //else dpm($b);
@@ -451,4 +481,3 @@ function _pingback_url_to_nid($url) {
   //dpm($a);
   return FALSE;
 }
-
