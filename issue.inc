@@ -941,18 +941,6 @@ function project_issue_view($node, $teaser = false, $page = false) {
     // the $current_data parameter by reference and add additional
     // elements for additional lines in the table.
     //
-    // NOTE:  Modules implementing this hook are responsible for making sure
-    // that all content printed in additional rows created by said module have
-    // properly escaped and/or filtered text.  In most cases this means passing
-    // any output through either the check_plain() or filter_xss() function.
-    //
-    // This hook is only necessary for display of metadata on the project issue
-    // node.  For display of initial metadata values in the original e-mail
-    // sent after an issue is created, your module should implement
-    // hook_project_issue_metadata() and watch for the case where
-    // $old_data is empty, which means that $new_data represents
-    // the original values of the metadata fields for the issue.
-    //
     // Modules implementing this hook should take the following parameters:
     // @param $view
     //  A string representing the metadata view being generated.  For the issue
