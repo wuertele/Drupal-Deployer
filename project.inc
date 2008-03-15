@@ -320,7 +320,7 @@ function project_project_view($node, $teaser = false, $page = false) {
       $links['report_bug'] = l(t('Report new bug'), 'node/add/project_issue/'. $node->uri .'/bug');
       $links['request_feature'] = l(t('Request new feature'), 'node/add/project_issue/'. $node->uri .'/feature');
     }
-    else {
+    elseif ($has_issues) {
       $links['create_forbidden'] = theme('project_issue_create_forbidden', $node->uri);
     }
     $all_links['support']['links'] = $links;
