@@ -77,7 +77,7 @@ function fckeditor_help($path, $arg) {
       <b> <u> <i> <strong> <font> <del> <ins> <sub> <sup> <quote> <blockquote>
       <pre> <address> <code> <cite> <embed> <object> <strike> <caption>'),
       '!fckconfig' => base_path() . drupal_get_path('module', 'fckeditor') .'/fckeditor/fckconfig.js',
-      '!moduledir' => base_path() . drupal_get_path('module', 'fckeditor') .'/fckeditor', 
+      '!moduledir' => base_path() . drupal_get_path('module', 'fckeditor') .'/fckeditor',
       '!filterlink' => l(t('filters'), 'admin/settings/filters'))
       );
       $output .= t('<h3>Installation troubleshooting</h3><p>If your FCKeditor does not show you must check if all files are extracted correctly. The directory %fckeditordir should have the following files: <code>fckeditor.js, fckconfig.js, fckstyles.xml, fcktemplates.xml</code> and a directory named <code>editor</code>.</p>',
@@ -439,11 +439,11 @@ function fckeditor_admin($arg = NULL) {
       $output = fckeditor_profile_overview();
   }
 
-  $fckeditor_roles = db_result(db_query("SELECT name FROM {fckeditor_role} LIMIT 1"));
+  $fckeditor_roles = db_result(db_query_range("SELECT name FROM {fckeditor_role}", 1));
   if (!$fckeditor_roles) {
     drupal_set_message(t('There is currently no role associated with FCKeditor profiles. At this moment, nobody is able to use FCKeditor.'), "error");
   }
-  
+
   return $output;
 }
 
@@ -593,7 +593,7 @@ function fckeditor_process_textarea($element) {
   if (isset($element['#attributes']['disabled']) && $element['#attributes']['disabled'] == 'disabled') {
     return $element;
   }
-  
+
   $profile = fckeditor_user_get_profile($user);
   if (!$profile) {
     return $element;
@@ -630,7 +630,7 @@ function fckeditor_process_textarea($element) {
     if ($conf["popup"]=="f") {
       $element['#resizable'] = FALSE;
     }
-    
+
     $js_id = 'oFCK_'. $num++;
     $fckeditor_on = ($conf['default']=='t') ? 1 : 0 ;
 
@@ -650,9 +650,9 @@ function fckeditor_process_textarea($element) {
     }
     // setting some variables
     $module_drupal_path = drupal_get_path('module', 'fckeditor');
-    $module_full_path = base_path() . $module_drupal_path;
+    $module_full_path = $host . $module_drupal_path;
     // get the default drupal files path
-    $files_path = base_path() . file_directory_path();
+    $files_path = $host . file_directory_path();
     // module_drupal_path:
     //  'modules/fckeditor' (length=17)
     // module_full_path:
@@ -707,44 +707,47 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
 ". $js_id .".Config['FormatOutput'] = ". ($conf['format_output']=="t"?"true":"false") .";\n";
     //}
 
-    // integrate IMCE if it exists and is prefered
-    if (function_exists('imce_integrate') && variable_get('imce_settings_fck', 0)) {
-      imce_integrate('fck');
-      $advanced_uploads = 0;
-      $basic_uploads = 0;
-    }
-    else {
-      $advanced_uploads = ($conf['upload_advanced']=="t");
-      $basic_uploads = ($conf['upload_basic']=="t");
-    }
+    $advanced_uploads = ($conf['upload_advanced']=="t");
+    $basic_uploads = ($conf['upload_basic']=="t");
+    
     // add code for filebrowser for users that have access
     if (user_access('allow fckeditor file uploads')==1) {
-      $connector_path = $module_drupal_path ."/fckeditor/editor/filemanager/connectors/php/connector.php" ;
-      $connector_path = file_exists($connector_path) ? "../../connectors/php/connector.php" : "connectors/php/connector.php" ;
-      $upload_path = $module_drupal_path ."/fckeditor/editor/filemanager/connectors/php/upload.php" ;
-      $upload_path = file_exists($upload_path) ? "/fckeditor/editor/filemanager/connectors/php/upload.php" : "/fckeditor/editor/filemanager/upload/php/upload.php" ;
-      if ($advanced_uploads) {
-        $element['#suffix'] .= $js_id .".Config['LinkBrowserURL'] = \"". $module_full_path ."/fckeditor/editor/filemanager/browser/default/browser.html?Connector=". $connector_path ."&ServerPath=". $files_path ."\";
+      if (isset($conf['imce']) && $conf['imce']=="t" && function_exists('imce_menu')) {
+        $element['#suffix'] .= $js_id .".Config['LinkBrowser']= true;";
+        $element['#suffix'] .= $js_id .".Config['ImageBrowser']= true;";
+        $element['#suffix'] .= $js_id .".Config['FlashBrowser']= true;";
+        $element['#suffix'] .= $js_id .".Config['LinkBrowserURL']= '". $host ."?q=imce&app=FCKEditor|url@txtUrl';";
+        $element['#suffix'] .= $js_id .".Config['ImageBrowserURL']= '". $host ."?q=imce&app=FCKEditor|url@txtUrl|width@txtWidth|height@txtHeight';";
+        $element['#suffix'] .= $js_id .".Config['FlashBrowserURL']= '". $host ."?q=imce&app=FCKEditor|url@txtUrl';";
+      }
+      else {
+        $connector_path = $module_drupal_path ."/fckeditor/editor/filemanager/connectors/php/connector.php" ;
+        $connector_path = file_exists($connector_path) ? "../../connectors/php/connector.php" : "connectors/php/connector.php" ;
+        $upload_path = $module_drupal_path ."/fckeditor/editor/filemanager/connectors/php/upload.php" ;
+        $upload_path = file_exists($upload_path) ? "/fckeditor/editor/filemanager/connectors/php/upload.php" : "/fckeditor/editor/filemanager/upload/php/upload.php" ;
+        if ($advanced_uploads) {
+          $element['#suffix'] .= $js_id .".Config['LinkBrowserURL'] = \"". $module_full_path ."/fckeditor/editor/filemanager/browser/default/browser.html?Connector=". $connector_path ."&ServerPath=". $files_path ."\";
   ". $js_id .".Config['ImageBrowserURL'] = \"". $module_full_path ."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Image&Connector=". $connector_path ."&ServerPath=". $files_path ."\";
   ". $js_id .".Config['FlashBrowserURL'] = \"". $module_full_path ."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Flash&Connector=". $connector_path ."&ServerPath=". $files_path ."\";\n";
-      }
-      else {
-        $element['#suffix'] .= $js_id .".Config['LinkBrowser'] = false;
+        }
+        else {
+          $element['#suffix'] .= $js_id .".Config['LinkBrowser'] = false;
 ". $js_id .".Config['ImageBrowser'] = false;
 ". $js_id .".Config['FlashBrowser'] = false;\n";
-      }
-      if ($basic_uploads) {
-        $element['#suffix'] .= $js_id .".Config['LinkUploadURL'] = \"". $module_full_path . $upload_path ."\";
+        }
+        if ($basic_uploads) {
+          $element['#suffix'] .= $js_id .".Config['LinkUploadURL'] = \"". $module_full_path . $upload_path ."\";
   ". $js_id .".Config['ImageUploadURL'] = \"". $module_full_path . $upload_path ."?Type=Image\";
   ". $js_id .".Config['FlashUploadURL'] = \"". $module_full_path . $upload_path ."?Type=Flash\";\n";
-      }
-      else {
-        $element['#suffix'] .= $js_id .".Config['LinkUpload'] = false;
+        }
+        else {
+          $element['#suffix'] .= $js_id .".Config['LinkUpload'] = false;
 ". $js_id .".Config['ImageUpload'] = false;
 ". $js_id .".Config['FlashUpload'] = false;\n";
+        }
+        $_SESSION['FCKeditor']['UserFilesPath'] = strtr($profile->settings['UserFilesPath'], array("%f" => file_directory_path(), "%u" => $user->uid, "%b" => $host));
+        $_SESSION['FCKeditor']['UserFilesAbsolutePath'] = strtr($profile->settings['UserFilesAbsolutePath'], array("%f" => file_directory_path(), "%u" => $user->uid, "%b" => base_path(), "%d" => $_SERVER['DOCUMENT_ROOT']));
       }
-      $_SESSION['FCKeditor']['UserFilesPath'] = strtr($profile->settings['UserFilesPath'], array("%f" => file_directory_path(), "%u" => $user->uid, "%b" => base_path()));
-      $_SESSION['FCKeditor']['UserFilesAbsolutePath'] = strtr($profile->settings['UserFilesAbsolutePath'], array("%f" => file_directory_path(), "%u" => $user->uid, "%b" => base_path(), "%d" => $_SERVER['DOCUMENT_ROOT']));
     }
     else {
       $element['#suffix'] .= $js_id .".Config['LinkBrowser'] = false;
@@ -1270,12 +1273,12 @@ function fckeditor_profile_form_build($sth, $edit) {
   $roles = $orig_roles;
 
   if ($edit->rids && !user_roles(false, 'access fckeditor')) {
-    drupal_set_message(t('You haven\'t assigned <code>!access1</code> !permissions yet.<br/>It is recommended to assign the <code>!access1</code> !permissions before updating FCKeditor profiles.', 
+    drupal_set_message(t('You haven\'t assigned <code>!access1</code> !permissions yet.<br/>It is recommended to assign the <code>!access1</code> !permissions before updating FCKeditor profiles.',
     array(
-    '!access1' => t('access fckeditor'), 
+    '!access1' => t('access fckeditor'),
     '!permissions' => l(t('permissions'), 'admin/user/permissions'))), 'warning');
   }
-  
+
   if (arg(3) == 'add') {
     drupal_set_breadcrumb(array(l(t('administer'), 'admin'), l(t('fckeditor'), 'admin/settings/fckeditor'), l(t('Add new FCKeditor profile'), 'admin/settings/fckeditor/add')));
 
@@ -1592,29 +1595,29 @@ function fckeditor_profile_form_build($sth, $edit) {
   '#description' => t('Enter path to XML file with predefined styles (<em>example: /fckstyles.xml</em>).<br />Macros: %h (host name: !host), %t (path to theme: !theme), %m (path to FCKeditor module: !module)<br />Be sure to select "define path to fckstyles.xml" above.', array('!host' => base_path(), '!theme' => path_to_theme() .'/', '!module' => drupal_get_path('module', 'fckeditor')))
   );
 
-  // don't show useless options if IMCE is preferred
-  if (function_exists('imce_integrate') && variable_get('imce_settings_fck', 0)) {
-    $form['fckeditor_upload_settings'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('File browser settings'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#description' => t('The file browser settings are not diplayed because you have configured IMCE to handle file browsing.')
-    );
-  }
-  else {
-    $form['fckeditor_upload_settings'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('File browser settings'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#description' => t('Set file browser settings. If you enable file uploads and disable basic and advanced file management, you will need to manage your images and other files with the core upload module or a contrib module like !imce. Please note that these options require manual configuration, check !readme for more information.<br />',
+  $form['fckeditor_upload_settings'] = array(
+  '#type' => 'fieldset',
+  '#title' => t('File browser settings'),
+  '#collapsible' => TRUE,
+  '#collapsed' => TRUE,
+  '#description' => t('Set file browser settings. If you enable file uploads and disable basic and advanced file management, you will need to manage your images and other files with the core upload module or a contrib module like !imce. Please note that these options require manual configuration, check !readme for more information.<br />',
     array(
     '!imce' => l(t('IMCE'), 'http://drupal.org/project/imce'),
     '!readme' => l('readme.txt', 'admin/help/fckeditor'),
     )
     )
-    );
+  );    
+  // don't show useless options if IMCE is preferred
+  if (function_exists('imce_menu')) {
+  $form['fckeditor_upload_settings']['imce'] = array(
+  '#type' => 'select',
+  '#options' => array('f' => t('false'), 't' => t('true')),
+  '#title' => t('IMCE integration'),
+  '#default_value' => $edit->settings['imce'] ? $edit->settings['imce'] : 'f',
+  '#description' => t("Use IMCE instead of FCKeditor built-in file browser to handle file uploads. Is set to true, all file browser settings below are not used."),
+  );
+  }
+  if (!function_exists('imce_menu') || !isset($edit->settings['imce']) || $edit->settings['imce']=='f') {
     $form['fckeditor_upload_settings']['upload_basic'] = array(
     '#type' => 'select',
     '#options' => array('f' => t('false'), 't' => t('true')),
@@ -1769,15 +1772,15 @@ function fckeditor_user_get_profile($user) {
       $profile_name[$user->uid] = db_result(db_query("SELECT s.name FROM {fckeditor_settings} s INNER JOIN {fckeditor_role} r ON r.name = s.name WHERE r.rid='%s'", $rid));
     }
     else if ($user->uid == "1") {
-      $profile_name[$user->uid] = db_result(db_query("SELECT s.name FROM {fckeditor_settings} s INNER JOIN {fckeditor_role} r ON r.name = s.name WHERE r.rid IN ('%s') ORDER BY r.rid DESC LIMIT 1", implode("','", array_keys($user->roles))));
+      $profile_name[$user->uid] = db_result(db_query_range("SELECT s.name FROM {fckeditor_settings} s INNER JOIN {fckeditor_role} r ON r.name = s.name WHERE r.rid IN ('%s') ORDER BY r.rid DESC", implode("','", array_keys($user->roles)), 1));
     }
   }
-  
+
   if (isset($profile_name[$user->uid]) && $profile_name[$user->uid]) {
     $profile = fckeditor_profile_load($profile_name[$user->uid]);
     return $profile;
   }
-  
+
   return false;
 }
 
