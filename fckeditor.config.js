@@ -24,6 +24,7 @@ FCKConfig.ToolbarSets["DrupalFull"] = [
 ['Link','Unlink','Anchor'],
 ['Image','Flash','Table','Rule','SpecialChar','DrupalBreak'],
 //uncomment this line to enable teaser break and page break buttons
+//remember to load appropriate plugins with FCKConfig.Plugins.Add command a couple of lines below
 //['Image','Flash','Table','Rule','SpecialChar','DrupalBreak','DrupalPageBreak'],
 '/',
 ['FontFormat','FontName','FontSize'],
