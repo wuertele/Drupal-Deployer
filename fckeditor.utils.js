@@ -8,6 +8,8 @@ var fckIsIE = ( /*@cc_on!@*/false ) ? true : false ;
 
 function Toggle(js_id, textareaID, textTextarea, TextRTE)
 {
+	var eFCKeditorDiv	= document.getElementById( 'fck_' + js_id ) ;
+
   if (!fckIsRunning[js_id])
   {
     if (!fckIsLaunching[js_id])
@@ -29,7 +31,6 @@ function Toggle(js_id, textareaID, textTextarea, TextRTE)
   // Get the _Textarea and _FCKeditor DIVs.
   var eTextarea	= document.getElementById( textareaID );
   var eFCKeditor	= document.getElementById( js_id );
-  var eFCKeditorDiv	= document.getElementById('fck_' + js_id);
   var text;
 
   // If the _Textarea DIV is visible, switch to FCKeditor.
