@@ -44,10 +44,6 @@ function Toggle(js_id, textareaID, textTextarea, TextRTE)
         text = val + '<!--break-->' + text;
       }
     }
-    if ( text.length ) {
-      oEditor.SetHTML( text, false);
-    }
-    eTextarea.style.display = 'none';
 
     // This is a hack for Gecko 1.0.x ... it stops editing when the editor is hidden.
     if (oEditor && !document.all)
@@ -55,6 +51,12 @@ function Toggle(js_id, textareaID, textTextarea, TextRTE)
       if (oEditor.EditMode == FCK_EDITMODE_WYSIWYG)
       oEditor.MakeEditable() ;
     }
+    
+    if ( text.length ) {
+      oEditor.SetHTML( text, false);
+    }
+    eTextarea.style.display = 'none';
+    
     $('div[@class=teaser-button-wrapper]').hide();
     $('#edit-teaser-js').parent().hide();
     $('#edit-teaser-include').parent().show();
