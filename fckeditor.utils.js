@@ -12,6 +12,9 @@ function Toggle(js_id, textareaID, textTextarea, TextRTE)
   {
     if (!fckIsLaunching[js_id])
     {
+			//display is set to '' at this stage because of IE 800a025e bug
+			if (fckIsIE)
+			   eFCKeditorDiv.style.display = '' ;
       fckIsLaunching[js_id] = true;
       eval(js_id + '.ReplaceTextarea();');
     }
