@@ -315,6 +315,6 @@ function admin_menu_remove_item(&$_admin_menu, $path) {
  * @ingroup themeable
  */
 function theme_admin_menu_icon() {
-  return '<img class="admin-menu-icon" src="'. (theme_get_setting('favicon') ? theme_get_setting('favicon') : url('misc/favicon.ico')) .'" width="16" height="16" alt="" />';
+  return '<img class="admin-menu-icon" src="'. (theme_get_setting('toggle_favicon') ? theme_get_setting('favicon') : base_path() .'misc/favicon.ico') .'" width="16" height="16" alt="" />';
 }
 
