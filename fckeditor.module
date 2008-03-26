@@ -612,12 +612,12 @@ function fckeditor_process_textarea($element) {
   $themepath = path_to_theme() .'/';
   $host = base_path();
 
-  $enabled = fckeditor_is_enabled($conf['excl_mode'], $conf['excl_fields'], $conf['excl_paths'], $element['#id'], $_GET['q']);
+  $enabled = fckeditor_is_enabled(empty($conf['excl_mode']) ? "" : $conf['excl_mode'], empty($conf['excl_fields']) ? "" : $conf['excl_fields'], empty($conf['excl_paths']) ? "" : $conf['excl_paths'], $element['#id'], $_GET['q']);
   if ($enabled) {
     $global_profile = fckeditor_profile_load("FCKeditor Global Profile");
     $global_conf = $global_profile->settings;
     if ($global_conf) {
-      $enabled = fckeditor_is_enabled($global_conf['excl_mode'], $global_conf['excl_fields'], $global_conf['excl_paths'], $element['#id'], $_GET['q']);
+      $enabled = fckeditor_is_enabled(empty($global_conf['excl_mode']) ? "" : $global_conf['excl_mode'], empty($global_conf['excl_fields']) ? "" : $global_conf['excl_fields'], empty($global_conf['excl_paths']) ? "" : $global_conf['excl_paths'], $element['#id'], $_GET['q']);
     }
   }
   if (!isset($element['#suffix'])) {
@@ -672,9 +672,9 @@ function fckeditor_process_textarea($element) {
     $toolbar = $conf['toolbar'];
     //$height += 100; // for larger toolbars
 
-    $force_simple_toolbar = fckeditor_is_enabled(1, $conf['simple_incl_fields'], $conf['simple_incl_paths'], $element['#id'], $_GET['q']);
+    $force_simple_toolbar = fckeditor_is_enabled(1, empty($conf['simple_incl_fields']) ? "" : $conf['simple_incl_fields'], empty($conf['simple_incl_paths']) ? "" : $conf['simple_incl_paths'], $element['#id'], $_GET['q']);
     if (!$force_simple_toolbar) {
-      $force_simple_toolbar = fckeditor_is_enabled(1, $global_conf['simple_incl_fields'], $global_conf['simple_incl_paths'], $element['#id'], $_GET['q']);
+      $force_simple_toolbar = fckeditor_is_enabled(1, empty($global_conf['simple_incl_fields']) ? "" : $global_conf['simple_incl_fields'], empty($global_conf['simple_incl_paths']) ? "" : $global_conf['simple_incl_paths'], $element['#id'], $_GET['q']);
     }
     if ($force_simple_toolbar) {
       $toolbar = FCKEDITOR_FORCE_SIMPLE_TOOLBAR_NAME;
@@ -743,8 +743,8 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
 ". $js_id .".Config['ImageUpload'] = false;
 ". $js_id .".Config['FlashUpload'] = false;\n";
         }
-        $_SESSION['FCKeditor']['UserFilesPath'] = strtr($profile->settings['UserFilesPath'], array("%f" => file_directory_path(), "%u" => $user->uid, "%b" => $host));
-        $_SESSION['FCKeditor']['UserFilesAbsolutePath'] = strtr($profile->settings['UserFilesAbsolutePath'], array("%f" => file_directory_path(), "%u" => $user->uid, "%b" => base_path(), "%d" => $_SERVER['DOCUMENT_ROOT']));
+        if (!empty($profile->settings['UserFilesPath'])) $_SESSION['FCKeditor']['UserFilesPath'] = strtr($profile->settings['UserFilesPath'], array("%f" => file_directory_path(), "%u" => $user->uid, "%b" => $host));
+        if (!empty($profile->settings['UserFilesAbsolutePath'])) $_SESSION['FCKeditor']['UserFilesAbsolutePath'] = strtr($profile->settings['UserFilesAbsolutePath'], array("%f" => file_directory_path(), "%u" => $user->uid, "%b" => base_path(), "%d" => $_SERVER['DOCUMENT_ROOT']));
       }
     }
     else {
@@ -756,7 +756,7 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
 ". $js_id .".Config['FlashUpload'] = false;\n";
     }
 
-    if ($conf['js_conf']) {
+    if (!empty($conf['js_conf'])) {
       $lines = preg_split("/[\n\r]+/", $conf['js_conf']);
       foreach ($lines as $l)
       if ($l && strlen($l) > 5) {
@@ -769,13 +769,13 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
     }
 
     // add custom xml stylesheet if it exists
-    if ($conf['css_style'] == 'theme') {
+    if (!empty($conf['css_style']) && $conf['css_style'] == 'theme') {
       if (file_exists($themepath .'/fckstyles.xml')) {
         $styles_xml_path = $host . $themepath .'/fckstyles.xml';
         $element['#suffix'] .= $js_id .".Config['StylesXmlPath'] = \"". $styles_xml_path ."\";\n";
       }
     }
-    else if ($conf['css_style'] == 'self') {
+    else if (!empty($conf['css_style']) && $conf['css_style'] == 'self') {
       $element['#suffix'] .=  $js_id .".Config['StylesXmlPath'] = \"". str_replace(array('%h', '%t', '%m'), array($host, $themepath, $module_drupal_path), $conf['styles_path']) ."\";\n";
     }
 
