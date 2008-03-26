@@ -121,7 +121,7 @@ function fckeditor_help($path, $arg) {
 
       break;
   }
-  return $output;
+  return !empty($output) ? $output : "";
 }
 
 /**
@@ -406,7 +406,7 @@ function fckeditor_admin($arg = NULL) {
     case t('Update profile');
     if (fckeditor_profile_validate($edit)) {
       fckeditor_profile_save($edit);
-      $edit['old_name'] ? drupal_set_message(t('Your FCKeditor profile has been updated.')) : drupal_set_message(t('Your FCKeditor profile has been created.'));
+      !empty($edit['old_name']) ? drupal_set_message(t('Your FCKeditor profile has been updated.')) : drupal_set_message(t('Your FCKeditor profile has been created.'));
       drupal_goto('admin/settings/fckeditor');
     }
     else {
@@ -450,16 +450,16 @@ function fckeditor_admin($arg = NULL) {
  * @todo add more entries to array in the user_save line
  */
 function fckeditor_profile_save($edit) {
-  db_query("DELETE FROM {fckeditor_settings} WHERE name = '%s' or name = '%s'", $edit['name'], $edit['old_name']);
-  db_query("DELETE FROM {fckeditor_role} WHERE name = '%s' or name = '%s'", $edit['name'], $edit['old_name']);
+  db_query("DELETE FROM {fckeditor_settings} WHERE name = '%s' or name = '%s'", $edit['name'], empty($edit['old_name']) ? "" : $edit['old_name']);
+  db_query("DELETE FROM {fckeditor_role} WHERE name = '%s' or name = '%s'", $edit['name'], empty($edit['old_name']) ? "" : $edit['old_name']);
   db_query("INSERT INTO {fckeditor_settings} (name, settings) VALUES ('%s', '%s')", $edit['name'], serialize($edit));
-  if ($edit['rids'])
+  if (!empty($edit['rids']))
   foreach ($edit['rids'] as $rid => $value) {
     db_query("INSERT INTO {fckeditor_role} (name, rid) VALUES ('%s', %d)", $edit['name'], $rid);
   }
 
   // if users can't set their own defaults, make sure to remove $user->fckeditor_status so their default doesn't override the main default
-  if ($edit['user_choose'] == 'false') {
+  if (!empty($edit['user_choose']) && $edit['user_choose'] == 'false') {
     global $user;
     user_save($user, array('fckeditor_status' => NULL));
   }
@@ -470,8 +470,8 @@ function fckeditor_global_profile_save($edit) {
     $edit['rank'] = explode('>', str_replace(' ', '', $edit['rank']));
   }
 
-  db_query("DELETE FROM {fckeditor_settings} WHERE name = '%s' or name = '%s'", $edit['name'], $edit['old_name']);
-  db_query("DELETE FROM {fckeditor_role} WHERE name = '%s' or name = '%s'", $edit['name'], $edit['old_name']);
+  db_query("DELETE FROM {fckeditor_settings} WHERE name = '%s' or name = '%s'", $edit['name'], empty($edit['old_name']) ? "" : $edit['old_name']);
+  db_query("DELETE FROM {fckeditor_role} WHERE name = '%s' or name = '%s'", $edit['name'], empty($edit['old_name']) ? "" : $edit['old_name']);
   db_query("INSERT INTO {fckeditor_settings} (name, settings) VALUES ('%s', '%s')", $edit['name'], serialize($edit));
 }
 
@@ -936,7 +936,7 @@ function fckeditor_user($type, &$edit, &$user, $category = NULL) {
  */
 function fckeditor_profile_form($edit) {
 
-  $output .= drupal_get_form('fckeditor_profile_form_build', $edit);
+  $output = drupal_get_form('fckeditor_profile_form_build', $edit);
 
   return $output;
 }
@@ -946,7 +946,7 @@ function fckeditor_profile_form($edit) {
  */
 function fckeditor_global_profile_form($edit) {
 
-  $output .= drupal_get_form('fckeditor_global_profile_form_build', $edit);
+  $output = drupal_get_form('fckeditor_global_profile_form_build', $edit);
 
   return $output;
 }
@@ -1121,7 +1121,7 @@ function fckeditor_sorted_roles() {
 
   $result = db_query("SELECT settings FROM {fckeditor_settings} WHERE name='FCKeditor Global Profile'");
   $data = db_fetch_object($result);
-  if ($data->settings) {
+  if (!empty($data->settings)) {
     $settings = unserialize($data->settings);
     if (isset($settings['rank']) && !empty($settings['rank']))
     foreach ($settings['rank'] as $rid) {
@@ -1145,7 +1145,7 @@ function fckeditor_global_profile_form_build($sth, $edit) {
     $result = db_query("SELECT DISTINCT(rid) FROM {fckeditor_role} WHERE name='FCKeditor Global Profile'");
     $data = db_fetch_object($result);
 
-    if ($data->rid) {
+    if (!empty($data->rid)) {
       drupal_set_message(t("Global profile already exist. Only one global profile is allowed."), "error");
       return array();
     }
@@ -1192,7 +1192,7 @@ function fckeditor_global_profile_form_build($sth, $edit) {
   $form['fckeditor_exclude_settings']['excl_mode'] = array(
   '#type' => 'select',
   '#title' => t('Use inclusion or exclusion mode'),
-  '#default_value' => (in_array($edit->settings['excl_mode'], array(0, 2))) ? 0 : 1,
+  '#default_value' => (!empty($edit->settings['excl_mode']) && in_array($edit->settings['excl_mode'], array(0, 2))) ? 0 : 1,
   '#options' => array('0' => t('exclude'), '1' => t('include')),
   '#description' => t('Choose the way of disabling/enabling FCKeditor on selected fields/paths (see below). Use exclude to disable FCKeditor on selected fields/paths. Use include if you want to load FCKeditor only on selected paths/fields.'),
   );
@@ -1209,7 +1209,7 @@ function fckeditor_global_profile_form_build($sth, $edit) {
   '#rows' => 5,
   '#prefix' => '<div style="margin-left:20px">',
   '#suffix' => '</div>',
-  '#default_value' => $edit->settings['excl_fields'] ? $edit->settings['excl_fields'] : '',
+  '#default_value' => !empty($edit->settings['excl_fields']) ? $edit->settings['excl_fields'] : '',
   '#description' => t("Enter names (HTML ID's) of fields that may or may not have an FCKeditor, depending on the chosen option for the inclusion/exclusion mode.<br />You may separate the different entries by commas, spaces or newlines."),
   );
 
@@ -1225,7 +1225,7 @@ function fckeditor_global_profile_form_build($sth, $edit) {
   '#suffix' => '</div>',
   '#cols' => 60,
   '#rows' => 5,
-  '#default_value' => $edit->settings['excl_paths'] ? $edit->settings['excl_paths'] : '',
+  '#default_value' => !empty($edit->settings['excl_paths']) ? $edit->settings['excl_paths'] : '',
   '#description' => t("Enter drupal paths here, depending on the chosen option for the inclusion/exclusion mode.<br />Paths may be used the same way as in the drupal blocks configuration.<br />You may separate the different entries by commas, spaces or newlines. <br />You may also use * as a wildcard character (for example <code>comment/*</code>)."),
   );
 
@@ -1234,7 +1234,7 @@ function fckeditor_global_profile_form_build($sth, $edit) {
   '#title' => t('Force simplified toolbar on the following fields'),
   '#cols' => 60,
   '#rows' => 5,
-  '#default_value' => $edit->settings['simple_incl_fields'] ? $edit->settings['simple_incl_fields'] : '',
+  '#default_value' => !empty($edit->settings['simple_incl_fields']) ? $edit->settings['simple_incl_fields'] : '',
   '#description' => t("Enter names (HTML ID's) of fields that should have the simplified toolbar.<br />If you don't want to use this feature, simply leave this field empty.<br />You may separate the different entries by commas, spaces or newlines."),
   );
 
@@ -1243,7 +1243,7 @@ function fckeditor_global_profile_form_build($sth, $edit) {
   '#title' => t('Force simplified toolbar on the following paths'),
   '#cols' => 60,
   '#rows' => 5,
-  '#default_value' => $edit->settings['simple_incl_paths'] ? $edit->settings['simple_incl_paths'] : '',
+  '#default_value' => !empty($edit->settings['simple_incl_paths']) ? $edit->settings['simple_incl_paths'] : '',
   '#description' => t("Enter drupal paths that should have the simplified toolbar.<br />If you don't want to use this feature, simply leave this field empty.<br />Paths may be used the same way as in the drupal blocks configuration.<br />You may separate the different entries by commas, spaces or newlines.<br />You may also use * as a wildcard character (for example <code>comment/*</code>)."),
   );
 
@@ -1270,7 +1270,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $orig_roles = user_roles(FALSE, 'access fckeditor');
   $roles = $orig_roles;
 
-  if ($edit->rids && !user_roles(false, 'access fckeditor')) {
+  if (!empty($edit->rids) && !user_roles(false, 'access fckeditor')) {
     drupal_set_message(t('You haven\'t assigned <code>!access1</code> !permissions yet.<br/>It is recommended to assign the <code>!access1</code> !permissions before updating FCKeditor profiles.',
     array(
     '!access1' => t('access fckeditor'),
@@ -1282,7 +1282,7 @@ function fckeditor_profile_form_build($sth, $edit) {
 
     $result = db_query('SELECT DISTINCT(rid) FROM {fckeditor_role}');
     while ($data = db_fetch_object($result)) {
-      if (!in_array($data->rid, array_keys((array) $edit->rids)) && !form_get_errors()) {
+      if ((empty($edit->rids) || !in_array($data->rid, array_keys((array) $edit->rids))) && !form_get_errors()) {
         unset($roles[$data->rid]);
       }
     }
@@ -1306,7 +1306,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['basic']['name'] = array(
   '#type' => 'textfield',
   '#title' => t('Profile name'),
-  '#default_value' => $edit->name,
+  '#default_value' => !empty($edit->name) ? $edit->name : "",
   '#size' => 40,
   '#maxlength' => 128,
   '#description' => t('Enter a name for this profile. This name is only visible within the fckeditor administration page.'),
@@ -1316,7 +1316,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['basic']['rids'] = array(
   '#type' => 'checkboxes',
   '#title' => t('Roles allowed to use this profile'),
-  '#default_value' => array_keys((array) $edit->rids),
+  '#default_value' => !empty($edit->rids) ? array_keys((array) $edit->rids) : array(),
   '#options' => $roles,
   '#description' =>  t('Only roles with \'!access1\' permission will be shown here. If no role is available, make sure that you have assigned the \'!access1\' !permission.', array('!access1' => t('access fckeditor'), '!permission' => l(t("permission"), "admin/user/permissions"))),
   '#required' => TRUE
@@ -1325,7 +1325,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['basic']['allow_user_conf'] = array(
   '#type' => 'select',
   '#title' => t('Allow users to customize FCKeditor appearance'),
-  '#default_value' => $edit->settings['allow_user_conf'] ? $edit->settings['allow_user_conf'] : 'f',
+  '#default_value' => !empty($edit->settings['allow_user_conf']) ? $edit->settings['allow_user_conf'] : 'f',
   '#options' => array('f' => t('false'), 't' => t('true')),
   '#description' => t('If allowed, users will be able to override <code>Editor appearance</code> by visiting their profile page.'),
   );
@@ -1340,14 +1340,14 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['fckeditor_exclude_settings']['min_rows'] = array(
   '#type' => 'textfield',
   '#title' => t('Minimum rows'),
-  '#default_value' => $edit->settings['min_rows'] ? $edit->settings['min_rows'] : '5',
+  '#default_value' => !empty($edit->settings['min_rows']) ? $edit->settings['min_rows'] : '5',
   '#description' => t("FCKeditor will be triggered if the textarea has more rows than entered here. Enter '1' if you do not want to use this feature."),
   );
 
   $form['fckeditor_exclude_settings']['excl_mode'] = array(
   '#type' => 'select',
   '#title' => t('Use inclusion or exclusion mode'),
-  '#default_value' => (in_array($edit->settings['excl_mode'], array(0, 2))) ? 0 : 1,
+  '#default_value' => (!empty($edit->settings['excl_mode']) && in_array($edit->settings['excl_mode'], array(0, 2))) ? 0 : 1,
   '#options' => array('0' => t('exclude'), '1' => t('include')),
   '#description' => t('Choose the way of disabling/enabling FCKeditor on selected fields/paths (see below). Use exclude to disable FCKeditor on selected fields/paths. Use include if you want to load FCKeditor only on selected paths/fields.'),
   );
@@ -1364,7 +1364,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   '#rows' => 5,
   '#prefix' => '<div style="margin-left:20px">',
   '#suffix' => '</div>',
-  '#default_value' => $edit->settings['excl_fields'] ? $edit->settings['excl_fields'] : '',
+  '#default_value' => !empty($edit->settings['excl_fields']) ? $edit->settings['excl_fields'] : '',
   '#description' => t("Enter names (HTML ID's) of fields that may or may not have an FCKeditor, depending on the chosen option for the inclusion/exclusion mode.<br />You may separate the different entries by commas, spaces or newlines."),
   );
 
@@ -1380,7 +1380,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   '#suffix' => '</div>',
   '#cols' => 60,
   '#rows' => 5,
-  '#default_value' => $edit->settings['excl_paths'] ? $edit->settings['excl_paths'] : '',
+  '#default_value' => !empty($edit->settings['excl_paths']) ? $edit->settings['excl_paths'] : '',
   '#description' => t("Enter drupal paths here, depending on the chosen option for the inclusion/exclusion mode.<br />Paths may be used the same way as in the drupal blocks configuration.<br />You may separate the different entries by commas, spaces or newlines. <br />You may also use * as a wildcard character (for example <code>comment/*</code>)."),
   );
 
@@ -1390,7 +1390,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   '#cols' => 60,
   '#rows' => 5,
   //'#prefix' => t('Here you can define where FCKeditor should force the <code>!simple</code> toolbar.<br/>Useful for smaller textareas where we usually don\'t use very complicated HTML code, like in signatures.', array('!simple' => FCKEDITOR_FORCE_SIMPLE_TOOLBAR_NAME)),
-  '#default_value' => $edit->settings['simple_incl_fields'] ? $edit->settings['simple_incl_fields'] : '',
+  '#default_value' => !empty($edit->settings['simple_incl_fields']) ? $edit->settings['simple_incl_fields'] : '',
   '#description' => t("Enter names (HTML ID's) of fields that should have the simplified toolbar.<br />If you don't want to use this feature, simply leave this field empty.<br />You may separate the different entries by commas, spaces or newlines."),
   );
 
@@ -1400,7 +1400,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   '#cols' => 60,
   '#rows' => 5,
   //'#prefix' => t('Here you can define where FCKeditor should force the <code>!simple</code> toolbar.<br/>Useful for smaller textareas where we usually don\'t use very complicated HTML code, like in signatures.', array('!simple' => FCKEDITOR_FORCE_SIMPLE_TOOLBAR_NAME)),
-  '#default_value' => $edit->settings['simple_incl_paths'] ? $edit->settings['simple_incl_paths'] : '',
+  '#default_value' => !empty($edit->settings['simple_incl_paths']) ? $edit->settings['simple_incl_paths'] : '',
   '#description' => t("Enter drupal paths that should have the simplified toolbar.<br />If you don't want to use this feature, simply leave this field empty.<br />Paths may be used the same way as in the drupal blocks configuration.<br />You may separate the different entries by commas, spaces or newlines.<br />You may also use * as a wildcard character (for example <code>comment/*</code>)."),
   );
 
@@ -1414,7 +1414,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['appearance']['default'] = array(
   '#type' => 'select',
   '#title' => t('Default state'),
-  '#default_value' => $edit->settings['default'] ? $edit->settings['default'] : 't',
+  '#default_value' => !empty($edit->settings['default']) ? $edit->settings['default'] : 't',
   '#options' => array('t' => t('enabled'), 'f' => t('disabled')),
   '#description' => t('Default editor state. If disabled, rich text editor may still be enabled using toggle or popup window.'),
   );
@@ -1422,7 +1422,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['appearance']['show_toggle'] = array(
   '#type' => 'select',
   '#title' => t('Show disable/enable rich text editor toggle'),
-  '#default_value' => $edit->settings['show_toggle'] ? $edit->settings['show_toggle'] : 't',
+  '#default_value' => !empty($edit->settings['show_toggle']) ? $edit->settings['show_toggle'] : 't',
   '#options' => array('t' => t('true'), 'f' => t('false')),
   '#description' => t('Whether or not to show the disable/enable rich text editor toggle below the textarea. Works only if FCKeditor is not running in a popup window (see below).'),
   );
@@ -1430,7 +1430,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['appearance']['popup'] = array(
   '#type' => 'select',
   '#title' => t('Use FCKeditor in a popup window'),
-  '#default_value' => $edit->settings['popup'] ? $edit->settings['popup'] : 'f',
+  '#default_value' => !empty($edit->settings['popup']) ? $edit->settings['popup'] : 'f',
   '#options' => array('f' => t('false'), 't' => t('true')),
   '#description' => t('If this option is enabled a link to a popup window will be used instead of a textarea replace.'),
   );
@@ -1438,7 +1438,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['appearance']['skin'] = array(
   '#type' => 'select',
   '#title' => t('Skin'),
-  '#default_value' => $edit->settings['skin'] ? $edit->settings['skin'] : 'default',
+  '#default_value' => !empty($edit->settings['skin']) ? $edit->settings['skin'] : 'default',
   '#options' => $skin_options,
   '#description' => t('Choose a default skin.'),
   );
@@ -1446,7 +1446,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['appearance']['toolbar'] = array(
   '#type' => 'select',
   '#title' => t('Toolbar'),
-  '#default_value' => $edit->settings['toolbar'] ? $edit->settings['toolbar'] : 'default',
+  '#default_value' => !empty($edit->settings['toolbar']) ? $edit->settings['toolbar'] : 'default',
   '#options' => $toolbar_options,
   '#description' => t('Choose a default toolbar set. To define new toolbar, edit <code>fckeditor.config.js</code> located in !module_path.', array('!module_path' => drupal_get_path('module', 'fckeditor'))),
   );
@@ -1454,7 +1454,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['appearance']['expand'] = array(
   '#type' => 'select',
   '#title' => t('Start the toolbar expanded'),
-  '#default_value' => $edit->settings['expand'] ? $edit->settings['expand'] : 't',
+  '#default_value' => !empty($edit->settings['expand']) ? $edit->settings['expand'] : 't',
   '#options' => array('t' => t('enabled'), 'f' => t('disabled')),
   '#description' => t('The toolbar start expanded or collapsed.'),
   );
@@ -1462,7 +1462,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['appearance']['width'] = array(
   '#type' => 'textfield',
   '#title' => t('Width'),
-  '#default_value' => $edit->settings['width'] ? $edit->settings['width'] : '100%',
+  '#default_value' => !empty($edit->settings['width']) ? $edit->settings['width'] : '100%',
   '#description' => t("Width in pixels or percent. Ex: 400 or 100%"),
   '#size' => 40,
   '#maxlength' => 128,
@@ -1471,7 +1471,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['appearance']['lang'] = array(
   '#type' => 'select',
   '#title' => t('Language'),
-  '#default_value' => $edit->settings['lang'] ? $edit->settings['lang'] : 'en',
+  '#default_value' => !empty($edit->settings['lang']) ? $edit->settings['lang'] : 'en',
   '#options' => $lang_options,
   '#description' => t('The language for the FCKeditor interface.')
   );
@@ -1479,7 +1479,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['appearance']['auto_lang'] = array(
   '#type' => 'select',
   '#title' => t('Auto-detect language'),
-  '#default_value' => $edit->settings['auto_lang'] ? $edit->settings['auto_lang'] : 't',
+  '#default_value' => !empty($edit->settings['auto_lang']) ? $edit->settings['auto_lang'] : 't',
   '#options' => array('t' => t('true'), 'f' => t('false')),
   '#description' => t('Use auto detect user language feature.')
   );
@@ -1504,7 +1504,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['output']['enter_mode'] = array(
   '#type' => 'select',
   '#title' => t('Enter mode'),
-  '#default_value' => $edit->settings['enter_mode'] ? $edit->settings['enter_mode'] : 'p',
+  '#default_value' => !empty($edit->settings['enter_mode']) ? $edit->settings['enter_mode'] : 'p',
   '#options' => array('p' => '<p>', 'br' => '<br>', 'div' => '<div>'),
   '#description' => t('Set which tag FCKeditor should use when [Enter] key is pressed.')
   );
@@ -1512,7 +1512,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['output']['shift_enter_mode'] = array(
   '#type' => 'select',
   '#title' => t('Shift + Enter mode'),
-  '#default_value' => $edit->settings['shift_enter_mode'] ? $edit->settings['shift_enter_mode'] : 'br',
+  '#default_value' => !empty($edit->settings['shift_enter_mode']) ? $edit->settings['shift_enter_mode'] : 'br',
   '#options' => array('p' => '<p>', 'br' => '<br>', 'div' => '<div>'),
   '#description' => t('Set which tag FCKeditor should use when [Shift] + [Enter] is pressed.')
   );
@@ -1520,7 +1520,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['output']['font_format'] = array(
   '#type' => 'textfield',
   '#title' => t('Font formats'),
-  '#default_value' => $edit->settings['font_format'] ? $edit->settings['font_format'] : 'p;div;pre;address;h1;h2;h3;h4;h5;h6',
+  '#default_value' => !empty($edit->settings['font_format']) ? $edit->settings['font_format'] : 'p;div;pre;address;h1;h2;h3;h4;h5;h6',
   '#size' => 40,
   '#maxlength' => 250,
   '#description' => t('Semicolon separated list of HTML font formats. Allowed values are: p;div;pre;address;h1;h2;h3;h4;h5;h6'),
@@ -1529,7 +1529,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['output']['format_source'] = array(
   '#type' => 'select',
   '#title' => t('Apply source formatting'),
-  '#default_value' => $edit->settings['format_source'] ? $edit->settings['format_source'] : 't',
+  '#default_value' => !empty($edit->settings['format_source']) ? $edit->settings['format_source'] : 't',
   '#options' => array('t' => 'true', 'f' => 'false'),
   '#description' => t('When set to "true" the editor will format the XHTML when switching from WYSIWYG view to Source view, by inserting line breaks on some tags endings and indenting paragraphs, tables and lists.'),
   );
@@ -1537,7 +1537,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['output']['format_output'] = array(
   '#type' => 'select',
   '#title' => t('Format output'),
-  '#default_value' => $edit->settings['format_output'] ? $edit->settings['format_output'] : 't',
+  '#default_value' => !empty($edit->settings['format_output']) ? $edit->settings['format_output'] : 't',
   '#options' => array('t' => 'true', 'f' => 'false'),
   '#description' => t('When set to "true" the editor will format the XHTML output by inserting line breaks on some tags endings and indenting paragraphs, tables and lists.'),
   );
@@ -1562,7 +1562,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['css']['css_mode'] = array(
   '#type' => 'select',
   '#title' => t('Editor CSS'),
-  '#default_value' => $edit->settings['css_mode'] ? $edit->settings['css_mode'] : 'theme',
+  '#default_value' => !empty($edit->settings['css_mode']) ? $edit->settings['css_mode'] : 'theme',
   '#options' => array('theme' => t('use theme css'), 'self' => t('define css'), 'none' => t('FCKeditor default')),
   '#description' => t('Defines the CSS to be used in the editor area.<br />use theme css - load style.css from current site theme.<br/>define css - enter path for css file below.<br />FCKeditor default - uses default CSS from editor.')
   );
@@ -1570,7 +1570,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['css']['css_path'] = array(
   '#type' => 'textfield',
   '#title' => t('CSS path'),
-  '#default_value' => $edit->settings['css_path'],
+  '#default_value' => !empty($edit->settings['css_path']) ? $edit->settings['css_path'] : "",
   '#size' => 40,
   '#maxlength' => 255,
   '#description' => t('Enter path to CSS file (<em>example: css/editor.css</em>) or a list of css files seperated by a comma (<em>example: /themes/garland/style.css,http://example.com/style.css</em>).<br />Macros: %h (host name: !host), %t (path to theme: !theme)<br />Be sure to select "define css" above.', array('!host' => base_path(), '!theme' => path_to_theme() .'/'))
@@ -1579,7 +1579,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['css']['css_style'] = array(
   '#type' => 'select',
   '#title' => t('Predefined styles'),
-  '#default_value' => $edit->settings['css_style'] ? $edit->settings['css_style'] : 'theme',
+  '#default_value' => !empty($edit->settings['css_style']) ? $edit->settings['css_style'] : 'theme',
   '#options' => array('theme' => t('use theme fckstyles.xml'), 'self' => t('define path to fckstyles.xml'), 'default' => t('FCKeditor default')),
   '#description' => t('Define the location of <code>fckstyles.xml</code> file. It is used by the &quot;Style&quot; dropdown list available in the Default toolbar.<br />Copy !fckstyles.xml inside your theme directory (<code>!theme</code>) and adjust it to your needs.', array('!fckstyles.xml' => drupal_get_path('module', 'fckeditor') .'/fckeditor/fckstyles.xml', '!theme' => path_to_theme() .'/fckstyles.xml'))
   );
@@ -1587,7 +1587,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['css']['styles_path'] = array(
   '#type' => 'textfield',
   '#title' => t('Predefined styles path'),
-  '#default_value' => $edit->settings['styles_path'],
+  '#default_value' => !empty($edit->settings['styles_path']) ? $edit->settings['styles_path'] : "",
   '#size' => 40,
   '#maxlength' => 255,
   '#description' => t('Enter path to XML file with predefined styles (<em>example: /fckstyles.xml</em>).<br />Macros: %h (host name: !host), %t (path to theme: !theme), %m (path to FCKeditor module: !module)<br />Be sure to select "define path to fckstyles.xml" above.', array('!host' => base_path(), '!theme' => path_to_theme() .'/', '!module' => drupal_get_path('module', 'fckeditor')))
@@ -1611,7 +1611,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   '#type' => 'select',
   '#options' => array('f' => t('false'), 't' => t('true')),
   '#title' => t('IMCE integration'),
-  '#default_value' => $edit->settings['imce'] ? $edit->settings['imce'] : 'f',
+  '#default_value' => !empty($edit->settings['imce']) ? $edit->settings['imce'] : 'f',
   '#description' => t("Use IMCE instead of FCKeditor built-in file browser to handle file uploads. Is set to true, all file browser settings below are not used."),
   );
   }
@@ -1620,24 +1620,24 @@ function fckeditor_profile_form_build($sth, $edit) {
     '#type' => 'select',
     '#options' => array('f' => t('false'), 't' => t('true')),
     '#title' => t('Allow basic file management'),
-    '#default_value' => $edit->settings['upload_basic'] ? $edit->settings['upload_basic'] : 'f',
+    '#default_value' => !empty($edit->settings['upload_basic']) ? $edit->settings['upload_basic'] : 'f',
     '#description' => t("Allow quick uploads."),
     );
     $form['fckeditor_upload_settings']['upload_advanced'] = array(
     '#type' => 'select',
     '#options' => array('f' => t('false'), 't' => t('true')),
     '#title' => t('Allow advanced file management'),
-    '#default_value' => $edit->settings['upload_advanced'] ? $edit->settings['upload_advanced'] : 'f',
+    '#default_value' => !empty($edit->settings['upload_advanced']) ? $edit->settings['upload_advanced'] : 'f',
     '#description' => t('Allow file management in the advanced file manager.'),
     );
 
-    $current_user_files_path = strtr($edit->settings['UserFilesPath'], array("%f" => file_directory_path(), "%u" => "UID", "%b" => base_path()));
-    $current_user_files_absolute_path = strtr($edit->settings['UserFilesAbsolutePath'], array("%f" => file_directory_path(), "%u" => "UID", "%b" => base_path(), "%d" => $_SERVER['DOCUMENT_ROOT']));
+    $current_user_files_path = empty($edit->settings['UserFilesPath']) ? "" : strtr($edit->settings['UserFilesPath'], array("%f" => file_directory_path(), "%u" => "UID", "%b" => base_path()));
+    $current_user_files_absolute_path = empty($edit->settings['UserFilesAbsolutePath']) ? "" : strtr($edit->settings['UserFilesAbsolutePath'], array("%f" => file_directory_path(), "%u" => "UID", "%b" => base_path(), "%d" => $_SERVER['DOCUMENT_ROOT']));
 
     $form['fckeditor_upload_settings']['UserFilesPath'] = array(
     '#type' => 'textfield',
     '#title' => t('Path to uploaded files'),
-    '#default_value' => $edit->settings['UserFilesPath'] ? $edit->settings['UserFilesPath'] : "%b%f/",
+    '#default_value' => !empty($edit->settings['UserFilesPath']) ? $edit->settings['UserFilesPath'] : "%b%f/",
     '#size' => 40,
     '#maxlength' => 255,
     '#description' => t('Path to uploaded files relative to the document root.<br />Available wildcard characters:<br/><strong>%b</strong> - base URL path of the Drupal installation (!base).<br/><strong>%f</strong> - Drupal file system path where the files are stored (!files).<br /><strong>%u</strong> - User ID.<br />Current path: !path', array('!path' => $current_user_files_path, '!files' => file_directory_path(), '!base' => base_path())),
@@ -1645,7 +1645,7 @@ function fckeditor_profile_form_build($sth, $edit) {
     $form['fckeditor_upload_settings']['UserFilesAbsolutePath'] = array(
     '#type' => 'textfield',
     '#title' => t('Absolute path to uploaded files'),
-    '#default_value' => $edit->settings['UserFilesAbsolutePath'] ? $edit->settings['UserFilesAbsolutePath'] : "%d%b%f/",
+    '#default_value' => !empty($edit->settings['UserFilesAbsolutePath']) ? $edit->settings['UserFilesAbsolutePath'] : "%d%b%f/",
     '#size' => 40,
     '#maxlength' => 255,
     '#description' => t('The path to the local directory (in the server) which points to the path defined above. If empty, FCKeditor will try to discover the right path.<br />Available wildcard characters:<br/><strong>%d</strong> - server path to document root (!root).<br /><strong>%b</strong> - base URL path of the Drupal installation (!base).<br/><strong>%f</strong> - Drupal file system path where the files are stored (!files).<br /><strong>%u</strong> - User ID.<br />Current path: !path', array('!path' => $current_user_files_absolute_path, '!files' => file_directory_path(), '!base' => base_path(), '!root' => $_SERVER['DOCUMENT_ROOT'])),
@@ -1661,7 +1661,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['advanced']['js_conf'] = array(
   '#type' => 'textarea',
   '#title' => t('Custom javascript configuration'),
-  '#default_value' => $edit->settings['js_conf'],
+  '#default_value' => !empty($edit->settings['js_conf']) ? $edit->settings['js_conf'] : "",
   '#cols' => 60,
   '#rows' => 5,
   '#description' => t('Warning: to change FCKeditor configuration globally, you should modify the config file: <code>!fckeditor_config</code>.<br/>Sometimes it is required to change the FCKeditor configuration for selected profile. Use this box to define settings that are uniqe for this profile.<br/>Available options are listed in the !docs.<br/>Warning: if you make something wrong here, FCKeditor may fail to load.<br/>For example to disable some advanced tabs in dialog windows in FCKeditor, add the following: !example',
