@@ -200,6 +200,11 @@ function fckeditor_profile_delete($name) {
 function fckeditor_profile_validate($edit) {
   $errors = array();
 
+  //include mode and all other fields are empty, invalid
+  if ($edit['excl_mode'] == 1 && !$edit['excl_fields'] && !$edit['excl_paths']) {
+  	$errors['excl_mode'] = t('Include mode selected, but no fields/paths given. Enter at least one path or field where FCKeditor should appear.');
+  }
+  
   if (!preg_match("/^\d+$/", trim($edit['min_rows']))) {
     $errors['min_rows'] = t('Minimum rows must be a valid number');
   }
@@ -303,6 +308,11 @@ function fckeditor_profile_validate($edit) {
  */
 function fckeditor_global_profile_validate($edit) {
   $errors = array();
+
+  //include mode and all other fields are empty, invalid
+  if ($edit['excl_mode'] == 1 && !$edit['excl_fields'] && !$edit['excl_paths']) {
+  	$errors['excl_mode'] = t('Include mode selected, but no fields/paths given. Enter at least one path or field where FCKeditor should appear.');
+  }
 
   //validate fields
   $fields = preg_split("/[\s,]+/", strip_tags($edit['excl_fields']));
@@ -1192,11 +1202,10 @@ function fckeditor_global_profile_form_build($sth, $edit) {
   $form['fckeditor_exclude_settings']['excl_mode'] = array(
   '#type' => 'select',
   '#title' => t('Use inclusion or exclusion mode'),
-  '#default_value' => (!empty($edit->settings['excl_mode']) && in_array($edit->settings['excl_mode'], array(0, 2))) ? 0 : 1,
+  '#default_value' => (empty($edit->settings['excl_mode']) || in_array($edit->settings['excl_mode'], array(0, 2))) ? 0 : 1,
   '#options' => array('0' => t('exclude'), '1' => t('include')),
   '#description' => t('Choose the way of disabling/enabling FCKeditor on selected fields/paths (see below). Use exclude to disable FCKeditor on selected fields/paths. Use include if you want to load FCKeditor only on selected paths/fields.'),
   );
-
   /**
    * get excluded fields - so we can have normal textareas too
    * split the phrase by any number of commas or space characters,
@@ -1347,7 +1356,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $form['fckeditor_exclude_settings']['excl_mode'] = array(
   '#type' => 'select',
   '#title' => t('Use inclusion or exclusion mode'),
-  '#default_value' => (!empty($edit->settings['excl_mode']) && in_array($edit->settings['excl_mode'], array(0, 2))) ? 0 : 1,
+  '#default_value' => (empty($edit->settings['excl_mode']) || in_array($edit->settings['excl_mode'], array(0, 2))) ? 0 : 1,
   '#options' => array('0' => t('exclude'), '1' => t('include')),
   '#description' => t('Choose the way of disabling/enabling FCKeditor on selected fields/paths (see below). Use exclude to disable FCKeditor on selected fields/paths. Use include if you want to load FCKeditor only on selected paths/fields.'),
   );
