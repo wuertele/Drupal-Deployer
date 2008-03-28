@@ -146,7 +146,7 @@ function services_admin_browse_test_submit($form_id, $form_state) {
   $method = services_method_get(arg(4));
   $args = services_admin_browse_test_unserialize_args($form_state['values']['arg']);
   $result = services_method_call($method['#method'], $args);
-  $services_admin_browse_test_submit_result = check_markup(print_r($result, true), 1);
+  $_services_admin_browse_test_submit_result = '<pre>'. htmlspecialchars(print_r($result, true)) .'</pre>';
 }
 
 function services_admin_browse_test_unserialize_args($values) {
