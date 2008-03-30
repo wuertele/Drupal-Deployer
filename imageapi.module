@@ -297,5 +297,11 @@ function imageapi_image_open($file, $toolkit = FALSE) {
 }
 
 function imageapi_image_close($image, $destination) {
-  return call_user_func($image->toolkit .'_image_close', $image, $destination);
+  if ($return = call_user_func($image->toolkit .'_image_close', $image, $destination)) {
+    if (@chmod($destination, 0775)) {
+      return $return;
+    } 
+    watchdog('imageapi', t('Could not set permissons on destination file: %file', array('%file' => $image->source)));
+  }
+  return FALSE;
 }
