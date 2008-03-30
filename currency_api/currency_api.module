@@ -31,13 +31,20 @@ function currency_api_menu($may_cache) {
  * Instantiation of hook_admin_settings()
  */
 function currency_api_admin_settings() {    
+  $ver = explode('.', phpversion());
+  if ($ver[0] > 4) {
+    $options = array('nyfed' => t('New York Federal Bank'), 'yahoo' => t('Yahoo Finance'));
+    $description = t("Note: Please read Yahoo's TOS if choosing Yahoo.") . '<br/>' . t('Choosing the New York Federal Bank will allow conversion of a select 22 countries, which gets updated only once a day at noon, whereas the Yahoo conversion is real-time.');
+  } else {
+    $options = array('yahoo' => t('Yahoo Finance'));
+    $description = t("Note: Please read Yahoo's TOS") . '<br/>' . t('To use New York Federal Bank exhange rates, requires SOAP which is included in PHP 5 and above.');
+  }
   $form['currency_api_vendor'] = array(
     '#type' => 'radios',
     '#title' => t('Choose currency provider'),    
     '#default_value' => variable_get('currency_api_vendor', 'all'),    
-    '#options' => array('nyfed' => t('New York Federal Bank'), 
-                        'yahoo' => t('Yahoo Finance')), 
-    '#description' => t("Note: Please read Yahoo's TOS if choosing Yahoo or All. <br/> Choosing the New York Federal Bank will allow conversion of a select 22 countries, which gets updated only once a day at noon, whereas the Yahoo conversion is real-time. "),
+    '#options' => $options,
+    '#description' => $description,
   );
 
   $form['currency_api_watchdog'] = array(
