@@ -11,7 +11,7 @@ function getAudioCaptcha() {
   var mollomSessionId = $("input#edit-session-id").val();
 
   // Retrieve an audio CAPTCHA:
-  var data = $.get(Drupal.settings.mollom_base_url + 'mollom/captcha/audio/' + mollomSessionId,
+  var data = $.get(Drupal.settings.basePath +'mollom/captcha/audio/' + mollomSessionId,
     function(data) {
      // When data is successfully loaded, empty the captcha-div  
      // and replace its content with an audio CAPTCHA:
@@ -27,7 +27,7 @@ function getImageCaptcha() {
   var mollomSessionId = $('input#edit-session-id').val();
 
   // Retrieve an audio CAPTCHA:
-  var data = $.get(Drupal.settings.mollom_base_url + 'mollom/captcha/image/' + mollomSessionId,
+  var data = $.get(Drupal.settings.basePath + 'mollom/captcha/image/' + mollomSessionId,
     function(data) {
      // When data is successfully loaded, empty the captcha-div  
      // and replace its content with an audio CAPTCHA:
