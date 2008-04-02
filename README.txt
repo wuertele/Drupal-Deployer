@@ -168,6 +168,8 @@ directory on the server and add new content to that directory
       
    3. Enabling file uploads is a security risk. That's why you have to grant a 
       separate permission to enable the file browser to certain groups.
+      In "Administer > User Management > Permissions" assign the
+      "allow fckeditor file uploads" permissions.
       
    4. Lastly, adjust the File browser settings for each profile.
 
