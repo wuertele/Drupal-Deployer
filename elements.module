@@ -2,7 +2,7 @@
 // $Id$
 
 /**
- * Provide a list of additional form element-types.
+ * Provide additional form element-types.
  *
  * Implementation of hook_elements.
  *
@@ -10,25 +10,75 @@
  *   An array of element types.
  */
 function elements_elements() {
-  $types['tableselect'] = array('#input' => TRUE, '#advanced_select' => TRUE, '#multiple' => TRUE, '#process' => array('_elements_expand_tableselect' => array()));
-  $types['imagebutton'] = array('#input' => TRUE, '#button_type' => 'submit',);
+
+  // Provides a clean, easy way to create tables with one checkbox per row,
+  // multi-row selection and a select all checkbox, without making your code
+  // a complicated mess.
+  $types['tableselect'] = array(
+    '#input' => TRUE,
+    '#advanced_select' => TRUE,
+    '#multiple' => TRUE,
+    '#process' => array('_elements_expand_tableselect'),
+  );
+
+  // The imagebutton provides an image that acts like a submit button.
+  // Taken from Views.
+  $types['imagebutton'] = array(
+    '#input' => TRUE,
+    '#button_type' => 'submit',
+  );
+
   return $types;
 }
 
 
-function theme_imagebutton($element) {
-  return '<input type="image" class="form-'. $element['#button_type'] .'" name="'. $element['#name'] .'" value="'. check_plain($element['#default_value']) .'" '. drupal_attributes($element['#attributes']) . ' src="' . $element['#image'] . '" alt="' . $element['#title'] . '" title="' . $element['#title'] . "\" />\n";
+/**
+ * Implementation of hook_theme.
+ *
+ * @return array
+ */
+function elements_theme() {
+  return array(
+    'tableselect' => array(
+      'arguments' => array('element'),
+    ),
+    'imagebutton' => array(
+      'arguments' => array('element'),
+    ),
+  );
 }
 
+
+/**
+ * Theme the imagebutton form element.
+ *
+ * @param array $element
+ *
+ * @return string
+ *   HTML representation of the imagebutton.
+ */
+function theme_imagebutton($element) {
+  return '<input type="image" class="form-'. $element['#button_type'] .'" name="'. $element['#name'] .'" value="'. check_plain($element['#default_value']) .'" '. drupal_attributes($element['#attributes']) .' src="'. $element['#image'] .'" alt="'. $element['#title'] .'" title="'. $element['#title'] ."\" />\n";
+}
+
+
+/**
+ * Dummy function.
+ */
 function imagebutton_value() {
   // null function guarantees default_value doesn't get moved to #value.
+  // Null function guarantees default_value doesn't get moved to #value.
 }
+
 
 /**
  * Create the right amount of checkboxes or radios to populate the table.
  *
- * @param unknown_type $element
- * @return unknown
+ * @param array $element
+ *   The unexpanded element.
+ *
+ * @return array
+ *   The element expanded to one checkbox or radio per row.
  */
 function _elements_expand_tableselect($element) {
 
@@ -59,11 +109,15 @@ function _elements_expand_tableselect($element) {
   return $element;
 }
 
+
 /**
  * Generate a table with radios or checkboxes in the first column.
  *
- * @param unknown_type $element
- * @return unknown
+ * @param array $element
+ *   A tableselect form element.
+ *
+ * @return string
+ *   HTML representation of the table.
  */
 function theme_tableselect($element) {
   $rows = array();
