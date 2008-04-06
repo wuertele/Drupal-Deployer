@@ -432,6 +432,14 @@ function faq_questions_settings_form() {
     '#default_value' => variable_get('faq_disable_node_links', false),
     );
 
+  $form['faq_questions_misc']['faq_default_sorting'] = array(
+    '#type' => 'select',
+    '#title' => t('Default Sorting for Non-Weighted FAQs'),
+    '#options' => array('DESC' => t('Date Descending'), 'ASC' => t('Date Ascending')),
+    '#description' => t("This controls the default weighting behaviour for new FAQ nodes which haven't been assigned a weight."),
+    '#default_value' => variable_get('faq_default_sorting', 'DESC'),
+    );
+
   return system_settings_form($form);
 }
 
@@ -595,6 +603,12 @@ function faq_weight_settings_form($form_state) {
   }
 
   else {
+    $default_sorting = variable_get('faq_default_sorting', 'DESC');
+    $default_weight = 0;
+    if ($default_sorting != 'DESC') {
+      $default_weight = 1000000;
+    }
+
     $options = array();
     $category = 0;
     if (!empty($form_state['values']['faq_category'])) {
@@ -602,12 +616,12 @@ function faq_weight_settings_form($form_state) {
     }
     if (empty($category)) {
       $category = 0;
-      $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight, n.sticky, n.created FROM {node} n LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d' WHERE n.type='faq' AND n.status = 1 ORDER BY weight ASC, n.sticky DESC, n.created DESC", "n", "nid"), $category);
-      $date_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight, n.sticky, n.created FROM {node} n LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d 'WHERE n.type='faq' AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $category);
+      $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d' WHERE n.type='faq' AND n.status = 1 ORDER BY weight ASC, n.sticky DESC, n.created %s", "n", "nid"), $default_weight, $category, $default_sorting);
+      $date_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d 'WHERE n.type='faq' AND n.status = 1 ORDER BY n.sticky DESC, n.created %s", "n", "nid"), $default_weight, $category, $default_sorting);
     }
     else {
-      $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d' WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight ASC, n.sticky DESC, n.created DESC", "n", "nid"), $category, $category);
-      $date_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), 0, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d' WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $category, $category);
+      $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d' WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight ASC, n.sticky DESC, n.created %s", "n", "nid"), $default_weight, $category, $category, $default_sorting);
+      $date_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d' WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created %s", "n", "nid"), $default_weight, $category, $category, $default_sorting);
     }
 
 
@@ -802,7 +816,12 @@ function faq_page($tid = 0) {
 
   // Non-categorized questions and answers.
   if (!$use_categories) {
-    $result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), 0, w.weight) as weight, n.sticky, n.created FROM {node} n LEFT JOIN {faq_weights} w ON w.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND (w.tid = 0 OR w.tid IS NULL) ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"));
+    $default_sorting = variable_get('faq_default_sorting', 'DESC');
+    $default_weight = 0;
+    if ($default_sorting != 'DESC') {
+      $default_weight = 1000000;
+    }
+    $result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n LEFT JOIN {faq_weights} w ON w.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND (w.tid = 0 OR w.tid IS NULL) ORDER BY weight, n.sticky DESC, n.created %s", "n", "nid"), $default_weight, $default_sorting);
 
     switch ($faq_display) {
       case 'questions_top':
@@ -929,8 +948,14 @@ function faq_page($tid = 0) {
  */
 function _display_faq_by_category($faq_display, $category_display, $term, $display_header, &$output, &$output_answers) {
 
-  $result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), 0, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $term->tid);
-  $result_copy = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), 0, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $term->tid);
+  $default_sorting = variable_get('faq_default_sorting', 'DESC');
+  $default_weight = 0;
+  if ($default_sorting != 'DESC') {
+    $default_weight = 1000000;
+  }
+
+  $result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created %s", "n", "nid"), $default_weight, $term->tid, $default_sorting);
+  $result_copy = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created %s", "n", "nid"), $default_weight, $term->tid, $default_sorting);
 
   $display_vars['display_header'] = $display_header;
   $display_vars['faq_display'] = $faq_display;
@@ -1129,6 +1154,11 @@ function template_preprocess_faq_category_questions_top(&$variables) {
   $term = $variables['term'];
   $class = $variables['class'];
   $disable_node_links = variable_get('faq_disable_node_links', false);
+  $default_sorting = variable_get('faq_default_sorting', 'DESC');
+  $default_weight = 0;
+  if ($default_sorting != 'DESC') {
+    $default_weight = 1000000;
+  }
 
   $this_page = 'faq';
   $get_sub_terms = 0;
@@ -1218,7 +1248,7 @@ function template_preprocess_faq_category_questions_top(&$variables) {
     foreach ($list as $tid => $sub_term) {
       $sub_term->depth = $term->depth + 1;
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), 0, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
+        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created %s", "n", "nid"), $default_weight, $sub_term->tid, $default_sorting);
         $display_vars['display_header'] = 1;
         $sub_cat_htmls[] = theme('faq_category_questions_top', $sub_result, $display_vars, $sub_term, $variables['class']);
       }
@@ -1291,6 +1321,11 @@ function template_preprocess_faq_category_questions_top_answers(&$variables) {
   $term = $variables['term'];
   $class = $variables['class'];
   $disable_node_links = variable_get('faq_disable_node_links', false);
+  $default_sorting = variable_get('faq_default_sorting', 'DESC');
+  $default_weight = 0;
+  if ($default_sorting != 'DESC') {
+    $default_weight = 1000000;
+  }
 
   if ($display_vars['group_questions_top'] || $display_vars['category_display'] == "hide_qa") {
     $variables['display_answers'] = false;
@@ -1333,7 +1368,7 @@ function template_preprocess_faq_category_questions_top_answers(&$variables) {
     foreach ($list as $tid => $sub_term) {
       $sub_term->depth = $term->depth + 1;
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), 0, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
+        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created %s", "n", "nid"), $default_weight, $sub_term->tid, $default_sorting);
         $display_vars['display_header'] = 1;
         $sub_cat_htmls[] = theme('faq_category_questions_top_answers', $sub_result, $display_vars, $sub_term, $variables['class']);
       }
@@ -1439,6 +1474,11 @@ function template_preprocess_faq_category_hide_answer(&$variables) {
   $term = $variables['term'];
   $class = $variables['class'];
   $disable_node_links = variable_get('faq_disable_node_links', false);
+  $default_sorting = variable_get('faq_default_sorting', 'DESC');
+  $default_weight = 0;
+  if ($default_sorting != 'DESC') {
+    $default_weight = 1000000;
+  }
 
   $get_sub_terms = 0;
   if (arg(0) == 'faq' && is_numeric(arg(1))) {
@@ -1515,7 +1555,7 @@ function template_preprocess_faq_category_hide_answer(&$variables) {
     foreach ($list as $tid => $sub_term) {
       $sub_term->depth = $term->depth + 1;
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), 0, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
+        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created %s", "n", "nid"), $default_weight, $sub_term->tid, $default_sorting);
         $display_vars['display_header'] = 1;
         $sub_cat_htmls[] = theme('faq_category_hide_answer', $sub_result, $display_vars, $sub_term, $variables['class']);
       }
@@ -1637,6 +1677,11 @@ function template_preprocess_faq_category_questions_inline(&$variables) {
   $term = $variables['term'];
   $class = $variables['class'];
   $disable_node_links = variable_get('faq_disable_node_links', false);
+  $default_sorting = variable_get('faq_default_sorting', 'DESC');
+  $default_weight = 0;
+  if ($default_sorting != 'DESC') {
+    $default_weight = 1000000;
+  }
 
   $this_page = 'faq';
   $get_sub_terms = 0;
@@ -1727,7 +1772,7 @@ function template_preprocess_faq_category_questions_inline(&$variables) {
     foreach ($list as $tid => $sub_term) {
       $sub_term->depth = $term->depth + 1;
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), 0, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
+        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created %s", "n", "nid"), $default_weight, $sub_term->tid, $default_sorting);
         $display_vars['display_header'] = 1;
         $sub_cat_htmls[] = theme('faq_category_questions_inline', $sub_result, $display_vars, $sub_term, $variables['class']);
       }
@@ -1813,6 +1858,11 @@ function template_preprocess_faq_category_new_page(&$variables) {
   if (arg(0) == 'faq' && is_numeric(arg(1))) {
     $get_sub_terms = arg(1);
   }
+  $default_sorting = variable_get('faq_default_sorting', 'DESC');
+  $default_weight = 0;
+  if ($default_sorting != 'DESC') {
+    $default_weight = 1000000;
+  }
 
   // Get number of questions, and account for hidden sub-cats.
   $count = 0;
@@ -1881,7 +1931,7 @@ function template_preprocess_faq_category_new_page(&$variables) {
     foreach ($list as $tid => $sub_term) {
       $sub_term->depth = $term->depth + 1;
       if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), 0, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"), $sub_term->tid);
+        $sub_result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created %s", "n", "nid"), $default_weight, $sub_term->tid, $default_sorting);
         $display_vars['display_header'] = 1;
         $sub_cat_htmls[] = theme('faq_category_new_page', $sub_result, $display_vars, $sub_term, $variables['class']);
       }
@@ -2177,8 +2227,14 @@ function faq_get_faq_list() {
   }
 
   // Otherwise return list of weighted FAQ nodes.
+  $default_sorting = variable_get('faq_default_sorting', 'DESC');
+  $default_weight = 0;
+  if ($default_sorting != 'DESC') {
+    $default_weight = 1000000;
+  }
+
   $items = array();
-  $result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), 0, w.weight) as weight, n.sticky, n.created FROM {node} n LEFT JOIN {faq_weights} w ON w.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND (w.tid = 0 OR w.tid IS NULL) ORDER BY weight, n.sticky DESC, n.created DESC", "n", "nid"));
+  $result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n LEFT JOIN {faq_weights} w ON w.nid = n.nid WHERE n.type='faq' AND n.status = 1 AND (w.tid = 0 OR w.tid IS NULL) ORDER BY weight, n.sticky DESC, n.created %s", "n", "nid"), $default_weight, $default_sorting);
   while ($row = db_fetch_object($result)) {
     $node = node_load($row->nid);
     if (node_access("view", $node)) {
