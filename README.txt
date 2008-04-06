@@ -64,6 +64,12 @@ body #admin-menu-icon { display: none; }
   site's cache (probably best using Devel module, or by manually truncating the
   cache_menu database table) to see any changes of your theme override function.
 
+* You can override the font size by adding a line to your stylesheet in your
+  theme like the following:
+<code>
+body #admin-menu { font-size: 10px; }
+</code>
+
 
 -- TROUBLESHOOTING --
 
