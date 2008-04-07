@@ -1,0 +1,83 @@
+<?php
+
+/**
+*  Implementation of hook_nodeapi() 
+*/
+function drupalforfirebug_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  if ($node->nid == 1) { firep($node); }
+  drupalforfirebug_log("Processing Node $node->nid with Operation $op", 'Node API Operations');
+}
+
+/**
+*  Implementation of hook_form_alter()
+*/
+function drupalforfirebug_form_alter($formid, &$form) {
+  drupalforfirebug_log("Processing Form $formid", 'Form API Operations ');
+}
+
+/**
+* API Function to Record a Message to the Drupal Firebug Log
+*/
+function drupalforfirebug_log($message, $type = 'General') {
+  $_SESSION['firebug_messages'][$type][] = $message; 
+}
+
+/**
+* Command Function to Record a Data Element to the Drupal Firebug Log
+*/
+function firep($element) {
+  drupalforfirebug_log('<PRE>'. print_r($element, true) . '</PRE>', 'Debugging Messages');
+}
+
+/**
+* Output Function to Return the Results of the Log
+*/
+function drupalforfirebug_get_log() {
+  foreach($_SESSION['firebug_messages'] as $type => $messages) {
+    $output .= '<fieldset>';
+    $output .= '<legend>' . $type . '</legend>';
+    foreach($messages as $message) {
+      $output .= '<div>'. $message .'</div>';
+    }
+    $output .= '</fieldset>';
+  }
+  unset($_SESSION['firebug_messages']);
+  return $output;
+}
+
+/**
+* Output Function to Return the Results of the SQL Log
+*/
+function drupalforfirebug_get_sql_log() {
+  if (module_exists('devel')) {
+    global $queries;
+    $txt = t(' Queries taking longer than %threshold ms and queries executed more than once, are <span class="marker">highlighted</span>.', array('%threshold' => variable_get('devel_execution', 5)));
+    $output = devel_query_table($queries, $counts);
+  } else {
+    $output = t('Please enable the Devel Module to see the SQL Queries.') . ' ' . l(t('See Devel Project Page'),'http://www.drupal.org/project/devel', array('target' => '_blank')) .'.';
+  }
+  return $output;
+}
+
+/**
+* Output Function to Return Hidden Div Containers in Footer
+*/
+function drupalforfirebug_footer() {
+  if (user_access('Access Drupal for Firebug Debug Information')) {
+    $output = '<div style="display: none" id="drupalforfirebug_log">';
+    $output .= drupalforfirebug_get_log();
+    $output .= '</div>';
+    $output .= '<div style="display: none" id="drupalforfirebug_sql_log">';
+    $output .= drupalforfirebug_get_sql_log();
+    $output .= '</div>';
+  }
+  return $output;
+}
+
+/**
+* Implementation of hook_perm()
+*/
+function drupalforfirebug_perm() {
+  return array('Access Drupal for Firebug Debug Information');
+}
+
