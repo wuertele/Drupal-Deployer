@@ -13,6 +13,7 @@ function node_token_values($type, $object = NULL, $options = array()) {
       $values['nid']              = $node->nid;
       $values['type']             = $node->type;
       $values['type-name']        = node_get_types('name', $node->type);
+      $values['language']         = filter_xss_admin($node->language);
       $values['title']            = check_plain($node->title);
       $values['title-raw']        = $node->title;
       $values['author-uid']       = $node->uid;
@@ -154,6 +155,7 @@ function node_token_list($type = 'all') {
     $tokens['node']['nid']            = t('Node ID');
     $tokens['node']['type']           = t('Node type');
     $tokens['node']['type-name']      = t('Node type (user-friendly version)');
+    $tokens['node']['language']       = t('Node language');
     $tokens['node']['title']          = t('Node title');
     $tokens['node']['title-raw']      = t('Unfiltered node title. WARNING - raw user input.');
 
