@@ -26,27 +26,8 @@ function currency_api_menu($may_cache) {
   }
   return $items;
 }
-
-/**
- * Instantiation of hook_admin_settings()
- */
+  
 function currency_api_admin_settings() {    
-  $ver = explode('.', phpversion());
-  if ($ver[0] > 4) {
-    $options = array('nyfed' => t('New York Federal Bank'), 'yahoo' => t('Yahoo Finance'));
-    $description = t("Note: Please read Yahoo's TOS if choosing Yahoo.") . '<br/>' . t('Choosing the New York Federal Bank will allow conversion of a select 22 countries, which gets updated only once a day at noon, whereas the Yahoo conversion is real-time.');
-  } else {
-    $options = array('yahoo' => t('Yahoo Finance'));
-    $description = t("Note: Please read Yahoo's TOS") . '<br/>' . t('To use New York Federal Bank exhange rates, requires SOAP which is included in PHP 5 and above.');
-  }
-  $form['currency_api_vendor'] = array(
-    '#type' => 'radios',
-    '#title' => t('Choose currency provider'),    
-    '#default_value' => variable_get('currency_api_vendor', 'all'),    
-    '#options' => $options,
-    '#description' => $description,
-  );
-
   $form['currency_api_watchdog'] = array(
     '#type' => 'checkbox',
     '#title' => t('Log all currency exchange requests and errors to watchdog'),    
@@ -99,6 +80,13 @@ function currency_api_admin_settings() {
  *    $result['time']   Time of the last update to the rates (Format is "h:mmpm")
  */
 function currency_api_convert($currency_from, $currency_to, $amount = 1) {
+  $currency_array = array(
+    's'  => 'Currencies',
+    'l1' => 'Last',
+    'd1' => 'Date',
+    't1' => 'Time'
+  );
+
   $result = array();
   $result['status']  = FALSE;
   $result['message'] = NULL;
@@ -108,6 +96,8 @@ function currency_api_convert($currency_from, $currency_to, $amount = 1) {
 
   $from = strtoupper($currency_from);
   $to   = strtoupper($currency_to);
+
+  $url = 'http://download.finance.yahoo.com/d/quotes.csv?e=.csv&f='. currency_api_get_fields($currency_array) .'&s='. $from . $to .'=X';
 
   // Validate the passed currency codes, to make sure they are valid
   if (FALSE == currency_api_get_desc($from)) {
@@ -132,71 +122,6 @@ function currency_api_convert($currency_from, $currency_to, $amount = 1) {
     $result['status'] = FALSE;
   }
 
-  if (variable_get('currency_api_vendor', 'all') == 'nyfed') {
-    // NYFED uses VEF instead of VEB
-    if ('VEB' == $from) {
-      $from == 'VEF';
-    } elseif ('VEB' == $to) {
-      $to == 'VEF';
-    }
-    $curr_from_rate = 1;
-    $curr_to_rate = 1;
-    // New York Federal Bank noon rates, using PHP5 SOAP client
-    $soapClient = new SoapClient('http://www.newyorkfed.org/markets/fxrates/WebService/v1_0/FXWS.wsdl');
-
-    if ($from != 'USD' ) {
-      // Get rate of starting currency to USD
-      $xmlstr = $soapClient->getLatestNoonRate($from);
-      $xmlstr = str_replace('frbny:', 'frbny', $xmlstr);
-      $xml = new SimpleXMLElement($xmlstr);
-      $curr_rate = $xml->frbnyDataSet->frbnySeries->frbnyObs->frbnyOBS_VALUE;
-      switch($from) {
-        case 'AUD':
-        case 'EUR':
-        case 'NZD':
-        case 'GBP':
-          $curr_from_rate = bcdiv(1, $curr_rate, 5);
-          break;
-        default:
-          $curr_from_rate = $curr_rate;
-          break;
-      }
-    }
-
-    if ($to != 'USD' ) {
-      // Get rate of ending currency from USD
-      $xmlstr = $soapClient->getLatestNoonRate($to);
-      $xmlstr = str_replace('frbny:', 'frbny', $xmlstr);
-      $xml = new SimpleXMLElement($xmlstr);
-      $curr_rate = $xml->frbnyDataSet->frbnySeries->frbnyObs->frbnyOBS_VALUE;
-      switch($to) {
-        case 'AUD':
-        case 'EUR':
-        case 'NZD':
-        case 'GBP':
-          $curr_to_rate = bcdiv(1, $curr_rate, 5);
-          break;
-        default:
-          $curr_to_rate = $curr_rate;
-          break;
-      }
-    }
-    $result['status'] = TRUE;
-    $result['message'] = 'af';
-    $result['value'] = round($amount * bcdiv($curr_to_rate, $curr_from_rate, 5), 2);
-    # $result['date']   Date of the last update to the rates (Format is "m/d/yyyy")
-    $result['time'] = "12:00pm";
-    return $result;
-  }
-
-  $currency_array = array(
-    's'  => 'Currencies',
-    'l1' => 'Last',
-    'd1' => 'Date',
-    't1' => 'Time'
-  );
-
-  $url = 'http://download.finance.yahoo.com/d/quotes.csv?e=.csv&f='. currency_api_get_fields($currency_array) .'&s='. $from . $to .'=X';
 
   if (($ch = @curl_init())) {
     $timeout = 5; // set to zero for no timeout
@@ -205,8 +130,7 @@ function currency_api_convert($currency_from, $currency_to, $amount = 1) {
     curl_setopt ($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
     $record = curl_exec($ch);
     curl_close($ch);
-  }
-  else {
+  } else {
     $record = file_get_contents($url);
   }
 
@@ -277,39 +201,7 @@ function currency_api_get_desc($currency) {
   return FALSE;
 }
 
-/**
- * Obtain a vendor specific list of currencies available for conversion
- */
 function currency_api_get_list() {
-  if (variable_get('currency_api_vendor', 'all') == 'nyfed') {
-    $currency = array(
-      'AUD' => t('Australian Dollar (AUD)'),
-      'BRL' => t('Brazilian Real (BRL)'),
-      'GBP' => t('British Pound (GBP)'),
-      'CAD' => t('Canadian Dollar (CAD)'),
-      'CNY' => t('Chinese Yuan (CNY)'),
-      'DKK' => t('Danish Krone (DKK)'),
-      'EUR' => t('Euro (EUR)'),
-      'HKD' => t('Hong Kong Dollar (HKD)'),
-      'INR' => t('Indian Rupee (INR)'),
-      'JPY' => t('Japanese Yen (JPY)'),
-      'KRW' => t('Korean Won (KRW)'),
-      'NZD' => t('New Zealand Dollar (NZD)'),
-      'MYR' => t('Malaysian Ringgit (MYR)'),
-      'MXN' => t('Mexican Peso (MXN)'),
-      'NOK' => t('Norwegian Krone (NOK)'),
-      'SGD' => t('Singapore Dollar (SGD)'),
-      'ZAR' => t('South African Rand (ZAR)'),
-      'LKR' => t('Sri Lanka Rupee (LKR)'),
-      'SEK' => t('Swedish Krona (SEK)'),
-      'CHF' => t('Swiss Franc (CHF)'),
-      'TWD' => t('Taiwan Dollar (TWD)'),
-      'USD' => t('U.S. Dollar (USD)'),
-      'VEB' => t('Venezuelan Bolivar/Frank (VEB)'),
-    );
-    return $currency;
-  }
-
   $currency = array(
     'AFN' => t('Afghanistani Afghani (AFA)'),
     'ALL' => t('Albanian Lek (ALL)'),
@@ -466,7 +358,7 @@ function currency_api_get_list() {
     'UYU' => t('Uruguayan New Peso (UYU)'),
     'UZS' => t('Uzbekistan Sum (UZS)'),
     'VUV' => t('Vanuatu Vatu (VUV)'),
-    'VEB' => t('Venezuelan Bolivar/Frank (VEB)'),
+    'VEB' => t('Venezuelan Bolivar (VEB)'),
     'VND' => t('Vietnam Dong (VND)'),
     'YER' => t('Yemen Riyal (YER)'),
     'YUM' => t('Yugoslav Dinar (YUM)'),
