@@ -73,12 +73,14 @@ function faq_menu() {
     'page callback' => 'faq_settings_page',
     'access callback' => 'user_access',
     'access arguments' => array('administer faq'),
+    'type' => MENU_CALLBACK,
   );
   $items['faq'] = array(
     'title' => variable_get('faq_title', 'Frequently Asked Questions'),
     'page callback' => 'faq_page',
     'access callback' => 'user_access',
     'access arguments' => array('view faq'),
+    'type' => MENU_CALLBACK,
     'weight' => 1
   );
   $items['admin/settings/faq/general'] = array(
@@ -172,18 +174,21 @@ function faq_node_name($node) {
  * Defines the form where new questions and answers are written.
  *
  * @param &$node
- *   Current node id, if modifying existing one.
+ *   The node being added or edited.
+ * @param &$param
+ *   The hook can set this variable to an associative array of attributes to add
+ *   to the enclosing \<form\> tag.
  * @return
  *   The form elements in the $form array.
  */
-function faq_form(&$node) {
+function faq_form(&$node, &$param) {
   $type = node_get_types('type', $node);
 
   // Question.
   $form['title'] = array(
     '#type' => 'textarea',
     '#title' => check_plain($type->title_label),
-    '#default_value' => empty($node->question) ? $node->title : $node->question,
+    '#default_value' => $node->title,
     '#required' => TRUE,
     '#weight' => 0,
     '#rows' => 3,
