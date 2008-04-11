@@ -715,8 +715,8 @@ function mollom_admin_settings() {
 function _mollom_get_openid($account) {
   if (isset($account->uid)) {
     $result = db_query("SELECT * FROM {authmap} WHERE module = 'openid' AND uid = %d", $account->uid);
- 
-    $ids = array(); 
+  
+    $ids = array();
     while ($identity = db_fetch_object($result)) {
       $ids[] = $identity->authname;
     }
@@ -811,6 +811,7 @@ function mollom_validate_captcha(&$form, &$form_state) {
        _mollom_debug("mollom_validate_captcha the captcha result was ". (int)$result);  
 
        if ($result == FALSE) {
+        watchdog('mollom', 'Incorrect CAPTCHA');
         form_set_error('captcha', t('The entered CAPTCHA solution is not correct. We generated a new CAPTCHA so please try again.'));
         _mollom_register_captcha($form_state);
       }
@@ -820,6 +821,8 @@ function mollom_validate_captcha(&$form, &$form_state) {
                 
         // Pass FALSE so we actually remove the CAPTCHA from the form:
         _mollom_register_captcha($form_state, FALSE);  // TODO: this break the 'request password form' -- it shouldn't rebuild the form.  Removing this breaks the comment form.
+        
+        watchdog('mollom', 'Correct CAPTCHA');
       }
     }
     else {
