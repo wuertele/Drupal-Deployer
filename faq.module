@@ -423,7 +423,7 @@ function faq_questions_settings_form() {
     '#type' => 'checkbox',
     '#title' => t('Disable question links to nodes'),
     '#description' => t('This allows the user to prevent the questions being links to the faq node in all layouts except "Clicking on question opens the answer in a new page".'),
-    '#default_value' => variable_get('faq_disable_node_links', false),
+    '#default_value' => variable_get('faq_disable_node_links', FALSE),
     );
 
   $form['faq_questions_misc']['faq_default_sorting'] = array(
@@ -730,7 +730,7 @@ function faq_weight_settings_choose_cat_form_submit($form, &$form_state) {
 function faq_weight_settings_reorder_form_submit($form, &$form_state) {
   if ($form_state['values']['op'] == t('Save order')) {
 
-    $order = preg_split("/,/", $form_state['values']['faq_node_order']);
+    $order = explode(",", $form_state['values']['faq_node_order']);
     switch ($GLOBALS['db_type']) {
       case 'mysql':
       case 'mysqli':
@@ -1087,7 +1087,7 @@ function template_preprocess_faq_questions_top(&$variables) {
     $back_to_top = l(t($display_vars['back_to_top']), 'faq', array('attributes' => array(), 'query' => NULL, 'fragment' => ' ', 'html' => TRUE));
   }
   $variables['back_to_top'] = $back_to_top;
-  $disable_node_links = variable_get('faq_disable_node_links', false);
+  $disable_node_links = variable_get('faq_disable_node_links', FALSE);
 
   // Loop through results.
   $questions = array();
@@ -1154,7 +1154,7 @@ function template_preprocess_faq_category_questions_top(&$variables) {
   $display_vars = $variables['display_vars'];
   $term = $variables['term'];
   $class = $variables['class'];
-  $disable_node_links = variable_get('faq_disable_node_links', false);
+  $disable_node_links = variable_get('faq_disable_node_links', FALSE);
   $default_sorting = variable_get('faq_default_sorting', 'DESC');
   $default_weight = 0;
   if ($default_sorting != 'DESC') {
@@ -1328,7 +1328,7 @@ function template_preprocess_faq_category_questions_top_answers(&$variables) {
   $display_vars = $variables['display_vars'];
   $term = $variables['term'];
   $class = $variables['class'];
-  $disable_node_links = variable_get('faq_disable_node_links', false);
+  $disable_node_links = variable_get('faq_disable_node_links', FALSE);
   $default_sorting = variable_get('faq_default_sorting', 'DESC');
   $default_weight = 0;
   if ($default_sorting != 'DESC') {
@@ -1336,11 +1336,11 @@ function template_preprocess_faq_category_questions_top_answers(&$variables) {
   }
 
   if ($display_vars['group_questions_top'] || $display_vars['category_display'] == "hide_qa") {
-    $variables['display_answers'] = false;
+    $variables['display_answers'] = FALSE;
     $variables['category_depth'] = 0;
     return;
   }
-  $variables['display_answers'] = true;
+  $variables['display_answers'] = TRUE;
 
   $this_page = 'faq';
   $get_sub_terms = 0;
@@ -1440,7 +1440,7 @@ function template_preprocess_faq_category_questions_top_answers(&$variables) {
 function template_preprocess_faq_hide_answer(&$variables) {
   $result = $variables['result'];
   $display_vars = $variables['display_vars'];
-  $disable_node_links = variable_get('faq_disable_node_links', false);
+  $disable_node_links = variable_get('faq_disable_node_links', FALSE);
   drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
 
   $nodes = array();
@@ -1496,7 +1496,7 @@ function template_preprocess_faq_category_hide_answer(&$variables) {
   $display_vars = $variables['display_vars'];
   $term = $variables['term'];
   $class = $variables['class'];
-  $disable_node_links = variable_get('faq_disable_node_links', false);
+  $disable_node_links = variable_get('faq_disable_node_links', FALSE);
   $default_sorting = variable_get('faq_default_sorting', 'DESC');
   $default_weight = 0;
   if ($default_sorting != 'DESC') {
@@ -1641,7 +1641,7 @@ function template_preprocess_faq_category_hide_answer(&$variables) {
 function template_preprocess_faq_questions_inline(&$variables) {
   $result = $variables['result'];
   $display_vars = $variables['display_vars'];
-  $disable_node_links = variable_get('faq_disable_node_links', false);
+  $disable_node_links = variable_get('faq_disable_node_links', FALSE);
 
   // Configure "back to top" link.
   $back_to_top = '';
@@ -1713,7 +1713,7 @@ function template_preprocess_faq_category_questions_inline(&$variables) {
   $display_vars = $variables['display_vars'];
   $term = $variables['term'];
   $class = $variables['class'];
-  $disable_node_links = variable_get('faq_disable_node_links', false);
+  $disable_node_links = variable_get('faq_disable_node_links', FALSE);
   $default_sorting = variable_get('faq_default_sorting', 'DESC');
   $default_weight = 0;
   if ($default_sorting != 'DESC') {
@@ -2036,7 +2036,7 @@ function faq_block($op = 'list', $delta = 0, $edit = array()) {
                 }
               }
             }
-            if (sizeof($terms) > 0) {
+            if (count($terms) > 0) {
               $block['subject'] = t('FAQ Categories');
               $items = array();
               foreach ($terms as $name => $tid) {
@@ -2322,7 +2322,7 @@ function faq_link_alter(&$links, $node) {
   $vocab_omit = variable_get('faq_omit_vocabulary', array());
   $vocabularies = array_diff_key($vocabularies, $vocab_omit);
   foreach ($links as $module => $link) {
-    if (strstr($module, 'taxonomy_term')) {
+    if (strpos($module, 'taxonomy_term') !== FALSE) {
       // Link back to the faq and not the taxonomy term page. We'll only
       // do this if the taxonomy term in question belongs to faq vocab.
       $tid = str_replace('taxonomy/term/', '', $link['href']);
