@@ -52,16 +52,10 @@ function services_admin_browse_index() {
   return $output;
 }
 
-function services_admin_browse_method() {
+function services_admin_browse_method($method) {
   global $_services_admin_browse_test_submit_result;
   
   $output = '';
-   
-  $method = services_method_get(arg(4));
-  
-  if (!$method) {
-    return $output;
-  }
   
   $output.= '<h3>'. $method['#method'] .'</h3>';
   $output.= '<p>'. $method['#help'] .'</p>';

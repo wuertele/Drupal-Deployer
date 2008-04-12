@@ -103,11 +103,11 @@ function services_menu() {
   ); 
   
   // method
-  $items['admin/build/services/browse/%'] = array(
+  $items['admin/build/services/browse/%services_method'] = array(
     'title' => 'Services',
   	'description' => 'Calls a Services method.',
     'page callback' => 'services_admin_browse_method',
-    'page arguments' => array(1),
+    'page arguments' => array(4),
   	'access arguments' => array('administer services'),
     'type' => MENU_CALLBACK,
     'file' => 'services_admin_browse.inc',
@@ -343,6 +343,14 @@ function services_get_all() {
   return $methods_cache;
 }
 
+/**
+ * Menu wildcard loader for browsing Service methods.
+ */
+function services_method_load($method) {
+  $method = services_method_get($method);
+  return isset($method) ? $method : FALSE;
+}
+
 function services_method_get($method_name) {
   static $method_cache;
   if (!isset($method_cache[$method_name])) {
@@ -391,7 +399,7 @@ function services_get_keys() {
  * Make any changes we might want to make to node.
  */
 function services_node_load($node, $fields = array()) {
-  if (!$node->nid) {
+  if (!isset($node->nid)) {
     return null;
   }
   
