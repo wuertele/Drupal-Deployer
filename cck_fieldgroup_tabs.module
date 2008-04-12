@@ -24,7 +24,14 @@ function cck_fieldgroup_tabs_form_alter($form_id, &$form) {
         if (!isset($form['fieldgroup_tabs'])) {
           $form['fieldgroup_tabs'] = array(
             '#type' => 'tabset',
+            '#weight' => $group['weight'],
           );
+        }
+        // Otherwise, reset the weight if lower than what's already set.
+        // This ensures the tabset has the weight of the lowest fieldgroup
+        // it includes.
+        else if ($group['weight'] < $form['fieldgroup_tabs']['#weight']) {
+          $form['fieldgroup_tabs']['#weight'] = $group['weight'];
         }
         $element = $form[$group_name];
         $element['#type'] = 'tabpage';
@@ -61,6 +68,12 @@ function cck_fieldgroup_tabs_nodeapi(&$node, $op, $teaser, $page) {
               '#type' => 'tabset',
             );
           }
+          // Otherwise, reset the weight if lower than what's already set.
+          // This ensures the tabset has the weight of the lowest fieldgroup
+          // it includes.
+          else if ($group['weight'] < $node->content['fieldgroup_tabs']['#weight']) {
+            $node->content['fieldgroup_tabs']['#weight'] = $group['weight'];
+          }
           $element = $node->content[$group_name];
           $element['#type'] = 'tabpage';
           $element['#weight'] = $group['weight'];
@@ -70,7 +83,7 @@ function cck_fieldgroup_tabs_nodeapi(&$node, $op, $teaser, $page) {
           unset($node->content[$group_name]);
         }
       }
-      if ($tabset) {
+      if (isset($node->content['fieldgroup_tabs'])) {
         // Explicitly build, as drupal_render won't invoke form element #process callbacks.
         $node->content['fieldgroup_tabs'] = form_builder('tabset', $node->content['fieldgroup_tabs']);
       }
