@@ -18,15 +18,13 @@ function cck_fieldgroup_tabs_form_alter($form_id, &$form) {
     if (arg(0) == 'admin') {
       return;
     }
-    $tabset = FALSE;
     foreach (fieldgroup_groups($form['type']['#value']) as $group_name => $group) {
       if (isset($form[$group_name]) && $group['settings']['form']['style'] == 'tabs') {
         // Add a tabset if not already added.
-        if (!$tabset) {
+        if (!isset($form['fieldgroup_tabs'])) {
           $form['fieldgroup_tabs'] = array(
             '#type' => 'tabset',
           );
-          $tabset = TRUE;
         }
         $element = $form[$group_name];
         $element['#type'] = 'tabpage';
@@ -54,16 +52,14 @@ function cck_fieldgroup_tabs_nodeapi(&$node, $op, $teaser, $page) {
   switch ($op) {
     case 'view':
       $context = $teaser ? 'teaser' : 'full';
-      $tabset = FALSE;
       foreach (fieldgroup_groups($node->type) as $group_name => $group) {
         // $node->content[$group_name] will be set only if there was visible content.
         if (isset($node->content[$group_name]) && $group['settings']['display'][$context] == 'tabs') {
           // Add a tabset if not already added.
-          if (!$tabset) {
+          if (!isset($node->content['fieldgroup_tabs'])) {
             $node->content['fieldgroup_tabs'] = array(
               '#type' => 'tabset',
             );
-            $tabset = TRUE;
           }
           $element = $node->content[$group_name];
           $element['#type'] = 'tabpage';
