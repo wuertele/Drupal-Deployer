@@ -5,7 +5,7 @@ if (Drupal.jsEnabled) {
     $('div.faq_dd_hide_answer').hide();
     $('div.faq_dt_hide_answer').click(function() {
       $(this).next('div.faq_dd_hide_answer').slideToggle();
-      return false;
+      return FALSE;
     });
 
 
@@ -13,7 +13,7 @@ if (Drupal.jsEnabled) {
     $('div.faq_qa_hide').hide();
     $('div.faq_qa_header .faq_header').click(function() {
       $(this).parent().next('div.faq_qa_hide').slideToggle();
-      return false;
+      return FALSE;
     });
 
 
@@ -158,9 +158,9 @@ function sub_cats_handler(event) {
 
 function faq_has_options(obj) {
   if (obj != null && obj.options != null) {
-    return true;
+    return TRUE;
   }
-  return false;
+  return FALSE;
 }
 
 function faq_swap_options(obj, i, j) {
@@ -183,7 +183,7 @@ function faq_move_selected_item_up() {
   for (i = 0; i < obj.options.length; i++) {
     if (obj.options[i].selected) {
       if (i != 0 && !obj.options[i-1].selected) {
-        faq_swap_options(obj, i, i-1);obj.options[i-1].selected = true;
+        faq_swap_options(obj, i, i-1);obj.options[i-1].selected = TRUE;
       }
     }
   }
@@ -198,7 +198,7 @@ function faq_move_selected_item_down() {
     if (obj.options[i].selected) {
       if (i != (obj.options.length-1) && ! obj.options[i+1].selected) {
         faq_swap_options(obj, i, i+1);
-        obj.options[i+1].selected = true;
+        obj.options[i+1].selected = TRUE;
       }
     }
   }
