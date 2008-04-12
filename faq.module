@@ -67,21 +67,27 @@ function faq_access($op, $node, $account) {
 function faq_menu() {
   $items = array();
 
-  $items['admin/settings/faq'] = array(
-    'title' => 'Frequently Asked Questions Settings',
-    'description' => 'Allows the user to configure the layout of questions and answers on a FAQ page.',
-    'page callback' => 'faq_settings_page',
-    'access callback' => 'user_access',
-    'access arguments' => array('administer faq'),
-    'type' => MENU_CALLBACK,
-  );
   $items['faq'] = array(
     'title' => variable_get('faq_title', 'Frequently Asked Questions'),
     'page callback' => 'faq_page',
     'access callback' => 'user_access',
     'access arguments' => array('view faq'),
-    'type' => MENU_CALLBACK,
     'weight' => 1
+  );
+  $items['faq/%'] = array(
+    'title' => variable_get('faq_title', 'Frequently Asked Questions'),
+    'page callback' => 'faq_page',
+    'page arguments' => array(1),
+    'access callback' => 'user_access',
+    'access arguments' => array('view faq'),
+  );
+
+  $items['admin/settings/faq'] = array(
+    'title' => 'Frequently Asked Questions',
+    'description' => 'Allows the user to configure the layout of questions and answers on a FAQ page.',
+    'page callback' => 'faq_settings_page',
+    'access callback' => 'user_access',
+    'access arguments' => array('administer faq'),
   );
   $items['admin/settings/faq/general'] = array(
     'title' => 'General',
@@ -124,24 +130,7 @@ function faq_menu() {
     'weight' => -8,
   );
 
-  $items['faq/%'] = array(
-    'title' => variable_get('faq_title', 'Frequently Asked Questions'),
-    'page callback' => 'faq_page',
-    'page arguments' => array(1),
-    'access callback' => 'user_access',
-    'access arguments' => array('view faq'),
-    'type' => MENU_CALLBACK,
-  );
-
   return $items;
-}
-
-/**
- * Implementation of hook_menu_alter().
- */
-function faq_menu_alter(&$callbacks) {
-  $callbacks['node/add/faq']['access callback'] = "user_access";
-  $callbacks['node/add/faq']['access arguments'] = array("create faq");
 }
 
 /**
