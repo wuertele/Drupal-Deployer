@@ -2020,7 +2020,9 @@ function project_issue_query_sql($query) {
         break;
       case 'text':
         $comments = 1;
-        $sql[] = '('. project_issue_query_sql_field('n.title', $value, 1) .' OR '. project_issue_query_sql_field('r.body', $value, 1) .' OR '. project_issue_query_sql_field('c.comment', $value, 1) .')';
+        foreach (preg_split('/\s+/', $value[0]) as $word) {
+          $sql[] = '('. project_issue_query_sql_field('n.title', $word, 1) .' OR '. project_issue_query_sql_field('r.body', $word, 1) .' OR '. project_issue_query_sql_field('c.comment', $word, 1) .')';
+        }
         break;
       case 'attachment':
         $comments = 1;
