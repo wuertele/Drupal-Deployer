@@ -870,7 +870,7 @@ function project_issue_form($node, $include_metadata_fields = FALSE) {
 function project_issue_validate(&$node) {
   // If $node->nid is set, that means that the node was being
   // edited and not created.  If that's the case, the user was
-  // not presented with any of themetadata fields, so there's no
+  // not presented with any of the metadata fields, so there's no
   // need to validate them here.
   if (empty($node->nid)) {
     if (empty($node->pid)) {
