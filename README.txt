@@ -8,7 +8,9 @@ CONTENTS OF THIS FILE
 
 INTRODUCTION
 ------------
-Maintainers: Stella Power (http://drupal.org/user/66894)
+Maintainer: Stella Power (http://drupal.org/user/66894)
+
+Documentation: http://drupal.org/node/129209
 
 The Frequently Asked Questions (faq) module allows users with the 'administer
 faq' permission to create question and answer pairs which they want displayed on
