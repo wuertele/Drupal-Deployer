@@ -116,6 +116,7 @@ function path_redirect_update_3() {
 
 /**
  * Clear the menu cache since paths have changed.
+ * Use rid as primary key; recreate unique key on path.
  */
 function path_redirect_update_4() {
   cache_clear_all(NULL, 'cache_menu');
@@ -125,10 +126,14 @@ function path_redirect_update_4() {
     array(
       'type' => 'varchar',
       'length' => 255,
-      'not null' => FALSE,
+      'not null' => TRUE,
       'description' => t('The query string to send to the destination.'),
     )
   );
+  db_drop_primary_key($ret, 'path_redirect');
+  db_drop_unique_key($ret, 'path_redirect', 'rid');
+  db_add_primary_key($ret, 'path_redirect', array('rid'));
+  db_add_unique_key($ret, 'path_redirect', 'path', array('path'));
   return $ret;
 }
 
