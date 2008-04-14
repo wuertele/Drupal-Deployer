@@ -695,7 +695,7 @@ function project_issue_form($node, $include_metadata_fields = FALSE) {
 
   if ($allow_metadata_changes) {
     if (module_exists('project_release') &&
-        $releases = project_release_get_releases($project, 0)) {
+        $releases = project_release_get_releases($project, 0, 'version', 'all', array($node->rid))) {
       $releases = array(t('<none>')) + $releases;
     }
     // Remove releases marked as invalid release nodes for user selection.
