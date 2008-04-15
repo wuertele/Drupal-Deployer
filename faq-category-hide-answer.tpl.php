@@ -26,9 +26,9 @@
  *
  * $nodes represents an array of nodes with questions and answers.
  * Each node stored in the $nodes array has the following information:
- *   $node['link'] represents the question and a link to the node (question).
- *   $node['body'] represents the body of the node (answer).
- *   $node['more_link'] represents a "more" link. This may not be available, so check that it exists with isset().
+ *   $node['question'] represents the question.
+ *   $node['body'] represents the answer.
+ *   $node['links'] represents the node links, e.g. "Read more".
  */
 
 if ($category_depth > 0) {
@@ -92,14 +92,12 @@ else {
   <div class="faq_dl_hide_answer">
   <?php foreach ($nodes as $i => $node): ?>
     <div class="faq_question faq_dt_hide_answer">
-    <?php print $node['link']; ?>
+    <?php print $node['question']; ?>
     </div> <!-- Close div: faq_question faq_dt_hide_answer -->
 
     <div class="faq_answer faq_dd_hide_answer">
     <?php print $node['body']; ?>
-    <?php if (!empty($node['more_link'])): ?>
-      <p class="faq_more_link"><?php print $node['more_link']; ?></p>
-    <?php endif; ?>
+    <?php print $node['links']; ?>
     </div> <!-- Close div: faq_answer faq_dd_hide_answer -->
   <?php endforeach; ?>
   </div> <!-- Close div: faq_dl_hide_answer -->

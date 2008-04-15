@@ -22,7 +22,6 @@
  * $container_class is the class attribute of the element containing subcategories, either 'faq_qa' or 'faq_qa_hide'. This is used by javascript to open/hide categories.
  *
  * $display_faq_count tells whether the number of questions in (sub)categories should be displayed
- * $use_teaser tells whether $node['body'] contains the full body or just the teaser
  *
  * $question_list represents an array of question links
  * $question_list_style, either ol or ul

@@ -4,17 +4,27 @@
 /**
  * Available variables:
  *
- * $category_name represents the category name
- * $category_depth (greather than 0 when it's a subcategory)
+ * $display_header tells whether the category header should be displayed.
+ * $header_title represents the link to the category.
+ * $category_name represents the category name.
+ * $category_depth (greater than 0 when it's a subcategory).
+ * $description
+ * $question_count represents the number of questions in category.
  * $term_img represents the html for the category image. This is empty if the taxonomy image module is not enabled.
-
- * $subcat_body_list represents subcategories' answers, recursively themed (by this template)
-
- * $display_answers tells whether there should be any output
+ *
+ * $subcat_body_list represents subcategories, recursively themed (by this template)
  * $answer_category_name tells whether the category name should be displayed before answers
- * $display_header tells whether the header should be displayed before answers
-
+ * $display_faq_count tells whether the number of questions in (sub)categories should be displayed
+ * $display_answers tells whether there should be any output
+ * $use_teaser tells whether $node['body'] contains the full body or just the teaser
+ *
+ * $nodes represents an array of nodes with questions and answers.
+ * Each node stored in the $nodes array has the following information:
+ *   $node['question'] represents the question.
+ *   $node['body'] represents the answer.
+ *   $node['links'] represents the node links, e.g. "Read more".
  */
+
 
 if ($category_depth > 0) {
   $hdr = 'h6';
@@ -60,18 +70,13 @@ $depth = 0;
     <?php foreach ($nodes as $i => $node): ?>
 
       <div class="faq_question"><?php //strong question label here? ?>
-      <?php print $node['link']; ?>
+      <?php print $node['question']; ?>
       </div> <!-- Close div: faq_question -->
 
       <div class="faq_answer">
       <strong><?php print $answer_label; ?></strong>
       <?php print $node['body']; ?>
-      <?php if (!empty($node['more_link'])): ?>
-        <p class="faq_more_link"><?php print $node['more_link']; ?></p>
-      <?php endif; ?>
-      <?php if (!empty($back_to_top)): ?>
-        <p class="faq_top_link"><?php print $back_to_top; ?></p>
-      <?php endif; ?>
+      <?php print $node['links']; ?>
       </div> <!-- Close div: faq_answer -->
 
     <?php endforeach; ?>
