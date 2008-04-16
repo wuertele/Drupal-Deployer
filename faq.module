@@ -1058,12 +1058,6 @@ function faq_theme() {
       'template' => 'faq-category-new-page',
       'arguments' => array('data' => NULL, 'display_header' => 0, 'category_display' => NULL, 'term' => NULL, 'class' => NULL),
       ),
-    'faq_highlights' => array(
-      'arguments' => array('num' => 5),
-      ),
-    'faq_random_highlights' => array(
-      'arguments' => array('num' => 5),
-      ),
   );
 }
 
@@ -1749,13 +1743,13 @@ function faq_block($op = 'list', $delta = 0, $edit = array()) {
         case 1:
           // Recent FAQs.
           $block['subject'] = t('Recent FAQs');
-          $block['content'] = theme('faq_highlights', variable_get('faq_block_recent_faq_count', 5));
+          $block['content'] = faq_highlights_block(variable_get('faq_block_recent_faq_count', 5));
           break;
 
         case 2:
           // Random FAQs.
           $block['subject'] = t('Random FAQs');
-          $block['content'] = theme('faq_random_highlights', variable_get('faq_block_random_faq_count', 5));
+          $block['content'] = faq_random_highlights_block(variable_get('faq_block_random_faq_count', 5));
           break;
 
       } // End switch($delta).
@@ -1818,7 +1812,7 @@ function faq_block($op = 'list', $delta = 0, $edit = array()) {
  * @return
  *   The HTML-formatted code displaying the Recent FAQs.
  */
-function theme_faq_highlights($num = 5) {
+function faq_highlights_block($num = 5) {
 
   $result = db_query_range(db_rewrite_sql("SELECT n.nid, n.created FROM {node} n WHERE n.type='faq' AND n.status = 1 ORDER BY n.created DESC", "n", "nid"), 0, $num);
 
@@ -1845,7 +1839,7 @@ function theme_faq_highlights($num = 5) {
  * @return
  *   The HTML-formatted code displaying the Random FAQs.
  */
-function theme_faq_random_highlights($num = 5) {
+function faq_random_highlights_block($num = 5) {
 
   $result = db_query_range(db_rewrite_sql("SELECT n.nid FROM {node} n WHERE n.type='faq' AND n.status = 1 ORDER BY RAND()", "n", "nid"), 0, $num);
 
