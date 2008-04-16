@@ -12,6 +12,8 @@
  *   The name of the category.
  * $answer_category_name
  *   Whether the category name should be displayed with the answers.
+ * $group_questions_top
+ *   Whether the questions and answers should be grouped together.
  * $category_depth
  *   The term or category depth.
  * $description
@@ -60,7 +62,8 @@ else {
   $hdr = 'h5';
 }
 
-?><div class="faq_category_menu">
+?>
+<div class="faq_category_menu">
 
   <!-- category header with title, link, image, description, and count of questions inside -->
   <div class="faq_qa_header">
@@ -121,8 +124,11 @@ else {
     </<?php print $question_list_style; ?>>
   </div> <!-- Close div: item-list -->
   <?php endif; ?>
-  </div> <!-- Close div: faq_qa / faq_qa_hide -->
-  </div> <!-- Close div: faq_category_menu -->
+
+  <?php if (!$group_questions_top && $category_display != 'hide_qa'): ?>
+    </div> <!-- Close div: faq_qa / faq_qa_hide -->
+    </div> <!-- Close div: faq_category_menu -->
+  <?php endif; ?>
 
   <?php if ($answer_category_name): ?>
     <!-- display header before answers in some layouts -->
@@ -152,3 +158,8 @@ else {
 
   </div> <!-- Close div -->
 </div> <!-- Close div: faq_category_group -->
+
+<?php if ($group_questions_top || $category_display == 'hide_qa'): ?>
+</div> <!-- Close div: faq_qa / faq_qa_hide -->
+</div> <!-- Close div: faq_category_menu -->
+<?php endif; ?>

@@ -14,6 +14,8 @@
  *   The name of the category.
  * $answer_category_name
  *   Whether the category name should be displayed with the answers.
+ * $group_questions_top
+ *   Whether the questions and answers should be grouped together.
  * $category_depth
  *   The term or category depth.
  * $description
