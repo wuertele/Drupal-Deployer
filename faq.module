@@ -1207,7 +1207,9 @@ function template_preprocess_faq_category_questions_top(&$variables) {
     $anchor = $term->tid ."n". $node->nid;
     $node_var = array();
     faq_view_question($node_var, $node, '', $anchor);
-    faq_view_answer($node_var, $node, $back_to_top, $teaser, $links);
+    if ($group_questions_top || $category_display == 'hide_qa') {
+      faq_view_answer($node_var, $node, $back_to_top, $teaser, $links);
+    }
     $nodes[] = $node_var;
     $questions[] = l($node->question, $this_page, array('fragment' => $anchor));
   }
@@ -1216,6 +1218,7 @@ function template_preprocess_faq_category_questions_top(&$variables) {
   $variables['question_list'] = $questions;
   $variables['question_list_style'] = variable_get('faq_question_listing', 'ul');
 
+  $variables['group_questions_top'] = $group_questions_top;
   if ($group_questions_top || $category_display == "hide_qa") {
     $variables['nodes'] = $nodes;
     $variables['answer_category_name'] = variable_get('faq_answer_category_name', FALSE);
@@ -1254,6 +1257,7 @@ function template_preprocess_faq_category_questions_top_answers(&$variables) {
     $default_weight = 1000000;
   }
 
+  $variables['group_questions_top'] = $group_questions_top;
   if ($group_questions_top || $category_display == "hide_qa") {
     $variables['display_answers'] = FALSE;
     $variables['category_depth'] = 0;
@@ -2124,8 +2128,8 @@ function faq_view_answer(&$data, $node, $back_to_top, $teaser, $links) {
   node_invoke_nodeapi($node, 'alter', $teaser, 0);
 
   // Unset unused $node text so that a bad theme can not open a security hole.
-  $node->body = NULL;
-  $node->teaser = NULL;
+  //$node->body = NULL;
+  //$node->teaser = NULL;
 
   $data['body'] = $content;
   if ($links) {
