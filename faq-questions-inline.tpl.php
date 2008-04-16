@@ -4,14 +4,18 @@
 /**
  * Available variables:
  *
- * $nodes represents an array of nodes.
- * Each node stored in the $nodes array has the following information:
- *   $node['question'] represents the question.
- *   $node['body'] represents the answer.
- *   $node['links'] represents the node links, e.g. "Read more".
- * $question_label represents the question label.
- * $answer_label represents the answer label.
- * $use_teaser tells whether $node['body'] contains the full body or just the teaser
+ * $nodes
+ *   The array of nodes to be displayed.
+ *   Each node stored in the $nodes array has the following information:
+ *     $node['question'] is the question text.
+ *     $node['body'] is the answer text.
+ *     $node['links'] represents the node links, e.g. "Read more".
+ * $question_label
+ *   The question label, intended to be pre-pended to the question text.
+ * $answer_label
+ *   The answer label, intended to be pre-pended to the answer text.
+ * $use_teaser
+ *   Tells whether $node['body'] contains the full body or just the teaser
  */
 ?><div>
 <?php foreach ($nodes as $node): ?>

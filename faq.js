@@ -27,7 +27,7 @@ if (Drupal.jsEnabled) {
     $("input[@name=faq_qa_mark]").bind("click", qa_mark_handler);
     $("input[@name=faq_use_teaser]").bind("click", teaser_handler);
     $("input[@name=faq_category_display]").bind("click", categories_handler);
-    $("input[@name=faq_hide_sub_categories]").bind("click", sub_cats_handler);
+    $("input[@name=faq_hide_child_terms]").bind("click", child_term_handler);
 
 
   });
@@ -134,24 +134,24 @@ function categories_handler(event) {
   }
 
   $("input[@name=faq_category_display]:checked").val() == "categories_inline" ?
-    $("input[@name=faq_hide_sub_categories]").attr("disabled", "disabled"):
-    $("input[@name=faq_hide_sub_categories]").removeAttr("disabled");
+    $("input[@name=faq_hide_child_terms]").attr("disabled", "disabled"):
+    $("input[@name=faq_hide_child_terms]").removeAttr("disabled");
   $("input[@name=faq_category_display]:checked").val() == "categories_inline" ?
-    $("input[@name=faq_show_cat_sub_cats]").attr("disabled", "disabled"):
-    $("input[@name=faq_show_cat_sub_cats]").removeAttr("disabled");
+    $("input[@name=faq_show_term_page_children]").attr("disabled", "disabled"):
+    $("input[@name=faq_show_term_page_children]").removeAttr("disabled");
   $("input[@name=faq_category_display]:checked").val() == "new_page" ?
     $("select[@name=faq_category_listing]").removeAttr("disabled"):
     $("select[@name=faq_category_listing]").attr("disabled", "disabled");
 
-  sub_cats_handler();
+  child_term_handler();
 }
 
-function sub_cats_handler(event) {
-  if ($("input[@name=faq_hide_sub_categories]:checked").val() == 1) {
-    $("input[@name=faq_show_cat_sub_cats]").attr("disabled", "disabled");
+function child_term_handler(event) {
+  if ($("input[@name=faq_hide_child_terms]:checked").val() == 1) {
+    $("input[@name=faq_show_term_page_children]").attr("disabled", "disabled");
   }
   else if ($("input[@name=faq_category_display]:checked").val() != "categories_inline") {
-    $("input[@name=faq_show_cat_sub_cats]").removeAttr("disabled");
+    $("input[@name=faq_show_term_page_children]").removeAttr("disabled");
   }
 }
 

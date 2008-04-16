@@ -4,15 +4,21 @@
 /**
  * Available variables:
  *
- * $questions_list represents a list of questions based on $list_style.
- * $list_style represents the type of list.
- * $limit represents the number of items.
- * $answers represents an array of answers.
- *   $answers[$key]['question'] represents the question.
- *   $answers[$key]['body'] represents the answer.
- *   $answers[$key]['links'] represents the node links, e.g. "Read more".
- * $questions represents an array of questions.
- * $use_teaser is true if $answer['body'] is a teaser.
+ * $questions_list
+ *   Pre-formatted list of questions.
+ * $questions
+ *   An array of questions to use for producing the question list at the top.
+ * $answers
+ *   An array of answers to use for producing the main body of text.
+ *     $answers[$key]['question'] is the question text.
+ *     $answers[$key]['body'] is the answer text.
+ *     $answers[$key]['links'] represents the node links, e.g. "Read more".
+ * $use_teaser
+ *   Is true if $answer['body'] is a teaser.
+ * $list_style
+ *   Represents the style of list, ul for unordered, ol for ordered.
+ * $limit
+ *   Represents the number of items.
  */
 ?>
 <?php print $questions_list ?>

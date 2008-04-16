@@ -517,18 +517,18 @@ function faq_categories_settings_form() {
     '#default_value' => variable_get('faq_group_questions_top', FALSE),
   );
 
-  $form['faq_category_misc']['faq_hide_sub_categories'] = array(
+  $form['faq_category_misc']['faq_hide_child_terms'] = array(
     '#type' => 'checkbox',
     '#title' => t("Only show sub-categories when parent category is selected"),
     '#description' => t("This allows the user more control over how and when sub-categories are displayed.  It does not affect the 'Categories inline' display."),
-    '#default_value' => variable_get('faq_hide_sub_categories', FALSE),
+    '#default_value' => variable_get('faq_hide_child_terms', FALSE),
   );
 
-  $form['faq_category_misc']['faq_show_cat_sub_cats'] = array(
+  $form['faq_category_misc']['faq_show_term_page_children'] = array(
     '#type' => 'checkbox',
     '#title' => t("Show sub-categories on FAQ category pages"),
     '#description' => t("Sub-categories with 'faq' nodes will be displayed on the per category FAQ page.  This will also happen if 'Only show sub-categories when parent category is selected' is set."),
-    '#default_value' => variable_get('faq_show_cat_sub_cats', FALSE),
+    '#default_value' => variable_get('faq_show_term_page_children', FALSE),
   );
 
   $form['faq_category_advanced'] = array(
@@ -859,7 +859,7 @@ function faq_page($tid = 0) {
   // Categorize questions.
   else {
     $category_display = variable_get('faq_category_display', 'categories_inline');
-    $hide_sub_categories = variable_get('faq_hide_sub_categories', FALSE);
+    $hide_child_terms = variable_get('faq_hide_child_terms', FALSE);
     $output .= "<br />";
 
 
@@ -894,7 +894,7 @@ function faq_page($tid = 0) {
 
       // Not a new page.
       else {
-        if ($hide_sub_categories && $category_display == 'hide_qa') {
+        if ($hide_child_terms && $category_display == 'hide_qa') {
           $tree = taxonomy_get_tree($vid, 0, -1, 1);
         }
         else {
@@ -1137,8 +1137,8 @@ function template_preprocess_faq_category_questions_top(&$variables) {
   $links = variable_get('faq_show_node_links', FALSE);
   $disable_node_links = variable_get('faq_disable_node_links', FALSE);
   $display_faq_count = variable_get('faq_count', FALSE);
-  $hide_sub_categories = variable_get('faq_hide_sub_categories', FALSE);
-  $show_cat_sub_cats = variable_get('faq_show_cat_sub_cats', FALSE);
+  $hide_child_terms = variable_get('faq_hide_child_terms', FALSE);
+  $show_term_page_children = variable_get('faq_show_term_page_children', FALSE);
   $group_questions_top = variable_get('faq_group_questions_top', FALSE);
   $default_sorting = variable_get('faq_default_sorting', 'DESC');
 
@@ -1148,26 +1148,26 @@ function template_preprocess_faq_category_questions_top(&$variables) {
     $default_weight = 1000000;
   }
   $this_page = 'faq';
-  $get_sub_terms = 0;
+  $get_child_terms = 0;
   if (arg(0) == 'faq' && is_numeric(arg(1))) {
     $this_page .= "/". arg(1);
-    $get_sub_terms = arg(1);
+    $get_child_terms = arg(1);
   }
 
   // Configure "back to top" link.
   $back_to_top = faq_init_back_to_top($this_page);
 
-  // Get number of questions, and account for hidden sub-cats.
+  // Get number of questions, and account for hidden sub-categories.
   $count = 0;
-  if ($display_faq_count && $hide_sub_categories) {
+  if ($display_faq_count && $hide_child_terms) {
     $count = taxonomy_term_count_nodes($term->tid, 'faq');
   }
   $variables['display_faq_count'] = $display_faq_count;
 
   // Get taxonomy image.
-  $variables['term_img'] = '';
+  $variables['term_image'] = '';
   if (module_exists('taxonomy_image')) {
-    $variables['term_img'] = taxonomy_image_display($term->tid, array('class' => 'faq_tax_image'));
+    $variables['term_image'] = taxonomy_image_display($term->tid, array('class' => 'faq_tax_image'));
   }
 
   // Configure header.
@@ -1184,15 +1184,15 @@ function template_preprocess_faq_category_questions_top(&$variables) {
   $variables['description'] = $term->description;
 
   // Get list of sub-categories if necessary.
-  $sub_categories = array();
-  if (($show_cat_sub_cats || $hide_sub_categories) && $category_display == 'new_page') {
-    $sub_categories = faq_view_sub_category_headers($term);
+  $child_categories = array();
+  if (($show_term_page_children || $hide_child_terms) && $category_display == 'new_page') {
+    $child_categories = faq_view_child_category_headers($term);
   }
-  $variables['subcat_list'] = $sub_categories;
+  $variables['subcat_list'] = $child_categories;
   $variables['subcat_list_style'] = variable_get('faq_category_listing', 'ul');
 
   // Configure class (faq_qa or faq_qa_hide).
-  if ($get_sub_terms == $term->tid) {
+  if ($get_child_terms == $term->tid) {
     $variables['container_class'] = 'faq_qa';
   }
   else {
@@ -1201,8 +1201,8 @@ function template_preprocess_faq_category_questions_top(&$variables) {
 
   // Configure subcategory bodies (theme recursively).
   $variables['subcat_body_list'] = array();
-  if (($get_sub_terms && $category_display == 'categories_inline') || ((($show_cat_sub_cats && $this_page != 'faq') || $hide_sub_categories) && $category_display == 'hide_qa')) {
-    $variables['subcat_body_list'] = faq_format_sub_categories($term, 'faq_category_questions_top', $default_weight, $default_sorting, $category_display, $variables['class']);
+  if (($get_child_terms && $category_display == 'categories_inline') || ((($show_term_page_children && $this_page != 'faq') || $hide_child_terms) && $category_display == 'hide_qa')) {
+    $variables['subcat_body_list'] = faq_get_child_categories_faqs($term, 'faq_category_questions_top', $default_weight, $default_sorting, $category_display, $variables['class']);
   }
 
   if (!count($data)) {
@@ -1213,7 +1213,7 @@ function template_preprocess_faq_category_questions_top(&$variables) {
   $questions = array();
   $nodes = array();
   foreach ($data as $node) {
-    if (!$hide_sub_categories) {
+    if (!$hide_child_terms) {
       $count++;
     }
     $anchor = $term->tid ."n". $node->nid;
@@ -1255,8 +1255,8 @@ function template_preprocess_faq_category_questions_top_answers(&$variables) {
   $teaser = variable_get('faq_use_teaser', FALSE);
   $links = variable_get('faq_show_node_links', FALSE);
   $disable_node_links = variable_get('faq_disable_node_links', FALSE);
-  $hide_sub_categories = variable_get('faq_hide_sub_categories', FALSE);
-  $show_cat_sub_cats = variable_get('faq_show_cat_sub_cats', FALSE);
+  $hide_child_terms = variable_get('faq_hide_child_terms', FALSE);
+  $show_term_page_children = variable_get('faq_show_term_page_children', FALSE);
   $group_questions_top = variable_get('faq_group_questions_top', FALSE);
   $default_sorting = variable_get('faq_default_sorting', 'DESC');
 
@@ -1274,25 +1274,25 @@ function template_preprocess_faq_category_questions_top_answers(&$variables) {
   $variables['display_answers'] = TRUE;
 
   $this_page = 'faq';
-  $get_sub_terms = 0;
+  $get_child_terms = 0;
   if (arg(0) == 'faq' && is_numeric(arg(1))) {
     $this_page .= "/". arg(1);
-    $get_sub_terms = arg(1);
+    $get_child_terms = arg(1);
   }
 
   // Configure "back to top" link.
   $back_to_top = faq_init_back_to_top($this_page);
 
    // Get taxonomy image.
-  $variables['term_img'] = '';
+  $variables['term_image'] = '';
   if (module_exists('taxonomy_image')) {
-    $variables['term_img'] = taxonomy_image_display($term->tid, array('class' => 'faq_tax_image'));
+    $variables['term_image'] = taxonomy_image_display($term->tid, array('class' => 'faq_tax_image'));
   }
 
   // Configure subcategory bodies (theme recursively).
   $variables['subcat_body_list'] = array();
-  if (($get_sub_terms && $category_display == 'categories_inline') || ((($show_cat_sub_cats && $this_page != 'faq') || $hide_sub_categories) && $category_display == 'hide_qa')) {
-    $variables['subcat_body_list'] = faq_format_sub_categories($term, 'faq_category_questions_top_answers', $default_weight, $default_sorting, $category_display, $variables['class']);
+  if (($get_child_terms && $category_display == 'categories_inline') || ((($show_term_page_children && $this_page != 'faq') || $hide_child_terms) && $category_display == 'hide_qa')) {
+    $variables['subcat_body_list'] = faq_get_child_categories_faqs($term, 'faq_category_questions_top_answers', $default_weight, $default_sorting, $category_display, $variables['class']);
   }
 
 
@@ -1363,8 +1363,8 @@ function template_preprocess_faq_category_hide_answer(&$variables) {
   $links = variable_get('faq_show_node_links', FALSE);
   $disable_node_links = variable_get('faq_disable_node_links', FALSE);
   $display_faq_count = variable_get('faq_count', FALSE);
-  $hide_sub_categories = variable_get('faq_hide_sub_categories', FALSE);
-  $show_cat_sub_cats = variable_get('faq_show_cat_sub_cats', FALSE);
+  $hide_child_terms = variable_get('faq_hide_child_terms', FALSE);
+  $show_term_page_children = variable_get('faq_show_term_page_children', FALSE);
   $default_sorting = variable_get('faq_default_sorting', 'DESC');
 
   // Initialise some variables.
@@ -1372,23 +1372,23 @@ function template_preprocess_faq_category_hide_answer(&$variables) {
   if ($default_sorting != 'DESC') {
     $default_weight = 1000000;
   }
-  $get_sub_terms = 0;
+  $get_child_terms = 0;
   if (arg(0) == 'faq' && is_numeric(arg(1))) {
-    $get_sub_terms = arg(1);
+    $get_child_terms = arg(1);
   }
 
 
-  // Get number of questions, and account for hidden sub-cats.
+  // Get number of questions, and account for hidden sub-categories.
   $count = 0;
-  if ($display_faq_count && $hide_sub_categories) {
+  if ($display_faq_count && $hide_child_terms) {
     $count = taxonomy_term_count_nodes($term->tid, 'faq');
   }
   $variables['display_faq_count'] = $display_faq_count;
 
    // Get taxonomy image.
-  $variables['term_img'] = '';
+  $variables['term_image'] = '';
   if (module_exists('taxonomy_image')) {
-    $variables['term_img'] = taxonomy_image_display($term->tid, array('class' => 'faq_tax_image'));
+    $variables['term_image'] = taxonomy_image_display($term->tid, array('class' => 'faq_tax_image'));
   }
 
   // Configure header.
@@ -1405,15 +1405,15 @@ function template_preprocess_faq_category_hide_answer(&$variables) {
   $variables['description'] = $term->description;
 
   // Get list of sub-categories if necessary.
-  $sub_categories = array();
-  if (($show_cat_sub_cats || $hide_sub_categories) && $category_display == 'new_page') {
-    $sub_categories = faq_view_sub_category_headers($term);
+  $child_categories = array();
+  if (($show_term_page_children || $hide_child_terms) && $category_display == 'new_page') {
+    $child_categories = faq_view_child_category_headers($term);
   }
-  $variables['subcat_list'] = $sub_categories;
+  $variables['subcat_list'] = $child_categories;
   $variables['subcat_list_style'] = variable_get('faq_category_listing', 'ul');
 
   // Configure class (faq_qa or faq_qa_hide).
-  if ($get_sub_terms == $term->tid) {
+  if ($get_child_terms == $term->tid) {
     $variables['container_class'] = 'faq_qa';
   }
   else {
@@ -1422,8 +1422,8 @@ function template_preprocess_faq_category_hide_answer(&$variables) {
 
   // Configure subcategory bodies (theme recursively).
   $variables['subcat_body_list'] = array();
-  if (($get_sub_terms && $category_display == 'categories_inline') || ((($show_cat_sub_cats && $this_page != 'faq') || $hide_sub_categories) && $category_display == 'hide_qa')) {
-    $variables['subcat_body_list'] = faq_format_sub_categories($term, 'faq_category_hide_answer', $default_weight, $default_sorting, $category_display, $variables['class']);
+  if (($get_child_terms && $category_display == 'categories_inline') || ((($show_term_page_children && $this_page != 'faq') || $hide_child_terms) && $category_display == 'hide_qa')) {
+    $variables['subcat_body_list'] = faq_get_child_categories_faqs($term, 'faq_category_hide_answer', $default_weight, $default_sorting, $category_display, $variables['class']);
   }
 
   if (!count($data)) {
@@ -1433,7 +1433,7 @@ function template_preprocess_faq_category_hide_answer(&$variables) {
 
   $nodes = array();
   foreach ($data as $node) {
-    if (!$hide_sub_categories) {
+    if (!$hide_child_terms) {
       $count++;
     }
     $node_var = array();
@@ -1500,8 +1500,8 @@ function template_preprocess_faq_category_questions_inline(&$variables) {
   $links = variable_get('faq_show_node_links', FALSE);
   $disable_node_links = variable_get('faq_disable_node_links', FALSE);
   $display_faq_count = variable_get('faq_count', FALSE);
-  $hide_sub_categories = variable_get('faq_hide_sub_categories', FALSE);
-  $show_cat_sub_cats = variable_get('faq_show_cat_sub_cats', FALSE);
+  $hide_child_terms = variable_get('faq_hide_child_terms', FALSE);
+  $show_term_page_children = variable_get('faq_show_term_page_children', FALSE);
   $default_sorting = variable_get('faq_default_sorting', 'DESC');
 
   // Initialise some variables.
@@ -1510,10 +1510,10 @@ function template_preprocess_faq_category_questions_inline(&$variables) {
     $default_weight = 1000000;
   }
   $this_page = 'faq';
-  $get_sub_terms = 0;
+  $get_child_terms = 0;
   if (arg(0) == 'faq' && is_numeric(arg(1))) {
     $this_page .= "/". arg(1);
-    $get_sub_terms = arg(1);
+    $get_child_terms = arg(1);
   }
 
   // Configure "back to top" link.
@@ -1527,17 +1527,17 @@ function template_preprocess_faq_category_questions_inline(&$variables) {
     $variables['answer_label'] = t(variable_get('faq_answer_label', "A:"));
   }
 
-  // Get number of questions, and account for hidden sub-cats.
+  // Get number of questions, and account for hidden sub-categories.
   $count = 0;
-  if ($display_faq_count && $hide_sub_categories) {
+  if ($display_faq_count && $hide_child_terms) {
     $count = taxonomy_term_count_nodes($term->tid, 'faq');
   }
   $variables['display_faq_count'] = $display_faq_count;
 
   // Get taxonomy image.
-  $variables['term_img'] = '';
+  $variables['term_image'] = '';
   if (module_exists('taxonomy_image')) {
-    $variables['term_img'] = taxonomy_image_display($term->tid, array('class' => 'faq_tax_image'));
+    $variables['term_image'] = taxonomy_image_display($term->tid, array('class' => 'faq_tax_image'));
   }
 
   // Configure header.
@@ -1553,15 +1553,15 @@ function template_preprocess_faq_category_questions_inline(&$variables) {
   $variables['description'] = $term->description;
 
   // Get list of sub-categories if necessary.
-  $sub_categories = array();
-  if (($show_cat_sub_cats || $hide_sub_categories) && $category_display == 'new_page') {
-    $sub_categories = faq_view_sub_category_headers($term);
+  $child_categories = array();
+  if (($show_term_page_children || $hide_child_terms) && $category_display == 'new_page') {
+    $child_categories = faq_view_child_category_headers($term);
   }
-  $variables['subcat_list'] = $sub_categories;
+  $variables['subcat_list'] = $child_categories;
   $variables['subcat_list_style'] = variable_get('faq_category_listing', 'ul');
 
   // Configure class (faq_qa or faq_qa_hide).
-  if ($get_sub_terms == $term->tid) {
+  if ($get_child_terms == $term->tid) {
     $variables['container_class'] = 'faq_qa';
   }
   else {
@@ -1570,8 +1570,8 @@ function template_preprocess_faq_category_questions_inline(&$variables) {
 
   // Configure subcategory bodies (theme recursively).
   $variables['subcat_body_list'] = array();
-  if (($get_sub_terms && $category_display == 'categories_inline') || ((($show_cat_sub_cats && $this_page != 'faq') || $hide_sub_categories) && $category_display == 'hide_qa')) {
-    $variables['subcat_body_list'] = faq_format_sub_categories($term, 'faq_category_questions_inline', $default_weight, $default_sorting, $category_display, $variables['class']);
+  if (($get_child_terms && $category_display == 'categories_inline') || ((($show_term_page_children && $this_page != 'faq') || $hide_child_terms) && $category_display == 'hide_qa')) {
+    $variables['subcat_body_list'] = faq_get_child_categories_faqs($term, 'faq_category_questions_inline', $default_weight, $default_sorting, $category_display, $variables['class']);
   }
 
   if (!count($data)) {
@@ -1581,7 +1581,7 @@ function template_preprocess_faq_category_questions_inline(&$variables) {
 
   $nodes = array();
   foreach ($data as $node) {
-    if (!$hide_sub_categories) {
+    if (!$hide_child_terms) {
       $count++;
     }
     $node_var = array();
@@ -1630,13 +1630,13 @@ function template_preprocess_faq_category_new_page(&$variables) {
 
   // Fetch configuration.
   $display_faq_count = variable_get('faq_count', FALSE);
-  $hide_sub_categories = variable_get('faq_hide_sub_categories', FALSE);
-  $show_cat_sub_cats = variable_get('faq_show_cat_sub_cats', FALSE);
+  $hide_child_terms = variable_get('faq_hide_child_terms', FALSE);
+  $show_term_page_children = variable_get('faq_show_term_page_children', FALSE);
 
   // Initialise some variables.
-  $get_sub_terms = 0;
+  $get_child_terms = 0;
   if (arg(0) == 'faq' && is_numeric(arg(1))) {
-    $get_sub_terms = arg(1);
+    $get_child_terms = arg(1);
   }
   $default_sorting = variable_get('faq_default_sorting', 'DESC');
   $default_weight = 0;
@@ -1644,17 +1644,17 @@ function template_preprocess_faq_category_new_page(&$variables) {
     $default_weight = 1000000;
   }
 
-  // Get number of questions, and account for hidden sub-cats.
+  // Get number of questions, and account for hidden sub-categories.
   $count = 0;
-  if ($display_faq_count && $hide_sub_categories) {
+  if ($display_faq_count && $hide_child_terms) {
     $count = taxonomy_term_count_nodes($term->tid, 'faq');
   }
   $variables['display_faq_count'] = $display_faq_count;
 
   // Get taxonomy image.
-  $variables['term_img'] = '';
+  $variables['term_image'] = '';
   if (module_exists('taxonomy_image')) {
-    $variables['term_img'] = taxonomy_image_display($term->tid, array('class' => 'faq_tax_image'));
+    $variables['term_image'] = taxonomy_image_display($term->tid, array('class' => 'faq_tax_image'));
   }
 
   // Configure header.
@@ -1670,15 +1670,15 @@ function template_preprocess_faq_category_new_page(&$variables) {
   $variables['description'] = $term->description;
 
   // Get list of sub-categories if necessary.
-  $sub_categories = array();
-  if (($show_cat_sub_cats || $hide_sub_categories) && $category_display == 'new_page') {
-    $sub_categories = faq_view_sub_category_headers($term);
+  $child_categories = array();
+  if (($show_term_page_children || $hide_child_terms) && $category_display == 'new_page') {
+    $child_categories = faq_view_child_category_headers($term);
   }
-  $variables['subcat_list'] = $sub_categories;
+  $variables['subcat_list'] = $child_categories;
   $variables['subcat_list_style'] = variable_get('faq_category_listing', 'ul');
 
   // Configure class (faq_qa or faq_qa_hide).
-  if ($get_sub_terms == $term->tid) {
+  if ($get_child_terms == $term->tid) {
     $variables['container_class'] = 'faq_qa';
   }
   else {
@@ -1687,8 +1687,8 @@ function template_preprocess_faq_category_new_page(&$variables) {
 
   // Configure subcategory bodies (theme recursively).
   $variables['subcat_body_list'] = array();
-  if (($get_sub_terms && $category_display == 'categories_inline') || ((($show_cat_sub_cats && $this_page != 'faq') || $hide_sub_categories) && $category_display == 'hide_qa')) {
-    $variables['subcat_body_list'] = faq_format_sub_categories($term, 'faq_category_new_page', $default_weight, $default_sorting, $category_display, $variables['class']);
+  if (($get_child_terms && $category_display == 'categories_inline') || ((($show_term_page_children && $this_page != 'faq') || $hide_child_terms) && $category_display == 'hide_qa')) {
+    $variables['subcat_body_list'] = faq_get_child_categories_faqs($term, 'faq_category_new_page', $default_weight, $default_sorting, $category_display, $variables['class']);
   }
 
   if (!count($data)) {
@@ -1698,7 +1698,7 @@ function template_preprocess_faq_category_new_page(&$variables) {
 
   $nodes = array();
   foreach ($data as $node) {
-    if (!$hide_sub_categories) {
+    if (!$hide_child_terms) {
       $count++;
     }
     $nodes[] = l($node->question, "node/$node->nid");
@@ -1885,7 +1885,7 @@ function theme_faq_random_highlights($num = 5) {
 function _get_indented_faq_terms($vid, $tid) {
 
   $display_faq_count = variable_get('faq_count', FALSE);
-  $hide_sub_categories = variable_get('faq_hide_sub_categories', FALSE);
+  $hide_child_terms = variable_get('faq_hide_child_terms', FALSE);
 
   $items = array();
   $tree = taxonomy_get_tree($vid, $tid, -1, 1);
@@ -1896,9 +1896,9 @@ function _get_indented_faq_terms($vid, $tid) {
 
     if ($tree_count) {
       // Get taxonomy image.
-      $term_img = '';
+      $term_image = '';
       if (module_exists('taxonomy_image')) {
-        $term_img = taxonomy_image_display($term->tid, array('class' => 'faq_tax_image'));
+        $term_image = taxonomy_image_display($term->tid, array('class' => 'faq_tax_image'));
       }
 
       // Get term description.
@@ -1910,27 +1910,27 @@ function _get_indented_faq_terms($vid, $tid) {
 
       // See if this term has any nodes itself, should it be a link?
       $result = db_query(db_rewrite_sql("SELECT COUNT(n.nid) AS c FROM {term_node} tn INNER JOIN {node} n ON (n.nid = tn.nid AND n.vid = tn.vid) WHERE n.status = 1 AND n.type = 'faq' AND tn.tid = '%d' ", "n", "nid"), $term->tid);
-      $term_count = db_fetch_object($result);
+      $term_node_count = db_fetch_object($result);
 
-      if ($term_count->c > 0) {
+      if ($term_node_count->c > 0) {
         if ($display_faq_count) {
-          $count = $term_count->c;
-          if ($hide_sub_categories) {
+          $count = $term_node_count->c;
+          if ($hide_child_terms) {
             $count = $tree_count;
           }
-          $cur_item = $term_img . l($term->name, "faq/$term->tid") ." ($count) ". $desc;
+          $cur_item = $term_image . l($term->name, "faq/$term->tid") ." ($count) ". $desc;
         }
         else {
-          $cur_item = $term_img . l($term->name, "faq/$term->tid") . $desc;
+          $cur_item = $term_image . l($term->name, "faq/$term->tid") . $desc;
         }
       }
       else {
-        $cur_item = $term_img . check_plain($term->name) . $desc;
+        $cur_item = $term_image . check_plain($term->name) . $desc;
       }
       $cur_item .= '<div class="clear-block"></div>';
 
       $term_items = array();
-      if (!$hide_sub_categories) {
+      if (!$hide_child_terms) {
         $term_items = _get_indented_faq_terms($vid, $term->tid);
       }
       $items[] = array("data" => $cur_item, "children" => $term_items);
@@ -2176,7 +2176,7 @@ function faq_init_back_to_top($path) {
  *
  * @param $term
  *   Contain the category / term information.
- * @param $sub_theme
+ * @param $theme_function
  *   Theme function to use to format the Q/A layout for sub-categories.
  * @param $default_weight
  *   Is 0 for $default_sorting = DESC; is 1000000 for $default_sorting = ASC.
@@ -2189,29 +2189,29 @@ function faq_init_back_to_top($path) {
  *   CSS class which the html div will be using. A special class name is
  *   required in order to hide and questions / answers.
  */
-function faq_format_sub_categories($term, $sub_theme, $default_weight, $default_sorting, $category_display, $class) {
-  $sub_cat_htmls = array();
+function faq_get_child_categories_faqs($term, $theme_function, $default_weight, $default_sorting, $category_display, $class) {
+  $output = array();
 
   $list = taxonomy_get_children($term->tid);
 
-  foreach ($list as $tid => $sub_term) {
-    $sub_term->depth = $term->depth + 1;
+  foreach ($list as $tid => $child_term) {
+    $child_term->depth = $term->depth + 1;
 
-    if (taxonomy_term_count_nodes($sub_term->tid, 'faq')) {
-      $result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created %s", "n", "nid"), $default_weight, $sub_term->tid, $default_sorting);
+    if (taxonomy_term_count_nodes($child_term->tid, 'faq')) {
+      $result = db_query(db_rewrite_sql("SELECT n.nid, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON w.tid = tn.tid AND n.nid = w.nid WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight, n.sticky DESC, n.created %s", "n", "nid"), $default_weight, $child_term->tid, $default_sorting);
 
-      $sub_data = array();
+      $data = array();
       while ($row = db_fetch_object($result)) {
         $node = node_load($row->nid);
         if (node_access("view", $node)) {
-          $sub_data[] = $node;
+          $data[] = $node;
         }
       }
-      $sub_cat_htmls[] = theme($sub_theme, $sub_data, 1, $category_display, $sub_term, $class);
+      $output[] = theme($theme_function, $data, 1, $category_display, $child_term, $class);
     }
   }
 
-  return $sub_cat_htmls;
+  return $output;
 }
 
 /**
@@ -2222,28 +2222,28 @@ function faq_format_sub_categories($term, $sub_theme, $default_weight, $default_
  * @return
  *   An array of sub-categories.
  */
-function faq_view_sub_category_headers($term) {
+function faq_view_child_category_headers($term) {
 
-  $sub_categories = array();
+  $child_categories = array();
   $list = taxonomy_get_children($term->tid);
 
-  foreach ($list as $tid => $sub_term) {
-    $sub_count = taxonomy_term_count_nodes($sub_term->tid, 'faq');
-    if ($sub_count) {
+  foreach ($list as $tid => $child_term) {
+    $term_node_count = taxonomy_term_count_nodes($child_term->tid, 'faq');
+    if ($term_node_count) {
 
       // Get taxonomy image.
-      $term_img = '';
+      $term_image = '';
       if (module_exists('taxonomy_image')) {
-        $term_img = taxonomy_image_display($sub_term->tid, array('class' => 'faq_tax_image'));
+        $term_image = taxonomy_image_display($child_term->tid, array('class' => 'faq_tax_image'));
       }
 
-      $sub_cat_vars['link'] = l($sub_term->name, "faq/$sub_term->tid");
-      $sub_cat_vars['description'] = $sub_term->description;
-      $sub_cat_vars['count'] = $sub_count;
-      $sub_cat_vars['img'] = $term_img;
-      $sub_categories[] = $sub_cat_vars;
+      $term_vars['link'] = l($child_term->name, "faq/$child_term->tid");
+      $term_vars['description'] = $child_term->description;
+      $term_vars['count'] = $term_node_count;
+      $term_vars['term_image'] = $term_image;
+      $child_categories[] = $term_vars;
     }
   }
 
-  return $sub_categories;
+  return $child_categories;
 }

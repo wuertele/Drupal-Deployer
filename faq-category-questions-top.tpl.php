@@ -4,36 +4,53 @@
 /**
  * Available variables:
  *
- * $display_header tells whether the category header should be displayed
- * $category_name represents the category name
- * $header_title represents the link to the category
- * $category_depth (greather than 0 when it's a subcategory)
+ * $display_header
+ *   Boolean value controlling whether a header should be displayed.
+ * $header_title
+ *   The category title.
+ * $category_name
+ *   The name of the category.
+ * $answer_category_name
+ *   Whether the category name should be displayed with the answers.
+ * $category_depth
+ *   The term or category depth.
  * $description
- * $question_count represents the number of questions in category
- * $term_img represents the html for the category image. This is empty if the taxonomy image module is not enabled.
- *
- * $subcat_list represents an array of subcategories
- * Each subcategory stored in the $subcat_list array has the following information:
- *   $subcat['link'] represents the link to the subcategory
- *   $subcat['description']
- *   $subcat['count'] represents the number of question in subcategory
- *   $subcat['img'] represents the subcategory (taxonomy) image
- * $subcat_list_style represents the style of the list, either ol or ul (ordered or unordered)
- * $subcat_body_list represents subcategories, recursively themed (by this template)
- * $container_class is the class attribute of the element containing subcategories, either 'faq_qa' or 'faq_qa_hide'. This is used by javascript to open/hide categories.
- *
- * $question_list represents an array of question links
- * $question_list_style, either ol or ul
- *
- * $answer_category_name tells whether the category name should be displayed before answers
- * $display_faq_count tells whether the number of questions in (sub)categories should be displayed
- * $use_teaser tells whether $node['body'] contains the full body or just the teaser
- *
- * $nodes represents an array of nodes with questions and answers.
- * Each node stored in the $nodes array has the following information:
- *   $node['question'] represents the question.
- *   $node['body'] represents the answer.
- *   $node['links'] represents the node links, e.g. "Read more".
+ *   The current page's description.
+ * $term_image
+ *   The HTML for the category image. This is empty if the taxonomy image module
+ *   is not enabled or there is no image associated with the term.
+ * $display_faq_count
+ *   Boolean value controlling whether or not the number of faqs in a category
+ *   should be displayed.
+ * $question_count
+ *   The number of questions in category.
+ * $nodes
+ *   An array of nodes to be displayed.
+ *   Each node stored in the $nodes array has the following information:
+ *     $node['question'] is the question text.
+ *     $node['body'] is the answer text.
+ *     $node['links'] represents the node links, e.g. "Read more".
+ * $use_teaser
+ *   Whether $node['body'] contains the full body or just the teaser text.
+ * $container_class
+ *   The class attribute of the element containing the sub-categories, either
+ *   'faq_qa' or 'faq_qa_hide'. This is used by javascript to open/hide
+ *   a category's faqs.
+ * $question_list
+ *   An array of question links.
+ * $question_list_style
+ *   The style of the question list, ul for unordered, ol for ordered.
+ * $subcat_list
+ *   An array of sub-categories.  Each sub-category stored in the $subcat_list
+ *   array has the following information:
+ *     $subcat['link'] is the link to the sub-category.
+ *     $subcat['description'] is the sub-category description.
+ *     $subcat['count'] is the number of questions in the sub-category.
+ *     $subcat['term_image'] is the sub-category (taxonomy) image.
+ * $subcat_list_style
+ *   The style of the sub-category list, either ol or ul (ordered or unordered).
+ * $subcat_body_list
+ *   The sub-categories faqs, recursively themed (by this template).
  */
 
 if ($category_depth > 0) {
@@ -49,14 +66,14 @@ else {
   <div class="faq_qa_header">
   <?php if ($display_header): ?>
     <<?php print $hdr; ?> class="faq_header">
-    <?php print $term_img; ?>
+    <?php print $term_image; ?>
     <?php print $header_title; ?>
     <?php if ($display_faq_count): ?>
       (<?php print $question_count; ?>)
     <?php endif; ?>
     </<?php print $hdr; ?>>
   <?php else: ?>
-    <?php print $term_img; ?>
+    <?php print $term_image; ?>
   <?php endif; ?>
   <?php if (!empty($description)): ?>
     <div class="faq_qa_description"><p><?php print $description ?></p></div>
@@ -110,7 +127,7 @@ else {
   <?php if ($answer_category_name): ?>
     <!-- display header before answers in some layouts -->
     <<?php print $hdr; ?> class="faq_header">
-    <?php print $term_img; ?>
+    <?php print $term_image; ?>
     <?php print $category_name; ?>
     </<?php print $hdr; ?>>
     <div class="clear-block"></div>

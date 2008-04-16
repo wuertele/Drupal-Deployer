@@ -4,25 +4,42 @@
 /**
  * Available variables:
  *
- * $display_header tells whether the category header should be displayed.
- * $header_title represents the link to the category.
- * $category_name represents the category name.
- * $category_depth (greater than 0 when it's a subcategory).
+ * $display_answers
+ *   Whether or not there should be any output.
+ * $display_header
+ *   Boolean value controlling whether a header should be displayed.
+ * $header_title
+ *   The category title.
+ * $category_name
+ *   The name of the category.
+ * $answer_category_name
+ *   Whether the category name should be displayed with the answers.
+ * $category_depth
+ *   The term or category depth.
  * $description
- * $question_count represents the number of questions in category.
- * $term_img represents the html for the category image. This is empty if the taxonomy image module is not enabled.
- *
- * $subcat_body_list represents subcategories, recursively themed (by this template)
- * $answer_category_name tells whether the category name should be displayed before answers
- * $display_faq_count tells whether the number of questions in (sub)categories should be displayed
- * $display_answers tells whether there should be any output
- * $use_teaser tells whether $node['body'] contains the full body or just the teaser
- *
- * $nodes represents an array of nodes with questions and answers.
- * Each node stored in the $nodes array has the following information:
- *   $node['question'] represents the question.
- *   $node['body'] represents the answer.
- *   $node['links'] represents the node links, e.g. "Read more".
+ *   The current page's description.
+ * $term_image
+ *   The HTML for the category image. This is empty if the taxonomy image module
+ *   is not enabled or there is no image associated with the term.
+ * $display_faq_count
+ *   Boolean value controlling whether or not the number of faqs in a category
+ *   should be displayed.
+ * $question_count
+ *   The number of questions in category.
+ * $nodes
+ *   An array of nodes to be displayed.
+ *   Each node stored in the $nodes array has the following information:
+ *     $node['question'] is the question text.
+ *     $node['body'] is the answer text.
+ *     $node['links'] represents the node links, e.g. "Read more".
+ * $use_teaser
+ *   Whether $node['body'] contains the full body or just the teaser text.
+ * $container_class
+ *   The class attribute of the element containing the sub-categories, either
+ *   'faq_qa' or 'faq_qa_hide'. This is used by javascript to open/hide
+ *   a category's faqs.
+ * $subcat_body_list
+ *   The sub-categories faqs, recursively themed (by this template).
  */
 
 
@@ -46,7 +63,7 @@ $depth = 0;
 
   <?php if ($display_header): ?>
     <<?php print $hdr; ?> class="faq_header">
-    <?php print $term_img; ?>
+    <?php print $term_image; ?>
     <?php print $category_name; ?>
     </<?php print $hdr; ?>>
     <div class="clear-block"></div>
