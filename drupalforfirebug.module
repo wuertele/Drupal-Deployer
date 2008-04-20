@@ -23,7 +23,11 @@ function drupalforfirebug_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 *  Implementation of hook_form_alter()
 */
 function drupalforfirebug_form_alter($formid, &$form) {
-  drupalforfirebug_log("Processing Form $formid", 'hook_form_alter');
+  drupalforfirebug_log("Processing Form: $formid", 'hook_form_alter');
+  drupalforfirebug_log('&nbsp;$form = array (', 'hook_form_alter');
+  drupalforfirebug_log(drupalforfirebug_array_compare($_SESSION['drupalforfirebug_forms']['original'][$formid], $form), 'hook_form_alter');
+  drupalforfirebug_log('&nbsp;);', 'hook_form_alter');
+  drupalforfirebug_log("<hr>", 'hook_form_alter');
 }
 
 /**
@@ -36,7 +40,7 @@ function drupalforfirebug_user($op, &$edit, &$account, $category = NULL) {
 /**
 * API Function to Record a Message to the Drupal Firebug Log
 */
-function drupalforfirebug_log($message, $type = 'main') {
+function drupalforfirebug_log($message, $type = 'general') {
   $_SESSION['firebug_messages'][$type][] = $message; 
 }
 
@@ -64,6 +68,12 @@ function drupalforfirebug_get($panetype) {
 * Output Function to Return the Results of the SQL Log
 */
 function drupalforfirebug_get_sql_log() {
+  if (!module_exists('devel')) {
+    return 'Please install and enable the Devel Module to use this feature';
+  }
+  if (!variable_get('dev_query', 0)) {   
+    return 'Please enable query logging in the Devel Module to use this feature';
+  }
   if (module_exists('devel') && variable_get('dev_query', 0)) {
     global $queries;
     $txt = t(' Queries taking longer than %threshold ms and queries executed more than once, are <span class="marker">highlighted</span>.', array('%threshold' => variable_get('devel_execution', 5)));
@@ -122,8 +132,8 @@ function drupalforfirebug_get_exec_php_callback() {
 */
 function drupalforfirebug_footer() {
   if (user_access('Access Firebug Debug')) {
-    $output = '<div style="display: none" id="drupalforfirebug_main">';
-    $output .= drupalforfirebug_get('main');
+    $output = '<div style="display: none" id="drupalforfirebug_general">';
+    $output .= drupalforfirebug_get('general');
     $output .= '</div>';
     $output .= '<div style="display: none" id="drupalforfirebug_sql">';
     $output .= drupalforfirebug_get_sql_log();
@@ -151,3 +161,163 @@ function drupalforfirebug_perm() {
   return array('Access Firebug Debug', 'Execute Firebug PHP');
 }
 
+/**
+* Generalized Array Comparision Function
+*/
+function drupalforfirebug_array_compare($a, $b) {
+  $data = drupalforfirebug_array_compare_code($a, $b);
+  $style = drupalforfirebug_array_highlight_code($data);
+  return $style;
+}
+
+/**
+* Specialized Function to Return an Array Row
+*/
+function drupalforfirebug_array_row_build($key, $value, $style, $depth) {
+  for ($x = 0; $x <= $depth; $x++) { 
+    $spacing .= '&nbsp;&nbsp;&nbsp;&nbsp;';
+  }
+  switch ($style) {
+    case 'ADDED':
+      $color = '<font color="green">';
+      $colorend = '</font>';
+      break;
+    case 'REMOVED':
+      $color = '<font color="red">';
+      $colorend = '</font>'; 
+      break;
+    case 'SAME':
+      $color = '<font color="black">';
+      $colorend = '</font>';
+      break;
+    case 'DIFFERENT':
+      $color = '<font color="orange">';
+      $colorend = '</font>';
+      break;
+    default:
+      $color = '<font color="yellow">'.$style;
+      $colorend = '</font>';
+      break;
+  }
+  if (is_array($value)) {
+    $output .= "<div>$spacing $color [$key] => array ( $colorend </div>";
+    $output .= drupalforfirebug_array_highlight_code($value, $depth + 1);
+    $output .= "<div>$spacing $color ) $colorend </div>";
+  } else {
+    if ($key || $value) {
+      $output .= "<div>$spacing $color [$key] => [$value] $colorend </div>";
+    }
+  } 
+  return $output; 
+}
+
+/**
+* Specialized Array Data Style Function
+*/
+function drupalforfirebug_array_highlight_code($data, $depth = 0) {
+  $output = '';
+  foreach($data as $key => $value) {
+    if ($key != '#firebug_style') {
+      $output .= drupalforfirebug_array_row_build($key, $value, $data['#firebug_style'][$key], $depth);
+    }
+  } 
+  return $output;
+}
+
+/**
+* Specialized Array Data Retrival Function
+*/
+function drupalforfirebug_array_compare_code($a, $b, $c = array()) {
+
+  // Create the Compared Data Object
+  $maxcount = count($a) > count($b) ? count($a) : count($b);
+  $akeys = is_array($a) ? array_keys($a) : array();
+  $bkeys = is_array($b) ? array_keys($b) : array();
+  for ($x = 0; $x < $maxcount; $x++) {
+    if (1 == 1) { // TODO - figure out why this is needed
+      // Set the Proper Styling
+      if (array_key_exists($akeys[$x], array_flip($bkeys))) { // is it in B array?
+        if ($a[$akeys[$x]] == $b[$akeys[$x]]) {
+          $c['#firebug_style'][$akeys[$x]] = 'SAME';
+        } else {
+          $c['#firebug_style'][$akeys[$x]] = 'DIFFERENT';
+        }
+      } else { // not in B array, must be removed
+        $c['#firebug_style'][$akeys[$x]] = 'REMOVED';
+      }
+
+      // Set the Proper Element
+      if (is_array($a[$akeys[$x]])) { // is b a valid array
+        $c[$akeys[$x]] = drupalforfirebug_array_compare_code($a[$akeys[$x]], $b[$akeys[$x]], $c[$akeys[$x]]);
+      } else {
+        if (array_key_exists($akeys[$x], array_flip($bkeys))) { // is it in B array?
+          if ($a[$akeys[$x]] == $b[$akeys[$x]]) {
+            $c[$akeys[$x]] = $a[$akeys[$x]];
+          } else {
+            $c[$akeys[$x]] = $b[$akeys[$x]];
+          }
+        } else { // not in B array, must be removed
+          $c[$akeys[$x]] = $a[$akeys[$x]];
+        }
+      }     
+    }
+    if ($b[$bkeys[$x]] || $bkeys[$x]) { // does b have a valid argument
+      // Set the Proper Styling
+      if (array_key_exists($bkeys[$x], array_flip($akeys))) { // is it in A array? 
+        // exists in the A array, already processed
+      } else {
+        $c[$bkeys[$x]] = $b[$bkeys[$x]];
+        $c['#firebug_style'][$bkeys[$x]] = 'ADDED';
+      } 
+
+      // Set the Proper Element
+      if (is_array($b[$bkeys[$x]])) { // is b a valid array
+        $c[$bkeys[$x]] = drupalforfirebug_array_compare_code($a[$bkeys[$x]], $b[$bkeys[$x]], $c[$bkeys[$x]]);
+      }
+    }
+  }
+  return $c;
+}
+
+// Array Handling Helper Function
+function do_offset($level){
+    $offset = "";             // offset for subarry 
+    for ($i=1; $i<$level;$i++){
+    $offset = $offset . "<td></td>";
+    }
+    return $offset;
+}
+
+// Array Handling Helper Function
+function show_array($array, $level, $sub){
+    $output = '';
+    if (is_array($array) == 1){          // check if input is an array
+       foreach($array as $key_val => $value) {
+           $offset = "";
+           if (is_array($value) == 1){   // array is multidimensional
+           $output .= "<tr>";
+           $offset = do_offset($level);
+           $output .= $offset . "<td>" . $key_val . "</td>";
+           $output .= show_array($value, $level+1, 1);
+           }
+           else{                        // (sub)array is not multidim
+           if ($sub != 1){          // first entry for subarray
+               $output .= "<tr nosub>";
+               $offset = do_offset($level);
+           }
+           $sub = 0;
+           $output .= $offset . "<td main ".$sub." width=\"120\">" . $key_val . 
+               "</td><td width=\"120\">" . $value . "</td>"; 
+           $output .= "</tr>\n";
+           }
+       } //foreach $array
+    }  
+    return $output;
+}
+
+function html_show_array($array){
+  $output = "<table cellspacing=\"0\" border=\"2\">\n";
+  $output .= show_array($array, 1, 0);
+  $output .= "</table>\n";
+  return $output;
+}   
