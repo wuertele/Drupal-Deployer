@@ -16,25 +16,40 @@ function drupalforfirebug_menu($may_cache) {
 *  Implementation of hook_nodeapi() 
 */
 function drupalforfirebug_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
-  drupalforfirebug_log("Processing Node $node->nid with Operation $op", 'hook_nodeapi');
+  $nid = ($node->nid) ? $node->nid : '*NEW*';
+  $output = '<fieldset>';
+  $output .= '<legend><strong><em>' . $op . '</em> $node->'.$nid . '</strong></legend>';
+  $output .= '<div>' . '&nbsp;$node = stdClass Object (' . '</div>';
+  $output .= drupalforfirebug_array_compare(objectToArray($_SESSION['drupalforfirebug_nodes']['original'][$node->type][$nid]), objectToArray($node));
+  $output .= '<div>' . '&nbsp;);</div>';
+  drupalforfirebug_log($output, 'hook_nodeapi');
 }
 
 /**
 *  Implementation of hook_form_alter()
 */
 function drupalforfirebug_form_alter($formid, &$form) {
-  drupalforfirebug_log("Processing Form: $formid", 'hook_form_alter');
-  drupalforfirebug_log('&nbsp;$form = array (', 'hook_form_alter');
-  drupalforfirebug_log(drupalforfirebug_array_compare($_SESSION['drupalforfirebug_forms']['original'][$formid], $form), 'hook_form_alter');
-  drupalforfirebug_log('&nbsp;);', 'hook_form_alter');
-  drupalforfirebug_log("<hr>", 'hook_form_alter');
+  $output = '<fieldset>';
+  $output .= '<legend><strong>'. $formid .  '</strong></legend>';
+  $output .= '<div>' . '&nbsp;$form = array (' . '</div>';
+  $output .= drupalforfirebug_array_compare($_SESSION['drupalforfirebug_forms']['original'][$formid], $form);
+  $output .= '<div>' . '&nbsp;);</div>';
+  drupalforfirebug_log($output, 'hook_form_alter');
+
 }
 
 /**
 * Implementation of hook_user()
 */
 function drupalforfirebug_user($op, &$edit, &$account, $category = NULL) {
-  drupalforfirebug_log("Processing Account $account->name with Operation $op", 'hook_user');
+  $uid = ($account->uid) ? $account->uid : '*NEW*';
+  $output = '<fieldset>';
+  $output .= '<legend><strong><em>'. $op .'</em> $account->'. $account->name .  '</strong></legend>';
+  $output .= '<div>' . '&nbsp;$account = stdClass (' . '</div>';
+  $output .= drupalforfirebug_array_compare(objectToArray($account), objectToArray($account));
+  // $output .= drupalforfirebug_array_compare(objectToArray($_SESSION['drupalforfirebug_user']['original'][$uid], $account);
+  $output .= '<div>' . '&nbsp;);</div>';
+  drupalforfirebug_log($output, 'hook_user');
 }
 
 /**
@@ -76,8 +91,9 @@ function drupalforfirebug_get_sql_log() {
   }
   if (module_exists('devel') && variable_get('dev_query', 0)) {
     global $queries;
-    $txt = t(' Queries taking longer than %threshold ms and queries executed more than once, are <span class="marker">highlighted</span>.', array('%threshold' => variable_get('devel_execution', 5)));
-    $output = devel_query_table($queries, $counts);
+    list($counts, $query_summary) = devel_query_summary();
+    $output = '<h4>SQL Query Log</h4>';
+    $output .= devel_query_table($queries, $counts);
   } else {
     if (!variable_get('dev_query', 0) && module_exists('devel')) {
       global $base_url;
@@ -95,8 +111,7 @@ function drupalforfirebug_get_sql_log() {
 function drupalforfirebug_execute_form() {
   $form['code'] = array(
     '#type' => 'textarea',
-    '#title' => t('PHP code to execute'),
-    '#description' => t('Enter some code. Do not use <code>&lt;?php ?&gt;</code> tags.')
+    '#description' => t('Enter PHP code for execution. Do not use <code>&lt;?php ?&gt;</code> tags.')
   );
   $form['op'] = array('#type' => 'submit', '#value' => t('Execute'));
   $form['#redirect'] = FALSE;
@@ -106,25 +121,42 @@ function drupalforfirebug_execute_form() {
   return $form; 
 }
 
+function drupalforfirebug_get_php_exec_area() {
+  global $base_url;
+  $output .= '<iframe width=95% frameborder=0 height=300px src="' . $base_url . '/admin/firebug/exec' . '">';
+  return $output;
+}
+
+function drupalforfirebug_get_php_exec($code = NULL) {
+  if (!user_access('Execute Firebug PHP')) {
+    $output = '<h4>Execute PHP Code</h4>';
+    $output .= 'You do not have the proper permissions to use this functionality.';
+    return $output;
+  }
+  if (!$code) {
+    $output = '<h4>Execute PHP Code</h4>';
+    $output .= drupal_get_form('drupalforfirebug_execute_form');
+    print $output;
+    exit();
+  } else {
+    $output = '<h4>PHP Code Execution Results</h4>';
+    $output .= ob_start();
+    $output .= eval($code);
+    $output .= ob_get_clean();
+    $output .= '<h4>Execute PHP Code</h4>';
+    $output .= drupal_get_form('drupalforfirebug_execute_form');
+    print $output;
+    exit();
+  }
+}
+
 
 /**
 * Outputs a Execute PHP Form
 */
 function drupalforfirebug_get_exec_php_callback() {
-  if (user_access('Execute Firebug PHP')) {
-    if ($_POST['code']) {
-      print '<div>PHP Exec Result:</div>';
-      print '<div>';
-      ob_start();
-      print eval($_POST['code']);
-      print ob_get_clean();
-      print '</div>';
-      print drupal_get_form('drupalforfirebug_execute_form');
-      exit();
-    }
-  } else {
-    return 'You do not have the proper permissions.';
-  }
+  $code = ($_POST['code']) ? $_POST['code'] : NULL;
+  return drupalforfirebug_get_php_exec($code);
 }
 
 /**
@@ -133,22 +165,30 @@ function drupalforfirebug_get_exec_php_callback() {
 function drupalforfirebug_footer() {
   if (user_access('Access Firebug Debug')) {
     $output = '<div style="display: none" id="drupalforfirebug_general">';
-    $output .= drupalforfirebug_get('general');
+    $output .= '<h4>Drupal for Firebug General Messages</h4>';
+    $general_messages = drupalforfirebug_get('general');
+    $output .= $general_messages;
+    if (!$general_messages) {
+      $output .= 'There were no messages sent to the general log. Please use "function firep($item)" to output messages to this console.';
+    }
     $output .= '</div>';
     $output .= '<div style="display: none" id="drupalforfirebug_sql">';
     $output .= drupalforfirebug_get_sql_log();
     $output .= '</div>';
     $output .= '<div style="display: none" id="drupalforfirebug_hook_form_alter">';
-    $output .= drupalforfirebug_get('hook_form_alter');
+    $output .= $form_alter_output = drupalforfirebug_get('hook_form_alter');
+    if (!$form_alter_output) { $output .= 'There was no form altering'; }
     $output .= '</div>';
     $output .= '<div style="display: none" id="drupalforfirebug_hook_user">';
-    $output .= drupalforfirebug_get('hook_user');
+    $output .= $user_output = drupalforfirebug_get('hook_user');
+    if (!$user_output) { $output .= 'There was no user processing.'; }
     $output .= '</div>';
     $output .= '<div style="display: none" id="drupalforfirebug_hook_nodeapi">';
-    $output .= drupalforfirebug_get('hook_nodeapi');
+    $output .= $node_api_output = drupalforfirebug_get('hook_nodeapi');
+    if (!$$node_api_output) { $output .= 'There was no node processing.'; }
     $output .= '</div>';
     $output .= '<div style="display: none" id="drupalforfirebug_php">';
-    $output .= drupal_get_form('drupalforfirebug_execute_form');
+    $output .= drupalforfirebug_get_php_exec_area();
     $output .= '</div>';
   }
   return $output;
@@ -194,14 +234,18 @@ function drupalforfirebug_array_row_build($key, $value, $style, $depth) {
       $color = '<font color="orange">';
       $colorend = '</font>';
       break;
-    default:
-      $color = '<font color="yellow">'.$style;
+    default: // suppose to be for objects
+      $color = '<font color="grey">'.$style;
       $colorend = '</font>';
       break;
   }
-  if (is_array($value)) {
-    $output .= "<div>$spacing $color [$key] => array ( $colorend </div>";
-    $output .= drupalforfirebug_array_highlight_code($value, $depth + 1);
+  if (is_array($value) || is_object($value)) {
+    if (is_array($value)) {
+      $output .= "<div>$spacing $color [$key] => array ( $colorend </div>";
+    } else {
+      $output .= "<div>$spacing <font color=grey> [$key] => stdClass ($colorend </div>";
+    }
+    $output .= drupalforfirebug_array_highlight_code(objectToArray($value), $depth + 1);
     $output .= "<div>$spacing $color ) $colorend </div>";
   } else {
     if ($key || $value) {
@@ -320,4 +364,16 @@ function html_show_array($array){
   $output .= show_array($array, 1, 0);
   $output .= "</table>\n";
   return $output;
-}   
+}
+
+
+
+function objectToArray($object)
+{
+$array=array();
+foreach($object as $member=>$data)
+{
+$array[$member]=$data;
+}
+return $array;
+}
