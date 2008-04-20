@@ -1,119 +1,110 @@
 <?php
-// recipe.install 
+function recipe_schema() {
+  $schema['recipe'] = array(
+    'fields' => array(
+      'nid' => array(
+        'description' => t('The primary identifier for a recipe.'),
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'source' => array(
+        'type' => 'varchar',
+        'not null' => FALSE,
+        'length' => 255),
+      'yield' => array(
+        'type' => 'int',
+        'unsigned' => FALSE,
+        'not null' => TRUE),
+      'instructions' => array(
+        'type' => 'text'),
+      'notes' => array(
+        'type' => 'text'),
+      'preptime' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'default' => 0),
+    ),
+    'primary key' => array('nid'),
+  );
+  $schema['recipe_node_ingredient'] = array(
+    'description' => t('The base table for recipe ingredients.'),
+    'fields' => array(
+      'id' => array(
+        'description' => t('The primary identifier for a recipe ingredient.'),
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'nid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'unit_id' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'quantity' => array(
+        'type' => 'float',
+        'not null' => FALSE),
+      'ingredient_id' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+    ),
+    'primary key' => array('id'),
+  );
+  $schema['recipe_ingredient'] = array(
+    'description' => t('The base table for recipe ingredients.'),
+    'fields' => array(
+      'id' => array(
+        'description' => t('The primary identifier for a recipe ingredient.'),
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => 255),
+      'link' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+    ),
+    'primary key' => array('id'),
+  );
+  $schema['recipe_unit'] = array(
+    'description' => t('The base table for recipe units.'),
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => 255),
+      'abbreviation' => array(
+        'type' => 'varchar',
+        'length' => 8),
+      'metric' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 6,
+        'not null' => TRUE,
+        'default' => 'Mass'),
+    ),
+    'primary key' => array('id'),
+  );
+
+  return $schema;
+}
 function recipe_install() {
-  $s = false;
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      $s = db_query("CREATE TABLE {recipe} (
-         nid int(10) unsigned NOT NULL,
-         source varchar(255),
-         yield int(2) unsigned NOT NULL,
-         instructions text,
-         notes text,
-         preptime int(10) unsigned DEFAULT '0',
-         PRIMARY KEY (nid)
-      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-
-      $s = $s && db_query("CREATE TABLE {recipe_node_ingredient} (
-         id int unsigned NOT NULL PRIMARY KEY auto_increment,
-         nid int(10) unsigned NOT NULL,
-         unit_id int(3) unsigned NOT NULL,
-         quantity double,
-         ingredient_id int(10) unsigned NOT NULL
-      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-
-      $s = $s && db_query("CREATE TABLE {recipe_ingredient} (
-         id int(10) unsigned NOT NULL PRIMARY KEY auto_increment,
-         name varchar(255),
-         link int(10) NOT NULL
-      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-
-      $s = $s && db_query("CREATE TABLE {recipe_unit} (
-         id int(3) unsigned NOT NULL PRIMARY KEY auto_increment,
-         name varchar(64) NOT NULL default '',
-         abbreviation varchar(8) NOT NULL default '',
-         metric int(1) unsigned NOT NULL default '0',
-         type enum('Mass','Volume','Unit') NOT NULL default 'Mass'
-      ) /*!40100 DEFAULT CHARACTER SET utf8 */;");
-
-       $s = $s && recipe_populate_units();
-       break;
-
-    case 'pgsql':
-      $s = db_query("CREATE TABLE {recipe} (
-         nid integer NOT NULL,
-         source varchar(255),
-         yield integer NOT NULL,
-         instructions text,
-         notes text,
-         preptime integer NOT NULL default '0',
-         PRIMARY KEY (nid)
-      );");
-
-     $s = $s && db_query("CREATE TABLE {recipe_node_ingredient} (
-         id serial NOT NULL,
-         nid integer NOT NULL,
-         unit_id integer NOT NULL,
-         quantity real,
-         ingredient_id integer NOT NULL,
-         PRIMARY KEY(id)
-      );");
-
-      $s = $s && db_query("CREATE TABLE {recipe_ingredient} (
-         id serial NOT NULL PRIMARY KEY,
-         name varchar(255),
-         link integer NOT NULL
-      );");
-
-      $s = $s && db_query("CREATE TABLE {recipe_unit} (
-         id serial NOT NULL PRIMARY KEY,
-         name varchar(64) NOT NULL default '',
-         abbreviation varchar(8) NOT NULL default '',
-         metric integer NOT NULL default '0',
-         type varchar(6) NOT NULL default 'Mass'
-      );");
-
-      $s = $s && recipe_populate_units();
-      break;
-  }
-  if ($s) {
-    drupal_set_message(t('Recipe module installed tables successfully.'));
-  }
-  else {
-    drupal_set_message(t('The installation of the Recipe module was unsuccessful.'), 'error');
-  }
+  drupal_install_schema('recipe');
+  recipe_populate_units();
 }
 
-function recipe_update_1() {
-  $ret = array();
-  $ret[] = update_sql("ALTER TABLE {recipe_node_ingredient} DROP weight");
-  switch ($GLOBALS['db_type']) {
-    case 'pgsql':
-      db_add_column($ret, 'recipe', 'preptime', 'integer', array('not null' => TRUE, 'default' => 0));
-      break;
-
-    case 'mysql':
-    case 'mysqli':
-      $ret[] = update_sql("ALTER TABLE {recipe} ADD COLUMN preptime int(10) NOT NULL DEFAULT 0");
-      break;
-  }
-  return $ret;
-}
-
-/**
- * Adds a field to link ingredient to corresponding node.
- */
-function recipe_update_2() {
-  $ret = array();
-
-  $ret[] = update_sql('ALTER TABLE {recipe_ingredient} ADD link INT NOT NULL');
-
-  return $ret;
-}
-
-function recipe_populate_units()
-{
+function recipe_populate_units() {
   $s = true;
   $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (1, 'Slice', 'sli', 0, 'Unit');");
   $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (2, 'Unit', '', 0, 'Unit');");
@@ -147,18 +138,6 @@ function recipe_populate_units()
   return $s;
 }
 
-function recipe_uninstall()
-{
-  if (db_table_exists("recipe")) {
-    db_query("DROP TABLE {recipe}");
-  }
-  if (db_table_exists("recipe_node_ingredient")) {
-    db_query("DROP TABLE {recipe_node_ingredient}");
-  }
-  if (db_table_exists("recipe_ingredient")) {
-    db_query("DROP TABLE {recipe_ingredient}");
-  }
-  if (db_table_exists("recipe_unit")) {
-    db_query("DROP TABLE {recipe_unit}");
-  }
+function recipe_uninstall() {
+  drupal_uninstall_schema('recipe');
 }
