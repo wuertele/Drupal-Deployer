@@ -1,30 +1,42 @@
 <?php
 
 /**
+* Implementation of hook_menu()
+*/
+function drupalforfirebug_menu($may_cache) {
+  if ($may_cache) {
+   $items[] = array(
+     'path' => 'admin/firebug/exec',
+     'callback' => 'drupalforfirebug_get_exec_php_callback',
+   );
+  }
+  return $items;
+}
+/**
 *  Implementation of hook_nodeapi() 
 */
 function drupalforfirebug_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
-  drupalforfirebug_log("Processing Node $node->nid with Operation $op", 'Node API Operations');
+  drupalforfirebug_log("Processing Node $node->nid with Operation $op", 'hook_nodeapi');
 }
 
 /**
 *  Implementation of hook_form_alter()
 */
 function drupalforfirebug_form_alter($formid, &$form) {
-  drupalforfirebug_log("Processing Form $formid", 'Form API Operations ');
+  drupalforfirebug_log("Processing Form $formid", 'hook_form_alter');
 }
 
 /**
 * Implementation of hook_user()
 */
 function drupalforfirebug_user($op, &$edit, &$account, $category = NULL) {
-  drupalforfirebug_log("Processing Account $account->name with Operation $op", 'User Operations');
+  drupalforfirebug_log("Processing Account $account->name with Operation $op", 'hook_user');
 }
 
 /**
 * API Function to Record a Message to the Drupal Firebug Log
 */
-function drupalforfirebug_log($message, $type = 'General') {
+function drupalforfirebug_log($message, $type = 'main') {
   $_SESSION['firebug_messages'][$type][] = $message; 
 }
 
@@ -38,17 +50,12 @@ function firep($element) {
 /**
 * Output Function to Return the Results of the Log
 */
-function drupalforfirebug_get_log() {
-  if (isset($_SESSION['firebug_messages'])) {
-    foreach($_SESSION['firebug_messages'] as $type => $messages) {
-      $output .= '<fieldset>';
-      $output .= '<legend>' . $type . '</legend>';
-      foreach($messages as $message) {
-        $output .= '<div>'. $message .'</div>';
-      }
-      $output .= '</fieldset>';
+function drupalforfirebug_get($panetype) {
+  if (isset($_SESSION['firebug_messages'][$panetype])) {
+    foreach($_SESSION['firebug_messages'][$panetype] as $message) {
+      $output .= '<div>'. $message .'</div>';
     }
-    unset($_SESSION['firebug_messages']);
+    unset($_SESSION['firebug_messages'][$panetype]);
     return $output;
   }
 }
@@ -57,26 +64,81 @@ function drupalforfirebug_get_log() {
 * Output Function to Return the Results of the SQL Log
 */
 function drupalforfirebug_get_sql_log() {
-  if (module_exists('devel')) {
+  if (module_exists('devel') && variable_get('dev_query', 0)) {
     global $queries;
     $txt = t(' Queries taking longer than %threshold ms and queries executed more than once, are <span class="marker">highlighted</span>.', array('%threshold' => variable_get('devel_execution', 5)));
     $output = devel_query_table($queries, $counts);
   } else {
-    $output = t('Please enable the Devel Module to see the SQL Queries.') . ' ' . l(t('See Devel Project Page'),'http://www.drupal.org/project/devel', array('target' => '_blank')) .'.';
-  }
+    if (!variable_get('dev_query', 0) && module_exists('devel')) {
+      global $base_url;
+      $output = t('Please Enable the Devel Modules to Log SQL Queries: ') . ' ' . l(t('Enable SQL Queries'), $base_url.'/admin/settings/devel', array('target' => '_blank')) . '.'; 
+    } else {
+      $output = t('Please enable the Devel Module to see the SQL Queries.') . ' ' . l(t('See Devel Project Page'),'http://www.drupal.org/project/devel', array('target' => '_blank')) .'.';
+    }
+  } 
   return $output;
+}
+
+/** 
+* Generates an Execute PHP Drupal For Firebug Form
+**/
+function drupalforfirebug_execute_form() {
+  $form['code'] = array(
+    '#type' => 'textarea',
+    '#title' => t('PHP code to execute'),
+    '#description' => t('Enter some code. Do not use <code>&lt;?php ?&gt;</code> tags.')
+  );
+  $form['op'] = array('#type' => 'submit', '#value' => t('Execute'));
+  $form['#redirect'] = FALSE;
+  global $base_url;
+  $form['#action'] = $base_url . '/admin/firebug/exec';
+  $form['#skip_duplicate_check'] = TRUE;
+  return $form; 
+}
+
+
+/**
+* Outputs a Execute PHP Form
+*/
+function drupalforfirebug_get_exec_php_callback() {
+  if (user_access('Execute Firebug PHP')) {
+    if ($_POST['code']) {
+      print '<div>PHP Exec Result:</div>';
+      print '<div>';
+      ob_start();
+      print eval($_POST['code']);
+      print ob_get_clean();
+      print '</div>';
+      print drupal_get_form('drupalforfirebug_execute_form');
+      exit();
+    }
+  } else {
+    return 'You do not have the proper permissions.';
+  }
 }
 
 /**
 * Output Function to Return Hidden Div Containers in Footer
 */
 function drupalforfirebug_footer() {
-  if (user_access('Access Drupal for Firebug Debug Information')) {
-    $output = '<div style="display: none" id="drupalforfirebug_log">';
-    $output .= drupalforfirebug_get_log();
+  if (user_access('Access Firebug Debug')) {
+    $output = '<div style="display: none" id="drupalforfirebug_main">';
+    $output .= drupalforfirebug_get('main');
     $output .= '</div>';
-    $output .= '<div style="display: none" id="drupalforfirebug_sql_log">';
+    $output .= '<div style="display: none" id="drupalforfirebug_sql">';
     $output .= drupalforfirebug_get_sql_log();
+    $output .= '</div>';
+    $output .= '<div style="display: none" id="drupalforfirebug_hook_form_alter">';
+    $output .= drupalforfirebug_get('hook_form_alter');
+    $output .= '</div>';
+    $output .= '<div style="display: none" id="drupalforfirebug_hook_user">';
+    $output .= drupalforfirebug_get('hook_user');
+    $output .= '</div>';
+    $output .= '<div style="display: none" id="drupalforfirebug_hook_nodeapi">';
+    $output .= drupalforfirebug_get('hook_nodeapi');
+    $output .= '</div>';
+    $output .= '<div style="display: none" id="drupalforfirebug_php">';
+    $output .= drupal_get_form('drupalforfirebug_execute_form');
     $output .= '</div>';
   }
   return $output;
@@ -86,6 +148,6 @@ function drupalforfirebug_footer() {
 * Implementation of hook_perm()
 */
 function drupalforfirebug_perm() {
-  return array('Access Drupal for Firebug Debug Information');
+  return array('Access Firebug Debug', 'Execute Firebug PHP');
 }
 
