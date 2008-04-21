@@ -444,12 +444,45 @@ function fckeditor_admin($arg = NULL) {
       if (!is_dir($fckeditor_loc)) {
         drupal_set_message(t('Could not find the FCKeditor engine installed at <strong>!fckeditor-directory</strong>. Please !download, uncompress it and copy the folder into !fckeditor-path.', array('!fckeditor-path' => drupal_get_path('module', 'fckeditor'), '!fckeditor-directory' => $fckeditor_loc, '!download' => l(t("download FCKeditor"), "http://www.fckeditor.net/download"))), 'error');
       }
-      $output = fckeditor_profile_overview();
-  }
+      
+      $access_fckeditor_roles = user_roles(FALSE, 'access fckeditor');
+      if (!$access_fckeditor_roles) {
+        drupal_set_message(t('There is currently no role with the <strong>!access</strong> permission. Visit !acl administration section.',
+        array("!access" => t("access fckeditor"), "!acl" => l(t("Permissions"), "admin/user/permissions"))), "warning");
+      } 
+      else {
+        $result = db_query_range("SELECT name FROM {fckeditor_settings} WHERE name<>'FCKeditor Global Profile'", 0, 1);
+        $has_profiles = false;
+        //find profile other than Global
+        if ($obj = db_fetch_object($result)) {
+          $has_profiles = true;
+        }
 
-  $fckeditor_roles = db_result(db_query_range("SELECT name FROM {fckeditor_role}", 1));
-  if (!$fckeditor_roles) {
-    drupal_set_message(t('There is currently no role associated with FCKeditor profiles. At this moment, nobody is able to use FCKeditor.'), "error");
+        //find roles with profiles
+        $result = db_query("SELECT rid FROM {fckeditor_role}");
+        $rids = array();
+        while ($obj = db_fetch_object($result)) {
+          $rids[] = $obj->rid;
+        }
+        $rids = array_unique($rids);        
+        if (!$has_profiles) {
+          drupal_set_message(t("No FCKeditor profiles found. At this moment, nobody is able to use FCKeditor. Create new profile below."), "error");
+        }
+        else {
+          //not all roles with access fckeditor has their FCKeditor profile assigned
+          $diff = array_diff(array_keys($access_fckeditor_roles), $rids);
+          if ($diff) {
+            $list = "<ul>";
+            foreach ($diff as $rid) {
+              $list .= "<li>". $access_fckeditor_roles[$rid] ."</li>";
+            }
+            $list .= "</ul>";
+            drupal_set_message(t("Not all roles with <strong>!access</strong> permission are associated with FCKeditor profiles. As a result, users having the following roles may be unable to use FCKeditor: !list Create new or edit FCKeditor profiles below and in the <strong>Basic setup</strong> section, check &quot;Roles allowed to use this profile&quot;.", array("!access" => l(t("access fckeditor"), "admin/user/permissions"), "!list" => $list)), "warning");
+          }
+        }   
+      }
+      
+      $output = fckeditor_profile_overview();
   }
 
   return $output;
@@ -494,10 +527,17 @@ function fckeditor_profile_overview() {
   $profiles = fckeditor_profile_load();
   if ($profiles) {
     $roles = user_roles();
+    $access_fckeditor_roles = user_roles(FALSE, 'access fckeditor');
     $header = array(t('Profile'), t('Roles'), t('Operations'));
     foreach ($profiles as $p) {
+      $rids = $p->rids;
       if ($p->name !== "FCKeditor Global Profile") {
-        $rows[] = array(array('data' => $p->name, 'valign' => 'top'), array('data' => implode("<br />\n", $p->rids)), array('data' => l(t('edit'), 'admin/settings/fckeditor/edit/'. urlencode($p->name)) .' '. l(t('delete'), 'admin/settings/fckeditor/delete/'. urlencode($p->name)), 'valign' => 'top'));
+        foreach ($p->rids as $rid => $name) {
+          if (!isset($access_fckeditor_roles[$rid])) {
+            unset($rids[$rid]);
+          }
+        }        
+        $rows[] = array(array('data' => $p->name, 'valign' => 'top'), array('data' => implode("<br />\n", $rids)), array('data' => l(t('edit'), 'admin/settings/fckeditor/edit/'. urlencode($p->name)) .' '. l(t('delete'), 'admin/settings/fckeditor/delete/'. urlencode($p->name)), 'valign' => 'top'));
       }
     }
     $output .= "<h3>". t("Profiles") ."</h3>";
