@@ -1,0 +1,106 @@
+<?php
+// $Id$
+
+class MollomModuleTestCase extends DrupalTestCase {
+  function get_info() {
+    return array(
+      'group' => t('Mollom tests'),
+    );
+  }
+
+  function setUp() {
+    // Setup some test keys.  These keys will only work in test mode so consult the
+    // Mollom API documentation for details:
+    $this->drupalVariableSet('mollom_public_key', '9cc3d2e43971de758ecddad61a3d12ec');
+    $this->drupalVariableSet('mollom_private_key', '603a8d11099f17faaab49139bfc7d00a');    
+
+    parent::setUp();
+  }
+
+  function tearDown() {
+    parent::tearDown();
+  }
+  
+  /**
+   * Test the key to see if it is working properly.
+   */
+  function testVerifyKey() {
+    // Call the mollom.verifyKey function directly:
+    $value = mollom('mollom.verifyKey');
+    if ($value !== TRUE) {
+      $this->fail('The key pair specified on the Mollom configuration page is not valid.  You need a valid key pair to run the Mollom tests.');     
+    }
+    
+    // Validate that the Mollom settings page works for users with 
+    // the 'administer site configuration' permission, and that is
+    // reports a working Mollom key pair:
+    $admin = $this->drupalCreateUserRolePerm(array('administer site configuration'));
+    $this->drupalLoginUser($admin);  
+    $this->drupalGet('admin/settings/mollom');
+    $this->assertResponse(array(200), 'Testing access to Mollom settings page.');
+    $this->assertText('correctly', 'Testing the Mollom key pair.');   
+  }
+  
+  function testFallbackMechanismBlock() {    
+    // We set the fallback strategy to 'blocking mode':
+    $this->drupalVariableSet('mollom_fallback', MOLLOM_FALLBACK_BLOCK);
+    
+    // We configure Mollom to use a non-existing server as that should trigger the fallback mechanism:
+    $this->drupalVariableSet('mollom_servers', array('http://localhost'));
+    
+    // We enable Mollom for the request password form:
+    $this->drupalVariableSet('mollom_user_pass', 1);
+    
+    // Try to request the user's password:
+    $this->drupalGet('user/password');
+    $this->assertNoUnwantedRaw('edit-captcha', 'Check absence of CAPTCHA on request password form.');
+    $this->assertText('The spam filter that is installed on this site is currently not available.', 'Testing the blocking fallback strategy.');
+  }
+  
+  function testFallbackMechanismAccept() {
+    // We set the fallback strategy to 'acccept mode':
+    $this->drupalVariableSet('mollom_fallback', MOLLOM_FALLBACK_ACCEPT);
+     
+    // We configure Mollom to use a non-existing server as that should trigger the fallback mechanism:
+    $this->drupalVariableSet('mollom_servers', array('http://localhost'));
+
+    // We enable Mollom for the request password form:
+    $this->drupalVariableSet('mollom_user_pass', 1);
+   
+    // Try to request the user's password:
+    $this->drupalGet('user/password');
+    $this->assertNoUnwantedRaw('edit-captcha', 'Check absence of CAPTCHA on request password form.');
+    $this->assertNoUnwantedRaw('The spam filter that is installed on this site is currently not available.', 'Testing the blocking fallback strategy.');
+  }
+   
+  function testProtectRequestPassword() {
+    // We first enable Mollom for the request password form:
+    $this->drupalVariableSet('mollom_user_pass', 1);
+
+    // Validate that the request password form has a CAPTCHA text field:
+    $this->drupalGet('user/password');
+    $this->assertWantedRaw('edit-captcha', 'Check presence of CAPTCHA on request password form.');
+
+    // Create a new user:
+    $user = $this->drupalCreateUserRolePerm(array('access content'));
+
+    // Try to reset the user's password by specifying an invalid CAPTCHA:
+    $edit = array('name' => $user->name, 'captcha' => 'incorrect');
+    $this->drupalPost('user/password', $edit, 'E-mail new password');
+    $this->assertText('The entered CAPTCHA solution is not correct.', 'Testing an inccorect CAPTCHA.');
+    
+    // Try to reset the user's password by specifying a valid CAPTCHA:
+    $edit = array('name' => $user->name, 'captcha' => 'correct');
+    $this->drupalPost('user/password', $edit, 'E-mail new password');
+    $this->assertText('Further instructions have been sent to your e-mail address.', 'Testing a ccorect CAPTCHA.');
+  }
+  
+  function testProtectRegisterUser() {
+    // We first enable Mollom for the request password form:
+    $this->drupalVariableSet('mollom_user_register', 1);
+    
+    // Validate that the request password form has a CAPTCHA text field:
+    $this->drupalGet('user/register');
+    $this->assertWantedRaw('edit-captcha', 'Check presence of CAPTCHA on register user form.');
+  }
+}
