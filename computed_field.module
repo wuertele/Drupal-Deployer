@@ -2,14 +2,14 @@
 // $Id$
 
 /**
- * Implementation of cck hook_field_info
+ * Implementation of cck hook_field_info().
  */
 function computed_field_field_info() {
   return array('computed' => array('label' => 'Computed'));
 }
 
 /**
- * Implementation of cck hook_field_settings
+ * Implementation of cck hook_field_settings().
  */
 function computed_field_field_settings($op, $field) {
   switch ($op) {
@@ -124,7 +124,7 @@ function _computed_field_compute_value(&$node, $field, &$node_field) {
 }
 
 /**
- * Implementation of cck hook_field
+ * Implementation of cck hook_field().
  */
 function computed_field_field($op, &$node, $field, &$node_field, $teaser, $page) {
   switch ($op) {
@@ -154,7 +154,7 @@ function computed_field_field($op, &$node, $field, &$node_field, $teaser, $page)
 }
 
 /**
- * Implementation of cck hook_widget_info
+ * Implementation of cck hook_widget_info().
  */
 function computed_field_widget_info() {
   return array(
@@ -166,7 +166,7 @@ function computed_field_widget_info() {
 }
 
 /**
- * Implementation of cck hook_widget
+ * Implementation of cck hook_widget().
  */
 function computed_field_widget($op, &$node, $field, &$node_field) {
   switch ($op) {
@@ -185,7 +185,7 @@ function computed_field_widget($op, &$node, $field, &$node_field) {
 }
 
 /**
- * Implementation of cck hook_view_item (obsolete, retained for backward compatibility with older cck)
+ * Implementation of cck hook_view_item (obsolete, retained for backward compatibility with older cck).
  */
 function computed_field_view_item($field, $node_field_item, $node = null) {
   global $base_url;
@@ -197,7 +197,7 @@ function computed_field_view_item($field, $node_field_item, $node = null) {
 }
 
 /**
- * Implementation of cck hook_field_formatter_info()
+ * Implementation of cck hook_field_formatter_info().
  */
 function computed_field_field_formatter_info() {
   return array(
@@ -217,7 +217,7 @@ function computed_field_field_formatter_info() {
 }
 
 /**
- * Implementation of cck hook_field_formatter():
+ * Implementation of cck hook_field_formatter().
  */
 function computed_field_field_formatter($field, $item, $formatter, $node) {
   // backward compatibility with computed_field_view_item
@@ -238,5 +238,31 @@ function computed_field_field_formatter($field, $item, $formatter, $node) {
     case 'default':
     default:
       return $display;
+  }
+}
+
+/**
+ * Implementation of hook_token_list().
+ */
+function computed_field_token_list($type = 'all') {
+  if ($type == 'field' || $type == 'all') {
+    $tokens = array();
+
+    $tokens['computed_field']['raw']       = t("Raw, unfiltered text.");
+    $tokens['computed_field']['formatted'] = t("Formatted and filtered text.");
+
+    return $tokens;
+  }
+}
+
+/**
+ * Implementation of hook_token_values().
+ */
+function computed_field_token_values($type, $object = NULL, $options = array()) {
+  if ($type == 'field') {
+    $item = $object[0];
+    $tokens['raw']  = $item['value'];
+    $tokens['formatted'] = $item['view'];
+    return $tokens;
   }
 }
