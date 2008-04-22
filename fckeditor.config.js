@@ -67,6 +67,7 @@ FCKConfig.ProtectedSource.Add( /<\?[\s\S]*?\?>/g ) ;	// PHP style server side co
 //remember to add 'DrupalBreak' and 'DrupalPageBreak' buttons to the toolbar
 FCKConfig.PluginsPath = '../../plugins/' ;
 FCKConfig.Plugins.Add( 'drupalbreak' ) ;
+FCKConfig.Plugins.Add( 'imgassist' ) ;
 //FCKConfig.Plugins.Add( 'drupalpagebreak' ) ;
 
 var _FileBrowserLanguage	= 'php' ;

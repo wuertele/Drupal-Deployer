@@ -156,7 +156,7 @@ function FCKeditor_OnComplete( editorInstance )
   $('#edit-teaser-include').parent().show();
 
 	//Img_Assist integration
-	//IntegrateWithImgAssist();
+	IntegrateWithImgAssist();
 	  
   // -- some hacks for IE
   var oldCheckAndRemovePaddingNode = editorInstance.EditorWindow.parent.FCKDomTools.CheckAndRemovePaddingNode ;
@@ -182,14 +182,14 @@ function FCKeditor_OnComplete( editorInstance )
   }
   // -- some hacks for IE
 }
-/*
+
 function IntegrateWithImgAssist()
 {
 	var link = document.getElementsByTagName("a");
 	for (var i = 0; i < link.length; i++) {
-		cl = link[i].getAttribute("class");
+		cl = link[i].className;
 		if ( cl == "img_assist-link") {
 			link[i].href = link[i].href.replace("/load/textarea", "/load/fckeditor");
 		}
 	}
-}*/
+}
