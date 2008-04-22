@@ -14,6 +14,11 @@ class MollomModuleTestCase extends DrupalTestCase {
     $this->drupalVariableSet('mollom_public_key', '9cc3d2e43971de758ecddad61a3d12ec');
     $this->drupalVariableSet('mollom_private_key', '603a8d11099f17faaab49139bfc7d00a');    
 
+    // Enable the modules requires for our tests:
+    $this->drupalModuleEnable('comment');
+    $this->drupalModuleEnable('contact');
+    $this->drupalModuleEnable('mollom');
+        
     parent::setUp();
   }
 
@@ -40,7 +45,7 @@ class MollomModuleTestCase extends DrupalTestCase {
     $this->assertResponse(array(200), 'Testing access to Mollom settings page.');
     $this->assertText('correctly', 'Testing the Mollom key pair.');   
   }
-  
+
   function testFallbackMechanismBlock() {    
     // We set the fallback strategy to 'blocking mode':
     $this->drupalVariableSet('mollom_fallback', MOLLOM_FALLBACK_BLOCK);
@@ -80,7 +85,7 @@ class MollomModuleTestCase extends DrupalTestCase {
     // Validate that the request password form has a CAPTCHA text field:
     $this->drupalGet('user/password');
     $this->assertWantedRaw('edit-captcha', 'Check presence of CAPTCHA on request password form.');
-
+    
     // Create a new user:
     $user = $this->drupalCreateUserRolePerm(array('access content'));
 
@@ -102,5 +107,65 @@ class MollomModuleTestCase extends DrupalTestCase {
     // Validate that the request password form has a CAPTCHA text field:
     $this->drupalGet('user/register');
     $this->assertWantedRaw('edit-captcha', 'Check presence of CAPTCHA on register user form.');
+  }
+  
+  function testCommentForm() {
+    // Enable Mollom for comments:
+    $this->drupalVariableSet('mollom_comment', 1);
+    $this->drupalVariableSet('mollom_comment_story', COMMENT_PREVIEW_OPTIONAL);
+        
+    // Create a user that can post stories and comments:
+    $user = $this->drupalCreateUserRolePerm(array('access comments', 'post comments', 'create story content'));
+    $this->drupalLoginUser($user);
+
+    // Create a new post:
+    $node = $this->drupalCreateNode(array('type' => 'story'));
+
+    // Request the comment reply form.  Initially, there should be no CAPTCHA:
+    $this->drupalGet('comment/reply/'. $node->nid);
+    $this->assertNoUnwantedRaw('edit-captcha', 'Check absence of CAPTCHA on comment form.');
+    
+    // Preview a comment that is 'unsure' and make sure there is both a CAPTCHA form:
+    $this->drupalPost('comment/reply/'. $node->nid, array('comment' => 'unsure'), t('Preview'));
+    $this->assertWantedRaw('edit-session-id', 'Check presence of the Mollom session ID om comment form.');
+    $this->assertWantedRaw('edit-captcha', 'Check presence of CAPTCHA on comment form.');
+
+    // Post a comment that is 'unsure' and make sure there is both a CAPTCHA form:
+    $this->drupalPost('comment/reply/'. $node->nid, array('comment' => 'unsure'), t('Save'));
+    $this->assertWantedRaw('edit-session-id', 'Check presence of the Mollom session ID om comment form.');
+    $this->assertWantedRaw('edit-captcha', 'Check presence of CAPTCHA on comment form.');
+    
+    // Retrieve the Mollom session ID:
+    $session_id = $this->_browser->getFieldById('edit-session-id');
+      // TODO: the session ID is not properly maintained from drupalPost() to drupalPost().
+      
+    // Preview a comment that is 'spam' and make sure there is no CAPTCHA form:
+    $this->drupalPost('comment/reply/'. $node->nid, array('comment' => 'spam'), t('Preview'));
+    $this->assertWantedRaw(t('Your submission has triggered the installed spam filter and will not be accepted.'), 'Check presence of blocked message.');
+    $this->assertNoUnwantedRaw('edit-captcha', 'Check absence of CAPTCHA on comment form.');
+      // $this->assertField('edit-session-id', $session_id, 'Check whether the session ID remained unchanged.');
+
+    // Post a comment that is 'spam' and make sure there is no CAPTCHA form:
+    $this->drupalPost('comment/reply/'. $node->nid, array('comment' => 'spam'), t('Save'));
+    $this->assertWantedRaw(t('Your submission has triggered the installed spam filter and will not be accepted.'), 'Check presence of blocked message.');
+    $this->assertNoUnwantedRaw('edit-captcha', 'Check absence of CAPTCHA on comment form.');
+      // $this->assertField('edit-session-id', $session_id, 'Check whether the session ID remained unchanged.');
+      
+    // Preview a comment that is 'ham' and make sure there is no CAPTCHA form:
+    $this->drupalPost('comment/reply/'. $node->nid, array('comment' => 'ham'), t('Preview'));
+    $this->assertNoUnwantedRaw('edit-captcha', 'Check absence of CAPTCHA on comment form.');
+      // $this->assertField('edit-session-id', $session_id, 'Check whether the session ID remained unchanged.');
+
+    // Post a comment that is 'ham' and make sure there is no CAPTCHA form:
+    $this->drupalPost('comment/reply/'. $node->nid, array('comment' => 'ham'), t('Save'));
+    $this->assertNoUnwantedRaw('edit-captcha', 'Check absence of CAPTCHA on comment form.');
+
+    // Only the last post operation should store a comment in the database:
+    $this->assertWantedRaw('<p>ham</p>', 'Check whether the comment was posted.');
+    
+  }
+  
+  function testContactForm() {
+    // TODO: difficult to test until we can hijack drupal_mail().
   }
 }
