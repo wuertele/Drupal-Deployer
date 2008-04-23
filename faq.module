@@ -1078,7 +1078,8 @@ function template_preprocess_faq_questions_top(&$variables) {
   $disable_node_links = variable_get('faq_disable_node_links', FALSE);
 
   // Configure "back to top" link.
-  $back_to_top = faq_init_back_to_top('faq');
+  $this_page = $_GET['q'];
+  $back_to_top = faq_init_back_to_top($this_page);
 
   // Loop through results.
   $questions = array();
@@ -1086,7 +1087,7 @@ function template_preprocess_faq_questions_top(&$variables) {
   $key = 0;
   foreach ($data as $node) {
     $anchor = "n". $node->nid;
-    $questions[$key] = l($node->question, 'faq', array('fragment' => $anchor));
+    $questions[$key] = l($node->question, $this_page, array('fragment' => $anchor));
     faq_view_question($answers[$key], $node, '', $anchor);
     faq_view_answer($answers[$key], $node, $back_to_top, $teaser, $links);
     $key++;
@@ -1129,10 +1130,9 @@ function template_preprocess_faq_category_questions_top(&$variables) {
   if ($default_sorting != 'DESC') {
     $default_weight = 1000000;
   }
-  $this_page = 'faq';
+  $this_page = $_GET['q'];
   $get_child_terms = 0;
   if (arg(0) == 'faq' && is_numeric(arg(1))) {
-    $this_page .= "/". arg(1);
     $get_child_terms = arg(1);
   }
 
@@ -1259,10 +1259,9 @@ function template_preprocess_faq_category_questions_top_answers(&$variables) {
   }
   $variables['display_answers'] = TRUE;
 
-  $this_page = 'faq';
+  $this_page = $_GET['q'];
   $get_child_terms = 0;
   if (arg(0) == 'faq' && is_numeric(arg(1))) {
-    $this_page .= "/". arg(1);
     $get_child_terms = arg(1);
   }
 
@@ -1312,6 +1311,7 @@ function template_preprocess_faq_hide_answer(&$variables) {
   drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
 
   $data = $variables['data'];
+  $this_page = $_GET['q'];
 
   // Fetch configuration.
   $teaser = variable_get('faq_use_teaser', FALSE);
@@ -1321,7 +1321,7 @@ function template_preprocess_faq_hide_answer(&$variables) {
   $nodes = array();
   $count = 0;
   foreach ($data as $node) {
-    faq_view_question($nodes[$count], $node, 'faq');
+    faq_view_question($nodes[$count], $node, $this_page);
     faq_view_answer($nodes[$count], $node, array(), $teaser, $links);
     $count++;
   }
@@ -1358,6 +1358,7 @@ function template_preprocess_faq_category_hide_answer(&$variables) {
   if ($default_sorting != 'DESC') {
     $default_weight = 1000000;
   }
+  $this_page = $_GET['q'];
   $get_child_terms = 0;
   if (arg(0) == 'faq' && is_numeric(arg(1))) {
     $get_child_terms = arg(1);
@@ -1423,7 +1424,7 @@ function template_preprocess_faq_category_hide_answer(&$variables) {
       $count++;
     }
     $node_var = array();
-    faq_view_question($node_var, $node, 'faq/'. arg(1));
+    faq_view_question($node_var, $node, $this_page);
     faq_view_answer($node_var, $node, array(), $teaser, $links);
     $nodes[] = $node_var;
   }
@@ -1447,7 +1448,8 @@ function template_preprocess_faq_questions_inline(&$variables) {
   $links = variable_get('faq_show_node_links', FALSE);
 
   // Configure "back to top" link.
-  $back_to_top = faq_init_back_to_top('faq');
+  $this_page = $_GET['q'];
+  $back_to_top = faq_init_back_to_top($this_page);
 
   // Configure labels.
   $variables['question_label'] = '';
@@ -1495,10 +1497,9 @@ function template_preprocess_faq_category_questions_inline(&$variables) {
   if ($default_sorting != 'DESC') {
     $default_weight = 1000000;
   }
-  $this_page = 'faq';
+  $this_page = $_GET['q'];
   $get_child_terms = 0;
   if (arg(0) == 'faq' && is_numeric(arg(1))) {
-    $this_page .= "/". arg(1);
     $get_child_terms = arg(1);
   }
 
