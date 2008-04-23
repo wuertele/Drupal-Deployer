@@ -778,15 +778,15 @@ function mollom_validate_analysis($form, &$form_state) {
         // Keep track of the response so we can use it later on to save the data in the database:
         $GLOBALS['mollom_response'] = $result;
 
-        watchdog('mollom', t('Ham: %message', array('%message' => $data['post_body'])));
+        watchdog('mollom', 'Ham: %message', array('%message' => $data['post_body']));
       }
       else if ($result['spam'] == MOLLOM_ANALYSIS_SPAM) {
         form_set_error('mollom', t('Your submission has triggered the installed spam filter and will not be accepted.'));
-        watchdog('mollom', t('Spam: %message', array('%message' => $data['post_body'])));
+        watchdog('mollom', 'Spam: %message', array('%message' => $data['post_body']));
       }
       else {
         form_set_error('mollom', t('We are sorry, but the spam filter on this site decided that your submission could be spam. Please fill in the CAPTCHA first.'));
-        watchdog('mollom', t('Unsure: %message', array('%message' => $data['post_body'])));
+        watchdog('mollom', 'Unsure: %message', array('%message' => $data['post_body']));
         _mollom_register_captcha($form_state);
       }
     }
@@ -1003,13 +1003,13 @@ function _mollom_insert_captcha(&$form, $form_state) {
 function _mollom_verify_key() {
   $status = mollom('mollom.verifyKey');
 
-  $message = 'We contacted the Mollom servers to verify your keys';
+  $message = t('We contacted the Mollom servers to verify your keys');
     
   if ($status) {
-    drupal_set_message(t("$message: the Mollom services are operating correctly. We are now blocking spam."));
+    drupal_set_message(t('@message: the Mollom services are operating correctly. We are now blocking spam.', array('@message' => $message)));
   }
   else {
-    drupal_set_message(t("$message: your keys do not exist or are no longer valid. Please visit the user settings page on the Mollom website again: <a href=\"http://mollom.com/user\">http://mollom.com/user</a>."), 'error');
+    drupal_set_message(t('@message: your keys do not exist or are no longer valid. Please visit the user settings page on the Mollom website again: <a href="@mollom-user">@mollom-user</a>.', array('@message' => $message, '@mollom-user' => 'http://mollom.com/user')), 'error');
   }
 }
 
@@ -1086,7 +1086,7 @@ function mollom($method, $data = array()) {
   variable_set('mollom_servers', array());
 
   // Report this error:
-  watchdog('mollom', 'No Nollom servers could be reached or all servers returned an error -- the server list was emptied.', WATCHDOG_ERROR);
+  watchdog('mollom', 'No Mollom servers could be reached or all servers returned an error -- the server list was emptied.', WATCHDOG_ERROR);
 }
 
 /**
