@@ -52,29 +52,19 @@ function node_token_values($type, $object = NULL, $options = array()) {
       }
       
       // Now get the menu related information.
-      global $_menu;
-      $trail = array();
-      $trail_raw = array();
-      $original_mid = token_menu_get_mid('node/'.$node->nid);
-      
-      $mid = $original_mid;
-      while ($mid && $_menu['visible'][$mid] && $_menu['visible'][$mid]['pid'] != 0) {
-        array_unshift($trail, check_plain($_menu['visible'][$mid]['title']));
-        $mid = $_menu['visible'][$mid]['pid'];
-      }
-
-      // One more time, unfiltered
-      $mid = $original_mid;
-      while ($mid && $_menu['visible'][$mid] && $_menu['visible'][$mid]['pid'] != 0) {
-        array_unshift($trail_raw, $_menu['visible'][$mid]['title']);
-        $mid = $_menu['visible'][$mid]['pid'];
-      }
-
-      if (isset($trail)) {
+      if ($node->menu['mlid']) {
+        $menus = menu_get_menus();
+        $menu_name = $node->menu['menu_name'];
+        $menu_title = $menus[$menu_name];
+        $trail_raw = _menu_titles($menu_name, $node->nid);
+        $trail = array();
+        foreach ($trail_raw as $title) {
+          $trail[] = check_plain($title);
+        }
         $values['menupath']     = implode('/', $trail);
         $values['menupath-raw'] = implode('/', $trail_raw);
-        $values['menu']         = check_plain($_menu['visible'][$mid]['title']);
-        $values['menu-raw']     = $_menu['visible'][$mid]['title'];
+        $values['menu']         = check_plain($menu_title);
+        $values['menu-raw']     = $menu_title;
       }
       else {
         $values['menu']         = '';
@@ -198,36 +188,63 @@ function node_token_list($type = 'all') {
   }
 }
 
-// Handle book nodes.
+/**
+ * Return an array of titles for a menu, from the top down to the specified node
+ *
+ * @param $menu_name
+ *   The name of the menu.
+ * @param $nid
+ *   Id of the node at the bottom
+ * @return
+ *   An array of titles through the specified node
+ */
+function _menu_titles($menu_name, $nid) {
+  // Get the menu hierarchy for the specified page.
+  $item = array_shift(menu_tree_all_data($menu_name));
+  $titles = array();
+  // Go down the active trail until the right level is reached.
+  while ($item) {
+    $titles[] = $item['link']['title'];
+    // Break AFTER getting the desired node's title
+    if ($item['link']['href'] == "node/$nid" || !$item['below']) {
+      break;
+    }
+    $item = array_shift($item['below']);
+  }
+
+  return $titles;
+}
+
+/**
+ * Implementation of hook_token_values() for book nodes
+ */
 function book_token_values($type, $object = NULL, $options = array()) {
   if ($type == 'node') {
     $node = $object;
-
-    $tokens = array();
-    if (!empty($node->parent)) {
-      $path = book_location($node);
-      $tokens['book'] = check_plain($path[0]->title);
-      $tokens['book-raw'] = $path[0]->title;
-      $tokens['book_id'] = $node->parent;
-
-      $bookhierarchy = book_location($node);
-      $bookpath = '';
-      $bookpath_raw = '';
-      foreach ($bookhierarchy as $bookelement) {
-        if ($bookpath == '') {
-          $bookpath = check_plain($bookelement->title);
-          $bookpath_raw = $bookelement->title;
-        } 
-        else {
-          $bookpath = $bookpath . '/' . check_plain($bookelement->title);
-          $bookpath_raw = $bookpath_raw . '/' . $bookelement->title;
-        }
+    if (isset($node->book)) {
+      $menus = menu_get_menus();
+      $menu_name = $node->book['menu_name'];
+      $trail_raw = _menu_titles($menu_name, $node->nid);
+      $book_raw = $trail_raw[0];
+      $book = check_plain($book_raw);
+      // For book paths, we don't include the current node's title (last in
+      // the array) in the trail.
+      array_pop($trail_raw);
+      $trail = array();
+      foreach ($trail_raw as $title) {
+        $trail[] = check_plain($title);
       }
-      $tokens['bookpath'] = $bookpath;
-      $tokens['bookpath-raw'] = $bookpath_raw;
-    } 
+      $book_title = $trail[0];
+      $tokens = array();
+      $tokens['book'] = $book;
+      $tokens['book-raw'] = $book_raw;
+      $tokens['book_id'] = $node->book['bid'];
+      $tokens['bookpath'] = implode('/', $trail);
+      $tokens['bookpath-raw'] = implode('/', $trail_raw);
+    }
     else {
       $tokens['book'] = '';
+      $tokens['book-raw'] = '';
       $tokens['book_id'] = '';
       $tokens['bookpath'] = '';
       $tokens['bookpath-raw'] = '';
