@@ -23,22 +23,28 @@ function htmlpurifier_filter($op, $delta = 0, $format = -1, $text = '') {
       return array(0 => t('HTML Purifier'));
 
     case 'no cache':
-      // caching HTML Purifier's output is STRONGLY recommended due to 
-      // HTML Purifier's data-intensive nature
-      return FALSE;
+      // since HTML Purifier implements its own caching layer, having filter
+      // cache it again is wasteful. MAYBE make this configurable.
+      return TRUE;
 
     case 'description':
       // TODO: Include description of what tags and properties are active
-      return t('Removes malicious HTML code and ensures that the output is standards compliant.');
+      return t('Removes malicious HTML code and ensures that the output is standards compliant. Note: For performance reasons, please ensure there are no dynamic filters before this filter.');
 
     case 'prepare':
       return $text;
 
     case 'process':
+      $cid = md5($text);
+      $cache = cache_get($cid, 'cache_htmlpurifier');
+      if ($cache) return $cache->data;
+      
       $config = _htmlpurifier_get_config($format);
       $purifier = htmlpurifier_create_purifier($config);
       _htmlpurifier_add_filters($format, $purifier);
-      return $purifier->purify($text);
+      $ret = $purifier->purify($text);
+      cache_set($cid, $ret, 'cache_htmlpurifier', CACHE_PERMANENT);
+      return $ret;
 
     case 'settings':
       return _htmlpurifier_settings($format);
@@ -46,11 +52,6 @@ function htmlpurifier_filter($op, $delta = 0, $format = -1, $text = '') {
     default:
       return NULL;
   }
-}
-
-function htmlpurifier_purify($text, $config) {
-  $purifier = htmlpurifier_create_purifier($config);
-  return $purifier->purify($text);
 }
 
 function htmlpurifier_create_purifier($config) {
