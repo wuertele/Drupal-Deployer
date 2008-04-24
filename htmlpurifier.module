@@ -3,12 +3,11 @@
 
 /**
  * Implementation of hook_help().
- *
- * Used by drupal 4.7
  */
-function htmlpurifier_help($section) {
-  switch ($section) {
-    case 'admin/modules#description':
+function htmlpurifier_help($path, $arg) {
+  $output = null;
+  switch ($path) {
+    case 'admin/modules#htmlpurifier':
       $output = t('Filter that removes malicious HTML and ensures standards compliant output.');
       break;
   }
@@ -62,15 +61,8 @@ function htmlpurifier_create_purifier($config) {
   // Overload HTML Purifiers default cache handler with our own so that
   // Drupals built-in cache is used
   require_once "$module_path/HTMLPurifier_DefinitionCache_Drupal.php";
-  $factory =& HTMLPurifier_DefinitionCacheFactory::instance();
-  if (method_exists($factory, 'register')) {
-    $factory->register('Drupal', 'HTMLPurifier_DefinitionCache_Drupal');
-  } else {
-    // Brittle, used for previous HTML Purifier version compatibility
-    $factory->caches['Drupal']['HTML'] = new HTMLPurifier_DefinitionCache_Drupal('HTML');
-    $factory->caches['Drupal']['CSS']  = new HTMLPurifier_DefinitionCache_Drupal('CSS');
-    $factory->caches['Drupal']['URI']  = new HTMLPurifier_DefinitionCache_Drupal('URI');
-  }
+  $factory = HTMLPurifier_DefinitionCacheFactory::instance();
+  $factory->register('Drupal', 'HTMLPurifier_DefinitionCache_Drupal');
   $config['Cache.DefinitionImpl'] = 'Drupal';
 
   return new HTMLPurifier($config);
@@ -108,7 +100,7 @@ function _htmlpurifier_settings($format) {
 
 function _htmlpurifier_get_config($format) {
   $config = array(
-    'HTML.EnableAttrID' => variable_get("htmlpurifier_enableattrid_$format", FALSE),
+    'Attr.EnableID' => variable_get("htmlpurifier_enableattrid_$format", FALSE),
   );
   return $config;
 }

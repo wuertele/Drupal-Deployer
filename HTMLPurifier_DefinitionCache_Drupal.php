@@ -2,11 +2,6 @@
 
 require_once 'HTMLPurifier/DefinitionCache.php';
 
-HTMLPurifier_ConfigSchema::defineAllowedValues(
-  'Cache', 'DefinitionImpl',
-  array('Drupal')
-);
-
 /**
  * Cache handler that stores all data in drupals builtin cache
  */
@@ -71,7 +66,6 @@ class HTMLPurifier_DefinitionCache_Drupal extends HTMLPurifier_DefinitionCache
     return true;
   }
 
-
   function flush($config) {
     cache_clear_all("htmlpurifier:*", 'cache', true);
     return true;
@@ -88,13 +82,13 @@ class HTMLPurifier_DefinitionCache_Drupal extends HTMLPurifier_DefinitionCache
   }
 
   function fetchFromDrupalCache($key) {
-    $cached = cache_get("htmlpurifier:$key", 'cache');
+    $cached = cache_get("htmlpurifier:$key");
     if ($cached) return unserialize($cached->data);
     return false;
   }
 
   function storeInDrupalCache($def, $key) {
-    cache_set("htmlpurifier:$key", 'cache', serialize($def), CACHE_PERMANENT);
+    cache_set("htmlpurifier:$key", serialize($def), 'cache', CACHE_PERMANENT);
   }
   
 }
