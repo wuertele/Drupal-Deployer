@@ -173,6 +173,11 @@ directory on the server and add new content to that directory
       
    4. Lastly, adjust the File browser settings for each profile.
 
+Modules: Image Assist
+---------------------
+Image Assist can be integrated with FCKeditor. 
+To do this, simply copy the modules/fckeditor/img_assist_fckeditor.js file to modules/img_assist/img_assist_fckeditor.js.
+   
 Help & Contribution
 -------------------
 If you are looking for more information, have any troubles in configuration or if 
