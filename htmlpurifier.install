@@ -18,7 +18,8 @@ DESCRIPTION
  * Implementation of hook_install().
  */
 function htmlpurifier_install() {
-    drupal_install_schema('htmlpurifier');
+  _htmlpurifier_version_check();
+  drupal_install_schema('htmlpurifier');
 }
 
 /**
@@ -26,4 +27,48 @@ function htmlpurifier_install() {
  */
 function htmlpurifier_uninstall() {
   drupal_uninstall_schema('htmlpurifier');
+}
+
+/**
+ * Checks the version of HTML Purifier and fatally errors out if there's a
+ * problem.
+ */
+function _htmlpurifier_version_check() {
+  // This version of HTML Purifier is required
+  static $req_version = '3.1.0-dev';
+  
+  // Can't use drupal_get_path, since module may not have been installed.
+  $module_path = dirname(__FILE__);
+  $s = DIRECTORY_SEPARATOR;
+  if (!file_exists("$module_path/library/HTMLPurifier.auto.php")) {
+    echo "<strong>Fatal error:</strong> Could not find HTML Purifier
+          installation in $module_path{$s}library. Please copy contents
+          of library to this folder or ensure HTMLPurifier.auto.php exists.
+          You can download HTML Purifier at
+          <a href=\"http://htmlpurifier.org/download.html\">htmlpurifier.org</a>.
+          After you have done so, reload this page.";
+    exit;
+  }
+  
+  require_once "$module_path/library/HTMLPurifier.auto.php";
+  if (!defined('HTMLPurifier::VERSION') || version_compare($old = HTMLPurifier::VERSION, $req_version, '<')) {
+    echo "<strong>Fatal error:</strong> HTML Purifier $old is not compatible
+          with this module: HTML Purifier <strong>$req_version</strong> or later is required.
+          If the required version is a dev version, you will need to
+          <a href=\"http://htmlpurifier.org/download.html#Subversion\">check
+          code out of Subversion</a> or
+          <a href=\"http://htmlpurifier.org/download.html#NightlyBuilds\">download a nightly</a>
+          to use this module. Once you have done so, reload this page.";
+    exit;
+  }
+  
+  // Everything looks ok!
+  return true;
+}
+
+// -- Update functions ------------------------------------------------------ //
+
+function htmlpurifier_update_6200() {
+  _htmlpurifier_version_check();
+  return array();
 }
