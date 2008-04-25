@@ -20,34 +20,50 @@ function htmlpurifier_help($path, $arg) {
 function htmlpurifier_filter($op, $delta = 0, $format = -1, $text = '') {
   switch ($op) {
     case 'list':
-      return array(0 => t('HTML Purifier'));
+
+      return array(0 => t('HTML Purifier'), 1 => t('HTML Purifier (advanced)'));
 
     case 'no cache':
-      // since HTML Purifier implements its own caching layer, having filter
-      // cache it again is wasteful. MAYBE make this configurable.
-      return TRUE;
+      // Since HTML Purifier implements its own caching layer, having filter
+      // cache it again is wasteful. Returns false if double caching is permitted.
+      return !variable_get("htmlpurifier_doublecache_$format", FALSE);
 
     case 'description':
-      // TODO: Include description of what tags and properties are active
-      return t('Removes malicious HTML code and ensures that the output is standards compliant. Note: For performance reasons, please ensure there are no dynamic filters before this filter.');
+      $common = t(
+        'Removes malicious HTML code and ensures that the output '.
+        'is standards compliant. <strong>Warning:</strong> For performance '.
+        'reasons, please ensure that there are no highly dynamic filters before HTML Purifier. '
+      );
+      switch ($delta) {
+        case 0:
+          return $common;
+        case 1:
+          return $common . t('<em>This version has advanced configuration options, do not enable both at the same time.</em>');
+      }
 
     case 'prepare':
       return $text;
 
     case 'process':
-      $cid = md5($text);
+      // We don't have any protection against double-purification.
+      
+      // Cache code:
+      $cid = $format . ':' . md5($text);
       $cache = cache_get($cid, 'cache_htmlpurifier');
       if ($cache) return $cache->data;
       
+      // We ignore $delta, because the only difference it makes is with
+      // the configuration screen; behavior stays the same.
       $config = _htmlpurifier_get_config($format);
       $purifier = htmlpurifier_create_purifier($config);
-      _htmlpurifier_add_filters($format, $purifier);
       $ret = $purifier->purify($text);
+      
       cache_set($cid, $ret, 'cache_htmlpurifier', CACHE_PERMANENT);
+      
       return $ret;
 
     case 'settings':
-      return _htmlpurifier_settings($format);
+      return _htmlpurifier_settings($delta, $format);
 
     default:
       return NULL;
@@ -58,18 +74,58 @@ function htmlpurifier_create_purifier($config) {
   // Load HTML Purifier library
   $module_path = drupal_get_path('module', 'htmlpurifier');
   require_once "$module_path/library/HTMLPurifier.auto.php";
-
-  // Overload HTML Purifiers default cache handler with our own so that
-  // Drupals built-in cache is used
-  require_once "$module_path/HTMLPurifier_DefinitionCache_Drupal.php";
-  $factory = HTMLPurifier_DefinitionCacheFactory::instance();
-  $factory->register('Drupal', 'HTMLPurifier_DefinitionCache_Drupal');
-  $config['Cache.DefinitionImpl'] = 'Drupal';
-
   return new HTMLPurifier($config);
 }
 
-function _htmlpurifier_settings($format) {
+function _htmlpurifier_get_config($format) {
+
+  // Overload HTML Purifiers default cache handler with our own so that
+  // Drupals built-in cache is used
+  $module_path = drupal_get_path('module', 'htmlpurifier');
+  require_once "$module_path/HTMLPurifier_DefinitionCache_Drupal.php";
+  $factory = HTMLPurifier_DefinitionCacheFactory::instance();
+  $factory->register('Drupal', 'HTMLPurifier_DefinitionCache_Drupal');
+  
+  $config_data = variable_get("htmlpurifier_config_$format", false);
+  
+  $config = HTMLPurifier_Config::createDefault();
+  $config->set('AutoFormat', 'AutoParagraph', true);
+  $config->set('AutoFormat', 'Linkify', true);
+  
+  // Assuming this for now. This might not actually be the case.
+  $config->set('HTML', 'Doctype', 'XHTML 1.0 Transitional');
+  $config->set('Core', 'AggressivelyFixLt', true);
+  $config->set('Cache', 'DefinitionImpl', 'Drupal');
+  
+  // Filter HTML doesn't allow external images, so neither will we...
+  // for now. This can be configured off.
+  $config->set('URI', 'DisableExternalResources', true);
+  
+  if (!empty($_SERVER['SERVER_NAME'])) {
+    // SERVER_NAME is more reliable than HTTP_HOST
+    $config->set('URI', 'Host', $_SERVER['SERVER_NAME']);
+  }
+  
+  if (defined('LANGUAGE_RTL') && $GLOBALS['language']->direction === LANGUAGE_RTL) {
+    $config->set('Attr', 'DefaultTextDir', 'rtl');
+  }
+  
+  // false, true, false = no index, everything is allowed, don't do mq fix
+  $config->mergeArrayFromForm($config_data, false, true, false);
+  
+  return $config;
+  
+}
+
+function _htmlpurifier_settings($delta, $format) {
+  $module_path = drupal_get_path('module', 'htmlpurifier');
+  require_once "$module_path/library/HTMLPurifier.auto.php";
+  
+  drupal_add_css("$module_path/config-form.css");
+  // Makes all configuration links open in new windows; can safe lots of grief!
+  drupal_add_js('$(function(){$(".hp-config a").click(function(){window.open(this.href);return false;});});', 'inline');
+  drupal_add_js(HTMLPurifier_Printer_ConfigForm::getJavaScript(), 'inline');
+  
   $form = array();
 
   $form['htmlpurifier'] = array(
@@ -77,40 +133,71 @@ function _htmlpurifier_settings($format) {
     '#title' => t('HTML Purifier'),
     '#collapsible' => TRUE,
   );
-  $form['htmlpurifier']["htmlpurifier_enableattrid_$format"] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Allow the ID attribute in HTML'),
-    '#default_value' => variable_get("htmlpurifier_enableattrid_$format", FALSE),
-    '#description' => t('If enabled, allows the use of ID attributes in HTML tags. This is disabled by default due to the fact that without proper configuration user input can easily break the validation of a webpage by specifying an ID that is already on the surrounding HTML.'),
-  );
-  $form['htmlpurifier']["htmlpurifier_preserveyoutube_$format"] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Preserve embedded YouTube videos'),
-    '#default_value' => variable_get("htmlpurifier_preserveyoutube_$format", FALSE),
-    '#description' => t('If enabled, allows the use of embedded YouTube videos. See !url for more information.', array('!url' => l('Embedding YouTube Videos', 'http://hp.jpsband.org/live/docs/enduser-youtube.html'))),
-  );
   $form['htmlpurifier']["htmlpurifier_help_$format"] = array(
     '#type' => 'checkbox',
     '#title' => t('Display help text'),
     '#default_value' => variable_get("htmlpurifier_help_$format", TRUE),
     '#description' => t('If enabled, a short note will be added to the filter tips explaining that HTML will be transformed to conform with HTML standards. You may want to disable this option when the HTML Purifier is used to check the output of another filter like BBCode.'),
   );
+  
+  if ($delta == 0) {
+    $title = t('Configure HTML Purifier');
+    $allowed = array(
+      'URI.DisableExternalResources',
+      'URI.DisableResources',
+      'URI.Munge',
+      'Filter.YouTube',
+      'Attr.EnableID',
+      'HTML.Allowed',
+      'HTML.ForbiddenElements',
+      'HTML.ForbiddenAttributes',
+      'AutoFormat.Linkify',
+      'AutoFormat.AutoParagraph',
+    );
+  } else {
+    $title = t('Advanced configuration options');
+    $allowed = true;
+    $form['htmlpurifier']["htmlpurifier_doublecache_$format"] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Allow double caching'),
+      '#default_value' => variable_get("htmlpurifier_doublecache_$format", FALSE),
+      '#description' => t('If enabled, HTML Purifier will tell filter that its output is cacheable. This is not usually necessary, because HTML Purifier maintains its own cache, but may be helpful if you have later filters that need to be cached.'),
+    );
+  }
+  
+  $intro =
+      '<div class="form-item"><h3>'.
+      $title.
+      '</h3><div class="description">'.
+      t('Please click on a directive name for more information on what it does before enabling or changing anything!').
+      '</div></div>';
+  
+  $config = _htmlpurifier_get_config($format);
+  $config_form = new HTMLPurifier_Printer_ConfigForm(
+    "htmlpurifier_config_$format", 'http://htmlpurifier.org/live/configdoc/plain.html#%s'
+  );
+  $form['htmlpurifier']["htmlpurifier_config_$format"] = array(
+    '#value' => $intro . $config_form->render($config, $allowed, false),
+    '#after_build' => array('_htmlpurifier_config_hack'),
+  );
 
   return $form;
 }
 
-function _htmlpurifier_get_config($format) {
-  $config = array(
-    'Attr.EnableID' => variable_get("htmlpurifier_enableattrid_$format", FALSE),
-  );
-  return $config;
-}
-
-function _htmlpurifier_add_filters($format, &$purifier) {
-  if (variable_get("htmlpurifier_preserveyoutube_$format", FALSE) && version_compare($purifier->version, '1.4.1', '>=')) {
-    require_once 'HTMLPurifier/Filter/YouTube.php';
-    $purifier->addFilter(new HTMLPurifier_Filter_YouTube());
+/**
+ * Fills out the form state with extra post data originating from the
+ * HTML Purifier configuration form. This is an #after_build hook function.
+ * 
+ * @warning
+ *    If someone ever gets the smart idea of changing the parameters to
+ *    this function, I'm SOL! ;-)
+ */
+function _htmlpurifier_config_hack($form_element, &$form_state) {
+  $key = $form_element['#parents'][0];
+  if (!empty($form_element['#post']) && isset($form_element['#post'][$key])) {
+    $form_state['values'][$key] = $form_element['#post'][$key];
   }
+  return $form_element;
 }
 
 /**
