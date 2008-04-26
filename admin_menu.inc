@@ -19,39 +19,85 @@ function admin_menu_build($mid_admin) {
   global $_menu;
   $_admin_menu = array();
   
-  // Temporary access permission fix for root menu items until #126621 is
-  // committed to Drupal core.
-  foreach ($_menu['items'][$mid_admin]['children'] as $key => $parent) {
-    if ($_menu['items'][$parent]['access'] != FALSE || !isset($_menu['items'][$parent]['children'])) {
-      continue;
-    }
-    $is_accessible = FALSE;
-    foreach ($_menu['items'][$parent]['children'] as $key => $child) {
-      if ($_menu['items'][$child]['access'] == TRUE) {
-        $is_accessible = TRUE;
-      }
-    }
-    if ($is_accessible) {
-      $_menu['items'][$parent]['access'] = TRUE;
-    }
-  }
-  
-  // Copy admin menu items into a new menu tree.
-  $_admin_menu['index'] = $_menu['path index'];
-  $_admin_menu[$mid_admin] = $_menu['items'][$mid_admin];
-  admin_menu_item_url($_admin_menu, $mid_admin);
-  _admin_menu_get_children($_admin_menu, $_admin_menu[$mid_admin]);
+  // Retrieve the full menu structure.
+  $_admin_menu = admin_menu_tree_all_data();
   
   // Adjust some menu items for better user experience.
-  admin_menu_adjust_items($_admin_menu);
+  #admin_menu_adjust_items($_admin_menu);
   
   // Allow other modules to integrate with admin_menu.
   foreach (module_implements('admin_menu') as $module) {
     $function = $module .'_admin_menu';
-    $function($_admin_menu, TRUE);
+    #$function($_admin_menu, TRUE);
   }
   
   return $_admin_menu;
+}
+
+/**
+ * Get the data structure representing the administrative menu tree.
+ *
+ * @see menu_tree_all_data()
+ */
+function admin_menu_tree_all_data() {
+  // chx way. 13/03/2008 sun
+  // $item_admin = db_fetch_array(db_query("SELECT * FROM {menu_links} WHERE link_path = 'admin' AND menu_name = 'navigation'"));
+  $item_admin = db_fetch_array(db_query("SELECT * FROM {menu_links} WHERE router_path = 'admin'"));
+  $item_admin = array_merge_recursive($item_admin, menu_get_item('admin'));
+
+  // chx way. 13/03/2008 sun
+  // $data['tree'] = menu_tree_all_data('navigation', $item_admin);
+  // return $data['tree'];
+
+  $args = $parents = array($item_admin['mlid']);
+  $placeholders = implode(', ', array_fill(0, count($args), '%d'));
+  
+  // Collect all links as well as all of their children.
+  do {
+    $result = db_query("SELECT mlid FROM {menu_links} WHERE menu_name = '%s' AND has_children = 1 AND plid IN (". $placeholders .') AND mlid NOT IN ('. $placeholders .')', array_merge(array($item_admin['menu_name']), $args, $args));
+    $num_rows = FALSE;
+    while ($item = db_fetch_array($result)) {
+      $args[] = $item['mlid'];
+      $num_rows = TRUE;
+    }
+    $placeholders = implode(', ', array_fill(0, count($args), '%d'));
+  } while ($num_rows);
+
+  // Build db_query arguments array.
+  array_unshift($args, $item_admin['menu_name']);
+  
+  // Until now, everything seems to be a wanted behaviour of the new menu system
+  // in Drupal 6.  However, {menu_links} does not contain any local tasks, and
+  // because of that, it's getting crude now.
+  
+  // Select the links from the table, and recursively build the tree. We
+  // LEFT JOIN since there is no match in {menu_router} for an external
+  // link.
+  // Union select all local tasks from {menu_router}
+  // - that start with 'admin/',
+  // - using the mlid of the corresponding tab_parent path in {menu_links} as plid,
+  // - using the depth of the tab_parent path in {menu_links} + 1 as depth.
+  $types = array(MENU_LOCAL_TASK, MENU_DEFAULT_LOCAL_TASK);
+  $args = array_merge($args, $types);
+  $data['tree'] = menu_tree_data(db_query("(
+    SELECT m.load_functions, m.to_arg_functions, m.access_callback, m.access_arguments, m.page_callback, m.page_arguments, m.title, m.title_callback, m.title_arguments, m.type, ml.*
+    FROM {menu_links} ml LEFT JOIN {menu_router} m ON m.path = ml.router_path
+    WHERE ml.menu_name = '%s' AND ml.plid IN (". $placeholders .")
+  ) UNION (
+    SELECT m.load_functions, m.to_arg_functions, m.access_callback, m.access_arguments, m.page_callback, m.page_arguments, m.title, m.title_callback, m.title_arguments, m.type,
+      ml.menu_name, ml.mlid + 100000 as mlid, ml.plid, ml.link_path, ml.router_path, m.title as link_title, ml.options, ml.module, ml.hidden, ml.external, ml.has_children, ml.expanded, ml.weight, ml.depth + 1 as depth, ml.customized, ml.p1, ml.p2, ml.p3, ml.p4, ml.p5, ml.p6, ml.p7, ml.p8, ml.p9, ml.updated
+    FROM {menu_router} m LEFT JOIN {menu_links} ml ON ml.router_path = m.tab_parent
+    WHERE ml.router_path REGEXP '[^%%]*' AND m.path LIKE 'admin/%%' AND m.type IN (". db_placeholders($types) .")
+  )
+  ORDER BY p1 ASC, p2 ASC, p3 ASC, p4 ASC, p5 ASC, p6 ASC, p7 ASC, p8 ASC, p9 ASC", $args), $parents);
+  
+  $data['node_links'] = array();
+  menu_tree_collect_node_links($data['tree'], $data['node_links']);
+  
+  // Check access for the current user to each item in the tree.
+  menu_tree_check_access($data['tree'], $data['node_links']);
+
+  return $data['tree'];
 }
 
 /**
@@ -130,7 +176,7 @@ function admin_menu_adjust_items(&$_admin_menu) {
   $_admin_menu['index']['admin_menu_icon'] = $mid_icon;
   
   // Add 'administer' item to the icon menu.
-  $mid_icon_admin = admin_menu_add_item($_admin_menu, $mid_icon, array('title' => t('Administer'), 'path' => 'admin', 'weight' => 10));
+  $mid_icon_admin = admin_menu_add_item($_admin_menu, $mid_icon, array('title' => 'Administer', 'path' => 'admin', 'weight' => 10));
   // ...and reset 'administer' menu item id in path index.
   $_admin_menu['index']['admin'] = $mid_admin;
   
@@ -147,19 +193,19 @@ function admin_menu_adjust_items(&$_admin_menu) {
   admin_menu_remove_item($_admin_menu, 'admin/by-task');
   
   // Add system update links.
-  admin_menu_add_item($_admin_menu, $mid_icon, array('title' => t('Run cron'), 'path' => 'admin/logs/status/run-cron', 'weight' => 50, 'query' => drupal_get_destination()));
+  admin_menu_add_item($_admin_menu, $mid_icon, array('title' => 'Run cron', 'path' => 'admin/reports/status/run-cron', 'weight' => 50, 'query' => drupal_get_destination()));
   if ($user->uid == 1) {
-    admin_menu_add_item($_admin_menu, $mid_icon, array('title' => t('Run updates'), 'path' => $base_url .'/update.php', 'weight' => 50));
+    admin_menu_add_item($_admin_menu, $mid_icon, array('title' => 'Run updates', 'path' => $base_url .'/update.php', 'weight' => 50));
   }
   
   // Add links to drupal.org.
   if (user_access('display drupal links')) {
-    $mid_drupal = admin_menu_add_item($_admin_menu, $mid_icon, array('title' => t('Drupal.org'), 'path' => 'http://drupal.org', 'weight' => 100));
-    admin_menu_add_item($_admin_menu, $mid_drupal, array('title' => t('Drupal issue queue'), 'path' => 'http://drupal.org/project/issues/drupal'));
+    $mid_drupal = admin_menu_add_item($_admin_menu, $mid_icon, array('title' => 'Drupal.org', 'path' => 'http://drupal.org', 'weight' => 100));
+    admin_menu_add_item($_admin_menu, $mid_drupal, array('title' => 'Drupal issue queue', 'path' => 'http://drupal.org/project/issues/drupal'));
     
     // Add links to project issue queues.
     foreach (module_list(FALSE, FALSE, TRUE) as $module) {
-      $info = _module_parse_info_file(drupal_get_path('module', $module) .'/'. $module .'.info');
+      $info = drupal_parse_info_file(drupal_get_path('module', $module) .'/'. $module .'.info');
       if (isset($info['project']) && $info['project'] == 'drupal') {
         continue;
       }
@@ -167,7 +213,7 @@ function admin_menu_adjust_items(&$_admin_menu) {
       // Filter project versions via query string not yet supported.
       // @see http://drupal.org/node/97569
       // $url .= !empty($info['version']) ? '/'. $info['version'] : '';
-      admin_menu_add_item($_admin_menu, $mid_drupal, array('title' => t('@title issue queue', array('@title' => $info['name'])), 'path' => $url));
+      admin_menu_add_item($_admin_menu, $mid_drupal, array('title' => '@title issue queue', 'title arguments' => array('@title' => $info['name']), 'path' => $url));
     }
   }
   
@@ -175,7 +221,8 @@ function admin_menu_adjust_items(&$_admin_menu) {
   if ($user->uid > 0) {
     $mid_logout = $_menu['path index']['logout'];
     admin_menu_add_item($_admin_menu, $mid_admin, array(
-      'title' => t('Logout @name', array('@name' => $user->name)),
+      'title' => 'Logout @name',
+      'title arguments' => array('@name' => $user->name),
       'path' => $_menu['items'][$mid_logout]['path'],
       'weight' => -100,
       'class' => 'admin-menu-action admin-menu-logout',
@@ -197,7 +244,7 @@ function admin_menu_adjust_items(&$_admin_menu) {
     $mid_content = $_admin_menu['index']['admin/content/node'];
   }
   $mid_node_add = $_menu['path index']['node/add'];
-  admin_menu_copy_items($_admin_menu, $mid_node_add, $mid_content, t('Add !title'));
+  admin_menu_copy_items($_admin_menu, $mid_node_add, $mid_content, 'Add @title');
 }
 
 /**
@@ -228,7 +275,8 @@ function admin_menu_copy_items(&$_admin_menu, $source_pid, $target_pid, $title =
         continue;
       }
       if (isset($title)) {
-        $item['title'] = check_plain(strtr($title, array('!title' => $_menu['items'][$mid]['title'])));
+        $item['title'] = $title;
+        $item['title arguments'] = array('@title' => $_menu['items'][$mid]['title']);
       }
       // Only add child to target if it does not already exist.
       if (!in_array($mid, $_admin_menu[$target_pid]['children'])) {
