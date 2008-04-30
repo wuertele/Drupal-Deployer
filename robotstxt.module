@@ -43,10 +43,12 @@ function robotstxt_menu() {
  * You can edit the robots.txt for your site under admin/settings/robotstxt
  */
 function robotstxt_admin_settings() {
+  $file_contents = robotstxt_get_file_contents();
+
   $form['robotstxt'] = array(
     '#type' => 'textarea',
     '#title' => t('Value for robots.txt'),
-    '#default_value' => variable_get('robotstxt', ''),
+    '#default_value' => variable_get('robotstxt',  $file_contents),
     '#cols' => 60,
     '#rows' => 20,
     '#required' => false,
@@ -98,4 +100,21 @@ function robotstxt_requirements($phase) {
       }
   }
   return $requirements;
+}
+
+
+/**
+ * Retrieve contents of robots.txt from site root or module directory
+ */
+function robotstxt_get_file_contents() {
+  $file_contents = '';
+
+  if (file_exists('./robots.txt')) {
+    $file_contents = check_plain(file_get_contents('./robots.txt'));
+  }
+  elseif (file_exists(drupal_get_path('module', 'robotstxt') .'/robots.txt')) {
+    $file_contents = check_plain(file_get_contents(drupal_get_path('module', 'robotstxt') .'/robots.txt'));
+  }
+  
+  return $file_contents;
 }
