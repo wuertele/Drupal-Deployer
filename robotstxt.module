@@ -19,7 +19,6 @@ function robotstxt_help($path, $arg) {
  * Defines the robots.txt path as a callback.
  */
 function robotstxt_menu() {
-
   $access_config = array('administer site configuration');
   $access_content = array('access content');
 
@@ -43,15 +42,19 @@ function robotstxt_menu() {
  * You can edit the robots.txt for your site under admin/settings/robotstxt
  */
 function robotstxt_admin_settings() {
-  $file_contents = robotstxt_get_file_contents();
+  $base = variable_get('robotstxt', FALSE);
+
+  if ($base === FALSE) {
+    $base = robotstxt_get_file_contents();
+  }
 
   $form['robotstxt'] = array(
     '#type' => 'textarea',
-    '#title' => t('Value for robots.txt'),
-    '#default_value' => variable_get('robotstxt',  $file_contents),
+    '#title' => t('Contents of robots.txt'),
+    '#default_value' => $base,
     '#cols' => 60,
     '#rows' => 20,
-    '#required' => false,
+    '#required' => FALSE,
   );
 
   return system_settings_form($form);
@@ -61,13 +64,22 @@ function robotstxt_admin_settings() {
  * Serve up the robots.txt file stored in the db.
  */
 function robotstxt_robots() {
+  $base = variable_get('robotstxt', FALSE);
+
+  if ($base === FALSE) {
+    $base = robotstxt_get_file_contents();
+  }
+
   drupal_set_header("Content-type: text/plain");
-  print check_plain(variable_get('robotstxt', ''));
+  echo trim(check_plain($base));
 
   // Hook other modules for adding additional lines to robots.txt
   $lines = module_invoke_all('robotstxt');
   foreach ($lines as $line) {
-    print check_plain($line) ."\n";
+    $line = check_plain($line);
+    if ($line != '') {
+      echo "\n" . trim($line);
+    }
   }
 
   exit;
