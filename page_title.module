@@ -31,7 +31,7 @@ function page_title_help($section) {
         <p><code>[page-title]</code> will default to the value returned from <code>drupal_get_title</code> if there is no overriden page title.</p>");
       break;
     case 'admin/content/page_title/types':
-      $output = t("<p>By default, a 'Page Title' field will be displayed (just below the 'Title' field) on every content type's creation form. You may hide this field for each content type below.</p>");
+      $output = t("<p>To display a 'Page Title' field on a node (just below the 'Title' field), you will need to enable it for the appropriate content types below.</p>");
       break;
   }
   return $output;
@@ -224,31 +224,9 @@ function page_title_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
 
     case 'load':
       return array('page_title' => page_title_node_get_title($node->nid));
-
-    case 'view':
-      if ($page) {
-        page_title_set_node($node);
-      }
-      break;
   }
 }
 
-/**
- * Sets or retrieves the page title of the current page.
- *
- * @param $settings
- *   array The page title to set and content type.
- * @return
- *   string The settings array.
- */
-function page_title_set_node($node = NULL) {
-  static $stored_node = NULL;
-
-  if (isset($node)) {
-    $stored_node = $node;
-  }
-  return $stored_node;
-}
 
 /**
  * Simple wrapper function to get the currently set title for a page
@@ -256,18 +234,15 @@ function page_title_set_node($node = NULL) {
  * @return unknown
  */
 function page_title_get_title() {
-  $node = page_title_set_node();
-  return empty($node->page_title) ? strip_tags(drupal_get_title()) : check_plain(strip_tags($node->page_title));
-}
-
-/**
- * Simple wrapper function to get the page type
- *
- * @return unknown
- */
-function page_title_get_type() {
-  $node = page_title_set_node();
-  return isset($node->type) ? $node->type : '';
+  $display_options = variable_get('page_title_display', array());
+  $node = ((arg(0) == 'node') && (is_numeric(arg(1)))) ? node_load(arg(1)) : NULL;
+  
+  if ($display_options[$node->type] && !empty($node->page_title)) {
+    return check_plain(strip_tags($node->page_title));
+  }
+  else {
+    return strip_tags(drupal_get_title());
+  }
 }
 
 
@@ -300,29 +275,29 @@ function page_title_page_get_title() {
   if (is_null($title)) {
     // If frontpage, then use the frontpage pattern and set the title.
     if (drupal_is_front_page()) {
-      $page_title_pattern = variable_get('page_title_front', '[site_name] | [site_slogan]');
+      $page_title_pattern = variable_get('page_title_front', '[site-name] | [site-slogan]');
       $title = token_replace($page_title_pattern);
     }
     //Otherwise this is a non-frontpage page title.
     else {
-      //Get the current type for the page being displayed
-      $type = page_title_get_type();
-      
-      //Get the display setting
-      $page_title_type_display = variable_get('page_title_display', array());
-      
-      //If the current type is overridable, get the tokens for this type (default to empty)
-      if ($page_title_type_display[$type]) {
-        $page_title_pattern = variable_get('page_title_type_' . $type, '');
-      }
+      //Get the node for this page
+      $node = ((arg(0) == 'node') && (is_numeric(arg(1)))) ? node_load(arg(1)) : NULL;
+
+      //Get the pattern for the node type. If no node type available, assume blank
+      $page_title_pattern = variable_get('page_title_type_' . (isset($node->type) ? $node->type : ''), '');
       
       //If pattern is emtpy (either if the type is not overridable or simply not set) fallback to the default pattern
       if (empty($page_title_pattern)) {
         $page_title_pattern = variable_get('page_title_default', '[page-title] | [site-name]');
       }
       
-      // Return the title
-      $title = token_replace($page_title_pattern);
+      // Return the title using the node scope if node is set, otherwise default to global scope.
+      if (isset($node)) {
+        $title = token_replace($page_title_pattern, 'node', $node);
+      }
+      else {
+        $title = token_replace($page_title_pattern);
+      }
     }
   }
   
