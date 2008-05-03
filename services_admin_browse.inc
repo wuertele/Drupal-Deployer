@@ -105,7 +105,15 @@ function services_admin_browse_test() {
       case 'sessid':
         $form['arg'][$key] = array('#type' => 'textfield', '#default_value' => session_id());
         break;
-        
+          
+      case 'domain_check':
+        $form['arg'][$key] = array('#type' => 'textfield', '#default_value' => $_SERVER['HTTP_HOST']);
+        break;
+         
+      case 'domain_time_stamp':
+        $form['arg'][$key] = array('#type' => 'textfield', '#default_value' => time());
+        break;
+          
       default:
         $form['arg'][$key] = array('#type' => 'textfield');
         break;
@@ -206,6 +214,12 @@ function services_admin_settings() {
     '#title' => t('Use keys'),
     '#default_value' => variable_get('services_use_key', TRUE),
     '#description' => t('When enabled, all method calls must include a valid key.')
+  );
+  $form['security']['services_domain_strict'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Strict domain checking'),
+    '#default_value' => variable_get('services_domain_strict', FALSE),
+    '#description' => t('When enabled, all method calls must include their domain to validate against the key.')
   );
   $form['security']['services_use_sessid'] = array(
     '#type' => 'checkbox',
