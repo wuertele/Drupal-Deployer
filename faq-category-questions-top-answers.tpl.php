@@ -76,9 +76,11 @@ $depth = 0;
   <?php if (!$answer_category_name || $display_header): ?>
 
     <!-- include subcategories -->
-    <?php foreach ($subcat_body_list as $i => $subcat_html): ?>
-      <?php print $subcat_html; ?>
-    <?php endforeach; ?>
+    <?php if (count($subcat_body_list)): ?>
+      <?php foreach ($subcat_body_list as $i => $subcat_html): ?>
+        <?php print $subcat_html; ?>
+      <?php endforeach; ?>
+    <?php endif; ?>
 
     <?php if (!$display_header): ?>
       <div class="faq_category_group">
@@ -86,19 +88,21 @@ $depth = 0;
     <?php endif; ?>
 
     <!-- list questions (in title link) and answers (in body) -->
-    <?php foreach ($nodes as $i => $node): ?>
+    <?php if (count($nodes)): ?>
+      <?php foreach ($nodes as $i => $node): ?>
 
-      <div class="faq_question"><?php //strong question label here? ?>
-      <?php print $node['question']; ?>
-      </div> <!-- Close div: faq_question -->
+        <div class="faq_question"><?php //strong question label here? ?>
+        <?php print $node['question']; ?>
+        </div> <!-- Close div: faq_question -->
 
-      <div class="faq_answer">
-      <strong><?php print $answer_label; ?></strong>
-      <?php print $node['body']; ?>
-      <?php print $node['links']; ?>
-      </div> <!-- Close div: faq_answer -->
+        <div class="faq_answer">
+        <strong><?php print $answer_label; ?></strong>
+        <?php print $node['body']; ?>
+        <?php print $node['links']; ?>
+        </div> <!-- Close div: faq_answer -->
 
-    <?php endforeach; ?>
+      <?php endforeach; ?>
+    <?php endif; ?>
 
   <?php endif; ?>
 

@@ -18,22 +18,24 @@
  *   Tells whether $node['body'] contains the full body or just the teaser
  */
 ?><div>
-<?php foreach ($nodes as $node): ?>
-  <?php // Cycle through the $nodes array so that we now have a $node variable to work with. ?>
-  <br />
-  <div class="faq_question">
-  <strong>
-  <?php print $question_label; ?>
-  </strong>
-  <?php print $node['question']; ?>
-  </div> <!-- Close div: faq_question -->
+<?php if (count($nodes)): ?>
+  <?php foreach ($nodes as $node): ?>
+    <?php // Cycle through the $nodes array so that we now have a $node variable to work with. ?>
+    <br />
+    <div class="faq_question">
+    <strong>
+    <?php print $question_label; ?>
+    </strong>
+    <?php print $node['question']; ?>
+    </div> <!-- Close div: faq_question -->
 
-  <div class="faq_answer">
-  <strong>
-  <?php print $answer_label; ?>
-  </strong>
-  <?php print $node['body']; ?>
-  <?php print $node['links']; ?>
-  </div> <!-- Close div: faq_answer -->
-<?php endforeach; ?>
+    <div class="faq_answer">
+    <strong>
+    <?php print $answer_label; ?>
+    </strong>
+    <?php print $node['body']; ?>
+    <?php print $node['links']; ?>
+    </div> <!-- Close div: faq_answer -->
+  <?php endforeach; ?>
+<?php endif; ?>
 </div> <!-- Close div -->

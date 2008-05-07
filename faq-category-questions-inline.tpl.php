@@ -102,24 +102,28 @@ else {
   <div class="<?php print $container_class; ?>">
 
   <!-- include subcategories -->
-  <?php foreach ($subcat_body_list as $i => $subcat_html): ?>
-    <div class="faq_category_indent"><?php print $subcat_html; ?></div>
-  <?php endforeach; ?>
+  <?php if (count($subcat_body_list)): ?>
+    <?php foreach ($subcat_body_list as $i => $subcat_html): ?>
+      <div class="faq_category_indent"><?php print $subcat_html; ?></div>
+    <?php endforeach; ?>
+  <?php endif; ?>
 
   <!-- list questions (in title link) and answers (in body) -->
   <div>
-  <?php foreach ($nodes as $i => $node): ?>
-    <div class="faq_question">
-    <strong><?php print $question_label; ?></strong>
-    <?php print $node['question']; ?>
-    </div> <!-- Close div: faq_question -->
+  <?php if (count($nodes)): ?>
+    <?php foreach ($nodes as $i => $node): ?>
+      <div class="faq_question">
+      <strong><?php print $question_label; ?></strong>
+      <?php print $node['question']; ?>
+      </div> <!-- Close div: faq_question -->
 
-    <div class="faq_answer">
-    <strong><?php print $answer_label; ?></strong>
-    <?php print $node['body']; ?>
-    <?php print $node['links']; ?>
-    </div> <!-- Close div: faq_answer -->
-  <?php endforeach; ?>
+      <div class="faq_answer">
+      <strong><?php print $answer_label; ?></strong>
+      <?php print $node['body']; ?>
+      <?php print $node['links']; ?>
+      </div> <!-- Close div: faq_answer -->
+    <?php endforeach; ?>
+  <?php endif; ?>
   </div> <!-- Close div -->
 
   </div> <!-- Close div: faq_qa / faq_qa_hide -->

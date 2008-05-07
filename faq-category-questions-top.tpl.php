@@ -108,9 +108,11 @@ else {
   <div class="<?php print $container_class; ?>">
 
   <?php // include subcategories ?>
-  <?php foreach ($subcat_body_list as $i => $subcat_html): ?>
-    <div class="faq_category_indent"><?php print $subcat_html; ?></div>
-  <?php endforeach; ?>
+  <?php if (count($subcat_body_list)): ?>
+    <?php foreach ($subcat_body_list as $i => $subcat_html): ?>
+      <div class="faq_category_indent"><?php print $subcat_html; ?></div>
+    <?php endforeach; ?>
+  <?php endif; ?>
 
   <?php // list question links ?>
   <?php if (!empty($question_list)): ?>
@@ -143,18 +145,20 @@ else {
   <div class="faq_category_group">
   <div>
 
-  <?php foreach ($nodes as $i => $node): ?>
+  <?php if (count($nodes)): ?>
+    <?php foreach ($nodes as $i => $node): ?>
 
-    <div class="faq_question"><?php //strong question label here? ?>
-    <?php print $node['question']; ?>
-    </div> <!-- Close div: faq_question -->
+      <div class="faq_question"><?php //strong question label here? ?>
+      <?php print $node['question']; ?>
+      </div> <!-- Close div: faq_question -->
 
-    <div class="faq_answer">
-    <strong><?php print $answer_label; ?></strong>
-    <?php print $node['body']; ?>
-    <?php print $node['links']; ?>
-    </div> <!-- Close div: faq_answer -->
-  <?php endforeach; ?>
+      <div class="faq_answer">
+      <strong><?php print $answer_label; ?></strong>
+      <?php print $node['body']; ?>
+      <?php print $node['links']; ?>
+      </div> <!-- Close div: faq_answer -->
+    <?php endforeach; ?>
+  <?php endif; ?>
 
   </div> <!-- Close div -->
 </div> <!-- Close div: faq_category_group -->

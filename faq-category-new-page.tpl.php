@@ -94,9 +94,11 @@ else {
   <div class="<?php print $container_class; ?>">
 
   <!-- include subcategories -->
-  <?php foreach ($subcat_body_list as $i => $subcat_html): ?>
-    <div class="faq_category_indent"><?php print $subcat_html; ?></div>
-  <?php endforeach; ?>
+  <?php if (count($subcat_body_list)): ?>
+    <?php foreach ($subcat_body_list as $i => $subcat_html): ?>
+      <div class="faq_category_indent"><?php print $subcat_html; ?></div>
+    <?php endforeach; ?>
+  <?php endif; ?>
 
   <!-- list questions (in title link) and answers (in body) -->
   <?php if (!empty($question_list)): ?>

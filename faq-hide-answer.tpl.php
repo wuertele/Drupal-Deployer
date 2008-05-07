@@ -14,15 +14,17 @@
  *   Is true if $node['body'] is a teaser.
  */
 ?><div>
-<?php foreach ($nodes as $node): ?>
-  <?php // Cycle through each of the nodes. We now have the variable $node to work with. ?>
-  <div class="faq_question faq_dt_hide_answer">
-  <?php print $node['question']; ?>
-  </div> <!-- Close div: faq_question faq_dt_hide_answer -->
+<?php if (count($nodes)): ?>
+  <?php foreach ($nodes as $node): ?>
+    <?php // Cycle through each of the nodes. We now have the variable $node to work with. ?>
+    <div class="faq_question faq_dt_hide_answer">
+    <?php print $node['question']; ?>
+    </div> <!-- Close div: faq_question faq_dt_hide_answer -->
 
-  <div class="faq_answer faq_dd_hide_answer">
-  <?php print $node['body']; ?>
-  <?php print $node['links']; ?>
-  </div> <!-- Close div: faq_answer faq_dd_hide_answer -->
-<?php endforeach; ?>
+    <div class="faq_answer faq_dd_hide_answer">
+    <?php print $node['body']; ?>
+    <?php print $node['links']; ?>
+    </div> <!-- Close div: faq_answer faq_dd_hide_answer -->
+  <?php endforeach; ?>
+<?php endif; ?>
 </div> <!-- Close div -->
