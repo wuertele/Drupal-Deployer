@@ -249,18 +249,19 @@ function services_method_call($method_name, $args = array()) {
   // Add additonal processing for methods requiring api key
   if (variable_get('services_use_key', TRUE)) {
     $api_key = array_shift($args);
-    if (!services_validate_key($api_key)) {
-      $domain = null;
-      $timestamp = null;
-      $hash =  null;
-     //strict domain matching
-     if(variable_get('services_domain_strict', false)){
-       $domain = array_shift($args);
-       $timestamp = array_shift($args);
-       $hash = $api_key;
-       $api_key = db_result(db_query("SELECT kid FROM {services_keys} WHERE domain = '%s'",$domain));
-     }
-     if (!services_validate_key($api_key, $timestamp, $domain,$hash)) {
+    $domain = null;
+    $timestamp = null;
+    $hash =  null;
+    // Check strict domain matching.
+    if (variable_get('services_domain_strict', false)) {
+      $domain = array_shift($args);
+      $timestamp = array_shift($args);
+      $hash = $api_key;
+      $api_key = db_result(db_query("SELECT kid FROM {services_keys} WHERE domain = '%s'", $domain));
+    }
+    if (!services_validate_key($api_key, $timestamp, $domain, $hash)) {
+      return services_error(t('Invalid API key.'));
+    }
   }
   
   // Add additonal processing for methods requiring authentication
