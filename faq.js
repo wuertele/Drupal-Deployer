@@ -1,38 +1,15 @@
 /* $Id$ */
-if (Drupal.jsEnabled) {
-  $(document).ready(function () {
-    // hide/show answer to question
-    $('div.faq_dd_hide_answer').hide();
-    $('div.faq_dt_hide_answer').click(function() {
-      $(this).next('div.faq_dd_hide_answer').slideToggle();
-      return false;
-    });
 
-
-    // hide/show q/a for a category
-    $('div.faq_qa_hide').hide();
-    $('div.faq_qa_header .faq_header').click(function() {
-      $(this).parent().next('div.faq_qa_hide').slideToggle();
-      return false;
-    });
-
-
-
-    // handle faq_category_settings_form
-    faq_display_handler();
-    questions_top_handler();
-    categories_handler();
-    teaser_handler();
-    $("input[@name=faq_display]").bind("click", faq_display_handler);
-    $("input[@name=faq_qa_mark]").bind("click", qa_mark_handler);
-    $("input[@name=faq_use_teaser]").bind("click", teaser_handler);
-    $("input[@name=faq_category_display]").bind("click", categories_handler);
-    $("input[@name=faq_hide_child_terms]").bind("click", child_term_handler);
-
-
-  });
+function teaser_handler(event) {
+  if ($("input[@name=faq_display]:checked").val() != "new_page") {
+    if ($("input[@name=faq_use_teaser]:checked").val() == 1) {
+      $("input[@name=faq_more_link]").removeAttr("disabled");
+    }
+    else {
+      $("input[@name=faq_more_link]").attr("disabled", "disabled");
+    }
+  }
 }
-
 
 function faq_display_handler(event) {
   // enable / disable "questions_inline" and "questions_top" only settings
@@ -57,8 +34,8 @@ function faq_display_handler(event) {
   teaser_handler(event);
 
   // enable / disable "new_page" and "questions_top" only settings
-  if ($("input[@name=faq_display]:checked").val() == "new_page"
-    || $("input[@name=faq_display]:checked").val() == "questions_top") {
+  if ($("input[@name=faq_display]:checked").val() == "new_page" ||
+    $("input[@name=faq_display]:checked").val() == "questions_top") {
     $("select[@name=faq_question_listing]").removeAttr("disabled");
   }
   else {
@@ -99,17 +76,6 @@ function qa_mark_handler(event) {
   }
 }
 
-function teaser_handler(event) {
-  if ($("input[@name=faq_display]:checked").val() != "new_page") {
-    if ($("input[@name=faq_use_teaser]:checked").val() == 1) {
-      $("input[@name=faq_more_link]").removeAttr("disabled");
-    }
-    else {
-      $("input[@name=faq_more_link]").attr("disabled", "disabled");
-    }
-  }
-}
-
 function questions_top_handler(event) {
   $("input[@name=faq_display]").val() == "questions_top" ?
     $("input[@name=faq_group_questions_top]").removeAttr("disabled"):
@@ -119,6 +85,17 @@ function questions_top_handler(event) {
     $("input[@name=faq_answer_category_name]").removeAttr("disabled"):
     $("input[@name=faq_answer_category_name]").attr("disabled", "disabled");
 }
+
+
+function child_term_handler(event) {
+  if ($("input[@name=faq_hide_child_terms]:checked").val() == 1) {
+    $("input[@name=faq_show_term_page_children]").attr("disabled", "disabled");
+  }
+  else if ($("input[@name=faq_category_display]:checked").val() != "categories_inline") {
+    $("input[@name=faq_show_term_page_children]").removeAttr("disabled");
+  }
+}
+
 
 function categories_handler(event) {
   if ($("input[@name=faq_display]").val() == "questions_top") {
@@ -146,18 +123,8 @@ function categories_handler(event) {
   child_term_handler();
 }
 
-function child_term_handler(event) {
-  if ($("input[@name=faq_hide_child_terms]:checked").val() == 1) {
-    $("input[@name=faq_show_term_page_children]").attr("disabled", "disabled");
-  }
-  else if ($("input[@name=faq_category_display]:checked").val() != "categories_inline") {
-    $("input[@name=faq_show_term_page_children]").removeAttr("disabled");
-  }
-}
-
-
 function faq_has_options(obj) {
-  if (obj != null && obj.options != null) {
+  if (obj !== null && obj.options !== null) {
     return true;
   }
   return false;
@@ -182,7 +149,7 @@ function faq_move_selected_item_up() {
   }
   for (i = 0; i < obj.options.length; i++) {
     if (obj.options[i].selected) {
-      if (i != 0 && !obj.options[i-1].selected) {
+      if (i !== 0 && !obj.options[i-1].selected) {
         faq_swap_options(obj, i, i-1);obj.options[i-1].selected = true;
       }
     }
@@ -206,7 +173,7 @@ function faq_move_selected_item_down() {
 
 function faq_update_order() {
   var obj = document.getElementById("edit-order-no-cats");
-  var ids = new Array();
+  var ids = [];
   for (var i = 0; i < obj.length; i++) {
     ids[i] = obj.options[i].value;
   }
@@ -231,19 +198,55 @@ function faq_order_by_date(order) {
   }
   form.faq_node_order.value = date_order;
 
-  var opt_text = new Array();
+  var opt_text = [];
   var opts = obj.options;
+  var id = 0;
+  var i = 0;
 
-  for (var i = 0; i < opts.length; i++) {
-    var id = opts[i].value;
+  for (i = 0; i < opts.length; i++) {
+    id = opts[i].value;
     opt_text[id] = opts[i].text;
   }
-  for (var i = 0; i < newIds.length; i++) {
-    var id = newIds[i];
+  for (i = 0; i < newIds.length; i++) {
+    id = newIds[i];
     var opt = new Option(opt_text[id], id);
     obj.options[i] = opt;
   }
 
+}
+
+if (Drupal.jsEnabled) {
+  $(document).ready(function () {
+    // hide/show answer to question
+    $('div.faq_dd_hide_answer').hide();
+    $('div.faq_dt_hide_answer').click(function() {
+      $(this).next('div.faq_dd_hide_answer').slideToggle();
+      return false;
+    });
+
+
+    // hide/show q/a for a category
+    $('div.faq_qa_hide').hide();
+    $('div.faq_qa_header .faq_header').click(function() {
+      $(this).parent().next('div.faq_qa_hide').slideToggle();
+      return false;
+    });
+
+
+
+    // handle faq_category_settings_form
+    faq_display_handler();
+    questions_top_handler();
+    categories_handler();
+    teaser_handler();
+    $("input[@name=faq_display]").bind("click", faq_display_handler);
+    $("input[@name=faq_qa_mark]").bind("click", qa_mark_handler);
+    $("input[@name=faq_use_teaser]").bind("click", teaser_handler);
+    $("input[@name=faq_category_display]").bind("click", categories_handler);
+    $("input[@name=faq_hide_child_terms]").bind("click", child_term_handler);
+
+
+  });
 }
 
 
