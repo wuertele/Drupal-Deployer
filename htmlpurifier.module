@@ -15,12 +15,53 @@ function htmlpurifier_help($path, $arg) {
 }
 
 /**
+ * Implementation of hook_cron().
+ * @note
+ *    Checks for updates to the HTML Purifier library.
+ */
+function htmlpurifier_cron() {
+  // Maybe this should be changed in the future:
+  $result  = drupal_http_request('http://htmlpurifier.org/live/VERSION');
+  $version = trim($result->data);
+  variable_set('htmlpurifier_version_current', $version);
+}
+
+/**
+ * Implementation of hook_init().
+ * @note
+ *    Displays any need to update the HTML Purifier library.
+ */
+function htmlpurifier_init() {
+  if (user_access('access administration pages')) {
+    $current = variable_get('htmlpurifier_version_current', false);
+    if (!$current) {
+      htmlpurifier_cron();
+      $current = variable_get('htmlpurifier_version_current', false);
+    }
+    $ours = variable_get('htmlpurifier_version_ours', false);
+    if (!$ours || version_compare($current, $ours, '>')) {
+      // Update our version number if it can't be found, or there's a mismatch.
+      _htmlpurifier_load();
+      $ours = variable_get('htmlpurifier_version_ours', false);
+    }
+    if ($current && $ours && version_compare($current, $ours, '>')) {
+      drupal_set_message(
+        t('Your version of HTML Purifier is currently out of date; '.
+        'the most recent version is %version. You can download the latest '.
+        'version at <a href="http://htmlpurifier.org">htmlpurifier.org</a>. '.
+        'To update, place the contents of HTML Purifier\'s <code>library/</code> folder in '.
+        '<code>modules/htmlpurifier/library/</code>',
+        array('%version' => $current)));
+    }
+  }
+}
+
+/**
  * Implementation of hook_filter().
  */
 function htmlpurifier_filter($op, $delta = 0, $format = -1, $text = '') {
   switch ($op) {
     case 'list':
-
       return array(0 => t('HTML Purifier'), 1 => t('HTML Purifier (advanced)'));
 
     case 'no cache':
@@ -45,22 +86,7 @@ function htmlpurifier_filter($op, $delta = 0, $format = -1, $text = '') {
       return $text;
 
     case 'process':
-      // We don't have any protection against double-purification.
-      
-      // Cache code:
-      $cid = $format . ':' . md5($text);
-      $cache = cache_get($cid, 'cache_htmlpurifier');
-      if ($cache) return $cache->data;
-      
-      // We ignore $delta, because the only difference it makes is with
-      // the configuration screen; behavior stays the same.
-      $config = _htmlpurifier_get_config($format);
-      $purifier = htmlpurifier_create_purifier($config);
-      $ret = $purifier->purify($text);
-      
-      cache_set($cid, $ret, 'cache_htmlpurifier', CACHE_PERMANENT);
-      
-      return $ret;
+      return _htmlpurifier_process($text, $format);
 
     case 'settings':
       return _htmlpurifier_settings($delta, $format);
@@ -70,30 +96,72 @@ function htmlpurifier_filter($op, $delta = 0, $format = -1, $text = '') {
   }
 }
 
-function htmlpurifier_create_purifier($config) {
-  // Load HTML Purifier library
-  $module_path = drupal_get_path('module', 'htmlpurifier');
-  require_once "$module_path/library/HTMLPurifier.auto.php";
-  return new HTMLPurifier($config);
+/**
+ * Processes HTML according to a format and returns purified HTML. Makes a 
+ * cache pass if possible.
+ * 
+ * @param string $text
+ *    Text to purify
+ * @param int $format
+ *    Input format corresponding to HTML Purifier's configuration.
+ * 
+ * @note
+ *    We ignore $delta because the only difference it makes is in the configuration
+ *    screen.
+ */
+function _htmlpurifier_process($text, $format) {
+  
+  $cid = $format . ':' . md5($text);
+  $cache = cache_get($cid, 'cache_htmlpurifier');
+  if ($cache) return $cache->data;
+  
+  _htmlpurifier_load();
+  $config = _htmlpurifier_get_config($format);
+  $purifier = new HTMLPurifier($config);
+  $ret = $purifier->purify($text);
+  
+  cache_set($cid, $ret, 'cache_htmlpurifier', CACHE_PERMANENT);
+  
+  return $ret;
 }
 
-function _htmlpurifier_get_config($format) {
-
-  // Overload HTML Purifiers default cache handler with our own so that
-  // Drupals built-in cache is used
+/**
+ * Loads the HTML Purifier library, and performs global initialization.
+ */
+function _htmlpurifier_load() {
+  if (class_exists('HTMLPurifier')) return;
   $module_path = drupal_get_path('module', 'htmlpurifier');
+  require_once "$module_path/library/HTMLPurifier.auto.php";
   require_once "$module_path/HTMLPurifier_DefinitionCache_Drupal.php";
   $factory = HTMLPurifier_DefinitionCacheFactory::instance();
   $factory->register('Drupal', 'HTMLPurifier_DefinitionCache_Drupal');
   
+  // Register the version as a variable:
+  if (!defined('HTMLPurifier::VERSION')) {
+    $purifier = new HTMLPurifier;
+    $version = $purifier->version;
+  } else {
+    $version = HTMLPurifier::VERSION;
+  }
+  variable_set('htmlpurifier_version_ours', $version);
+}
+
+/**
+ * Returns the HTMLPurifier_Config object corresponding to an input format.
+ * @param int $format
+ *    Input format.
+ * @return
+ *    Instance of HTMLPurifier_Config.
+ */
+function _htmlpurifier_get_config($format) {
+  
   $config_data = variable_get("htmlpurifier_config_$format", false);
   
   $config = HTMLPurifier_Config::createDefault();
+  
   $config->set('AutoFormat', 'AutoParagraph', true);
   $config->set('AutoFormat', 'Linkify', true);
-  
-  // Assuming this for now. This might not actually be the case.
-  $config->set('HTML', 'Doctype', 'XHTML 1.0 Transitional');
+  $config->set('HTML', 'Doctype', 'XHTML 1.0 Transitional'); // Probably
   $config->set('Core', 'AggressivelyFixLt', true);
   $config->set('Cache', 'DefinitionImpl', 'Drupal');
   
@@ -110,17 +178,26 @@ function _htmlpurifier_get_config($format) {
     $config->set('Attr', 'DefaultTextDir', 'rtl');
   }
   
-  // false, true, false = no index, everything is allowed, don't do mq fix
+  // {false, true, false} = {no index, everything is allowed, don't do mq fix}
   $config->mergeArrayFromForm($config_data, false, true, false);
   
   return $config;
   
 }
 
+/**
+ * Generates a settings form for configuring HTML Purifier.
+ * @param int $delta
+ *    Whether or not to use advanced form (1) or not (0).
+ * @param int $format
+ *    Input format being configured.
+ * @return
+ *    Form API array.
+ */
 function _htmlpurifier_settings($delta, $format) {
-  $module_path = drupal_get_path('module', 'htmlpurifier');
-  require_once "$module_path/library/HTMLPurifier.auto.php";
+  _htmlpurifier_load();
   
+  $module_path = drupal_get_path('module', 'htmlpurifier');
   drupal_add_css("$module_path/config-form.css");
   // Makes all configuration links open in new windows; can safe lots of grief!
   drupal_add_js('$(function(){$(".hp-config a").click(function(){window.open(this.href);return false;});});', 'inline');
