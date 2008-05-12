@@ -4,9 +4,22 @@
 /**
  * Implementation of hook_install().
  */
+
 function imagefield_install() {
+  content_notify('install', 'imagefield');
 }
 
+function imagefield_uninstall() {
+  content_notify('uninstall', 'imagefield');
+}
+
+function imagefield_enable() {
+  content_notify('enable', 'imagefield');
+}
+
+function imagefield_disable() {
+  content_notify('disable', 'imagefield');
+}
 
 /**
  * Data is now stored in per-field tables.
@@ -75,4 +88,30 @@ function imagefield_update_2() {
 
 
 
+/**
+ * Upgrade to CCK 2 and Drupal 6.
+ */
+function imagefield_update_6100() {
+  include_once('./'. drupal_get_path('module', 'content') .'/content_crud.inc');
+
+  $fields = content_fields();
+  foreach ($fields as $field) {
+    // Convert max_number_images to CCK's multiple limit.
+    if ($field['type'] == 'image' && isset($field['widget']['max_number_images'])) {
+      if ($field['widget']['max_number_images'] == 0) {
+        $field['multiple'] = 1; // 1 means "Unlimited" in CCK.
+      }
+      elseif ($field['widget']['max_number_images'] == 1) {
+        $field['multiple'] = 0; // 0 means "Not Multiple" in CCK.
+      }
+      else {
+        $field['multiple'] == $field['widget']['max_number_images'];
+      }
+      $field = array_merge($field, $field['widget']);
+      content_field_instance_update($field);
+    }
+  }
+
+  return array();
+}
 
