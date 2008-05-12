@@ -108,6 +108,7 @@ $depth = 0;
 
   </div> <!-- Close div -->
   </div> <!-- Close div: faq_category_group -->
+  </div>
 
   <?php if ($answer_category_name): ?>
     <?php while ($depth > 0): ?>
