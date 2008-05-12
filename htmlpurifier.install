@@ -27,6 +27,7 @@ function htmlpurifier_install() {
  */
 function htmlpurifier_uninstall() {
   drupal_uninstall_schema('htmlpurifier');
+  db_query("DELETE FROM {variable} WHERE name LIKE 'htmlpurifier%%'");
 }
 
 /**
@@ -76,14 +77,15 @@ function htmlpurifier_update_6200() {
   $formats = filter_formats();
   foreach ($formats as $format => $info) {
     $filters = filter_list_format($format);
-    if (!isset($filters[$format]['htmlpurifier/0'])) continue;
+    if (!isset($filters['htmlpurifier/0'])) continue;
     $config_data = array(
       'URI.DisableExternalResources' => variable_get("htmlpurifier_externalresources_$format", TRUE),
       'Attr.EnableID' => variable_get("htmlpurifier_enableattrid_$format", FALSE),
       'AutoFormat.Linkify' => variable_get("htmlpurifier_linkify_$format", TRUE),
       'AutoFormat.AutoParagraph' => variable_get("htmlpurifier_autoparagraph_$format", TRUE),
-      'Null_HTML.Allowed' => variable_get("htmlpurifier_allowedhtml_enabled_$format", FALSE),
-      'HTML.Allowed' => variable_get("htmlpurifier_allowedhtml_$format", '') : null,
+      'Null_HTML.Allowed' => !variable_get("htmlpurifier_allowedhtml_enabled_$format", FALSE),
+      'HTML.Allowed' => variable_get("htmlpurifier_allowedhtml_$format", ''),
+      'Filter.YouTube' => variable_get("htmlpurifier_preserveyoutube_$format", FALSE),
     );
     if (defined('HTMLPurifier::VERSION') && version_compare(HTMLPurifier::VERSION, '3.1.0-dev', '>=')) {
       $config_data['HTML.ForbiddenElements']   = variable_get("htmlpurifier_forbiddenelements_$format", '');
