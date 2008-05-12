@@ -129,6 +129,7 @@ function field_file_check_directory(&$directory, $mode = 0, $form_item = NULL) {
       if ($form_item) {
         form_set_error($form_item, t('The directory %directory does not exist.', array('%directory' => $directory)));
       }
+      watchdog('file system', 'The directory %directory does not exist.', array('%directory' => $directory), WATCHDOG_ERROR);
       return FALSE;
     }
   }
@@ -136,8 +137,10 @@ function field_file_check_directory(&$directory, $mode = 0, $form_item = NULL) {
   // Check to see if the directory is writable.
   if (!is_writable($directory)) {
     if (($mode & FILE_MODIFY_PERMISSIONS) && !@chmod($directory, 0775)) {
-      form_set_error($form_item, t('The directory %directory is not writable', array('%directory' => $directory)));
-      watchdog('file system', t('The directory %directory is not writable, because it does not have the correct permissions set.', array('%directory' => $directory)), WATCHDOG_ERROR);
+      if ($form_item) {
+        form_set_error($form_item, t('The directory %directory is not writable', array('%directory' => $directory)));
+      }  
+      watchdog('file system', 'The directory %directory is not writable, because it does not have the correct permissions set.', array('%directory' => $directory), WATCHDOG_ERROR);
       return FALSE;
     }
   }
@@ -149,9 +152,10 @@ function field_file_check_directory(&$directory, $mode = 0, $form_item = NULL) {
       chmod($directory .'/.htaccess', 0664);
     }
     else {
-      $message = t("Security warning: Couldn't write .htaccess file. Please create a .htaccess file in your %directory directory which contains the following lines: <code>!htaccess</code>", array('%directory' => $directory, '!htaccess' => '<br />'. nl2br(check_plain($htaccess_lines))));
-      form_set_error($form_item, $message);
-      watchdog('security', $message, WATCHDOG_ERROR);
+      $message =  "Security warning: Couldn't write .htaccess file. Please create a .htaccess file in your %directory directory which contains the following lines: <code>!htaccess</code>";
+      $repl =  array('%directory' => $directory, '!htaccess' => '<br />'. nl2br(check_plain($htaccess_lines)));
+      form_set_error($form_item, t($message, $repl));
+      watchdog('security', $message, $repl, WATCHDOG_ERROR);
     }
   }
 
