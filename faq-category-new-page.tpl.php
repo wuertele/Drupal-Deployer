@@ -2,6 +2,12 @@
 // $Id$
 
 /**
+ * @file
+ * Template file for the FAQ page if set to show the categorized answer in a
+ * new page.
+ */
+
+/**
  * Available variables:
  *
  * $display_header

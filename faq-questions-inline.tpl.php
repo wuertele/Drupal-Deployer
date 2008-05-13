@@ -2,6 +2,11 @@
 // $Id$
 
 /**
+ * @file
+ * Template file for the FAQ page if set to show the questions inline.
+ */
+
+/**
  * Available variables:
  *
  * $nodes

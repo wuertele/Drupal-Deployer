@@ -2,6 +2,11 @@
 // $Id$
 
 /**
+ * @file
+ * Template file for the FAQ page if set to show the answer in a new page.
+ */
+
+/**
  * Available variables:
  *
  * $list_style

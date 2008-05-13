@@ -2,6 +2,12 @@
 // $Id$
 
 /**
+ * @file
+ * Template file for the FAQ page if set to show the questions in a list at the
+ * top.
+ */
+
+/**
  * Available variables:
  *
  * $questions_list
