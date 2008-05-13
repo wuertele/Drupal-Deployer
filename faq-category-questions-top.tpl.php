@@ -3,7 +3,7 @@
 
 /**
  * @file
- * Template file for the questions section of the FAQ page if set to show 
+ * Template file for the questions section of the FAQ page if set to show
  * categorized questions at the top of the page.
  */
 
