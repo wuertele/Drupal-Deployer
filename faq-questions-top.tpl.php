@@ -42,4 +42,5 @@
   </div> <!-- Close div: faq_answer -->
   <?php // Increment $key to move on to the next position. ?>
   <?php $key++; ?>
-<?php endwhile; ?>
+<?php
+endwhile;

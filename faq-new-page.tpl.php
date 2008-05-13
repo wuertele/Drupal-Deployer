@@ -17,4 +17,5 @@
  *   Pre-formatted list.
  */
 ?>
-<?php print $list; ?>
+<?php
+print $list;

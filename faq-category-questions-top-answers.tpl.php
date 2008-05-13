@@ -121,4 +121,5 @@ $depth = 0;
       </div> <!-- Close div: faq_category_indent -->
     <?php $depth--; endwhile; ?>
   <?php endif; ?>
-<?php endif; //if display_answers ?>
+<?php
+endif; //if display_answers
