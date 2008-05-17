@@ -4,6 +4,9 @@
 
 // Copyright 2005 Khalid Baheyeldin http://2bits.com
 
+// 3600 is once an hour
+define('UPDATE_FREQUENCY', 3600);
+
 function currency_api_help($section) {
   switch ($section) {
     case 'admin/help#currency_api':
@@ -32,6 +35,15 @@ function currency_api_admin_settings() {
     '#type' => 'checkbox',
     '#title' => t('Log all currency exchange requests and errors to watchdog'),    
     '#default_value' => variable_get('currency_api_watchdog', 1),    
+  );
+
+  $period = drupal_map_assoc(array(900, 1800, 3600, 10800, 21600, 32400, 43200, 86400), 'format_interval');
+  $form['currency_api_fetch'] = array(
+    '#type' => 'select',
+    '#title' => t('Currency data update frequency'),
+    '#default_value' => variable_get('currency_api_fetch', UPDATE_FREQUENCY),
+    '#options' => $period,
+    '#description' => t('How long to keep the currency data from Yahoo! Finance. Default is 1 hour (3600 seconds).'),
   );
 
   return system_settings_form($form);
@@ -97,6 +109,11 @@ function currency_api_convert($currency_from, $currency_to, $amount = 1) {
   $from = strtoupper($currency_from);
   $to   = strtoupper($currency_to);
 
+  // load cached rate, if exists
+  $cached = currency_api_load($record, $currency_from, $currency_to);
+
+  if (!$record) {
+    // cached rate not found, go get it
   $url = 'http://download.finance.yahoo.com/d/quotes.csv?e=.csv&f='. currency_api_get_fields($currency_array) .'&s='. $from . $to .'=X';
 
   // Validate the passed currency codes, to make sure they are valid
@@ -133,6 +150,7 @@ function currency_api_convert($currency_from, $currency_to, $amount = 1) {
   } else {
     $record = file_get_contents($url);
   }
+  }
 
   if ($record) {
     $currency_data = explode(',', $record);
@@ -152,6 +170,11 @@ function currency_api_convert($currency_from, $currency_to, $amount = 1) {
     $result['time']   = $time;
     $result['status'] = TRUE;
     $result['message']= 'success';
+
+    if (!$cached) {
+      // cache rate does not exist, save it
+      currency_api_save($currency_from, $currency_to, $rate);
+    }
   }
   else {
     $msg = 'currency: cannot contact Yahoo Finance host';
@@ -192,18 +215,16 @@ function currency_api_convert($currency_from, $currency_to, $amount = 1) {
  *   has the description.
  */
 function currency_api_get_desc($currency) {
-  foreach (currency_api_get_list() as $key => $description) {
-    if ($key == $currency) {
-      return $description;
+  $list = currency_api_get_list();
+  if (isset($list[$currency])) {
+    return $list[$currency];
     }
-  }
-  
   return FALSE;
 }
 
 function currency_api_get_list() {
   $currency = array(
-    'AFN' => t('Afghanistani Afghani (AFA)'),
+    'AFA' => t('Afghanistani Afghani (AFA)'),
     'ALL' => t('Albanian Lek (ALL)'),
     'DZD' => t('Algerian Dinar (DZD)'),
     'ARS' => t('Argentine Peso (ARS)'),
@@ -373,7 +394,7 @@ function currency_api_get_symbols() {
   $currency = array(
     // There is a new sign as of January 2003. It does not yet have a Unicode
     // encoding yet (see http://std.dkuug.dk/jtc1/sc2/wg2/docs/n2640.pdf).
-    'AFN' => t('afghani'),
+    'AFA' => t('afghani'),
     'ALL' => t('Lek'),
     'DZD' => t('دج'),
     'ARS' => t('$'),
@@ -561,3 +582,50 @@ function _log_to_watchdog($msg = '', $severity = WATCHDOG_NOTICE, $type = 'user'
     watchdog($type, $msg, $severity);
   }
 }
+
+/**
+ *
+ * fetch cached rate for from and to countries
+ * retrieve from static array variable, else from database
+ * returns: rate by reference, true if exists otherwise false
+ *
+ */
+function currency_api_load(&$record, $currency_from, $currency_to) {
+  static $rate = array();
+  $cached = TRUE;
+
+  if (isset($rate[$currency_from][$currency_to])) {
+    // retrieve cached rate from static array variable
+    $record = $rate[$currency_from][$currency_to];
+  }
+  else {
+    $result = db_fetch_object(db_query("SELECT * FROM {currencyapi} WHERE currency_from = '%s' AND currency_to = '%s' AND timestamp > UNIX_TIMESTAMP( ) - %d", $currency_from, $currency_to, variable_get('currency_api_fetch', UPDATE_FREQUENCY)));
+    if ($result) {
+      $currency = array($currency_from . $currency_to . '=X', $result->rate, date('n/j/Y', $result->timestamp), date('g:ha', $result->timestamp));
+      $record = implode(',', $currency);
+      // cache rate in static array variable for subsequent queries
+      $rate[$currency_from][$currency_to] = $record;
+    }
+    else {
+      // rate does not exist in database cache
+      $record = null;
+      $cached = FALSE;
+    }
+  }
+
+  return $cached;
+}
+
+/**
+ *
+ * cache rate for from and to countries
+ * delete outdated record, if exists
+ * returns: true/false result from insert
+ *
+ */
+function currency_api_save($currency_from, $currency_to, $rate) {
+  // delete outdated record, if exists
+  db_query("DELETE FROM {currencyapi} WHERE currency_from = '%s' AND currency_to = '%s'", $currency_from, $currency_to);
+  return db_query("INSERT INTO {currencyapi} VALUES ('%s', '%s', %f, %d)", $currency_from, $currency_to, $rate, time());
+}
+
