@@ -201,7 +201,10 @@ function project_mail_notify($nid) {
 
   // Record users that are connected to this issue.
   $uids = array();
-  if ($node->assigned) {
+  if (!empty($node->uid)) {
+    $uids[$node->uid] = $node->uid;
+  }
+  if (!empty($node->assigned)) {
     $uids[$node->assigned] = $node->assigned;
   }
 
