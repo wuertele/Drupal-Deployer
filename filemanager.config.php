@@ -41,14 +41,28 @@ function CheckAuthentication()
   if (!isset($authenticated)) {
     $result = false;
 
-    $drupal_path = "../../../";
-    if(!file_exists($drupal_path . "/includes/bootstrap.inc")) {
-      $drupal_path = "../..";
-      do {
-        $drupal_path .= "/..";
-        $depth = substr_count($drupal_path, "..");
+    if (!empty($_SERVER['SCRIPT_FILENAME'])) {
+      $drupal_path = dirname(dirname(dirname(dirname($_SERVER['SCRIPT_FILENAME']))));
+      if(!file_exists($drupal_path . "/includes/bootstrap.inc")) {
+        $drupal_path = dirname(dirname(dirname($_SERVER['SCRIPT_FILENAME'])));
+        $depth = 2;
+        do {
+          $drupal_path = dirname($drupal_path);
+          $depth ++;          
+        }
+        while(!($bootstrapFileFound = file_exists($drupal_path . "/includes/bootstrap.inc")) && $depth<10);
       }
-      while(!($bootstrapFileFound = file_exists($drupal_path . "/includes/bootstrap.inc")) && $depth<10);
+    }
+    if (!isset($bootstrapFileFound) || !$bootstrapFileFound) {
+      $drupal_path = "../../../";
+      if(!file_exists($drupal_path . "/includes/bootstrap.inc")) {
+        $drupal_path = "../..";
+        do {
+          $drupal_path .= "/..";
+          $depth = substr_count($drupal_path, "..");
+        }
+        while(!($bootstrapFileFound = file_exists($drupal_path . "/includes/bootstrap.inc")) && $depth<10);
+      }
     }
     if (!isset($bootstrapFileFound) || $bootstrapFileFound) {
       $fck_cwd = getcwd();
