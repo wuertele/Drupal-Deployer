@@ -695,7 +695,7 @@ function fckeditor_process_textarea($element) {
     $wysiwyg_link .= $fckeditor_on ? t("Switch to plain text editor") : t("Switch to rich text editor");
     $wysiwyg_link .= "</a>";
     $wysiwyg_link .= "\n<script type=\"text/javascript\">";
-    $wysiwyg_link .= "window.setTimeout(\"CreateToggle('{$element['#id']}','{$js_id}', $fckeditor_on);\",100);\n</script>";
+    $wysiwyg_link .= "$(document).ready( function () {CreateToggle('{$element['#id']}','{$js_id}', $fckeditor_on);});\n</script>";
     //settings are saved as strings, not booleans
     if ($profile->settings['show_toggle'] == 't') {
       // Make sure to append to #suffix so it isn't completely overwritten
@@ -738,6 +738,7 @@ function fckeditor_process_textarea($element) {
     $textarea_id = $profile->settings['show_toggle'] == 't' ? $js_id : $element['#id'];
 
     $element['#suffix'] .= "\n<script type=\"text/javascript\">
+    $(document).ready( function() {
 var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
 ". $js_id .".BasePath	= '". $module_full_path ."/fckeditor/';
 ". $js_id .".Config['CustomConfigurationsPath'] = \"". $module_full_path ."/fckeditor.config.js\";
@@ -850,23 +851,24 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
       $conf['css_path'] = str_replace("%h%t", "%t", $conf['css_path']);
       $element['#suffix'] .=  $js_id .".Config['EditorAreaCSS'] = \"". str_replace(array('%h', '%t'), array($host, $host . $themepath), $conf['css_path']) .",". $module_full_path ."/fckeditor.css\";";
     }
+    // Inline mode, replace the textarea after initialising it
+    if ($conf['popup'] == "f") {
+      if ($fckeditor_on) {
+        $element['#suffix'] .= 'if ($("#edit-teaser-js").size() && $("#edit-teaser-js").val().length){
+        	$("#edit-body").val($("#edit-teaser-js").val() + "<!--break-->" + $("#edit-body").val());
+        }';
+        $element['#suffix'] .= $js_id .'.ReplaceTextarea();' ;
+      }
+    }
+
+    // end the $(document).ready implementation
+    $element['#suffix'] .= "});\n";
     $element['#suffix'] .= "</script>\n";
 
     if ($conf['popup']=="t") {
       // Add the script file with the popup open function.
       drupal_add_js($module_drupal_path .'/fckeditor.popup.js');
       $element['#suffix'] .= " <span class=\"fckeditor_popuplink\">(<a href=\"#\" onclick=\"FCKeditor_OpenPopup('". $module_full_path ."/fckeditor.popup.html?var=". $js_id ."&el=". $element['#id'] ."');return false;\">". t('Open rich editor') ."</a>)</span>";
-    }
-    else {
-      // if no popup mode, add the editor initialization to the footer
-      // this obviously needs print($closure) in page.tpl.php
-      if ($fckeditor_on) {
-        drupal_add_js('if (Drupal.jsEnabled) {$(document).ready(function() {if (typeof ('. $js_id .') != "undefined") {
-        if ($("#edit-teaser-js").size() && $("#edit-teaser-js").val().length){
-        	$("#edit-body").val($("#edit-teaser-js").val() + "<!--break-->" + $("#edit-body").val());
-        }
-        '. $js_id .'.ReplaceTextarea();}});}', 'inline', 'footer');
-      }
     }
   }
 
