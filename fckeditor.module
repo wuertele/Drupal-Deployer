@@ -835,9 +835,9 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
       }
     }
     else if (!empty($conf['css_style']) && $conf['css_style'] == 'self') {
-      $element['#suffix'] .=  $js_id .".Config['StylesXmlPath'] = \"". str_replace(array('%h', '%t', '%m'), array($host, $themepath, $module_drupal_path), $conf['styles_path']) ."\";\n";
+      $conf['styles_path'] = str_replace("%h%t", "%t", $conf['styles_path']);
+      $element['#suffix'] .=  $js_id .".Config['StylesXmlPath'] = \"". str_replace(array('%h', '%t', '%m'), array($host, $host . $themepath, $module_drupal_path), $conf['styles_path']) ."\";\n";
     }
-
     // add custom stylesheet if configured
     // lets hope it exists but we'll leave that to the site admin
     if ($conf['css_mode'] == 'theme') {
@@ -847,9 +847,9 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
       }
     }
     else if ($conf['css_mode'] == 'self') {
-      $element['#suffix'] .=  $js_id .".Config['EditorAreaCSS'] = \"". str_replace(array('%h', '%t'), array($host, $themepath), $conf['css_path']) .",". $module_full_path ."/fckeditor.css\";";
+      $conf['css_path'] = str_replace("%h%t", "%t", $conf['css_path']);
+      $element['#suffix'] .=  $js_id .".Config['EditorAreaCSS'] = \"". str_replace(array('%h', '%t'), array($host, $host . $themepath), $conf['css_path']) .",". $module_full_path ."/fckeditor.css\";";
     }
-
     $element['#suffix'] .= "</script>\n";
 
     if ($conf['popup']=="t") {
@@ -1635,7 +1635,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   '#default_value' => !empty($edit->settings['css_path']) ? $edit->settings['css_path'] : "",
   '#size' => 40,
   '#maxlength' => 255,
-  '#description' => t('Enter path to CSS file (<em>example: css/editor.css</em>) or a list of css files seperated by a comma (<em>example: /themes/garland/style.css,http://example.com/style.css</em>).<br />Macros: %h (host name: !host), %t (path to theme: !theme)<br />Be sure to select "define css" above.', array('!host' => base_path(), '!theme' => path_to_theme() .'/'))
+  '#description' => t('Enter path to CSS file (<em>example: css/editor.css</em>) or a list of css files seperated by a comma (<em>example: /themes/garland/style.css,http://example.com/style.css</em>).<br />Macros: %h (host name: !host), %t (path to theme: !theme)<br />Be sure to select "define css" above.', array('!host' => base_path(), '!theme' => base_path() . path_to_theme() .'/'))
   );
 
   $form['css']['css_style'] = array(
@@ -1652,7 +1652,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   '#default_value' => !empty($edit->settings['styles_path']) ? $edit->settings['styles_path'] : "",
   '#size' => 40,
   '#maxlength' => 255,
-  '#description' => t('Enter path to XML file with predefined styles (<em>example: /fckstyles.xml</em>).<br />Macros: %h (host name: !host), %t (path to theme: !theme), %m (path to FCKeditor module: !module)<br />Be sure to select "define path to fckstyles.xml" above.', array('!host' => base_path(), '!theme' => path_to_theme() .'/', '!module' => drupal_get_path('module', 'fckeditor')))
+  '#description' => t('Enter path to XML file with predefined styles (<em>example: /fckstyles.xml</em>).<br />Macros: %h (host name: !host), %t (path to theme: !theme), %m (path to FCKeditor module: !module)<br />Be sure to select "define path to fckstyles.xml" above.', array('!host' => base_path(), '!theme' => base_path() . path_to_theme() .'/', '!module' => drupal_get_path('module', 'fckeditor')))
   );
 
   $form['fckeditor_upload_settings'] = array(
