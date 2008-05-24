@@ -92,11 +92,12 @@ function views_service_get_view($view_name, $fields = array(), $args = array()) 
     return services_error('You do not have access to this view.');
   }
   
-  $result = views_build_view('result', $view, $args);
-  while ($node = db_fetch_object($result['result'])) {
-    $nodes[] = services_node_load(node_load(array('nid' => $node->nid)), $fields);
-  }
+  $view->set_arguments($args);
+  $view->execute();
   
+  foreach ($view->result as $node) {
+    $nodes[] = services_node_load(node_load($node->nid), $fields);
+  }
   return $nodes;
 }
 
