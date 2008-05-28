@@ -451,13 +451,32 @@ function imagefield_content_is_empty($item, $field) {
  */
 function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
   $form['#attributes'] += array('enctype' => 'multipart/form-data');
-  return array(
+ 
+  $widget = array();
+  
+  if ($field['widget']['custom_alt']) {
+    $widget['alt'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Alternate Text'),
+      '#default_value' => '',
+    );  
+  }  
+  if ($field['widget']['custom_title']) {
+    $widget['title'] = array(
+      '#type' => 'textfield',
+      '#title' => t('title'),
+      '#default_value' => '',
+    );  
+  }    
+  $widget['fid'] =  array(
     '#type' => $field['widget']['type'],
     '#description' =>  $field['widget']['description'],
-    '#default_value' => isset($items[$delta]) ? $items['delta'] : null,
+    '#default_value' => isset($items[$delta]) ? $items[$delta]['fid'] : null,
     '#field' => $field,
     '#delta' => $delta,
   );
+
+  return $widget;
 }
 
 function imagefield_widget_value($form, $edit = FALSE) {
@@ -466,16 +485,9 @@ function imagefield_widget_value($form, $edit = FALSE) {
   }  
 
   $field = $form['#field'];
-  $fieldname = $form['#field_name'];
+  $fieldname = $field['field_name'];
   $upload_name = $fieldname .'_'. $form['#delta'];
   
-
-  static $d;
-  if (!isset($d)) {
-    $d=1;
-    drupal_set_message('<pre>'. print_r($_FILES,1) .'</pre>');
-  }  
- 
 
   global $user;
   $widget_image_path = token_replace($field['widget']['image_path'], 'user', $user);
@@ -488,19 +500,16 @@ function imagefield_widget_value($form, $edit = FALSE) {
 
   $complete_image_path = file_directory_path() .'/'. $widget_image_path;
 
-  drupal_set_message('checking for: '. $upload_name);  
-  // Attach new files.
   if (!imagefield_check_directory($widget_image_path, $upload_name)) {
-    drupal_set_message('unable to check dir');
-    return '';
+    // watchdog.
+    return $form['#default_value'];
   }  
   
-  if ($file = file_save_upload($upload_name, $validators, $complete_image_path)) {
-    drupal_set_message('Scored on '. $upload_name);
-    return (array)$file;
+  if (!$file = file_save_upload($upload_name, $validators, $complete_image_path)) {
+    // watchdog.
+    return $form['#default_value'];
   }
-  drupal_set_message('upload failed');
-  return $form['#default_value'];
+  return $file->fid;
 }
 
 /**
@@ -510,10 +519,10 @@ function imagefield_widget_value($form, $edit = FALSE) {
  * an individual image edit form.
  */
 function imagefield_widget_default_process($element, $edit, &$form_state, $form) {
-  $fieldname = $element['#field_name'];
-  $field = $form['#field_info'][$fieldname];
- 
-  drupal_add_js(drupal_get_path('module', 'imagefield') .'/imagefield.js');
+  $field = $element['#field'];
+  $fieldname = $field['field_name'];
+
+  //drupal_add_js(drupal_get_path('module', 'imagefield') .'/imagefield.js');
   drupal_add_css(drupal_get_path('module', 'imagefield') .'/imagefield.css');
   drupal_set_message('<pre>'. var_export($element['#value'],1) .'</pre>');
   if (empty($element['#value']['fid'])) {
@@ -534,9 +543,16 @@ function imagefield_widget_default_process($element, $edit, &$form_state, $form)
     );
   }   
   else {
-    $element['file'] = array(
+    // load file from fid.
+    $file = field_file_load($element['#value']);
+    $element['preview'] = array(
       '#type' => 'markup',
-      '#value' => '<pre>'. print_r($element,1) .'</pre>',
+      '#value' => '<img src="'. file_create_url($file['filepath']) .'" />',
+    );  
+    $element['delete'] = array(
+      '#type' => 'checkbox',
+      '#default_value' => 0,
+      '#title' => t('delete'),
     );  
   }  
   return $element;
