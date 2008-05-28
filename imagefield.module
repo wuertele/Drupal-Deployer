@@ -47,6 +47,9 @@ function imagefield_theme() {
     'imagefield' => array(
       'arguments' => array('element' => null),
     ),
+    'imagefield_widget_default' => array(
+      'arguments' => array('element' => null),
+    ),  
     'imagefield_row' => array(
       'arguments' => array('element' => null),
     ),
@@ -65,6 +68,9 @@ function imagefield_theme() {
     'imagefield_formatter_path_plain' => array(
       'arguments' => array('element' => null),
     ),
+    'imagefield_element_file' => array(
+      'arguments' => array('element' => null),
+    ),  
   );
 }
 
@@ -76,209 +82,16 @@ function imagefield_elements() {
   $elements['imagefield_widget_default'] =  array(
     '#input' => TRUE,
     '#columns' => array('fid', 'title', 'alt'),
-    '#process' => array('imagefield_element_process'),
+    '#process' => array('imagefield_widget_default_process'),
+    '#value_callback' => 'imagefield_widget_value',
     '#tree' => TRUE,
     '#description' => t('Changes made to the attachments are not permanent until you save this post.'),
   );
+
+  $elements['imagefield_element_file_upload'] = array(
+    '#input' => TRUE,
+  );  
   return $elements;
-}
-
-/**
- * Process the image type element before displaying the field.
- */
-function imagefield_element_process($element, $edit, &$form_state, $form) {
-  $field = $element['#field'];
-  $fieldname = $field['field_name'];
-  drupal_add_js(drupal_get_path('module', 'imagefield') .'/imagefield.js');
-  drupal_add_css(drupal_get_path('module', 'imagefield') .'/imagefield.css');
-  // Pull in form state saved in storage.
-  form_get_cache($form_state['values']['form_build_id'], $form_state);
-  if (isset($form_state['storage'][$fieldname])) {
-    $form_state['values'][$fieldname] = $form_state['storage'][$fieldname];
-    // Unset the storage to keep the form from unnecessarily rebuilding.
-    unset($form_state['storage'][$fieldname]);
-  }
-  // Set an internal flag for requiredness. Prevents FAPI from interfering.
-  $element['#image_required'] = $element['#required'];
-  $element['#required'] = FALSE;
-  $files = array();
-  if (isset($form_state['values'])) {
-    // Set a default value if available.
-    if (!isset($form_state[$fieldname]) && isset($element['#default_value'])) {
-      $form_state['values'][$fieldname] = $element['#default_value'];
-    }
-    // @hack: Why is this data not complete before the element is built?
-    foreach ($form_state['values'][$fieldname] as $delta => $file) {
-      if (!empty($file['fid']))  $files[$file['fid']] = array_merge($file, field_file_load($file['fid']));
-    }
-  }
-  $form_state['values'][$fieldname] = $files;
-  $element['#files'] = $files;
-  foreach ($files as $fid => $file) {
-    $element[$fid]['flags']['delete'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Delete'),
-      '#default_value' => isset($file['flags']['delete']) ? $file['flags']['delete'] : 0,
-    );
-    $element[$fid]['admin_preview'] = array(
-      '#type' => 'markup',
-      '#value' => theme('imagefield_image', $file, $file['alt'], $file['title'], array('width' => '150'), FALSE),
-    );
-    $element[$fid]['description'] = array(
-      '#type' => 'markup',
-      '#value' => '<strong>'. t('Filename: ') .'</strong>'. $file['filename'],
-    );
-    $element[$fid]['alt'] = array(
-      '#type' => 'hidden',
-      '#value' => $file['filename'],
-    );
-    // overwrite with an input field if custom_alt is flagged;
-    if ($field['widget']['custom_alt']) {
-      $element[$fid]['alt'] = array(
-        '#type' => 'textfield',
-        '#title' =>  t('Alternate text'),
-        '#default_value' => $file['alt'],
-        '#description' => t('Alternate text to be displayed if the image cannot be displayed.'),
-        '#maxlength' => 255,
-        '#size' => 10,
-      );
-    }
-    $element[$fid]['title'] = array(
-      '#type' => 'hidden',
-      '#value' => $file['filename'],
-    );
-    // overwrite with an input field if custom_title is flagged;
-    if ($field['widget']['custom_title']) {
-      $element[$fid]['title'] = array(
-        '#type' => 'textfield',
-        '#title' =>  t('Title'),
-        '#default_value' =>  $file['title'],
-        '#description' => t('Text to be displayed on mouse overs.'),
-        '#maxlength' => 255,
-        '#size' => 10,
-      );
-    }
-    if ($file['filepath'] && !empty($file['flags']['hidden'])) {
-      // Render all the form values of this item if it is hidden.
-      $element[$fid]['title'] = array('#type' => 'value', '#value' => $file['title']);
-      $element[$fid]['alt'] = array('#type' => 'value', '#value' => $file['alt']);
-      $element[$fid]['flags']['delete'] = array('#type' => 'value', '#value' => !empty($file['flags']['delete']));
-    }
-    if ($element['#multiple']) {
-      $element[$fid]['weight'] = array(
-        '#type' => 'weight',
-        '#delta' => max('10', count($element['#files'])),
-      );
-    }
-    $element[$fid]['flags']['hidden'] = array('#type' => 'value', '#value' => !empty($file['flags']['hidden']));
-    $element[$fid]['filename'] = array('#type' => 'value',  '#value' => $file['filename']);
-    $element[$fid]['filepath'] = array('#type' => 'value',  '#value' => $file['filepath']);
-    $element[$fid]['filemime'] = array('#type' => 'value',  '#value' => $file['filemime']);
-    $element[$fid]['filesize'] = array('#type' => 'value',  '#value' => $file['filesize']);
-    $element[$fid]['fid'] = array('#type' => 'hidden',  '#value' => $file['fid']);
-  }
-  // Special handling for single value fields
-  if (!$element['#multiple'] && count($element['#files'])) {
-    $element['replace'] = array(
-      '#type' => 'markup',
-      '#value' => t('If a new image is chosen, the current image will be replaced upon submitting the form.'),
-    );
-  }
-  elseif ($element['#multiple_limit'] != 0 && $element['#multiple_limit'] <= count($element['#files'])) {
-    $element['replace'] = array(
-      '#type' => 'markup',
-      '#value' => format_plural($element['#multiple_limit'], 'You can only attach one image to this field. Delete the image if you wish to be able to upload a different one.', 'You can only attach @count images to this field. Delete an image if you wish to be able to upload different images.'),
-    );
-  }
-  // multiupload: add an add new field button.
-  // onchange ajax upload each file input after validation.
-  // update date 'file_inputs' with qty of file inputs.
-  // name file inputs $fieldname .'_upload_'. number of file input.
-  // inprepare form_values hook iterate over each input.
-  // can we display files sizes to predict the total size of an upload.
-  $extensions_description = empty($field['widget']['file_extensions'])
-  ? ''
-  : t('<br />Allowed extensions: %ext', array('%ext' => $field['widget']['file_extensions']));
-  // Seperate from tree becase of that silly things won't be
-  // displayed if they are a child of '#type' = form issue
-  $element['new'][$fieldname .'_upload'] = array(
-    '#type'  => 'file',
-    '#title' => t('Upload a new image'),
-    '#description' => $field['widget']['description'] . $extensions_description,
-    '#tree' => FALSE,
-    '#weight' => 9,
-    '#attributes' => array('class' => 'imagefield imagefield-'. $fieldname, 'accept' => str_replace(' ', '|', trim($field['widget']['file_extensions']))),
-  );
-  $element['new']['upload'] = array(
-    '#type' => 'button',
-    '#value' => t('Upload'),
-    '#ahah' => array(
-      'wrapper' => $element['#id'] .'-wrapper',
-      'path' => 'imagefield/js/'. $field['type_name'] .'/'. $field['field_name'],
-      'progress' => array('type' => 'bar', 'message' => t('Uploading image...')),
-    ),
-    '#weight' => 10,
-  );
-  return $element;
-}
-
-function _imagefield_widget_validate($element, &$form_state) {
-  $field = $element['#field'];
-  $fieldname = $field['field_name'];
-  $items =& $form_state['values'][$fieldname];
-  unset($items['new']);
- 
-  global $user;
-  $widget_image_path = token_replace($field['widget']['image_path'], 'user', $user);
-
-  $validators = array(
-    'file_validate_extensions' => array($field['widget']['file_extensions']),
-    'file_validate_size' => array($field['widget']['max_filesize']),
-    'file_validate_image_resolution' => array($field['widget']['max_resolution']),
-  );
-
-  $complete_image_path = file_directory_path() .'/'. $widget_image_path;
-
-  // Attach new files.
-  if (imagefield_check_directory($widget_image_path, $fieldname .'_upload') && $file = file_save_upload($fieldname .'_upload', $validators, $complete_image_path)) {
-    // If a single field, mark any other images for deletion.
-    if (count($items)) {
-      foreach ($items as $delta => $item_file) {
-        if (!$element['#multiple']) {
-          $items[$delta]['flags']['hidden'] = TRUE;
-          $items[$delta]['flags']['delete'] = TRUE;
-        }
-        if (empty($items[$delta]['fid'])) {
-          unset($items[$delta]);
-        }
-      }
-    }
-    $file = (array)$file;
-    $items[$file['fid']] = $file;
- }
- 
-  // Sum all the items marked for deletion.
-  $deleted = 0;
-  foreach ($items as $delta => $item) {
-    if (is_numeric($delta) && !empty($item['flags']['delete'])) {
-      $deleted++;
-    }
-  }
-
-  // Insure at least one image is going to be saved.
-  if ($element['#image_required']) {
-    if (!count($items)) {
-      form_set_error($field['field_name'] .'_upload', t('@field is required. Please upload an image.', array('@field' => $field['widget']['label'])));
-    }
-    else if (count($items) == $deleted ) {
-      form_set_error($field['field_name'] .'_upload',  t('@field is required. Please uncheck at least one delete checkbox or upload another image.', array('@field' => $field['widget']['label'])));
-    }
-  }
- 
-  // Prevent more than the maximum limit.
-  if ($element['#multiple'] && $element['#multiple_limit'] != 0 && count($items) - $deleted > $element['#multiple_limit']) {
-    form_set_error($field['field_name'] .'_upload', t('You are only allowed to upload up to %maximages images.', array('%maximages' => $element['#multiple_limit'])));
-  }
 }
 
 /**
@@ -348,6 +161,8 @@ function imagefield_field_settings($op, $field) {
         'fid' => array('type' => 'int', 'not null' => true, 'default' => '0'),
         'title' => array('type' => 'varchar', 'length' => 255, 'not null' => true, 'default' => '', 'sortable' => true),
         'alt' => array('type' => 'varchar', 'length' => 255, 'not null' => true, 'default' => '', 'sortable' => true),
+        // widget specific data storage where widgets can stick some serialized foo....
+        'data' => array('type' => 'text'),
       );
       return $columns;
 
@@ -444,7 +259,7 @@ function imagefield_field($op, $node, $field, &$items, $teaser, $page) {
     
     case 'delete':
       foreach ($items as $delta => $item) {
-        _imagefield_file_delete($item, true);
+        field_file_delete($item, true);
       }
       break;
 
@@ -456,7 +271,7 @@ function imagefield_field($op, $node, $field, &$items, $teaser, $page) {
         }
         // Load the complete file if a filepath is not available.
         if (!empty($item['fid']) && empty($item['filepath'])) {
-          $items[$delta] = array_merge($item, _imagefield_file_load($item['fid']));
+          $items[$delta] = array_merge($item, field_file_load($item['fid']));
         }
         // Add nid so formatters can create a link to the node.
         $items[$delta]['nid'] = $node->nid;
@@ -501,7 +316,7 @@ function imagefield_widget_info() {
     'imagefield_widget_default' => array(
       'label' => t('Image'),
       'field types' => array('image'),
-      'multiple values' => CONTENT_HANDLE_MODULE,
+      'multiple values' => CONTENT_HANDLE_CORE,
       'callbacks' => array('default value' => CONTENT_CALLBACK_CUSTOM),
     ),
   );
@@ -620,19 +435,86 @@ function _imagefield_scale_image($file, $resolution = 0) {
 /**
  * Implementation of hook_widget().
  */
-function imagefield_widget(&$form, &$form_state, $field, $items) {
+function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
   return array(
     '#type' => $field['widget']['type'],
-    '#title' => $field['widget']['label'],
-    '#weight' => $field['widget']['weight'],
-    '#default_value' => $items,
-    '#required' => $field['required'],
-    '#multiple' => $field['multiple'] == 0 ? FALSE : TRUE,
-    '#multiple_limit' => $field['multiple'] == 1 ? 0 : $field['multiple'],
-    '#element_validate' => array('_imagefield_widget_validate'),
-    '#field' => $field,
+    '#description' =>  $field['widget']['description'],
+    '#default_value' => isset($items[$delta]) ? $items['delta'] : null,
   );
 }
+
+/**
+ * Process the image type element before displaying the field.
+ *
+ * this process call back should either display an input[@type=file] or 
+ * an image edit form.
+ */
+function imagefield_widget_default_process($element, $edit, &$form_state, $form) {
+  $fieldname = $element['#field_name'];
+  $field = $form['#field_info'][$fieldname];
+ 
+  drupal_add_js(drupal_get_path('module', 'imagefield') .'/imagefield.js');
+  drupal_add_css(drupal_get_path('module', 'imagefield') .'/imagefield.css');
+
+  if (is_null($element['#value'])) {
+    $element['file'] = array(
+      '#type' => 'file',
+      '#title' => t('Upload Image'),
+      '#description' => $element['#description'],
+      '#weight' => 9,
+      '#attributes' => array('class' => 'imagefield imagefield-'. $fieldname, 'accept' => str_replace(' ', '|', trim($field['widget']['file_extensions']))),
+    );
+    $element['submit'] = array(
+      '#type' => 'button',
+      '#value' => t('Upload'),
+      '#weight' => 10,
+    );
+  }   
+  else {
+    $element['file'] = array(
+      '#type' => 'markup',
+      '#value' => '<pre>'. print_r($element['#value'],1) .'</pre>',
+    );  
+  }  
+  return $element;
+}
+
+function imagefield_widget_value($form, $edit = FALSE) {
+  // return nulls so widget process will create a file upload input if there
+  // is no input.
+  if ($edit === FALSE) {
+    return $form['#default_value'];
+  }  
+
+  $field_name = $form['#field_name'];
+  if (empty($form['#post']['files'][$field_name])) {
+    return $form['#default_value'];
+  }
+
+  $field = $form['#field_info'][$field_name];
+  
+  global $user;
+  $widget_image_path = token_replace($field['widget']['image_path'], 'user', $user);
+
+  $validators = array(
+    'file_validate_extensions' => array($field['widget']['file_extensions']),
+    'file_validate_size' => array($field['widget']['max_filesize']),
+    'file_validate_image_resolution' => array($field['widget']['max_resolution']),
+  );
+
+  $complete_image_path = file_directory_path() .'/'. $widget_image_path;
+
+  // Attach new files.
+  if (imagefield_check_directory($widget_image_path, $fieldname .'_upload') && $file = file_save_upload($fieldname .'_upload', $validators, $complete_image_path)) {
+    return $file;
+  }
+
+  return $form['#default_value'];
+}
+
+function _imagefield_widget_validate($element, &$form_state) {
+}
+
 
 /**
  * Implementation of hook_field_formatter_info().
@@ -668,7 +550,7 @@ function theme_imagefield_formatter_image_plain($element) {
   $item = $element['#item'];
 
   if (empty($item['fid']) && $field['use_default_image']) $item = $field['default_image'];
-  if (empty($item['filepath']))  $item = array_merge($item, _imagefield_file_load($item['fid']));
+  if (empty($item['filepath']))  $item = array_merge($item, field_file_load($item['fid']));
   
   $class = 'imagefield imagefield-'. $field['field_name'];
   return  theme('imagefield_image', $item, $item['alt'], $item['title'], array('class' => $class));
@@ -698,7 +580,7 @@ function theme_imagefield_formatter_path_plain($element) {
   $item = $element['#item'];
   if (empty($item['fid']) && $field['use_default_image'])  $item = $field['default_image'];
   // If there is no image on the database, use default.
-  if (empty($item['filepath']))  $item = array_merge($item, _imagefield_file_load($item['fid']));
+  if (empty($item['filepath']))  $item = array_merge($item, field_file_load($item['fid']));
 
   $attributes['class'] .= ' imagefield-formatter-path';
   return '<span '. drupal_attributes($attributes) .'>'. file_create_path($item['filepath']) .'</span>';
@@ -709,7 +591,7 @@ function theme_imagefield_formatter_url_plain($element) {
   $item = $element['#item'];
   if (empty($item['fid']) && $field['use_default_image'])  $item = $field['default_image'];
   // If there is no image on the database, use default.
-  if (empty($item['filepath']))  $item = array_merge($item, _imagefield_file_load($item['fid']));
+  if (empty($item['filepath']))  $item = array_merge($item, field_file_load($item['fid']));
 
   $attributes['class'] .= ' imagefield-formatter-url';
   return '<span '. drupal_attributes($attributes) .'>'. file_create_url($item['filepath']) .'</span>';
@@ -735,58 +617,7 @@ function theme_imagefield_row($element) {
  * FormAPI theme function. Theme the output of an image field.
  */
 function theme_imagefield_widget_default(&$element) {
-  $output = '';
-
-  // Always add tabledrag in case a table is created after uploads.
-  if ($element['#multiple']) {
-    drupal_add_tabledrag($element['#id'] .'-table', 'order', 'sibling', $element['#id'] .'-weight');
-  }
-
-  // Print out the existing images.
-  if ($element['#multiple'] && !empty($element['#files'])) {
-    $rows = array();
-    foreach ($element['#files'] as $fid => $file) {
-      $element[$fid]['weight']['#attributes']['class'] = isset($element[$fid]['weight']['#attributes']['class']) ? ($element[$fid]['weight']['#attributes']['class'] .' '. $element['#id'] .'-weight') : $element['#id'] .'-weight';
-
-      $row = array();
-      $row[] = array('data' => '', 'class' => 'content-multiple-drag');
-      $row[] = theme('imagefield_row', $element[$fid]);
-      $row[] = drupal_render($element[$fid]['weight']);
-      $rows[] = array('data' => $row, 'class' => 'draggable');
-    }
-
-    $existing_items = theme('table', array(), $rows, array('id' => $element['#id'] .'-table'));
-  }
-  elseif (!empty($element['#files'])) {
-    foreach ($element['#files'] as $file) {
-      if ($file['fid'] && empty($file['flags']['hidden'])) {
-        $existing_items = '<div class="clear-block">'. theme('imagefield_row', $element[$file['fid']]) .'</div>';
-        break;
-      }
-    }
-  }
-
-  if (isset($existing_items)) {
-    $existing_element = array(
-      '#type' => 'element',
-      '#title' => $element['#title'],
-      '#required' => $element['#image_required'],
-    );
-    $output .= theme('form_element', $existing_element, $existing_items);
-    unset($element['new'][$element['#field']['field_name'] .'_upload']['#title']);
-  }
-  else {
-    $element['new'][$element['#field']['field_name'] .'_upload']['#required'] = $element['#image_required'];
-  }
-
-  // Additional image information and upload controls.
-  if (isset($element['replace'])) {
-    $output .= '<div class="imagefield-edit-image-replace">'. drupal_render($element['replace']) .'</div>';
-  }
-  $output .= drupal_render($element['new']);
-  $output = '<div id="'. $element['#id'] .'-wrapper" class="imagefield-element clear-block">'. $output .'</div>';
-
-  return $output;
+  return $element['#children'];
 }
 
 function theme_imagefield_image($file, $alt = '', $title = '', $attributes = null, $getsize = true) {
