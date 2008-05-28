@@ -456,6 +456,7 @@ function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
     '#description' =>  $field['widget']['description'],
     '#default_value' => isset($items[$delta]) ? $items['delta'] : null,
     '#field' => $field,
+    '#delta' => $delta,
   );
 }
 
@@ -466,10 +467,15 @@ function imagefield_widget_value($form, $edit = FALSE) {
 
   $field = $form['#field'];
   $fieldname = $form['#field_name'];
-  drupal_set_message('<pre>'. print_r($_FILES,1) .'</pre>');
+  $upload_name = $fieldname .'_'. $form['#delta'];
+  
 
+  static $d;
+  if (!isset($d)) {
+    $d=1;
+    drupal_set_message('<pre>'. print_r($_FILES,1) .'</pre>');
+  }  
  
-  drupal_set_message('checking for uploads');  
 
   global $user;
   $widget_image_path = token_replace($field['widget']['image_path'], 'user', $user);
@@ -482,9 +488,15 @@ function imagefield_widget_value($form, $edit = FALSE) {
 
   $complete_image_path = file_directory_path() .'/'. $widget_image_path;
 
+  drupal_set_message('checking for: '. $upload_name);  
   // Attach new files.
-  if (imagefield_check_directory($widget_image_path, $fieldname) && $file = file_save_upload($fieldname, $validators, $complete_image_path)) {
-    drupal_set_message('We got a file!!');
+  if (!imagefield_check_directory($widget_image_path, $upload_name)) {
+    drupal_set_message('unable to check dir');
+    return '';
+  }  
+  
+  if ($file = file_save_upload($upload_name, $validators, $complete_image_path)) {
+    drupal_set_message('Scored on '. $upload_name);
     return (array)$file;
   }
   drupal_set_message('upload failed');
@@ -495,7 +507,7 @@ function imagefield_widget_value($form, $edit = FALSE) {
  * Process the image type element before displaying the field.
  *
  * this process call back should either display an input[@type=file] or 
- * an image edit form.
+ * an individual image edit form.
  */
 function imagefield_widget_default_process($element, $edit, &$form_state, $form) {
   $fieldname = $element['#field_name'];
@@ -504,13 +516,16 @@ function imagefield_widget_default_process($element, $edit, &$form_state, $form)
   drupal_add_js(drupal_get_path('module', 'imagefield') .'/imagefield.js');
   drupal_add_css(drupal_get_path('module', 'imagefield') .'/imagefield.css');
   drupal_set_message('<pre>'. var_export($element['#value'],1) .'</pre>');
-  if (empty($element['#value'])) {
-    $element['file'] = array(
+  if (empty($element['#value']['fid'])) {
+    $element['file_'. $element['#delta']] = array(
       '#type' => 'file',
       '#title' => t('Upload Image'),
       '#description' => $element['#description'],
       '#weight' => 9,
       '#attributes' => array('class' => 'imagefield imagefield-'. $fieldname, 'accept' => str_replace(' ', '|', trim($field['widget']['file_extensions']))),
+      // emulate how FAPI normalizes the _FILES array since this won't go through form_builder.
+      '#name' => 'files['. $fieldname .'_'. $element['#delta'] .']',
+      '#tree' => FALSE,
     );
     $element['submit'] = array(
       '#type' => 'button',
@@ -521,7 +536,7 @@ function imagefield_widget_default_process($element, $edit, &$form_state, $form)
   else {
     $element['file'] = array(
       '#type' => 'markup',
-      '#value' => '<pre>'. print_r($element['#value'],1) .'</pre>',
+      '#value' => '<pre>'. print_r($element,1) .'</pre>',
     );  
   }  
   return $element;
