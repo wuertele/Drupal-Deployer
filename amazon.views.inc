@@ -90,6 +90,8 @@ function amazon_views_data() {
 
   _amazon_make_simple_text_field($data, 'amazon_item_participant', 'participant', 'Participant name', 'The name of an individual who participated in the creation of a product.');
   _amazon_make_simple_text_field($data, 'amazon_item_participant', 'type', 'Participant role', 'The role the participant had in creating the product (author, artist, etc).');
+  //$data['amazon_item_participant']['participant']['argument']['handler'] = 'views_handler_argument_many_to_one';
+  unset($data['amazon_item_participant']['type']['argument']);
 
   // participants_all
   $data['amazon_item_participant']['participants_all'] = array(
@@ -142,6 +144,7 @@ function _amazon_make_simple_text_field(&$data, $table, $column, $title, $help =
       'handler' => 'views_handler_field',
       'click sortable' => TRUE,
      ),
+    'argument' => array('handler' => 'views_handler_argument_string'),
     'filter' => array('handler' => 'views_handler_filter_string'),
     'sort' => array('handler' => 'views_handler_sort'),
   );
