@@ -19,43 +19,12 @@
 function amazon_views_data() {
   // Basic table information.
 
-  // Define the base group of this table. Fields that don't
-  // have a group defined will go into this field by default.
-  $data['amazon_item_node']['table']['group']  = t('Node');
-
-  // For other base tables, explain how we join
-  $data['amazon_item_node']['table']['join'] = array(
-    'amazon_item' => array(
-      'handler' => 'views_join', // this is actually optional
-      'arguments' => array('amazon_item_node', 'amazon_item', 'asin', 'asin'),
-     ),
-    'node' => array(
-      'handler' => 'views_join', // this is actually optional
-      'arguments' => array('amazon_item_node', 'node', 'vid', 'vid'),
-     ),
-  );
-
-  // ----------------------------------------------------------------
-  // Fields
-
-  // delta
-  $data['amazon_item_node']['module'] = array(
-    'title' => t('Amazon item source'), // The item it appears as on the UI,
-    'help' => t('The module that associated a product with the node.'), // The help that appears on the UI,
-    // Information for accepting a nid as a filter
-    'filter' => array(
-      'handler' => 'views_handler_filter_amazon_node_module',
-    ),
-  );
-
-
   // ----------------------------------------------------------------
   // Core amazon_item table
 
-
   // Define the base group of this table. Fields that don't
   // have a group defined will go into this field by default.
-  $data['amazon_item']['table']['group']  = t('Amazon item');
+  $data['amazon_item']['table']['group']  = t('Amazon');
 
   // Advertise this table as a possible base table
   $data['amazon_item']['table']['base'] = array(
@@ -67,7 +36,7 @@ function amazon_views_data() {
 
   // ----------------------------------------------------------------
   // Fields
-  _amazon_make_simple_text_field($data, 'asin', 'ASIN', 'The product ID of the item.');
+  _amazon_make_simple_text_field($data, 'amazon_item', 'asin', 'ASIN', 'The product ID of the item.');
 
   // title
   $data['amazon_item']['title'] = array(
@@ -77,7 +46,6 @@ function amazon_views_data() {
     'field' => array(
       'field' => 'title', // the real field
       'handler' => 'views_handler_field_amazon_title',
-      'group' => t('Amazon item'), // The group it appears in on the UI,
       'click sortable' => TRUE,
      ),
   );
@@ -90,34 +58,88 @@ function amazon_views_data() {
     'field' => array(
       'field' => 'detailpageurl', // the real field
       'handler' => 'views_handler_field',
-      'group' => t('Amazon item'), // The group it appears in on the UI,
       'click sortable' => FALSE,
      ),
   );
 
-  _amazon_make_simple_number_field($data, 'salesrank', 'Sales rank', 'The current sales ranking of the product on Amazon.com.');
-  _amazon_make_simple_text_field($data, 'publisher', 'Publisher', 'The publisher of the product.');
-  _amazon_make_simple_text_field($data, 'manufacturer', 'Manufacturer', 'The manufacturer of the product.');
-  _amazon_make_simple_text_field($data, 'studio', 'Studio', 'The name of the studio that published the product.');
-  _amazon_make_simple_text_field($data, 'label', 'Label', 'The name of the label that published the product.');
-  _amazon_make_simple_text_field($data, 'binding', 'Binding', 'The style of binding used for the product.');
-  _amazon_make_simple_text_field($data, 'releasedate', 'Release date', 'The release date of the product.');
-  _amazon_make_simple_text_field($data, 'productgroup', 'Product group', 'The Amazon grouping the product is categorized in.');
-  _amazon_make_simple_text_field($data, 'producttypename', 'Product type name', 'The Amazon internal product-type code for the product.');
+  _amazon_make_simple_number_field($data, 'amazon_item', 'salesrank', 'Sales rank', 'The current sales ranking of the product on Amazon.com.');
+  _amazon_make_simple_text_field($data, 'amazon_item', 'publisher', 'Publisher', 'The publisher of the product.');
+  _amazon_make_simple_text_field($data, 'amazon_item', 'manufacturer', 'Manufacturer', 'The manufacturer of the product.');
+  _amazon_make_simple_text_field($data, 'amazon_item', 'studio', 'Studio', 'The name of the studio that published the product.');
+  _amazon_make_simple_text_field($data, 'amazon_item', 'label', 'Label', 'The name of the label that published the product.');
+  _amazon_make_simple_text_field($data, 'amazon_item', 'binding', 'Binding', 'The style of binding used for the product.');
+  _amazon_make_simple_text_field($data, 'amazon_item', 'productgroup', 'Product group', 'The Amazon grouping the product is categorized in.');
+  _amazon_make_simple_text_field($data, 'amazon_item', 'producttypename', 'Product type name', 'The Amazon internal product-type code for the product.');
+
+  // We probably want to convert this to a real date field.
+  _amazon_make_simple_text_field($data, 'amazon_item', 'releasedate', 'Release date', 'The release date of the product.');
+  _amazon_make_simple_number_field($data, 'amazon_item', 'listpriceamount', 'List price', 'The current list price of the item. (Unformatted)');
+
+
+  // Define the base group of this table. Fields that don't
+  // have a group defined will go into this field by default.
+  $data['amazon_item_participant']['table']['group']  = t('Amazon');
+
+  $data['amazon_item_participant']['table']['join'] = array(
+    // participant links to amazon_item directly via asin.
+    'amazon_item' => array(
+      'left_field' => 'asin',
+      'field' => 'asin',
+    ),
+  );
+
+  _amazon_make_simple_text_field($data, 'amazon_item_participant', 'participant', 'Participant name', 'The name of an individual who participated in the creation of a product.');
+  _amazon_make_simple_text_field($data, 'amazon_item_participant', 'type', 'Participant role', 'The role the participant had in creating the product (author, artist, etc).');
+
+  // participants_all
+  $data['amazon_item_participant']['participants_all'] = array(
+    'title' => t('All participants'), // The item it appears as on the UI,
+    'help' => t("The names of all individuals who participated in the creation of a product, grouped as a single field."), // The help that appears on the UI,
+     // Information for displaying a title as a field
+    'field' => array(
+      'field' => 'participant', // the real field
+      'handler' => 'views_handler_field_amazon_participant',
+      'click sortable' => FALSE,
+     ),
+  );
+
+
+  // Define the base group of this table. Fields that don't
+  // have a group defined will go into this field by default.
+  $data['amazon_item_image']['table']['group']  = t('Amazon');
+
+  $data['amazon_item_image']['table']['join'] = array(
+    // participant links to amazon_item directly via asin.
+    'amazon_item' => array(
+      'left_field' => 'asin',
+      'field' => 'asin',
+    ),
+  );
+
+  // image
+  $data['amazon_item_image']['product_image'] = array(
+    'title' => t('Product image'), // The item it appears as on the UI,
+    'help' => t("A photo of the Amazon product in question."), // The help that appears on the UI,
+     // Information for displaying a title as a field
+    'field' => array(
+      'field' => 'url', // the real field
+      'handler' => 'views_handler_field_amazon_image',
+      'click sortable' => FALSE,
+     ),
+  );
 
   return $data;
 }
 
 
-function _amazon_make_simple_text_field(&$data, $column, $title, $help = '') {
-  $data['amazon_item'][$column] = array(
+function _amazon_make_simple_text_field(&$data, $table, $column, $title, $help = '') {
+  $data[$table][$column] = array(
     'title' => t($title), // The item it appears as on the UI,
     'help' => t($help), // The help that appears on the UI,
      // Information for displaying a title as a field
     'field' => array(
       'field' => $column, // the real field
       'handler' => 'views_handler_field',
-      'group' => t('Amazon item'), // The group it appears in on the UI,
       'click sortable' => TRUE,
      ),
     'filter' => array('handler' => 'views_handler_filter_string'),
@@ -125,8 +147,8 @@ function _amazon_make_simple_text_field(&$data, $column, $title, $help = '') {
   );
 }
 
-function _amazon_make_simple_number_field(&$data, $column, $title, $help = '') {
-  $data['amazon_item'][$column] = array(
+function _amazon_make_simple_number_field(&$data, $table, $column, $title, $help = '') {
+  $data[$table][$column] = array(
     'title' => t($title), // The item it appears as on the UI,
     'help' => t($help), // The help that appears on the UI,
      // Information for displaying a title as a field
@@ -134,7 +156,6 @@ function _amazon_make_simple_number_field(&$data, $column, $title, $help = '') {
       'field' => $column, // the real field
       'handler' => 'views_handler_field_numeric',
       'click sortable' => TRUE,
-      'group' => t('Amazon item'), // The group it appears in on the UI,
      ),
     'filter' => array('handler' => 'views_handler_filter_numeric'),
     'sort' => array('handler' => 'views_handler_sort'),
@@ -166,6 +187,11 @@ class views_handler_filter_amazon_node_module extends views_handler_filter_in_op
 }
 
 class views_handler_field_amazon_title extends views_handler_field {
+  function options(&$options) {
+    parent::options($options);
+    $options['link_format'] = 'amazon';
+  }
+
   /**
    * Override init function to provide generic option to link to node.
    */
@@ -181,10 +207,10 @@ class views_handler_field_amazon_title extends views_handler_field {
    */
   function options_form(&$form, &$form_state) {
     $form['link_format'] = array(
-      '#title' => t('Display the title as'),
+      '#title' => t('Link behavior'),
       '#type' => 'radios',
       '#options' => array(
-        'plain' => t('Plain text'),
+        'plain' => t('No link'),
         'amazon' => t("A link to the product's Amazon page"),
       ),
       '#default_value' => !empty($this->options['link_format']) ? $this->options['link_format'] : 'plain',
@@ -207,6 +233,138 @@ class views_handler_field_amazon_title extends views_handler_field {
         return l($title, check_url($values->{$this->table_alias . '_detailpageurl'}), array('html' => TRUE));
         break;
     }
+  }
+}
+
+
+class views_handler_field_amazon_image extends views_handler_field {
+  function options(&$options) {
+    parent::options($options);
+    $options['image_size'] = 'smallimage';
+    $options['link_format'] = 'amazon';
+  }
+
+  /**
+   * Override init function to provide generic option to link to node.
+   */
+  function init(&$view, &$data) {
+    parent::init($view, $data);
+    if (!empty($data['image_size'])) {
+      //$this->additional_fields[] = 'size';
+      $this->additional_fields[] = 'height';
+      $this->additional_fields[] = 'width';
+    }
+    if (!empty($data['link_format']) && $data['link_format'] == 'amazon') {
+      $this->additional_fields['detailpageurl'] = array('table' => 'amazon_item', 'field' => 'detailpageurl');
+    }
+  }
+
+  function ensure_my_table() {
+    if (empty($this->table_alias)) {
+      $join_extra = array();
+      if (!empty($this->options['image_size'])) {
+        $join_extra[] = array('field' => 'size', 'value' => $this->options['image_size'], 'numeric' => FALSE);
+      }
+
+      $join = new views_join();
+      $join->construct($this->table, 'amazon_item', 'asin', 'asin', $join_extra);
+
+      $this->table_alias = $this->query->ensure_table($this->table, $this->relationship, $join);
+    }
+    return $this->table_alias;
+  }
+
+  /**
+   * Provide link to node option
+   */
+  function options_form(&$form, &$form_state) {
+    $form['image_size'] = array(
+      '#title' => t('Image size'),
+      '#type' => 'select',
+      '#options' => array(
+        'smallimage' => t('Small'),
+        'mediumimage' => t("Medium"),
+        'largeimage' => t("Large"),
+      ),
+      '#default_value' => !empty($this->options['image_size']) ? $this->options['image_size'] : 'MedumImage',
+    );
+
+    $form['link_format'] = array(
+      '#title' => t('Link behavior'),
+      '#type' => 'radios',
+      '#options' => array(
+        'plain' => t('No link'),
+        'amazon' => t("A link to the product's Amazon page"),
+      ),
+      '#default_value' => !empty($this->options['link_format']) ? $this->options['link_format'] : 'plain',
+    );
+    if ($this->view->base_table == 'node') {
+      $form['link_format']['#options']['node'] = t('A link to the node the product is associated with');
+    }
+  }
+
+  function render($values) {
+    $attributes = array(
+      'height' => $values->{$this->table_alias . '_height'},
+      'width' => $values->{$this->table_alias . '_width'},
+    );
+    $image = theme('image', $values->{$this->table_alias . '_url'}, NULL, NULL, $attributes, FALSE);
+
+    switch($this->options['link_format']) {
+      case 'plain':
+        return $image;
+        break;
+      case 'node':
+        return l($image, 'node/'. $values->nid, array('html' => TRUE));
+        break;
+      case 'amazon':
+        $urlfield = $this->additional_fields['detailpageurl']['field'];
+        if (!empty($this->relationship)) {
+          $urlfield = $this->relationship .'_'. $urlfield;
+        }
+        return l($image, $values->{$urlfield}, array('html' => TRUE));
+        break;
+    }
+  }
+}
+
+
+class views_handler_field_amazon_participant extends views_handler_field_prerender_list {
+  function init(&$view, $options) {
+    parent::init($view, $options);
+    $this->additional_fields['participant_type'] = array('table' => 'amazon_item_participants', 'field' => 'type');
+  }
+
+  /**
+   * Provide meaningful defaults
+   */
+  function options(&$options) {
+    parent::options($options);
+    $options['limit'] = FALSE;
+    $options['participant_types'] = array();
+  }
+
+  /**
+   * Provide "link to term" option.
+   */
+  function options_form(&$form, &$form_state) {
+    parent::options_form($form, $form_state);
+    $form['limit'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Limit participants by by type'),
+      '#default_value'=> $this->options['limit'],
+    );
+
+    $form['participant_types'] = array(
+      '#prefix' => '<div><div id="edit-options-types">',
+      '#suffix' => '</div></div>',
+      '#type' => 'checkboxes',
+      '#title' => t('Vocabularies'),
+      '#options' => array('Author','Artist','Actor','Director','Creator'),
+      '#default_value' => $this->options['participant_types'],
+      '#process' => array('expand_checkboxes', 'views_process_dependency'),
+      '#dependency' => array('edit-options-limit' => array(TRUE)),
+    );
   }
 }
 
