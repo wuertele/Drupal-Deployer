@@ -1,0 +1,44 @@
+<?php
+// $Id$
+
+function amazon_node_info() {
+  return array(
+    'amazon' => array(
+      'name' => t('Amazon review'),
+      'module' => 'aat_legacy',
+      'description' => t('A review of an Amazon.com product.'),
+      'locked' => TRUE,
+    ),
+    'amazon_node' => array(
+      'name' => t('Amazon data'),
+      'module' => 'aat_legacy',
+      'description' => t('Legacy Amazon data created by the Amazon Associates Tools module.'),
+      'has_body' => FALSE,
+      'locked' => TRUE,
+    )
+  );
+}
+
+function aat_legacy_load($node) {
+  $asins = array();
+  $sql = "SELECT * FROM {amazon_item_node} ain WHERE ain.nid = %d ORDER BY delta ASC WHERE ain.module = 'aat_legacy'";
+  $results = db_query($sql, $node->nid);
+  while ($asin = db_fetch_array($results)) {
+    $asins[$asin['asin']] = $asin;
+  }
+  $node->aat_legacy_items = $asins;
+}
+
+function aat_legacy_view(&$node, $teaser = FALSE, $page = FALSE) {
+  $asins = amazon_item_lookup(array_keys($node->aat_legacy_items));
+  foreach ($asins as $asin) {
+    $node->content['aat_legacy_items'][] = array(
+      '#type' => 'markup',
+      '#value' => theme('amazon_item', theme('amazon_item', $product))
+    );
+  }
+}
+
+function aat_legacy_delete(&$node) {
+  amazon_item_node_delete(NULL, $node->nid, 'aat_legacy');
+}

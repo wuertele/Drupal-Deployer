@@ -1,0 +1,16 @@
+<?php
+// $Id$
+
+// Migrate data from the old Amazon Associates Tools.
+function aat_legacy_install() {
+  if (db_table_exists('amazonnode')) {
+    $select  = "SELECT a.nid, a.asin FROM {amazonnode} a ";
+    $select .= "WHERE a.ntype IN ('amazon', 'amazon_node')";
+
+    $insert = "INSERT INTO {amazon_item_node} (nid, vid, asin, module) VALUES (%d, %d, '%s', '%s')";
+    $results = db_query($select);
+    while ($asin = db_fetch_object($results)) {
+      db_query($insert, $asin['nid'], -1, $asin['asin'], 'aat_legacy');
+    }
+  }
+}

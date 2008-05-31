@@ -534,13 +534,16 @@ function amazon_cron() {
     $asins[] = $item['asin'];
   }
 
-  if ($items = amazon_item_lookup_from_web($asins)) {
-    foreach ($items as $item) {
-      amazon_item_save($item);
+  if (!empty($asins)) {
+    if ($items = amazon_item_lookup_from_web($asins)) {
+      foreach ($items as $item) {
+        amazon_item_save($item);
+      }
+      watchdog('Amazon', 'Amazon items were updated.');
     }
-  }
-  else {
-    watchdog('Amazon', t('Amazon items could not be updated.'));
+    else {
+      watchdog('Amazon', 'Amazon items could not be updated.');
+    }
   }
 }
 
