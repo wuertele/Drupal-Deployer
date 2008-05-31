@@ -269,17 +269,20 @@ function amazon_item_lookup_from_db($item_ids = array()) {
 function _amazon_load_child_data(&$item) {
   $result = db_query("SELECT type, participant FROM {amazon_item_participant} WHERE asin = '%s'", $item['asin']);
   while ($participant = db_fetch_array($result)) {
+    unset($participant['asin']);
     $item[$participant['type']][] = $participant['participant'];
     $item['participants'][] = $participant['participant'];
   }
 
   $result = db_query("SELECT * FROM {amazon_item_image} WHERE asin = '%s'", $item['asin']);
   while ($image = db_fetch_array($result)) {
+    unset($item['asin']);
     $item['imagesets'][$image['size']] = $image;
   }
 
   $result = db_query("SELECT * FROM {amazon_item_editorial_review} WHERE asin = '%s'", $item['asin']);
   while ($review = db_fetch_array($result)) {
+    unset($review['asin']);
     $item['editorialreviews'][] = $review;
   }
 }
@@ -350,7 +353,7 @@ function amazon_item_clean_xml($xml) {
 
   // Give other modules an opportunity to pull out other bits of Amazon data
   // that would otherwise be ignored.
-  foreach (module_implements('_amazon_item_clean_xml') as $module) {
+  foreach (module_implements('amazon_item_clean_xml') as $module) {
     $function = $module .'_amazon_item_clean_xml';
     $function($item, $xml);
   }
@@ -359,6 +362,8 @@ function amazon_item_clean_xml($xml) {
 
 function amazon_item_insert($item) {
   $metadata = amazon_data_cache();
+
+  $item['timestamp'] = time();
   drupal_write_record('amazon_item', $item);
 
   // Handle the various credits for a product, including Artist, Author,
