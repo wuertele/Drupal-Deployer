@@ -297,6 +297,12 @@ function amazon_item_clean_xml($xml) {
   $item['salesrank'] = (string)$xml->SalesRank;
   $item['detailpageurl'] = (string)$xml->DetailPageURL;
 
+  if (!empty($xml->ItemAttributes->ListPrice)) {
+    $item['listpriceamount'] = (string)$xml->ItemAttributes->ListPrice->Amount;
+    $item['listpricecurrencycode'] = (string)$xml->ItemAttributes->ListPrice->CurrencyCode;
+    $item['listpriceformattedprice'] = (string)$xml->ItemAttributes->ListPrice->FormattedPrice;
+  }
+
   $participant_types = split(',', AMAZON_PARTICIPANT_TYPES);
 
   // Pull in the basics of the ItemAttributes collection.
@@ -307,20 +313,12 @@ function amazon_item_clean_xml($xml) {
     }
   }
 
-  // Handle the Authors/Artists/Etc. This is a little bit ugly, but it's kind of
-  // unavoidable given Amazon's penchant for using a duplicate element types
-  // rather than wrapper elements.
+  // Handle the Authors/Artists/Etc.
   foreach ($participant_types as $key) {
     if (isset($xml->ItemAttributes->$key)) {
-      if (is_array($xml->ItemAttributes->$key)) {
-        foreach($xml->ItemAttributes->$key as $value) {
-          $item[strtolower($key)][] = $value;
-          $item['participants'][] = (string)$xml->ItemAttributes->$key;
-        }
-      }
-      else {
-        $item[strtolower($key)] = array((string)$xml->ItemAttributes->$key);
-        $item['participants'][] = (string)$xml->ItemAttributes->$key;
+      foreach($xml->ItemAttributes->$key as $value) {
+        $item[strtolower($key)][] = (string)$value;
+        $item['participants'][] = (string)$value;
       }
     }
   }
@@ -352,7 +350,8 @@ function amazon_item_clean_xml($xml) {
   }
 
   // Give other modules an opportunity to pull out other bits of Amazon data
-  // that would otherwise be ignored.
+  // that would otherwise be ignored. We can't use module_invoke_all, as it
+  // would lose the reference.
   foreach (module_implements('amazon_item_clean_xml') as $module) {
     $function = $module .'_amazon_item_clean_xml';
     $function($item, $xml);
