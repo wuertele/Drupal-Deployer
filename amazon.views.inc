@@ -73,8 +73,8 @@ function amazon_views_data() {
 
   // We probably want to convert this to a real date field.
   _amazon_make_simple_text_field($data, 'amazon_item', 'releasedate', 'Release date', 'The release date of the product.');
-  _amazon_make_simple_number_field($data, 'amazon_item', 'listpriceamount', 'List price', 'The current list price of the item. (Unformatted)');
-
+  _amazon_make_simple_text_field($data, 'amazon_item', 'listpriceformattedprice', 'List price', 'The current list price of the item. (Unformatted)');
+  unset($data['amazon_item']['listpriceformattedprice']['argument']);
 
   // Define the base group of this table. Fields that don't
   // have a group defined will go into this field by default.
@@ -335,7 +335,7 @@ class views_handler_field_amazon_image extends views_handler_field {
 class views_handler_field_amazon_participant extends views_handler_field_prerender_list {
   function init(&$view, $options) {
     parent::init($view, $options);
-    $this->additional_fields['participant_type'] = array('table' => 'amazon_item_participants', 'field' => 'type');
+    $this->additional_fields['asin'] = array('table' => 'amazon_item', 'field' => 'asin');
   }
 
   /**
@@ -343,8 +343,7 @@ class views_handler_field_amazon_participant extends views_handler_field_prerend
    */
   function options(&$options) {
     parent::options($options);
-    $options['limit'] = FALSE;
-    $options['participant_types'] = array();
+    $options['participant_type'] = '**ALL**';
   }
 
   /**
@@ -352,22 +351,44 @@ class views_handler_field_amazon_participant extends views_handler_field_prerend
    */
   function options_form(&$form, &$form_state) {
     parent::options_form($form, $form_state);
-    $form['limit'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Limit participants by by type'),
-      '#default_value'=> $this->options['limit'],
+    $form['participant_type'] = array(
+      '#type' => 'select',
+      '#title' => t('Participant restriction'),
+      '#options' => array(
+        '**ALL**' => t('Show all particpants'),
+        'author' => 'Author',
+        'artist' => 'Artist',
+        'actor' => 'Actor',
+        'director' => 'Director',
+        'creator' => 'Creator'
+      ),
+      '#default_value' => $this->options['participant_type'],
     );
+  }
 
-    $form['participant_types'] = array(
-      '#prefix' => '<div><div id="edit-options-types">',
-      '#suffix' => '</div></div>',
-      '#type' => 'checkboxes',
-      '#title' => t('Vocabularies'),
-      '#options' => array('Author','Artist','Actor','Director','Creator'),
-      '#default_value' => $this->options['participant_types'],
-      '#process' => array('expand_checkboxes', 'views_process_dependency'),
-      '#dependency' => array('edit-options-limit' => array(TRUE)),
-    );
+  function query() {
+    $this->add_additional_fields();
+  }
+
+  function pre_render($values) {
+    $this->field_alias = $this->aliases['asin'];
+    $this->items = array();
+
+    foreach ($values as $result) {
+      if (!empty($result->{$this->aliases['asin']})) {
+        $asins[] = $result->{$this->aliases['asin']};
+      }
+    }
+
+    $sql = "SELECT aip.participant, aip.asin FROM {amazon_item_participant} aip WHERE aip.asin IN ('" . implode("', '", $asins) . "') ";
+    if ($this->options['participant_type'] != '**ALL**') {
+      $sql .= " AND aip.type = '%s'";
+    }
+    $results = db_query($sql, $this->options['participant_type']);
+
+    while ($result = db_fetch_array($results)) {
+      $this->items[$result['asin']][] = check_plain($result['participant']);
+    }
   }
 }
 
