@@ -10,60 +10,24 @@
  */
 
 
-function mimedetect_menu($may_cache) {
+function mimedetect_menu() {
   $items = array();
-  if ($may_cache) {
-    // The admin settings form.
-    $items[] = array(
-      'path' => 'admin/settings/mimedetect',
-      'title' => t('Mime type detection'),
-      'description' => t('Control how the mime type of uploaded files will be determined.'),
-      'callback' => 'drupal_get_form',
-      'callback arguments' => array('mimedetect_settings'),
-    );
-  }
+
+  // The admin settings form.
+  $items['admin/settings/mimedetect'] = array(
+    'title' => 'Mime type detection',
+    'description' => 'Control how the mime type of uploaded files will be determined.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mimedetect_settings'),
+    'access arguments' => array('administer site configuration'),
+  );
+
   return $items;
 }
 
-function mimedetect_requirements($phase) {
-  $requirements = array();
-
-  $t = get_t();
-  $requirement = array(
-    'title' => $t('Mime type detection'),
-  );
-
-  if (extension_loaded('fileinfo')) {
-    $requirement['value'] = $t('PHP Fileinfo Extension');
-    if (!$finfo = @finfo_open(FILEINFO_MIME, drupal_get_path('module', 'mimedetect') .'/magic')) {
-      $requirement['description'] = $t('Fileinfo could not load the magic file. It could be corrupted. Try reinstalling the magic file distributed with the MimeDetect module.');
-      $requirement['severity'] = REQUIREMENT_ERROR;
-    }
-  }
-  else if(variable_get('mimedetect_enable_file_binary', FALSE)) {
-    $binary = variable_get('mimedetect_file_binary', '/usr/bin/file');
-    $requirement['value'] = $t("UNIX 'file' Command");
-    if (!is_executable($binary)){
-      if (!file_exists($binary)) {
-        $requirement['description'] = $t("The file %path does not exist or is not readable by your webserver. ", array('%path' => $binary));
-      }
-      else {
-        $requirement['description'] = $t("The file %path is not executable by your webserver.", array('%path' => $binary));
-      }
-      $requirement['severity'] = REQUIREMENT_ERROR;
-    }
-  }
-  else {
-     $requirement['value'] = $t('Browser & Extension');
-     $requirement['description'] = $t("MimeDetect is using the browser supplied mime type or file extension lookups. It is strongly recommended that you install and configure the PHP Fileinfo Extension or the UNIX 'file' command to provide more accurate severside mime type detection.");
-     $requirement['severity'] = REQUIREMENT_WARNING;
-  }
-
-  return array('mimedetect' => $requirement);
-}
 
 function mimedetect_settings() {
-  $form[] = array();
+  $form = array();
   $form['mimedetect_enable_file_binary'] = array(
     '#type' => 'checkbox',
     '#title' => t("Use UNIX 'file' command to detect mime type?"),
@@ -79,18 +43,18 @@ function mimedetect_settings() {
   return system_settings_form($form);
 }
 
-function mimedetect_settings_validate($form_id, $form_values) {
+function mimedetect_settings_validate($form_id, &$form_state) {
   // Test file binary settings.
-  if ($form_values['mimedetect_enable_file_binary']) {
-    if (empty($form_values['mimedetect_file_binary'])) {
+  if ($form_state['values']['mimedetect_enable_file_binary']) {
+    if (empty($form_state['values']['mimedetect_file_binary'])) {
       form_set_error('mimedetect_file_binary', t("You must specify the path to the 'file' binary if it is enabled."));
     }
-    if (!is_executable($form_values['mimedetect_file_binary'])) {
-      if (!file_exists($form_values['mimedetect_file_binary'])) {
-        form_set_error('mimedetect_file_binary', t("The path %path does not exist or is not readable by your webserver.", array('%path' => $form_values['mimedetect_file_binary'])));
+    if (!is_executable($form_state['values']['mimedetect_file_binary'])) {
+      if (!file_exists($form_state['values']['mimedetect_file_binary'])) {
+        form_set_error('mimedetect_file_binary', t("The path %path does not exist or is not readable by your webserver.", array('%path' => $form_state['values']['mimedetect_file_binary'])));
       }
       else {
-        form_set_error('mimedetect_file_binary', t("%path is not executable by your webserver.", array('%path' => $form_values['mimedetect_file_binary'])));
+        form_set_error('mimedetect_file_binary', t("%path is not executable by your webserver.", array('%path' => $form_state['values']['mimedetect_file_binary'])));
       }
     }
   }
