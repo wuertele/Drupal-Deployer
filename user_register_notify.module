@@ -17,24 +17,16 @@ function user_register_notify_user($op, &$edit, &$account, $category = NULL) {
       // In case when accounts must be created with administrator's approval
       // there is already a 'pending approval' e-mail notification.
       if ($account->uid != 1 && $account->status) {
-        if (defined('VERSION') && version_compare(VERSION, '5.0 dev', '>=')) {
-          $subject = t('Account details for !username at !site', array('!username' => $account->name, '!site' => variable_get('site_name', 'Drupal')));
-          $to = $from = variable_get('site_mail', ini_get('sendmail_from'));
+        $subject = t('Account details for !username at !site', array('!username' => $account->name, '!site' => variable_get('site_name', 'Drupal')));
+        $to = $from = variable_get('site_mail', ini_get('sendmail_from'));
 
-          drupal_mail(
-            'user-register-notify-admin',
-            $to,
-            $subject,
-            t("!user (!uri) has created account.\n\n!edit-uri", array('!uri' => url("user/$account->uid", NULL, NULL, TRUE), '!user' => $account->name, '!edit-uri' => url("user/$account->uid/edit", NULL, NULL, TRUE))),
-            $from
-          );
-        }
-        // Else we have Drupal 4.7.
-        else {
-          $subject = t('Account details for %username at %site', array('%username' => $account->name, '%site' => variable_get('site_name', 'drupal')));
-          $from = variable_get('site_mail', ini_get('sendmail_from'));
-          user_mail($from, $subject, t("%user (%uri) has created account.\n\n%edit-uri", array('%uri' => url("user/$account->uid", NULL, NULL, TRUE), '%user' => $account->name, '%edit-uri' => url("user/$account->uid/edit", NULL, NULL, TRUE))), "From: $from\nReply-to: $from\nX-Mailer: Drupal\nReturn-path: $from\nErrors-to: $from");
-        }
+        drupal_mail(
+          'user-register-notify-admin',
+          $to,
+          $subject,
+          t("!user (!uri) has created account.\n\n!edit-uri", array('!uri' => url("user/$account->uid", NULL, NULL, TRUE), '!user' => $account->name, '!edit-uri' => url("user/$account->uid/edit", NULL, NULL, TRUE))),
+          $from
+        );
       }
       break;
   }
