@@ -68,7 +68,7 @@ function amazon_storage_settings_form() {
     $form['details']['#prefix'] = '<div id="amazon-storage-details" class="js-hide">';
   }
   else {
-   $form['details']['#prefix'] = '<div id="amazon-storage-details">';
+    $form['details']['#prefix'] = '<div id="amazon-storage-details">';
   }
 
   $form['details']['#suffix'] = '</div>';

@@ -77,68 +77,88 @@ function amazon_theme() {
   $templates = array(
     'amazon_item' => array(
       'arguments' => array('item' => array(), 'style' => 'default'),
-      'file' => 'amazon.theme.inc',
-    ),
-    'amazon_item_default' => array(
-      'arguments' => array('item' => array()),
       'pattern' => 'amazon_item__',
-      'file' => 'amazon.theme.inc',
+      'template' => 'amazon-item',
     ),
-    'amazon_item_full' => array(
+    'amazon_inline_item' => array(
       'arguments' => array('item' => array()),
-      'pattern' => 'amazon_item_full__',
-      'file' => 'amazon.theme.inc',
-    ),
-    'amazon_item_inline' => array(
-      'arguments' => array('item' => array()),
-      'pattern' => 'amazon_item_inline__',
-      'file' => 'amazon.theme.inc',
-    ),
-    'amazon_item_thumbnail' => array(
-      'arguments' => array('item' => array()),
-      'pattern' => 'amazon_item_thumbnail__',
       'file' => 'amazon.theme.inc',
     ),
   );
-  $templates += drupal_find_theme_functions($templates, array('theme'));
   return $templates;
 }
 
 function amazon_preprocess_amazon_item(&$variables) {
+  drupal_add_css(drupal_get_path('module', 'amazon') . '/amazon.css');
+
   $item = $variables['item'];
 
   // Do a quick cycle through the simple keys on the item, check_plain() them,
   // and stick them in the variables collection.
   foreach($item as $key => $value) {
     if (is_string($value)) {
-      $variables[$key] = check_plain($value);
+      $variables[$key] = filter_xss($value);
     }
   }
+
   $variables['type'] = _amazon_clean_type($item['producttypename']);
   $variables['detailpageurl'] = check_url($item['detailpageurl']);
+  $variables['classes'] = _amazon_item_classes($item) . ' amazon-item-' . check_plain($variables['style']);
   $variables['editorialreview'] = isset($item['editorialreviews']) ? check_markup($item['editorialreviews'][0]['content']) : '';
 
-  if (isset($item['participants'])) {
-    foreach($item['participants'] as $participant) {
-      $variables['participants'][] = check_plain($participant);
-    }
+  if (!empty($variables['theatricalreleasedate'])) {
+    $date = explode('-', $variables['theatricalreleasedate']);
+    $variables['releaseyear'] = $date[0];
   }
   else {
-    $variables['participants'] = array();
+    $variables['releaseyear'] = '';
   }
 
-  if (isset($item['imagesets'])) {
-    foreach($item['imagesets'] as $key => $image) {
-      $variables[$key] = theme('image', $image['url'], t('Image of') .' '. $item['title'], $item['title'], array('height' => $image['height'], 'width' => $image['width']), FALSE);
+  if (!empty($variables['publicationdate'])) {
+    $date = explode('-', $variables['publicationdate']);
+    $variables['publicationyear'] = $date[0];
+  }
+  else {
+    $variables['publicationyear'] = '';
+  }
+
+  // Handle participants and types.
+  if (isset($item['participants'])) {
+    $variables['participants'] = filter_xss(filter_xss(implode(', ', $item['participants'])));
+    $participant_types = split(',', AMAZON_PARTICIPANT_TYPES);
+
+    foreach($participant_types as $participant_type) {
+      $participant_type = strtolower($participant_type);
+      if (!empty($item[$participant_type])) {
+        if (is_string($item[$participant_type])) {
+          $variables[$participant_type] = filter_xss($item[$participant_type]);
+        }
+        else {
+          $variables[$participant_type] = filter_xss(implode(', ', $item[$participant_type]));
+        }
+      }
     }
   }
+  $variables += array(
+    'participants' => '',
+    'director' => '',
+    'actor' => '',
+    'artist' => '',
+    'author' => '',
+  );
 
+  // Handle supported image resolutions.
+  if (isset($item['imagesets'])) {
+    foreach($item['imagesets'] as $key => $image) {
+      $variables[$key] = theme('image', $image['url'], t('Image of') .' '. check_plain($item['title']), check_plain($item['title']), array('height' => $image['height'], 'width' => $image['width']), FALSE);
+    }
+  }
   $variables['image'] = $variables['mediumimage'];
 
   // A set of more specific templates to use when displaying items.
-  $variables['template_files'][] = 'amazon-item-'. $variables['variation'];
+  $variables['template_files'][] = 'amazon-item-'. $variables['style'];
   $variables['template_files'][] = 'amazon-item-'. strtolower($variables['type']);
-  $variables['template_files'][] = 'amazon-item-'. strtolower($variables['type']) .'-'. $variables['variation'];
+  $variables['template_files'][] = 'amazon-item-'. strtolower($variables['type']) .'-'. $variables['style'];
 }
 
 
@@ -253,8 +273,9 @@ function _amazon_item_batch_lookup_from_web($item_ids = array()) {
 function amazon_item_lookup_from_db($item_ids = array()) {
   if (!empty($item_ids)) {
     $sql  = "SELECT * FROM {amazon_item} ai WHERE ai.asin IN (";
-    $sql .= implode(',', array_fill(0, count($item_ids), "'%s'")) .')';
-    $results = db_query($sql, $item_ids);
+    $sql .= implode(',', array_fill(0, count($item_ids), "'%s'")) .') ';
+    $sql .= 'AND ai.timestamp > %d';
+    $results = db_query($sql, $item_ids, time() - variable_get('amazon_refresh_schedule', 86400));
     $items = array();
     while ($item = db_fetch_array($results)) {
       _amazon_load_child_data($item);
@@ -317,7 +338,8 @@ function amazon_item_clean_xml($xml) {
   foreach ($participant_types as $key) {
     if (isset($xml->ItemAttributes->$key)) {
       foreach($xml->ItemAttributes->$key as $value) {
-        $item[strtolower($key)][] = (string)$value;
+        // $item[strtolower($key)][] = (string)$value;
+        $item[strtolower($key)] = (string)$value;
         $item['participants'][] = (string)$value;
       }
     }
@@ -371,7 +393,7 @@ function amazon_item_insert($item) {
     $participant_types = split(',', AMAZON_PARTICIPANT_TYPES);
     foreach ($participant_types as $type) {
       if (isset($item[strtolower($type)])){
-        foreach($item[strtolower($type)] as $participant) {
+        foreach((array)$item[strtolower($type)] as $participant) {
           $item_participant = array('asin' => $item['asin'], 'type' => strtolower($type), 'participant' => $participant);
           drupal_write_record('amazon_item_participant', $item_participant);
         }
@@ -402,7 +424,7 @@ function amazon_item_insert($item) {
   module_invoke_all('amazon_item_insert', $item);
 }
 
-function amazon_item_save($item) {
+function amazon_item_save($item, $force_save = FALSE) {
   // Only save if the user has turned on local persistence.
   if (variable_get('amazon_cache', TRUE) || $force_save) {
     // We have boatloads of data to insert in here, so we're going to

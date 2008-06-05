@@ -25,10 +25,8 @@ function amazon_filter_filter($op, $delta = 0, $format = -1, $text = '') {
       switch ($op) {
         case 'description':
           return t('Lets writers use the [amazon] tag to embed Amazon product information in text.');
-
         case 'prepare':
           return $text;
-
         case 'process':
           return _amazon_filter_process_text($text);
       }
@@ -52,7 +50,12 @@ function _amazon_filter_process_text($text) {
         $replace[] = "<!-- The Amazon product ". $matches[1][$key] ." could not be found.-->";
       }
       else {
-        $replace[] = theme('amazon_item', $items[$matches[1][$key]], empty($matches[2][$key]) ? 'inline' : $matches[2][$key]);
+        if (empty($matches[2][$key]) || $matches[2][$key] == 'inline') {
+          $replace[] = theme('amazon_inline_item', $items[$matches[1][$key]]);
+        }
+        else {
+          $replace[] = theme('amazon_item', $items[$matches[1][$key]], $matches[2][$key]);
+        }
       }
     }
     return str_replace($search, $replace, $text);
