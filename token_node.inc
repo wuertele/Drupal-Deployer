@@ -50,9 +50,9 @@ function node_token_values($type, $object = NULL, $options = array()) {
         $values['mod-dd']         = date('d', $date);
         $values['mod-d']          = date('j', $date);
       }
-      
+
       // Now get the menu related information.
-      if ($node->menu['mlid']) {
+      if (!empty($node->menu['mlid'])) {
         $menus = menu_get_menus();
         $menu_name = $node->menu['menu_name'];
         $menu_title = $menus[$menu_name];
@@ -81,7 +81,7 @@ function node_token_values($type, $object = NULL, $options = array()) {
           if ((object)$term) {
             // With freetagging it's somewhat hard to get the tid, vid, name values
             // Rather than duplicating taxonomy.module code here you should make sure your calling module
-            // has a weight of at least 1 which will run after taxonomy has saved the data which allows us to 
+            // has a weight of at least 1 which will run after taxonomy has saved the data which allows us to
             // pull it out of the db here.
             if (!isset($term->name) || !isset($term->tid)) {
               $vid = db_result(db_query("SELECT t.vid FROM {term_node} r INNER JOIN {term_data} t ON r.tid = t.tid INNER JOIN {vocabulary} v ON t.vid = v.vid WHERE r.nid = %d ORDER BY v.weight, t.weight, t.name LIMIT 1", $object->nid));
@@ -122,8 +122,8 @@ function node_token_values($type, $object = NULL, $options = array()) {
             break;
           }
         }
-      } 
-      // It's possible to leave that block and still not have good data.  
+      }
+      // It's possible to leave that block and still not have good data.
       // So, we test for these and if not set, set them.
       if (!isset($values['term'])) {
         $values['term'] = '';
@@ -136,7 +136,7 @@ function node_token_values($type, $object = NULL, $options = array()) {
 
       break;
   }
-  
+
   return $values;
 }
 
@@ -294,4 +294,3 @@ function token_menu_get_mid($in) {
 
   return $mid;
 }
-
