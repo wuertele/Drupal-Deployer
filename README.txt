@@ -3,11 +3,11 @@
 -- SUMMARY --
 
 Drupal Administration Menu displays the whole menu tree below /admin including
-all invisible local tasks in a drop-down menu. So administrators need less time
+most local tasks in a drop-down menu. So administrators need less time
 to access pages which are only visible after one or two clicks normally.
 
-Admin menu also provides hook_admin_menu() that allows other modules to add or
-alter menu items.
+Admin menu also provides hook_admin_menu() that allows other modules to add
+menu links.
 
 For a full description visit the project page:
   http://drupal.org/project/admin_menu
@@ -89,33 +89,10 @@ body #admin-menu { font-size: 10px; }
 
 -- FAQ --
 
-Q: After upgrading to 5.x-2.x, admin_menu disappeared. Why?
+Q: After upgrading to 6.x-1.x, admin_menu disappeared. Why?
 
 A: This should not happen. If it did, visit
-   http://<yoursitename>/admin/build/menu to re-generate your menu cache.
-
-Q: After upgrading, admin_menu disappeared. Why?
-
-A: Prior to release 5.x-1.2, Drupal Administration Menu was output in a block.
-   Since 5.x-1.2, it is output via hook_footer(). Some custom themes may not
-   (yet) output $closure, so admin_menu could no longer be displayed. If you
-   decided to move the 'administer' tree into a new menu and disabled that menu
-   block, a site could become (temporarily) unmaintainable. Either way, you
-   should fix your theme by adding the following code in front of the closing
-   HTML (</html>) tag:
-<code>
-   <?php echo $closure; ?>
-</code>
-
-Q: After upgrading, the menu item 'administer' is no longer removed. Why?
-
-A: Prior to release 5.x-1.2, Drupal Administration Menu was output via
-   hook_block(), which allowed to alter the global menu array. Since 5.x-1.2, it
-   is output via hook_footer() and thus no longer able to alter the menu. As
-   long as there will be no built-in solution in an upcoming release, you may
-   perform the following steps as a workaround:
-   - Create a new menu.
-   - Edit the menu item 'administer' and select the new menu as parent.
+   http://<yoursitename>/admin/build/modules to re-generate your menu.
 
 Q: I enabled "Aggregate and compress CSS files", but I found admin_menu.css is
    still there, is it normal?
@@ -130,6 +107,8 @@ A: Yes, this is the intended behavior. Since admin_menu is only visible for
 Current maintainers:
 * Daniel F. Kudwien (sun) - dev@unleashedmind.com
 * Stefan M. Kudwien (smk-ka) - dev@unleashedmind.com
+
+Major rewrite for Drupal 6 by Peter Wolanin (pwolanin).
 
 This project has been sponsored by:
 * UNLEASHED MIND

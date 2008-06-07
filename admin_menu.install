@@ -2,17 +2,16 @@
 // $Id$
 
 /**
- * #224605: Rebuild cached menu for users.
+ * Implementation of hook_uninstall().
  */
-function admin_menu_update_5202() {
-  $ret = array();
-
-  // Clear CSS preprocessor cache.
-  drupal_clear_css_cache();
-
-  // Clear cache_menu.
-  cache_clear_all(NULL, 'cache_menu');
-
-  return $ret;
+function admin_menu_uninstall() {
+  // Delete menu links.
+  db_query("DELETE FROM {menu_links} WHERE module = 'admin_menu'");
+  menu_cache_clear_all();
 }
+
+/**
+ * @todo Drop the {admin_menu} table in admin_menu_update_6000() on sites
+ *   that used one of the later patches in #132524.
+ */
 

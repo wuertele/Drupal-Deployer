@@ -5,10 +5,6 @@
  * @file
  * Renders a menu tree for administrative purposes as dropdown menu at the top
  * of the window.
- *
- * Note: Most theme-functions in Administration Menu are not invoked via theme(),
- * because we try to keep this module as fast as possible and chances are very
- * small that someone wants to override those functions.
  */
 
 /**
@@ -67,7 +63,7 @@ function admin_menu_theme() {
  * We can't move this into admin_menu_footer(), because PHP-only based themes
  * like chameleon load and output scripts and stylesheets in front of
  * theme_closure(), so we ensure Admin menu's styles and scripts are loaded on
- * all pages via hook_menu().
+ * all pages via hook_init().
  */
 function admin_menu_init() {
   if (user_access('access administration menu')) {
@@ -109,60 +105,27 @@ function admin_menu_theme_settings() {
  * Admin menu was previously output via hook_block(), but suffered from
  * theme-specific stylesheets that may be applied to layout blocks. We now
  * output Admin menu in the footer to circumvent this.
+ *
+ * @todo Since admin_menu is rebuilt in the same request, we should be able
+ *   to use a helper function instead of a variable to remind us to rebuild
+ *   (variable_set() is slow).
  */
 function admin_menu_footer($main = 0) {
+  // Check for the flag indicating that we need to rebuild.
+  if (variable_get('admin_menu_rebuild_links', FALSE)) {
+    include_once(drupal_get_path('module', 'admin_menu') . '/' . 'admin_menu.inc');
+    _admin_menu_rebuild_links();
+    variable_del('admin_menu_rebuild_links');
+  }
+
   if (!user_access('access administration menu')) {
     return;
   }
-  global $_menu;
-  
-  // Get the menu item of /q=admin, which is the root for admin menu.
-  // $mid_admin = $_menu['path index']['admin'];
-  $_admin_menu =& admin_menu_get_menu();
-  
-  // Allow other modules to integrate with admin_menu (uncached).
-  foreach (module_implements('admin_menu') as $module) {
-    $function = $module .'_admin_menu';
-    // $function($_admin_menu, FALSE);
-  }
-  
+
   $content  = '<div id="admin-menu">';
-  $content .= admin_menu_tree_output($_admin_menu);
-  // $content .= menu_tree_output($_admin_menu);
+  $content .= admin_menu_tree_output(menu_tree_all_data('admin_menu'));
   $content .= '</div>';
   return $content;
-}
-
-/**
- * Return Administration Menu from cache or rebuild it.
- *
- * @param int $mid_admin
- *   The menu item id to use for the administration menu.
- *
- * @return array
- *   An array containing a complete menu structure of all cached administration
- *   menu items.
- */
-function &admin_menu_get_menu($mid_admin = 2) {
-  static $_admin_menu;
-  
-  if (isset($_admin_menu)) {
-    return $_admin_menu;
-  }
-  global $user, $language;
-  
-  $cid = 'links:admin_menu:all:admin:'. $user->uid .':'. $language->language;
-  $cache = 0; // cache_get($cid, 'cache_menu');
-  if ($cache && isset($cache->data)) {
-    $_admin_menu = $cache->data;
-  }
-  else {
-    require_once drupal_get_path('module', 'admin_menu') .'/admin_menu.inc';
-    $_admin_menu = admin_menu_build($mid_admin);
-    // cache_set($cid, $_admin_menu, 'cache_menu', 0);
-  }
-  
-  return $_admin_menu;
 }
 
 /**
@@ -176,25 +139,11 @@ function &admin_menu_get_menu($mid_admin = 2) {
  */
 function admin_menu_tree_output($tree) {
   $output = '';
-  $items = array();
 
-  // Pull out just the menu items we are going to render so that we
-  // get an accurate count for the first/last classes.
   foreach ($tree as $data) {
-    if (!$data['link']['hidden']) {
-      $items[] = $data;
-    }
-  }
-
-  // Since we allow other modules to add items to admin menu, we need to sort
-  // all items (again).
-  #usort($_admin_menu[$pid]['children'], '_admin_menu_sort');
-  
-  foreach ($items as $i => $data) {
-    $extra_class = NULL;
-    // Allow HTML and omit alias lookups.
-    $data['link']['options']['html'] = TRUE;
-    $data['link']['options']['alias'] = TRUE;
+    $extra_class = isset($data['link']['localized_options']['extra class']) ? $data['link']['localized_options']['extra class'] : NULL;
+    // Omit alias lookups.
+    $data['link']['localized_options']['alias'] = TRUE;
     
     $link = theme('menu_item_link', $data['link']);
     if ($data['below']) {
@@ -235,191 +184,114 @@ function theme_admin_menu_item($link, $has_children, $menu = '', $in_active_trai
   return '<li'. (!empty($class) ? ' class="'. $class .'"' : '') .'>'. $link . $menu .'</li>';
 }
 
+
 /**
- * Comparator routine for use in sorting menu items.
+ * Implementation of hook_form_[form_id]_alter().
+ *
+ * Extends Devel module with Administration Menu developer settings.
  */
-function _admin_menu_sort($a, $b) {
-  $_admin_menu = admin_menu_get_menu();
+function admin_menu_form_devel_admin_settings_alter(&$form, $form_state) {
+  // Shift system_settings_form buttons.
+  $weight = isset($form['buttons']['#weight']) ? $form['buttons']['#weight'] : 0;
+  $form['buttons']['#weight'] = $weight + 1;
   
-  $a = $_admin_menu[$a];
-  $b = $_admin_menu[$b];
-  
-  if ($a['weight'] < $b['weight']) {
-    return -1;
-  }
-  elseif ($a['weight'] > $b['weight']) {
-    return 1;
-  }
-  elseif (isset($a['title']) && isset($b['title'])) {
-    return strnatcasecmp($a['title'], $b['title']);
-  }
-  else {
-    return 1;
-  }
+  $form['admin_menu'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Administration Menu settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $display_options = array('mid', 'weight', 'pid');
+  $display_options = array(0 => t('None'), 'mlid' => t('Menu link id'), 'weight' => t('Weight'), 'plid' => t('Parent link id'));
+  $form['admin_menu']['admin_menu_display'] = array(
+    '#type' => 'radios',
+    '#title' => t('Display extra information for menu items in Drupal Administration Menu'),
+    '#default_value' => variable_get('admin_menu_display', 0),
+    '#options' => $display_options,
+    '#description' => t('If enabled, the chosen information will appear next to each menu item link.'),
+  );
+  $form['admin_menu']['admin_menu_show_all'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Display all menu items'),
+    '#default_value' => variable_get('admin_menu_show_all', 0),
+    '#description' => t('Enable this option to disable user access checks for menu items, i.e. every menu item in the visible menu tree will be displayed to every user regardless of access permissions.'),
+  );
+  // Rebuild the admin menu
+  $form['#submit'][] = 'admin_menu_menu_alter';
 }
 
 /**
- * Adjust the menu item path.
- *
- * Adjust the path of local tasks and let them point to their parent item.
- * Finally build the url. These functions have been moved here to be able
- * to cache the final results.
- *
- * @param &$item
- *   An admin menu item.
+ * Implementation of hook_enable().
  */
-function admin_menu_item_url(&$_admin_menu, $mid) {
-  $link_item = $mid;
-  while ($_admin_menu[$link_item]['type'] & MENU_LINKS_TO_PARENT) {
-    $link_item = $_admin_menu[$link_item]['pid'];
-  }
-
-  if (!isset($_admin_menu[$link_item]['processed'])) {
-    $_admin_menu[$mid]['path'] = url($_admin_menu[$link_item]['path'], isset($_admin_menu[$mid]['query']) ? $_admin_menu[$mid]['query'] : NULL);
-    $_admin_menu[$link_item]['processed'] = TRUE;
-  }
-  else {
-    // Copy the already processed path of the parent item to the
-    // default local task.
-    $_admin_menu[$mid]['path'] = $_admin_menu[$link_item]['path'];
-  }
+function admin_menu_enable() {
+  variable_set('admin_menu_rebuild_links', TRUE);
 }
 
 /**
- * Add a custom menu item.
- *
- * @param array $_admin_menu
- *   An array containing the complete administration menu structure, passed by
- *   reference.
- * @param int $pid
- *   The parent menu item id.
- * @param array $item
- *   An menu item array for the menu system. May contain the key 'weight' to
- *   adjust the item's weight. You can use Devel module to display additional
- *   information about menu items.
- *
- * @return int
- *   The id of the new menu item.
+ * Implementation of hook_menu_alter().
  */
-function admin_menu_add_item(&$_admin_menu, $pid, $item) {
-  if (empty($item['path'])) {
-    return FALSE;
-  }
-  $item['pid'] = $pid;
-  $item['children'] = array();
-  $id = max(array_keys($_admin_menu)) + 1;
-  $_admin_menu[$id] = $item;
-  $_admin_menu[$pid]['children'][] = $id;
-  $_admin_menu['index'][$item['path']] = $id;
-  admin_menu_item_url($_admin_menu, $id);
-
-  return $id;
+function admin_menu_menu_alter() {
+  variable_set('admin_menu_rebuild_links', TRUE);
 }
 
 /**
- * Implementation of hook_admin_menu().
+ * Implementation of hook_translated_menu_link_alter().
  *
- * @param array $admin_menu
- *   An array containing the complete administration menu structure, passed by
- *   reference.
- * @param bool $may_cache
- *   Whether changes will be cached. If new menu items contain dynamic
- *   information, such as query strings or user-related data, these should be
- *   added on each page request ($may_cache = FALSE).
+ * Here is where we make changes to links that need dynamic information such
+ * as the current page path or the number of users.
  */
-function admin_menu_admin_menu(&$admin_menu, $may_cache) {
-  if (!$may_cache) {
+function admin_menu_translated_menu_link_alter(&$item, $map) {
+  static $access_all;
+
+  if (!isset($access_all)) {
+    // We only ever do this for development
+    $access_all = variable_get('admin_menu_show_all', 0) && module_exists('devel');
+  }
+  if ($item['menu_name'] != 'admin_menu') {
+    return;
+  }
+  if ($access_all && !$item['access']) {
+    $item['access'] = TRUE;
+    // Prepare for http://drupal.org/node/266596
+    if (!isset($item['localized_options'])) {
+      _menu_item_localize($item, $map, TRUE);
+    }
+  }
+  // Fix destination query strings
+  if (isset($item['localized_options']['query'])) {
+    if ($item['localized_options']['query'] == 'destination') {
+      $item['localized_options']['query'] = drupal_get_destination();
+    }
+  }
+  if (($item['link_path'] == 'http://drupal.org') && !user_access('display drupal links')) {
+    $item['access'] = FALSE;
+  }
+  if ($extra = variable_get('admin_menu_display', 0)) {
+    $item['title'] .= ' '. $extra[0] .': '. $item[$extra];
+  }
+  if ($item['title'] == 'icon_users') {
     // Add count of active anonymous/authenticated users.
     // @see user_block(), user.module
     $interval = time() - variable_get('user_block_seconds_online', 900);
     $count_anon = sess_count($interval);
     $count_auth = db_result(db_query("SELECT COUNT(DISTINCT uid) FROM {sessions} WHERE uid > 0 AND timestamp >= %d", $interval));
-
-    $mid_admin  = $admin_menu['index']['admin'];
-    $title = t('Current anonymous / authenticated users');
     $icon_users = '<img src="'. base_path() . drupal_get_path('module', 'admin_menu') .'/images/icon_users.png" width="16" height="15" alt="@title" title="@title" />';
-    admin_menu_add_item($admin_menu, $mid_admin, array(
-      'title' => $count_anon .' / '. $count_auth .' '. $icon_users,
-      'title arguments' => array('@title' => 'Current anonymous / authenticated users'),
-      'path' => user_access('administer users') ? 'admin/user/user' : drupal_get_normal_path(variable_get('site_frontpage', 'node')),
-      'weight' => -90,
-      'class' => 'admin-menu-action admin-menu-icon admin-menu-users',
-    ));
+
+    $title = array('@title' => t('Current anonymous / authenticated users'));
+    $icon_users = strtr($icon_users, $title);
+    $item['title'] = t('@count-anon / @count-auth !icon', array('@count-anon' => $count_anon, '@count-auth' => $count_auth, '!icon' => $icon_users));
+    if (user_access('administer users')) {
+      $item['href'] = 'admin/user/user';
+    }
   }
 }
 
 /**
- * Implementation of hook_form_alter().
+ * Render an icon to display in the Administration Menu.
  *
- * Extends Devel module with Administration Menu developer settings.
+ * @ingroup themeable
  */
-function admin_menu_form_alter(&$form, $form_state, $form_id) {
-  if ($form_id == 'devel_admin_settings') {
-    // Shift system_settings_form buttons.
-    $weight = $form['buttons']['#weight'];
-    $form['buttons']['#weight'] = $weight + 1;
-    
-    $form['admin_menu'] = array(
-      '#type' => 'fieldset',
-      '#title' => t('Administration Menu settings'),
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-    );
-    $display_options = array('mid', 'weight', 'pid');
-    $display_options = array(0 => t('None'), 'mid' => t('Id'), 'weight' => t('Weight'), 'pid' => t('Parent id'));
-    $form['admin_menu']['admin_menu_display'] = array(
-      '#type' => 'radios',
-      '#title' => t('Display extra information for menu items in Drupal Administration Menu'),
-      '#default_value' => variable_get('admin_menu_display', 0),
-      '#options' => $display_options,
-      '#description' => t('If enabled, the chosen information will appear next to each menu item link.'),
-    );
-    $form['admin_menu']['admin_menu_show_all'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Display all menu items'),
-      '#default_value' => variable_get('admin_menu_show_all', 0),
-      '#description' => t('Enable this option to disable user access checks for menu items, i.e. every menu item in the visible menu tree will be displayed to every user regardless of access permissions.'),
-    );
-  }
-}
-
-/**
- * Implementation of hook_admin_menu() for Devel module (temporary).
- *
- * - Adds most used functions 'empty cache' and 'variable editor' to the menu in
- *   Administration Menu's icon.
- * - Adds links to switch to a different user to the logout button.
- */
-if (module_exists('devel') && !function_exists('devel_admin_menu')) {
-  function devel_admin_menu(&$admin_menu, $may_cache) {
-    $access_devel = user_access('access devel information');
-    $access_switch = user_access('switch users');
-    if (!$access_devel && !$access_switch) {
-      return;
-    }
-    
-    $mid_icon = $admin_menu['index']['admin_menu_icon'];
-    if ($may_cache) {
-      // Add variable editor.
-      if ($access_devel) {
-        admin_menu_add_item($admin_menu, $mid_icon, array('title' => 'Variable editor', 'path' => 'devel/variable', 'weight' => 20));
-      }
-    }
-    else {
-      // Add clear-cache.
-      if ($access_devel) {
-        admin_menu_add_item($admin_menu, $mid_icon, array('title' => 'Empty cache', 'path' => 'devel/cache/clear', 'weight' => 20, 'query' => drupal_get_destination()));
-      }
-      // Add switch_user items.
-      if ($access_switch && $devel_user_links = module_invoke('devel', 'switch_user_list')) {
-        $mid_logout = $admin_menu['index']['logout'];
-        foreach ($devel_user_links as $link) {
-          if (preg_match('!href="'. base_path() .'([^\?]+)\?([^"]+)" title="([^"]+)">((<em>)?[^<]+(</em>)?)!', $link, $match)) {
-            admin_menu_add_item($admin_menu, $mid_logout, array('title' => $match[4], 'description' => $match[3], 'path' => $match[1], 'query' => $match[2]));
-          }
-        }
-      }
-    }
-  }
+function theme_admin_menu_icon() {
+  return '<img class="admin-menu-icon" src="'. (theme_get_setting('toggle_favicon') ? theme_get_setting('favicon') : base_path() .'misc/favicon.ico') .'" width="16" height="16" alt="" />';
 }
 
