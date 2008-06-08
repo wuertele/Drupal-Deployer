@@ -19,7 +19,7 @@ function _admin_menu_rebuild_links() {
       }
     }
   }
-  admin_menu_adjust_items($menu_links, $sort);
+  $deleted = admin_menu_adjust_items($menu_links, $sort);
   if ($menu_links) {
     // Make sure no child comes before its parent.
     array_multisort($sort, SORT_NUMERIC, $menu_links);
@@ -33,7 +33,7 @@ function _admin_menu_rebuild_links() {
   // Allow modules to add more links. If you want to alter links saved by
   // admin_menu, use hook_menu_link_alter() and look for
   // $item['module'] == 'admin_menu'
-  $links = module_invoke_all('admin_menu');
+  $links = module_invoke_all('admin_menu', $deleted);
   foreach ($links as $item) {
     admin_menu_link_save($item);
   }
@@ -52,9 +52,14 @@ function admin_menu_link_build($item) {
     'options' => array(),
   );
   $item['options']['alter'] = TRUE;
+  // DAM does not output item descriptions to prevent mouseover clashes and
+  // increase page loading performance.  However, the following code shows how
+  // link attributes can be added (for ajaxified DAM functionality later).
+  /*
   if (!empty($item['description'])) {
     $item['options']['attributes']['title'] = $item['description'];
   }
+  */
   if (!empty($item['query'])) {
     $item['options']['query'] = $item['query'];
   }
@@ -77,10 +82,15 @@ function admin_menu_link_save($item) {
 
 /**
  * Implementation of hook_admin_menu().
+ *
+ * @param &$deleted
+ *   Array of links under admin/* that were removed by admin_menu_adjust_items().
+ *   If one of these links is added back, it should be removed from the array.
  */
-function admin_menu_admin_menu() {
+function admin_menu_admin_menu(&$deleted) {
   global $base_url;
 
+  $links = array();
   $icon_path = drupal_get_normal_path(variable_get('site_frontpage', 'node'));
 
   // Add 'administer' item to the icon menu.
@@ -105,7 +115,15 @@ function admin_menu_admin_menu() {
     'parent_path' => $icon_path,
   );
 
-  // Add links to drupal.org.
+  // Move 'By module' item into Site configuration.
+  if (isset($deleted['admin/by-module'])) {
+    $deleted['admin/by-module']['parent_path'] = 'admin/settings';
+    $deleted['admin/by-module']['weight'] = -10;
+    $links[] = $deleted['admin/by-module'];
+    unset($deleted['admin/by-module']);
+  }
+
+  // Add link to drupal.org.
   $links[] = array(
     'title' => 'Drupal.org',
     'path' => 'http://drupal.org',
@@ -126,27 +144,50 @@ function admin_menu_admin_menu() {
     }
     $url = 'http://drupal.org/project/issues/'. $info['project'];
     $links[] = array(
-      'title' => check_plain($info['name']) . 'issue queue',
+      'title' => check_plain($info['name']) . ' issue queue',
       'path' => $url,
       'parent_path' => 'http://drupal.org',
     );
   }
+
   // Add 'Create <content-type>' items to Content management menu.
   $links[] = array(
     'title' => 'Create content',
     'path' => 'node/add',
-    'weight' => -100,
+    'weight' => 0,
     'parent_path' => 'admin/content',
   );
+  // Make sure longer paths are after shorter ones
+  ksort($deleted);
   foreach (node_get_types('types', NULL, TRUE) as $type) {
     $type_url_str = str_replace('_', '-', $type->type);
-    $path = 'node/add/'. $type_url_str;
     $links[] = array(
       'title' => $type->name,
-      'path' => $path,
-      'weight' => -100,
+      'path' => 'node/add/' . $type_url_str,
       'parent_path' => 'node/add',
     );
+    $type_path = 'admin/content/node-type/' . $type_url_str;
+    $links[$type_path] = array(
+      'title' => 'Edit @content-type',
+      'path' => $type_path,
+      'parent_path' => 'admin/content/types',
+      'options' => array('t' => array('@content-type' => $type->name)),
+    );
+    unset($deleted['admin/content/node-type/' . $type_url_str . '/edit']);
+    // CCK and other modules adding to node types handled here.
+    foreach($deleted as $path => $item) {
+      if (strpos($path, $type_path) !== FALSE) {
+        // Logically, parent path can never go shorter than $type_path.
+        $i = $item['_number_parts'] - 1;
+        do {
+          $parent_path = implode('/', array_slice($item['_parts'], 0, $i));
+          --$i;
+        } while (!isset($links[$parent_path]) && $i);
+        $item['parent_path'] = $parent_path;
+        $links[$path] = $item;
+        unset($deleted[$path]);
+      }
+    }
   }
 
   // Add devel module links
@@ -195,21 +236,26 @@ function admin_menu_admin_menu() {
  * @param array $sort
  *   An array containing the # parts of each link - must be updated if a link
  *   is added.
+ * @return
+ *   An array of links that were removed from $menu_links.
  */
 function admin_menu_adjust_items(&$menu_links, &$sort) {
   global $user, $base_url;
   $links = array();
+  $deleted = array();
 
-  // Change or remove items, or add new top-level items
-  $add_links['admin/by-module'] = $menu_links['admin/by-module'];
+  // Change or remove items, or add new top-level items.
+  $deleted['admin/by-module'] = $menu_links['admin/by-module'];
   unset($menu_links['admin/by-module'], $sort['admin/by-module']);
+  $deleted['admin/by-task'] = $menu_links['admin/by-task'];
   unset($menu_links['admin/by-task'], $sort['admin/by-task']);
 
-  // Remove "edit" links
-  foreach (node_get_types('types', NULL, TRUE) as $type) {
-    $type_url_str = str_replace('_', '-', $type->type);
-    $path = 'admin/content/node-type/'. $type_url_str .'/edit';
-    unset($menu_links[$path], $sort[$path]);
+  // Remove links below admin/content/node-type/*.
+  foreach ($menu_links as $path => $link) {
+    if (strpos($path, 'admin/content/node-type/') !== FALSE) {
+      $deleted[$path] = $link;
+      unset($menu_links[$path], $sort[$path]);
+    }
   }
 
   // Add the icon containing special links.
@@ -229,10 +275,12 @@ function admin_menu_adjust_items(&$menu_links, &$sort) {
     'options' => array('extra class' => 'admin-menu-action admin-menu-icon admin-menu-users', 'html' => TRUE),
   );
   $links[] = array(
-    'title' => 'Log out',
+    'title' => 'Log out @username',
     'path' => 'logout',
     'weight' => -100,
-    'options' => array('extra class' => 'admin-menu-action admin-menu-logout'),
+    // Note: @username is dynamically replaced by default, we just invoke
+    // replacement by setting the 't' key here.
+    'options' => array('extra class' => 'admin-menu-action admin-menu-logout', 't' => array()),
   );
   foreach ($links as $item) {
     $path = $item['path'];
@@ -241,6 +289,6 @@ function admin_menu_adjust_items(&$menu_links, &$sort) {
     $sort[$path] = 1;
   }
 
-  return;
+  return $deleted;
 }
 
