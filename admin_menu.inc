@@ -10,7 +10,8 @@ function _admin_menu_rebuild_links() {
   // Add normal and suggested items as links.
   $menu_links = array();
   foreach ($menu as $path => $item) {
-    if (($item['type'] != MENU_CALLBACK) && ($item['_parts'][0] == 'admin') && (count($item['_parts']) > 1)) {
+    // Exclude menu callbacks, include items below admin/* and node/add/*.
+    if ($item['type'] != MENU_CALLBACK && (($item['_parts'][0] == 'admin' && count($item['_parts']) > 1) || (isset($item['_parts'][1]) && $item['_parts'][0] == 'node' && $item['_parts'][1] == 'add'))) {
       // TODO: handle local tasks with wildcards
       if (!strpos($path, '%')) {
         $item = admin_menu_link_build($item);
@@ -151,21 +152,22 @@ function admin_menu_admin_menu(&$deleted) {
   }
 
   // Add 'Create <content-type>' items to Content management menu.
-  $links[] = array(
-    'title' => 'Create content',
-    'path' => 'node/add',
-    'weight' => 0,
-    'parent_path' => 'admin/content',
-  );
+  if (isset($deleted['node/add'])) {
+    $deleted['node/add']['parent_path'] = 'admin/content';
+    $deleted['node/add']['weight'] = 0;
+    $links[] = $deleted['node/add'];
+    unset($deleted['node/add']);
+  }
+  foreach($deleted as $path => $item) {
+    if (strpos($path, 'node/add') !== FALSE) {
+      $links[] = $deleted[$path];
+      unset($deleted[$path]);
+    }
+  }
   // Make sure longer paths are after shorter ones
   ksort($deleted);
   foreach (node_get_types('types', NULL, TRUE) as $type) {
     $type_url_str = str_replace('_', '-', $type->type);
-    $links[] = array(
-      'title' => $type->name,
-      'path' => 'node/add/' . $type_url_str,
-      'parent_path' => 'node/add',
-    );
     $type_path = 'admin/content/node-type/' . $type_url_str;
     $links[$type_path] = array(
       'title' => 'Edit @content-type',
@@ -250,9 +252,12 @@ function admin_menu_adjust_items(&$menu_links, &$sort) {
   $deleted['admin/by-task'] = $menu_links['admin/by-task'];
   unset($menu_links['admin/by-task'], $sort['admin/by-task']);
 
-  // Remove links below admin/content/node-type/*.
+  // Remove certain links to re-position them in admin_menu_admin_menu().
   foreach ($menu_links as $path => $link) {
-    if (strpos($path, 'admin/content/node-type/') !== FALSE) {
+    // Remove links below
+    // - admin/content/node-type/*
+    // - node/add*
+    if (strpos($path, 'admin/content/node-type/') !== FALSE || strpos($path, 'node/add') !== FALSE) {
       $deleted[$path] = $link;
       unset($menu_links[$path], $sort[$path]);
     }
