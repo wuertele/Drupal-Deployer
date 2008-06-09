@@ -11,7 +11,7 @@ function _admin_menu_rebuild_links() {
   $menu_links = array();
   foreach ($menu as $path => $item) {
     // Exclude menu callbacks, include items below admin/* and node/add/*.
-    if ($item['type'] != MENU_CALLBACK && (($item['_parts'][0] == 'admin' && count($item['_parts']) > 1) || (isset($item['_parts'][1]) && $item['_parts'][0] == 'node' && $item['_parts'][1] == 'add'))) {
+    if ($item['type'] != MENU_CALLBACK && (($item['_parts'][0] == 'admin' && count($item['_parts']) > 1) || (strpos($path, 'node/add') !== FALSE))) {
       // TODO: handle local tasks with wildcards
       if (!strpos($path, '%')) {
         $item = admin_menu_link_build($item);
@@ -25,10 +25,8 @@ function _admin_menu_rebuild_links() {
     // Make sure no child comes before its parent.
     array_multisort($sort, SORT_NUMERIC, $menu_links);
 
-    // KISS for now - completely rebuild each time.
-    db_query("DELETE FROM {menu_links} WHERE module = '%s'",  'admin_menu');
     foreach ($menu_links as $item) {
-      menu_link_save($item);
+      admin_menu_link_save($item);
     }
   }
   // Allow modules to add more links. If you want to alter links saved by
@@ -71,13 +69,31 @@ function admin_menu_link_build($item) {
  * Convenience function that looks up the plid if $item['parent_path'] is set.
  */
 function admin_menu_link_save($item) {
+  $item = admin_menu_link_build($item);
+
+  // Check whether we are able to update an existing item.
+  $existing_item = db_fetch_array(db_query("SELECT mlid, plid, has_children FROM {menu_links} WHERE link_path = '%s' AND menu_name = '%s'", $item['link_path'], 'admin_menu'));
+  if ($existing_item) {
+    $item['mlid'] = $existing_item['mlid'];
+    $item['plid'] = $existing_item['plid'];
+    $item['has_children'] = $existing_item['has_children'];
+  }
+
+  // Look up the parent path for both new and existing links, since the parent
+  // may change.
   if (isset($item['parent_path'])) {
-    $plid = db_result(db_query("SELECT mlid from {menu_links} WHERE menu_name = '%s' AND link_path = '%s'", 'admin_menu', $item['parent_path']));
-    if ($plid) {
-      $item['plid'] = $plid;
+    if ($item['parent_path'] == '<root>') {
+      // <root> means that we want the link at the top level.
+      $item['plid'] = 0;
+    }
+    else {
+      $plid = db_result(db_query("SELECT mlid from {menu_links} WHERE link_path = '%s' AND menu_name = '%s'", $item['parent_path'], 'admin_menu'));
+      if ($plid) {
+        $item['plid'] = $plid;
+      }
     }
   }
-  $item = admin_menu_link_build($item);
+
   menu_link_save($item);
 }
 
@@ -268,6 +284,7 @@ function admin_menu_adjust_items(&$menu_links, &$sort) {
     'title' => theme('admin_menu_icon'),
     'path' => drupal_get_normal_path(variable_get('site_frontpage', 'node')),
     'weight' => -100,
+    'parent_path' => '<root>',
     'options' => array('extra class' => 'admin-menu-icon', 'html' => TRUE),
   );
   // Add link to show current authenticated/anonymous users - we will add the
@@ -276,13 +293,14 @@ function admin_menu_adjust_items(&$menu_links, &$sort) {
     'title' => 'icon_users',
     'path' => 'user',
     'weight' => -90,
-    'parent_path' => 'admin',
+    'parent_path' => '<root>',
     'options' => array('extra class' => 'admin-menu-action admin-menu-icon admin-menu-users', 'html' => TRUE),
   );
   $links[] = array(
     'title' => 'Log out @username',
     'path' => 'logout',
     'weight' => -100,
+    'parent_path' => '<root>',
     // Note: @username is dynamically replaced by default, we just invoke
     // replacement by setting the 't' key here.
     'options' => array('extra class' => 'admin-menu-action admin-menu-logout', 't' => array()),
