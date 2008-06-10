@@ -87,7 +87,9 @@ else {
   <?php if (!empty($description)): ?>
     <div class="faq_qa_description"><p><?php print $description ?></p></div>
   <?php endif; ?>
-  <div class="clear-block"></div>
+  <?php if (!empty($term_image)): ?>
+    <div class="clear-block"></div>
+  <?php endif; ?>
   </div> <!-- Close div: faq_qa_header -->
 
 
