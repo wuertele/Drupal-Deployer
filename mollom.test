@@ -74,6 +74,21 @@ class MollomModuleTestCase extends DrupalTestCase {
     $this->assertNoUnwantedRaw('The spam filter that is installed on this site is currently not available.', 'Testing the blocking fallback strategy.');
   }
 
+  function testFailoverMechanism() {
+    // We set the fallback strategy to 'acccept mode':
+    $this->drupalVariableSet('mollom_fallback', MOLLOM_FALLBACK_ACCEPT);
+
+    // We configure Mollom to use list of servers that have a number of unknown servers:
+    $this->drupalVariableSet('mollom_servers', array('http://fake-host-1', 'http://fake-host-2', 'http://xmlrpc1.mollom.com', 'http://fake-host-3'));
+
+    // We enable Mollom for the request password form:
+    $this->drupalVariableSet('mollom_user_pass', 1);
+
+    // Validate that the request password form has a CAPTCHA text field:
+    $this->drupalGet('user/password');
+    $this->assertWantedRaw('edit-captcha', 'Check presence of CAPTCHA on request password form.');
+  }
+
   function testProtectRequestPassword() {
     // We first enable Mollom for the request password form:
     $this->drupalVariableSet('mollom_user_pass', 1);
