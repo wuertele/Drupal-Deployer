@@ -11,6 +11,10 @@
  */
 function field_file_load($fid, $reset = NULL) {
   static $files = array();
+  
+  if (empty($fid)) {
+    return false;
+  }  
 
   // Reset internal cache.
   if ($reset) {
@@ -27,6 +31,10 @@ function field_file_load($fid, $reset = NULL) {
   }
   else {
     $file = db_fetch_object(db_query("SELECT f.* FROM {files} f WHERE f.filepath = '%s'", $fid));
+  }
+
+  if (!$file) {
+    return false;
   }
 
   module_invoke_all('file', 'load', $file);
@@ -106,7 +114,6 @@ function field_file_delete($file, $force = FALSE) {
  *
  * Check that the directory exists and is writable. Directories need to
  * have execute permissions to be considered a directory by FTP servers, etc.
- * 
  *
  * @param $directory A string containing the name of a directory path.
  * @param $mode A Boolean value to indicate if the directory should be created
@@ -144,7 +151,6 @@ function field_file_check_directory(&$directory, $mode = 0, $form_item = NULL) {
       return FALSE;
     }
   }
-
   if ((file_directory_path() == $directory || file_directory_temp() == $directory) && !is_file("$directory/.htaccess")) {
     $htaccess_lines = "SetHandler Drupal_Security_Do_Not_Remove_See_SA_2006_006\nOptions None\nOptions +FollowSymLinks";
     if (($fp = fopen("$directory/.htaccess", 'w')) && fputs($fp, $htaccess_lines)) {
@@ -158,8 +164,19 @@ function field_file_check_directory(&$directory, $mode = 0, $form_item = NULL) {
       watchdog('security', $message, $repl, WATCHDOG_ERROR);
     }
   }
-
   return TRUE;
+}
+
+/**
+ * Remove a possible leading file directory path from the given path.
+ */
+function field_file_strip_path($path) {
+  $dirpath = file_directory_path();
+  $dirlen = strlen($dirpath);
+  if (substr($path, 0, $dirlen + 1) == $dirpath .'/') {
+    $path = substr($path, $dirlen + 1);
+  }
+  return $path;
 }
 
 

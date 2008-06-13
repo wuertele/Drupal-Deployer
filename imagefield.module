@@ -91,6 +91,7 @@ function imagefield_elements() {
   $elements['imagefield_element_file_upload'] = array(
     '#input' => TRUE,
   );  
+
   return $elements;
 }
 
@@ -405,6 +406,7 @@ function _imagefield_content_admin_field_form_alter(&$form, $form_state, $form_i
  *   A form element to throw an error on if the directory is not writable
  */
 function imagefield_check_directory($directory, $fieldname = NULL) {
+  $directory = field_file_strip_path($directory);
   foreach (explode('/', $directory) as $dir) {
     $dirs[] = $dir;
     $path = file_create_path(implode($dirs, '/'));
@@ -452,7 +454,6 @@ function imagefield_content_is_empty($item, $field) {
 function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
   $form['#attributes'] += array('enctype' => 'multipart/form-data');
  
-  $widget = array();
   
   if ($field['widget']['custom_alt']) {
     $widget['alt'] = array(
@@ -475,7 +476,6 @@ function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
     '#field' => $field,
     '#delta' => $delta,
   );
-
   return $widget;
 }
 
@@ -507,8 +507,10 @@ function imagefield_widget_value($form, $edit = FALSE) {
   
   if (!$file = file_save_upload($upload_name, $validators, $complete_image_path)) {
     // watchdog.
+    
     return $form['#default_value'];
   }
+  dsm($file);
   return $file->fid;
 }
 
