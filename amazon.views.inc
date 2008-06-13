@@ -14,8 +14,85 @@
  */
 
 /**
+ * Implementation of hook_views_plugins
+ */
+function amazon_views_plugins() {
+  return array(
+    'module' => 'amazon', // This just tells our themes are elsewhere.
+    'row' => array(
+      'amazon_item' => array(
+        'title' => t('Amazon item'),
+        'help' => t('Display the item as a fully themed Amazon product.'),
+        'handler' => 'amazon_views_plugin_row_amazon_view',
+        'theme' => 'amazon_views_view_row_item',
+        'base' => array('amazon_item'), // only works with 'node' as base.
+        'uses options' => TRUE,
+        'type' => 'normal',
+      ),
+    ),
+  );
+}
+
+/**
  * Implementation of hook_views_data()
  */
+
+/**
+ * Plugin which performs a node_view on the resulting object.
+ *
+ * Most of the code on this object is in the theme function.
+ *
+ * @ingroup views_plugin_rows
+ */
+class amazon_views_plugin_row_amazon_view extends views_plugin_row {
+  function option_definition() {
+    $options = parent::option_definition();
+
+    $options['display_format'] = array('default' => 'default');
+
+    return $options;
+  }
+
+  function options_form(&$form, &$form_state) {
+    $form['display_format'] = array(
+      '#type' => 'select',
+      '#title' => t('Display format'),
+      '#options' => array(
+        'default' => t('Default'),
+        'details' => t('Details'),
+        'thumbnail' => t('Thumbnail'),
+        'inline' => t('Inline'),
+      ),
+      '#default_value' => $this->options['display_format'],
+    );
+  }
+}
+
+/**
+ * Template helper for theme_amazon_views_view_row_item
+ */
+function template_preprocess_amazon_views_view_row_item(&$vars) {
+  $options = $vars['options'];
+  $vars['amazon_item'] = ''; // make sure var is defined.
+  $asin = $vars['row']->asin;
+  $items = amazon_item_lookup($asin);
+  if (empty($items[$asin])) {
+    return;
+  }
+  else {
+    $item = $items[$asin];
+    $item['view'] = $vars['view'];
+    $vars['amazon_item'] = $item;
+    if ($options['display_format'] == 'inline') {
+      $vars['content'] = theme('amazon_item_inline', $item, $options['display_format']);
+    }
+    else {
+      $vars['content'] = theme('amazon_item', $item, $options['display_format']);
+    }
+  }
+}
+
+
 function amazon_views_data() {
   // Basic table information.
 
