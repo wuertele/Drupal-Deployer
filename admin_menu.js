@@ -2,8 +2,13 @@
 
 $(document).ready(function() {
   // Apply margin-top if enabled; directly applying marginTop doesn't work in IE.
-  if (Drupal.settings.admin_menu_margin_top == 1) {
+  if (Drupal.settings.admin_menu.margin_top) {
     $('body').addClass('admin-menu');
+  }
+
+  // Collapse fieldsets on Modules page.
+  if (Drupal.settings.admin_menu.tweak_modules) {
+    $('[id^="system-modules"] fieldset:not(.collapsed)').addClass('collapsed');
   }
 
   // Hover emulation for IE 6.
@@ -14,7 +19,7 @@ $(document).ready(function() {
       $(this).removeClass('iehover');
     });
   }
-  
+
   // Delayed mouseout.
   $('#admin-menu li').hover(function() {
     // Stop the timer.

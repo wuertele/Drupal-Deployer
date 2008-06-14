@@ -22,17 +22,13 @@ None.
 
 -- INSTALLATION --
 
-* Copy admin_menu module to your modules directory and enable it on the admin
-  modules page.
+* Install as usual, see http://drupal.org/node/70151 for further information.
 
 
 -- CONFIGURATION --
 
-* Configure module settings in administer -> Site configuration ->
-  Administration Menu.
-
-* Go to Administer -> User management -> Access control and assign permissions
-  for Drupal Administration Menu:
+* Configure user permissions in Administer >> User management >> Permissions
+  >> admin_menu module:
 
   - access administration menu: Displays Drupal Administration Menu.
 
@@ -44,11 +40,14 @@ None.
   have the permission 'administer access control' and 'administer users', the
   whole 'User management' menu item will not be displayed.
 
+* Customize module settings in Administer >> Site configuration >> Administration
+  Menu.
+
 
 -- CUSTOMIZATION --
 
 * You have two options to override the admin menu icon:
-  
+
   1) Disable it via CSS in your theme:
 <code>
 body #admin-menu-icon { display: none; }
@@ -89,6 +88,15 @@ body #admin-menu { font-size: 10px; }
 
 -- FAQ --
 
+Q: When admin_menu is enabled, plenty of blank space is added to the bottom of
+   my theme. Why?
+
+A: This is caused by a long list of links to module issue queues at Drupal.org.
+   Just go to Administer >> User management >> Permissions >> admin_menu and
+   disable the permission "display drupal links" for your or all roles.
+   Since uid 1 always has all permissions, this link list cannot be disabled
+   for uid 1.
+
 Q: After upgrading to 6.x-1.x, admin_menu disappeared. Why?
 
 A: This should not happen. If it did, visit
@@ -106,6 +114,7 @@ A: Yes, this is the intended behavior. Since admin_menu is only visible for
 
 Current maintainers:
 * Daniel F. Kudwien (sun) - dev@unleashedmind.com
+* Peter Wolanin (pwolanin) - http://drupal.org/user/49851
 * Stefan M. Kudwien (smk-ka) - dev@unleashedmind.com
 
 Major rewrite for Drupal 6 by Peter Wolanin (pwolanin).

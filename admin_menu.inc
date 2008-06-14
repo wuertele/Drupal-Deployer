@@ -241,6 +241,15 @@ function admin_menu_admin_menu(&$deleted) {
       }
     }
   }
+  // Add developer modules toggle link.
+  $current_state = variable_get('admin_menu_devel_modules_enabled', NULL);
+  $links[] = array(
+    'title' => isset($current_state) ? t('Re-enable developer modules') : t('Disable developer modules'),
+    'path' => 'admin_menu/toggle-modules',
+    'weight' => 88,
+    'parent_path' => $icon_path,
+    'options' => array('query' => 'destination'),
+  );
 
   return $links;
 }
@@ -313,5 +322,98 @@ function admin_menu_adjust_items(&$menu_links, &$sort) {
   }
 
   return $deleted;
+}
+
+/**
+ * Form builder function for module settings.
+ */
+function admin_menu_theme_settings() {
+  $form['admin_menu_margin_top'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Apply margin-top to page body'),
+    '#default_value' => variable_get('admin_menu_margin_top', 1),
+    '#description' => t('If enabled, the output of this site will be shifted for approx. 20 pixels from the top of the viewport to make room for the Administration Menu. If this setting is disabled, some absolute or fixed positioned page elements at the top of the viewport may be covered by Administration Menu.'),
+  );
+  $form['tweaks'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Drupal Administration Tweaks'),
+  );
+  $form['tweaks']['admin_menu_tweak_modules'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Collapse fieldsets on modules page'),
+    '#default_value' => variable_get('admin_menu_tweak_modules', 1),
+    '#description' => t('If enabled, fieldsets on the <a href="!modules-url">Site building &raquo; Modules</a> page will be initially collapsed.', array('!modules-url' => url('admin/build/modules'))),
+  );
+  if (module_exists('util')) {
+    $form['tweaks']['admin_menu_tweak_modules']['#description'] .= '<br /><strong>'. t('If you installed Utility module for this purpose, you can safely uninstall it now!') .'</strong>';
+  }
+  return system_settings_form($form);
+}
+
+/**
+ * Menu callback to enable/disable developer modules.
+ *
+ * This saves up to 150ms on each uncached page request. Not much, but
+ * on larger Drupal sites this is actually a 10% performance increase.
+ */
+function admin_menu_toggle_modules() {
+  $saved_state = variable_get('admin_menu_devel_modules_enabled', NULL);
+  if (isset($saved_state)) {
+    // Re-enable modules that were enabled before.
+    module_enable($saved_state);
+    variable_del('admin_menu_devel_modules_enabled');
+    drupal_set_message(t('Re-enabled these modules: !module_list', array('!module_list' => implode(', ', $saved_state))));
+  }
+  else {
+    // Allow site admins to override this variable via settings.php.
+    $devel_modules = variable_get('admin_menu_devel_modules', array('cache_disable', 'coder', 'debug', 'delete_all', 'demo', 'devel', 'devel_node_access', 'macro', 'form_controller', 'imagecache_ui', 'journal', 'trace', 'util', 'views_ui', 'views_theme_wizard'));
+    // Store currently enabled modules in a variable.
+    $devel_modules = array_intersect(module_list(FALSE, FALSE), $devel_modules);
+    if (!empty($devel_modules)) {
+      variable_set('admin_menu_devel_modules_enabled', $devel_modules);
+      // Disable developer modules.
+      module_disable($devel_modules);
+      drupal_set_message(t('Disabled these modules: !module_list', array('!module_list' => implode(', ', $devel_modules))));
+    }
+    else {
+      drupal_set_message(t('No developer modules are active'));
+    }
+  }
+  // Rebuild the admin menu.
+  variable_set('admin_menu_rebuild_links', TRUE);
+  drupal_goto('');
+}
+
+/**
+ * Helper function for admin_menu_form_devel_admin_settings_alter().
+ *
+ * Extends Devel module with Administration Menu developer settings.
+ */
+function _admin_menu_devel_settings_form_alter(&$form, $form_state) {
+  // Shift system_settings_form buttons.
+  $weight = isset($form['buttons']['#weight']) ? $form['buttons']['#weight'] : 0;
+  $form['buttons']['#weight'] = $weight + 1;
+
+  $form['admin_menu'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Administration Menu settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $display_options = array('mid', 'weight', 'pid');
+  $display_options = array(0 => t('None'), 'mlid' => t('Menu link id'), 'weight' => t('Weight'), 'plid' => t('Parent link id'));
+  $form['admin_menu']['admin_menu_display'] = array(
+    '#type' => 'radios',
+    '#title' => t('Display extra information for menu items in Drupal Administration Menu'),
+    '#default_value' => variable_get('admin_menu_display', 0),
+    '#options' => $display_options,
+    '#description' => t('If enabled, the chosen information will appear next to each menu item link.'),
+  );
+  $form['admin_menu']['admin_menu_show_all'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Display all menu items'),
+    '#default_value' => variable_get('admin_menu_show_all', 0),
+    '#description' => t('Enable this option to disable user access checks for menu items, i.e. every menu item in the visible menu tree will be displayed to every user regardless of access permissions.'),
+  );
 }
 
