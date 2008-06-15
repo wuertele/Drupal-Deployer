@@ -6,9 +6,9 @@ $(document).ready(function() {
     $('body').addClass('admin-menu');
   }
 
-  // Collapse fieldsets on Modules page.
+  // Collapse fieldsets on Modules page. For why multiple selectors see #111719.
   if (Drupal.settings.admin_menu.tweak_modules) {
-    $('[id^="system-modules"] fieldset:not(.collapsed)').addClass('collapsed');
+    $('#system-modules fieldset:not(.collapsed), #system-modules-1 fieldset:not(.collapsed)').addClass('collapsed');
   }
 
   // Hover emulation for IE 6.
