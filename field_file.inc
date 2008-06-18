@@ -12,9 +12,7 @@
 function field_file_load($fid, $reset = NULL) {
   static $files = array();
   
-  if (empty($fid)) {
-    return false;
-  }  
+  if (empty($fid)) return array();
 
   // Reset internal cache.
   if ($reset) {
@@ -22,30 +20,26 @@ function field_file_load($fid, $reset = NULL) {
   }
 
   // Serve file from internal cache if available.
-  if (!empty($fid) && !empty($files[$fid])) {
-    return (array)$files[$fid];
-  }
+  if (empty($files[$fid])) {
+    if (is_numeric($fid)) {
+      $file = db_fetch_object(db_query('SELECT f.* FROM {files} f WHERE f.fid = %d', $fid));
+    }
+    else {
+      $file = db_fetch_object(db_query("SELECT f.* FROM {files} f WHERE f.filepath = '%s'", $fid));
+    }
 
-  if (is_numeric($fid)) {
-    $file = db_fetch_object(db_query('SELECT f.* FROM {files} f WHERE f.fid = %d', $fid));
-  }
-  else {
-    $file = db_fetch_object(db_query("SELECT f.* FROM {files} f WHERE f.filepath = '%s'", $fid));
-  }
+    if (!$file) {
+      return array();
+    }  
+    module_invoke_all('file', 'load', $file);
 
-  if (!$file) {
-    return false;
-  }
-
-  module_invoke_all('file', 'load', $file);
-
-  // Cache the fully loaded value by both fid and filepath.
-  // use non-copying objects to save memory.
-  $files[$fid] = $file;
-  $files[$file->filepath] = $file;
-
+    // Cache the fully loaded value by both fid and filepath.
+    // use non-copying objects to save memory.
+    $files[$fid] = $file;
+  }  
+  
   // cast to array for field. hook_file expects objects as well as core file functions.
-  return (array)$file;
+  return (array)$files[$fid];
 }
 
 
