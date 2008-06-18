@@ -452,8 +452,10 @@ function imagefield_content_is_empty($item, $field) {
  * Implementation of hook_widget().
  */
 function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
+  //dsm($items);
   $form['#attributes'] += array('enctype' => 'multipart/form-data');
  
+  $file = empty($items[$delta]) ? array() : field_file_load($items[$delta]['fid']);
   
   if ($field['widget']['custom_alt']) {
     $widget['alt'] = array(
@@ -469,13 +471,18 @@ function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
       '#default_value' => '',
     );  
   }    
+  
   $widget['fid'] =  array(
     '#type' => $field['widget']['type'],
     '#description' =>  $field['widget']['description'],
-    '#default_value' => isset($items[$delta]) ? $items[$delta]['fid'] : null,
+    '#default_value' => empty($file) ? null : $file['fid'],
     '#field' => $field,
     '#delta' => $delta,
   );
+  $widget['data'] = array(
+    '#type' => 'hidden',
+    '#default_value' => '',
+  );  
   return $widget;
 }
 
@@ -510,7 +517,7 @@ function imagefield_widget_value($form, $edit = FALSE) {
     
     return $form['#default_value'];
   }
-  dsm($file);
+  //dsm($file);
   return $file->fid;
 }
 
@@ -523,11 +530,24 @@ function imagefield_widget_value($form, $edit = FALSE) {
 function imagefield_widget_default_process($element, $edit, &$form_state, $form) {
   $field = $element['#field'];
   $fieldname = $field['field_name'];
-
+   //dsm($element);
   //drupal_add_js(drupal_get_path('module', 'imagefield') .'/imagefield.js');
   drupal_add_css(drupal_get_path('module', 'imagefield') .'/imagefield.css');
   drupal_set_message('<pre>'. var_export($element['#value'],1) .'</pre>');
-  if (empty($element['#value']['fid'])) {
+  if ($file = field_file_load($element['#value'])) {
+    $element['preview'] = array(
+      '#type' => 'markup',
+      '#value' => '<img src="'. file_create_url($file['filepath']) .'" />',
+    );  
+    $element['delete'] = array(
+      '#tree' => false,
+      '#type' => 'checkbox',
+      '#default_value' => 0,
+      '#title' => t('delete'),
+    );  
+  }  
+  else {   
+
     $element['file_'. $element['#delta']] = array(
       '#type' => 'file',
       '#title' => t('Upload Image'),
@@ -538,25 +558,13 @@ function imagefield_widget_default_process($element, $edit, &$form_state, $form)
       '#name' => 'files['. $fieldname .'_'. $element['#delta'] .']',
       '#tree' => FALSE,
     );
-    $element['submit'] = array(
+    $element['upload_btn_'. $element['#delta']] = array(
+      '#tree' => false,
       '#type' => 'button',
       '#value' => t('Upload'),
       '#weight' => 10,
     );
   }   
-  else {
-    // load file from fid.
-    $file = field_file_load($element['#value']);
-    $element['preview'] = array(
-      '#type' => 'markup',
-      '#value' => '<img src="'. file_create_url($file['filepath']) .'" />',
-    );  
-    $element['delete'] = array(
-      '#type' => 'checkbox',
-      '#default_value' => 0,
-      '#title' => t('delete'),
-    );  
-  }  
   return $element;
 }
 
