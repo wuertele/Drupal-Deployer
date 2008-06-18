@@ -8,11 +8,11 @@ function services_admin_keys_list() {
 
   foreach ($keys as $kid => $key) {
     $row = array();
-    
+
     $row[] = $kid;
     $row[] = $key->title;
     $row[] = $key->domain;
-    
+
     // Populate the operations field.
     $operations = array();
 
@@ -21,10 +21,9 @@ function services_admin_keys_list() {
 
     // Set the delete column.
     $operations[] = array('data' => l(t('delete'), 'admin/build/services/keys/'. $kid .'/delete'));
-    
+
     //$row = array(array('data' => l($kid, 'admin/build/services/keys/'. $type_url_str), 'class' => $class), array('data' => check_plain($type->type), 'class' => $class), array('data' => check_plain($type->description), 'class' => $class));
     foreach ($operations as $operation) {
-      $operation['class'] = $class;
       $row[] = $operation;
     }
     $rows[] = $row;
@@ -38,44 +37,48 @@ function services_admin_keys_list() {
 }
 
 function services_admin_keys_form($key = NULL) {
+  $kid = isset($key->kid) ? $key->kid : NULL;
+  $title = isset($key->title) ? $key->title : NULL;
+  $domain = isset($key->domain) ? $key->domain : NULL;
+
   $form['kid'] = array(
     '#type' => 'hidden',
-    '#default_value' => $key->kid,
+    '#default_value' => $kid,
   );
-  
-  if ($key->kid) {
+
+  if ($kid) {
     $form['key'] = array(
       '#type' => 'markup',
       '#title' => t('Key'),
-      '#value' => '<strong>'. t('API Key') .':</strong> '. $key->kid,
-    ); 
+      '#value' => '<strong>'. t('API Key') .':</strong> '. $kid,
+    );
   }
-  
+
   $form['title'] = array(
     '#title' => t('Application title'),
     '#type' => 'textfield',
-    '#default_value' => $key->title,
+    '#default_value' => $title,
     '#description' => t('The title of the application or website using the service.'),
   );
   $form['domain'] = array(
     '#title' => t('Allowed domain'),
     '#type' => 'textfield',
-    '#default_value' => $key->domain,
+    '#default_value' => $domain,
     '#description' => t('External domain allowed to use this key.'),
   );
-  
+
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => ($key) ? t('Save key') : t('Create key'),
   );
-  
+
   return $form;
 }
 
 function services_admin_keys_form_submit($form, $form_state) {
-  
+
   services_admin_keys_save($form_state['values']);
-  
+
   return 'admin/build/services/keys';
 }
 
