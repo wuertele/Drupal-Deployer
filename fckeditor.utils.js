@@ -36,6 +36,8 @@ function Toggle(js_id, textareaID, textTextarea, TextRTE)
   // If the _Textarea DIV is visible, switch to FCKeditor.
   if ( eTextarea.style.display != 'none' )
   {
+	  if (typeof( imceInitiateFCK ) != 'undefined')
+	    imceInitiateFCK();
     document.getElementById('switch_' + js_id).innerHTML = textTextarea;
 
     // Switch the DIVs display.
