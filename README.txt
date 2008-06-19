@@ -87,6 +87,8 @@ The correct directory structure is as follows:
              fckconfig.js
              ...
 
+If you're still having problems, scroll down to the "Help & Contribution" section.
+             
 Plugins: Teaser break and Pagebreak
 -----------------------------------
 By default, FCKeditor module comes with two plugins that can handle 
@@ -184,6 +186,12 @@ If you are looking for more information, have any troubles in configuration or i
 you found an issue, please visit the official project page:
   http://drupal.org/project/fckeditor
 
+Having problems? Take a look at list of common problems when installing FCKeditor:
+  http://drupal.fckeditor.net/troubleshooting
+
+How to tune up FCKeditor to your theme:
+  http://drupal.fckeditor.net/tricks
+  
 We would like to encourage you to join our team if you can help in any way.
 If you can translate FCKeditor module, please use fckeditor.pot file as a template
 (located in "po" directory) and send us the translated file so that we could attach it.
