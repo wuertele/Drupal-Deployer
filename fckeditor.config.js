@@ -7,6 +7,13 @@
  FCKEDITOR_FORCE_SIMPLE_TOOLBAR_NAME in fckeditor.module
  */
 
+//uncomment these three lines to enable teaser break and page break plugins
+//remember to add 'DrupalBreak' and 'DrupalPageBreak' buttons to the toolbar
+FCKConfig.PluginsPath = '../../plugins/' ;
+FCKConfig.Plugins.Add( 'drupalbreak' ) ;
+FCKConfig.Plugins.Add( 'imgassist' ) ;
+//FCKConfig.Plugins.Add( 'drupalpagebreak' ) ;
+
 /*
  This toolbar is dedicated to users with "Full HTML" access 
  some of commands used here (like 'FontName') use inline styles,
@@ -62,13 +69,6 @@ if ( FCK.GetData ) {
 // code in the source. This kind of prevention must be done in the server side
 // (as does Drupal), so just leave this line as is.
 FCKConfig.ProtectedSource.Add( /<\?[\s\S]*?\?>/g ) ;	// PHP style server side code
-
-//uncomment these three lines to enable teaser break and page break plugins
-//remember to add 'DrupalBreak' and 'DrupalPageBreak' buttons to the toolbar
-FCKConfig.PluginsPath = '../../plugins/' ;
-FCKConfig.Plugins.Add( 'drupalbreak' ) ;
-FCKConfig.Plugins.Add( 'imgassist' ) ;
-//FCKConfig.Plugins.Add( 'drupalpagebreak' ) ;
 
 var _FileBrowserLanguage	= 'php' ;
 var _QuickUploadLanguage	= 'php' ;
