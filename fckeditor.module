@@ -40,19 +40,22 @@ define('FCKEDITOR_FORCE_SIMPLE_TOOLBAR_NAME', 'DrupalBasic') ;
  * Implementation of hook_help
  */
 function fckeditor_help($path, $arg) {
-  if (strpos($path, 'admin/settings/fckeditor/edit/') === 0 || $path == 'admin/settings/fckeditor/add') {
-    $output = t("<p>Note: FCKeditor is highly configurable. The most commonly used features are listed below. If you want to take a look at all available settings, open <code>!fckconfig</code> and then customize <code>!fckeditor_config</code> to your needs. This is also the only way to define new toolbar sets. It is advised to not edit <code>fckconfig.js</code> because you may overwrite it accidentally when you update the editor.</p>", array('!fckconfig' => drupal_get_path('module', 'fckeditor') ."/fckeditor/fckconfig.js", '!fckeditor_config' => drupal_get_path('module', 'fckeditor') ."/fckeditor.config.js"));
-  }
-
   switch ($path) {
     case 'admin/settings/help#description':
       $output = t("Enables the usage of FCKeditor (WYSIWYG editor) instead of plain text fields.");
       break;
-    case 'admin/settings/fckeditor/addg':
-    case 'admin/settings/fckeditor/editg':
-      $output = t("<p>The Global Profile allows you to define settings that are common for all profiles. Values defined in other profiles will be appended to the global configuration. This way you can avoid repeating some of the settings that are usually the same in each profile.</p>");
-      break;
     case 'admin/settings/fckeditor':
+      if (!empty($arg[3]) && in_array($arg[3], array("addg", "editg"))) {
+        $output = t("<p>The Global Profile allows you to define settings that are common for all profiles. Values defined in other profiles will be appended to the global configuration. This way you can avoid repeating some of the settings that are usually the same in each profile.</p>");
+        break;
+      }
+      else if (!empty($arg[3]) && in_array($arg[3], array("add", "edit"))) {
+        $output = t("<p>Note: FCKeditor is highly configurable. The most commonly used features are listed below. If you want to take a look at all available settings, open <code>!fckconfig</code> and then customize <code>!fckeditor_config</code> to your needs. This is also the only way to define new toolbar sets. It is advised to not edit <code>fckconfig.js</code> because you may overwrite it accidentally when you update the editor.</p>", array('!fckconfig' => drupal_get_path('module', 'fckeditor') ."/fckeditor/fckconfig.js", '!fckeditor_config' => drupal_get_path('module', 'fckeditor') ."/fckeditor.config.js"));
+        break;
+      }
+      else if (!empty($arg[3]) && in_array($arg[3], array("delete", "deleteg"))) {
+        break;
+      }
       $output = t("<p>The FCKeditor module allows Drupal to replace textarea fields with a rich text or <acronym title=\"What You See Is What You Get\">WYSIWYG</acronym> editor. This editor brings many of the powerful functionalities of known desktop editors like Word to the web. It's relatively lightweight and doesn't require any kind of installation on the client computer.</p><p>More information about the editor is located at the !fckeditorlink. A small user guide is located at !userguidelink.</p>",
       array(
       '!fckeditorlink' => l(t('FCKeditor homepage'), 'http://www.fckeditor.net'),
@@ -400,13 +403,21 @@ function fckeditor_admin($arg = NULL) {
       $output = fckeditor_global_profile_form(fckeditor_profile_load("FCKeditor Global Profile"));
       break;
 
+    case 'deleteg':
+      $output = fckeditor_ask_delete_confirmation(true); 
+      break;
+
     case 'delete':
+      $output = fckeditor_ask_delete_confirmation(false, urldecode(arg(4)));
+      break;
+      
+    case 'deleteconfirmed':
       fckeditor_profile_delete(urldecode(arg(4)));
       drupal_set_message(t('Deleted profile'));
       drupal_goto('admin/settings/fckeditor');
       break;
 
-    case 'deleteg':
+    case 'deletegconfirmed':
       fckeditor_profile_delete("FCKeditor Global Profile");
       drupal_set_message(t('Deleted Global profile'));
       drupal_goto('admin/settings/fckeditor');
@@ -1846,4 +1857,24 @@ function fckeditor_user_get_profile($user) {
 
 function fckeditor_init() {
   drupal_add_css(drupal_get_path('module', 'fckeditor') .'/fckeditor.css');
+}
+
+function fckeditor_ask_delete_confirmation($is_global, $profile = "") {
+  if (!$is_global) {
+    $delete_link = l(t('Yes, delete!'), 'admin/settings/fckeditor/deleteconfirmed/'. urlencode($profile));
+    $profile_name = t('!profile profile', array('!profile' => $profile));
+  }
+  else {
+    $delete_link = l(t('Yes, delete!'), 'admin/settings/fckeditor/deletegconfirmed');
+    $profile_name = t('Global Profile');
+  }
+  
+  drupal_set_title(t('Confirm profile deletion'));
+  drupal_set_message(t("You're about to delete the FCKeditor profile, read the question below carefully."), "warning");
+  
+  return t("<p>Are you sure that you want to delete the !profile?</p><p>!yes !no</p>", 
+    array('!profile' => $profile_name, 
+          '!yes' => $delete_link,
+          '!no' => l(t('Cancel'), 'admin/settings/fckeditor', array('attributes' => array ('style' => 'margin-left:40px'))),
+          ));
 }
