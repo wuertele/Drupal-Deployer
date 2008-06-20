@@ -1,4 +1,15 @@
-document.write('<script type="text/javascript" src="' + window.opener.fckImgAssistPath + '/img_assist_textarea.js"></script>');
+//
+// Load the img_assist_textarea.js script
+//
+// Get the header of the document
+var head= document.getElementsByTagName('head')[0];
+// Create a new script object
+var script= document.createElement('script');
+script.type= 'text/javascript';
+// Source dirname is built from the second script tag found in the document
+script.src = head.getElementsByTagName('script')[1].src.match( /.*\// ) + 'img_assist_textarea.js';
+// Append the new script to the header
+head.appendChild(script);
 
 setTimeout("InitFCKeditorImgAssist();", 1000);
 
