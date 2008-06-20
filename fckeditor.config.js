@@ -59,9 +59,24 @@ FCKConfig.ToolbarSets["DrupalFiltered"] = [
 ] ;
 
 //as of FCKeditor 2.5 ShowBlocks command is available
+//remove this code if you don't need ShowBlocks buttons
 if ( FCK.GetData ) {
-	FCKConfig.ToolbarSets["DrupalFull"][10].push('ShowBlocks') ;
-	FCKConfig.ToolbarSets["DrupalFiltered"][9].push('ShowBlocks') ;
+  var len ;
+  var ts = FCKConfig.ToolbarSets ;
+  if (ts["DrupalFull"]) {
+    len = ts["DrupalFull"].length ;
+    if (!ts["DrupalFull"][len-1] && ts["DrupalFull"][len-2])
+      len--;
+    if (ts["DrupalFull"][len-1])
+      FCKConfig.ToolbarSets["DrupalFull"][len-1].push('ShowBlocks') ;
+  }
+  if (ts["DrupalFiltered"]) {
+    len = ts["DrupalFiltered"].length ;
+    if (!ts["DrupalFiltered"][len-1] && ts["DrupalFiltered"][len-2])
+      len--;
+    if (ts["DrupalFiltered"][len-1])
+      FCKConfig.ToolbarSets["DrupalFiltered"][len-1].push('ShowBlocks') ;
+  }
 }
 // Protect PHP code tags (<?...?>) so FCKeditor will not break them when
 // switching from Source to WYSIWYG.
