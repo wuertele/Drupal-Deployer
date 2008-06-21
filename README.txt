@@ -67,6 +67,8 @@ the following changes:
    For example:
 
      jquery_ui_add(array('ui.draggable', 'ui.droppable', 'ui.sortable'));
+     
+     jquery_ui_add('ui.sortable');  // For a single file
 
    See the contents of the jquery.ui-X.X sub-directory for a list of available
    files that may be included, and see http://ui.jquery.com/docs for details on
