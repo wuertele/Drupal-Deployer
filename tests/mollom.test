@@ -4,10 +4,18 @@
 /**
  * Define some test keys.  These keys will only work in test mode, so
  * consult the Mollom API documentation for details.  These keys are
- * also Mollom reseller keys.
+ * also Mollom reseller keys.  Do NOT use production keys for testing!
  */
 define('MOLLOM_TEST_PUBLIC_KEY', '9cc3d2e43971de758ecddad61a3d12ec');
 define('MOLLOM_TEST_PRIVATE_KEY', '603a8d11099f17faaab49139bfc7d00a');
+
+/**
+ * If the keys above are reseller keys, set to TRUE.  The default keys
+ * are not reseller keys.  If you set this to TRUE and you are testing
+ * with non-reseller keys, various tests will fail due to unprivileged
+ * API access.
+ */
+define('MOLLOM_RESELLER_KEY', FALSE);
 
 class MollomWebTestCase extends DrupalWebTestCase {
   /**
@@ -23,6 +31,7 @@ class MollomWebTestCase extends DrupalWebTestCase {
     // Delete any previously set Mollom servers to make sure we are using
     // the default ones.
     variable_del('mollom_servers');
+    variable_set('mollom_servers', array('http://127.0.0.1:8080'));
     
     // Call the mollom.verifyKey function directly and check that the key
     // is valid.
@@ -485,7 +494,7 @@ class MollomResellerTestCase extends MollomWebTestCase {
   
   function getInfo() {
     return array(
-      'name' => t('Key provisioning and management'),
+      'name' => t('Key provisioning for Mollom reseller'),
       'description' => t('Check that the reseller APIs are working properly.'),
       'group' => t('Mollom'),
     );
@@ -499,7 +508,47 @@ class MollomResellerTestCase extends MollomWebTestCase {
   /**
    * Make sure that resellers can create a new site.
    */
-  function testCreateSite() {
-//        $key_is_valid = mollom('mollom.createSite', );
+  function testKeyManagement() {    
+
+    if (MOLLOM_RESELLER_KEY) {
+      // Create 3 test sites:
+      for ($i = 1; $i <= 3; $i++) {
+        $keys[] = mollom('mollom.createSite', array('url' => 'http://example.com/site-'. $i, 'mail' => 'mail@example.com', 'status' => 0, 'testing' => 1)); 
+        $this->assertEqual(xmlrpc_errno(), FALSE, t('A new site has been registered with Mollom.'));
+      }
+    
+      $sites = mollom('mollom.listSites');
+      foreach ($sites as $site) {
+        // Retrieve the information from the site:
+        $details = mollom('mollom.getSite', array('client_key' => $site));
+        $this->assertEqual($details['mail'], 'mail@example.com', t("The original information is correctly retrieved from Mollom."));
+        $this->assertEqual($details['status'], 0, t("The original information is correctly retrieved from Mollom."));
+        $this->assertEqual($details['testing'], 1, t("The original information is correctly retrieved from Mollom."));
+                         
+        // Perform a safety check to avoid that the tests would delete
+        // valid sites in case someone messed up their Mollom settings!
+        if ($details['mail'] == 'mail@example.com' || $details['mail'] == 'root@example.com') { 
+          // Update the information on the site:
+          $details['mail'] = 'root@example.com';
+          mollom('mollom.updateSite', array('client_key' => $site) + $details);
+          $this->assertEqual(xmlrpc_errno(), FALSE, t('The information has been updated on the Mollom server.'));
+      
+          // Retrieve the information from the site and check if it was updated properly:
+          $details = mollom('mollom.getSite', array('client_key' => $site));
+          $this->assertEqual($details['mail'], 'root@example.com', t("The updated information is correctly retrieved from Mollom."));
+      
+          // Delete the test site:
+          mollom('mollom.deleteSite', array('client_key' => $site));
+          $this->assertEqual(xmlrpc_errno(), FALSE, t('The Mollom server deleted a site.'));
+        }
+        else {
+          $this->fail(t('We tried to delete a non-test site.'));
+        }
+      }
+
+      // Verify that all sites have been deleted:
+      $sites = mollom('mollom.listSites');
+      $this->assertEqual(count($sites), 0, t('All Mollom sites have been deleted.'));
+    }
   }
 }
