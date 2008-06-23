@@ -3,7 +3,8 @@
 
 /**
  * Define some test keys.  These keys will only work in test mode, so
- * consult the Mollom API documentation for details.
+ * consult the Mollom API documentation for details.  These keys are
+ * also Mollom reseller keys.
  */
 define('MOLLOM_TEST_PUBLIC_KEY', '9cc3d2e43971de758ecddad61a3d12ec');
 define('MOLLOM_TEST_PRIVATE_KEY', '603a8d11099f17faaab49139bfc7d00a');
@@ -18,15 +19,17 @@ class MollomWebTestCase extends DrupalWebTestCase {
     // Set up the test keys.
     variable_set('mollom_public_key', MOLLOM_TEST_PUBLIC_KEY);
     variable_set('mollom_private_key', MOLLOM_TEST_PRIVATE_KEY);
+    
     // Delete any previously set Mollom servers to make sure we are using
     // the default ones.
     variable_del('mollom_servers');
+    
     // Call the mollom.verifyKey function directly and check that the key
     // is valid.
     $key_is_valid = mollom('mollom.verifyKey');
     $this->assertIdentical($key_is_valid, TRUE, t('The Mollom servers can be contacted and the key pair specified in the mollom.test file is found to be valid.'));
   }
-
+    
   /**
    * Visit the Mollom administration page and edit the administrative
    * settings. Note that this function has the side effect of logging
@@ -58,19 +61,44 @@ class MollomAccessTestCase extends MollomWebTestCase {
   }
 
   /**
-   * Make sure that the Mollom settings page works for users with the 
-   * 'administer site configuration' permission (but not those without
-   * it) and that it reports a working Mollom key pair.
+   * Configure both a valid and an invalid key pair and make sure both
+   * success and failure are reported on the Mollom settings page.
    */
-  function testMollomAccess() {
+  function testKeyPairs() {
+    // Check that a success message is shown.
+    $admin_user = $this->drupalCreateUser(array('administer site configuration'));
+    $this->drupalLogin($admin_user);
+    $this->drupalGet('admin/settings/mollom');
+    $this->assertText(t('@message: the Mollom services are operating correctly. We are now blocking spam.', array('@message' => t('We contacted the Mollom servers to verify your keys'))), t('The Mollom settings page reports that Mollom is working correctly.'));
+  
+    // Set up invalid test keys.
+    variable_set('mollom_public_key', 'invalid-public-key');
+    variable_set('mollom_private_key', 'invalid-private-key');
+
+    // Check that an error message is shown.
+    $admin_user = $this->drupalCreateUser(array('administer site configuration'));
+    $this->drupalLogin($admin_user);
+    $this->drupalGet('admin/settings/mollom');
+    $this->assertRaw(t('"messages error"'), t('The Mollom settings page reports that the Mollom keys are invalid.'));
+  }
+  
+  /**
+   * Make sure that the Mollom settings page works for users with the 
+   * 'administer site configuration' permission but not those without
+   * it.
+   */
+  function testAccessRights() {
+    // Check access for a user that only has access to the 'administer
+    // site configuration' permission. This user should have access to
+    // the Mollom settings page.
     $admin_user = $this->drupalCreateUser(array('administer site configuration'));
     $this->drupalLogin($admin_user);
     $this->drupalGet('admin/settings/mollom');
     $this->assertResponse(200, t("The Mollom settings page is accessible to users with the 'administer site configuration' permission."));
-    $this->assertText(t('@message: the Mollom services are operating correctly. We are now blocking spam.', array('@message' => t('We contacted the Mollom servers to verify your keys'))), t('The Mollom settings page reports that Mollom is working correctly.'));
+
     // Check access for a user that has everything except the 'administer
     // site configuration' permission. This user should not have access
-    // to the module settings page.
+    // to the Mollom settings page.
     $non_admin_user = $this->drupalCreateUser(array_diff(module_invoke_all('perm'), array('administer site configuration')));
     $this->drupalLogin($non_admin_user);
     $this->drupalGet('admin/settings/mollom');
@@ -450,5 +478,28 @@ class MollomContactFormTestCase extends MollomWebTestCase {
     $this->drupalPost($url, array('subject' => 'unsure', 'message' => 'unsure', 'captcha' => 'correct'), $button);
     $this->assertNoFieldByID('edit-captcha', '', t('The CAPTCHA is absent on the @form after it has been solved.', array('@form' => $form_name)));
     $this->assertText($success_message, t('A possible spam message can be submitted on the @form after the CAPTCHA has been solved.', array('@form' => $form_name)));
+  }
+}
+
+class MollomResellerTestCase extends MollomWebTestCase {
+  
+  function getInfo() {
+    return array(
+      'name' => t('Key provisioning and management'),
+      'description' => t('Check that the reseller APIs are working properly.'),
+      'group' => t('Mollom'),
+    );
+  }
+
+  function setUp() {
+    parent::setUp('mollom');
+    $this->mollomKeySetup();
+  }
+    
+  /**
+   * Make sure that resellers can create a new site.
+   */
+  function testCreateSite() {
+//        $key_is_valid = mollom('mollom.createSite', );
   }
 }
