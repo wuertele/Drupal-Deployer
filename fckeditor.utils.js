@@ -158,31 +158,7 @@ function FCKeditor_OnComplete( editorInstance )
   $('#edit-teaser-include').parent().show();
 
 	//Img_Assist integration
-	IntegrateWithImgAssist();
-	  
-  // -- some hacks for IE
-  var oldCheckAndRemovePaddingNode = editorInstance.EditorWindow.parent.FCKDomTools.CheckAndRemovePaddingNode ;
-
-  editorInstance.EditorWindow.parent.FCKDomTools.CheckAndRemovePaddingNode = function( doc, tagName, dontRemove )
-  {
-    try
-    {
-      oldCheckAndRemovePaddingNode( doc, tagName, dontRemove ) ;
-    }
-    catch(e)
-    {}
-  }
-
-  editorInstance.Events.FireEvent = function( eventName, params )
-  {
-    try
-    {
-      return editorInstance.EditorWindow.parent.FCKEvents.prototype.FireEvent.call( this, eventName, params ) ;
-    }
-    catch(e)
-    {}
-  }
-  // -- some hacks for IE
+	IntegrateWithImgAssist();	  
 }
 
 function IntegrateWithImgAssist()
