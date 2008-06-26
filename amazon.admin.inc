@@ -116,9 +116,7 @@ function amazon_test_form($form_state) {
   );
 
   if (isset($form_state['amazon_item'])) {
-    $markup = '';
-    $markup .= theme('amazon_item', $form_state['amazon_item']);
-    $markup .= '<h3>' . t('Raw data:') . '</h3>';
+    $markup = theme('amazon_item', $form_state['amazon_item'], 'details');
     $markup .= '<pre>'. print_r($form_state['amazon_item'], TRUE) .'</pre>';
     $form['item_data'] = array(
       '#type' => 'markup',

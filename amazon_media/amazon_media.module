@@ -41,14 +41,20 @@ function amazon_media_preprocess_amazon_item(&$variables) {
   else {
     $variables['theatricalreleaseyear'] = '';
   }
-
+  
   if (!empty($variables['publicationdate'])) {
     $date = explode('-', $variables['publicationdate']);
     $variables['publicationyear'] = $date[0];
   }
-  else {
-    $variables['publicationyear'] = '';
-  }
+
+  // Various bits we want to ensure have defaults.
+  $variables += array(
+    'director' => '',
+    'audiencerating' => t('NR - Not Rated'),
+    'publicationyear' => '',
+    'runningtime' => '',
+    'theatricalreleaseyear' => '',
+  );
 }
 
 
@@ -57,6 +63,7 @@ function amazon_media_amazon_item_load(&$item) {
     case 'ABIS_BOOK':
       $additions = db_fetch_array(db_query("SELECT * FROM {amazon_book} WHERE asin = '%s'", $item['asin']));
       break;
+    case 'VIDEO_DVD':
     case 'ABIS_DVD':
       $additions = db_fetch_array(db_query("SELECT * FROM {amazon_dvd} WHERE asin = '%s'", $item['asin']));
       break;
@@ -79,6 +86,7 @@ function amazon_media_amazon_item_insert($item) {
     case 'ABIS_BOOK':
       drupal_write_record('amazon_book', $item);
       break;
+    case 'VIDEO_DVD':
     case 'ABIS_DVD':
       drupal_write_record('amazon_dvd', $item);
       break;
