@@ -142,6 +142,7 @@ function amazon_views_data() {
   _amazon_make_simple_number_field($data, 'amazon_item', 'salesrank', 'Sales rank', 'The current sales ranking of the product on Amazon.com.');
   _amazon_make_simple_text_field($data, 'amazon_item', 'publisher', 'Publisher', 'The publisher of the product.');
   _amazon_make_simple_text_field($data, 'amazon_item', 'manufacturer', 'Manufacturer', 'The manufacturer of the product.');
+  _amazon_make_simple_text_field($data, 'amazon_item', 'mpn', "Part number", "The Manufacturer's own part number for the product.");
   _amazon_make_simple_text_field($data, 'amazon_item', 'studio', 'Studio', 'The name of the studio that published the product.');
   _amazon_make_simple_text_field($data, 'amazon_item', 'label', 'Label', 'The name of the label that published the product.');
   _amazon_make_simple_text_field($data, 'amazon_item', 'binding', 'Binding', 'The style of binding used for the product.');
