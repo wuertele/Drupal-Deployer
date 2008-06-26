@@ -56,28 +56,6 @@ function admin_menu_theme() {
 }
 
 /**
- * Implementation of hook_init().
- *
- * We can't move this into admin_menu_footer(), because PHP-only based themes
- * like chameleon load and output scripts and stylesheets in front of
- * theme_closure(), so we ensure Admin menu's styles and scripts are loaded on
- * all pages via hook_init().
- */
-function admin_menu_init() {
-  if (user_access('access administration menu')) {
-    $path = drupal_get_path('module', 'admin_menu');
-    drupal_add_css($path .'/admin_menu.css', 'module', 'all', FALSE);
-    // Performance: Defer execution.
-    drupal_add_js($path .'/admin_menu.js', 'module', 'header', TRUE);
-
-    drupal_add_js(array('admin_menu' => array('margin_top' => variable_get('admin_menu_margin_top', 1))), 'setting');
-    if ($_GET['q'] == 'admin/build/modules') {
-      drupal_add_js(array('admin_menu' => array('tweak_modules' => variable_get('admin_menu_tweak_modules', 1))), 'setting');
-    }
-  }
-}
-
-/**
  * Implementation of hook_menu().
  */
 function admin_menu_menu() {
@@ -100,6 +78,28 @@ function admin_menu_menu() {
 }
 
 /**
+ * Implementation of hook_init().
+ *
+ * We can't move this into admin_menu_footer(), because PHP-only based themes
+ * like chameleon load and output scripts and stylesheets in front of
+ * theme_closure(), so we ensure Admin menu's styles and scripts are loaded on
+ * all pages via hook_init().
+ */
+function admin_menu_init() {
+  if (user_access('access administration menu')) {
+    $path = drupal_get_path('module', 'admin_menu');
+    drupal_add_css($path .'/admin_menu.css', 'module', 'all', FALSE);
+    // Performance: Defer execution.
+    drupal_add_js($path .'/admin_menu.js', 'module', 'header', TRUE);
+
+    drupal_add_js(array('admin_menu' => array('margin_top' => variable_get('admin_menu_margin_top', 1))), 'setting');
+    if ($_GET['q'] == 'admin/build/modules') {
+      drupal_add_js(array('admin_menu' => array('tweak_modules' => variable_get('admin_menu_tweak_modules', 1))), 'setting');
+    }
+  }
+}
+
+/**
  * Implementation of hook_footer().
  *
  * Admin menu was previously output via hook_block(), but suffered from
@@ -113,7 +113,7 @@ function admin_menu_menu() {
 function admin_menu_footer($main = 0) {
   // Check for the flag indicating that we need to rebuild.
   if (variable_get('admin_menu_rebuild_links', FALSE)) {
-    include_once(drupal_get_path('module', 'admin_menu') . '/admin_menu.inc');
+    module_load_include('inc', 'admin_menu');
     _admin_menu_rebuild_links();
     variable_del('admin_menu_rebuild_links');
   }
@@ -191,7 +191,7 @@ function theme_admin_menu_item($link, $has_children, $menu = '', $in_active_trai
  * Extends Devel module with Administration Menu developer settings.
  */
 function admin_menu_form_devel_admin_settings_alter(&$form, $form_state) {
-  include_once(drupal_get_path('module', 'admin_menu') .'/admin_menu.inc');
+  module_load_include('inc', 'admin_menu');
   _admin_menu_devel_settings_form_alter($form, $form_state);
 }
 

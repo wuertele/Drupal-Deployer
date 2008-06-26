@@ -242,9 +242,9 @@ function admin_menu_admin_menu(&$deleted) {
     }
   }
   // Add developer modules toggle link.
-  $current_state = variable_get('admin_menu_devel_modules_enabled', NULL);
+  $saved_state = variable_get('admin_menu_devel_modules_enabled', NULL);
   $links[] = array(
-    'title' => isset($current_state) ? t('Re-enable developer modules') : t('Disable developer modules'),
+    'title' => isset($saved_state) ? t('Re-enable developer modules') : t('Disable developer modules'),
     'path' => 'admin_menu/toggle-modules',
     'weight' => 88,
     'parent_path' => $icon_path,
@@ -357,12 +357,14 @@ function admin_menu_theme_settings() {
  * on larger Drupal sites this is actually a 10% performance increase.
  */
 function admin_menu_toggle_modules() {
+  $rebuild = FALSE;
   $saved_state = variable_get('admin_menu_devel_modules_enabled', NULL);
   if (isset($saved_state)) {
     // Re-enable modules that were enabled before.
     module_enable($saved_state);
     variable_del('admin_menu_devel_modules_enabled');
-    drupal_set_message(t('Re-enabled these modules: !module_list', array('!module_list' => implode(', ', $saved_state))));
+    drupal_set_message(t('Re-enabled these modules: !module-list.', array('!module-list' => implode(', ', $saved_state))));
+    $rebuild = TRUE;
   }
   else {
     // Allow site admins to override this variable via settings.php.
@@ -373,14 +375,25 @@ function admin_menu_toggle_modules() {
       variable_set('admin_menu_devel_modules_enabled', $devel_modules);
       // Disable developer modules.
       module_disable($devel_modules);
-      drupal_set_message(t('Disabled these modules: !module_list', array('!module_list' => implode(', ', $devel_modules))));
+      drupal_set_message(t('Disabled these modules: !module-list.', array('!module-list' => implode(', ', $devel_modules))));
+      $rebuild = TRUE;
     }
     else {
-      drupal_set_message(t('No developer modules are active'));
+      drupal_set_message(t('No developer modules are enabled.'));
     }
   }
-  // Rebuild the admin menu.
-  variable_set('admin_menu_rebuild_links', TRUE);
+  if ($rebuild) {
+    // Make sure everything is rebuilt, basically a combination of the calls
+    // from system_modules() and system_modules_submit().
+    drupal_rebuild_theme_registry();
+    menu_rebuild();
+    cache_clear_all('schema', 'cache');
+    cache_clear_all();
+    drupal_clear_css_cache();
+    drupal_clear_js_cache();
+    // Synchronize to catch any actions that were added or removed.
+    actions_synchronize();
+  }
   drupal_goto('');
 }
 
