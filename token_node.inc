@@ -2,7 +2,20 @@
 // $Id$
 
 /**
- * Implementation of hook_token_values()
+ * @file
+ * Implementations of token module hooks for the core node and book modules.
+ *
+ * The token module requires specific hooks to be added to modules
+ * so that those modules can return data about their objects to the
+ * token API.  Until and unless token becomes a part of core, the
+ * implementations of the token hooks for core modules are provided
+ * in the token module itself.
+ *
+ * @ingroup token
+ */
+
+/**
+ * Implementation of hook_token_values().
  */
 function node_token_values($type, $object = NULL, $options = array()) {
   $values = array();
@@ -56,7 +69,7 @@ function node_token_values($type, $object = NULL, $options = array()) {
         $menus = menu_get_menus();
         $menu_name = $node->menu['menu_name'];
         $menu_title = $menus[$menu_name];
-        $trail_raw = _menu_titles($menu_name, $node->nid);
+        $trail_raw = _menu_titles($node->menu, $node->nid);
         $trail = array();
         foreach ($trail_raw as $title) {
           $trail[] = check_plain($title);
@@ -84,17 +97,17 @@ function node_token_values($type, $object = NULL, $options = array()) {
             // has a weight of at least 1 which will run after taxonomy has saved the data which allows us to
             // pull it out of the db here.
             if (!isset($term->name) || !isset($term->tid)) {
-              $vid = db_result(db_query("SELECT t.vid FROM {term_node} r INNER JOIN {term_data} t ON r.tid = t.tid INNER JOIN {vocabulary} v ON t.vid = v.vid WHERE r.nid = %d ORDER BY v.weight, t.weight, t.name LIMIT 1", $object->nid));
+              $vid = db_result(db_query_range("SELECT t.vid FROM {term_node} r INNER JOIN {term_data} t ON r.tid = t.tid INNER JOIN {vocabulary} v ON t.vid = v.vid WHERE r.nid = %d ORDER BY v.weight, t.weight, t.name", $object->nid, 0, 1));
               if (!$vid) {
                 continue;
               }
-              $term = db_fetch_object(db_query("SELECT t.tid, t.name FROM {term_data} t INNER JOIN {term_node} r ON r.tid = t.tid WHERE t.vid = %d AND r.nid = %d ORDER BY weight LIMIT 1", $vid, $object->nid));
+              $term = db_fetch_object(db_query_range("SELECT t.tid, t.name FROM {term_data} t INNER JOIN {term_node} r ON r.tid = t.tid WHERE t.vid = %d AND r.nid = %d ORDER BY weight", $vid, $object->nid, 0, 1));
               $term->vid = $vid;
             }
 
             // Ok, if we still don't have a term name maybe this is a pre-taxonomy submit node
             // So if it's a number we can get data from it
-            if(!isset($term->name) && is_array($original_term)) {
+            if (!isset($term->name) && is_array($original_term)) {
               $tid = array_shift($original_term);
               if (is_numeric($tid)) {
                 $term = taxonomy_get_term($tid);
@@ -105,7 +118,7 @@ function node_token_values($type, $object = NULL, $options = array()) {
             $values['term-id'] = $term->tid;
             $vid = $term->vid;
 
-            if(!empty($vid)) {
+            if (!empty($vid)) {
               $vocabulary = taxonomy_vocabulary_load($vid);
               $values['vocab'] = check_plain($vocabulary->name);
               $values['vocab-raw'] = $vocabulary->name;
@@ -141,7 +154,7 @@ function node_token_values($type, $object = NULL, $options = array()) {
 }
 
 /**
- * Implementation of hook_token_list()
+ * Implementation of hook_token_list().
  */
 function node_token_list($type = 'all') {
   if ($type == 'node' || $type == 'all') {
@@ -191,27 +204,39 @@ function node_token_list($type = 'all') {
 /**
  * Return an array of titles for a menu, from the top down to the specified node
  *
- * @param $menu_name
- *   The name of the menu.
+ * @param $menu_link
+ *   Fully loaded menu link, of node to which a path is desired.
  * @param $nid
- *   Id of the node at the bottom
+ *   Id of node.
  * @return
  *   An array of titles through the specified node
  */
-function _menu_titles($menu_name, $nid) {
-  // Get the menu hierarchy for the specified page.
-  $item = array_shift(menu_tree_all_data($menu_name));
-  $titles = array();
-  // Go down the active trail until the right level is reached.
-  while ($item) {
-    $titles[] = $item['link']['title'];
-    // Break AFTER getting the desired node's title
-    if ($item['link']['href'] == "node/$nid" || !$item['below']) {
-      break;
+function _menu_titles($menu_link, $nid) {
+  $tree = menu_tree_all_data($menu_link['menu_name'], $menu_link);
+
+  // Get mlid of all nodes in path - top-most parent to leaf node.
+  $parents = array();
+  for ($i = 1; $i < MENU_MAX_DEPTH; $i++) {
+    if ($menu_link["p$i"]) {
+      $parents[] = $menu_link["p$i"];
     }
-    $item = array_shift($item['below']);
   }
 
+  // Build the titles in this hierarchy.
+  $titles = array();
+  $current = array_shift($tree);
+  while ($current) {
+    if (in_array($current['link']['mlid'], $parents)) {
+      $titles[] = $current['link']['title'];
+      if ($current['link']['href'] == "node/". $nid) {
+        break;
+      }
+      // Go deeper in tree hierarchy.
+      $tree = $current['below'];
+    }
+    // Go to next sibling at same level in tree hierarchy.
+    $current = $tree ? array_shift($tree) : NULL;
+  }
   return $titles;
 }
 
@@ -221,10 +246,9 @@ function _menu_titles($menu_name, $nid) {
 function book_token_values($type, $object = NULL, $options = array()) {
   if ($type == 'node') {
     $node = $object;
-    if (isset($node->book)) {
+    if (!empty($node->book['menu_name'])) {
       $menus = menu_get_menus();
-      $menu_name = $node->book['menu_name'];
-      $trail_raw = _menu_titles($menu_name, $node->nid);
+      $trail_raw = _menu_titles($node->book, $node->nid);
       $book_raw = $trail_raw[0];
       $book = check_plain($book_raw);
       // For book paths, we don't include the current node's title (last in
@@ -234,7 +258,7 @@ function book_token_values($type, $object = NULL, $options = array()) {
       foreach ($trail_raw as $title) {
         $trail[] = check_plain($title);
       }
-      $book_title = $trail[0];
+      $book_title = isset($trail[0]) ? $trail[0] : '';
       $tokens = array();
       $tokens['book'] = $book;
       $tokens['book-raw'] = $book_raw;

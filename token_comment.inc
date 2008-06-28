@@ -2,13 +2,25 @@
 // $Id$
 
 /**
- * Implementation of hook_token_values()
+ * @file
+ * Implementations of token module hooks for the core comment module.
+ *
+ * The token module requires specific hooks to be added to modules
+ * so that those modules can return data about their objects to the
+ * token API.  Until and unless token becomes a part of core, the
+ * implementations of the token hooks for core modules are provided
+ * in the token module itself.
+ * @ingroup token
+ */
+
+/**
+ * Implementation of hook_token_values().
  */
 function comment_token_values($type, $object = NULL, $options = array()) {
   $values = array();
   switch ($type) {
     case 'comment':
-      
+
       // Cast to an object just in case fussy Drupal gave us an array
       $comment = (object)$object;
 
@@ -40,12 +52,12 @@ function comment_token_values($type, $object = NULL, $options = array()) {
       $values['comment-d']               = date('j', $comment->timestamp);
       break;
   }
-  
+
   return $values;
 }
 
 /**
- * Implementation of hook_token_list()
+ * Implementation of hook_token_list().
  */
 function comment_token_list($type = 'all') {
   if ($type == 'comment' || $type == 'all') {

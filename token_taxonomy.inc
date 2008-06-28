@@ -2,16 +2,29 @@
 // $Id$
 
 /**
- * Implementation of hook_token_values()
+ * @file
+ * Implementations of token module hooks for the core taxonomy module.
+ *
+ * The token module requires specific hooks to be added to modules
+ * so that those modules can return data about their objects to the
+ * token API.  Until and unless token becomes a part of core, the
+ * implementations of the token hooks for core modules are provided
+ * in the token module itself.
+ *
+ * @ingroup token
+ */
+
+/**
+ * Implementation of hook_token_values().
  */
 function taxonomy_token_values($type, $object = NULL, $options = array()) {
   $values = array();
   switch ($type) {
     case 'taxonomy':
       $category = $object;
-      
       $vid = $category->vid;
       $vocabulary = taxonomy_vocabulary_load($vid);
+
       $values['vid'] = $vid;
       $values['vocab'] = check_plain($vocabulary->name);
       $values['cat'] = check_plain($category->name);
@@ -25,7 +38,7 @@ function taxonomy_token_values($type, $object = NULL, $options = array()) {
 }
 
 /**
- * Implementation of hook_token_list()
+ * Implementation of hook_token_list().
  */
 function taxonomy_token_list($type = 'all') {
   if ($type == 'taxonomy' || $type == 'all') {
