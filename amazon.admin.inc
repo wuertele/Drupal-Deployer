@@ -95,7 +95,7 @@ function amazon_storage_settings_form() {
   );
 
   // Now add the Javascript that does the fancy hide/show effects.
-  drupal_add_js(drupal_get_path('module', 'amazon') .'/amazon-admin.js');
+  drupal_add_js(drupal_get_path('module', 'amazon') .'/amazon.admin.js');
 
   return system_settings_form($form);
 }
