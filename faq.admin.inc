@@ -239,26 +239,28 @@ function faq_categories_settings_form() {
     '#default_value' => variable_get('faq_show_term_page_children', FALSE),
   );
 
-  $form['faq_category_advanced'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Advanced category settings'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-  );
+  if (module_exists('taxonomy')) {
+    $form['faq_category_advanced'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Advanced category settings'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
 
-  $vocab_options = array();
-  $vocabularies = taxonomy_get_vocabularies('faq');
-  foreach ($vocabularies as $vid => $vobj) {
-    $vocab_options[$vid] = $vobj->name;
+    $vocab_options = array();
+    $vocabularies = taxonomy_get_vocabularies('faq');
+    foreach ($vocabularies as $vid => $vobj) {
+      $vocab_options[$vid] = $vobj->name;
+    }
+    $form['faq_category_advanced']['faq_omit_vocabulary'] = array(
+      '#type' => 'select',
+      '#title' => t('Omit vocabulary'),
+      '#description' => t("Terms from these vocabularies will be excluded from the FAQ pages."),
+      '#default_value' => variable_get('faq_omit_vocabulary', 0),
+      '#options' => $vocab_options,
+      '#multiple' => TRUE,
+    );
   }
-  $form['faq_category_advanced']['faq_omit_vocabulary'] = array(
-    '#type' => 'select',
-    '#title' => t('Omit vocabulary'),
-    '#description' => t("Terms from these vocabularies will be excluded from the FAQ pages."),
-    '#default_value' => variable_get('faq_omit_vocabulary', 0),
-    '#options' => $vocab_options,
-    '#multiple' => TRUE,
-  );
 
   return system_settings_form($form);
 }
