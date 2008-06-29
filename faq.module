@@ -312,6 +312,10 @@ function faq_view($node, $teaser = FALSE, $page = FALSE) {
  *   questions and answers.
  */
 function faq_page($tid = 0) {
+  if (module_exists('pathauto')) {
+    _pathauto_include();
+  }
+
   // Things to provide translations for.
   $default_values = array(t('Frequently Asked Questions'), t('Back to Top'), t('Q:'), t('A:'));
 
@@ -328,6 +332,13 @@ function faq_page($tid = 0) {
   $breadcrumb = array();
 
   if (!empty($tid) && $current = taxonomy_get_term($tid)) {
+    if (!drupal_lookup_path('alias', arg(0) .'/'. arg(1)) && module_exists('pathauto')) {
+      $placeholders = pathauto_get_placeholders('taxonomy', taxonomy_get_term($tid));
+      if ($alias = pathauto_create_alias('faq', 'insert', $placeholders, arg(0) .'/'. arg(1), arg(1))) {
+        drupal_goto($alias);
+      }
+    }
+
     $breadcrumb[] = l($current->name, 'faq/'. $current->tid);
     while ($parents = taxonomy_get_parents($current->tid)) {
       $current = array_shift($parents);
@@ -836,15 +847,22 @@ function _get_indented_faq_terms($vid, $tid) {
       $term_node_count = db_fetch_object($result);
 
       if ($term_node_count->c > 0) {
+        $path = "faq/$term->tid";
+
+        if (!drupal_lookup_path('alias', arg(0) .'/'. $term->tid) && module_exists('pathauto')) {
+          $placeholders = pathauto_get_placeholders('taxonomy', $term);
+          $path = pathauto_create_alias('faq', 'insert', $placeholders, arg(0) .'/'. $term->tid, $term->tid);
+        }
+
         if ($display_faq_count) {
           $count = $term_node_count->c;
           if ($hide_child_terms) {
             $count = $tree_count;
           }
-          $cur_item = $term_image . l($term->name, "faq/$term->tid") ." ($count) ". $desc;
+          $cur_item = $term_image . l($term->name, $path) ." ($count) ". $desc;
         }
         else {
-          $cur_item = $term_image . l($term->name, "faq/$term->tid") . $desc;
+          $cur_item = $term_image . l($term->name, $path) . $desc;
         }
       }
       else {
@@ -1177,3 +1195,31 @@ function faq_view_child_category_headers($term) {
 
   return $child_categories;
 }
+
+/**
+ * Implementation of hook_pathauto().
+ */
+function faq_pathauto($op) {
+  switch ($op) {
+    case 'settings':
+      $settings = array();
+      $settings['module'] = 'faq';
+      $settings['token_type'] = 'taxonomy';
+      $settings['groupheader'] = t('FAQ category path settings');
+      $settings['patterndescr'] = t('Default path pattern (applies to all FAQ categories with blank patterns below)');
+      $settings['patterndefault'] = t('faq/[catpath-raw]');
+
+      $patterns = token_get_list('taxonomy');
+      foreach ($patterns as $type => $pattern_set) {
+        if ($type != 'global') {
+          foreach ($pattern_set as $pattern => $description) {
+            $settings['placeholders']['['. $pattern .']'] = $description;
+          }
+        }
+      }
+      return (object) $settings;
+    default:
+      break;
+  }
+}
+
