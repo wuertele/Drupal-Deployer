@@ -43,6 +43,9 @@ function faq_perm() {
 function faq_access($op, $node, $account) {
   global $user;
 
+  if ($op != 'create') {
+    $node = (object)$node;
+  }
   if ($op == 'create') {
     if (user_access('create faq') || user_access('administer faq')) {
       return TRUE;
@@ -57,7 +60,21 @@ function faq_access($op, $node, $account) {
     }
   }
   else if ($op == 'view') {
-    return user_access('view faq');
+    // No permission to view any faq nodes.
+    if (!user_access('view faq')) {
+      return FALSE;
+    }
+    // Have permission and node is published.
+    else if ($node->nid && $node->status) {
+      return TRUE;
+    }
+    // Have permission, node is unpublished but it's their node.
+    else if ($user->uid == $node->uid && $user->uid != 0) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
   }
 }
 
