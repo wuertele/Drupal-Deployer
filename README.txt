@@ -19,7 +19,8 @@ updated to ensure that the same tab is opened when the page is loaded.
 Dependencies
 ------------
 * Panels 2 (http://drupal.org/project/panels)
-  (with this patch applied http://drupal.org/node/278861)
+  (a 5.x-2.x-dev tarball of July 6 or later, or alternatively: beta 5 with
+  this patch applied: http://drupal.org/node/278861)
 * Tabs (part of Javascript Tools, http://drupal.org/project/jstools)
 
 
