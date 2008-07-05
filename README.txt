@@ -31,6 +31,15 @@ Installation
 which you want to apply this style.
 
 
+Troubleshooting
+---------------
+This module does not have any CSS of itself. CSS is provided by the Tabs
+module. The Tabs module itself only *overrides* the tabs style defined by the
+theme. This means that you need a theme that already supports tabs, or you
+won't see any tabs at all! E.g. Garland has tabs.
+See http://drupal.org/node/258177.
+
+
 Sponsors
 --------
 * Initial development:
