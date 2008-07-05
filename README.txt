@@ -16,6 +16,7 @@ Configurable 'tabs' panel style. Provides 3 kinds of tabs:
 Dependencies
 ------------
 * Panels 2 (http://drupal.org/project/panels)
+  (with this patch applied http://drupal.org/node/278861)
 * Tabs (part of Javascript Tools, http://drupal.org/project/jstools)
 
 
@@ -30,9 +31,10 @@ Installation
 which you want to apply this style.
 
 
-Sponsor
--------
-Paul Ektov of http://autobin.ru.
+Sponsors
+--------
+* Initial development:
+   Paul Ektov of http://autobin.ru.
 
 
 Author
