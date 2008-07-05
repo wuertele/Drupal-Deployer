@@ -3,7 +3,7 @@
 if (Drupal.jsEnabled) {
   $(document).ready(function(){ 
     for (var id in Drupal.settings.panelsTabs) {
-      var $tabs = $('#'+ id +' ul li');
+      var $tabs = $('#tabs-'+ id +' > ul > li');
 
       switch (Drupal.settings.panelsTabs[id].fillingTabs) {
         case 'equal':
