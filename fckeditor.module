@@ -769,57 +769,72 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
 ". $js_id .".Config['FormatOutput'] = ". ($conf['format_output']=="t"?"true":"false") .";\n";
     //}
 
-    $advanced_uploads = ($conf['upload_advanced']=="t");
-    $basic_uploads = ($conf['upload_basic']=="t");
-
     // add code for filebrowser for users that have access
     if (user_access('allow fckeditor file uploads')==1) {
-      if (isset($conf['imce']) && $conf['imce']=="t" && function_exists('imce_menu')) {
-        $element['#suffix'] .= $js_id .".Config['LinkBrowser']= true;";
-        $element['#suffix'] .= $js_id .".Config['ImageBrowser']= true;";
-        $element['#suffix'] .= $js_id .".Config['FlashBrowser']= true;";
-        $element['#suffix'] .= $js_id .".Config['LinkBrowserURL']= '". $host ."?q=imce&app=FCKEditor|url@txtUrl';";
-        $element['#suffix'] .= $js_id .".Config['ImageBrowserURL']= '". $host ."?q=imce&app=FCKEditor|url@txtUrl|width@txtWidth|height@txtHeight';";
-        $element['#suffix'] .= $js_id .".Config['FlashBrowserURL']= '". $host ."?q=imce&app=FCKEditor|url@txtUrl';";
+      $filebrowser = $conf['filebrowser'];
+      if ($filebrowser == 'imce' && !module_exists('imce')) {
+        $filebrowser = 'none';
       }
-      else {
+      $quickupload = $conf['quickupload'] == 't';
+      
+      // load variables used by both quick upload and filebrowser
+      // and assure that the $_SESSION variables are loaded
+      if ($quickupload || $filebrowser == 'builtin') {
         $connector_path = $module_drupal_path ."/fckeditor/editor/filemanager/connectors/php/connector.php" ;
         $connector_path = file_exists($connector_path) ? "../../connectors/php/connector.php" : "connectors/php/connector.php" ;
         $upload_path = $module_drupal_path ."/fckeditor/editor/filemanager/connectors/php/upload.php" ;
         $upload_path = file_exists($upload_path) ? "/fckeditor/editor/filemanager/connectors/php/upload.php" : "/fckeditor/editor/filemanager/upload/php/upload.php" ;
-        if ($advanced_uploads) {
-          $element['#suffix'] .= $js_id .".Config['LinkBrowserURL'] = \"". $module_full_path ."/fckeditor/editor/filemanager/browser/default/browser.html?Connector=". $connector_path ."&ServerPath=". $files_path ."\";
-  ". $js_id .".Config['ImageBrowserURL'] = \"". $module_full_path ."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Image&Connector=". $connector_path ."&ServerPath=". $files_path ."\";
-  ". $js_id .".Config['FlashBrowserURL'] = \"". $module_full_path ."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Flash&Connector=". $connector_path ."&ServerPath=". $files_path ."\";\n";
-        }
-        else {
-          $element['#suffix'] .= $js_id .".Config['LinkBrowser'] = false;
-". $js_id .".Config['ImageBrowser'] = false;
-". $js_id .".Config['FlashBrowser'] = false;\n";
-        }
-        if ($basic_uploads) {
-          $element['#suffix'] .= $js_id .".Config['LinkUploadURL'] = \"". $module_full_path . $upload_path ."\";
-  ". $js_id .".Config['ImageUploadURL'] = \"". $module_full_path . $upload_path ."?Type=Image\";
-  ". $js_id .".Config['FlashUploadURL'] = \"". $module_full_path . $upload_path ."?Type=Flash\";\n";
-        }
-        else {
-          $element['#suffix'] .= $js_id .".Config['LinkUpload'] = false;
-". $js_id .".Config['ImageUpload'] = false;
-". $js_id .".Config['FlashUpload'] = false;\n";
-        }
         if (!empty($profile->settings['UserFilesPath'])) $_SESSION['FCKeditor']['UserFilesPath'] = strtr($profile->settings['UserFilesPath'], array("%f" => file_directory_path(), "%u" => $user->uid, "%b" => $host));
         if (!empty($profile->settings['UserFilesAbsolutePath'])) $_SESSION['FCKeditor']['UserFilesAbsolutePath'] = strtr($profile->settings['UserFilesAbsolutePath'], array("%f" => file_directory_path(), "%u" => $user->uid, "%b" => base_path(), "%d" => $_SERVER['DOCUMENT_ROOT']));
       }
+      
+      if ($quickupload) {
+        $element['#suffix'] .= $js_id .".Config['LinkUpload'] = true;\n";
+        $element['#suffix'] .= $js_id .".Config['ImageUpload'] = true;\n";
+        $element['#suffix'] .= $js_id .".Config['FlashUpload'] = true;\n";
+        $element['#suffix'] .= $js_id .".Config['LinkUploadURL'] = '".$module_full_path.$upload_path."';\n";
+        $element['#suffix'] .= $js_id .".Config['ImageUploadURL'] = '".$module_full_path.$upload_path."?Type=Image';\n";
+        $element['#suffix'] .= $js_id .".Config['FlashUploadURL'] = '".$module_full_path.$upload_path."?Type=Flash';\n";
+      } else {
+        $element['#suffix'] .= $js_id .".Config['LinkUpload'] = false;\n";
+        $element['#suffix'] .= $js_id .".Config['ImageUpload'] = false;\n";
+        $element['#suffix'] .= $js_id .".Config['FlashUpload'] = false;\n";
+      }
+      
+      switch($filebrowser) {
+        case 'imce':
+          $element['#suffix'] .= $js_id .".Config['LinkBrowser']= true;\n";
+          $element['#suffix'] .= $js_id .".Config['ImageBrowser']= true;\n";
+          $element['#suffix'] .= $js_id .".Config['FlashBrowser']= true;\n";
+          $element['#suffix'] .= $js_id .".Config['LinkBrowserURL']= '". $host ."?q=imce&app=FCKEditor|url@txtUrl';\n";
+          $element['#suffix'] .= $js_id .".Config['ImageBrowserURL']= '". $host ."?q=imce&app=FCKEditor|url@txtUrl|width@txtWidth|height@txtHeight';\n";
+          $element['#suffix'] .= $js_id .".Config['FlashBrowserURL']= '". $host ."?q=imce&app=FCKEditor|url@txtUrl';\n";
+          break;
+        case 'builtin':
+          $element['#suffix'] .= $js_id .".Config['LinkBrowser'] = true;\n";
+          $element['#suffix'] .= $js_id .".Config['ImageBrowser'] = true;\n";
+          $element['#suffix'] .= $js_id .".Config['FlashBrowser'] = true;\n";
+          $element['#suffix'] .= $js_id .".Config['LinkBrowserURL'] = '". $module_full_path ."/fckeditor/editor/filemanager/browser/default/browser.html?Connector=". $connector_path ."&ServerPath=". $files_path ."';\n";
+          $element['#suffix'] .= $js_id .".Config['ImageBrowserURL'] = '". $module_full_path ."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Image&Connector=". $connector_path ."&ServerPath=". $files_path ."';\n";
+          $element['#suffix'] .= $js_id .".Config['FlashBrowserURL'] = '". $module_full_path ."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Flash&Connector=". $connector_path ."&ServerPath=". $files_path ."';\n";
+          break;
+        default:
+        case 'none':
+          $element['#suffix'] .= $js_id .".Config['LinkBrowser'] = false;\n";
+          $element['#suffix'] .= $js_id .".Config['ImageBrowser'] = false;\n";
+          $element['#suffix'] .= $js_id .".Config['FlashBrowser'] = false;\n";
+          break;
+      }
     }
     else {
-      $element['#suffix'] .= $js_id .".Config['LinkBrowser'] = false;
-". $js_id .".Config['ImageBrowser'] = false;
-". $js_id .".Config['FlashBrowser'] = false;
-". $js_id .".Config['LinkUpload'] = false;
-". $js_id .".Config['ImageUpload'] = false;
-". $js_id .".Config['FlashUpload'] = false;\n";
+      $element['#suffix'] .= $js_id .".Config['LinkBrowser'] = false;\n";
+      $element['#suffix'] .= $js_id .".Config['ImageBrowser'] = false;\n";
+      $element['#suffix'] .= $js_id .".Config['FlashBrowser'] = false;\n";
+      $element['#suffix'] .= $js_id .".Config['LinkUpload'] = false;\n";
+      $element['#suffix'] .= $js_id .".Config['ImageUpload'] = false;\n";
+      $element['#suffix'] .= $js_id .".Config['FlashUpload'] = false;\n";
     }
-
+    
     if (!empty($conf['js_conf'])) {
       $lines = preg_split("/[\n\r]+/", $conf['js_conf']);
       foreach ($lines as $l)
@@ -1665,60 +1680,60 @@ function fckeditor_profile_form_build($sth, $edit) {
   '#title' => t('File browser settings'),
   '#collapsible' => TRUE,
   '#collapsed' => TRUE,
-  '#description' => t('Set file browser settings. If you enable file uploads and disable basic and advanced file management, you will need to manage your images and other files with the core upload module or a contrib module like !imce. Please note that these options require manual configuration, check !readme for more information.<br />',
+  '#description' => t('Set file browser settings. A file browser will allow you to explore the files contained on the server and embed them as links, images or flash movies. Besides the built-in FCKeditor file browser, you can also use a contributed module like !imce. The quick upload setting controls whether images, flash movies and files can be uploaded using the Upload tab of the respective dialogs. Please note that these options require manual configuration, check !readme for more information.<br />',
     array(
     '!imce' => l(t('IMCE'), 'http://drupal.org/project/imce'),
     '!readme' => l('readme.txt', 'admin/help/fckeditor'),
     )
     )
   );    
-  // don't show useless options if IMCE is preferred
-  if (function_exists('imce_menu')) {
-  $form['fckeditor_upload_settings']['imce'] = array(
-  '#type' => 'select',
-  '#options' => array('f' => t('false'), 't' => t('true')),
-  '#title' => t('IMCE integration'),
-  '#default_value' => !empty($edit->settings['imce']) ? $edit->settings['imce'] : 'f',
-  '#description' => t("Use IMCE instead of FCKeditor built-in file browser to handle file uploads. Is set to true, all file browser settings below are not used."),
+  
+  $filebrowsers = array(
+    'none' => t('None'),
+    'builtin' => t('Built-in filebrowser'),
   );
+  
+  if (module_exists('imce')) {
+    $filebrowsers['imce'] = t('IMCE');
   }
-  if (!function_exists('imce_menu') || !isset($edit->settings['imce']) || $edit->settings['imce']=='f') {
-    $form['fckeditor_upload_settings']['upload_basic'] = array(
+  
+  $form['fckeditor_upload_settings']['filebrowser'] = array(
+    '#type' => 'select',
+    '#options' => $filebrowsers,
+    '#title' => t('File browser type'),
+    '#default_value' => !empty($edit->settings['filebrowser']) ? $edit->settings['filebrowser'] : 'none',
+    '#description' => t('Select the file browser that you would like to use to upload files, images and flash movies.'),
+  );
+  
+  $form['fckeditor_upload_settings']['quickupload'] = array(
     '#type' => 'select',
     '#options' => array('f' => t('false'), 't' => t('true')),
-    '#title' => t('Allow basic file management'),
-    '#default_value' => !empty($edit->settings['upload_basic']) ? $edit->settings['upload_basic'] : 'f',
-    '#description' => t("Allow quick uploads."),
-    );
-    $form['fckeditor_upload_settings']['upload_advanced'] = array(
-    '#type' => 'select',
-    '#options' => array('f' => t('false'), 't' => t('true')),
-    '#title' => t('Allow advanced file management'),
-    '#default_value' => !empty($edit->settings['upload_advanced']) ? $edit->settings['upload_advanced'] : 'f',
-    '#description' => t('Allow file management in the advanced file manager.'),
-    );
+    '#title' => t('Allow quick uploads'),
+    '#default_value' => !empty($edit->settings['quickupload']) ? $edit->settings['quickupload'] : 'f',
+    '#description' => t('The quick upload functionality can be disabled and enabled independently of the file browser. It will always use the settings below.'),
+  );
+  
+  $current_user_files_path = empty($edit->settings['UserFilesPath']) ? "" : strtr($edit->settings['UserFilesPath'], array("%f" => file_directory_path(), "%u" => "UID", "%b" => base_path()));
+  $current_user_files_absolute_path = empty($edit->settings['UserFilesAbsolutePath']) ? "" : strtr($edit->settings['UserFilesAbsolutePath'], array("%f" => file_directory_path(), "%u" => "UID", "%b" => base_path(), "%d" => $_SERVER['DOCUMENT_ROOT']));
 
-    $current_user_files_path = empty($edit->settings['UserFilesPath']) ? "" : strtr($edit->settings['UserFilesPath'], array("%f" => file_directory_path(), "%u" => "UID", "%b" => base_path()));
-    $current_user_files_absolute_path = empty($edit->settings['UserFilesAbsolutePath']) ? "" : strtr($edit->settings['UserFilesAbsolutePath'], array("%f" => file_directory_path(), "%u" => "UID", "%b" => base_path(), "%d" => $_SERVER['DOCUMENT_ROOT']));
-
-    $form['fckeditor_upload_settings']['UserFilesPath'] = array(
+  $form['fckeditor_upload_settings']['UserFilesPath'] = array(
     '#type' => 'textfield',
     '#title' => t('Path to uploaded files'),
     '#default_value' => !empty($edit->settings['UserFilesPath']) ? $edit->settings['UserFilesPath'] : "%b%f/",
     '#size' => 40,
     '#maxlength' => 255,
     '#description' => t('Path to uploaded files relative to the document root.<br />Available wildcard characters:<br/><strong>%b</strong> - base URL path of the Drupal installation (!base).<br/><strong>%f</strong> - Drupal file system path where the files are stored (!files).<br /><strong>%u</strong> - User ID.<br />Current path: !path', array('!path' => $current_user_files_path, '!files' => file_directory_path(), '!base' => base_path())),
-    );
-    $form['fckeditor_upload_settings']['UserFilesAbsolutePath'] = array(
+  );
+  
+  $form['fckeditor_upload_settings']['UserFilesAbsolutePath'] = array(
     '#type' => 'textfield',
     '#title' => t('Absolute path to uploaded files'),
     '#default_value' => !empty($edit->settings['UserFilesAbsolutePath']) ? $edit->settings['UserFilesAbsolutePath'] : "%d%b%f/",
     '#size' => 40,
     '#maxlength' => 255,
     '#description' => t('The path to the local directory (in the server) which points to the path defined above. If empty, FCKeditor will try to discover the right path.<br />Available wildcard characters:<br/><strong>%d</strong> - server path to document root (!root).<br /><strong>%b</strong> - base URL path of the Drupal installation (!base).<br/><strong>%f</strong> - Drupal file system path where the files are stored (!files).<br /><strong>%u</strong> - User ID.<br />Current path: !path', array('!path' => $current_user_files_absolute_path, '!files' => file_directory_path(), '!base' => base_path(), '!root' => $_SERVER['DOCUMENT_ROOT'])),
-    );
-  }
-
+  );
+  
   $form['advanced'] = array(
   '#type' => 'fieldset',
   '#title' => t('Advanced options'),

@@ -238,6 +238,46 @@ function fckeditor_update_6110() {
 }
 
 /**
+ * Update from 6.x-1.x to 6.x-2.x
+ *
+ */
+function fckeditor_update_6201() {
+  $ret = array();
+  
+  $result = db_query('SELECT * FROM {fckeditor_settings} WHERE name != "FCKeditor Global Profile"');
+  $hasimce = module_exists('imce');
+  while(($data = db_fetch_object($result))) {
+    if ($data->settings) {
+      $settings = unserialize($data->settings);
+      
+      // Rewrite imce, upload_basic and upload_advanced settings to filebrowser and quickupload
+      $imce = ($hasimce && isset($settings['imce']) && $settings['imce'] == 't');
+      $upload_basic = (isset($settings['upload_basic']) && $settings['upload_basic'] == 't');
+      $upload_advanced = (isset($settings['upload_advanced']) && $settings['upload_advanced'] == 't');
+      
+      if($imce) {
+        $settings['filebrowser'] = 'imce';
+      } elseif($upload_advanced) {
+        $settings['filebrowser'] = 'builtin';
+      } else {
+        $settings['filebrowser'] = 'none';
+      }
+      
+      $settings['quickupload'] = $upload_basic ? 't' : 'f';
+      
+      unset($settings['imce'], $settings['upload_basic'], $settings['upload_advanced']);
+      
+      // unfortunately, update_sql is not an option, as serialize($settings) will contain curly braces which will
+      // be replaced. update_sql does not support arguments like db_query() does.
+      
+      db_query("UPDATE {fckeditor_settings} SET settings='%s' WHERE name='%s'", serialize($settings), $data->name);
+    }
+  }
+  
+  return $ret;
+}
+
+/**
  * Implementation of hook_uninstall()
  */
 function fckeditor_uninstall() {
