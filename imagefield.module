@@ -3,13 +3,12 @@
 
 /**
  * @file
- * Defines an image field type.
- * imagefield uses content.module to store the fid, and the drupal files
- * table to store the actual file data.
+ *
+ * The imagefield.module defines both a stand alone Image field type as well
+ * as image extensions to the filefield.module.
  *
  */
 
-include_once('field_file.inc');
 /**
  * @defgroup core_hooks
  * @{
@@ -162,7 +161,7 @@ function imagefield_field_settings($op, $field) {
         'fid' => array('type' => 'int', 'not null' => true, 'default' => '0'),
         'title' => array('type' => 'varchar', 'length' => 255, 'not null' => true, 'default' => '', 'sortable' => true),
         'alt' => array('type' => 'varchar', 'length' => 255, 'not null' => true, 'default' => '', 'sortable' => true),
-        // widget specific data storage where widgets can stick some serialized foo....
+        // widget specific data storage where widgets can stick some serialized foo per item.
         'data' => array('type' => 'text'),
       );
       return $columns;
@@ -230,84 +229,23 @@ function imagefield_views_handler_filter_is_not_null($op, $filter, $filterinfo, 
  * Implementation of hook_field().
  */
 function imagefield_field($op, $node, $field, &$items, $teaser, $page) {
-  $fieldname = $field['field_name'];
-  switch ($op) {
-    // called after content.module loads default data.
-    case 'load':
-      if (empty($items)) return;
-      foreach ($items as $delta => $item) {
-        $items[$delta] = array_merge($item, field_file_load($item['fid']));
-      }
-      $items = array_values(array_filter($items)); // compact deltas
-      return array($fieldname => $items);
-      break;
-
-    // called before content.module inserts data.
-    case 'insert':
-    case 'update':
-      foreach ($items as $delta => $item) {
-        $items[$delta] = field_file_save($node, $item);
-      }
-      $items = array_values(array_filter($items)); // compact deltas
-      break;
-
-    case 'delete revision':
-      foreach ($items as $delta => $item) {
-        if (field_file_delete($item)) $items[$delta] = array();
-      }
-      $items = array_values($items); // compact deltas
-      break;
-    
-    case 'delete':
-      foreach ($items as $delta => $item) {
-        field_file_delete($item, true);
-      }
-      break;
-
-    case 'sanitize':
-      foreach ($items as $delta => $item) {
-        // Cleanup $items during node preview.
-        if (empty($item['fid']) || !empty($item['flags']['delete']) || !empty($item['flags']['hidden'])) {
-          unset($items[$delta]);
-        }
-        // Load the complete file if a filepath is not available.
-        if (!empty($item['fid']) && empty($item['filepath'])) {
-          $items[$delta] = array_merge($item, field_file_load($item['fid']));
-        }
-        // Add nid so formatters can create a link to the node.
-        $items[$delta]['nid'] = $node->nid;
-      }
-      // If completely empty, check for a default image.
-      if (empty($items) && $field['use_default_image'] && $field['default_image']['fid']) {
-        $items[$field['default_image']['fid']] = $field['default_image'];
-        $items[$field['default_image']['fid']] = $node->nid;
-      }
-      break;
-  }
+  return filefield_field($op, $node, $field, &$items, $teaser, $page);
 }
 
 /**
- * Implementation of hook_file.
- *
- * Filefield and Imagefield implement hook_file for D6 in their own API's.
+ * Implementation of hook_file().
+ * (Which is implemented by filefield/imagefield in Drupal 6 yet).
  */
-function imagefield_file($op, $file) {
-  switch ($op) {
-    // report references to prevent deletion of files associated to older revisions
-    // or by other fields.
-    case 'references':
-      $references = 0;
-      foreach(content_fields() as $field) {
-        if (!$field['type'] != 'image') continue;
-        $db_info = content_database_info($field);
-        $references += db_result(db_query("SELECT count(fid) FROM {%s} WHERE %s=%d", $db_info['table'],  $db_info['columns']['fid']['column'], $item['fid']));
-      }
-      return array('imagefield' => $references);
-  } 
+function imagefield_file_references($op, $file) {
+  $references = 0;
+  foreach(content_fields() as $field) {
+    if ($field['type'] != 'imagefield') {
+      continue;
+    }
+    $references += field_file_references($file, $field);
+  }
+  return array('imagefield' => $references);
 }
-
-
-
 
 /**
  * Implementation of hook_widget_info().
@@ -456,7 +394,7 @@ function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
   $form['#attributes'] += array('enctype' => 'multipart/form-data');
  
   $file = empty($items[$delta]) ? array() : field_file_load($items[$delta]['fid']);
-  
+  dsm($field); 
   if ($field['widget']['custom_alt']) {
     $widget['alt'] = array(
       '#type' => 'textfield',
@@ -603,7 +541,7 @@ function imagefield_field_formatter_info() {
 }
 
 function theme_imagefield_formatter_image_plain($element) {
-  $field = $element['#field'];
+  $field = content_fields($element['#field_name']);
   $item = $element['#item'];
 
   if (empty($item['fid']) && $field['use_default_image']) $item = $field['default_image'];
@@ -614,26 +552,23 @@ function theme_imagefield_formatter_image_plain($element) {
 }
 
 function theme_imagefield_formatter_image_nodelink($element) {
-  $field = $element['#field'];
   $node = $element['#node'];
-
   $imagetag = theme('imagefield_formatter_image_plain', $element);
-  $class = 'imagefield imagefield-nodelink imagefield-'. $field['field_name'];
+  $class = 'imagefield imagefield-nodelink imagefield-'. $element['#field_name'];
   return l($imagetag, 'node/'. $node->nid, array('class' => $class), null, null, false, true);
 }
 
 function theme_imagefield_formatter_image_imagelink($element) {
-  $field = $element['#field'];
   $item = $element['#item'];
-
   $imagetag = theme('imagefield_formatter_image_plain', $element);
   $original_image_url = file_create_url($item['filepath']);
-  $class = 'imagefield imagefield-imagelink imagefield-'. $field['field_name'];
+  $class = 'imagefield imagefield-imagelink imagefield-'. $element['#field_name'];
   return l($imagetag, $original_image_url, array('class' => $class), null, null, false, true);
 }
 
 function theme_imagefield_formatter_path_plain($element) {
-  $field = $element['#field'];
+
+  $field = content_fields($element['#field_name']);
   $item = $element['#item'];
   if (empty($item['fid']) && $field['use_default_image'])  $item = $field['default_image'];
   // If there is no image on the database, use default.
@@ -644,7 +579,7 @@ function theme_imagefield_formatter_path_plain($element) {
 }
 
 function theme_imagefield_formatter_url_plain($element) {
-  $field = $element['#field'];
+  $field = content_fields($element['#field_name']);
   $item = $element['#item'];
   if (empty($item['fid']) && $field['use_default_image'])  $item = $field['default_image'];
   // If there is no image on the database, use default.

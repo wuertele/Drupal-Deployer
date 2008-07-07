@@ -81,7 +81,6 @@ function imagefield_update_2() {
     drupal_set_message('altered: <br /><pre>'. print_r($field, true) .'</pre>');
   }
 
-
   db_query('DELETE FROM {cache}');
   return $ret;
 }
@@ -103,8 +102,11 @@ function imagefield_update_6100() {
 
   $fields = content_fields();
   foreach ($fields as $field) {
+    // skip non imagefields.
+    if ($field['type'] != 'image') continue;
+
     // Convert max_number_images to CCK's multiple limit.
-    if ($field['type'] == 'image' && isset($field['widget']['max_number_images'])) {
+    if (isset($field['widget']['max_number_images'])) {
       if ($field['widget']['max_number_images'] == 0) {
         $field['multiple'] = 1; // 1 means "Unlimited" in CCK.
       }
@@ -115,10 +117,46 @@ function imagefield_update_6100() {
         $field['multiple'] == $field['widget']['max_number_images'];
       }
       $field = array_merge($field, $field['widget']);
-      content_field_instance_update($field);
     }
+
+    // update widget names.
+    if ($field['widget']['type'] == 'image') $field['widget']['type'] = 'imagefield_widget_default';
+
+    // update formatter names.
+    $display_settings = array('teaser','full','4');
+    foreach ($display_settings as $context) {
+      switch($field['display_settings'][$context]['formatter']) {
+        case 'default':  
+          $field['display_settings'][$context]['formatter'] = 'image_plain';
+          break;
+        case 'imagefield_nodelink': 
+          $field['display_settings'][$context]['formatter'] = 'image_nodelink'; 
+          break;
+        case 'imagefield_imagelink': 
+          $field['display_settings'][$context]['formatter'] = 'image_imagelink'; 
+          break;
+        case 'imagefield_path': 
+          $field['display_settings'][$context]['formatter'] = 'path_plain';
+          break;
+        case 'imagefield_url': 
+          $field['display_settings'][$context]['formatter'] = 'url_plain';
+          break;
+      }
+    }
+     
+    content_field_instance_update($field);
   }
 
   return array();
 }
 
+function imagefield_update_6101() {
+ include_once(drupal_get_path('module','content') .'/includes/content.admin.inc');
+
+  $fields = content_fields();
+  foreach($fields as $field) {
+    $new_field = $field;
+    $new_field['columns']['data'] = array('type' => 'text');
+    content_db_alter($field, $new_field);
+  }
+}
