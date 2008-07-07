@@ -98,10 +98,11 @@ function imagefield_update_2() {
  *    imagefield_url => url_plain 
  */
 function imagefield_update_6100() {
-  include_once('./'. drupal_get_path('module', 'content') .'/content_crud.inc');
+  module_load_include('inc', 'content', 'includes/content.admin');
+  module_load_include('inc', 'content', 'includes/content.crud');
+ 
 
-  $fields = content_fields();
-  foreach ($fields as $field) {
+  foreach (content_fields() as $field) {
     // skip non imagefields.
     if ($field['type'] != 'image') continue;
 
@@ -149,17 +150,19 @@ function imagefield_update_6100() {
      
     content_field_instance_update($field);
   }
-
+  // clear cache..
+  cache_clear_all('content_type_info', content_cache_tablename());
   return array();
 }
 
 function imagefield_update_6101() {
- include_once(drupal_get_path('module','content') .'/includes/content.admin.inc');
+  module_load_include('inc', 'content', 'includes/content.admin');
+  module_load_include('inc', 'content', 'includes/content.crud');
 
   $fields = content_fields();
   foreach($fields as $field) {
     $new_field = $field;
-    $new_field['columns']['data'] = array('type' => 'text');
+    $new_field['columns']['data'] = array('type' => 'text', 'serlialize' => true);
     content_db_alter($field, $new_field);
   }
 }
