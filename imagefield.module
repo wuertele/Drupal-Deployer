@@ -284,12 +284,12 @@ function imagefield_widget_settings($op, $widget) {
         '#size' => 6,
         '#description' => t('The maximum allowed image file size expressed in kilobytes. Set to 0 for no restriction.')
       );
-      $form['image_path'] = array(
+      $form['file_path'] = array(
         '#type' => 'textfield',
         '#title' => t('Image path'),
-        '#default_value' => $widget['image_path'] ? $widget['image_path'] : '',
+        '#default_value' => $widget['file_path'] ? $widget['file_path'] : '',
         '#description' => t('Optional subdirectory within the "%dir" directory where images will be stored. Do not include trailing slash. You can use the following tokens in the image path.', array('%dir' => variable_get('file_directory_path', 'files'))),
-        '#element_validate' => array('_imagefield_widget_settings_image_path_validate'), 
+        '#element_validate' => array('_imagefield_widget_settings_file_path_validate'), 
         '#suffix' => theme('token_help', 'user'),
       );
 
@@ -317,13 +317,13 @@ function imagefield_widget_settings($op, $widget) {
       return $form;
 
     case 'save':
-      return array('max_resolution', 'max_filesize', 'image_path', 'file_extensions', 'custom_alt', 'custom_title');
+      return array('max_resolution', 'max_filesize', 'file_path', 'file_extensions', 'custom_alt', 'custom_title');
   }
 }
 
-function _imagefield_widget_settings_image_path_validate($element, &$form_state) {
-  // Strip slashes from the beginning and end of $widget['image_path']
-  $form_state['values']['image_path'] =  trim($form_state['values']['image_path'], '\\/');
+function _imagefield_widget_settings_file_path_validate($element, &$form_state) {
+  // Strip slashes from the beginning and end of $widget['file_path']
+  $form_state['values']['file_path'] =  trim($form_state['values']['file_path'], '\\/');
 }
 
 /**
@@ -394,7 +394,7 @@ function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
   $form['#attributes'] += array('enctype' => 'multipart/form-data');
  
   $file = empty($items[$delta]) ? array() : field_file_load($items[$delta]['fid']);
-  dsm($field); 
+
   if ($field['widget']['custom_alt']) {
     $widget['alt'] = array(
       '#type' => 'textfield',
@@ -435,7 +435,7 @@ function imagefield_widget_value($form, $edit = FALSE) {
   
 
   global $user;
-  $widget_image_path = token_replace($field['widget']['image_path'], 'user', $user);
+  $widget_file_path = token_replace($field['widget']['file_path'], 'user', $user);
 
   $validators = array(
     'file_validate_extensions' => array($field['widget']['file_extensions']),
@@ -443,14 +443,14 @@ function imagefield_widget_value($form, $edit = FALSE) {
     'file_validate_image_resolution' => array($field['widget']['max_resolution']),
   );
 
-  $complete_image_path = file_directory_path() .'/'. $widget_image_path;
+  $complete_file_path = file_directory_path() .'/'. $widget_file_path;
 
-  if (!imagefield_check_directory($widget_image_path, $upload_name)) {
+  if (!imagefield_check_directory($widget_file_path, $upload_name)) {
     // watchdog.
     return $form['#default_value'];
   }  
   
-  if (!$file = file_save_upload($upload_name, $validators, $complete_image_path)) {
+  if (!$file = file_save_upload($upload_name, $validators, $complete_file_path)) {
     // watchdog.
     
     return $form['#default_value'];
