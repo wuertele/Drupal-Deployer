@@ -246,6 +246,14 @@ function _menu_titles($menu_link, $nid) {
 function book_token_values($type, $object = NULL, $options = array()) {
   if ($type == 'node') {
     $node = $object;
+
+    // Initialize some variables to empty.
+    $tokens['book'] = '';
+    $tokens['book-raw'] = '';
+    $tokens['book_id'] = '';
+    $tokens['bookpath'] = '';
+    $tokens['bookpath-raw'] = '';
+
     if (!empty($node->book['menu_name'])) {
       $menus = menu_get_menus();
       $trail_raw = _menu_titles($node->book, $node->nid);
@@ -266,13 +274,7 @@ function book_token_values($type, $object = NULL, $options = array()) {
       $tokens['bookpath'] = implode('/', $trail);
       $tokens['bookpath-raw'] = implode('/', $trail_raw);
     }
-    else {
-      $tokens['book'] = '';
-      $tokens['book-raw'] = '';
-      $tokens['book_id'] = '';
-      $tokens['bookpath'] = '';
-      $tokens['bookpath-raw'] = '';
-    }
+
     return $tokens;
   }
 }
