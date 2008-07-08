@@ -10,6 +10,7 @@
  * Implementation of hook_menu().
  */
 function cck_fieldgroup_tabs_menu() {
+  $items = array();
   $items['admin/settings/cck-fieldgroup-tabs'] = array(
     'title' => 'CCK Fieldgroup Tabs',
     'description' => 'Configuration for CCK fieldgroup tabs',
@@ -55,13 +56,6 @@ function cck_fieldgroup_tabs_admin_settings() {
  */
 function cck_fieldgroup_tabs_form_alter(&$form, $form_state, $form_id) {
   if (isset($form['type']) && $form['type']['#value'] .'_node_form' == $form_id) {
-    // Content module loads a dummy node form. If we alter that form, content_admin_field_overview_form breaks.
-    // The cck_dummy_node_form attribute has not yet made it into the stable release of CCK.
-    // if (isset($form['#node']) && isset($form['#node']->cck_dummy_node_form) && $form['#node']->cck_dummy_node_form) {
-    // For now, test arg.
-    if (arg(0) == 'admin') {
-      return;
-    }
     foreach (fieldgroup_groups($form['type']['#value']) as $group_name => $group) {
       if (isset($form[$group_name]) && $group['settings']['form']['style'] == 'tabs') {
         // Add a tabset if not already added.
@@ -105,10 +99,12 @@ function cck_fieldgroup_tabs_form_alter(&$form, $form_state, $form_id) {
     }
   }
   else if ($form_id == 'content_admin_display_overview_form') {
-    $groups = fieldgroup_groups($form['#type_name']);
-    foreach (array_keys($groups) as $group_name) {
-      foreach (array_keys(_content_admin_display_contexts()) as $key) {
-        $form[$group_name][$key]['format']['#options']['tabs'] = t('tabs');
+    if (isset($form['#groups']) && $form['#groups']) {
+      $contexts = _content_admin_display_contexts($form['#contexts_selector']);
+      foreach ($groups as $name => $group) {
+        foreach ($contexts as $key => $title) {
+          $form[$name][$key]['format']['#options']['tabs'] = t('tabs');
+        }
       }
     }
   }
