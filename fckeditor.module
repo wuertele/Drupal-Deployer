@@ -204,8 +204,8 @@ function fckeditor_profile_validate($edit) {
   $errors = array();
 
   //include mode and all other fields are empty, invalid
-  if ($edit['excl_mode'] == 1 && !$edit['excl_fields'] && !$edit['excl_paths']) {
-    $errors['excl_mode'] = t('Include mode selected, but no fields/paths given. Enter at least one path or field where FCKeditor should appear.');
+  if ($edit['excl_mode'] == 1 && empty($edit['excl'])) {
+    $errors['excl_mode'] = t('Include mode selected, but no paths given. Enter at least one path where FCKeditor should appear.');
   }
   
   if (!preg_match("/^\d+$/", trim($edit['min_rows']))) {
@@ -258,40 +258,6 @@ function fckeditor_profile_validate($edit) {
     }
   }
 
-  //validate fields
-  $fields = preg_split("/[\s,]+/", strip_tags($edit['excl_fields']));
-  foreach ($fields as $field) {
-    if ($field && !preg_match("/^[a-z]+(\-[[:alnum:]]+)+$/i", $field)) {
-      $errors['excl_fields'] = t("Invalid field specified: %1", array("%1" => $field));
-      break;
-    }
-  }
-
-  $fields = preg_split("/[\s,]+/", strip_tags($edit['simple_incl_fields']));
-  foreach ($fields as $field) {
-    if ($field && !preg_match("/^[a-z]+(\-[[:alnum:]]+)+$/i", $field)) {
-      $errors['excl_fields'] = t("Invalid field specified: %1", array("%1" => $field));
-      break;
-    }
-  }
-
-  //validate paths
-  $paths = preg_split("/[\s,]+/", strip_tags($edit['excl_paths']));
-  foreach ($paths as $path) {
-    if ($path && !preg_match("|^[_a-z0-9-\*/]*$|i", $path)) {
-      $errors['excl_paths'] = t("Invalid path specified: %1", array("%1" => $path));
-      break;
-    }
-  }
-
-  $paths = preg_split("/[\s,]+/", strip_tags($edit['simple_incl_paths']));
-  foreach ($paths as $path) {
-    if ($path && !preg_match("|^[_a-z0-9-\*/]*$|i", $path)) {
-      $errors['excl_paths'] = t("Invalid path specified: %1", array("%1" => $path));
-      break;
-    }
-  }
-
   if ($edit['UserFilesAbsolutePath'] && !$edit['UserFilesPath']) {
     $errors['UserFilesPath'] = t("Path to uploaded files is required.");
   }
@@ -313,44 +279,10 @@ function fckeditor_global_profile_validate($edit) {
   $errors = array();
 
   //include mode and all other fields are empty, invalid
-  if ($edit['excl_mode'] == 1 && !$edit['excl_fields'] && !$edit['excl_paths']) {
-    $errors['excl_mode'] = t('Include mode selected, but no fields/paths given. Enter at least one path or field where FCKeditor should appear.');
+  if ($edit['excl_mode'] == 1 && empty($edit['excl'])) {
+    $errors['excl_mode'] = t('Include mode selected, but no paths given. Enter at least one path where FCKeditor should appear.');
   }
-
-  //validate fields
-  $fields = preg_split("/[\s,]+/", strip_tags($edit['excl_fields']));
-  foreach ($fields as $field) {
-    if ($field && !preg_match("/^[a-z]+(\-[[:alnum:]]+)+$/i", $field)) {
-      $errors['excl_fields'] = t("Invalid field specified: %1", array("%1" => $field));
-      break;
-    }
-  }
-
-  $fields = preg_split("/[\s,]+/", strip_tags($edit['simple_incl_fields']));
-  foreach ($fields as $field) {
-    if ($field && !preg_match("/^[a-z]+(\-[[:alnum:]]+)+$/i", $field)) {
-      $errors['excl_fields'] = t("Invalid field specified: %1", array("%1" => $field));
-      break;
-    }
-  }
-
-  //validate paths
-  $paths = preg_split("/[\s,]+/", strip_tags($edit['excl_paths']));
-  foreach ($paths as $path) {
-    if ($path && !preg_match("|^[_a-z0-9-\*/]*$|i", $path)) {
-      $errors['excl_paths'] = t("Invalid path specified: %1", array("%1" => $path));
-      break;
-    }
-  }
-
-  $paths = preg_split("/[\s,]+/", strip_tags($edit['simple_incl_paths']));
-  foreach ($paths as $path) {
-    if ($path && !preg_match("|^[_a-z0-9-\*/]*$|i", $path)) {
-      $errors['excl_paths'] = t("Invalid path specified: %1", array("%1" => $path));
-      break;
-    }
-  }
-
+   
   foreach ($errors as $name => $message) {
     form_set_error($name, $message);
   }
@@ -362,7 +294,6 @@ function fckeditor_global_profile_validate($edit) {
  * Controller for FCKeditor administrative settings.
  */
 function fckeditor_admin($arg = NULL) {
-
   $module_drupal_path = drupal_get_path('module', 'fckeditor');
   $fckconfig_file = $module_drupal_path .'/fckeditor/fckconfig.js';
   if (!file_exists($fckconfig_file)) {
@@ -507,6 +438,7 @@ function fckeditor_profile_save($edit) {
   db_query("DELETE FROM {fckeditor_settings} WHERE name = '%s' or name = '%s'", $edit['name'], empty($edit['old_name']) ? "" : $edit['old_name']);
   db_query("DELETE FROM {fckeditor_role} WHERE name = '%s' or name = '%s'", $edit['name'], empty($edit['old_name']) ? "" : $edit['old_name']);
   db_query("INSERT INTO {fckeditor_settings} (name, settings) VALUES ('%s', '%s')", $edit['name'], serialize($edit));
+  fckeditor_rebuild_selectors($edit['name']);
   if (!empty($edit['rids']))
   foreach ($edit['rids'] as $rid => $value) {
     db_query("INSERT INTO {fckeditor_role} (name, rid) VALUES ('%s', %d)", $edit['name'], $rid);
@@ -527,6 +459,7 @@ function fckeditor_global_profile_save($edit) {
   db_query("DELETE FROM {fckeditor_settings} WHERE name = '%s' or name = '%s'", $edit['name'], empty($edit['old_name']) ? "" : $edit['old_name']);
   db_query("DELETE FROM {fckeditor_role} WHERE name = '%s' or name = '%s'", $edit['name'], empty($edit['old_name']) ? "" : $edit['old_name']);
   db_query("INSERT INTO {fckeditor_settings} (name, settings) VALUES ('%s', '%s')", $edit['name'], serialize($edit));
+  fckeditor_rebuild_selectors($edit['name']);
 }
 
 /**
@@ -599,26 +532,20 @@ function fckeditor_profile_load($name = '') {
 
 /**
  * @param int $excl_mode 1/include, exclude otherwise
- * @param string $excl_fields fields (HTML IDs)
- * @param string $excl_paths paths (drupal paths)
+ * @param string $excl_regex paths (drupal paths with ids attached)
  * @param string $element_id current ID
  * @param string $get_q current path
  * 
  * @return boolean
  *    returns true if FCKeditor is enabled
  */
-function fckeditor_is_enabled($excl_mode, $excl_fields, $excl_paths, $element_id, $get_q) {
-  $arr_excl_fields = preg_split("/[\s,]+/", strip_tags($excl_fields));
-  $field_found = fckeditor_idsearch($element_id, $arr_excl_fields);
-
-  $path = drupal_get_path_alias($get_q);
-  $regexp = '/^('. preg_replace(array('/(\r\n?|\n)/', '/\\\\\*/', '/(^|\|)\\\\<front\\\\>($|\|)/'), array('|', '.*', '\1'. preg_quote(variable_get('site_frontpage', 'node'), '/') .'\2'), preg_quote($excl_paths, '/')) .')$/';
-  $path_found = preg_match($regexp, $path);
-
-  $found = $field_found || $path_found;
-
-  $result =  ($excl_mode == 1) ? $found : !$found;
-  return $result;
+function fckeditor_is_enabled($excl_mode, $excl_regex, $element_id, $get_q) {
+  $front = variable_get('site_frontpage', 'node');
+  $excl_regex = str_replace('<front>', $front, $excl_regex);
+  
+  $match = !empty($excl_regex) && preg_match($excl_regex, $get_q.'.'.$element_id);
+  
+  return ($excl_mode == '0' xor $match);
 }
 
 /**
@@ -637,13 +564,9 @@ function fckeditor_process_textarea($element) {
   //skip this one, surely nobody wants WYSIWYG here
 
   switch ($element['#id']) {
-    case 'edit-excl-list':
-    case 'edit-simple-incl-list':
-    case 'edit-simple-incl-paths':
-    case 'edit-simple-incl-fields':
+    case 'edit-simple-incl':
     case 'edit-log':
-    case 'edit-excl-fields':
-    case 'edit-excl-paths':
+    case 'edit-excl':
     case 'edit-js-conf':
       return $element;
       break;
@@ -673,12 +596,12 @@ function fckeditor_process_textarea($element) {
   $themepath = path_to_theme() .'/';
   $host = base_path();
 
-  $enabled = fckeditor_is_enabled(empty($conf['excl_mode']) ? "" : $conf['excl_mode'], empty($conf['excl_fields']) ? "" : $conf['excl_fields'], empty($conf['excl_paths']) ? "" : $conf['excl_paths'], $element['#id'], $_GET['q']);
+  $enabled = fckeditor_is_enabled(empty($conf['excl_mode']) ? '0' : $conf['excl_mode'], empty($conf['excl_regex']) ? '' : $conf['excl_regex'], $element['#id'], $_GET['q']);
   if ($enabled) {
     $global_profile = fckeditor_profile_load("FCKeditor Global Profile");
     $global_conf = $global_profile->settings;
     if ($global_conf) {
-      $enabled = fckeditor_is_enabled(empty($global_conf['excl_mode']) ? "" : $global_conf['excl_mode'], empty($global_conf['excl_fields']) ? "" : $global_conf['excl_fields'], empty($global_conf['excl_paths']) ? "" : $global_conf['excl_paths'], $element['#id'], $_GET['q']);
+      $enabled = fckeditor_is_enabled(empty($global_conf['excl_mode']) ? '0' : $global_conf['excl_mode'], empty($global_conf['excl_regex']) ? '' : $global_conf['excl_regex'], $element['#id'], $_GET['q']);
     }
   }
   if (!isset($element['#suffix'])) {
@@ -738,9 +661,9 @@ function fckeditor_process_textarea($element) {
     $toolbar = $conf['toolbar'];
     //$height += 100; // for larger toolbars
 
-    $force_simple_toolbar = fckeditor_is_enabled(1, empty($conf['simple_incl_fields']) ? "" : $conf['simple_incl_fields'], empty($conf['simple_incl_paths']) ? "" : $conf['simple_incl_paths'], $element['#id'], $_GET['q']);
+    $force_simple_toolbar = fckeditor_is_enabled('1', empty($conf['simple_incl_regex']) ? '' : $conf['simple_incl_regex'], $element['#id'], $_GET['q']);
     if (!$force_simple_toolbar) {
-      $force_simple_toolbar = fckeditor_is_enabled(1, empty($global_conf['simple_incl_fields']) ? "" : $global_conf['simple_incl_fields'], empty($global_conf['simple_incl_paths']) ? "" : $global_conf['simple_incl_paths'], $element['#id'], $_GET['q']);
+      $force_simple_toolbar = fckeditor_is_enabled('1', empty($global_conf['simple_incl_regex']) ? '' : $global_conf['simple_incl_regex'], $element['#id'], $_GET['q']);
     }
     if ($force_simple_toolbar) {
       $toolbar = FCKEDITOR_FORCE_SIMPLE_TOOLBAR_NAME;
@@ -895,10 +818,9 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
 
   // display the field id for administrators
   if (user_access('administer fckeditor')) {
-    $element['#suffix'] .= t('<div class="textarea-identifier description">The ID for !excluding this element is: !id - the path is: !path</div>', array(
-    '!excluding' => l(t("excluding or including"), 'admin/settings/fckeditor'),
-    '!id' => $element['#id'],
-    '!path' => $_GET['q'],
+    $element['#suffix'] .= t('<div class="textarea-identifier description">The ID for !excluding this element is %fieldname</div>', array(
+    '!excluding' => l(t('excluding or including'), 'admin/settings/fckeditor'),
+    '%fieldname' => $_GET['q'].'.'.$element['#id'],
     ));
   }
 
@@ -1287,51 +1209,26 @@ function fckeditor_global_profile_form_build($sth, $edit) {
    * split the phrase by any number of commas or space characters,
    * which include " ", \r, \t, \n and \f
    */
-  $form['fckeditor_exclude_settings']['excl_fields'] = array(
+  $form['fckeditor_exclude_settings']['excl'] = array(
   '#type' => 'textarea',
   '#title' => t('Fields to exclude/include'),
   '#cols' => 60,
   '#rows' => 5,
   '#prefix' => '<div style="margin-left:20px">',
   '#suffix' => '</div>',
-  '#default_value' => !empty($edit->settings['excl_fields']) ? $edit->settings['excl_fields'] : '',
-  '#description' => t("Enter names (HTML ID's) of fields that may or may not have an FCKeditor, depending on the chosen option for the inclusion/exclusion mode.<br />You may separate the different entries by commas, spaces or newlines."),
+  '#default_value' => !empty($edit->settings['excl']) ? $edit->settings['excl'] : '',
+  '#description' => t('Enter the paths to the textarea fields on which you want to enable or disable FCKeditor. Paths to fields consist of the path to the page combined with the name of the field, for instance <em>node/add/page.edit-log</em> for the log field on a node add page.<br/>Wildcards * and ? are allowed for both the path part and the name part. If no name is given, all fields on the specified path are included or excluded.<br/> You may separate the different entries by commas, spaces or newlines.<br/>Examples: <em>node/add/*.edit.log</em>, <em>admin/*</em>, <em>*.site-*</em>'),
   );
-
-  /**
-   * get excluded paths - so we can have normal textareas too
-   * split the phrase by any number of commas or space characters,
-   * which include " ", \r, \t, \n and \f
-   */
-  $form['fckeditor_exclude_settings']['excl_paths'] = array(
-  '#type' => 'textarea',
-  '#title' => t('Paths to exclude/include'),
-  '#prefix' => '<div style="margin-left:20px">',
-  '#suffix' => '</div>',
-  '#cols' => 60,
-  '#rows' => 5,
-  '#default_value' => !empty($edit->settings['excl_paths']) ? $edit->settings['excl_paths'] : '',
-  '#description' => t("Enter drupal paths here, depending on the chosen option for the inclusion/exclusion mode.<br />Paths may be used the same way as in the drupal blocks configuration.<br />You may separate the different entries by commas, spaces or newlines. <br />You may also use * as a wildcard character (for example <code>comment/*</code>)."),
-  );
-
-  $form['fckeditor_exclude_settings']['simple_incl_fields'] = array(
+  
+  $form['fckeditor_exclude_settings']['simple_incl'] = array(
   '#type' => 'textarea',
   '#title' => t('Force simplified toolbar on the following fields'),
   '#cols' => 60,
   '#rows' => 5,
-  '#default_value' => !empty($edit->settings['simple_incl_fields']) ? $edit->settings['simple_incl_fields'] : '',
-  '#description' => t("Enter names (HTML ID's) of fields that should have the simplified toolbar.<br />If you don't want to use this feature, simply leave this field empty.<br />You may separate the different entries by commas, spaces or newlines."),
+  '#default_value' => !empty($edit->settings['simple_incl']) ? $edit->settings['simple_incl'] : '',
+  '#description' => t('Enter the paths to the textarea fields on which you want to force the simplified toolbar. The paths follow the same syntax as the exclude/include paths'),
   );
-
-  $form['fckeditor_exclude_settings']['simple_incl_paths'] = array(
-  '#type' => 'textarea',
-  '#title' => t('Force simplified toolbar on the following paths'),
-  '#cols' => 60,
-  '#rows' => 5,
-  '#default_value' => !empty($edit->settings['simple_incl_paths']) ? $edit->settings['simple_incl_paths'] : '',
-  '#description' => t("Enter drupal paths that should have the simplified toolbar.<br />If you don't want to use this feature, simply leave this field empty.<br />Paths may be used the same way as in the drupal blocks configuration.<br />You may separate the different entries by commas, spaces or newlines.<br />You may also use * as a wildcard character (for example <code>comment/*</code>)."),
-  );
-
+  
   $form['submit'] = array(
   '#type' => 'submit',
   '#value' => $btn
@@ -1442,51 +1339,24 @@ function fckeditor_profile_form_build($sth, $edit) {
    * split the phrase by any number of commas or space characters,
    * which include " ", \r, \t, \n and \f
    */
-  $form['fckeditor_exclude_settings']['excl_fields'] = array(
+  $form['fckeditor_exclude_settings']['excl'] = array(
   '#type' => 'textarea',
   '#title' => t('Fields to exclude/include'),
   '#cols' => 60,
   '#rows' => 5,
   '#prefix' => '<div style="margin-left:20px">',
   '#suffix' => '</div>',
-  '#default_value' => !empty($edit->settings['excl_fields']) ? $edit->settings['excl_fields'] : '',
-  '#description' => t("Enter names (HTML ID's) of fields that may or may not have an FCKeditor, depending on the chosen option for the inclusion/exclusion mode.<br />You may separate the different entries by commas, spaces or newlines."),
+  '#default_value' => !empty($edit->settings['excl']) ? $edit->settings['excl'] : '',
+  '#description' => t('Enter the paths to the textarea fields on which you want to enable or disable FCKeditor. Paths to fields consist of the path to the page combined with the name of the field, for instance <em>node/add/page.edit-log</em> for the log field on a node add page.<br/>Wildcards * and ? are allowed for both the path part and the name part. If no name is given, all fields on the specified path are included or excluded.<br/> You may separate the different entries by commas, spaces or newlines.<br/>Examples: <em>node/add/*.edit.log</em>, <em>admin/*</em>, <em>*.site-*</em>'),
   );
-
-  /**
-   * get excluded paths - so we can have normal textareas too
-   * split the phrase by any number of commas or space characters,
-   * which include " ", \r, \t, \n and \f
-   */
-  $form['fckeditor_exclude_settings']['excl_paths'] = array(
-  '#type' => 'textarea',
-  '#title' => t('Paths to exclude/include'),
-  '#prefix' => '<div style="margin-left:20px">',
-  '#suffix' => '</div>',
-  '#cols' => 60,
-  '#rows' => 5,
-  '#default_value' => !empty($edit->settings['excl_paths']) ? $edit->settings['excl_paths'] : '',
-  '#description' => t("Enter drupal paths here, depending on the chosen option for the inclusion/exclusion mode.<br />Paths may be used the same way as in the drupal blocks configuration.<br />You may separate the different entries by commas, spaces or newlines. <br />You may also use * as a wildcard character (for example <code>comment/*</code>)."),
-  );
-
-  $form['fckeditor_exclude_settings']['simple_incl_fields'] = array(
+  
+  $form['fckeditor_exclude_settings']['simple_incl'] = array(
   '#type' => 'textarea',
   '#title' => t('Force simplified toolbar on the following fields'),
   '#cols' => 60,
   '#rows' => 5,
-  //'#prefix' => t('Here you can define where FCKeditor should force the <code>!simple</code> toolbar.<br/>Useful for smaller textareas where we usually don\'t use very complicated HTML code, like in signatures.', array('!simple' => FCKEDITOR_FORCE_SIMPLE_TOOLBAR_NAME)),
-  '#default_value' => !empty($edit->settings['simple_incl_fields']) ? $edit->settings['simple_incl_fields'] : '',
-  '#description' => t("Enter names (HTML ID's) of fields that should have the simplified toolbar.<br />If you don't want to use this feature, simply leave this field empty.<br />You may separate the different entries by commas, spaces or newlines."),
-  );
-
-  $form['fckeditor_exclude_settings']['simple_incl_paths'] = array(
-  '#type' => 'textarea',
-  '#title' => t('Force simplified toolbar on the following paths'),
-  '#cols' => 60,
-  '#rows' => 5,
-  //'#prefix' => t('Here you can define where FCKeditor should force the <code>!simple</code> toolbar.<br/>Useful for smaller textareas where we usually don\'t use very complicated HTML code, like in signatures.', array('!simple' => FCKEDITOR_FORCE_SIMPLE_TOOLBAR_NAME)),
-  '#default_value' => !empty($edit->settings['simple_incl_paths']) ? $edit->settings['simple_incl_paths'] : '',
-  '#description' => t("Enter drupal paths that should have the simplified toolbar.<br />If you don't want to use this feature, simply leave this field empty.<br />Paths may be used the same way as in the drupal blocks configuration.<br />You may separate the different entries by commas, spaces or newlines.<br />You may also use * as a wildcard character (for example <code>comment/*</code>)."),
+  '#default_value' => !empty($edit->settings['simple_incl']) ? $edit->settings['simple_incl'] : '',
+  '#description' => t('Enter the paths to the textarea fields on which you want to force the simplified toolbar. The paths follow the same syntax as the exclude/include paths'),
   );
 
   $form['appearance'] = array(
@@ -1769,27 +1639,6 @@ return $form;
 }
 
 /**
- * Search the field id for matches in array of matches
- *
- * @param $search
- *   A string representing a form field id
- * @ param $array
- *   An $array with strings to match the $search parameter against
- *
- * @return
- *   TRUE on match, FALSE on no match
- */
-function fckeditor_idsearch($search, $array) {
-  foreach ($array as $key => $value) {
-    if (!empty($value) && preg_match('/^'. str_replace('*', '.*', addslashes($value)) .'$/i', $search)) {
-      // on any first match we know we're done here so return positive
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
  * Test if client can render the FCKeditor
  * Use built-in test method in fckeditor.php
  * If fckeditor.php is not found, return false (probably in such case fckeditor is not installed correctly)
@@ -1889,4 +1738,46 @@ function fckeditor_ask_delete_confirmation($is_global, $profile = "") {
           '!yes' => $delete_link,
           '!no' => l(t('Cancel'), 'admin/settings/fckeditor', array('attributes' => array ('style' => 'margin-left:40px'))),
           ));
+}
+
+/**
+ * Rebuilds the regular expression that is used to match the inclusion/exclusion rules
+ * and the simplified toolbar rules
+ *
+ * @param string $name Name of the profile to process. If omitted, all profiles are rebuilt
+ */
+function fckeditor_rebuild_selectors($name = null) {
+  if($name == null) {
+    $result = db_query('SELECT * FROM {fckeditor_settings}');
+  } else {
+    $result = db_query('SELECT * FROM {fckeditor_settings} WHERE name = "%s"', $name);
+  }
+  $replace = array('\*' => '.*', '\?' => '.');
+  while(($data = db_fetch_object($result))) {
+    if ($data->settings) {
+      $settings = unserialize($data->settings);
+      
+      foreach(array('excl', 'simple_incl') as $var) {
+        $rules = preg_split('/[\s,]+/', $settings[$var]);
+        $regex = array();
+        
+        if(!empty($rules)) {
+          foreach($rules as $rule) {
+            if(strpos($rule, '.') === false) {
+              // rules with no combined path and id are assumed to be paths
+              $rule .= '.*'; 
+            }
+            
+            $regex[] = '(?:^'.strtr(preg_quote($rule, '#'), $replace).'$)';
+          }
+          
+          $settings[$var.'_regex'] = '#'.implode('|', $regex).'#';
+        } else {
+          $settings[$var.'_regex'] = '';
+        }
+      }
+      
+      db_query("UPDATE {fckeditor_settings} SET settings='%s' WHERE name='%s'", serialize($settings), $data->name);
+    }
+  }
 }
