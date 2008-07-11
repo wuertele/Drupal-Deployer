@@ -258,11 +258,13 @@ function fckeditor_profile_validate($edit) {
     }
   }
 
-  if ($edit['UserFilesAbsolutePath'] && !$edit['UserFilesPath']) {
-    $errors['UserFilesPath'] = t("Path to uploaded files is required.");
-  }
-  if ($edit['UserFilesPath'] && !$edit['UserFilesAbsolutePath']) {
-    $errors['UserFilesPath'] = t("Absolute path to uploaded files is required.");
+  if (variable_get('file_downloads', '') !== FILE_DOWNLOADS_PRIVATE) {
+    if ($edit['UserFilesAbsolutePath'] && !$edit['UserFilesPath']) {
+      $errors['UserFilesPath'] = t("Path to uploaded files is required.");
+    }
+    if ($edit['UserFilesPath'] && !$edit['UserFilesAbsolutePath']) {
+      $errors['UserFilesPath'] = t("Absolute path to uploaded files is required.");
+    }
   }
 
   foreach ($errors as $name => $message) {
@@ -712,6 +714,10 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
         $upload_path = file_exists($upload_path) ? "/fckeditor/editor/filemanager/connectors/php/upload.php" : "/fckeditor/editor/filemanager/upload/php/upload.php" ;
         if (!empty($profile->settings['UserFilesPath'])) $_SESSION['FCKeditor']['UserFilesPath'] = strtr($profile->settings['UserFilesPath'], array("%f" => file_directory_path(), "%u" => $user->uid, "%b" => $host));
         if (!empty($profile->settings['UserFilesAbsolutePath'])) $_SESSION['FCKeditor']['UserFilesAbsolutePath'] = strtr($profile->settings['UserFilesAbsolutePath'], array("%f" => file_directory_path(), "%u" => $user->uid, "%b" => base_path(), "%d" => $_SERVER['DOCUMENT_ROOT']));
+        if (variable_get('file_downloads', '') == FILE_DOWNLOADS_PRIVATE) {
+          $_SESSION['FCKeditor']['UserFilesPath'] = url('system/files') .'/';
+          $_SESSION['FCKeditor']['UserFilesAbsolutePath'] = realpath(file_directory_path()) . DIRECTORY_SEPARATOR;
+        }
       }
       
       if ($quickupload) {
@@ -1606,6 +1612,13 @@ function fckeditor_profile_form_build($sth, $edit) {
     '#maxlength' => 255,
     '#description' => t('The path to the local directory (in the server) which points to the path defined above. If empty, FCKeditor will try to discover the right path.<br />Available wildcard characters:<br/><strong>%d</strong> - server path to document root (!root).<br /><strong>%b</strong> - base URL path of the Drupal installation (!base).<br/><strong>%f</strong> - Drupal file system path where the files are stored (!files).<br /><strong>%u</strong> - User ID.<br />Current path: !path', array('!path' => $current_user_files_absolute_path, '!files' => file_directory_path(), '!base' => base_path(), '!root' => $_SERVER['DOCUMENT_ROOT'])),
   );
+
+  if (variable_get('file_downloads', '') == FILE_DOWNLOADS_PRIVATE) {
+    $form['fckeditor_upload_settings']['UserFilesPath']['#description'] = t('Setting relative path to uploaded files has been disabled because private downloads are enabled and this path is calculated automatically.');
+    $form['fckeditor_upload_settings']['UserFilesPath']['#disabled'] = true;
+    $form['fckeditor_upload_settings']['UserFilesAbsolutePath']['#description'] = t('Setting path to uploaded files has been disabled because private downloads are enabled and this path is calculated automatically.');
+    $form['fckeditor_upload_settings']['UserFilesAbsolutePath']['#disabled'] = true;
+  }
   
   $form['advanced'] = array(
   '#type' => 'fieldset',
@@ -1780,4 +1793,27 @@ function fckeditor_rebuild_selectors($name = null) {
       db_query("UPDATE {fckeditor_settings} SET settings='%s' WHERE name='%s'", serialize($settings), $data->name);
     }
   }
+}
+
+/**
+ * Implementation of hook_file_download(). 
+ * Support for private downloads.
+ */
+function fckeditor_file_download($file) {
+  if (module_exists('imce') && variable_get('imce_settings_fck', 0)) {
+    return null;
+  }
+  if (module_exists('upload')) {
+    $result = db_query("SELECT f.* FROM {files} f WHERE filepath = '%s'", $file);
+    if ($file = db_fetch_object($result)) {
+      return null;
+    }
+  }
+  //it is probably file uploaded with FCKeditor
+  if ($path = file_create_path($file)) {
+    $ctype = ($info = @getimagesize($path)) ? $info['mime'] : (function_exists('mime_content_type') ? mime_content_type($path) : 'application/x-download');
+    return array('Content-type: '. $ctype);
+  }
+  
+  return -1;
 }
