@@ -5,7 +5,6 @@
  * field upload element demonstration module.
  */
 
-include_once('field_file.inc');
 /**
  * @defgroup core_hooks
  * @{
@@ -83,49 +82,64 @@ function field_upload_value(&$element, $edit = null) {
   }
   // check _FILES since edit will always be null for file uploads.
   if (empty($_FILES['files']['name'][$element['#name']])) {
-    dsm('field_upload_value::default_value');
-    return (array)$element['#default_value'];
+    return $element['#default_value'];
   }  
-  dsm('field_upload_value::real_value');
-  return (array)file_save_upload($element['#name'], $element['#validators'], $element['#dest']);
+  $file = file_save_upload($element['#name'], $element['#validators'], $element['#dest']);
+
+  dsm($file, 'field_upload_value::real_value');
+  return $file->fid;
 }
 
 
 function field_upload_process(&$element, $edit, $state, $form) {
-  dsm('field_upload_process');
-  // make sure the form can accept uploads.  
+  dsm($element['#default_value'], 'field_upload_process');
+
   $form['#attributes']['enctype'] = 'multipart/form-data';
-  // If the element as a value.. spawn out elements for the files properties.
-  if ($element['#value']) {
-     $file = $element['#value'];
-     $element['#tree'] = true;
-     $element['#theme'] = 'field_file';
-     $element['filename'] = array(
-        '#title' => t('filename'),
-        '#type' => 'textfield',
-        '#default_value' => $file['filename'],
-     );
-     $owner = user_load($file['uid']);
-     $element['owner'] = array(
-        '#title' => t('owner'),
-        '#type' => 'textfield',
-        '#default_value' => $owner->name,
-        '#autocomplete_path' => 'user/autocomplete',
-     );   
-     $element['status'] = array(
-        '#title' => t('status'),
-        '#type' => 'select',
-        '#options' => array(0 => t('temporary'), 1 => t('permanent')),
-        '#default_value' => $file['status'],
-     );
-     $element['delete'] = array(
-        '#title' => 'delete',
-        '#type' => 'button',
-     );   
-     // do i need to add the addition file properties?
+  if ($file = field_file_load($element['#value'])) {
+    dsm($file);
+    // store the fid for posterity. 
+    $element['fid'] = array(
+      '#type' => 'value',
+      '#value' => $file['fid'],
+      '#parents'=> $element['#parents'] + array('fid'),
+    );
+ 
+    $element['file'] = array(
+      '#type' => 'markup',
+      '#value' => '<pre>'. print_r($file,1) .'</pre>',
+    );
+
+    $element['filename'] = array(
+       '#title' => t('filename'),
+       '#type' => 'textfield',
+       '#default_value' => $file['filename'],
+    );
+
+    $owner = user_load($file['uid']);
+    $element['owner'] = array(
+       '#title' => t('owner'),
+       '#type' => 'textfield',
+       '#default_value' => $owner->name,
+       '#autocomplete_path' => 'user/autocomplete',
+    );   
+    $element['status'] = array(
+       '#title' => t('status'),
+       '#type' => 'select',
+       '#options' => array(0 => t('temporary'), 1 => t('permanent')),
+       '#default_value' => $file['status'],
+    );
+    $element['delete'] = array(
+       '#title' => 'delete',
+       '#value' => t('Remove'),
+       '#type' => 'button',
+    );   
+    // do i need to add the addition file properties?
   }  
-  //dsm($element);
-  dsm($element);
+  else {
+    //display upload element. 
+
+  }
+  dsm($element, 'field_upload_process');
   return $element;
 }
 
@@ -142,23 +156,23 @@ function field_upload_validate($element, $state, $form){
 function theme_field_upload($element) {
   dsm('theme_field_upload');
   _form_set_class($element, array('form-file'));
-  return theme('form_element', $element, '<input type="file" name="files['. $element['#name'] .']"'. ($element['#attributes'] ? ' '. drupal_attributes($element['#attributes']) : '') .' id="'. $element['#id'] .'" size="'. $element['#size'] .'" accept="'. $element['#accept'] ."\" />\n");
+  
+  return $element['#children'] . theme('form_element', $element, '<input type="file" name="files['. $element['#name'] .']"'. ($element['#attributes'] ? ' '. drupal_attributes($element['#attributes']) : '') .' id="'. $element['#id'] .'" size="'. $element['#size'] .'" accept="'. $element['#accept'] ."\" />\n");
 }
  
 function theme_field_file($element) {
-  foreach(element_children($element) as $child) {
-    $output .= drupal_render($element[$child]);
-  }  
-  return $output;
-  return drupal_render($element);
+ dsm('theme_field_file');
+ return print_r($element,1);
+ return $element['#children']; 
 }
+  
 
 function field_upload_form($state) {
   $form = array('#attributes' => array('enctype' => 'multipart/form-data'));
   $form['upload'] = array(
     '#title' => t('Upload'),
     '#type' => 'field_upload',
-    '#default_value' => field_file_load(17),
+    '#default_value' => 17,
     '#accept' => 'image/jpg, image/gif, image/png',
     '#maxfilesize' => '8M',
   );
@@ -177,6 +191,4 @@ function field_upload_form_validate() {
 
 function field_upload_form_submit($form, &$state) {
   dsm('field_upload_form_submit');
-  //dsm($form);
-  //dsm($state);
 }
