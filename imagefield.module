@@ -110,66 +110,6 @@ function imagefield_elements() {
 }
 
 /**
- * Implementation of hook_file_download().
- * Replicated from upload.module.
- *
- * Conditionally included since we're just replicating the
- * work of upload.module for now.
- */
-
-if (!function_exists('upload_file_download')) {
-  function imagefield_file_download($file) {
-    // if this isn't a default image look it up from the db...
-    if (strpos($file, 'imagefield_default_images') !== false) {
-      $fieldname = array_shift(explode('.', basename($file)));
-      $field = content_fields($fieldname);
-      $file = $field['default_image'];
-    }
-    else {
-      $file = file_create_path($file);
-
-      $result = db_query("SELECT f.* FROM {files} f WHERE filepath = '%s'", $file);
-      if (!$file = db_fetch_object($result)) {
-        // We don't really care about this file.
-        return;
-      }
-    }
-
-    // @todo: check the node for this file to be referenced in a field
-    // to determine if it is managed by imagefield. and do the access denied part here.
-    if (!user_access('view imagefield uploads')) {
-      // sorry you do not have the proper permissions to view
-      // imagefield uploads.
-      return -1;
-    }
-
-    // @hack: default images dont' have nids....
-    // I'm not going to bother checking perms for default images...
-    // it's a bug, but we'll resolve it later.
-    if (!empty($file->nid)) {
-      $node = node_load($file->nid);
-      if (!node_access('view', $node)) {
-        // You don't have permission to view the node
-        // this file is attached to.
-        return -1;
-      }
-    }
-
-    // Well I guess you can see this file.
-    $name = mime_header_encode($file->filename);
-    $type = mime_header_encode($file->filemime);
-    // Serve images and text inline for the browser to display rather than download.
-    $disposition = ereg('^(text/|image/)', $file->filemime) ? 'inline' : 'attachment';
-    return array(
-      'Content-Type: '. $type .'; name='. $name,
-      'Content-Length: '. $file->filesize,
-      'Content-Disposition: '. $disposition .'; filename='. $name,
-      'Cache-Control: private',
-    );
-  }
-}
-
-/**
  * Menu-callback for JavaScript-based uploads.
  */
 function imagefield_js($node_type, $fieldname) {
@@ -215,8 +155,6 @@ function imagefield_js($node_type, $fieldname) {
   exit;
 
 }
-
-
 
 function theme_imagefield_image($file, $alt = '', $title = '', $attributes = null, $getsize = true) {
   $file = (array)$file;
