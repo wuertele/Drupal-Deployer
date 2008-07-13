@@ -89,7 +89,7 @@ function imagefield_field_settings($op, $field) {
 function _imagefield_field_settings_default_validate($element, &$form_state) {
   // Verify the destination exists
   $dst = file_directory_path() .'/imagefield_default_images';
-  if (!imagefield_check_directory($dst)) {
+  if (!field_file_check_directory($dst, FILE_CREATE_DIRECTORY)) {
     form_set_error('default_image', t("The default image could not be uploaded. The destination(%d) does not exist or is not writable by the webserver.", array('%d' => dirname($dst))));
     return;
   }
