@@ -133,20 +133,21 @@ function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
 function imagefield_widget_value($element, $edit = FALSE) {
   //dsm('imagefield_widget_value');
   //dsm($edit);
+  
   if (!$edit) { 
-    return $element['#default_value'] + field_file_load($element['#default_value']['fid']);
+    $file =  field_file_load($element['#default_value']['fid']);
+    $item = $element['#default_value'];
   }
   else {
- 
-    return array(
+    $file = field_file_load($edit['fid']);
+    $item = array(
       'fid' => $edit['fid'],
       'alt' => $edit['alt'],
       'title' => $edit['title'],
       'data' => '',
-    ) + field_file_load($edit['fid']);
+    );
   }
-  return $value;
-
+  return array_merge($item, $file);
 }
 
 
@@ -155,15 +156,18 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
   //dsm($element);
   //dsm($form_state);
 
-  $item = $element['#default_value'];
-  $file = $item += field_file_load($item['fid']);
+  $file = $element['#value'];
   $delta = $element['#delta'];
   $field_name = $element['#field_name'];
 
   
   $element['fid'] = array('#type' => 'hidden', '#value' =>  $file['fid']);
+
   if ($file['fid'] != 0) {
     $element['preview'] = array('#type' => 'markup', '#value' => theme('imagefield_item', $file));  
+    if (empty($file['filepath'])) {
+      //dsm($file);
+    }
   }
   $element['alt'] = array(
     '#type' => 'textfield', 
@@ -192,20 +196,27 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
     return $element;
   }
 
-  $element['upload'] = array(
-    '#name' => 'files['. $field_name .'_'. $delta .']',
-    '#type' => 'file',
-    '#title' => t('New Upload'),
-  );
-  $element['upload_btn'] = array(
-    '#name' => $field_name .'_'. $delta .'_upload_btn',
-    '#type' => 'submit', 
-    '#value' => t('Upload'),
-    '#submit' => array('imagefield_widget_submit_upload_btn'),
-    '#field_name' => $field_name,
-    '#delta' => $delta,
-  );
+  if ($file['fid'] == 0) {
+    $element['alt']['#type'] = 'hidden';
+    $element['title']['#type'] = 'hidden';
 
+    $element['upload'] = array(
+      '#name' => 'files['. $field_name .'_'. $delta .']',
+      '#type' => 'file',
+      '#title' => t('New Upload'),
+    );
+
+    $element['upload_btn'] = array(
+      '#name' => $field_name .'_'. $delta .'_upload_btn',
+      '#type' => 'submit', 
+      '#value' => t('Upload'),
+      '#submit' => array('imagefield_widget_submit_upload_btn'),
+      '#field_name' => $field_name,
+      '#delta' => $delta,
+    );
+  }
+/*
+ @needs validation before going public.
   // @todo: jquery file browser.
   $element['reuse'] = array(
     '#type' => 'textfield',
@@ -220,7 +231,7 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
     '#field_name' => $field_name,
     '#delta' => $delta,
   );
-
+*/
   return $element;
 }
 
