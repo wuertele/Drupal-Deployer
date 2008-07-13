@@ -123,25 +123,27 @@ function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
     '#default_value' => $items[$delta],
   );
   // store the original item to revert form if necessary.
-  $form_state['storage'][$field['field_name']][$delta]['orig'] = $items[$delta];
+  // submission redirects stop if stoage is populated... we need to find an alternative place for this...
+  //$form_state['storage'][$field['field_name']][$delta]['orig'] = $items[$delta];
   
   return $element;
 }
 
 
 function imagefield_widget_value($element, $edit = FALSE) {
-  dsm('imagefield_widget_value');
-  dsm($edit);
+  //dsm('imagefield_widget_value');
+  //dsm($edit);
   if (!$edit) { 
-    return $element['#default_value'];
+    return $element['#default_value'] + field_file_load($element['#default_value']['fid']);
   }
   else {
+ 
     return array(
       'fid' => $edit['fid'],
       'alt' => $edit['alt'],
       'title' => $edit['title'],
       'data' => '',
-    );
+    ) + field_file_load($edit['fid']);
   }
   return $value;
 
@@ -183,8 +185,8 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
       '#type' => 'submit', 
       '#value' => t('Remove'),
       '#submit' => array('imagefield_widget_submit_remove_btn'),
-      '#field_name' => $element['#field_name'],
-      '#delta' => $element['#delta'],
+      '#field_name' => $field_name,
+      '#delta' => $delta,
     );
     return $element;
   }
@@ -198,8 +200,8 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
     '#type' => 'submit', 
     '#value' => t('Upload'),
     '#submit' => array('imagefield_widget_submit_upload_btn'),
-    '#field_name' => $element['#field_name'],
-    '#delta' => $element['#delta'],
+    '#field_name' => $field_name,
+    '#delta' => $delta,
   );
 
   // @todo: jquery file browser.
@@ -212,8 +214,8 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
     '#type' => 'submit', 
     '#value' => t('ReUse'),
     '#submit' => array('imagefield_widget_submit_reuse_btn'),
-    '#field_name' => $element['#field_name'],
-    '#delta' => $element['#delta'],
+    '#field_name' => $field_name,
+    '#delta' => $delta,
   );
 
   return $element;
@@ -225,7 +227,6 @@ function imagefield_widget_submit_remove_btn($form, &$form_state) {
   //dsm($form_state);
   $field_name = $form_state['clicked_button']['#field_name'];
   $delta = $form_state['clicked_button']['#delta'];
-  
   $form_state['values'][$field_name][$delta] = array(
     'fid' => 0,
     'alt' => '',
@@ -234,11 +235,12 @@ function imagefield_widget_submit_remove_btn($form, &$form_state) {
     'title' => '',
     'data' => '',
   ); 
+  $form_state['rebuild'] = true;
 }
 
 
 function imagefield_widget_submit_upload_btn($form, &$form_state) {
-  dsm('imagefield_widget_submit_upload_btn');
+  //dsm('imagefield_widget_submit_upload_btn');
   //dsm($form);
   //dsm($form_state);
   $field_name = $form_state['clicked_button']['#field_name'];
@@ -271,8 +273,9 @@ function imagefield_widget_submit_upload_btn($form, &$form_state) {
     form_set_error($upload_name, t('The Image upload failed.'));
     return;
   }
-  dsm($file);
+  //dsm($file);
   $form_state['values'][$field_name][$delta]['fid'] = $file['fid'];
+  $form_state['rebuild'] = true;
 }
 
 function imagefield_widget_submit_reuse_btn($form, &$form_state) {
@@ -289,18 +292,20 @@ function imagefield_widget_submit_reuse_btn($form, &$form_state) {
   // if numeric assume we got an fid and try to load it.
   if (is_numeric($reuse) && $file = field_file_load($reuse)) {
     $form_state['values'][$field_name][$delta]['fid'] = $file['fid'];
+    $form_state['rebuild'] = true;
   } 
   else {
     // load fid from path..
     $result = db_query("SELECT fid FROM {files} WHERE filepath='%s'", $reuse);
     if ($fid = db_result($result)) {
       $form_state['values'][$field_name][$delta]['fid'] = $fid;
+      $form_state['rebuild'] = true;
     }
   }
 }
 
 function imagefield_widget_after_build($element) {
-  dsm('imagefield_widget_after_build');
+  //dsm('imagefield_widget_after_build');
   //dsm($element);
  
   $element['#value'] = array(
@@ -313,7 +318,7 @@ function imagefield_widget_after_build($element) {
 }
 
 function _imagefield_widget_validate($element, &$form_state) {
-  dsm('imagefield_validate');
+  //dsm('imagefield_validate');
   //dsm($element);
 }
 
