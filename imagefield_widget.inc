@@ -92,27 +92,6 @@ function _imagefield_content_admin_field_form_alter(&$form, $form_state, $form_i
   $form['#attributes'] = array('enctype' => 'multipart/form-data');
 }
 
-/**
- * Create the image directory relative to the 'files' dir recursively for every
- * directory in the path.
- *
- * @param $directory
- *   The directory path under files to check, such as 'photo/path/here'
- * @param $form_element
- *   A form element to throw an error on if the directory is not writable
- */
-function imagefield_check_directory($directory, $fieldname = NULL) {
-  $directory = field_file_strip_path($directory);
-  foreach (explode('/', $directory) as $dir) {
-    $dirs[] = $dir;
-    $path = file_create_path(implode($dirs, '/'));
-    if (!field_file_check_directory($path, FILE_CREATE_DIRECTORY, $fieldname)) {
-      watchdog('imagefield', t('Imagefield failed to create directory(%d) at (%p).', array('%d' => $directory, '%p' => $path)), WATCHDOG_ERROR);
-      return false;
-    }
-  }
-  return true;
-}
 
 function _imagefield_scale_image($file, $resolution = 0) {
   $info = image_get_info($file['filepath']);
@@ -138,7 +117,7 @@ function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
     $items[$delta] = array('fid' => 0, 'alt' => '', 'title' => '', 'data' => '');
   }
 
-  $element['#attributes'] = array('enctype' => 'multipart/form-data');
+  $form['#attributes'] = array('enctype' => 'multipart/form-data');
   $element = array(
     '#type' => 'imagefield_widget',
     '#default_value' => $items[$delta],
@@ -211,7 +190,7 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
   }
 
   $element['upload'] = array(
-    '#name' => 'file['. $field_name .'_'. $delta .'_upload' .']',
+    '#name' => 'files['. $field_name .'_'. $delta .']',
     '#type' => 'file',
     '#title' => t('New Upload'),
   );
@@ -257,6 +236,44 @@ function imagefield_widget_submit_remove_btn($form, &$form_state) {
   ); 
 }
 
+
+function imagefield_widget_submit_upload_btn($form, &$form_state) {
+  dsm('imagefield_widget_submit_upload_btn');
+  //dsm($form);
+  //dsm($form_state);
+  $field_name = $form_state['clicked_button']['#field_name'];
+  $delta = $form_state['clicked_button']['#delta'];
+
+  $field = content_fields($field_name);
+
+  $widget_file_path = $field['widget']['file_path'];
+  if (module_exists('token')) {
+    global $user;
+    $widget_file_path = token_replace($widget_file_path, 'user', $user);
+  }
+
+  $complete_file_path = file_directory_path() .'/'. $widget_file_path;
+  $upload_name = $field_name .'_'. $delta;
+  if (!field_file_check_directory($complete_file_path, FILE_CREATE_DIRECTORY)) {
+    watchdog('imagefield', 'The upload directory %directory for the file field %field (content type %type) could not be created or is not accessible. A newly uploaded file could not be saved in this directory as a consequence, and the upload was canceled.', array('%directory' => $widget_file_path, '%field' => $field_name, '%type' => $field['type_name']));
+    form_set_error($upload_name, t('The file could not be uploaded.'));
+    return $file;
+  }
+
+  $validators = array(
+    'file_validate_extensions' => array($field['widget']['file_extensions']),
+    'file_validate_size' => array($field['widget']['max_filesize']),
+    'file_validate_image_resolution' => array($field['widget']['max_resolution']),
+  );
+
+  if (!$file = field_file_save_upload($upload_name, $validators, $complete_file_path)) {
+    watchdog('imagefield', 'The file upload failed. %upload', array('%upload' => $upload_name));
+    form_set_error($upload_name, t('The Image upload failed.'));
+    return;
+  }
+  dsm($file);
+  $form_state['values'][$field_name][$delta]['fid'] = $file['fid'];
+}
 
 function imagefield_widget_submit_reuse_btn($form, &$form_state) {
   //dsm('imagefield_widget_submit_reuse_btn');

@@ -35,13 +35,13 @@ function imagefield_file_delete($file) {
 // test if a file is an image.
 function imagefield_file_is_image($file) {
   $file = (object)$file;
-  dsm($file);
+  //dsm($file);
   return in_array($file->filemime, array('image/jpg', 'image/jpeg', 'image/png', 'image/gif'));
 }
 
 // create the path to and admin thumbnail.
 function imagefield_file_admin_thumb_path($file) {
-  dsm($file);
+  //dsm($file);
   $file = (object)$file;
   return $file->filepath .'.thumb.jpg';
 } 
