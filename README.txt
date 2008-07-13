@@ -33,6 +33,12 @@ INSTALLATION
 3. Enable permissions at admin/user/permissions.
 4. Configure the module at admin/settings/faq.
 
+UPGRADE NOTICE
+---------------
+When using categorized FAQ nodes, the disabling of the FAQ module causes the
+vocabulary to lose the association with the FAQ content type. This results in no
+FAQ nodes being displayed when you re-enable the FAQ module. Before opening an
+issue, please verify that this setting is still in place.
 
 CONFIGURATION
 -------------
