@@ -182,6 +182,7 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
 
   if ($file['fid'] != 0) {
     $element['remove_btn'] = array(
+      '#name' => $field_name .'_'. $delta .'_remove_btn',
       '#type' => 'submit', 
       '#value' => t('Remove'),
       '#submit' => array('imagefield_widget_submit_remove_btn'),
@@ -197,6 +198,7 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
     '#title' => t('New Upload'),
   );
   $element['upload_btn'] = array(
+    '#name' => $field_name .'_'. $delta .'_upload_btn',
     '#type' => 'submit', 
     '#value' => t('Upload'),
     '#submit' => array('imagefield_widget_submit_upload_btn'),
@@ -211,6 +213,7 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
     '#description' => t('Enter a Drupal filepath or file id to use an existing file.'),
   );
   $element['reuse_btn'] = array(
+    '#name' => $field_name .'_'. $delta .'_reuse_btn',
     '#type' => 'submit', 
     '#value' => t('ReUse'),
     '#submit' => array('imagefield_widget_submit_reuse_btn'),
