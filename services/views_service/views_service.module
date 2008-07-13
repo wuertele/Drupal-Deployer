@@ -110,30 +110,39 @@ function views_service_export_view($view_name) {
     return services_error('View does not exist.');
   }
   
-  return views_create_view_code($view_name);
+  return $view->export();
 }
 
 /**
  * Import a view.
  */
 function views_service_import_view($view_export) { 
-  views_load_cache();
+  views_include('view');
   ob_start();
   eval($view_export);
   ob_end_clean();
-
-  // Views exports don't contain vids, therefore we have to
-  // check and see if the view already exists. If so, save
-  // the existing vid into our imported view object. Otherwise
-  // _views_save_view() will treat this as an insert rather than
-  // as an update.
-  $existing_view = views_get_view($view->name);
-  if ($existing_view) {
-    $view->vid = $existing_view->vid;
+    
+  if (!is_object($view)) {
+    return services_error(t('Unable to interpret view code.'));
   }
 
-  views_sanitize_view($view);
-  $vid = _views_save_view($view);
+  if (empty($view->api_version) || $view->api_version < 2) {
+    // Check for some value that would only exist on a Views 1 view.
+    if (isset($view->url) || isset($view->page) || isset($view->block)) {
+      views_include('convert');
+      $view = views1_import($view);
+      return services_error(t('You are importing a view created in Views version 1. You may need to adjust some parameters to work correctly in version 2.'));
+    }
+    else {
+      return services_error(t('That view is not compatible with this version of Views.'));
+    }
+  }
+
+  $existing_view = views_get_view($view->name);
+  if ($existing_view && $existing_view->type != t('Default')) {
+    $view->vid = $existing_view->vid;
+  }
   
-  return $vid;
+  $view->save();
+  return $view->vid;
 }
