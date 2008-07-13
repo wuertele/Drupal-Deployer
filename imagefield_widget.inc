@@ -129,208 +129,178 @@ function _imagefield_scale_image($file, $resolution = 0) {
   return $file;
 }
 
+
 /**
  * Implementation of hook_widget().
  */
 function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
-  $form['#attributes'] = array('enctype' => 'multipart/form-data');
- 
-  if (!empty($items[$delta]) && $file = field_file_load($items[$delta]['fid'])) {
-    $file = array_merge($items[$delta], $file); 
-  }
-  else {
-    $file = array(
-      'fid' => 0, 
-      'title' => '', 
-      'alt' => '',
-      'filename' => '', 
-      'filepath' => '', 
-      'filemime' => '',
-      'filesize' => 0,
-      'source' => 'initialization',
-    );
+  if (empty($items[$delta])) { 
+    $items[$delta] = array('fid' => 0, 'alt' => '', 'title' => '', 'data' => '');
   }
 
-  $widget['fid'] = array(
-    '#type' => 'imagefield_widget_file',
-    '#default_value' => $file['fid'],
-    '#field' => $field,
-    '#field_name' => $field['field_name'],
-    '#delta' => $delta,
-    '#items' => $items,
-    '#file' => (object)$file,
+  $element['#attributes'] = array('enctype' => 'multipart/form-data');
+  $element = array(
+    '#type' => 'imagefield_widget',
+    '#default_value' => $items[$delta],
   );
-
-  $widget['alt'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Alternate Text'),
-    '#default_value' => '',
-  );  
-  if (!$field['widget']['custom_alt']) {
-    $widget['alt']['#type'] = 'hidden';
-  }  
-
-  $widget['title'] = array(
-    '#type' => 'textfield',
-    '#title' => t('title'),
-    '#default_value' => '',
-  );  
- 
-  if ($field['widget']['custom_title']) {
-    $widget['title']['#type'] = 'hidden';
-  }    
-
-  $widget['alt'] = array('#type' => 'value', '#value' => '');
-  $widget['title'] = array('#type' => 'value', '#value' => '');
-  $widget['data'] = array('#type' => 'value', '#value' => '');
-
-  return $widget;
+  // store the original item to revert form if necessary.
+  $form_state['storage'][$field['field_name']][$delta]['orig'] = $items[$delta];
+  
+  return $element;
 }
 
-function imagefield_widget_value($form, $edit = FALSE) {
-  return $form['#default_value'];
+
+function imagefield_widget_value($element, $edit = FALSE) {
+  dsm('imagefield_widget_value');
+  dsm($edit);
+  if (!$edit) { 
+    return $element['#default_value'];
+  }
+  else {
+    return array(
+      'fid' => $edit['fid'],
+      'alt' => $edit['alt'],
+      'title' => $edit['title'],
+      'data' => '',
+    );
+  }
+  return $value;
+
 }
 
 
 function imagefield_widget_process($element, $edit, &$form_state, $form) {
-  return $element;
-}
+  //dsm('imagefield_widget_process');
+  //dsm($element);
+  //dsm($form_state);
 
-function imagefield_widget_file_value($form, $edit = FALSE) {
-  dsm('widget_file_value');
-  
-  if ($edit === FALSE) {
-    return $form['#default_value'];
-  }  
-  $field = $form['#field'];
-  $fieldname = $field['field_name'];
-  $upload_name = $fieldname .'_'. $form['#delta'];
-  
-
-  global $user;
-  $widget_file_path = token_replace($field['widget']['file_path'], 'user', $user);
-
-  $validators = array(
-    'file_validate_extensions' => array($field['widget']['file_extensions']),
-    'file_validate_size' => array($field['widget']['max_filesize']),
-    'file_validate_image_resolution' => array($field['widget']['max_resolution']),
-  );
-
-  $complete_file_path = file_directory_path() .'/'. $widget_file_path;
-
-  if (!imagefield_check_directory($widget_file_path, $upload_name)) {
-    // watchdog.
-    return $form['#default_value'];
-  }  
-  
-  if (!$file = field_file_save_upload($upload_name, $validators, $complete_file_path)) {
-    // watchdog.
-    return $form['#default_value'];
-  }
-  return $file['fid'];
-}
-
-/**
- * Process the image type element before displaying the field.
- *
- * this process call back should either display an input[@type=file] or 
- * an individual image edit form.
- */
-function imagefield_widget_file_process($element, $edit, &$form_state, $form) {
-  dsm('widget_file_process');
-
-  $field_name = $element['#field_name'];
-  $field = content_fields($field_name);
+  $item = $element['#default_value'];
+  $file = $item += field_file_load($item['fid']);
   $delta = $element['#delta'];
+  $field_name = $element['#field_name'];
 
-  $form_state['values'][$field['field_name']][$delta] = array(); 
-  $field_name_css = str_replace('_', '-', $field['field_name']);
-  $id = 'filefield-'. $field_name_css .'-'. $delta .'-form';
-
-  $classes = array(
-    'filefield-'. $field_name_css .'-form',
-    'filefield-file-form',
+  
+  $element['fid'] = array('#type' => 'hidden', '#value' =>  $file['fid']);
+  if ($file['fid'] != 0) {
+    $element['preview'] = array('#type' => 'markup', '#value' => theme('imagefield_item', $file));  
+  }
+  $element['alt'] = array(
+    '#type' => 'textfield', 
+    '#title' => t('Alternate Text'),
+    '#default_value' => $file['alt'],
   );
-  $element['#prefix'] =  '<div id="'. $id .'" class="'. implode(' ', $classes) .'"><div class="filefield-file-edit">';
-  $element['#suffix'] = '</div></div>';
+  $element['title'] = array(
+    '#type' => 'textfield', 
+    '#title' => t('Title'),
+    '#default_value' => $file['title'],
+  );
+  $element['data'] = array(
+    '#type' => 'hidden', 
+    '#value' => '',
+  );
 
-  //drupal_add_js(drupal_get_path('module', 'imagefield') .'/imagefield.js');
-  drupal_add_css(drupal_get_path('module', 'imagefield') .'/imagefield.css');
-  if ($file = field_file_load($element['#value'])) {
-    $element['preview'] = array(
-      '#type' => 'markup',
-      '#value' => '<img src="'. file_create_url(imagefield_file_admin_thumb_path($file)) .'" />',
-    );  
-    $element['delete'] = array(
-      '#name' => $field_name .'_'. $delta .'_delete',
-      '#type' => 'submit',
-      '#value' => t('Delete'),
-      '#submit' => array('filefield_file_edit_delete_submit'), // without JavaScript
-      '#ahah' => array( // with JavaScript
-        'path' => 'filefield/js/delete/'. $element['#field_name'] .'/'. $field['type_name'] .'/'. $element['#delta'],
-        'wrapper' => $id,
-        'method' => 'replace',
-        'effect' => 'fade',
-      ),  
-      '#field' => $field,
-      '#delta' => $delta,
-      '#file' => $file,
-    ); 
-  }  
-  else {   
-    $element[$field_name .'_'. $delta] = array(
-      '#type' => 'file',
-      '#title' => t('Upload Image'),
-      '#description' => $element['#description'],
-      '#weight' => 9,
-      '#attributes' => array('class' => 'imagefield imagefield-'. $field_name, 'accept' => str_replace(' ', '|', trim($field['widget']['file_extensions']))),
-      // emulate how FAPI normalizes the _FILES array since this won't go through form_builder.
-      '#name' => 'files['. $field_name .'_'. $delta .']',
-      '#tree' => FALSE,
-    );
-
-    $btn_name =  $field['field_name'] .'_'. $delta .'_upload';
-    $element[$btn_name] = array( 
-      '#name' => $btn_name, 
+  if ($file['fid'] != 0) {
+    $element['remove_btn'] = array(
       '#type' => 'submit', 
-      '#value' => t('Upload'), 
-      '#submit' => array('filefield_file_upload_submit'), // without JavaScript 
-      // set #parents since widget_value is different.
-      '#parents' => array($btn_name),
-      '#ahah' => array( // with JavaScript 
-        'path' => 'filefield/js/upload/'. $field['field_name'] .'/'. $field['type_name'] .'/'. $delta, 
-        'wrapper' => $id, 
-        'method' => 'replace', 
-        'effect' => 'fade', 
-      ), 
-      '#weight' => 10, 
-      '#field' => $field, 
-      '#delta' => $delta, 
+      '#value' => t('Remove'),
+      '#submit' => array('imagefield_widget_submit_remove_btn'),
+      '#field_name' => $element['#field_name'],
+      '#delta' => $element['#delta'],
     );
-  }   
+    return $element;
+  }
+
+  $element['upload'] = array(
+    '#name' => 'file['. $field_name .'_'. $delta .'_upload' .']',
+    '#type' => 'file',
+    '#title' => t('New Upload'),
+  );
+  $element['upload_btn'] = array(
+    '#type' => 'submit', 
+    '#value' => t('Upload'),
+    '#submit' => array('imagefield_widget_submit_upload_btn'),
+    '#field_name' => $element['#field_name'],
+    '#delta' => $element['#delta'],
+  );
+
+  // @todo: jquery file browser.
+  $element['reuse'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Reuse Existing File'),
+    '#description' => t('Enter a Drupal filepath or file id to use an existing file.'),
+  );
+  $element['reuse_btn'] = array(
+    '#type' => 'submit', 
+    '#value' => t('ReUse'),
+    '#submit' => array('imagefield_widget_submit_reuse_btn'),
+    '#field_name' => $element['#field_name'],
+    '#delta' => $element['#delta'],
+  );
+
   return $element;
 }
 
+function imagefield_widget_submit_remove_btn($form, &$form_state) {
+  //dsm ('imagefield_widget_submit_remove_btn');
+  //dsm($form);
+  //dsm($form_state);
+  $field_name = $form_state['clicked_button']['#field_name'];
+  $delta = $form_state['clicked_button']['#delta'];
+  
+  $form_state['values'][$field_name][$delta] = array(
+    'fid' => 0,
+    'alt' => '',
+    'filepath' => '',
+    'filename' => '',
+    'title' => '',
+    'data' => '',
+  ); 
+}
+
+
+function imagefield_widget_submit_reuse_btn($form, &$form_state) {
+  //dsm('imagefield_widget_submit_reuse_btn');
+  //dsm($form);
+  //dsm($form_state);
+
+  $field_name = $form_state['clicked_button']['#field_name'];
+  $delta = $form_state['clicked_button']['#delta'];
+
+  $reuse =  trim($form_state['values'][$field_name][$delta]['reuse']);
+  if (empty($reuse))  return;
+
+  // if numeric assume we got an fid and try to load it.
+  if (is_numeric($reuse) && $file = field_file_load($reuse)) {
+    $form_state['values'][$field_name][$delta]['fid'] = $file['fid'];
+  } 
+  else {
+    // load fid from path..
+    $result = db_query("SELECT fid FROM {files} WHERE filepath='%s'", $reuse);
+    if ($fid = db_result($result)) {
+      $form_state['values'][$field_name][$delta]['fid'] = $fid;
+    }
+  }
+}
+
+function imagefield_widget_after_build($element) {
+  dsm('imagefield_widget_after_build');
+  //dsm($element);
+ 
+  $element['#value'] = array(
+    'fid' => $element['fid']['#value'],
+    'alt' => $element['alt']['#value'],
+    'title' => $element['title']['#value'],
+    'data' => $element['data']['#value'],
+  );
+  return $element;
+}
 
 function _imagefield_widget_validate($element, &$form_state) {
+  dsm('imagefield_validate');
+  //dsm($element);
 }
 
 
-function theme_imagefield_row($element) {
-  $output = '<div class="imagefield-edit-preview">'. drupal_render($element['admin_preview']) .'</div>';
-  $output .= '<div class="imagefield-edit-image-detail">';
-  $output .= '<div class="imagefield-edit-image-flags">'. drupal_render($element['flags']) .'</div>';
-  $output .= '<div class="imagefield-edit-image-description">'. drupal_render($element['description']);
-  $output .= '</div>';
-  $output .= drupal_render($element['alt']);
-  $output .= drupal_render($element['title']);
-  $output .= drupal_render($element['fid']);
-  $output .= '</div>';
-  if (isset($element['replace'])) {
-    $output .= '<div class="imagefield-edit-image-replace">'. drupal_render($element['replace']) .'</div>';
-  }
-  return $output;
-}
 
 /**
  * FormAPI theme function. Theme the output of an image field.
@@ -339,8 +309,5 @@ function theme_imagefield_widget(&$element) {
   return $element['#children'];
 }
 
-function theme_imagefield_widget_file(&$element) {
-  return $element['#children'];
-}
 
 

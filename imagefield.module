@@ -21,7 +21,7 @@ function imagefield_init() {
   module_load_include('inc', 'imagefield', 'imagefield_formatter');
 
   // field_file hooks and callbacks.
-  module_load_include('inc', 'imagefield', 'imagefield_file');
+  module_load_include('inc', 'imagefield', 'imagefield_field_file');
 
   // file field image extensions.
   module_load_include('inc', 'imagefield', 'imagefield_filefield');
@@ -56,6 +56,9 @@ function imagefield_theme() {
   return array(
     'imagefield_image' => array(
       'arguments' => array('file' => null, 'alt' => '', 'title' => '', 'attributes' => null, 'getsize' => TRUE),
+    ),
+    'imagefield_item' => array(
+      'arguments' => array('item' => null),
     ),
     'imagefield' => array(
       'arguments' => array('element' => null),
@@ -110,22 +113,14 @@ function imagefield_elements() {
     '#input' => TRUE,
     '#columns' => array('fid', 'title', 'alt'),
     '#process' => array('imagefield_widget_process'),
+    '#after_build' => array('imagefield_widget_after_build'),
     '#value_callback' => 'imagefield_widget_value',
     '#description' => t('Changes made to the attachments are not permanent until you save this post.'),
   );
-  $elements['imagefield_widget_file'] = array(
-    '#input' => TRUE,
-    '#process' => array('imagefield_widget_file_process'),
-    '#value_callback' => 'imagefield_widget_file_value',
-  );
-  $elements['imagefield_element_file_upload'] = array(
-    '#input' => TRUE,
-  );  
   $elements['imagefield_filefield_edit'] = array(
     '#input' => TRUE,
     '#process' => array('imagefield_filefield_edit_process'),
   );
- 
   return $elements;
 }
 
@@ -179,7 +174,7 @@ function imagefield_js($node_type, $fieldname) {
 function theme_imagefield_image($file, $alt = '', $title = '', $attributes = null, $getsize = true) {
   $file = (array)$file;
   if (!is_file($file['filepath'])) {
-    return;
+    return '<!-- file not found: '. $file['filepath'] .' -->';
   }
   $image_attributes = array();
   if (!$getsize || (list($width, $height, $type, $image_attributes) = @getimagesize($file['filepath']))) {
@@ -190,5 +185,10 @@ function theme_imagefield_image($file, $alt = '', $title = '', $attributes = nul
     return '<img src="'. check_url($url) .'" alt="'.
         check_plain($alt) .'" title="'. check_plain($title) .'" '. $image_attributes . $attributes .' />';
   }
+  return '<!-- could not get imagesize, possibly corrupt or non image. '. $file['filepath'] .' -->';
+}
+
+function theme_imagefield_item($item) {
+  return theme('imagefield_image', $item, $item['alt'], $item['title']);
 }
 
