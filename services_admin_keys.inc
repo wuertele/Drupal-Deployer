@@ -8,11 +8,11 @@ function services_admin_keys_list() {
 
   foreach ($keys as $kid => $key) {
     $row = array();
-
+    
     $row[] = $kid;
     $row[] = $key->title;
     $row[] = $key->domain;
-
+    
     // Populate the operations field.
     $operations = array();
 
@@ -21,9 +21,9 @@ function services_admin_keys_list() {
 
     // Set the delete column.
     $operations[] = array('data' => l(t('delete'), 'admin/build/services/keys/'. $kid .'/delete'));
-
-    //$row = array(array('data' => l($kid, 'admin/build/services/keys/'. $type_url_str), 'class' => $class), array('data' => check_plain($type->type), 'class' => $class), array('data' => check_plain($type->description), 'class' => $class));
+    
     foreach ($operations as $operation) {
+      $operation['class'] = $class;
       $row[] = $operation;
     }
     $rows[] = $row;
@@ -36,50 +36,50 @@ function services_admin_keys_list() {
   return theme('table', $header, $rows);
 }
 
-function services_admin_keys_form($key = NULL) {
-  $kid = isset($key->kid) ? $key->kid : NULL;
-  $title = isset($key->title) ? $key->title : NULL;
-  $domain = isset($key->domain) ? $key->domain : NULL;
+function services_admin_keys_form() {
+$kid = arg(4);
+
+$key = db_fetch_object(db_query("SELECT * FROM {services_keys} WHERE kid = '%s'", $kid));
 
   $form['kid'] = array(
     '#type' => 'hidden',
-    '#default_value' => $kid,
+    '#default_value' => $key->kid,
   );
-
-  if ($kid) {
+  
+if ($key->kid) {
     $form['key'] = array(
       '#type' => 'markup',
       '#title' => t('Key'),
-      '#value' => '<strong>'. t('API Key') .':</strong> '. $kid,
-    );
+      '#value' => '<strong>'. t('API Key') .':</strong> '. $key->kid,
+    ); 
   }
-
+  
   $form['title'] = array(
     '#title' => t('Application title'),
     '#type' => 'textfield',
-    '#default_value' => $title,
+    '#default_value' => $key->title,
     '#description' => t('The title of the application or website using the service.'),
   );
   $form['domain'] = array(
     '#title' => t('Allowed domain'),
     '#type' => 'textfield',
-    '#default_value' => $domain,
+    '#default_value' => $key->domain,
     '#description' => t('External domain allowed to use this key.'),
   );
-
+  
   $form['submit'] = array(
     '#type' => 'submit',
-    '#value' => ($key) ? t('Save key') : t('Create key'),
+    '#value' => $key->title ? t('Save key') : t('Create key'),
   );
-
+  
   return $form;
 }
 
-function services_admin_keys_form_submit($form, $form_state) {
-
+function services_admin_keys_form_submit($form, &$form_state) {
+  
   services_admin_keys_save($form_state['values']);
-
-  return 'admin/build/services/keys';
+  
+  $form_state['redirect']  =  'admin/build/services/keys';
 }
 
 function services_admin_keys_save($key) {
@@ -102,7 +102,11 @@ function services_admin_keys_delete($kid) {
   db_query("DELETE FROM {services_keys} WHERE kid = '%s'", $kid);
 }
 
-function services_admin_keys_delete_confirm($key) {
+function services_admin_keys_delete_confirm() {
+  $kid = arg(4);
+
+  $key = db_fetch_object(db_query("SELECT * FROM {services_keys} WHERE kid = '%s'", $kid));
+  
   $form['kid'] = array('#type' => 'value', '#value' => $key->kid);
 
   $message = t('Are you sure you want to delete the key %key?', array('%key' => $key->kid));
@@ -113,12 +117,13 @@ function services_admin_keys_delete_confirm($key) {
   return confirm_form($form, $message, 'admin/build/services/keys', $caption, t('Delete'));
 }
 
-function services_admin_keys_delete_confirm_submit($form_id, $form_values) {
-  services_admin_keys_delete($form_values['kid']);
+function services_admin_keys_delete_confirm_submit($form_id, &$form_state) {
+  
+  services_admin_keys_delete($form_state['values']['kid']);
 
-  $t_args = array('%key' => $form_values['kid']);
+  $t_args = array('%key' => $form_state['kid']);
   drupal_set_message(t('The key %key has been deleted.', $t_args));
   watchdog('menu', t('Deleted key %key.', $t_args), WATCHDOG_NOTICE);
 
-  return 'admin/build/services/keys';
+  $form_state['redirect'] = 'admin/build/services/keys';
 }
