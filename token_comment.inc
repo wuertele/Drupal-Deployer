@@ -24,6 +24,7 @@ function comment_token_values($type, $object = NULL, $options = array()) {
       // Cast to an object just in case fussy Drupal gave us an array
       $comment = (object)$object;
 
+      $values['comment-cid']             = $comment->cid;
       $values['comment-nid']             = $comment->nid;
       $values['comment-title']           = check_plain($comment->subject);
       $values['comment-body']            = check_markup($comment->comment, $comment->format);
@@ -61,7 +62,8 @@ function comment_token_values($type, $object = NULL, $options = array()) {
  */
 function comment_token_list($type = 'all') {
   if ($type == 'comment' || $type == 'all') {
-    $tokens['comment']['comment-nid']             = t('Comment ID');
+    $tokens['comment']['comment-cid']             = t('Comment ID');
+    $tokens['comment']['comment-nid']             = t("Comment's node ID");
     $tokens['comment']['comment-title']           = t('Comment title');
     $tokens['comment']['comment-title-raw']       = t('Comment title. WARNING - raw user input');
     $tokens['comment']['comment-body']            = t('Comment body');
