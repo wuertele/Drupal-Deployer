@@ -133,20 +133,22 @@ function token_actions_send_email_action($object, $context) {
   if (!empty($context['node']) && empty($context['user'])) {
     $context['user'] = user_load(array('uid' => $context['node']->uid));
   }
-  $from = variable_get('site_mail', ini_get('sendmail_from'));
+  $params['from'] = variable_get('site_mail', ini_get('sendmail_from'));
   $recipient = token_replace_multiple($context['recipient'], $context);
+  $params['subject'] = str_replace(array("\r", "\n"), '', token_replace_multiple($context['subject'], $context));
+  $params['body'] = drupal_html_to_text(token_replace_multiple($context['message'], $context));
 
-  $subject = token_replace_multiple($context['subject'], $context);
-  $subject = str_replace(array("\r", "\n"), '', $subject);
-  $message = token_replace_multiple($context['message'], $context);
-  $body = drupal_html_to_text($message);
-
-  if (drupal_mail('action_send_email', $recipient, $subject, $body, $from )) {
+  if (drupal_mail('token_actions', 'action_send_email', $recipient, language_default(), $params)) {
     watchdog('action', 'Sent email to %recipient', array('%recipient' => $recipient));
   }
   else {
     watchdog('error', 'Unable to send email to %recipient', array('%recipient' => $recipient));
   }
+}
+
+function token_actions_mail($key, &$message, $params) {
+  $message['subject'] = $params['subject'];
+  $message['body'] = $params['body'];
 }
 
 function token_actions_message_action_form($context) {
