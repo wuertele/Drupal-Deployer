@@ -315,8 +315,10 @@ function token_menu_get_mid($in) {
     $mid = 0;
   }
 
-  // temporary paths would break much of this module
-  if ($mid < 0) $mid = 0;
+  // Temporary paths would break much of this module.
+  if ($mid < 0) {
+    $mid = 0;
+  }
 
   return $mid;
 }
