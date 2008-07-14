@@ -102,6 +102,14 @@ Q: After upgrading to 6.x-1.x, admin_menu disappeared. Why?
 A: This should not happen. If it did, visit
    http://<yoursitename>/admin/build/modules to re-generate your menu.
 
+Q: Can I configure admin_menu to display another (or the Navigation) menu just
+   like the administration menu?
+
+A: No. As the name implies, Drupal Administration Menu is for the administrative
+   menu only. However, if you know CSS, you can simply copy'n'paste the contents
+   of admin_menu.css into your theme's stylesheet and alter #admin-menu to any
+   other menu block id, for example #block-menu-1 or the like.
+
 Q: Sometimes the user counter displays a lot of anonymous users, but when
    comparing the site's statistics (f.e. in Google Analytics) there is no such
    huge amount of users and/or requests reported.
