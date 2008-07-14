@@ -27,66 +27,93 @@ function imagefield_widget_info() {
  * Implementation of hook_widget_settings().
  */
 function imagefield_widget_settings($op, $widget) {
-  switch ($op) {
-    case 'form':
-      $form = array();
-      $form['max_resolution'] = array(
-        '#type' => 'textfield',
-        '#title' => t('Maximum resolution for Images'),
-        '#default_value' => $widget['max_resolution'] ? $widget['max_resolution'] : 0,
-        '#size' => 15,
-        '#maxlength' => 10,
-        '#description' =>
-        t('The maximum allowed image size expressed as WIDTHxHEIGHT (e.g. 640x480). Set to 0 for no restriction. If a larger image is uploaded, it will be resized to reflect the given width and height.'),
-      );
-      $form['max_filesize'] = array(
-        '#type' => 'textfield',
-        '#title' => t('Maximum filesize for Images'),
-        '#default_value' => $widget['max_filesize'] ? $widget['max_filesize'] : 0,
-        '#size' => 6,
-        '#description' => t('The maximum allowed image file size expressed in kilobytes. Set to 0 for no restriction.')
-      );
-      $form['file_path'] = array(
-        '#type' => 'textfield',
-        '#title' => t('Image path'),
-        '#default_value' => $widget['file_path'] ? $widget['file_path'] : '',
-        '#description' => t('Optional subdirectory within the "%dir" directory where images will be stored. Do not include trailing slash. You can use the following tokens in the image path.', array('%dir' => variable_get('file_directory_path', 'files'))),
-        '#element_validate' => array('_imagefield_widget_settings_file_path_validate'), 
-        '#suffix' => theme('token_help', 'user'),
-      );
-
-      $form['file_extensions'] = array(
-        '#type' => 'textfield',
-        '#title' => t('Permitted upload file extensions.'),
-        '#default_value' => $widget['file_extensions'] ? $widget['file_extensions'] : 'jpg jpeg png gif',
-        '#size' => 64,
-        '#maxlength' => 64,
-        '#description' => t('Extensions a user can upload to this field. Seperate extensions with a space and do not include the leading dot.')
-      );
-
-      $form['custom_alt'] = array(
-        '#type' => 'checkbox',
-        '#title' => t('Enable custom alternate text'),
-        '#default_value' =>  $widget['custom_alt'] ? $widget['custom_alt'] : 0,
-        '#description' => t('Enable custom alternate text for images. Filename will be used if not checked.'),
-      );
-      $form['custom_title'] = array(
-        '#type' => 'checkbox',
-        '#title' => t('Enable custom title text'),
-        '#default_value' =>  $widget['custom_title'] ? $widget['custom_title'] : 0,
-        '#description' => t('Enable custom title text for images. Filename will be used if not checked.'),
-      );
-      return $form;
-
-    case 'save':
-      return array('max_resolution', 'max_filesize', 'file_path', 'file_extensions', 'custom_alt', 'custom_title');
-  }
+  // filefield wiget settings will call the filefield callbacks
+  // then merge the wiget callback values,
+  // widget callbacks are in the form of 
+  // $widget['type'] .'_settings_'. $op.
+  return filefield_widget_settings($op, $widget);
 }
 
-function _imagefield_widget_settings_file_path_validate($element, &$form_state) {
-  // Strip slashes from the beginning and end of $widget['file_path']
-  $form_state['values']['file_path'] =  trim($form_state['values']['file_path'], '\\/');
+function imagefield_widget_widget_settings_form($widget) {
+  $form = array();
+  $form['max_resolution'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Maximum resolution for Images'),
+    '#default_value' => $widget['max_resolution'] ? $widget['max_resolution'] : 0,
+    '#size' => 15,
+    '#maxlength' => 10,
+    '#description' =>
+    t('The maximum allowed image size expressed as WIDTHxHEIGHT (e.g. 640x480). Set to 0 for no restriction. If a larger image is uploaded, it will be resized to reflect the given width and height.'),
+    '#weight' => 2,
+  );
+  $form['file_extensions'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Permitted upload file extensions.'),
+    '#default_value' => $widget['file_extensions'] ? $widget['file_extensions'] : 'jpg jpeg png gif',
+    '#size' => 64,
+    '#maxlength' => 64,
+    '#description' => t('Extensions a user can upload to this field. Seperate extensions with a space and do not include the leading dot.'),
+    '#weight' => 2,
+  );
+
+  $form['alt_settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('ALT text settings'),
+    '#collapsible' => true,
+    '#collapsed' => true,
+    '#weight' => 8,
+  );
+  $form['alt_settings']['alt'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Default ALT text'),
+    '#default_value' => ($widget['alt']) ? $widget['alt'] : '',
+    '#description' => t('This value will be used for alternate text by default.'),
+    '#suffix' => theme('token_help', 'file'),
+  );
+  $form['alt_settings']['custom_alt'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable custom alternate text'),
+    '#default_value' =>  $widget['custom_alt'] ? $widget['custom_alt'] : 0,
+    '#description' => t('Enable user input alternate text for images.'),
+  );
+  
+  $form['title_settings'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Title text settings'),
+    '#collapsible' => true,
+    '#collapsed' => true,
+    '#weight' => 8,
+  );
+ 
+  $form['title_settings']['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Default Title text'),
+    '#default_value' => ($widget['title']) ? $widget['title'] : '',
+    '#description' => t('This value will be used as the image title by default.'),
+  );
+  $form['title_settings']['title_tokens'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Available Title Tokens'),
+    '#value' =>  theme('token_help', 'file'),
+    '#collapsible' => true,
+    '#collapsed' => true,
+  );
+
+
+  $form['title_settings']['custom_title'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable custom title text'),
+    '#default_value' =>  $widget['custom_title'] ? $widget['custom_title'] : 0,
+    '#description' => t('Enable user input title text for images.'),
+  );
+  return $form;
 }
+
+function imagefield_widget_widget_settings_save($widget) {
+  //@todo: rename custom_alt and custom_title to alt_custom and title_custom to be OCD.
+  return array('max_resolution', 'max_filesize', 'alt',  'custom_alt', 'title', 'custom_title');
+}
+
 
 /**
  * Implementation of hook_form_alter(). Set the appropriate
