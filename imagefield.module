@@ -25,6 +25,8 @@ function imagefield_init() {
 
   // file field image extensions.
   module_load_include('inc', 'imagefield', 'imagefield_filefield');
+
+  drupal_add_css(drupal_get_path('module', 'imagefield') .'/imagefield.css');
 }
 
 
@@ -60,13 +62,13 @@ function imagefield_theme() {
     'imagefield_item' => array(
       'arguments' => array('item' => null),
     ),
+    'imagefield_admin_thumbnail' => array(
+      'arguments' => array('item' => null),
+    ),
     'imagefield' => array(
       'arguments' => array('element' => null),
     ),
     'imagefield_widget' => array(
-      'arguments' => array('element' => null),
-    ),  
-    'imagefield_widget_file' => array(
       'arguments' => array('element' => null),
     ),  
     'imagefield_row' => array(
@@ -193,3 +195,16 @@ function theme_imagefield_item($item) {
   return theme('imagefield_image', $item, $item['alt'], $item['title']);
 }
 
+function theme_imagefield_admin_thumbnail($item = null) {
+  if (is_null($item) || empty($item['filepath'])) {
+    return '<!-- link to default admin thumb -->';
+  }
+  $thumb_path = imagefield_file_admin_thumb_path($item);
+  return '<img src="'. file_create_url($thumb_path) .'" />';
+}
+
+function theme_imagefield_row($element) {
+  return "<div class='imagefield-row clear-block'><div class='imagefield-preview'>". drupal_render($element['preview']) ."</div><div class='imagefield-edit'>" . 
+         drupal_render($element) .'</div></div>';
+
+}

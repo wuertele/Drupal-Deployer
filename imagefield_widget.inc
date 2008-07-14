@@ -161,10 +161,11 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
   $field_name = $element['#field_name'];
 
   
+  $element['#theme'] = 'imagefield_row';
   $element['fid'] = array('#type' => 'hidden', '#value' =>  $file['fid']);
 
   if ($file['fid'] != 0) {
-    $element['preview'] = array('#type' => 'markup', '#value' => theme('imagefield_item', $file));  
+    $element['preview'] = array('#type' => 'markup', '#value' => theme('imagefield_admin_thumbnail', $file));  
     if (empty($file['filepath'])) {
       //dsm($file);
     }
@@ -193,10 +194,9 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
       '#field_name' => $field_name,
       '#delta' => $delta,
     );
-    return $element;
   }
 
-  if ($file['fid'] == 0) {
+  else if ($file['fid'] == 0) {
     $element['alt']['#type'] = 'hidden';
     $element['title']['#type'] = 'hidden';
 
@@ -215,23 +215,6 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
       '#delta' => $delta,
     );
   }
-/*
- @needs validation before going public.
-  // @todo: jquery file browser.
-  $element['reuse'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Reuse Existing File'),
-    '#description' => t('Enter a Drupal filepath or file id to use an existing file.'),
-  );
-  $element['reuse_btn'] = array(
-    '#name' => $field_name .'_'. $delta .'_reuse_btn',
-    '#type' => 'submit', 
-    '#value' => t('ReUse'),
-    '#submit' => array('imagefield_widget_submit_reuse_btn'),
-    '#field_name' => $field_name,
-    '#delta' => $delta,
-  );
-*/
   return $element;
 }
 
