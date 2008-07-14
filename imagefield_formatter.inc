@@ -9,26 +9,42 @@
  * Implementation of hook_field_formatter_info().
  */
 function imagefield_field_formatter_info() {
+  $module_path = drupal_get_path('module','imagefield');
   $formatters = array(
     'image_plain' => array(
-      'label' => t('Default'),
-      'field types' => array('image'),
+      'label' => t('Image'),
+      'field types' => array('image', 'filefield'),
+      'suitability callback' => 'imagefield_handles_file',
+      'css' => array($module_path .'/imagefield.css'),
+      'description' => t('Displays image files in their original size.'),
     ),
     'image_nodelink' => array(
-      'label' => t('link to node'),
-      'field types' => array('image'),
+      'label' => t('Image linked to node'),
+      'field types' => array('image', 'filefield'),
+      'suitability callback' => 'imagefield_handles_file',
+      'css' => array($module_path .'/imagefield.css'),
+      'description' => t('Displays image files in their original size.'),
     ),
     'image_imagelink' => array(
-      'label' => t('link to image'),
-      'field types' => array('image'),
+      'label' => t('Image linked to file'),
+      'field types' => array('image', 'filefield'),
+      'suitability callback' => 'imagefield_handles_file',
+      'css' => array($module_path .'/imagefield.css'),
+      'description' => t('Displays image files in their original size.'),
     ),
     'path_plain' => array(
-       'label' => t('path to image'),
-       'field types' => array('image'),
+      'label' => t('Path to file'),
+      'field types' => array('image', 'filefield'),
+      'suitability callback' => 'imagefield_handles_file',
+      'css' => array($module_path .'/imagefield.css'),
+      'description' => t('Displays image files in their original size.'),
     ),   
     'url_plain' => array(
-       'label' => t('url to image'),
-       'field types' => array('image'),
+      'label' => t('URL to file'),
+      'field types' => array('image', 'filefield'),
+      'suitability callback' => 'imagefield_handles_file',
+      'css' => array($module_path .'/imagefield.css'),
+      'description' => t('Displays image files in their original size.'),
     ),   
   );
   return $formatters;

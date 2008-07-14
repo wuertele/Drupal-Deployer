@@ -74,23 +74,6 @@ function imagefield_filefield_edit_process($element, $edit, &$form_state, $form)
   return $element;
 }
 
-
-/**
- * Implementation of filefield's hook_file_formatter_info().
- */
-function imagefield_filefield_file_formatter_info() {
-  $module_path = drupal_get_path('module', 'imagefield');
-
-  return array(
-    'default' => array(
-      'suitability callback' => 'imagefield_handles_file',
-      'css' => array($module_path .'/imagefield.css'),
-      'title' => t('Images (png/jpeg/gif, original size)'),
-      'description' => t('Displays image files in their original size.'),
-    ),
-  );
-}
-
 /**
  * Theme function for the 'filefield_image_edit' form element.
  */

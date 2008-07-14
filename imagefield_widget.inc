@@ -9,12 +9,16 @@
  * Implementation of hook_widget_info().
  */
 function imagefield_widget_info() {
+  $module_path = drupal_get_path('module', 'imagefield');
   return array(
     'imagefield_widget' => array(
       'label' => t('Image'),
-      'field types' => array('image'),
+      'field types' => array('image', 'filefield'),
       'multiple values' => CONTENT_HANDLE_CORE,
       'callbacks' => array('default value' => CONTENT_CALLBACK_CUSTOM),
+      'suitability callback' => 'imagefield_handles_file',
+      'css' => array($module_path .'/imagefield.css'),
+      'description' => t('An edit widget for image files, including a preview of the image.'),
     ),
   );
 }
@@ -122,10 +126,6 @@ function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
     '#type' => 'imagefield_widget',
     '#default_value' => $items[$delta],
   );
-  // store the original item to revert form if necessary.
-  // submission redirects stop if stoage is populated... we need to find an alternative place for this...
-  //$form_state['storage'][$field['field_name']][$delta]['orig'] = $items[$delta];
-  
   return $element;
 }
 
