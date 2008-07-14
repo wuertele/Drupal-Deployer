@@ -154,12 +154,17 @@ function admin_menu_admin_menu(&$deleted) {
     'weight' => -10,
     'parent_path' => 'http://drupal.org',
   );
+  $projects = array();
   foreach (module_list(FALSE, FALSE, TRUE) as $module) {
     $info = drupal_parse_info_file(drupal_get_path('module', $module) .'/'. $module .'.info');
-    if (!isset($info['project']) || $info['project'] == 'drupal') {
+    if (!isset($info['project']) || (isset($info['project']) && ($info['project'] == 'drupal' || isset($projects[$info['project']])))) {
       continue;
     }
+    $projects[$info['project']] = 1;
     $url = 'http://drupal.org/project/issues/'. $info['project'];
+    // Filtering project versions via query string is not yet supported.
+    // @see http://drupal.org/node/97569
+    // $url .= !empty($info['version']) ? '/'. $info['version'] : '';
     $links[] = array(
       'title' => check_plain($info['name']) . ' issue queue',
       'path' => $url,
