@@ -102,6 +102,15 @@ Q: After upgrading to 6.x-1.x, admin_menu disappeared. Why?
 A: This should not happen. If it did, visit
    http://<yoursitename>/admin/build/modules to re-generate your menu.
 
+Q: Sometimes the user counter displays a lot of anonymous users, but when
+   comparing the site's statistics (f.e. in Google Analytics) there is no such
+   huge amount of users and/or requests reported.
+
+A: If your site was concurrently spidered by search-engine robots, it's commonly
+   known to have a giant amount of anonymous users for a short time-frame.
+   Most web statistics systems like Google Analytics filter such requests
+   already.
+
 Q: I enabled "Aggregate and compress CSS files", but I found admin_menu.css is
    still there, is it normal?
 
