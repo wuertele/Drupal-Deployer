@@ -65,7 +65,7 @@ function theme_imagefield_formatter_image_nodelink($element) {
   $node = $element['#node'];
   $imagetag = theme('imagefield_formatter_image_plain', $element);
   $class = 'imagefield imagefield-nodelink imagefield-'. $element['#field_name'];
-  return l($imagetag, 'node/'. $node->nid, array('class' => $class), null, null, false, true);
+  return l($imagetag, 'node/'. $node->nid, array('attributes' => array('class' => $class), 'html' => true));
 }
 
 function theme_imagefield_formatter_image_imagelink($element) {
@@ -73,7 +73,7 @@ function theme_imagefield_formatter_image_imagelink($element) {
   $imagetag = theme('imagefield_formatter_image_plain', $element);
   $original_image_url = file_create_url($item['filepath']);
   $class = 'imagefield imagefield-imagelink imagefield-'. $element['#field_name'];
-  return l($imagetag, $original_image_url, array('class' => $class), null, null, false, true);
+  return l($imagetag, $original_image_url, array('attributes' => array('class' => $class), 'html' => true));
 }
 
 function theme_imagefield_formatter_path_plain($element) {
