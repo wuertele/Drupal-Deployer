@@ -4,7 +4,6 @@
 /**
  * @file
  * ImageField core hooks and menu callbacks.
- *
  */
 
 /**
@@ -13,34 +12,15 @@
 function imagefield_init() {
   // field hooks and callbacks.
   module_load_include('inc', 'imagefield', 'imagefield_field');
-
   // widget hooks and callbacks.
   module_load_include('inc', 'imagefield', 'imagefield_widget');
- 
   // formatter hooks and callbacks.
   module_load_include('inc', 'imagefield', 'imagefield_formatter');
-
   // field_file hooks and callbacks.
   module_load_include('inc', 'imagefield', 'imagefield_file');
-
-
   drupal_add_css(drupal_get_path('module', 'imagefield') .'/imagefield.css');
 }
 
-
-/**
- * Implementation of hook_menu().
- */
-function imagefield_menu() {
-  $items = array();
-  $items['imagefield/js'] = array(
-    'page callback' => 'imagefield_js',
-    'access callback' => 'user_access',
-    'access arguments' => array('access content'),
-    'type' => MENU_CALLBACK,
-  );
-  return $items;
-}
 
 /**
  * Implementation of hook_perm().
@@ -60,6 +40,9 @@ function imagefield_theme() {
     'imagefield_item' => array(
       'arguments' => array('item' => null),
     ),
+    'imagefield_widget' => array(
+      'arguments' => array('element' => null),
+    ),  
     'imagefield_widget_preview' => array(
       'arguments' => array('item' => null),
     ),
@@ -70,15 +53,6 @@ function imagefield_theme() {
    
     'imagefield_admin_thumbnail' => array(
       'arguments' => array('item' => null),
-    ),
-    'imagefield' => array(
-      'arguments' => array('element' => null),
-    ),
-    'imagefield_widget' => array(
-      'arguments' => array('element' => null),
-    ),  
-    'imagefield_row' => array(
-      'arguments' => array('element' => null),
     ),
     'imagefield_formatter_image_plain' => array(
       'arguments' => array('element' => null),
@@ -94,19 +68,6 @@ function imagefield_theme() {
     ),
     'imagefield_formatter_path_plain' => array(
       'arguments' => array('element' => null),
-    ),
-    'imagefield_filefield_edit' => array(
-      'arguments' => array('element' => NULL),
-    ),
-    'imagefield_filefield_file_formatter_default' => array(
-      'arguments' => array(
-        'file' => NULL, 'field' => NULL, 'file_formatter_settings' => NULL,
-      ),
-    ),
-    'imagefield_filefield' => array(
-      'arguments' => array(
-        'file' => NULL, 'attributes' => array(), 'getsize' => TRUE,
-      ),
     ),
  
   );
@@ -124,10 +85,6 @@ function imagefield_elements() {
     '#process' => array('filefield_widget_process'),
     '#value_callback' => 'filefield_widget_value',
     '#description' => t('Changes made to the attachments are not permanent until you save this post.'),
-  );
-  $elements['imagefield_filefield_edit'] = array(
-    '#input' => TRUE,
-    '#process' => array('imagefield_filefield_edit_process'),
   );
   return $elements;
 }
@@ -166,14 +123,8 @@ function imagefield_field($op, $node, $field, &$items, $teaser, $page) {
  * the value of the field.
  */
 function imagefield_content_is_empty($item, $field) {
-  if (empty($item['fid'])) {
-    return true;
-  }
-  else {
-    return false;
-  }  
+  return filefield_content_is_empty($item, $field);
 }
-
 
 /**
  * Implementation of hook_widget_info().
@@ -197,11 +148,11 @@ function imagefield_widget_info() {
 /**
  * Implementation of hook_widget_settings().
  */
+
+/**
+ * Implementation of CCK's hook_widget_settings().
+ */
 function imagefield_widget_settings($op, $widget) {
-  // filefield wiget settings will call the filefield callbacks
-  // then merge the wiget callback values,
-  // widget callbacks are in the form of 
-  // $widget['type'] .'_settings_'. $op.
   return filefield_widget_settings($op, $widget);
 }
 
@@ -209,66 +160,12 @@ function imagefield_widget_settings($op, $widget) {
  * Implementation of hook_widget().
  */
 function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
+  // @todo: use CCK's default value callback.
   // add default values to items.
   if (empty($items[$delta])) { 
     $items[$delta] = array('alt' => '', 'title' => '');
   }
   return filefield_widget(&$form, &$form_state, $field, $items, $delta = 0);
-}
-
-
-
-
-
-
-
-
-
-/**
- * Menu-callback for JavaScript-based uploads.
- */
-function imagefield_js($node_type, $fieldname) {
-  $field = content_fields($fieldname, $node_typ);
-
-  $form_state = array('values' => $_POST);
-  $form_state['values'][$fieldname] = isset($form_state['values'][$fieldname]) ? $form_state['values'][$fieldname] : array();
-
-  // Load in the form cache.
-  $form = form_get_cache($_POST['form_build_id'], $form_state);
-   
-  // Find field group if needed and assign the form element by reference.
-  // @hack: Well duh I can see what you're doing, but why are you doing it? -dopry
-  if (function_exists('fieldgroup_get_group') && $group = fieldgroup_get_group($node_type, $fieldname)) {
-    $form_element =& $form[$group][$fieldname];
-  }
-  else {
-    $form_element =& $form[$fieldname];
-  }
-
-  // Handle new uploads.
-  _imagefield_widget_validate($form_element, $form_state);
-
-  // Add the new element to the stored form and form_state then resave.
-  $form_element = imagefield_widget($form, $form_state, $field, $form_state['values'][$fieldname]);
-  $form_state['storage'][$fieldname] = $form_state['values'][$fieldname];
-  form_set_cache($_POST['form_build_id'], $form, $form_state);
-
-
-  // Render the form for output.
-  $form['#post'] = $_POST;
-  $form['#programmed'] = TRUE;
-  $form_state['submitted'] = FALSE;
-
-  drupal_alter('form', $form, $form_state, 'imagefield_js');
-  $form = form_builder('imagefield_js', $form, $form_state);
- 
-  $output = theme('status_messages') . drupal_render($form_element);
-
-  // We send the updated file attachments form.
-  drupal_set_header('Content-Type: application/json; charset=utf-8');
-  print drupal_to_js(array('status' => true, 'data' => $output));
-  exit;
-
 }
 
 function theme_imagefield_image($file, $alt = '', $title = '', $attributes = null, $getsize = true) {
@@ -299,7 +196,10 @@ function theme_imagefield_widget_preview($item = null) {
 }
 
 function theme_imagefield_widget_item($element) {
-  return theme('imagefield_row', $element);
+  return '<div class="imagefield-row clear-block">'.
+            '<div class="imagefield-preview">'. drupal_render($element['preview']) . '</div>' .
+            '<div class="imagefield-edit">' . drupal_render($element) . '</div>' .
+         '</div>';
 }
 
 function theme_imagefield_admin_thumbnail($item = null) {
@@ -308,12 +208,4 @@ function theme_imagefield_admin_thumbnail($item = null) {
   }
   $thumb_path = imagefield_file_admin_thumb_path($item);
   return '<img src="'. file_create_url($thumb_path) .'" />';
-}
-
-function theme_imagefield_row($element) {
-  return '<div class="imagefield-row clear-block">'.
-            '<div class="imagefield-preview">'. drupal_render($element['preview']) . '</div>' .
-            '<div class="imagefield-edit">' . drupal_render($element) . '</div>' .
-         '</div>';
-
 }

@@ -115,11 +115,10 @@ function _imagefield_scale_image($file, $resolution = 0) {
 }
 
 
-
-
-
-
-function imagefield_widget_value($element, $edit = FALSE) {
+/**
+ * Imagefield widget callbacks, called by filefield.module.
+ */
+function imagefield_widget_widget_value($element, $edit = FALSE) {
   // handle additional 
   if ($edit) { 
     $item = array_merge( 
@@ -162,96 +161,6 @@ function imagefield_widget_widget_process($element, $edit, &$form_state, $form) 
     );
   }
   return $element;
-}
-
-function _imagefield_widget_validate($element, &$form_state) {
-  //dsm('imagefield_validate');
-  //dsm($element);
-}
-
-function imagefield_widget_submit_remove_btn($form, &$form_state) {
-  //dsm ('imagefield_widget_submit_remove_btn');
-  //dsm($form);
-  //dsm($form_state);
-  $field_name = $form_state['clicked_button']['#field_name'];
-  $delta = $form_state['clicked_button']['#delta'];
-  $form_state['values'][$field_name][$delta] = array(
-    'fid' => 0,
-    'alt' => '',
-    'filepath' => '',
-    'filename' => '',
-    'title' => '',
-    'data' => '',
-  ); 
-  $form_state['rebuild'] = true;
-}
-
-function imagefield_widget_submit_upload_btn($form, &$form_state) {
-  //dsm('imagefield_widget_submit_upload_btn');
-  //dsm($form);
-  //dsm($form_state);
-  $field_name = $form_state['clicked_button']['#field_name'];
-  $delta = $form_state['clicked_button']['#delta'];
-
-  $field = content_fields($field_name);
-
-  $widget_file_path = $field['widget']['file_path'];
-  if (module_exists('token')) {
-    global $user;
-    $widget_file_path = token_replace($widget_file_path, 'user', $user);
-  }
-
-  $complete_file_path = file_directory_path() .'/'. $widget_file_path;
-  $upload_name = $field_name .'_'. $delta;
-  if (!field_file_check_directory($complete_file_path, FILE_CREATE_DIRECTORY)) {
-    watchdog('imagefield', 'The upload directory %directory for the file field %field (content type %type) could not be created or is not accessible. A newly uploaded file could not be saved in this directory as a consequence, and the upload was canceled.', array('%directory' => $widget_file_path, '%field' => $field_name, '%type' => $field['type_name']));
-    form_set_error($upload_name, t('The file could not be uploaded.'));
-    return $file;
-  }
-  
-  $validators = array(
-    'file_validate_extensions' => array(isset($field['widget']['file_extensions']) ? $field['widget']['file_extensions'] : 0),
-    'file_validate_size' => array(isset($field['widget']['max_filesize']) ? $field['widget']['max_filesize'] : 0),
-    'file_validate_image_resolution' => array(
-      isset($field['widget']['max_resolution']) ? $field['widget']['max_resolution'] : 0,
-      isset($field['widget']['min_resolution']) ? $field['widget']['min_resolution'] : 0,
-    ),
-  );
-
-  if (!$file = field_file_save_upload($upload_name, $validators, $complete_file_path)) {
-    watchdog('imagefield', 'The file upload failed. %upload', array('%upload' => $upload_name));
-    form_set_error($upload_name, t('The Image upload failed.'));
-    return;
-  }
-  //dsm($file);
-  $form_state['values'][$field_name][$delta]['fid'] = $file['fid'];
-  $form_state['rebuild'] = true;
-}
-
-function imagefield_widget_submit_reuse_btn($form, &$form_state) {
-  //dsm('imagefield_widget_submit_reuse_btn');
-  //dsm($form);
-  //dsm($form_state);
-
-  $field_name = $form_state['clicked_button']['#field_name'];
-  $delta = $form_state['clicked_button']['#delta'];
-
-  $reuse =  trim($form_state['values'][$field_name][$delta]['reuse']);
-  if (empty($reuse))  return;
-
-  // if numeric assume we got an fid and try to load it.
-  if (is_numeric($reuse) && $file = field_file_load($reuse)) {
-    $form_state['values'][$field_name][$delta]['fid'] = $file['fid'];
-    $form_state['rebuild'] = true;
-  } 
-  else {
-    // load fid from path..
-    $result = db_query("SELECT fid FROM {files} WHERE filepath='%s'", $reuse);
-    if ($fid = db_result($result)) {
-      $form_state['values'][$field_name][$delta]['fid'] = $fid;
-      $form_state['rebuild'] = true;
-    }
-  }
 }
 
 
