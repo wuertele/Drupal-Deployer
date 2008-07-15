@@ -60,6 +60,14 @@ function imagefield_theme() {
     'imagefield_item' => array(
       'arguments' => array('item' => null),
     ),
+    'imagefield_widget_preview' => array(
+      'arguments' => array('item' => null),
+    ),
+    'imagefield_widget_item' => array(
+      'arguments' => array('element' => null),
+    ),
+
+   
     'imagefield_admin_thumbnail' => array(
       'arguments' => array('item' => null),
     ),
@@ -109,12 +117,12 @@ function imagefield_theme() {
  */
 function imagefield_elements() {
   $elements = array();
+  // @todo: convert to call filefield_widget_*
   $elements['imagefield_widget'] =  array(
     '#input' => TRUE,
     '#columns' => array('fid', 'title', 'alt'),
-    '#process' => array('imagefield_widget_process'),
-    '#after_build' => array('imagefield_widget_after_build'),
-    '#value_callback' => 'imagefield_widget_value',
+    '#process' => array('filefield_widget_process'),
+    '#value_callback' => 'filefield_widget_value',
     '#description' => t('Changes made to the attachments are not permanent until you save this post.'),
   );
   $elements['imagefield_filefield_edit'] = array(
@@ -165,6 +173,49 @@ function imagefield_content_is_empty($item, $field) {
     return false;
   }  
 }
+
+
+/**
+ * Implementation of hook_widget_info().
+ */
+function imagefield_widget_info() {
+  $module_path = drupal_get_path('module', 'imagefield');
+  return array(
+    'imagefield_widget' => array(
+      'label' => t('Image'),
+      'field types' => array('image', 'filefield'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+      'callbacks' => array('default value' => CONTENT_CALLBACK_CUSTOM),
+      'suitability callback' => 'imagefield_handles_file',
+      'css' => array($module_path .'/imagefield.css'),
+      'description' => t('An edit widget for image files, including a preview of the image.'),
+    ),
+  );
+}
+
+
+/**
+ * Implementation of hook_widget_settings().
+ */
+function imagefield_widget_settings($op, $widget) {
+  // filefield wiget settings will call the filefield callbacks
+  // then merge the wiget callback values,
+  // widget callbacks are in the form of 
+  // $widget['type'] .'_settings_'. $op.
+  return filefield_widget_settings($op, $widget);
+}
+
+/**
+ * Implementation of hook_widget().
+ */
+function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
+  // add default values to items.
+  if (empty($items[$delta])) { 
+    $items[$delta] = array('alt' => '', 'title' => '');
+  }
+  return filefield_widget(&$form, &$form_state, $field, $items, $delta = 0);
+}
+
 
 
 
@@ -240,6 +291,15 @@ function theme_imagefield_image($file, $alt = '', $title = '', $attributes = nul
 function theme_imagefield_item($item) {
   //dsm($item);
   return theme('imagefield_image', $item, $item['alt'], $item['title']);
+}
+
+// widget preview callback.
+function theme_imagefield_widget_preview($item = null) {
+  return theme('imagefield_admin_thumbnail', $item);
+}
+
+function theme_imagefield_widget_item($element) {
+  return theme('imagefield_row', $element);
 }
 
 function theme_imagefield_admin_thumbnail($item = null) {
