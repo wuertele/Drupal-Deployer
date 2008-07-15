@@ -150,7 +150,7 @@ function _imagefield_scale_image($file, $resolution = 0) {
 function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
   // add default values to items.
   if (empty($items[$delta])) { 
-    $items[$delta] = array_merge($items[$delta], array('alt' => '', 'title' => ''));
+    $items[$delta] = array('alt' => '', 'title' => '');
   }
   return filefield_widget(&$form, &$form_state, $field, $items, $delta = 0);
 }
