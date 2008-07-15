@@ -119,17 +119,15 @@ function _imagefield_scale_image($file, $resolution = 0) {
  * Imagefield widget callbacks, called by filefield.module.
  */
 function imagefield_widget_widget_value($element, $edit = FALSE) {
+
   // handle additional 
   if ($edit) { 
-    $item = array_merge( 
-      $item, 
-      array(
+      return array(
         'alt' => isset($edit['alt']) ? $edit['alt'] : '',
         'title' => isset($edit['title']) ? $edit['title'] : '',
-      )
-    );
+      );
   }
-  return $item;
+  return array('alt' => '', 'title' => '');
 }
 
 function imagefield_widget_widget_process($element, $edit, &$form_state, $form) {
