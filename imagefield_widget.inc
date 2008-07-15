@@ -39,17 +39,28 @@ function imagefield_widget_widget_settings_form($widget) {
   $form['max_resolution'] = array(
     '#type' => 'textfield',
     '#title' => t('Maximum resolution for Images'),
-    '#default_value' => $widget['max_resolution'] ? $widget['max_resolution'] : 0,
+    '#default_value' => !empty($widget['max_resolution']) ? $widget['max_resolution'] : 0,
     '#size' => 15,
     '#maxlength' => 10,
     '#description' =>
     t('The maximum allowed image size expressed as WIDTHxHEIGHT (e.g. 640x480). Set to 0 for no restriction. If a larger image is uploaded, it will be resized to reflect the given width and height.'),
     '#weight' => 2,
   );
+  $form['min_resolution'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Minimum resolution for Images'),
+    '#default_value' => !empty($widget['min_resolution']) ? $widget['min_resolution'] : 0,
+    '#size' => 15,
+    '#maxlength' => 10,
+    '#description' =>
+    t('The minimum allowed image size expressed as WIDTHxHEIGHT (e.g. 640x480). Set to 0 for no restriction. If an image that is smaller than these dimensions is uploaded it will be rejected.'),
+    '#weight' => 2,
+  );
+ 
   $form['file_extensions'] = array(
     '#type' => 'textfield',
     '#title' => t('Permitted upload file extensions.'),
-    '#default_value' => $widget['file_extensions'] ? $widget['file_extensions'] : 'jpg jpeg png gif',
+    '#default_value' => !empty($widget['file_extensions']) ? $widget['file_extensions'] : 'jpg jpeg png gif',
     '#size' => 64,
     '#maxlength' => 64,
     '#description' => t('Extensions a user can upload to this field. Seperate extensions with a space and do not include the leading dot.'),
@@ -63,18 +74,19 @@ function imagefield_widget_widget_settings_form($widget) {
     '#collapsed' => true,
     '#weight' => 8,
   );
-  $form['alt_settings']['alt'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Default ALT text'),
-    '#default_value' => ($widget['alt']) ? $widget['alt'] : '',
-    '#description' => t('This value will be used for alternate text by default.'),
-    '#suffix' => theme('token_help', 'file'),
-  );
   $form['alt_settings']['custom_alt'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable custom alternate text'),
-    '#default_value' =>  $widget['custom_alt'] ? $widget['custom_alt'] : 0,
+    '#default_value' =>  !empty($widget['custom_alt']) ? $widget['custom_alt'] : 0,
     '#description' => t('Enable user input alternate text for images.'),
+  );
+
+  $form['alt_settings']['alt'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Default ALT text'),
+    '#default_value' => !empty($widget['alt']) ? $widget['alt'] : '',
+    '#description' => t('This value will be used for alternate text by default.'),
+    '#suffix' => theme('token_help', 'file'),
   );
   
   $form['title_settings'] = array(
@@ -84,34 +96,27 @@ function imagefield_widget_widget_settings_form($widget) {
     '#collapsed' => true,
     '#weight' => 8,
   );
+  $form['title_settings']['custom_title'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable custom title text'),
+    '#default_value' =>  !empty($widget['custom_title']) ? $widget['custom_title'] : 0,
+    '#description' => t('Enable user input title text for images.'),
+  );
+
  
   $form['title_settings']['title'] = array(
     '#type' => 'textfield',
     '#title' => t('Default Title text'),
-    '#default_value' => ($widget['title']) ? $widget['title'] : '',
+    '#default_value' => !empty($widget['title']) ? $widget['title'] : '',
     '#description' => t('This value will be used as the image title by default.'),
-  );
-  $form['title_settings']['title_tokens'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Available Title Tokens'),
-    '#value' =>  theme('token_help', 'file'),
-    '#collapsible' => true,
-    '#collapsed' => true,
-  );
-
-
-  $form['title_settings']['custom_title'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Enable custom title text'),
-    '#default_value' =>  $widget['custom_title'] ? $widget['custom_title'] : 0,
-    '#description' => t('Enable user input title text for images.'),
+    '#suffix' =>  theme('token_help', 'file'),
   );
   return $form;
 }
 
 function imagefield_widget_widget_settings_save($widget) {
   //@todo: rename custom_alt and custom_title to alt_custom and title_custom to be OCD.
-  return array('max_resolution', 'max_filesize', 'alt',  'custom_alt', 'title', 'custom_title');
+  return array('max_resolution', 'min_resolution', 'alt',  'custom_alt', 'title', 'custom_title');
 }
 
 
@@ -122,7 +127,6 @@ function imagefield_widget_widget_settings_save($widget) {
 function _imagefield_content_admin_field_form_alter(&$form, $form_state, $form_id) {
   $form['#attributes'] = array('enctype' => 'multipart/form-data');
 }
-
 
 function _imagefield_scale_image($file, $resolution = 0) {
   $info = image_get_info($file['filepath']);
@@ -144,39 +148,27 @@ function _imagefield_scale_image($file, $resolution = 0) {
  * Implementation of hook_widget().
  */
 function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
+  // add default values to items.
   if (empty($items[$delta])) { 
-    $items[$delta] = array('fid' => 0, 'alt' => '', 'title' => '', 'data' => '');
+    $items[$delta] = array_merge($items[$delta], array('alt' => '', 'title' => ''));
   }
-
-  $form['#attributes'] = array('enctype' => 'multipart/form-data');
-  $element = array(
-    '#type' => 'imagefield_widget',
-    '#default_value' => $items[$delta],
-  );
-  return $element;
+  return filefield_widget(&$form, &$form_state, $field, $items, $delta = 0);
 }
-
 
 function imagefield_widget_value($element, $edit = FALSE) {
-  //dsm('imagefield_widget_value');
-  //dsm($edit);
-  
-  if (!$edit) { 
-    $file =  field_file_load($element['#default_value']['fid']);
-    $item = $element['#default_value'];
-  }
-  else {
-    $file = field_file_load($edit['fid']);
-    $item = array(
-      'fid' => $edit['fid'],
-      'alt' => $edit['alt'],
-      'title' => $edit['title'],
-      'data' => '',
+  $item = filefield_widget_value($element, $edit);
+  // handle additional 
+  if ($edit) { 
+    $item = array_merge( 
+      $item, 
+      array(
+        'alt' => $edit['alt'],
+        'title' => $edit['title'],
+      )
     );
   }
-  return array_merge($item, $file);
+  return $item;
 }
-
 
 function imagefield_widget_process($element, $edit, &$form_state, $form) {
   //dsm('imagefield_widget_process');
@@ -262,7 +254,6 @@ function imagefield_widget_submit_remove_btn($form, &$form_state) {
   $form_state['rebuild'] = true;
 }
 
-
 function imagefield_widget_submit_upload_btn($form, &$form_state) {
   //dsm('imagefield_widget_submit_upload_btn');
   //dsm($form);
@@ -285,11 +276,14 @@ function imagefield_widget_submit_upload_btn($form, &$form_state) {
     form_set_error($upload_name, t('The file could not be uploaded.'));
     return $file;
   }
-
+  
   $validators = array(
-    'file_validate_extensions' => array($field['widget']['file_extensions']),
-    'file_validate_size' => array($field['widget']['max_filesize']),
-    'file_validate_image_resolution' => array($field['widget']['max_resolution']),
+    'file_validate_extensions' => array(isset($field['widget']['file_extensions']) ? $field['widget']['file_extensions'] : 0),
+    'file_validate_size' => array(isset($field['widget']['max_filesize']) ? $field['widget']['max_filesize'] : 0),
+    'file_validate_image_resolution' => array(
+      isset($field['widget']['max_resolution']) ? $field['widget']['max_resolution'] : 0,
+      isset($field['widget']['min_resolution']) ? $field['widget']['min_resolution'] : 0,
+    ),
   );
 
   if (!$file = field_file_save_upload($upload_name, $validators, $complete_file_path)) {
