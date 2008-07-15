@@ -3,8 +3,21 @@
 /**
  * @file
  * ImageField widget hooks and callbacks.
+ *
+ * This file is loaded by fileifeld.module and the callbacks it contains are
+ * invoked by filefield.module. This happens because imagefield delegates it's
+ * CCK hooks and callbacks to filefield in imagefield.module.
  */
 
+
+/**
+ * @defgroup "FileField widget settings callbacks"
+ * @{
+ *
+ * These callbacks are invoked by filefield_widget_settings. Their
+ * return values are merged with and will override filefields' widget
+ * settings callback's return values.
+ */
 function imagefield_widget_widget_settings_form($widget) {
   $form = array();
   $form['max_resolution'] = array(
@@ -90,36 +103,20 @@ function imagefield_widget_widget_settings_save($widget) {
   return array('max_resolution', 'min_resolution', 'alt',  'custom_alt', 'title', 'custom_title');
 }
 
-
 /**
- * Implementation of hook_form_alter(). Set the appropriate
- * attibutes to allow file uploads on the field settings form.
+ * @} End defgroup "Filefield widget settings callbacks."
  */
-function _imagefield_content_admin_field_form_alter(&$form, $form_state, $form_id) {
-  $form['#attributes'] = array('enctype' => 'multipart/form-data');
-}
-
-function _imagefield_scale_image($file, $resolution = 0) {
-  $info = image_get_info($file['filepath']);
-  if ($info) {
-    list($width, $height) = explode('x', $resolution);
-    if ($width && $height) {
-      $result = image_scale($file['filepath'], $file['filepath'], $width, $height);
-      if ($result) {
-        $file['filesize'] = filesize($file['filepath']);
-        drupal_set_message(t('The image %filename was resized to fit within the maximum allowed resolution of %resolution pixels', array('%resolution' => $resolution, '%filename' => $file['filename'])));
-      }
-    }
-  }
-  return $file;
-}
-
 
 /**
- * Imagefield widget callbacks, called by filefield.module.
+ * @defgroup "FileField widget element callbacks.
+ * @{
+ *
+ * The call backs are called by form elements that leverage the 
+ * filefield_widget_value and filefield_widget_process callbacks.
+ * They will be called after the filefield callbacks and their
+ * return values will be merged with the filefield callback's.
  */
 function imagefield_widget_widget_value($element, $edit = FALSE) {
-
   // handle additional 
   if ($edit) { 
       return array(
@@ -131,36 +128,41 @@ function imagefield_widget_widget_value($element, $edit = FALSE) {
 }
 
 function imagefield_widget_widget_process($element, $edit, &$form_state, $form) {
+  dsm('imagefield_widget_widget_process');
   $file = $element['#value'];
   $field = content_fields($element['#field_name'], $element['#type_name']);
 
-  $element['alt'] = array(
+  $element['data']['alt'] = array(
     '#type' => 'value',
     '#value' => $field['widget']['alt'],
   );
-  $element['title'] = array(
+  if ($field['widget']['custom_alt']) {
+    $element['data']['alt'] = array(
+      '#type' => $file['fid'] ? 'textfield' : 'hidden',
+      '#title' => t('Alternate Text'),
+      '#value' => empty($edit['data']['alt']) ? $file['data']['alt'] : $edit['data']['alt'],
+    );
+  } 
+
+
+  $element['data']['title'] = array(
     '#type' => 'value',
     '#value' => $field['widget']['title'],
   );
 
-  if ($field['widget']['custom_alt']) {
-    $element['alt'] = array(
-      '#type' => $file['fid'] ? 'textfield' : 'hidden',
-      '#title' => t('Alternate Text'),
-      '#value' => empty($edit['alt']) ? $file['alt'] : $edit['alt'],
-    );
-  } 
-
   if ($field['widget']['custom_title']) {
-    $element['title'] = array(
+    $element['data']['title'] = array(
       '#type' => $file['fid'] ? 'textfield' : 'hidden',
       '#title' => t('Title'),
-      '#value' => empty($edit['title']) ? $file['title'] : $edit['title'],
+      '#value' => empty($edit['title']['title']) ? $file['data']['title'] : $edit['data']['title'],
     );
   }
   return $element;
 }
 
+/**
+ * @} End defgroup "FileField widget element callbacks."
+ */
 
 /**
  * FormAPI theme function. Theme the output of an image field.
