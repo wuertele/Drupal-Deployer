@@ -37,7 +37,7 @@
 define('FCKEDITOR_FORCE_SIMPLE_TOOLBAR_NAME', 'DrupalBasic') ;
 
 /**
- * Implementation of hook_help
+ * Implementation of hook_help().
  */
 function fckeditor_help($path, $arg) {
   switch ($path) {
@@ -130,7 +130,7 @@ function fckeditor_help($path, $arg) {
 }
 
 /**
- * Implementation of hook_perm
+ * Implementation of hook_perm().
  * Administer -> User management -> Permissions
  */
 function fckeditor_perm() {
@@ -139,7 +139,7 @@ function fckeditor_perm() {
 
 
 /**
- * Implementation of textarea
+ * Implementation of hook_elements().
  * Replace textarea with FCKeditor using callback function (fckeditor_process_textarea)
  */
 function fckeditor_elements() {
@@ -208,13 +208,14 @@ function fckeditor_profile_validate($edit) {
   //include mode and all other fields are empty, invalid
   if ($edit['excl_mode'] == 1 && empty($edit['excl'])) {
     $errors['excl_mode'] = t('Include mode selected, but no paths given. Enter at least one path where FCKeditor should appear.');
-  } else {
+  }
+  else {
     fckeditor_profile_validate_fieldpaths('excl', $edit['excl'], $errors);
   }
   
   fckeditor_profile_validate_fieldpaths('simple_incl', $edit['simple_incl'], $errors);
   
-  if (!preg_match("/^\d+$/", trim($edit['min_rows']))) {
+  if (!preg_match('/^\d+$/', trim($edit['min_rows']))) {
     $errors['min_rows'] = t('Minimum rows must be a valid number');
   }
 
@@ -230,7 +231,7 @@ function fckeditor_profile_validate($edit) {
     $errors['name'] = t('You must give a profile name.');
   }
 
-  if (!preg_match("/^\d+%?$/", $edit['width'])) {
+  if (!preg_match('/^\d+%?$/', $edit['width'])) {
     $errors['width'] = t('Enter valid width. Ex: 400 or 100%');
   }
 
@@ -238,9 +239,10 @@ function fckeditor_profile_validate($edit) {
     if ($edit['css_mode'] != 'self') {
       $errors['css_path'] = t('CSS path is not empty. Please set the "Editor CSS" option to "define css" mode.');
     }
-    else if (false !== strpos($edit['css_path'], '"')) {
+    else if (FALSE !== strpos($edit['css_path'], '"')) {
       $errors['css_path'] = t('Double quotes are not allowed in CSS path.');
     }
+    
     else if (substr($edit['css_path'], 0, 1) == "'" && substr($edit['css_path'], -1) == "'") {
       $errors['css_path'] = t('Enter valid path, do not surround it with quotes.');
     }
@@ -250,7 +252,7 @@ function fckeditor_profile_validate($edit) {
     if ($edit['css_style'] != 'self') {
       $errors['styles_path'] = t('Path to predefined styles is not empty. Please set the "Predefined styles" option to "define path to fckstyles.xml" mode.');
     }
-    else if (false !== strpos($edit['styles_path'], '"')) {
+    else if (FALSE !== strpos($edit['styles_path'], '"')) {
       $errors['styles_path'] = t('Double quotes are not allowed in path.');
     }
     else if (substr($edit['styles_path'], 0, 1) == "'" && substr($edit['styles_path'], -1) == "'") {
@@ -289,7 +291,8 @@ function fckeditor_global_profile_validate($edit) {
   //include mode and all other fields are empty, invalid
   if ($edit['excl_mode'] == 1 && empty($edit['excl'])) {
     $errors['excl_mode'] = t('Include mode selected, but no paths given. Enter at least one path where FCKeditor should appear.');
-  } else {
+  }
+  else {
     fckeditor_profile_validate_fieldpaths('excl', $edit['excl'], $errors);
   }
   
@@ -307,14 +310,14 @@ function fckeditor_profile_validate_fieldpaths($fieldname, $paths, &$errors) {
   
   $rules = preg_split('/[\s,]+/', $paths);
   
-  foreach($rules as $rule) {
+  foreach ($rules as $rule) {
     $rule = trim($rule);
-    if(!empty($rule) && strpos($rule, '.') === false && strpos($rule, '/') === false && strpos($rule, '-') === false) {
+    if (!empty($rule) && strpos($rule, '.') === FALSE && strpos($rule, '/') === FALSE && strpos($rule, '-') === FALSE) {
       $myerrors[] = t('Rule %rule is ambiguous: please append .* if %rule is a path or prepend *. if %rule is a field', array('%rule' => $rule));
     }
   }
   
-  if(!empty($myerrors)) {
+  if (!empty($myerrors)) {
     $errors[$fieldname] = implode('<br/>', $myerrors);
   }
 }
@@ -336,7 +339,7 @@ function fckeditor_admin($arg = NULL) {
     '%modulesubdir' => base_path() . $module_drupal_path .'/fckeditor/editor',
     '%modulefile' => base_path() . $module_drupal_path .'/fckeditor/fckeditor.js')),
     'error');
-    return false;
+    return FALSE;
   }
 
   $edit = $_POST;
@@ -364,11 +367,11 @@ function fckeditor_admin($arg = NULL) {
       break;
 
     case 'deleteg':
-      $output = fckeditor_ask_delete_confirmation(true); 
+      $output = fckeditor_ask_delete_confirmation(TRUE); 
       break;
 
     case 'delete':
-      $output = fckeditor_ask_delete_confirmation(false, urldecode(arg(4)));
+      $output = fckeditor_ask_delete_confirmation(FALSE, urldecode(arg(4)));
       break;
       
     case 'deleteconfirmed':
@@ -423,16 +426,16 @@ function fckeditor_admin($arg = NULL) {
       } 
       else {
         $result = db_query_range("SELECT name FROM {fckeditor_settings} WHERE name<>'FCKeditor Global Profile'", 0, 1);
-        $has_profiles = false;
+        $has_profiles = FALSE;
         //find profile other than Global
-        if ($obj = db_fetch_object($result)) {
-          $has_profiles = true;
+        if (($obj = db_fetch_object($result))) {
+          $has_profiles = TRUE;
         }
 
         //find roles with profiles
         $result = db_query("SELECT rid FROM {fckeditor_role}");
         $rids = array();
-        while ($obj = db_fetch_object($result)) {
+        while (($obj = db_fetch_object($result))) {
           $rids[] = $obj->rid;
         }
         $rids = array_unique($rids);        
@@ -468,9 +471,10 @@ function fckeditor_profile_save($edit) {
   db_query("DELETE FROM {fckeditor_role} WHERE name = '%s' or name = '%s'", $edit['name'], empty($edit['old_name']) ? "" : $edit['old_name']);
   db_query("INSERT INTO {fckeditor_settings} (name, settings) VALUES ('%s', '%s')", $edit['name'], serialize($edit));
   fckeditor_rebuild_selectors($edit['name']);
-  if (!empty($edit['rids']))
-  foreach ($edit['rids'] as $rid => $value) {
-    db_query("INSERT INTO {fckeditor_role} (name, rid) VALUES ('%s', %d)", $edit['name'], $rid);
+  if (!empty($edit['rids'])) {
+    foreach (array_keys($edit['rids']) as $rid) {
+      db_query("INSERT INTO {fckeditor_role} (name, rid) VALUES ('%s', %d)", $edit['name'], $rid);
+    }
   }
 
   // if users can't set their own defaults, make sure to remove $user->fckeditor_status so their default doesn't override the main default
@@ -499,13 +503,12 @@ function fckeditor_profile_overview() {
 
   $profiles = fckeditor_profile_load();
   if ($profiles) {
-    $roles = user_roles();
     $access_fckeditor_roles = user_roles(FALSE, 'access fckeditor');
     $header = array(t('Profile'), t('Roles'), t('Operations'));
     foreach ($profiles as $p) {
       $rids = $p->rids;
       if ($p->name !== "FCKeditor Global Profile") {
-        foreach ($p->rids as $rid => $name) {
+        foreach (array_keys($p->rids) as $rid) {
           if (!isset($access_fckeditor_roles[$rid])) {
             unset($rids[$rid]);
           }
@@ -543,11 +546,11 @@ function fckeditor_profile_load($name = '') {
   if (!$profiles) {
     $roles = user_roles();
     $result = db_query('SELECT * FROM {fckeditor_settings}');
-    while ($data = db_fetch_object($result)) {
+    while (($data = db_fetch_object($result))) {
       $data->settings = unserialize($data->settings);
       $result2 = db_query("SELECT rid FROM {fckeditor_role} WHERE name = '%s'", $data->name);
       $role = array();
-      while ($r = db_fetch_object($result2)) {
+      while (($r = db_fetch_object($result2))) {
         $role[$r->rid] = $roles[$r->rid];
       }
       $data->rids = $role;
@@ -572,7 +575,7 @@ function fckeditor_is_enabled($excl_mode, $excl_regex, $element_id, $get_q) {
   $front = variable_get('site_frontpage', 'node');
   $excl_regex = str_replace('<front>', $front, $excl_regex);
   $element_id = str_replace('.', '\.', $element_id);
-  $match = !empty($excl_regex) && preg_match($excl_regex, $get_q.'.'.$element_id);
+  $match = !empty($excl_regex) && preg_match($excl_regex, $get_q .'.'. $element_id);
   
   return ($excl_mode == '0' xor $match);
 }
@@ -588,7 +591,7 @@ function fckeditor_is_enabled($excl_mode, $excl_regex, $element_id, $get_q) {
 function fckeditor_process_textarea($element) {
   static $is_running = FALSE;
   static $num = 1;
-  global $user, $fckeditor_simple_toolbar_ids;
+  global $user;
 
   //skip this one, surely nobody wants WYSIWYG here
 
@@ -684,7 +687,7 @@ function fckeditor_process_textarea($element) {
     if (!$is_running) {
       drupal_add_js($module_drupal_path .'/fckeditor/fckeditor.js');
       drupal_add_js($module_drupal_path .'/fckeditor.utils.js');
-      $is_running = true;
+      $is_running = TRUE;
     }
 
     $toolbar = $conf['toolbar'];
@@ -751,16 +754,17 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
         $element['#suffix'] .= $js_id .".Config['LinkUpload'] = true;\n";
         $element['#suffix'] .= $js_id .".Config['ImageUpload'] = true;\n";
         $element['#suffix'] .= $js_id .".Config['FlashUpload'] = true;\n";
-        $element['#suffix'] .= $js_id .".Config['LinkUploadURL'] = '".$module_full_path.$upload_path."';\n";
-        $element['#suffix'] .= $js_id .".Config['ImageUploadURL'] = '".$module_full_path.$upload_path."?Type=Image';\n";
-        $element['#suffix'] .= $js_id .".Config['FlashUploadURL'] = '".$module_full_path.$upload_path."?Type=Flash';\n";
-      } else {
+        $element['#suffix'] .= $js_id .".Config['LinkUploadURL'] = '". $module_full_path . $upload_path ."';\n";
+        $element['#suffix'] .= $js_id .".Config['ImageUploadURL'] = '". $module_full_path . $upload_path ."?Type=Image';\n";
+        $element['#suffix'] .= $js_id .".Config['FlashUploadURL'] = '". $module_full_path . $upload_path ."?Type=Flash';\n";
+      }
+      else {
         $element['#suffix'] .= $js_id .".Config['LinkUpload'] = false;\n";
         $element['#suffix'] .= $js_id .".Config['ImageUpload'] = false;\n";
         $element['#suffix'] .= $js_id .".Config['FlashUpload'] = false;\n";
       }
       
-      switch($filebrowser) {
+      switch ($filebrowser) {
         case 'imce':
           $element['#suffix'] .= $js_id .".Config['LinkBrowser']= true;\n";
           $element['#suffix'] .= $js_id .".Config['ImageBrowser']= true;\n";
@@ -799,7 +803,7 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
       foreach ($lines as $l)
       if ($l && strlen($l) > 5) {
         $eqpos = strpos($l, "=");
-        if (false !== $eqpos) {
+        if (FALSE !== $eqpos) {
           $option = str_replace("FCKConfig.", "", substr($l, 0, $eqpos));
           $element['#suffix'] .= "\n". $js_id .".Config['". trim($option) ."'] =". substr($l, $eqpos + 1);
         }
@@ -839,14 +843,14 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
     else {
       // if no popup mode, add the editor initialization to the footer 	 
       // this obviously needs print($closure) in page.tpl.php 	 
-      if ($fckeditor_on) { 	 
+      if ($fckeditor_on) {
         drupal_add_js('if (Drupal.jsEnabled) {$(document).ready(function() {if (typeof ('. $js_id .') != "undefined") { 	 
           if ($("#edit-teaser-js").size() && $("#edit-teaser-js").val().length){ 	 
             $("#edit-body").val($("#edit-teaser-js").val() + "<!--break-->" + $("#edit-body").val()); 	 
 	        } 	 
 	        '. $js_id .'.ReplaceTextarea();}});}', 'inline', 'footer');
-	    }
-	  }
+      }
+    }
   }
 
   // display the field id for administrators
@@ -863,7 +867,7 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
 /**
  * Implementation of hook_user().
  */
-function fckeditor_user($type, &$edit, &$user, $category = NULL) {
+function fckeditor_user($type, $edit, &$user, $category = NULL) {
   if ($type == 'form' && $category == 'account' && user_access('access fckeditor')) {
     $profile = fckeditor_user_get_profile($user);
     $toolbar_options = fckeditor_load_toolbar_options();
@@ -1002,7 +1006,8 @@ function fckeditor_load_toolbar_options() {
     if ($fp) {
       while (!feof($fp)) {
         $line = fgets($fp, 1024);
-        if (preg_match("/FCKConfig\.ToolbarSets\[(\"|')(.*?)\\1\]/i", $line, $matches)) {
+        $matches = array();
+        if (preg_match('/FCKConfig\.ToolbarSets\[("|\')(.*?)\\1\]/i', $line, $matches)) {
           $arr[$matches[2]] = ucfirst($matches[2]);
         }
       }
@@ -1014,7 +1019,8 @@ function fckeditor_load_toolbar_options() {
     if ($fp) {
       while (!feof($fp)) {
         $line = fgets($fp, 1024);
-        if (preg_match("/FCKConfig\.ToolbarSets\[(\"|')(.*?)\\1\]/i", $line, $matches)) {
+        $matches = array();
+        if (preg_match('/FCKConfig\.ToolbarSets\[("|\')(.*?)\\1\]/i', $line, $matches)) {
           $arr[$matches[2]] = ucfirst($matches[2]);
         }
       }
@@ -1040,8 +1046,8 @@ function fckeditor_load_skin_options() {
   $skin_dir = $module_drupal_path .'/fckeditor/editor/skins';
   if (is_dir($skin_dir)) {
     $dh = @opendir($skin_dir);
-    if (false !== $dh) {
-      while (($file = readdir($dh)) !== false ) {
+    if (FALSE !== $dh) {
+      while (($file = readdir($dh)) !== FALSE ) {
         if (in_array($file, array(".", "..", "CVS", ".svn"))) {
           continue;
         }
@@ -1070,12 +1076,13 @@ function fckeditor_load_lang_options() {
   $lang_dir = $module_drupal_path .'/fckeditor/editor/lang';
   if (is_dir($lang_dir)) {
     $dh = @opendir($lang_dir);
-    if (false !== $dh ) {
-      while (($file = readdir($dh)) !== false) {
+    if (FALSE !== $dh ) {
+      while (($file = readdir($dh)) !== FALSE) {
         if (in_array($file, array(".", "..", "CVS", ".svn"))) {
           continue;
         }
-        if (is_file($lang_dir . DIRECTORY_SEPARATOR . $file) && preg_match("/^(.*?)\.js$/", $file, $matches)) {
+        $matches = array();
+        if (is_file($lang_dir . DIRECTORY_SEPARATOR . $file) && preg_match('/^(.*?)\.js$/', $file, $matches)) {
           $lang = $matches[1];
           $arr[$lang] = strtoupper($lang);
         }
@@ -1250,7 +1257,7 @@ function fckeditor_global_profile_form_build($sth, $edit) {
   '#prefix' => '<div style="margin-left:20px">',
   '#suffix' => '</div>',
   '#default_value' => !empty($edit->settings['excl']) ? $edit->settings['excl'] : '',
-  '#description' => t('Enter the paths to the textarea fields on which you want to enable or disable FCKeditor.').' '.t('Paths are formed by appending the field name to the path of the page, separated by a dot. Please see the !helppagelink for more information about defining field names.', array('!helppagelink' => l(t('help page'), 'admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
+  '#description' => t('Enter the paths to the textarea fields on which you want to enable or disable FCKeditor.') .' '. t('Paths are formed by appending the field name to the path of the page, separated by a dot. Please see the !helppagelink for more information about defining field names.', array('!helppagelink' => l(t('help page'), 'admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
   );
   
   $form['fckeditor_exclude_settings']['simple_incl'] = array(
@@ -1259,7 +1266,7 @@ function fckeditor_global_profile_form_build($sth, $edit) {
   '#cols' => 60,
   '#rows' => 5,
   '#default_value' => !empty($edit->settings['simple_incl']) ? $edit->settings['simple_incl'] : '',
-  '#description' => t('Enter the paths to the textarea fields on which you want to force the simplified toolbar.').' '.t('Paths are formed by appending the field name to the path of the page, separated by a dot. Please see the !helppagelink for more information about defining field names.', array('!helppagelink' => l(t('help page'), 'admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
+  '#description' => t('Enter the paths to the textarea fields on which you want to force the simplified toolbar.') .' '. t('Paths are formed by appending the field name to the path of the page, separated by a dot. Please see the !helppagelink for more information about defining field names.', array('!helppagelink' => l(t('help page'), 'admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
   );
   
   $form['submit'] = array(
@@ -1285,7 +1292,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   $orig_roles = user_roles(FALSE, 'access fckeditor');
   $roles = $orig_roles;
 
-  if (!empty($edit->rids) && !user_roles(false, 'access fckeditor')) {
+  if (!empty($edit->rids) && !user_roles(FALSE, 'access fckeditor')) {
     drupal_set_message(t('You haven\'t assigned <code>!access1</code> !permissions yet.<br/>It is recommended to assign the <code>!access1</code> !permissions before updating FCKeditor profiles.',
     array(
     '!access1' => t('access fckeditor'),
@@ -1296,7 +1303,7 @@ function fckeditor_profile_form_build($sth, $edit) {
     drupal_set_breadcrumb(array(l(t('administer'), 'admin'), l(t('fckeditor'), 'admin/settings/fckeditor'), l(t('Add new FCKeditor profile'), 'admin/settings/fckeditor/add')));
 
     $result = db_query('SELECT DISTINCT(rid) FROM {fckeditor_role}');
-    while ($data = db_fetch_object($result)) {
+    while (($data = db_fetch_object($result))) {
       if ((empty($edit->rids) || !in_array($data->rid, array_keys((array) $edit->rids))) && !form_get_errors()) {
         unset($roles[$data->rid]);
       }
@@ -1380,7 +1387,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   '#prefix' => '<div style="margin-left:20px">',
   '#suffix' => '</div>',
   '#default_value' => !empty($edit->settings['excl']) ? $edit->settings['excl'] : '',
-  '#description' => t('Enter the paths to the textarea fields on which you want to enable or disable FCKeditor.').' '.t('Paths are formed by appending the field name to the path of the page, separated by a dot. Please see the !helppagelink for more information about defining field names.', array('!helppagelink' => l(t('help page'), 'admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
+  '#description' => t('Enter the paths to the textarea fields on which you want to enable or disable FCKeditor.') .' '. t('Paths are formed by appending the field name to the path of the page, separated by a dot. Please see the !helppagelink for more information about defining field names.', array('!helppagelink' => l(t('help page'), 'admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
   );
   
   $form['fckeditor_exclude_settings']['simple_incl'] = array(
@@ -1389,7 +1396,7 @@ function fckeditor_profile_form_build($sth, $edit) {
   '#cols' => 60,
   '#rows' => 5,
   '#default_value' => !empty($edit->settings['simple_incl']) ? $edit->settings['simple_incl'] : '',
-  '#description' => t('Enter the paths to the textarea fields on which you want to force the simplified toolbar.').' '.t('Paths are formed by appending the field name to the path of the page, separated by a dot. Please see the !helppagelink for more information about defining field names.', array('!helppagelink' => l(t('help page'), 'admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
+  '#description' => t('Enter the paths to the textarea fields on which you want to force the simplified toolbar.') .' '. t('Paths are formed by appending the field name to the path of the page, separated by a dot. Please see the !helppagelink for more information about defining field names.', array('!helppagelink' => l(t('help page'), 'admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
   );
 
   $form['appearance'] = array(
@@ -1642,9 +1649,9 @@ function fckeditor_profile_form_build($sth, $edit) {
 
   if (variable_get('file_downloads', '') == FILE_DOWNLOADS_PRIVATE) {
     $form['fckeditor_upload_settings']['UserFilesPath']['#description'] = t('Setting relative path to uploaded files has been disabled because private downloads are enabled and this path is calculated automatically.');
-    $form['fckeditor_upload_settings']['UserFilesPath']['#disabled'] = true;
+    $form['fckeditor_upload_settings']['UserFilesPath']['#disabled'] = TRUE;
     $form['fckeditor_upload_settings']['UserFilesAbsolutePath']['#description'] = t('Setting path to uploaded files has been disabled because private downloads are enabled and this path is calculated automatically.');
-    $form['fckeditor_upload_settings']['UserFilesAbsolutePath']['#disabled'] = true;
+    $form['fckeditor_upload_settings']['UserFilesAbsolutePath']['#disabled'] = TRUE;
   }
   
   $form['advanced'] = array(
@@ -1700,7 +1707,7 @@ function fckeditor_is_compatible_client() {
     }
   }
 
-  return false;
+  return FALSE;
 }
 
 function fckeditor_user_get_setting($user, $profile, $setting) {
@@ -1734,7 +1741,7 @@ function fckeditor_user_get_profile($user) {
   // we're gonna render fckeditor.
   if (!isset($profile_name[$user->uid])) {
     $sorted_roles = fckeditor_sorted_roles();
-    foreach ($sorted_roles as $rid => $name) {
+    foreach (array_keys($sorted_roles) as $rid) {
       if (isset($user->roles[$rid])) {
         break;
       }
@@ -1753,7 +1760,7 @@ function fckeditor_user_get_profile($user) {
     return $profile;
   }
 
-  return false;
+  return FALSE;
 }
 
 function fckeditor_init() {
@@ -1776,7 +1783,7 @@ function fckeditor_ask_delete_confirmation($is_global, $profile = "") {
   return t("<p>Are you sure that you want to delete the !profile?</p><p>!yes !no</p>", 
     array('!profile' => $profile_name, 
           '!yes' => $delete_link,
-          '!no' => l(t('Cancel'), 'admin/settings/fckeditor', array('attributes' => array ('style' => 'margin-left:40px'))),
+          '!no' => l(t('Cancel'), 'admin/settings/fckeditor', array('attributes' => array('style' => 'margin-left:40px'))),
           ));
 }
 
@@ -1786,30 +1793,32 @@ function fckeditor_ask_delete_confirmation($is_global, $profile = "") {
  *
  * @param string $name Name of the profile to process. If omitted, all profiles are rebuilt
  */
-function fckeditor_rebuild_selectors($name = null) {
-  if($name == null) {
+function fckeditor_rebuild_selectors($name = NULL) {
+  if ($name == NULL) {
     $result = db_query('SELECT * FROM {fckeditor_settings}');
-  } else {
+  }
+  else {
     $result = db_query('SELECT * FROM {fckeditor_settings} WHERE name = "%s"', $name);
   }
   
-  while(($data = db_fetch_object($result))) {
+  while (($data = db_fetch_object($result))) {
     if ($data->settings) {
       $settings = unserialize($data->settings);
       
-      foreach(array('excl', 'simple_incl') as $var) {
+      foreach (array('excl', 'simple_incl') as $var) {
         $rules = preg_split('/[\s,]+/', $settings[$var]);
         $regex = array();
         
-        if(!empty($rules)) {
-          foreach($rules as $rule) {
+        if (!empty($rules)) {
+          foreach ($rules as $rule) {
             $rule = fckeditor_parse_rule($rule);
-            $regex[] = '(?:'.fckeditor_rule_to_regex($rule).')';
+            $regex[] = '(?:'. fckeditor_rule_to_regex($rule) .')';
           }
           
-          $settings[$var.'_regex'] = '#'.implode('|', $regex).'#';
-        } else {
-          $settings[$var.'_regex'] = '';
+          $settings[$var .'_regex'] = '#'. implode('|', $regex) .'#';
+        }
+        else {
+          $settings[$var .'_regex'] = '';
         }
       }
       
@@ -1830,17 +1839,19 @@ function fckeditor_parse_rule($rule) {
   $ruleobj = new stdClass();
   
   $dotpos = strpos($rule, '.');
-  if($dotpos === false) {
-    if(strpos($rule, '/') === false && strpos($rule, '-') !== false) {
+  if ($dotpos === FALSE) {
+    if (strpos($rule, '/') === FALSE && strpos($rule, '-') !== FALSE) {
       // assume it's a field
       $ruleobj->path = '*';
       $ruleobj->field = $rule;
-    } elseif(strpos($rule, '/') !== false) {
+    }
+    elseif (strpos($rule, '/') !== FALSE) {
       // assume it's a path
       $ruleobj->path = $rule;
       $ruleobj->field = '*';
-    } else {
-      return null;
+    }
+    else {
+      return NULL;
     }
   }
   
@@ -1854,7 +1865,7 @@ function fckeditor_rule_to_regex($rule) {
   static $replace = array('\*' => '.*', '\?' => '.');
   
   $field = str_replace('.', '\.', $rule->field);
-  $regex = '^'.preg_quote($rule->path, '#').'\.'.preg_quote($field, '#').'$';
+  $regex = '^'. preg_quote($rule->path, '#') .'\.'. preg_quote($field, '#') .'$';
   $regex = strtr($regex, $replace);
   
   return $regex;
@@ -1862,7 +1873,7 @@ function fckeditor_rule_to_regex($rule) {
 
 function fckeditor_rule_to_string($rule) {
   $field = str_replace('.', '\.', $rule->field);
-  return $rule->path.'.'.$field;
+  return $rule->path .'.'. $field;
 }
 
 /**
@@ -1871,18 +1882,18 @@ function fckeditor_rule_to_string($rule) {
  */
 function fckeditor_file_download($file) {
   if (module_exists('imce') && variable_get('imce_settings_fck', 0)) {
-    return null;
+    return NULL;
   }
   if (module_exists('upload')) {
     $result = db_query("SELECT f.* FROM {files} f WHERE filepath = '%s'", $file);
-    if ($file = db_fetch_object($result)) {
-      return null;
+    if (($file = db_fetch_object($result))) {
+      return NULL;
     }
   }
   //it is probably file uploaded with FCKeditor
-  if ($path = file_create_path($file)) {
+  if (($path = file_create_path($file))) {
     $ctype = ($info = @getimagesize($path)) ? $info['mime'] : (function_exists('mime_content_type') ? mime_content_type($path) : 'application/x-download');
-    return array('Content-type: '. $ctype);
+    return array('Content-Type: '. $ctype .'; authoritative=true');
   }
   
   return -1;
