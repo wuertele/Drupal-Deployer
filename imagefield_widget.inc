@@ -160,6 +160,12 @@ function imagefield_widget_widget_process($element, $edit, &$form_state, $form) 
   return $element;
 }
 
+function imagefield_widget_widget_after_build($element) {
+  $element['#value']['alt'] = $element['alt']['#value'];
+  $element['#value']['title'] = $element['title']['#value'];
+  return $element;
+}
+
 /**
  * @} End defgroup "FileField widget element callbacks."
  */
