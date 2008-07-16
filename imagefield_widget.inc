@@ -128,7 +128,6 @@ function imagefield_widget_widget_value($element, $edit = FALSE) {
 }
 
 function imagefield_widget_widget_process($element, $edit, &$form_state, $form) {
-  dsm('imagefield_widget_widget_process');
   $file = $element['#value'];
   $field = content_fields($element['#field_name'], $element['#type_name']);
 
@@ -161,8 +160,8 @@ function imagefield_widget_widget_process($element, $edit, &$form_state, $form) 
 }
 
 function imagefield_widget_widget_after_build($element) {
-  $element['#value']['alt'] = $element['alt']['#value'];
-  $element['#value']['title'] = $element['title']['#value'];
+  $element['#value']['data']['alt'] = $element['alt']['#value'];
+  $element['#value']['data']['title'] = $element['title']['#value'];
   return $element;
 }
 
