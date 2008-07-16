@@ -153,18 +153,7 @@ function imagefield_widget_widget_process($element, $edit, &$form_state, $form) 
   return $element;
 }
 
-function imagefield_widget_widget_after_build($element) {
-  if (!is_array($element['#value']['data'])) $element['#value']['data'] = array();
-  $field = content_fields($element['#field_name'], $element['#type_name']);
-  $element['#value']['data']['alt'] = $element['data']['alt']['#value'];
-  if (empty($element['#value']['data']['alt'])) {
-    $element['#value']['data']['alt'] = $field['widget']['alt'];
-  }
-  $element['#value']['data']['title'] = $element['data']['title']['#value'];
-  if (empty($element['#value']['data']['title'])) {
-    $element['#value']['data']['title'] = $field['widget']['title'];
-  }
-  return $element;
+function imagefield_widget_widget_validate($element) {
 }
 
 /**
