@@ -132,36 +132,38 @@ function imagefield_widget_widget_process($element, $edit, &$form_state, $form) 
   $field = content_fields($element['#field_name'], $element['#type_name']);
 
   $element['data']['alt'] = array(
+    '#title' => t('Alternate Text'),
     '#type' => 'value',
-    '#value' => $field['widget']['alt'],
+    '#default_value' => $field['widget']['alt'],
   );
   if ($field['widget']['custom_alt']) {
-    $element['data']['alt'] = array(
-      '#type' => $file['fid'] ? 'textfield' : 'hidden',
-      '#title' => t('Alternate Text'),
-      '#value' => empty($edit['data']['alt']) ? $file['data']['alt'] : $edit['data']['alt'],
-    );
+    $element['data']['alt']['#type'] = $file['fid'] ? 'textfield' : 'hidden';
+    if (!empty($file['data']['alt'])) $element['data']['alt']['#default_value'] =  $file['data']['alt'];
   } 
-
 
   $element['data']['title'] = array(
     '#type' => 'value',
-    '#value' => $field['widget']['title'],
+    '#title' => t('Title'),
+    '#default_value' => $field['widget']['title'],
   );
-
   if ($field['widget']['custom_title']) {
-    $element['data']['title'] = array(
-      '#type' => $file['fid'] ? 'textfield' : 'hidden',
-      '#title' => t('Title'),
-      '#value' => empty($edit['title']['title']) ? $file['data']['title'] : $edit['data']['title'],
-    );
+    $element['data']['title']['#type'] = $file['fid'] ? 'textfield' : 'hidden';
+    if (!empty($file['data']['title'])) $element['data']['title']['#value'] =  $file['data']['title'];
   }
   return $element;
 }
 
 function imagefield_widget_widget_after_build($element) {
-  $element['#value']['data']['alt'] = $element['alt']['#value'];
-  $element['#value']['data']['title'] = $element['title']['#value'];
+  if (!is_array($element['#value']['data'])) $element['#value']['data'] = array();
+  $field = content_fields($element['#field_name'], $element['#type_name']);
+  $element['#value']['data']['alt'] = $element['data']['alt']['#value'];
+  if (empty($element['#value']['data']['alt'])) {
+    $element['#value']['data']['alt'] = $field['widget']['alt'];
+  }
+  $element['#value']['data']['title'] = $element['data']['title']['#value'];
+  if (empty($element['#value']['data']['title'])) {
+    $element['#value']['data']['title'] = $field['widget']['title'];
+  }
   return $element;
 }
 
