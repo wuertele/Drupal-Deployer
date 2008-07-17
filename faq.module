@@ -40,8 +40,11 @@ function faq_perm() {
 /**
  * Implementation of hook_access().
  */
-function faq_access($op, $node, $account) {
+function faq_access($op, $node, $account = NULL) {
   global $user;
+  if (empty($account)) {
+    $account = $user;
+  }
 
   if ($op != 'create') {
     $node = (object)$node;
@@ -55,7 +58,7 @@ function faq_access($op, $node, $account) {
     if (user_access('edit faq') || user_access('administer faq')) {
       return TRUE;
     }
-    elseif (user_access('edit own faq') && $user->uid == $node->uid) {
+    elseif (user_access('edit own faq') && $account->uid == $node->uid) {
       return TRUE;
     }
   }
@@ -69,7 +72,7 @@ function faq_access($op, $node, $account) {
       return TRUE;
     }
     // Have permission, node is unpublished but it's their node.
-    elseif ($user->uid == $node->uid && $user->uid != 0) {
+    elseif ($account->uid == $node->uid && $account->uid != 0) {
       return TRUE;
     }
     else {
