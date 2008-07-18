@@ -22,6 +22,7 @@ function node_token_values($type, $object = NULL, $options = array()) {
   switch ($type) {
     case 'node':
       $node = $object;
+      $account_mail = db_result(db_query("SELECT mail FROM {users} WHERE uid = %d", $node->uid));
 
       $values['nid']              = $node->nid;
       $values['type']             = $node->type;
@@ -32,6 +33,8 @@ function node_token_values($type, $object = NULL, $options = array()) {
       $values['author-uid']       = $node->uid;
       $values['author-name']      = check_plain($node->name);
       $values['author-name-raw']  = $node->name;
+      $values['author-mail']      = check_plain($account_mail);
+      $values['author-mail-raw']  = $account_mail;
       if (isset($node->created)) {
         $date = (int)$node->created;
         $values['yyyy']           = date('Y', $date);
@@ -158,45 +161,48 @@ function node_token_values($type, $object = NULL, $options = array()) {
  */
 function node_token_list($type = 'all') {
   if ($type == 'node' || $type == 'all') {
-    $tokens['node']['nid']            = t('Node ID');
-    $tokens['node']['type']           = t('Node type');
-    $tokens['node']['type-name']      = t('Node type (user-friendly version)');
-    $tokens['node']['language']       = t('Node language');
-    $tokens['node']['title']          = t('Node title');
-    $tokens['node']['title-raw']      = t('Unfiltered node title. WARNING - raw user input.');
+    $tokens['node']['nid']             = t('Node ID');
+    $tokens['node']['type']            = t('Node type');
+    $tokens['node']['type-name']       = t('Node type (user-friendly version)');
+    $tokens['node']['language']        = t('Node language');
+    $tokens['node']['title']           = t('Node title');
+    $tokens['node']['title-raw']       = t('Unfiltered node title. WARNING - raw user input.');
 
-    $tokens['node']['author-uid']     = t("Node author's user id");
-    $tokens['node']['author-name']    = t("Node author's user name");
-    $tokens['node']['author-name-raw']    = t("Node author's user name. WARNING - raw user input.");
+    $tokens['node']['author-uid']      = t("Node author's user id");
+    $tokens['node']['author-name']     = t("Node author's user name");
+    $tokens['node']['author-name-raw'] = t("Node author's user name. WARNING - raw user input.");
+    $tokens['node']['author-mail']     = t("Node author's e-mail.");
+    $tokens['node']['author-mail-raw'] = t("Node author's e-mail. WARNING - raw user input.");
 
-    $tokens['node']['term']           = t("Name of top taxonomy term");
-    $tokens['node']['term-raw']       = t("Unfiltered name of top taxonomy term. WARNING - raw user input.");
-    $tokens['node']['term-id']        = t("ID of top taxonomy term");
-    $tokens['node']['vocab']          = t("Name of top term's vocabulary");
-    $tokens['node']['vocab-raw']      = t("Unfiltered name of top term's vocabulary. WARNING - raw user input.");
-    $tokens['node']['vocab-id']       = t("ID of top term's vocabulary");
+
+    $tokens['node']['term']            = t("Name of top taxonomy term");
+    $tokens['node']['term-raw']        = t("Unfiltered name of top taxonomy term. WARNING - raw user input.");
+    $tokens['node']['term-id']         = t("ID of top taxonomy term");
+    $tokens['node']['vocab']           = t("Name of top term's vocabulary");
+    $tokens['node']['vocab-raw']       = t("Unfiltered name of top term's vocabulary. WARNING - raw user input.");
+    $tokens['node']['vocab-id']        = t("ID of top term's vocabulary");
 
     // Temporarily disabled -- see notes in node_token_values.
     // $tokens['node']['catpath']        = t("Full taxonomy tree for the topmost term");
 
-    $tokens['node']['yyyy']           = t("Node creation year (four digit)");
-    $tokens['node']['yy']             = t("Node creation year (two digit)");
-    $tokens['node']['month']          = t("Node creation month (full word)");
-    $tokens['node']['mon']            = t("Node creation month (abbreviated)");
-    $tokens['node']['mm']             = t("Node creation month (two digit, zero padded)");
-    $tokens['node']['m']              = t("Node creation month (one or two digit)");
-    $tokens['node']['ww']             = t("Node creation week (two digit)");
-    $tokens['node']['date']           = t("Node creation date (day of month)");
-    $tokens['node']['day']            = t("Node creation day (full word)");
-    $tokens['node']['ddd']            = t("Node creation day (abbreviation)");
-    $tokens['node']['dd']             = t("Node creation day (two digit, zero-padded)");
-    $tokens['node']['d']              = t("Node creation day (one or two digit)");
-    $tokens['node']['mod-????']       = t('All tokens for node creation dates can also be used with with the "mod-" prefix; doing so will use the modification date rather than the creation date.');
+    $tokens['node']['yyyy']            = t("Node creation year (four digit)");
+    $tokens['node']['yy']              = t("Node creation year (two digit)");
+    $tokens['node']['month']           = t("Node creation month (full word)");
+    $tokens['node']['mon']             = t("Node creation month (abbreviated)");
+    $tokens['node']['mm']              = t("Node creation month (two digit, zero padded)");
+    $tokens['node']['m']               = t("Node creation month (one or two digit)");
+    $tokens['node']['ww']              = t("Node creation week (two digit)");
+    $tokens['node']['date']            = t("Node creation date (day of month)");
+    $tokens['node']['day']             = t("Node creation day (full word)");
+    $tokens['node']['ddd']             = t("Node creation day (abbreviation)");
+    $tokens['node']['dd']              = t("Node creation day (two digit, zero-padded)");
+    $tokens['node']['d']               = t("Node creation day (one or two digit)");
+    $tokens['node']['mod-????']        = t('All tokens for node creation dates can also be used with with the "mod-" prefix; doing so will use the modification date rather than the creation date.');
 
-    $tokens['node']['menu']           = t("The name of the menu the node belongs to.");
-    $tokens['node']['menu-raw']       = t("The name of the menu the node belongs to. WARNING - raw user input.");
-    $tokens['node']['menupath']       = t("The menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /.");
-    $tokens['node']['menupath-raw']   = t("The unfiltered menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /. WARNING - raw user input.");
+    $tokens['node']['menu']            = t("The name of the menu the node belongs to.");
+    $tokens['node']['menu-raw']        = t("The name of the menu the node belongs to. WARNING - raw user input.");
+    $tokens['node']['menupath']        = t("The menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /.");
+    $tokens['node']['menupath-raw']    = t("The unfiltered menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /. WARNING - raw user input.");
     return $tokens;
   }
 }
