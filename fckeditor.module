@@ -282,7 +282,7 @@ function fckeditor_process_textarea($element) {
   $conf = $profile->settings;
 
   if ($conf['allow_user_conf']=='t') {
-    foreach (array('default', 'show_toggle', 'popup', 'skin', 'toolbar', 'expand', 'width', 'lang', 'auto_lang') as $setting) {
+    foreach (array('default', 'show_toggle', 'show_fieldnamehint', 'popup', 'skin', 'toolbar', 'expand', 'width', 'lang', 'auto_lang') as $setting) {
       $conf[$setting] = fckeditor_user_get_setting($user, $profile, $setting);
     }
   }
@@ -328,7 +328,7 @@ function fckeditor_process_textarea($element) {
     $wysiwyg_link .= "\n<script type=\"text/javascript\">";
     $wysiwyg_link .= "window.setTimeout(\"CreateToggle('{$element['#id']}','{$js_id}', $fckeditor_on);\",100);\n</script>";
     //settings are saved as strings, not booleans
-    if ($profile->settings['show_toggle'] == 't') {
+    if ($conf['show_toggle'] == 't') {
       // Make sure to append to #suffix so it isn't completely overwritten
       $element['#suffix'] .= $wysiwyg_link;
     }
@@ -365,7 +365,7 @@ function fckeditor_process_textarea($element) {
     if ($force_simple_toolbar) {
       $toolbar = FCKEDITOR_FORCE_SIMPLE_TOOLBAR_NAME;
     }
-    $textarea_id = $profile->settings['show_toggle'] == 't' ? $js_id : $element['#id'];
+    $textarea_id = $conf['show_toggle'] == 't' ? $js_id : $element['#id'];
     $element['#suffix'] .= "\n<script type=\"text/javascript\">
 var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
 ". $js_id .".BasePath	= '". $module_full_path ."/fckeditor/';
@@ -519,7 +519,7 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
   }
 
   // display the field id for administrators
-  if (user_access('administer fckeditor')) {
+  if (user_access('administer fckeditor') && $conf['show_fieldnamehint'] == 't') {
     module_load_include('admin.inc', 'fckeditor');
     
     $element['#suffix'] .= t('<div class="textarea-identifier description">The ID for !excluding this element is %fieldname</div>', array(
@@ -587,6 +587,7 @@ function fckeditor_user_get_setting($user, $profile, $setting) {
   $default = array(
   'default' => 't',
   'show_toggle' => 't',
+  'show_fieldnamehint' => 't',
   'popup' => 'f',
   'skin' => 'default',
   'toolbar' => 'default',
@@ -595,13 +596,12 @@ function fckeditor_user_get_setting($user, $profile, $setting) {
   'lang' => 'en',
   'auto_lang' => 't',
   );
-  $settings = $profile->settings;
 
-  if ($settings['allow_user_conf']) {
-    $status = isset($user->{"fckeditor_". $setting}) ? $user->{"fckeditor_". $setting} : (isset($settings[$setting]) ? $settings[$setting] : $default[$setting]);
+  if ($profile->settings['allow_user_conf']) {
+    $status = isset($user->{'fckeditor_'. $setting}) ? $user->{'fckeditor_'. $setting} : (isset($profile->settings[$setting]) ? $profile->settings[$setting] : $default[$setting]);
   }
   else {
-    $status = isset($settings[$setting]) ? $settings[$setting] : $default[$setting];
+    $status = isset($profile->settings[$setting]) ? $profile->settings[$setting] : $default[$setting];
   }
 
   return $status;

@@ -65,6 +65,15 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
       '#description' => t('Whether or not to show the disable/enable rich text editor toggle below the textarea. Works only if FCKeditor is not running a popup window (see below).'),
       );
 
+      if (user_access('administer fckeditor')) {
+        $form['fckeditor']['fckeditor_show_fieldnamehint'] = array(
+      	'#type' => 'select',
+      	'#title' => t('Show field name hint below each rich text editor'),
+      	'#default_value' => !empty($user->fckeditor_show_fieldnamehint) ? $user->fckeditor_show_fieldnamehint : 't',
+      	'#options' => array('t' => t('true'), 'f' => t('false')),
+        );
+      }
+
       $form['fckeditor']['fckeditor_popup'] = array(
       '#type' => 'select',
       '#title' => t('Use FCKeditor in a popup window'),
@@ -130,6 +139,7 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
     return array(
     'fckeditor_default' => $edit['fckeditor_default'],
     'fckeditor_show_toggle' => $edit['fckeditor_show_toggle'],
+    'fckeditor_show_fieldnamehint' => $edit['fckeditor_show_fieldnamehint'],
     'fckeditor_popup' => $edit['fckeditor_popup'],
     'fckeditor_skin' => $edit['fckeditor_skin'],
     'fckeditor_toolbar' => $edit['fckeditor_toolbar'],
