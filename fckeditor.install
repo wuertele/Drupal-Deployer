@@ -162,6 +162,166 @@ function fckeditor_schema() {
 }
 
 /**
+ * Implementation of hook_requirements().
+ * 
+ * This hook will issue warnings if:
+ * - The FCKeditor source files are not found
+ * - The FCKeditor source files are out of date
+ * - Quick upload and/or the built-in file browser are used and $cookie_domain is not set
+ */
+function fckeditor_requirements($phase) {
+  $requirements = array();
+  
+  if ($phase == 'runtime') {
+    $requirements['fckeditor'] = array(
+      'title' => t('FCKeditor'),
+      'value' => t('Unknown'),
+    );
+    
+    $available_version_error = '';
+    
+    if (!_fckeditor_requirements_isinstalled()) {
+      $modulepath = drupal_get_path('module', 'fckeditor');
+      $sourcepath = $modulepath.'/fckeditor/';
+      
+      $requirements['fckeditor']['description'] = t('FCKeditor was not found at %sourcepath', array('%sourcepath' => $sourcepath));
+      $requirements['fckeditor']['severity'] = REQUIREMENT_ERROR;
+    }
+    elseif (($installed_version = _fckeditor_requirements_getinstalledversion()) === null) {
+      $requirements['fckeditor']['description'] = t('FCKeditor version could not be determined');
+      $requirements['fckeditor']['severity'] = REQUIREMENT_INFO;
+    }
+    elseif (($available_version = _fckeditor_requirements_getavailableversion($available_version_error)) === null) {
+      $requirements['fckeditor']['description'] = t('The latest available FCKeditor version could not be determined, the HTTP error while fetching the version information was: @error', array('@error' => $available_version_error));
+      $requirements['fckeditor']['severity'] = REQUIREMENT_INFO;
+    }
+    elseif (version_compare($installed_version, $available_version, '<')) {
+      $requirements['fckeditor']['severity'] = REQUIREMENT_WARNING;
+      $requirements['fckeditor']['description'] = t('The latest available FCKeditor version is @version. You can download it at !fcklink.', array('@version' => $available_version, '!fcklink' => l('FCKeditor.net', 'http://fckeditor.net')));
+    }
+    elseif (_fckeditor_requirements_cookiedomainrequired() && !_fckeditor_requirements_cookiedomainset()) {
+      $requirements['fckeditor']['severity'] = REQUIREMENT_ERROR;
+      $requirements['fckeditor']['description'] = t('You are using a feature that requires $cookie_domain to be set, but it is not set in your settings.php.');
+    } else {
+      $requirements['fckeditor']['severity'] = REQUIREMENT_OK;
+    }
+    
+    if ($installed_version !== null) {
+      $requirements['fckeditor']['value'] = $installed_version;
+    }
+  }
+  
+  return $requirements;
+}
+
+/**
+ * Determines whether the FCKeditor sources are present
+ * 
+ * It checks if fckeditor.js is present.
+ * 
+ * This function is used by fckeditor_requirements()
+ *
+ * @return boolean True iff FCKeditor is installed
+ */
+function _fckeditor_requirements_isinstalled() {
+  $modulepath = drupal_get_path('module', 'fckeditor');
+  $jspath = $modulepath.'/fckeditor/fckeditor.js';
+  
+  return file_exists($jspath);
+}
+
+/**
+ * Fetches the version of the installed FCKeditor sources
+ * 
+ * It tries to locate the version of the FCKeditor sources in
+ * fckeditor.js
+ * 
+ * This function is used by fckeditor_requirements()
+ *
+ * @return string Version number (eg. 2.6.2) of FCKeditor. Null if not found in fckeditor.js
+ */
+function _fckeditor_requirements_getinstalledversion() {
+  $modulepath = drupal_get_path('module', 'fckeditor');
+  $jspath = $modulepath.'/fckeditor/fckeditor.js';
+  
+  $configcontents = file_get_contents($jspath);
+  $matches = array();
+  if (preg_match('#FCKeditor\.prototype\.Version\s*=\s*\'([\d\.]+)\'\s*;#', $configcontents, $matches)) {
+    return $matches[1];
+  }
+  return null;
+}
+
+/**
+ * Fetches the version of the latest version of FCKeditor available
+ * 
+ * It tries to locate the latest version of FCKeditor in the source of
+ * http://fckeditor.net/. It might fail when the connection fails.
+ * 
+ * This function is used by fckeditor_requirements()
+ *
+ * @param $error string This string will be filled with the error reason or be untouched if no error occured
+ * @return string Version number (eg. 2.6.2) of the latest version of FCKeditor. Null if an error occured
+ */
+function _fckeditor_requirements_getavailableversion(&$error) {
+  $fckpage = drupal_http_request('http://www.fckeditor.net');
+  $matches = array();
+  if (!isset($fckpage->error) && preg_match('#class="release_number">\s*([\d\.]+)</#', $fckpage->data, $matches)) {
+    return $matches[1];
+  }
+  else {
+    $error = $fckpage->error;
+  }
+  return null;
+}
+
+/**
+ * Checks if any profile requires an explicit setting of $cookie_domain
+ * in settings.php
+ * 
+ * %cookie_domain is required when the internal filebrowser or quick upload is used
+ * 
+ * This function is used by fckeditor_requirements()
+ *
+ * @return boolean True iff any profile requires $cookie_domain
+ */
+function _fckeditor_requirements_cookiedomainrequired() {
+  module_load_include('module', 'fckeditor');
+  $profiles = fckeditor_profile_load();
+  
+  foreach ($profiles as $profile) {
+    if ((isset($profile->settings['filebrowser']) && $profile->settings['filebrowser'] == 'builtin') || (isset($profile->settings['quickupload']) && $profile->settings['quickupload'] == 't')) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Checks if $cookie_domain has been set
+ * 
+ * It has to include settings.php again because conf_init() sets
+ * $cookie_domain regardless of its presence in settings.php, so
+ * simply checking $GLOBALS['cookie_domain'] is not possible.
+ * 
+ * This function is used by fckeditor_requirements()
+ *
+ * @return boolean True iff $cookie_domain was set in settings.php
+ */
+function _fckeditor_requirements_cookiedomainset() {
+  if (file_exists('./'. conf_path() .'/settings.php')) {
+    $settings = file_get_contents('./'. conf_path() .'/settings.php');
+    
+    if (preg_match('#^\s*\$cookie_domain#m', $settings)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
  * Update from 6.x-1.0 to 6.x-1.1
  *
  */
@@ -336,7 +496,7 @@ function fckeditor_update_6201() {
 }
 
 /**
- * Implementation of hook_uninstall()
+ * Implementation of hook_uninstall().
  */
 function fckeditor_uninstall() {
   drupal_uninstall_schema('fckeditor');
