@@ -34,5 +34,17 @@ function user_register_notify_settings() {
     '#required' => TRUE,
     '#description' => t('Customize the body of the user registration notification email.') .' '. t('Available variables are:') .' !user_name, !user_mail, !user_view, !user_edit, !user_delete, !site, !uri, !uri_brief, !date, !profile.'
   );
+  $alert_options = array(
+    'create' => 'Receive Email upon user creation.',
+    'update' => 'Receive Email upon user creation and update.',
+    );
+  $form['user_register_notify_alert'] = array(
+    '#type' => 'radios',
+    '#options' => $alert_options,
+    '#title' => t('Page Sort order'),
+    '#default_value' => variable_get('user_register_notify_alert', 'create'),
+    '#description' => t('When to send an Email'),
+    '#required' => false,
+  );
   return system_settings_form($form);
 }

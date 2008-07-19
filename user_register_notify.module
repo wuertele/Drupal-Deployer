@@ -38,6 +38,46 @@ function user_register_notify_menu() {
   return $items;
 }
 
+function user_register_notify_setup_email(&$edit, &$account) {
+  // Notify administrator of new user only if this is not first user and
+  // if visitors can create accounts without administrator's approval.
+  // In case when accounts must be created with administrator's approval
+  // there is already a 'pending approval' e-mail notification.
+  if ($account->uid != 1 && (variable_get('user_register', 1) == 1 ? $account->status : !$account->status)) {
+    $from = variable_get('site_mail', ini_get('sendmail_from'));
+    $to = variable_get('user_register_notify_mailto', $from);
+    $params = array('account' => $account);
+
+    drupal_mail(
+      'user_register_notify',
+      'user-register-notify-admin',
+      $to,
+      language_default(),
+      $params,
+      $from,
+      true // Automatically send
+      );
+  }
+}
+
+
+/**
+ * Implementation of hook_user().
+ */
+function user_register_notify_user($op, &$edit, &$account, $category = NULL) {
+  switch ($op) {
+    case 'insert':
+      user_register_notify_setup_email(&$edit, &$account);
+      break;
+    case 'update':
+      if (variable_get('user_register_notify_alert', 'create') == 'update')
+        user_register_notify_setup_email(&$edit, &$account);
+      break;
+  }
+}
+
+
+
 function user_register_notify_mail($key, &$message, $params) {
 
   if ($key == 'user-register-notify-admin') {
