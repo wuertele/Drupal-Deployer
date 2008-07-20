@@ -100,6 +100,26 @@ function admin_menu_init() {
 }
 
 /**
+ * Suppress display of administration menu.
+ *
+ * This function should be called from within another module's page callback
+ * (preferably using module_invoke()) when the menu should not be displayed.
+ * This is useful for modules that implement popup pages or other special
+ * pages where the menu would be distracting or break the layout.
+ *
+ * @param $set
+ *   Defaults to TRUE.  If called before hook_footer, the menu will not be
+ *   displayed.  Calling with FALSE returns the suppression state.
+ */
+function admin_menu_suppress($set = TRUE) {
+  static $suppress = FALSE;
+  if (!empty($set)) {
+    $suppress = TRUE;
+  }
+  return $suppress;
+}
+
+/**
  * Implementation of hook_footer().
  *
  * Admin menu was previously output via hook_block(), but suffered from
@@ -118,7 +138,7 @@ function admin_menu_footer($main = 0) {
     variable_del('admin_menu_rebuild_links');
   }
 
-  if (!user_access('access administration menu')) {
+  if (!user_access('access administration menu') || admin_menu_suppress(FALSE)) {
     return;
   }
 

@@ -2,7 +2,7 @@
 
 $(document).ready(function() {
   // Apply margin-top if enabled; directly applying marginTop doesn't work in IE.
-  if (Drupal.settings.admin_menu.margin_top) {
+  if ($('#admin-menu').size() && Drupal.settings.admin_menu.margin_top) {
     $('body').addClass('admin-menu');
   }
 
