@@ -108,7 +108,15 @@ function fckeditor_profile_overview() {
             unset($rids[$rid]);
           }
         }        
-        $rows[] = array(array('data' => $p->name, 'valign' => 'top'), array('data' => implode("<br />\n", $rids)), array('data' => l(t('edit'), 'admin/settings/fckeditor/edit/'. urlencode($p->name)) .' '. l(t('delete'), 'admin/settings/fckeditor/delete/'. urlencode($p->name)), 'valign' => 'top'));
+        $rows[] = array(
+          array('data' => $p->name, 'valign' => 'top'), 
+          array('data' => implode("<br />\n", $rids)), 
+          array('data' => 
+            l(t('edit'), 'admin/settings/fckeditor/edit/'. urlencode($p->name)) .' '. 
+            l(t('clone'), 'admin/settings/fckeditor/clone/'. urlencode($p->name)) .' '.         
+            l(t('delete'), 'admin/settings/fckeditor/delete/'. urlencode($p->name)), 'valign' => 'top'
+          )
+        );
       }
     }
     $output .= "<h3>". t("Profiles") ."</h3>";
@@ -125,10 +133,40 @@ function fckeditor_profile_overview() {
   }
   else {
     $output .= "<h3>". t("Global Settings") ."</h3>";
-    $rows[] = array(array('data' => t('FCKeditor Global Profile'), 'valign' => 'top'), array('data' => l(t('edit'), 'admin/settings/fckeditor/editg') ." ". l(t('delete'), 'admin/settings/fckeditor/delete/FCKeditor Global Profile'), 'valign' => 'top'));
+    $rows[] = array(
+      array('data' => t('FCKeditor Global Profile'), 'valign' => 'top'), 
+      array('data' => l(t('edit'), 'admin/settings/fckeditor/editg') ." ". l(t('delete'), 'admin/settings/fckeditor/delete/FCKeditor Global Profile'), 'valign' => 'top')
+    );
     $output .= theme('table', array(t('Profile'), t('Operations')), $rows);
   }
   return $output;
+}
+
+/**
+ * Clone profile
+ */
+function fckeditor_admin_profile_clone_form($form_state, $oldprofile) {
+  return fckeditor_admin_profile_form($form_state, $oldprofile);
+}
+
+function fckeditor_admin_profile_clone_form_validate($form_state, $oldprofile) {
+  fckeditor_admin_profile_form_validate($form_state, $oldprofile);
+}
+
+function fckeditor_admin_profile_clone_form_submit($form, &$form_state) {
+  $edit =& $form_state['values'];
+  drupal_set_message(t('Your FCKeditor profile has been created.'));    
+  $settings = fckeditor_admin_values_to_settings($edit);
+  db_query('INSERT INTO {fckeditor_settings} (name, settings) VALUES ("%s", "%s")', $edit['name'], $settings);
+  fckeditor_rebuild_selectors($edit['name']);
+  if (!empty($edit['rids'])) {
+    foreach (array_keys($edit['rids']) as $rid) {
+      if ($edit['rids'][$rid]!=0) {
+        db_query('INSERT INTO {fckeditor_role} (name, rid) VALUES ("%s", %d)', $edit['name'], $rid);
+      }
+    }
+  }
+  $form_state['redirect'] = 'admin/settings/fckeditor';
 }
 
 /**
@@ -175,6 +213,9 @@ function fckeditor_admin_profile_form($form_state, $profile = null) {
     }
     $btn = t('Create profile');
   }
+  else if (arg(3) == 'clone') {
+    $btn = t('Create profile');
+  }
   else {
     $btn = t('Update profile');
   }
@@ -186,10 +227,41 @@ function fckeditor_admin_profile_form($form_state, $profile = null) {
   '#collapsed' => TRUE
   );
 
+  if (arg(3) == 'clone') {
+    //load all profiles to check their names
+    $profiles = fckeditor_profile_load();
+    $oldname = $profile->name;
+    $maxsize=128;   //default max name length
+    
+    $res=array();
+    $pat = "/^(?<name>.*?)_(?<n>[0-9]*)$/";
+    if (preg_match_all($pat, $oldname, $res)) {     // oldname like 'name_nr'
+      $name=$res['name'][0];
+      $num=$res['n'][0]+1;
+    }
+    else{
+      $name=$oldname;
+      $num=2;
+    }
+    
+    $newname=substr($name, 0, $maxsize-3) .'_'. $num;   // +limit
+    while (isset($profiles[$newname])) {            //find next free number
+      $num++;
+      $newname=substr($name, 0, $maxsize-3) .'_'. $num;
+
+    }   
+    //dont clone rids
+    $profile->settings['rids']=array();
+    $profile->rids=array();
+  }
+  else{
+     $newname = $profile->name;
+  }
+    
   $form['basic']['name'] = array(
   '#type' => 'textfield',
   '#title' => t('Profile name'),
-  '#default_value' => !empty($profile->name) ? $profile->name : '',
+  '#default_value' => !empty($profile->name) ? $newname : '',
   '#size' => 40,
   '#maxlength' => 128,
   '#description' => t('Enter a name for this profile. This name is only visible within the fckeditor administration page.'),
