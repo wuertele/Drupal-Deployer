@@ -29,7 +29,7 @@ Requirements
 ------------
   - Drupal 6.x
   - PHP 4.3.0 or greater
-  - FCKeditor 2.3.x or greater (http://www.fckeditor.net/)
+  - FCKeditor 2.5.x or greater (http://www.fckeditor.net/)
 
 Configuration
 -------------------
@@ -134,26 +134,12 @@ directory on the server and add new content to that directory
       in your fckeditor module directory, the file should be in:
 
           sites/all/modules/fckeditor/fckeditor/editor/filemanager/connectors/php/config.php
-          (FCKeditor 2.5+)
-
-          or
-
-          sites/all/modules/fckeditor/fckeditor/editor/filemanager/browser/default/connectors/php/config.php
-          and
-          sites/all/modules/fckeditor/fckeditor/editor/filemanager/upload/php/config.php
-          (FCKeditor 2.3.x - 2.4.x)
 
       In this file(s) you will need to enable the file browser by adding one 
       line that includes file with the special authentication function for 
       Drupal (filemanager.config.php). Add this code:
 
-          require_once "../../../../../filemanager.config.php";
-          (FCKeditor 2.5+)
-
-      or
-
-          require_once "D:\\xampp\\htdocs\\drupal\\sites\\all\\modules\\fckeditor\\filemanager.config.php"
-          (FCKeditor 2.3.x - 2.4.x)
+          require_once '../../../../../filemanager.config.php';
 
       straight below this line:
 
@@ -162,11 +148,10 @@ directory on the server and add new content to that directory
       The config.php file also holds some other important settings, please 
       take a look at it and adjust it to your needs (optional).
       
-   2. As of Drupal 5.2, additional step is required: locate file named 
-      settings.php inside your drupal directory (usually sites/default/settings.php) 
-      and set $cookie_domain variable to the appropiate domain 
-      (remember to uncomment that line). If you not do this, FCKeditor will 
-      claim that file browser is disabled
+   2. Locate file named settings.php inside your drupal directory 
+      (usually sites/default/settings.php) and set $cookie_domain variable to the
+      appropiate domain (remember to uncomment that line). If you not do this,
+      FCKeditor will claim that file browser is disabled
       
    3. Enabling file uploads is a security risk. That's why you have to grant a 
       separate permission to enable the file browser to certain groups.
