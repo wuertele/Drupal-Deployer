@@ -656,7 +656,9 @@ function fckeditor_admin_profile_form_submit($form, &$form_state) {
   fckeditor_rebuild_selectors($edit['name']);
   if (!empty($edit['rids'])) {
     foreach (array_keys($edit['rids']) as $rid) {
-      db_query('INSERT INTO {fckeditor_role} (name, rid) VALUES ("%s", %d)', $edit['name'], $rid);
+      if ($edit['rids'][$rid]!=0) {
+      	db_query('INSERT INTO {fckeditor_role} (name, rid) VALUES ("%s", %d)', $edit['name'], $rid);
+      }
     }
   }
   
