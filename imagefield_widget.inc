@@ -164,7 +164,7 @@ function imagefield_widget_widget_validate($element) {
  * FormAPI theme function. Theme the output of an image field.
  */
 function theme_imagefield_widget(&$element) {
-  return $element['#children'];
+  return theme('form_element', $element, $element['#children']);
 }
 
 
