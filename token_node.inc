@@ -67,26 +67,35 @@ function node_token_values($type, $object = NULL, $options = array()) {
         $values['mod-d']          = date('j', $date);
       }
 
+      // Try to get the menu data.
+      $mlid = db_result(db_query("SELECT mlid FROM {menu_links} WHERE link_path = '%s'", 'node/'. $node->nid));
+
       // Now get the menu related information.
-      if (!empty($node->menu['mlid'])) {
+      if (!empty($mlid) || !empty($node->menu['mlid']) || !empty($node->menu['plid'])) {
+        $menu_link = menu_link_load($mlid);
         $menus = menu_get_menus();
-        $menu_name = $node->menu['menu_name'];
-        $menu_title = $menus[$menu_name];
-        $trail_raw = _menu_titles($node->menu, $node->nid);
+        $menu = $menus[$menu_link['menu_name']];
+        $trail_raw = _menu_titles($menu_link, $node->nid);
+
         $trail = array();
         foreach ($trail_raw as $title) {
           $trail[] = check_plain($title);
         }
-        $values['menupath']     = implode('/', $trail);
-        $values['menupath-raw'] = implode('/', $trail_raw);
-        $values['menu']         = check_plain($menu_title);
-        $values['menu-raw']     = $menu_title;
+
+        $values['menupath']            = implode('/', $trail);
+        $values['menupath-raw']        = implode('/', $trail_raw);
+        $values['menu']                = check_plain($menu);
+        $values['menu-raw']            = $menu;
+        $values['menu-link-title']     = check_plain($menu_link['title']);
+        $values['menu-link-title-raw'] = $menu_link['link_title'];
       }
       else {
-        $values['menu']         = '';
-        $values['menu-raw']     = '';
-        $values['menupath']     = '';
-        $values['menupath-raw'] = '';
+        $values['menu']                = '';
+        $values['menu-raw']            = '';
+        $values['menupath']            = '';
+        $values['menupath-raw']        = '';
+        $values['menu-link-title']     = '';
+        $values['menu-link-title-raw'] = '';
       }
 
       // And now taxonomy, which is a bit more work. This code is adapted from
@@ -199,10 +208,13 @@ function node_token_list($type = 'all') {
     $tokens['node']['d']               = t("Node creation day (one or two digit)");
     $tokens['node']['mod-????']        = t('All tokens for node creation dates can also be used with with the "mod-" prefix; doing so will use the modification date rather than the creation date.');
 
-    $tokens['node']['menu']            = t("The name of the menu the node belongs to.");
-    $tokens['node']['menu-raw']        = t("The name of the menu the node belongs to. WARNING - raw user input.");
-    $tokens['node']['menupath']        = t("The menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /.");
-    $tokens['node']['menupath-raw']    = t("The unfiltered menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /. WARNING - raw user input.");
+    $tokens['node']['menu']                = t("The name of the menu the node belongs to.");
+    $tokens['node']['menu-raw']            = t("The name of the menu the node belongs to. WARNING - raw user input.");
+    $tokens['node']['menupath']            = t("The menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /.");
+    $tokens['node']['menupath-raw']        = t("The unfiltered menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /. WARNING - raw user input.");
+    $tokens['node']['menu-link-title']     = t("The text used in the menu as link text for this item.");
+    $tokens['node']['menu-link-title-raw'] = t("The unfiltered text used in the menu as link text for this item. WARNING - raw user input.");
+
     return $tokens;
   }
 }
