@@ -1,8 +1,73 @@
 <?php
+
+
+
+/**
+ * Guess the absolute server path to the document root
+ * Usually it should return $_SERVER['DOCUMENT_ROOT']
+ *
+ * @todo Improve me!!
+ * Returns absolute path or false on failure
+ * 
+ * @return string|boolean
+ */
+function fckeditor_get_document_root_full_path() {
+  $found=0;
+  $index_dir  = realpath(dirname($_SERVER['SCRIPT_FILENAME'])); // {/dir1/dir2/home/drupal}/index.php
+  if (getcwd() == $index_dir) { $found++;}
+  $drupal_dir = base_path();
+  $index_dir  = str_replace('\\', "/", $index_dir);
+  $drupal_dir = str_replace('\\', "/", $drupal_dir);
+  $document_root_dir   = $index_dir .'/'. str_repeat('../', substr_count($drupal_dir, '/')-1);
+  $document_root_dir   = realpath($document_root_dir);
+  $document_root_dir   = rtrim($document_root_dir, '/\\');
+  if ($document_root_dir == $_SERVER['DOCUMENT_ROOT']) { $found++;}
+  $document_root_dir   = str_replace('\\', '/', $document_root_dir);
+
+  if ($document_root_dir != '') { $found++;}
+  if (file_exists($document_root_dir)) { $found++;}
+  if (file_exists($document_root_dir. base_path() . 'includes/bootstrap.inc')) { $found++;}
+
+  if ($found >= 3) {
+    return $document_root_dir;
+  }
+  else{
+    return FALSE;
+  }
+}
+
+/**
+ * Emulates the asp Server.mapPath function.
+ * Given an url path return the physical directory that it corresponds to.
+ *
+ * Returns absolute path or false on failure
+ * 
+ * @param string $path
+ * @return @return string|boolean
+ */
+function fckeditor_resolve_url( $path ) {
+  if ( function_exists( 'apache_lookup_uri' ) )
+  {
+    $info = @apache_lookup_uri( $path ) ;
+    if (!$info) {
+      return FALSE;
+    }
+    return $info->filename . $info->path_info ;
+  }
+
+  $document_root = fckeditor_get_document_root_full_path();
+  if ( $document_root !== FALSE ) {
+    return $document_root . $path;
+  }
+  
+  return FALSE;
+}
+
 function fckeditor_load_toolbar_options() {
   $arr = array();
   $module_drupal_path = drupal_get_path('module', 'fckeditor');
-  $fckconfig_js = $module_drupal_path .'/fckeditor/fckconfig.js';
+  $editor_local_path  = fckeditor_path(TRUE);
+  $fckconfig_js = $editor_local_path .'/fckconfig.js';
   $fckeditor_config_js = $module_drupal_path .'/fckeditor.config.js';
   if (file_exists($fckconfig_js) && is_readable($fckconfig_js)) {
     $fp = @fopen($fckconfig_js, "r");
@@ -45,8 +110,8 @@ function fckeditor_load_toolbar_options() {
 
 function fckeditor_load_skin_options() {
   $arr = array();
-  $module_drupal_path = drupal_get_path('module', 'fckeditor');
-  $skin_dir = $module_drupal_path .'/fckeditor/editor/skins';
+  $editor_local_path  = fckeditor_path(TRUE);
+  $skin_dir     = $editor_local_path .'/editor/skins';
   if (is_dir($skin_dir)) {
     $dh = @opendir($skin_dir);
     if (FALSE !== $dh) {
@@ -75,8 +140,8 @@ function fckeditor_load_skin_options() {
 
 function fckeditor_load_lang_options() {
   $arr = array();
-  $module_drupal_path = drupal_get_path('module', 'fckeditor');
-  $lang_dir = $module_drupal_path .'/fckeditor/editor/lang';
+  $editor_local_path  = fckeditor_path(TRUE);
+  $lang_dir     = $editor_local_path .'/editor/lang';
   if (is_dir($lang_dir)) {
     $dh = @opendir($lang_dir);
     if (FALSE !== $dh ) {

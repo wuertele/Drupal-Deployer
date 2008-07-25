@@ -35,18 +35,26 @@
  */
 function fckeditor_admin_main() {
   $module_drupal_path = drupal_get_path('module', 'fckeditor');
-  $fckconfig_file = $module_drupal_path .'/fckeditor/fckconfig.js';
-  if (!file_exists($fckconfig_file)) {
+  $editor_path        = fckeditor_path(TRUE);
+  $fckconfig_file = $editor_path .'/fckconfig.js';
+  if (!file_exists($fckconfig_file)) {    
     drupal_set_message(t('checking for %filename', array('%filename' => $fckconfig_file)));
     drupal_set_message(
-    t('The FCKeditor component is not installed correctly. Please go to the !fckeditorlink to download the latest version. After that you must extract the files to %modulepath and make sure that the directory %modulesubdir and the file %modulefile exist. Refer to the !readme for more information.',
+    t('The FCKeditor component is not installed correctly. Please go to the !fckeditorlink to download the latest version. After that you must extract the files to %fckeditorpath and make sure that the directory %fckeditorsubdir and the file %fckeditorfile exist. Refer to the !readme for more information.',
     array(
     '!fckeditorlink' => l(t('FCKeditor homepage'), 'http://www.fckeditor.net/download'),
     '!readme' => l('readme.txt', 'admin/help/fckeditor'),
-    '%modulepath' => base_path() . $module_drupal_path .'/fckeditor/',
-    '%modulesubdir' => base_path() . $module_drupal_path .'/fckeditor/editor',
-    '%modulefile' => base_path() . $module_drupal_path .'/fckeditor/fckeditor.js')),
+    '%fckeditorpath' => $editor_path .'/fckeditor/',
+    '%fckeditorsubdir' => $editor_path .'/editor',
+    '%fckeditorfile' => $editor_path .'/fckeditor.js')),
     'error');
+    
+    drupal_set_message(
+    t('If you have FCKeditor already installed please edit !editg and update FCKeditor path.',
+    array(
+      '!editg' => l(t('FCKeditor Global Profile'), 'admin/settings/fckeditor/editg'))
+    ), "warning");
+
     return FALSE;
   }
   
@@ -517,7 +525,7 @@ function fckeditor_admin_profile_form($form_state, $profile = null) {
   '#title' => t('Predefined styles'),
   '#default_value' => !empty($profile->settings['css_style']) ? $profile->settings['css_style'] : 'theme',
   '#options' => array('theme' => t('use theme fckstyles.xml'), 'self' => t('define path to fckstyles.xml'), 'default' => t('FCKeditor default')),
-  '#description' => t('Define the location of <code>fckstyles.xml</code> file. It is used by the &quot;Style&quot; dropdown list available in the Default toolbar.<br />Copy !fckstyles.xml inside your theme directory (<code>!theme</code>) and adjust it to your needs.', array('!fckstyles.xml' => drupal_get_path('module', 'fckeditor') .'/fckeditor/fckstyles.xml', '!theme' => path_to_theme() .'/fckstyles.xml'))
+  '#description' => t('Define the location of <code>fckstyles.xml</code> file. It is used by the &quot;Style&quot; dropdown list available in the Default toolbar.<br />Copy !fckstyles.xml inside your theme directory (<code>!theme</code>) and adjust it to your needs.', array('!fckstyles.xml' => fckeditor_path(TRUE) .'/fckstyles.xml', '!theme' => path_to_theme() .'/fckstyles.xml'))
   );
 
   $form['css']['styles_path'] = array(
@@ -738,6 +746,7 @@ function fckeditor_admin_profile_form_submit($form, &$form_state) {
 }
 
 function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
+  module_load_include('lib.inc', 'fckeditor');
   if ($mode == 'edit') {
     $profile = fckeditor_profile_load('FCKeditor Global Profile');
     
@@ -787,7 +796,7 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
   else {
     $form['common']['rank']['#description'] .= t('You haven\'t assigned the <code>!access1</code> !permissions yet.', array('!access1' => t('access fckeditor'), '!permissions' => l(t('permissions'), 'admin/user/permissions')));
   }
-
+  
   $form['fckeditor_exclude_settings'] = array(
   '#type' => 'fieldset',
   '#title' => t('Visibility settings'),
@@ -827,6 +836,51 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
   '#description' => t('Enter the paths to the textarea fields on which you want to force the simplified toolbar.') .' '. t('Paths are formed by appending the field name to the path of the page, separated by a dot. Please see the !helppagelink for more information about defining field names.', array('!helppagelink' => l(t('help page'), 'admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
   );
   
+  $form['fckeditor_advanced_settings'] = array(
+  '#type' => 'fieldset',
+  '#title' => t('Advanced settings'),
+  '#collapsible' => TRUE,
+  '#collapsed' => TRUE,
+  );
+  
+  $module_drupal_path = drupal_get_path('module', 'fckeditor');
+
+  $form['fckeditor_advanced_settings']['fckeditor_path'] = array(
+  '#type' => 'textfield',
+  '#title' => t('Path to FCKeditor'),
+  '#default_value' =>  isset($profile->settings['fckeditor_path']) ? $profile->settings['fckeditor_path'] : '%m/fckeditor',
+  '#size' => 40,
+  '#maxlength' => 128,
+  '#description' => t('Path to FCKeditor (the HTML editor, downloaded from !fckeditornet) relative to the document root.
+    <br />Available wildcard characters:
+    <br/><strong>%b</strong> - base URL path of the Drupal installation (!base).
+    <br/><strong>%m</strong> - base URL path where FCKeditor module is stored (!files).
+    <br />Current path: !path', 
+      array(
+      '!path' => fckeditor_path(FALSE),
+      '!base' => base_path(),
+      '!files' => base_path() . $module_drupal_path ,
+      '!fckeditornet' => l('www.fckeditor.net', 'http://www.fckeditor.net/download')
+      )
+    ),
+  '#required' => TRUE
+  ); 
+
+  $form['fckeditor_advanced_settings']['fckeditor_local_path'] = array(
+  '#type' => 'textfield',
+  '#title' => t('Local path to FCKeditor'),
+  '#default_value' =>  isset($profile->settings['fckeditor_local_path'])?$profile->settings['fckeditor_local_path']:'',
+  '#size' => 40,
+  '#maxlength' => 128,
+  '#description' => t('The path to the local directory (on the server) which points to the path defined above. Enter either an absolute server path or path relative to index.php.<br />If empty, FCKeditor module will try to find the right path.
+    <br />Current path: !path', 
+      array(
+    '!path' => fckeditor_path(TRUE),
+      )
+    ),
+  ); 
+  
+  
   $form['submit'] = array(
   '#type' => 'submit',
   '#value' => $btn
@@ -850,6 +904,7 @@ function fckeditor_admin_global_profile_form_validate($form, $form_state) {
 }
 
 function fckeditor_admin_global_profile_form_submit($form, &$form_state) {
+  module_load_include('lib.inc', 'fckeditor');
   $edit =& $form_state['values'];
   $edit['name'] = 'FCKeditor Global Profile';
   
@@ -861,6 +916,21 @@ function fckeditor_admin_global_profile_form_submit($form, &$form_state) {
     db_query('DELETE FROM {fckeditor_settings} WHERE name = "%s"', $edit['_profile']->name);
     db_query('DELETE FROM {fckeditor_role} WHERE name = "%s"', $edit['_profile']->name);
   }
+  
+  //strip whitespaces
+  $edit['fckeditor_local_path'] = trim($edit['fckeditor_local_path']);
+  if (empty($edit['fckeditor_local_path'])) {
+    $edit['fckeditor_local_path'] = '';
+  }
+  
+  //strip slash from the end
+  $edit['fckeditor_path'] = trim(rtrim($edit['fckeditor_path'], "/"));
+  if ($edit['fckeditor_path'] && 0 !== strpos($edit['fckeditor_path'], "/") && 0 !== strpos($edit['fckeditor_path'], "%")) {
+    //ensure that slash is at the beginning
+    $edit['fckeditor_path'] = "/". $edit['fckeditor_path'];
+  }
+  //no slash at the end
+  $edit['fckeditor_local_path'] = trim(rtrim($edit['fckeditor_local_path'], "/"));
   
   $settings = fckeditor_admin_values_to_settings($edit);
   db_query('INSERT INTO {fckeditor_settings} (name, settings) VALUES ("%s", "%s")', $edit['name'], $settings);

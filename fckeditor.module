@@ -355,9 +355,11 @@ function fckeditor_process_textarea($element) {
     }
     // setting some variables
     $module_drupal_path = drupal_get_path('module', 'fckeditor');
-    $module_full_path = $host . $module_drupal_path;
+    $module_full_path   = $host . $module_drupal_path;
+    $editor_path        = fckeditor_path(FALSE);
+    $editor_local_path  = fckeditor_path(TRUE);
     // get the default drupal files path
-    $files_path = $host . file_directory_path();
+    $files_path         = $host . file_directory_path();
     // module_drupal_path:
     //  'modules/fckeditor' (length=17)
     // module_full_path:
@@ -371,8 +373,9 @@ function fckeditor_process_textarea($element) {
     $height = $element['#rows'] * 14 + 140;
 
     if (!$is_running) {
-      drupal_add_js($module_drupal_path .'/fckeditor/fckeditor.js');
       drupal_add_js($module_drupal_path .'/fckeditor.utils.js');
+      /* In D6 drupal_add_js() can't add external JS, in D7 use drupal_add_js(...,'externeal')*/
+      drupal_set_html_head('<script type="text/javascript" src="'.$editor_path .'/fckeditor.js?I"></script>');
       $is_running = TRUE;
     }
 
@@ -389,7 +392,8 @@ function fckeditor_process_textarea($element) {
     $textarea_id = $conf['show_toggle'] == 't' ? $js_id : $element['#id'];
     $element['#suffix'] .= "\n<script type=\"text/javascript\">
 var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
-". $js_id .".BasePath	= '". $module_full_path ."/fckeditor/';
+". $js_id .".BasePath	= '". $editor_path ."/';
+". $js_id .".Config['PluginsPath']	= '". $module_full_path ."/plugins/';
 ". $js_id .".Config['CustomConfigurationsPath'] = \"". $module_full_path ."/fckeditor.config.js\";
 ". $js_id .".Config['TextareaID'] = \"". $element['#id'] ."\";";
 
@@ -424,10 +428,20 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
       // load variables used by both quick upload and filebrowser
       // and assure that the $_SESSION variables are loaded
       if ($quickupload || $filebrowser == 'builtin') {
-        $connector_path = $module_drupal_path ."/fckeditor/editor/filemanager/connectors/php/connector.php" ;
-        $connector_path = file_exists($connector_path) ? "../../connectors/php/connector.php" : "connectors/php/connector.php" ;
-        $upload_path = $module_drupal_path ."/fckeditor/editor/filemanager/connectors/php/upload.php" ;
-        $upload_path = file_exists($upload_path) ? "/fckeditor/editor/filemanager/connectors/php/upload.php" : "/fckeditor/editor/filemanager/upload/php/upload.php" ;
+        if (file_exists($editor_local_path ."/editor/filemanager/connectors/php/connector.php")) {
+          $connector_path = $editor_path ."/editor/filemanager/connectors/php/connector.php" ;
+        }
+        else if(file_exists($editor_local_path ."/editor/filemanager/upload/php/connector.php")){
+          $connector_path = $editor_path ."/editor/filemanager/upload/php/connector.php";
+        }
+
+        if (file_exists($editor_local_path ."/editor/filemanager/connectors/php/upload.php")) {
+          $upload_path = $editor_path ."/editor/filemanager/connectors/php/upload.php" ;
+        }
+        else if(file_exists($editor_local_path ."/editor/filemanager/upload/php/upload.php")){
+          $upload_path = $editor_path ."/editor/filemanager/upload/php/upload.php";
+        }
+
         if (!empty($profile->settings['UserFilesPath'])) $_SESSION['FCKeditor']['UserFilesPath'] = strtr($profile->settings['UserFilesPath'], array("%f" => file_directory_path(), "%u" => $user->uid, "%b" => $host));
         if (!empty($profile->settings['UserFilesAbsolutePath'])) $_SESSION['FCKeditor']['UserFilesAbsolutePath'] = strtr($profile->settings['UserFilesAbsolutePath'], array("%f" => file_directory_path(), "%u" => $user->uid, "%b" => base_path(), "%d" => $_SERVER['DOCUMENT_ROOT']));
         if (variable_get('file_downloads', '') == FILE_DOWNLOADS_PRIVATE) {
@@ -440,9 +454,9 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
         $element['#suffix'] .= $js_id .".Config['LinkUpload'] = true;\n";
         $element['#suffix'] .= $js_id .".Config['ImageUpload'] = true;\n";
         $element['#suffix'] .= $js_id .".Config['FlashUpload'] = true;\n";
-        $element['#suffix'] .= $js_id .".Config['LinkUploadURL'] = '". $module_full_path . $upload_path ."';\n";
-        $element['#suffix'] .= $js_id .".Config['ImageUploadURL'] = '". $module_full_path . $upload_path ."?Type=Image';\n";
-        $element['#suffix'] .= $js_id .".Config['FlashUploadURL'] = '". $module_full_path . $upload_path ."?Type=Flash';\n";
+        $element['#suffix'] .= $js_id .".Config['LinkUploadURL'] = '". $upload_path ."';\n";
+        $element['#suffix'] .= $js_id .".Config['ImageUploadURL'] = '". $upload_path ."?Type=Image';\n";
+        $element['#suffix'] .= $js_id .".Config['FlashUploadURL'] = '". $upload_path ."?Type=Flash';\n";
       }
       else {
         $element['#suffix'] .= $js_id .".Config['LinkUpload'] = false;\n";
@@ -463,9 +477,9 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
           $element['#suffix'] .= $js_id .".Config['LinkBrowser'] = true;\n";
           $element['#suffix'] .= $js_id .".Config['ImageBrowser'] = true;\n";
           $element['#suffix'] .= $js_id .".Config['FlashBrowser'] = true;\n";
-          $element['#suffix'] .= $js_id .".Config['LinkBrowserURL'] = '". $module_full_path ."/fckeditor/editor/filemanager/browser/default/browser.html?Connector=". $connector_path ."&ServerPath=". $files_path ."';\n";
-          $element['#suffix'] .= $js_id .".Config['ImageBrowserURL'] = '". $module_full_path ."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Image&Connector=". $connector_path ."&ServerPath=". $files_path ."';\n";
-          $element['#suffix'] .= $js_id .".Config['FlashBrowserURL'] = '". $module_full_path ."/fckeditor/editor/filemanager/browser/default/browser.html?Type=Flash&Connector=". $connector_path ."&ServerPath=". $files_path ."';\n";
+          $element['#suffix'] .= $js_id .".Config['LinkBrowserURL'] = '". $editor_path ."/editor/filemanager/browser/default/browser.html?Connector=". $connector_path ."&ServerPath=". $files_path ."';\n";
+          $element['#suffix'] .= $js_id .".Config['ImageBrowserURL'] = '". $editor_path ."/editor/filemanager/browser/default/browser.html?Type=Image&Connector=". $connector_path ."&ServerPath=". $files_path ."';\n";
+          $element['#suffix'] .= $js_id .".Config['FlashBrowserURL'] = '". $editor_path ."/editor/filemanager/browser/default/browser.html?Type=Flash&Connector=". $connector_path ."&ServerPath=". $files_path ."';\n";
           break;
         default:
         case 'none':
@@ -589,7 +603,8 @@ function fckeditor_sorted_roles() {
  *   TRUE if the browser is reasonably capable
  */
 function fckeditor_is_compatible_client() {
-  $fckeditor_main_file = drupal_get_path('module', 'fckeditor') .'/fckeditor/fckeditor.php';
+  $editor_local_path    = fckeditor_path(TRUE);
+  $fckeditor_main_file  = $editor_local_path .'/fckeditor.php';
   if (file_exists($fckeditor_main_file)) {
     include_once $fckeditor_main_file;
     if (function_exists('FCKeditor_IsCompatibleBrowser')) {
@@ -602,6 +617,76 @@ function fckeditor_is_compatible_client() {
   }
 
   return FALSE;
+}
+
+/**
+ * Read FCKeditor path from Global profile
+ *
+ * @return
+ *   path to FCKeditor folder
+ */
+
+function fckeditor_path($local = FALSE) {
+  static $fck_path;
+  static $fck_local_path;
+
+  if (!$fck_path) {
+    $mod_path = drupal_get_path('module', 'fckeditor');
+    $global_profile = fckeditor_profile_load('FCKeditor Global Profile');
+
+    //default: path to fckeditor subdirectory in the fckeditor module directory (starting from the document root)
+    //e.g. for http://example.com/drupal it will be /drupal/sites/all/modules/fckeditor/fckeditor
+    $fck_path = base_path() . $mod_path . "/fckeditor";
+    
+    //default: path to fckeditor subdirectory in the fckeditor module directory (relative to index.php)
+    //e.g.: sites/all/modules/fckeditor/fckeditor
+    $fck_local_path = $mod_path . "/fckeditor";
+
+    if ($global_profile) {
+      $gs = $global_profile->settings;
+      
+      if (isset($gs['fckeditor_path'])){
+        $tmp_path = $gs['fckeditor_path'];
+        $tmp_path = strtr($tmp_path, array("%b" => base_path(), "%m" => base_path() . $mod_path));
+        $tmp_path   = str_replace('\\', '/', $tmp_path);
+        $tmp_path   = str_replace('//', '/', $tmp_path);
+        $tmp_path = rtrim($tmp_path, ' \/');
+        if (substr($tmp_path,0,1) != '/') {
+          $tmp_path = '/'. $tmp_path; //starts with '/'
+        }
+        $fck_path = $tmp_path;
+        
+        if (empty($gs['fckeditor_local_path'])) {
+          //fortunately wildcards are used, we can easily get the right server path
+          if (false !== strpos($gs['fckeditor_path'], "%m")) {
+            $gs['fckeditor_local_path'] = strtr($gs['fckeditor_path'], array("%m" => $mod_path));
+          }
+          if (false !== strpos($gs['fckeditor_path'], "%b")) {
+            $gs['fckeditor_local_path'] = strtr($gs['fckeditor_path'], array("%b" => "."));
+          }
+        }
+      }
+
+      //fckeditor_path is defined, but wildcards are not used, we need to try to find out where is 
+      //the document root located and append fckeditor_path to it.
+      if (!empty($gs['fckeditor_local_path'])) {
+        $fck_local_path = $gs['fckeditor_local_path'];
+      }
+      else if (!empty($gs['fckeditor_path'])) {
+        module_load_include('lib.inc', 'fckeditor');
+        $local_path = fckeditor_resolve_url( $gs['fckeditor_path'] ."/" );
+        if (FALSE !== $local_path) {
+          $fck_local_path = $local_path;
+        }
+      }
+    }    
+  }
+  if ($local) {
+    return $fck_local_path;
+  }
+  else {
+    return $fck_path;
+  }
 }
 
 function fckeditor_user_get_setting($user, $profile, $setting) {
