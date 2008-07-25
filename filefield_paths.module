@@ -88,6 +88,7 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
     case 'insert':
     case 'update':
       $content_type = content_types($node->type);
+      $update = FALSE;
 
       foreach ($content_type['fields'] as $field) {
         if ($field['type'] == 'filefield') {
@@ -96,7 +97,7 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
             $dest = token_replace($file['filepath'], 'node', $node);
 
             if (variable_get('filefield_paths_'. $node->type .'_'. $field['field_name'] .'_filepath_tolower', 0) == 1) {
-              $dest = strtolower($dest);
+              $dest = drupal_strtolower($dest);
             }
 
             $file_rename = FALSE;
@@ -106,7 +107,7 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
               $filename = token_replace(token_replace($filename, 'node', $node), 'field', $file);
 
               if (variable_get('filefield_paths_'. $node->type .'_'. $field['field_name'] .'_filename_tolower', 0) == 1) {
-                $filename = strtolower($filename);
+                $filename = drupal_strtolower($filename);
               }
 
               if ($file['filename'] != $filename) {
@@ -117,7 +118,15 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 
             // Move file if it hasn't already been processed
             if ($dest != $file['filepath'] || $file_rename) {
-              // @TODO: Check Body field for references to old file path and replace with new file path.
+              $body = urldecode(preg_replace('/'. urlencode($file['filepath']) .'/', urlencode($dest), urlencode(urldecode($node->body))));
+              $teaser = urldecode(preg_replace('/'. urlencode($file['filepath']) .'/', urlencode($dest), urlencode(urldecode($node->teaser))));
+
+              if ($body != $node->body || $teaser != $node->teaser) {
+                $node->body = $body;
+                $node->teaser = $teaser;
+
+                $update = TRUE;
+              }
 
               filefield_paths_file_move($file, drupal_substr($dest, 0, strrpos($dest, '/')));
             }
@@ -142,6 +151,19 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 
         }
       }
+
+      if ($update == TRUE) {
+        drupal_write_record('node', $node, 'nid');
+        if (!empty($node->revision)) {
+          _node_save_revision($node, $user->uid);
+          db_query('UPDATE {node} SET vid = %d WHERE nid = %d', $node->vid, $node->nid);
+        }
+        else {
+          _node_save_revision($node, $user->uid, 'vid');
+          $update_node = FALSE;
+        }
+      }
+
       break;
   }
 }
