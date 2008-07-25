@@ -524,10 +524,24 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
     // add custom stylesheet if configured
     // lets hope it exists but we'll leave that to the site admin
     if ($conf['css_mode'] == 'theme') {
-      $css = $themepath .'style.css';
+      global $theme;
+
+      $default_theme_css = array($themepath . 'style.css');
+      $css = (variable_get('color_' .$theme. '_stylesheets', $default_theme_css));
+      $css = $css[0];
+      $element['#suffix'] .=  $js_id .".Config['EditorAreaCSS'] = \"";
       if (file_exists($css)) {
-        $element['#suffix'] .=  $js_id .".Config['EditorAreaCSS'] = \"". $host . $css .",". $module_full_path ."/fckeditor.css\";";
+        $element['#suffix'] .=  $host . $css .',';
       }
+      else if (file_exists($themepath . $theme .'.css')) {
+        $element['#suffix'] .=  $host . $themepath . $theme .'.css,';
+      }
+      else if(!empty($GLOBALS['theme_info']->info['stylesheets']['all'])){
+        foreach ($GLOBALS['theme_info']->info['stylesheets']['all'] as $value) {
+            $element['#suffix'] .= $host . $value .',';
+        }
+      }
+      $element['#suffix'] .=  $module_full_path ."/fckeditor.css\";";
     }
     else if ($conf['css_mode'] == 'self') {
       $conf['css_path'] = str_replace("%h%t", "%t", $conf['css_path']);
