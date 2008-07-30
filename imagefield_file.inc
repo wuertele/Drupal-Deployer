@@ -36,7 +36,7 @@ function imagefield_file_delete($file) {
 function imagefield_file_is_image($file) {
   $file = (object)$file;
   //dsm($file);
-  return in_array($file->filemime, array('image/jpg', 'image/jpeg', 'image/png', 'image/gif'));
+  return in_array($file->filemime, array('image/jpg', 'image/pjpeg', 'image/jpeg', 'image/png', 'image/gif'));
 }
 
 // create the path to and admin thumbnail.
