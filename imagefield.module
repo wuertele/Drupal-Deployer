@@ -194,14 +194,27 @@ function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
   }
   $element = filefield_widget($form, $form_state, $field, $items, $delta);
 
+  $element['#upload_validators'] += imagefield_widget_upload_validators($field);
+
+  return $element;
+}
+
+/**
+ * Get the upload validators for an image field.
+ *
+ * @param $field CCK Field
+ * @return array suitable for passing to file_save_upload() or the filefield
+ *   element's '#upload_validators' property.
+ */
+function imagefield_widget_upload_validators($field) {
+  $validators = array();
   if (!empty($field['widget']['max_resolution']) || !empty($field['widget']['min_resolution'])) {
-    $element['#upload_validators']['file_validate_image_resolution'] = array(
+    $validators['file_validate_image_resolution'] = array(
       $field['widget']['max_resolution'],
       $field['widget']['min_resolution'],
     );
   }
-
-  return $element;
+  return $validators;
 }
 
 /**
