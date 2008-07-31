@@ -111,9 +111,21 @@ function filefield_paths_form_submit($form, &$form_state) {
   );
 
   variable_set(
-    'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_filename_tolower',
-    $form_state['values']['file_name_tolower']
+    'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_filename_pathauto',
+    $form_state['values']['file_name_pathauto']
   );
+
+  if (module_exists('pathauto')) {
+    variable_set(
+      'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_filepath_pathauto',
+      $form_state['values']['file_path_pathauto']
+    );
+
+    variable_set(
+      'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_filename_tolower',
+      $form_state['values']['file_name_tolower']
+    );
+  }
 }
 
 /**
@@ -129,47 +141,24 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       foreach ($content_type['fields'] as $field) {
         if ($field['type'] == 'filefield') {
 
+          $settings['filepath'] = 'filefield_paths_'. $node->type .'_'. $field['field_name'] .'_filepath';
+          $settings['filename'] = 'filefield_paths_'. $node->type .'_'. $field['field_name'] .'_filename';
+
           foreach ($node->$field['field_name'] as $count => $file) {
             if (empty($file['filepath'])) {
               continue;
             }
 
+            // Process filepath
             $dest = token_replace($file['filepath'], 'node', $node);
+            $dest = filefield_paths_cleanup($dest, $settings['filepath'], FALSE);
 
-            if (module_exists('pathauto') && variable_get('filefield_paths_'. $node->type .'_'. $field['field_name'] .'_filepath_pathauto', 0) == 1) {
-              _pathauto_include();
-
-              $period = variable_get('pathauto_punctuation_period', 0);
-              variable_set('pathauto_punctuation_period', 2);
-
-              $dest = pathauto_cleanstring($dest, FALSE);
-
-              variable_set('pathauto_punctuation_period', $period);
-            }
-            else if (variable_get('filefield_paths_'. $node->type .'_'. $field['field_name'] .'_filepath_tolower', 0) == 1) {
-              $dest = drupal_strtolower($dest);
-            }
-
+            // Process filename
             $file_rename = FALSE;
-            $filename = variable_get('filefield_paths_'. $node->type .'_'. $field['field_name'] .'_filename', '');
-
-            if (!empty($filename)) {
+            if (($filename = variable_get($settings['filename'], '')) != '') {
               $filename = token_replace($filename, 'node', $node);
               $filename = token_replace($filename, 'field', array(0 => $file));
-
-              if (module_exists('pathauto') && variable_get('filefield_paths_'. $node->type .'_'. $field['field_name'] .'_filename_pathauto', 0) == 1) {
-                _pathauto_include();
-
-                $period = variable_get('pathauto_punctuation_period', 0);
-                variable_set('pathauto_punctuation_period', 2);
-
-                $filename = pathauto_cleanstring($filename);
-
-                variable_set('pathauto_punctuation_period', $period);
-              }
-              else if (variable_get('filefield_paths_'. $node->type .'_'. $field['field_name'] .'_filename_tolower', 0) == 1) {
-                $filename = drupal_strtolower($filename);
-              }
+              $filename = filefield_paths_cleanup($filename, $settings['filename']);
 
               if ($file['filename'] != $filename) {
                 $file['filename'] = $filename;
@@ -177,20 +166,23 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
               }
             }
 
-            // Move file if it hasn't already been processed
+            // Finalize files if necessary
             if ($dest != $file['filepath'] || $file_rename) {
-              $body = urldecode(preg_replace('/'. urlencode($file['filepath']) .'/', urlencode($dest), urlencode(urldecode($node->body))));
-              $teaser = urldecode(preg_replace('/'. urlencode($file['filepath']) .'/', urlencode($dest), urlencode(urldecode($node->teaser))));
-
-              if ($body != $node->body || $teaser != $node->teaser) {
-                $node->body = $body;
-                $node->teaser = $teaser;
-
-                $update = TRUE;
+              if (filefield_paths_file_move($file, drupal_substr($dest, 0, strrpos($dest, '/')))) { 
+                // Fix reference to old paths in Body and Teaser
+                // @TODO: allow for CCK fields
+                $body = urldecode(preg_replace('/'. urlencode($file['filepath']) .'/', urlencode($dest), urlencode(urldecode($node->body))));
+                $teaser = urldecode(preg_replace('/'. urlencode($file['filepath']) .'/', urlencode($dest), urlencode(urldecode($node->teaser))));
+  
+                if ($body != $node->body || $teaser != $node->teaser) {
+                  $node->body = $body;
+                  $node->teaser = $teaser;
+  
+                  $update = TRUE;
+                }
               }
-
-              filefield_paths_file_move($file, drupal_substr($dest, 0, strrpos($dest, '/')));
             }
+
           }
 
           // Cleanup temporary paths
@@ -253,6 +245,31 @@ function filefield_paths_token_values($type, $object = NULL) {
     $tokens['filefield_paths-ext']            = drupal_substr($item['filename'], strrpos($item['filename'], '.') + 1);
     return $tokens;
   }
+}
+
+/**
+ * Perform string cleanup
+ */
+function filefield_paths_cleanup($value, $settings, $clean_slash = TRUE) {
+  if (module_exists('pathauto') && variable_get($settings .'_pathauto', 0)) {
+    // Include Pathauto functions
+    _pathauto_include();
+  
+    // Store periods current setting and force to ignore mode
+    $period = variable_get('pathauto_punctuation_period', 0);
+    variable_set('pathauto_punctuation_period', 2);
+  
+    $value = pathauto_cleanstring($value, $clean_slash);
+  
+    // Set periods setting back to previous setting
+    variable_set('pathauto_punctuation_period', $period);
+  }
+
+  if (variable_get($settings .'_tolower', 0) || (variable_get($settings .'_pathauto', 0) && variable_get('pathauto_case', 0))) {
+    $value = drupal_strtolower($value);
+  }
+
+  return $value;
 }
 
 /**
