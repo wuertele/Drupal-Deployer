@@ -35,7 +35,8 @@ function filefield_paths_form_alter(&$form, $form_state, $form_id) {
         '#default_value' => variable_get(
           'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_filepath_pathauto',
           0
-        )
+        ),
+        '#description' => 'Cleanup File path using '. l('Pathauto settings', 'admin/build/path/pathauto')
       );
     }
 
@@ -79,7 +80,8 @@ function filefield_paths_form_alter(&$form, $form_state, $form_id) {
         '#default_value' => variable_get(
           'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_filename_pathauto',
           0
-        )
+        ),
+        '#description' => 'Cleanup File name using '. l('Pathauto settings', 'admin/build/path/pathauto')
       );
     }
 
@@ -141,6 +143,7 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       foreach ($content_type['fields'] as $field) {
         if ($field['type'] == 'filefield') {
 
+          // Set base for FileField Paths variables
           $settings['filepath'] = 'filefield_paths_'. $node->type .'_'. $field['field_name'] .'_filepath';
           $settings['filename'] = 'filefield_paths_'. $node->type .'_'. $field['field_name'] .'_filename';
 
@@ -150,15 +153,13 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
             }
 
             // Process filepath
-            $dest = token_replace($file['filepath'], 'node', $node);
-            $dest = filefield_paths_cleanup($dest, $settings['filepath'], FALSE);
+            $dest = filefield_paths_process_string($file['filepath'], 'node', $node, $settings['filepath']);
 
             // Process filename
             $file_rename = FALSE;
             if (($filename = variable_get($settings['filename'], '')) != '') {
-              $filename = token_replace($filename, 'node', $node);
-              $filename = token_replace($filename, 'field', array(0 => $file));
-              $filename = filefield_paths_cleanup($filename, $settings['filename']);
+              $filename = filefield_paths_process_string($filename, 'node', $node, $settings['filename']);
+              $filename = filefield_paths_process_string($filename, 'field', array(0 => $file), $settings['filename']);
 
               if ($file['filename'] != $filename) {
                 $file['filename'] = $filename;
@@ -205,6 +206,7 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         }
       }
 
+      // Re-write node entry if required
       if ($update == TRUE) {
         drupal_write_record('node', $node, 'nid');
         if (!empty($node->revision)) {
@@ -222,8 +224,7 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 }
 
 /**
- * Implementation of hook_token_list():
- * Provide a user readable list of filefield tokens.
+ * Implementation of hook_token_list().
  */
 function filefield_paths_token_list($type = 'all') {
   if ($type == 'field' || $type == 'all') {
@@ -235,8 +236,7 @@ function filefield_paths_token_list($type = 'all') {
 }
 
 /**
- * Implementation of hook_token_values():
- * Provide the concrete token values for a given file item.
+ * Implementation of hook_token_values().
  */
 function filefield_paths_token_values($type, $object = NULL) {
   if ($type == 'field') {
@@ -248,24 +248,20 @@ function filefield_paths_token_values($type, $object = NULL) {
 }
 
 /**
- * Perform string cleanup
+ * Process and cleanup strings.
  */
-function filefield_paths_cleanup($value, $settings, $clean_slash = TRUE) {
+function filefield_paths_process_string($original, $type = 'global', $object = NULL, $settings) {
   if (module_exists('pathauto') && variable_get($settings .'_pathauto', 0)) {
-    // Include Pathauto functions
-    _pathauto_include();
-  
-    // Store periods current setting and force to ignore mode
-    $period = variable_get('pathauto_punctuation_period', 0);
-    variable_set('pathauto_punctuation_period', 2);
-  
-    $value = pathauto_cleanstring($value, $clean_slash);
-  
-    // Set periods setting back to previous setting
-    variable_set('pathauto_punctuation_period', $period);
+    // Replace Tokens with Pathauto cleaned values
+    $placeholders = pathauto_get_placeholders($type, $object);
+    $value = str_replace($placeholders['tokens'], $placeholders['values'], $original);
+  }
+  else {
+   $value = token_replace($original, $type, $object);
   }
 
   if (variable_get($settings .'_tolower', 0) || (variable_get($settings .'_pathauto', 0) && variable_get('pathauto_case', 0))) {
+    // Convert string to lower case
     $value = drupal_strtolower($value);
   }
 
