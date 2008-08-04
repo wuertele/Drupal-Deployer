@@ -1,6 +1,9 @@
 <?php
-//$Id$
-
+// $Id$
+/**
+ * @file
+ * The Global Redirect module redirects for all paths which have aliases but are not using the aliases which reduces the risk of duplicate content
+ */
 /**
  * Implementation of hook_help().
  */
@@ -16,38 +19,76 @@ function globalredirect_help($section) {
  * Implementation of hook_init().
  */
 function globalredirect_init() {
-  if(isset($_REQUEST['q']) && function_exists('drupal_get_path_alias') && !isset($_REQUEST['destination'])) {
-    
+  global $language;
+
+  /**
+   * We need to do a test to make sure we only clean up URL's for the main request. This stops modules such as
+   * the Ad Module which had its own script in its folder doing a bootstrap which invoked hook_init and caused some banners to get "cleaned up"
+   * See issues: http://drupal.org/node/205810 and http://drupal.org/node/278615
+   */
+  if ($_SERVER['SCRIPT_NAME'] != $GLOBALS['base_path'] .'index.php') return FALSE;
+
+  /**
+   * If the site is in offline mode there is little point doing any of this as you might end up redirecting to a 503.
+   */
+  if (variable_get('site_offline', 0) == 1) return FALSE;
+
+  /**
+   * We need to make sure this hook only fires in certain conditions:
+   *   1) If the 'drupal_get_path' function exists. Sometimes hook_init gets called twice, the first call hasn't included path.inc.
+   *   2) If there is a request. There is no point checking the REAL frontpage for an alias.
+   *   3) If the $_POST is empty. The problem which arises here is if a form posts to an source path rather than the alias. GlobalRedirect sometimes interrupts the post and redirects to the alias instead.
+   */
+
+  if (function_exists('drupal_get_path_alias') &&
+      function_exists('menu_get_item') &&
+      isset($_REQUEST['q']) &&
+      empty($_POST)) {
+
+    //Check the access on the current path, return FALSE if access not allowed. This stops redirection for paths without access permission.
+    $item = menu_get_item();
+    _menu_check_access($item, $item['map']);
+    if (!$item['access']) return FALSE;
+
+    //Store the destination from the $_REQUEST as it breaks things if we leave it in - restore it at the end...
+    if (isset($_REQUEST['destination'])) {
+      $destination = $_REQUEST['destination'];
+      unset($_REQUEST['destination']);
+    }
+
     // Get the Query String (minus the 'q'). If none set, set to NULL
     $query_string = drupal_query_string_encode($_GET, array('q'));
     if (empty($query_string)) {
       $query_string = NULL;
     }
 
-    // If current path is also the frontpage, redirect to http://www.example.com
-    if (!empty($_REQUEST['q']) && drupal_is_front_page()) {
-      drupal_goto('', $query_string, NULL, 301);
+    // Do a check if this is a frontpage
+    if (drupal_is_front_page()) {
+      // If the current reques is NOT the language prefix (eg, /de/node) then redirect to the prefix
+      if ($_REQUEST['q'] != $language->prefix) {
+        drupal_goto('', $query_string, NULL, 301);
+      }
+      // If we've got to this point then we're on a frontpage with a VALID request path (such as a language-prefix frontpage such as '/de')
+      return;
     }
 
     // Trim any trailing slash off the end (eg, 'node/1/' to 'node/1')
-    $request = trim($_REQUEST['q'], '/');
-    
-    // Check the path (eg, node/123) for a request
-    $alias = drupal_get_path_alias($request);
-    
-    // If alias is different to the request, redirect...
-    if ($alias != $request) {
-      drupal_goto($alias, $query_string, NULL, 301);
-    }
+    $request = trim($_GET['q'], '/');
 
-    // If the trimmed request differs to the request then redirect (basically, de-slash the source path)
-    if ($request != $_REQUEST['q']) {
-      drupal_goto($request, $query_string, NULL, 301);
+    // Check the path (eg, node/123) for the request
+    $alias = drupal_get_path_alias($request);
+
+    // Compare the request to the alias. If we have a language prefix then prefix the alias and compare. This also works as a 'deslashing' agent too
+    if ((empty($language->prefix) ? $alias : $language->prefix .'/'. $alias) != $_REQUEST['q']) {
+      drupal_goto($alias, $query_string, NULL, 301);
     }
 
     //If no alias was returned, the final check is to direct non-clean to clean - if clean is enabled
     if ((bool)variable_get('clean_url', 0) && strpos(request_uri(), '?q=')) {
       drupal_goto($request, $query_string, NULL, 301);
     }
+
+    //Restore the destination from earlier so its available in other places.
+    if (isset($destination)) $_REQUEST['destination'] = $destination;
   }
 }
