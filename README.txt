@@ -1,57 +1,56 @@
-$Id$
+/* $Id$ */
 
-Description:
-------------
+-- SUMMARY --
 
-This is a simple feedback module, allowing visitors to your web site to
-send you email from web forms.
+Feedback allows visitors and users of a site to report issues for the currently
+displayed page, whereas issues could be data or theming related bugs, or also
+feature requests.
 
-Features:
----------
+Site administrators are then able to review and process those feedback messages.
 
-* Multiple feedback pages are configureable. Each page has its own settings,
-  so e.g. you can create two forms which send to 2 different e-mail address.
-* It's possible to define a list of categories which the user has to choose
-  from - similar to drupals core-contact module since 4.7.
-* Flooding Prevention. Each user is only able to send a configureable amount
-  of mails per hour. So you are safe from flooding attacks.
-* Configurable required fields on the web form (Sender Name, Postal Address,
-  Phone Number, Message Subject, Message Body)
-* If the visitor is a registered user of the site, then the sender's
-  email address field and sender's name default to the values entered
-  upon registration
-* Configurable subject prefix for messages sent by visitors
-* Configurable instructions/guidelines text above the form (for example,
-  you can use this to link to your FAQ page, site map, or ask users to do
-  a search before contacting you)
-* Contact mail address can be different from the general email address
-  of the site administrator
-* Optional setting for logging of all attempts to contact you to the
-  Drupal log
-* Mails the IP address of the sender and the browser they are using to 
-  the siteadmin (helps detect bots, and abuse)
-* Works with clean URLs as well as regular URLs (post 4.5.0 CVS version) 
+For a full description visit the project page:
+  http://drupal.org/project/feedback
+Bug reports, feature suggestions and latest developments:
+  http://drupal.org/project/issues/feedback
 
-Database:
----------
-With 4.7 and later this module uses own database tables, which are automatically
-created for you. Previous versions did not require any new database tables, so
-in any case you needn't care.
 
-Installation:
--------------
+-- REQUIREMENTS --
 
-Please see the INSTALL document for details.
+* jQuery Update v2.x
 
-Bugs/Features/Patches:
-----------------------
+* BrowsCap (optional to record user agents)
 
-If you want to report bugs, feature requests, or submit a patch, please do so
-at the project page on the Drupal web site.
-http://drupal.org/project/feedback
 
-Author
-------
-Originally by: Barry O'Rourke (barry@alted.co.uk)
-Rewritten by: Khalid Baheyeldin (http://baheyeldin.com/khalid and http://2bits.com)
-Again rewritten by: Wolfgang Ziegler (nuppla@zites.net)
+-- INSTALLATION --
+
+* Install as usual, see http://drupal.org/node/70151 for further information.
+
+
+-- CONFIGURATION --
+
+* Configure user permissions in administer >> User management >> Access control
+  >> Feedback.
+
+
+-- USAGE --
+
+* To view all feedback messages, go to
+  Administer -> Logs -> Feedback messages
+
+
+-- CONTACT --
+
+Current maintainers:
+* Daniel F. Kudwien (sun) - dev@unleashedmind.com
+
+Note:
+Feedback module v1.x had a completely different purpose, but its features are
+provided by several other and much more mature modules now (i.e. Contact in
+Drupal core, Webform, CCK, aso.).
+
+This project has been sponsored by:
+* UNLEASHED MIND
+  Specialized in consulting and planning of Drupal powered sites, UNLEASHED
+  MIND offers installation, development, theming, customization, and hosting
+  to get you started. Visit http://www.unleashedmind.com for more information.
+
