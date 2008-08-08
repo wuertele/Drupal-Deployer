@@ -7,9 +7,15 @@
 
 
 function theme_imagefield_formatter_image_plain($element) {
+  // Inside a View this function may be called with null data.  In that case,
+  // just return.
+  if (empty($element['#item'])) {
+    return '';
+  }
+
   $field = content_fields($element['#field_name']);
   $item = $element['#item'];
-
+  
   if (empty($item['fid']) && $field['use_default_image']) $item = $field['default_image'];
   if (empty($item['filepath']))  $item = array_merge($item, field_file_load($item['fid']));
   
@@ -18,6 +24,12 @@ function theme_imagefield_formatter_image_plain($element) {
 }
 
 function theme_imagefield_formatter_image_nodelink($element) {
+  // Inside a View this function may be called with null data.  In that case,
+  // just return.
+  if (empty($element['#item'])) {
+    return '';
+  }
+
   $node = $element['#node'];
   $imagetag = theme('imagefield_formatter_image_plain', $element);
   $class = 'imagefield imagefield-nodelink imagefield-'. $element['#field_name'];
@@ -25,6 +37,12 @@ function theme_imagefield_formatter_image_nodelink($element) {
 }
 
 function theme_imagefield_formatter_image_imagelink($element) {
+  // Inside a View this function may be called with null data.  In that case,
+  // just return.
+  if (empty($element['#item'])) {
+    return '';
+  }
+  
   $item = $element['#item'];
   $imagetag = theme('imagefield_formatter_image_plain', $element);
   $original_image_url = file_create_url($item['filepath']);
@@ -33,7 +51,12 @@ function theme_imagefield_formatter_image_imagelink($element) {
 }
 
 function theme_imagefield_formatter_path_plain($element) {
-
+  // Inside a View this function may be called with null data.  In that case,
+  // just return.
+  if (empty($element['#item'])) {
+    return '';
+  }
+  
   $field = content_fields($element['#field_name']);
   $item = $element['#item'];
   if (empty($item['fid']) && $field['use_default_image'])  $item = $field['default_image'];
@@ -45,6 +68,12 @@ function theme_imagefield_formatter_path_plain($element) {
 }
 
 function theme_imagefield_formatter_url_plain($element) {
+  // Inside a View this function may be called with null data.  In that case,
+  // just return.
+  if (empty($element['#item'])) {
+    return '';
+  }
+
   $field = content_fields($element['#field_name']);
   $item = $element['#item'];
   if (empty($item['fid']) && $field['use_default_image'])  $item = $field['default_image'];
