@@ -182,8 +182,7 @@ function fckeditor_requirements($phase) {
     $available_version_error = '';
     
     if (!_fckeditor_requirements_isinstalled()) {
-      $modulepath = drupal_get_path('module', 'fckeditor');
-      $sourcepath = $modulepath.'/fckeditor/';
+      $sourcepath = fckeditor_path(TRUE);
       
       $requirements['fckeditor']['description'] = t('FCKeditor was not found at %sourcepath', array('%sourcepath' => $sourcepath));
       $requirements['fckeditor']['severity'] = REQUIREMENT_ERROR;
@@ -225,8 +224,9 @@ function fckeditor_requirements($phase) {
  * @return boolean True iff FCKeditor is installed
  */
 function _fckeditor_requirements_isinstalled() {
-  $modulepath = drupal_get_path('module', 'fckeditor');
-  $jspath = $modulepath.'/fckeditor/fckeditor.js';
+  module_load_include('module', 'fckeditor');
+  $editor_path= fckeditor_path(TRUE);
+  $jspath = $editor_path.'/fckeditor.js';
   
   return file_exists($jspath);
 }
@@ -242,8 +242,9 @@ function _fckeditor_requirements_isinstalled() {
  * @return string Version number (eg. 2.6.2) of FCKeditor. Null if not found in fckeditor.js
  */
 function _fckeditor_requirements_getinstalledversion() {
-  $modulepath = drupal_get_path('module', 'fckeditor');
-  $jspath = $modulepath.'/fckeditor/fckeditor.js';
+  module_load_include('module', 'fckeditor');
+  $editor_path= fckeditor_path(TRUE);
+  $jspath = $editor_path.'/fckeditor.js';
   
   $configcontents = file_get_contents($jspath);
   $matches = array();
@@ -267,7 +268,7 @@ function _fckeditor_requirements_getinstalledversion() {
 function _fckeditor_requirements_getavailableversion(&$error) {
   $fckpage = drupal_http_request('http://www.fckeditor.net');
   $matches = array();
-  if (!isset($fckpage->error) && preg_match('#class="release_number">\s*([\d\.]+)</#', $fckpage->data, $matches)) {
+  if (!isset($fckpage->error) && preg_match('#class="release_number">\s*([\d\.]+[ \w]*)<#', $fckpage->data, $matches)) {
     return $matches[1];
   }
   else {
