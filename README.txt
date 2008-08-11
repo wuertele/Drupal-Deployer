@@ -36,7 +36,7 @@ CONFIGURATION
 - Allowed extensions and the maximum allowed upload sizes are taken from the 
   Upload module settings on Administer >> Site configuration >> File uploads 
   (admin/settings/uploads).
-  
+
 
 NOTE
 ====
