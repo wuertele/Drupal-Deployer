@@ -1,7 +1,11 @@
 <?php
 // $Id$
+/**
+=======
+// $Id$
 
 /*
+>>>>>>> 1.2.2.10.2.13
  * FCKeditor - The text editor for Internet - http://www.fckeditor.net
  * Copyright (C) 2003-2008 Frederico Caldeira Knabben
  *
@@ -20,8 +24,19 @@
  *    http://www.mozilla.org/MPL/MPL-1.1.html
  *
  * == END LICENSE ==
+ *
+ * @file
+ * FCKeditor Module for Drupal 6.x
+ *
+ * This module allows Drupal to replace textarea fields with FCKeditor.
+ *
+ * This HTML text editor brings to the web many of the powerful functionalities
+ * of known desktop editors like Word. It's really  lightweight and doesn't
+ * require any kind of installation on the client computer.
+ */
 
- * Implementation of hook_install()
+/*
+ * Implementation of hook_install().
  *
  * This will automatically install the database tables for the FCKeditor module for both the MySQL and PostgreSQL databases.
  *
@@ -119,8 +134,8 @@ function fckeditor_install() {
 }
 
 /**
-* Implementation of hook_schema().
-*/
+ * Implementation of hook_schema().
+ */
 function fckeditor_schema() {
   $schema['fckeditor_settings'] = array(
     'description' => t('Stores FCKeditor profile settings'),
@@ -187,11 +202,11 @@ function fckeditor_requirements($phase) {
       $requirements['fckeditor']['description'] = t('FCKeditor was not found at %sourcepath', array('%sourcepath' => $sourcepath));
       $requirements['fckeditor']['severity'] = REQUIREMENT_ERROR;
     }
-    elseif (($installed_version = _fckeditor_requirements_getinstalledversion()) === null) {
+    elseif (($installed_version = _fckeditor_requirements_getinstalledversion()) === NULL) {
       $requirements['fckeditor']['description'] = t('FCKeditor version could not be determined');
       $requirements['fckeditor']['severity'] = REQUIREMENT_INFO;
     }
-    elseif (($available_version = _fckeditor_requirements_getavailableversion($available_version_error)) === null) {
+    elseif (($available_version = _fckeditor_requirements_getavailableversion($available_version_error)) === NULL) {
       $requirements['fckeditor']['description'] = t('The latest available FCKeditor version could not be determined, the HTTP error while fetching the version information was: @error', array('@error' => $available_version_error));
       $requirements['fckeditor']['severity'] = REQUIREMENT_INFO;
     }
@@ -202,7 +217,8 @@ function fckeditor_requirements($phase) {
     elseif (_fckeditor_requirements_cookiedomainrequired() && !_fckeditor_requirements_cookiedomainset()) {
       $requirements['fckeditor']['severity'] = REQUIREMENT_ERROR;
       $requirements['fckeditor']['description'] = t('You are using a feature that requires $cookie_domain to be set, but it is not set in your settings.php.');
-    } else {
+    }
+    else {
       $requirements['fckeditor']['severity'] = REQUIREMENT_OK;
     }
     
@@ -225,8 +241,8 @@ function fckeditor_requirements($phase) {
  */
 function _fckeditor_requirements_isinstalled() {
   module_load_include('module', 'fckeditor');
-  $editor_path= fckeditor_path(TRUE);
-  $jspath = $editor_path.'/fckeditor.js';
+  $editor_path = fckeditor_path(TRUE);
+  $jspath = $editor_path .'/fckeditor.js';
   
   return file_exists($jspath);
 }
@@ -243,15 +259,15 @@ function _fckeditor_requirements_isinstalled() {
  */
 function _fckeditor_requirements_getinstalledversion() {
   module_load_include('module', 'fckeditor');
-  $editor_path= fckeditor_path(TRUE);
-  $jspath = $editor_path.'/fckeditor.js';
+  $editor_path = fckeditor_path(TRUE);
+  $jspath = $editor_path .'/fckeditor.js';
   
   $configcontents = file_get_contents($jspath);
   $matches = array();
   if (preg_match('#FCKeditor\.prototype\.Version\s*=\s*\'([\d\.]+)\'\s*;#', $configcontents, $matches)) {
     return $matches[1];
   }
-  return null;
+  return NULL;
 }
 
 /**
@@ -274,7 +290,7 @@ function _fckeditor_requirements_getavailableversion(&$error) {
   else {
     $error = $fckpage->error;
   }
-  return null;
+  return NULL;
 }
 
 /**
@@ -293,11 +309,11 @@ function _fckeditor_requirements_cookiedomainrequired() {
   
   foreach ($profiles as $profile) {
     if ((isset($profile->settings['filebrowser']) && $profile->settings['filebrowser'] == 'builtin') || (isset($profile->settings['quickupload']) && $profile->settings['quickupload'] == 't')) {
-      return true;
+      return TRUE;
     }
   }
   
-  return false;
+  return FALSE;
 }
 
 /**
@@ -316,11 +332,11 @@ function _fckeditor_requirements_cookiedomainset() {
     $settings = file_get_contents('./'. conf_path() .'/settings.php');
     
     if (preg_match('#^\s*\$cookie_domain#m', $settings)) {
-      return true;
+      return TRUE;
     }
   }
   
-  return false;
+  return FALSE;
 }
 
 /**
@@ -331,10 +347,10 @@ function fckeditor_update_6110() {
   $ret = array();
 
   $result = db_query('SELECT * FROM {fckeditor_settings}');
-  $global_profile_found = false;
-  while ($data = db_fetch_object($result)) {
+  $global_profile_found = FALSE;
+  while (($data = db_fetch_object($result))) {
     if ($data->name == "FCKeditor Global Profile") {
-      $global_profile_found = true;
+      $global_profile_found = TRUE;
     }
     if ($data->settings) {
       $settings = unserialize($data->settings);
@@ -396,9 +412,9 @@ function fckeditor_update_6110() {
 function fckeditor_update_6130() {
   $ret = array();
   
-  $result = db_query("SELECT * FROM {fckeditor_settings} WHERE name != 'FCKeditor Global Profile'");
+  $result = db_query("SELECT * FROM {fckeditor_settings} WHERE name <> 'FCKeditor Global Profile'");
   $hasimce = module_exists('imce');
-  while(($data = db_fetch_object($result))) {
+  while (($data = db_fetch_object($result))) {
     if ($data->settings) {
       $settings = unserialize($data->settings);
       
@@ -407,11 +423,13 @@ function fckeditor_update_6130() {
       $upload_basic = (isset($settings['upload_basic']) && $settings['upload_basic'] == 't');
       $upload_advanced = (isset($settings['upload_advanced']) && $settings['upload_advanced'] == 't');
       
-      if($imce) {
+      if ($imce) {
         $settings['filebrowser'] = 'imce';
-      } elseif($upload_advanced) {
+      }
+      elseif ($upload_advanced) {
         $settings['filebrowser'] = 'builtin';
-      } else {
+      }
+      else {
         $settings['filebrowser'] = 'none';
       }
       
@@ -438,31 +456,31 @@ function fckeditor_update_6200() {
   $ret = array();
   
   $result = db_query('SELECT * FROM {fckeditor_settings}');
-  while(($data = db_fetch_object($result))) {
+  while (($data = db_fetch_object($result))) {
     if ($data->settings) {
       $settings = unserialize($data->settings);
       
-      foreach(array('simple_incl', 'excl') as $var) {
-        $paths = preg_split('/[\s,]+/', $settings[$var.'_paths']);
-        $ids = preg_split('/[\s,]+/', $settings[$var.'_fields']);
+      foreach (array('simple_incl', 'excl') as $var) {
+        $paths = preg_split('/[\s,]+/', $settings[$var .'_paths']);
+        $ids = preg_split('/[\s,]+/', $settings[$var .'_fields']);
         $final = array();
         
-        foreach($paths as $path) {
+        foreach ($paths as $path) {
           $path = trim($path);
-          if(!empty($path)) {
+          if (!empty($path)) {
             $final[] = $path;
           }
         }
         
-        foreach($ids as $id) {
+        foreach ($ids as $id) {
           $id = trim($id);
-          if(!empty($id)) {
-            $final[] = '*.'.$id;
+          if (!empty($id)) {
+            $final[] = '*.'. $id;
           }
         }
         
         $settings[$var] = implode("\n", $final);
-        unset($settings[$var.'_paths'], $settings[$var.'_fields']);
+        unset($settings[$var .'_paths'], $settings[$var .'_fields']);
       }
       
       db_query("UPDATE {fckeditor_settings} SET settings='%s' WHERE name='%s'", serialize($settings), $data->name);
@@ -484,7 +502,7 @@ function fckeditor_update_6201() {
   $ret = array();
   
   $result = db_query('SELECT * FROM {fckeditor_settings}');
-  while(($data = db_fetch_object($result))) {
+  while (($data = db_fetch_object($result))) {
     if ($data->settings) {
       $settings = unserialize($data->settings);
       $settings['show_fieldnamehint'] = 't';

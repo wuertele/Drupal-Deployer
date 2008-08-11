@@ -1,6 +1,34 @@
 <?php
-
-
+// $Id$
+/**
+ * FCKeditor - The text editor for Internet - http://www.fckeditor.net
+ * Copyright (C) 2003-2008 Frederico Caldeira Knabben
+ *
+ * == BEGIN LICENSE ==
+ *
+ * Licensed under the terms of any of the following licenses at your
+ * choice:
+ *
+ *  - GNU General Public License Version 2 or later (the "GPL")
+ *    http://www.gnu.org/licenses/gpl.html
+ *
+ *  - GNU Lesser General Public License Version 2.1 or later (the "LGPL")
+ *    http://www.gnu.org/licenses/lgpl.html
+ *
+ *  - Mozilla Public License Version 1.1 or later (the "MPL")
+ *    http://www.mozilla.org/MPL/MPL-1.1.html
+ *
+ * == END LICENSE ==
+ *
+ * @file
+ * FCKeditor Module for Drupal 6.x
+ *
+ * This module allows Drupal to replace textarea fields with FCKeditor.
+ *
+ * This HTML text editor brings to the web many of the powerful functionalities
+ * of known desktop editors like Word. It's really  lightweight and doesn't
+ * require any kind of installation on the client computer.
+ */
 
 /**
  * Guess the absolute server path to the document root
@@ -14,19 +42,29 @@
 function fckeditor_get_document_root_full_path() {
   $found=0;
   $index_dir  = realpath(dirname($_SERVER['SCRIPT_FILENAME'])); // {/dir1/dir2/home/drupal}/index.php
-  if (getcwd() == $index_dir) { $found++;}
+  if (getcwd() == $index_dir) {
+    $found++;
+  }
   $drupal_dir = base_path();
   $index_dir  = str_replace('\\', "/", $index_dir);
   $drupal_dir = str_replace('\\', "/", $drupal_dir);
   $document_root_dir   = $index_dir .'/'. str_repeat('../', substr_count($drupal_dir, '/')-1);
   $document_root_dir   = realpath($document_root_dir);
   $document_root_dir   = rtrim($document_root_dir, '/\\');
-  if ($document_root_dir == $_SERVER['DOCUMENT_ROOT']) { $found++;}
+  if ($document_root_dir == $_SERVER['DOCUMENT_ROOT']) {
+    $found++;
+  }
   $document_root_dir   = str_replace('\\', '/', $document_root_dir);
 
-  if ($document_root_dir != '') { $found++;}
-  if (file_exists($document_root_dir)) { $found++;}
-  if (file_exists($document_root_dir. base_path() . 'includes/bootstrap.inc')) { $found++;}
+  if ($document_root_dir != '') {
+    $found++;
+  }
+  if (file_exists($document_root_dir)) {
+    $found++;
+  }
+  if (file_exists($document_root_dir . base_path() .'includes/bootstrap.inc')) {
+    $found++;
+  }
 
   if ($found >= 3) {
     return $document_root_dir;
@@ -45,10 +83,9 @@ function fckeditor_get_document_root_full_path() {
  * @param string $path
  * @return @return string|boolean
  */
-function fckeditor_resolve_url( $path ) {
-  if ( function_exists( 'apache_lookup_uri' ) )
-  {
-    $info = @apache_lookup_uri( $path ) ;
+function fckeditor_resolve_url($path) {
+  if (function_exists('apache_lookup_uri')) {
+    $info = @apache_lookup_uri($path);
     if (!$info) {
       return FALSE;
     }
@@ -56,7 +93,7 @@ function fckeditor_resolve_url( $path ) {
   }
 
   $document_root = fckeditor_get_document_root_full_path();
-  if ( $document_root !== FALSE ) {
+  if ($document_root !== FALSE) {
     return $document_root . $path;
   }
   

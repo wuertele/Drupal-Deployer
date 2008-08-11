@@ -67,10 +67,10 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
 
       if (user_access('administer fckeditor')) {
         $form['fckeditor']['fckeditor_show_fieldnamehint'] = array(
-      	'#type' => 'select',
-      	'#title' => t('Show field name hint below each rich text editor'),
-      	'#default_value' => !empty($user->fckeditor_show_fieldnamehint) ? $user->fckeditor_show_fieldnamehint : 't',
-      	'#options' => array('t' => t('true'), 'f' => t('false')),
+        '#type' => 'select',
+        '#title' => t('Show field name hint below each rich text editor'),
+        '#default_value' => !empty($user->fckeditor_show_fieldnamehint) ? $user->fckeditor_show_fieldnamehint : 't',
+        '#options' => array('t' => t('true'), 'f' => t('false')),
         );
       }
 
@@ -162,5 +162,5 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
     );
   }
   
-  return null;
+  return NULL;
 }

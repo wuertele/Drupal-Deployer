@@ -117,4 +117,3 @@ function fckeditor_help_delegate($path, $arg) {
   }
   return !empty($output) ? $output : "";
 }
-?>

@@ -180,8 +180,8 @@ function fckeditor_admin_profile_clone_form_submit($form, &$form_state) {
 /**
  * Form builder for a normal profile
  */
-function fckeditor_admin_profile_form($form_state, $profile = null) {
-  if ($profile != null) {
+function fckeditor_admin_profile_form($form_state, $profile = NULL) {
+  if ($profile != NULL) {
     $form['_profile'] = array(
       '#type' => 'value',
       '#value' => $profile,
@@ -262,8 +262,8 @@ function fckeditor_admin_profile_form($form_state, $profile = null) {
     $profile->settings['rids']=array();
     $profile->rids=array();
   }
-  else{
-     $newname = $profile->name;
+  else {
+    $newname = $profile->name;
   }
     
   $form['basic']['name'] = array(
@@ -727,7 +727,8 @@ function fckeditor_admin_profile_form_submit($form, &$form_state) {
     db_query('DELETE FROM {fckeditor_settings} WHERE name = "%s"', $edit['_profile']->name);
     db_query('DELETE FROM {fckeditor_role} WHERE name = "%s"', $edit['_profile']->name);
     drupal_set_message(t('Your FCKeditor profile has been updated.'));
-  } else {
+  }
+  else {
     drupal_set_message(t('Your FCKeditor profile has been created.'));
   }
   
@@ -737,7 +738,7 @@ function fckeditor_admin_profile_form_submit($form, &$form_state) {
   if (!empty($edit['rids'])) {
     foreach (array_keys($edit['rids']) as $rid) {
       if ($edit['rids'][$rid]!=0) {
-      	db_query('INSERT INTO {fckeditor_role} (name, rid) VALUES ("%s", %d)', $edit['name'], $rid);
+        db_query('INSERT INTO {fckeditor_role} (name, rid) VALUES ("%s", %d)', $edit['name'], $rid);
       }
     }
   }
@@ -1003,8 +1004,8 @@ function fckeditor_admin_profile_delete_form_submit($form, &$form_state) {
   $v =& $form_state['values'];
   
   if ($form_state['clicked_button']['#id'] == 'delete') {
-     fckeditor_profile_delete($v['_profile']->name);
-     drupal_set_message(t('Deleted profile'));
+    fckeditor_profile_delete($v['_profile']->name);
+    drupal_set_message(t('Deleted profile'));
   }
   
   $form_state['redirect'] = 'admin/settings/fckeditor';
