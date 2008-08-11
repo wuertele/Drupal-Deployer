@@ -36,7 +36,6 @@ function Toggle(textareaID, TextTextarea, TextRTE)
   // execute the switch
   if (textArea.is(':hidden')) {
     // switch from fck to textarea
-    // TODO reactivate teaser.js stuff
     swtch.text(TextRTE);
     
     text = editorInstance.GetData(true);
@@ -47,16 +46,16 @@ function Toggle(textareaID, TextTextarea, TextRTE)
     if(teaser) {
       var t = text.indexOf('<!--break-->');
       if (t != -1) {
-        $('#'+teaser.textarea).val(FCKeditor_trim(text.slice(0,t)));
+        teaser.textarea.val(FCKeditor_trim(text.slice(0,t)));
         text = FCKeditor_trim(text.slice(t+12));
         
-        $('#'+teaser.textarea).parent().show();
-        $('#'+teaser.textarea).attr('disabled', '');
+        teaser.textarea.parent().show();
+        teaser.textarea.attr('disabled', '');
         if ($('input.teaser-button').attr('value') != Drupal.t('Join summary')) {
           try {$('input.teaser-button').click();} catch(e) {$('input.teaser-button').val(Drupal.t('Join summary'));}
         }
       } else {
-        $('#'+teaser.textarea).attr('disabled', 'disabled');
+        teaser.textarea.attr('disabled', 'disabled');
         if ($('input.teaser-button').attr('value') != Drupal.t('Split summary at cursor')) {
           try {$('input.teaser-button').click();} catch(e) {$('input.teaser-button').val(Drupal.t('Split summary at cursor'));}
         }
@@ -86,15 +85,15 @@ function Toggle(textareaID, TextTextarea, TextRTE)
     var teaser = FCKeditor_TeaserInfo(textareaID);
     
     if(teaser) {
-      if ($('#'+teaser.textarea).val().length > 0) {
-        text = $('#'+teaser.textarea).val() + '\n<!--break-->\n' + textArea.val();
+      if (teaser.textarea.val().length > 0) {
+        text = teaser.textarea.val() + '\n<!--break-->\n' + textArea.val();
       } else {
         text = textArea.val();
       }
-      $('#'+teaser.textarea).attr('disabled', '');
+      teaser.textarea.attr('disabled', '');
       $('div.teaser-button-wrapper').hide();
-      $('#'+teaser.textarea).parent().hide();
-      $('#'+teaser.checkbox).parent().show();
+      teaser.textarea.parent().hide();
+      teaser.checkbox.parent().show();
     } else {
       text = textArea.val();
     }
@@ -139,15 +138,15 @@ function FCKeditor_OnComplete( editorInstance )
   var teaser = FCKeditor_TeaserInfo(editorInstance.Name);
   
   if(teaser) {
-    if ($('#'+teaser.textarea).val().length > 0) {
-      var text = $('#'+teaser.textarea).val() + '\n<!--break-->\n' + editorInstance.GetData();
+    if (teaser.textarea.val().length > 0) {
+      var text = teaser.textarea.val() + '\n<!--break-->\n' + editorInstance.GetData();
       editorInstance.SetData(text);
     }
     
-    $('#'+teaser.textarea).attr('disabled', '');
+    teaser.textarea.attr('disabled', '');
     $('div.teaser-button-wrapper').hide();
-    $('#'+teaser.textarea).parent().hide();
-    $('#'+teaser.checkbox).parent().show();
+    teaser.textarea.parent().hide();
+    teaser.checkbox.parent().show();
   }
   
   // cope with resizable
@@ -156,6 +155,11 @@ function FCKeditor_OnComplete( editorInstance )
     container.after($('iframe', container));
     container.hide();
   }
+  
+  // very ugly hack to circumvent FCKeditor from re-updating textareas on submission. We do that ourselves
+  // FCKeditor will happily update the fake textarea while we will use the proper one
+  editorInstance.LinkedField2 = editorInstance.LinkedField;
+  editorInstance.LinkedField = $('<textarea></textarea>');
   
   //Img_Assist integration
   IntegrateWithImgAssist();	  
@@ -170,8 +174,8 @@ function FCKeditor_TeaserInfo(taid) {
   
   if (teasers[taid]) {
     return {
-      textarea : teasers[taid],
-      checkbox : Drupal.settings.teaserCheckbox[teasers[taid]],
+      textarea : $('#'+teasers[taid]),
+      checkbox : $('#'+Drupal.settings.teaserCheckbox[teasers[taid]]),
     };
   } else {
     return null;
@@ -179,27 +183,23 @@ function FCKeditor_TeaserInfo(taid) {
 }
 
 function FCKeditor_OnAfterLinkedFieldUpdate(editorInstance) {
-  // make a list of all elements that are associated with teaser-js's
-  var teasers = {};
-  for(x in Drupal.settings.teaser) {
-    teasers[Drupal.settings.teaser[x]] = x;
-  }
-  
-  var textArea = editorInstance.LinkedField;
+  var textArea = editorInstance.LinkedField2;
   var taid = textArea.id;
+  
+  var teaser = FCKeditor_TeaserInfo(taid);
+  
   if($(textArea).is(':hidden')) {
     var text = editorInstance.GetData();
     textArea.value = text;
     // only update the teaser field if this field is associated with a teaser field
-    if(teasers[taid]) {
+    if(teaser) {
       var t = text.indexOf('<!--break-->');
-      var teaser = $('#'+teasers[taid]);
       if(t != -1) {
-        teaser.val(FCKeditor_trim(text.slice(0,t)));
+        teaser.textarea.val(FCKeditor_trim(text.slice(0,t)));
         textArea.value = FCKeditor_trim(text.slice(t+12));
       } else {
-        teaser.val('');
-        teaser.attr('disabled', 'disabled');
+        teaser.textarea.val('');
+        teaser.textarea.attr('disabled', 'disabled');
         
         var teaserbutton = $('input.teaser-button');
         var teaserbuttontxt = Drupal.t('Join summary');
