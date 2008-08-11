@@ -527,30 +527,34 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
     }
     // add custom stylesheet if configured
     // lets hope it exists but we'll leave that to the site admin
-    if ($conf['css_mode'] == 'theme') {
-      global $theme;
-
-      $default_theme_css = array($themepath . 'style.css');
-      $css = (variable_get('color_' .$theme. '_stylesheets', $default_theme_css));
-      $css = $css[0];
-      $element['#suffix'] .=  $js_id .".Config['EditorAreaCSS'] = '";
-      if (file_exists($css)) {
-        $element['#suffix'] .=  $host . $css .',';
-      }
-      else if (file_exists($themepath . $theme .'.css')) {
-        $element['#suffix'] .=  $host . $themepath . $theme .'.css,';
-      }
-      else if(!empty($GLOBALS['theme_info']->info['stylesheets']['all'])){
-        foreach ($GLOBALS['theme_info']->info['stylesheets']['all'] as $value) {
-            $element['#suffix'] .= $host . $value .',';
+    $cssfiles = array($module_full_path .'/fckeditor.css');
+    switch ($conf['css_mode']) {
+      case 'theme':
+        global $theme, $theme_info;
+        
+        $default_theme_css = array($themepath . 'style.css');
+        $css = array_shift(variable_get('color_' .$theme. '_stylesheets', $default_theme_css));
+        
+        $element['#suffix'] .=  $js_id .".Config['EditorAreaCSS'] = '";
+        if (file_exists($css)) {
+          $cssfiles[] =  $host . $css;
         }
-      }
-      $element['#suffix'] .=  $module_full_path ."/fckeditor.css';\n";
+        elseif (file_exists($themepath . $theme .'.css')) {
+          $cssfiles[] =  $host . $themepath . $theme .'.css';
+        }
+        elseif(!empty($theme_info->info['stylesheets']['all'])){
+          foreach ($theme_info->info['stylesheets']['all'] as $value) {
+            $cssfiles[] = $host . $value;
+          }
+        }
+        break;
+      case 'self':
+        $conf['css_path'] = str_replace("%h%t", "%t", $conf['css_path']);
+        $cssfiles[] = str_replace(array('%h', '%t'), array($host, $host . $themepath), $conf['css_path']);
+        break;
     }
-    else if ($conf['css_mode'] == 'self') {
-      $conf['css_path'] = str_replace("%h%t", "%t", $conf['css_path']);
-      $element['#suffix'] .=  $js_id .".Config['EditorAreaCSS'] = '". str_replace(array('%h', '%t'), array($host, $host . $themepath), $conf['css_path']) .','. $module_full_path ."/fckeditor.css';\n";
-    }
+    
+    $element['#suffix'] .=  $js_id .".Config['EditorAreaCSS'] = '".implode(',',$cssfiles)."';\n";
     $element['#suffix'] .= 'fckInstances[\''. $textarea_id . '\'] = '. $js_id .";\n";
     $element['#suffix'] .= "</script>\n";
 
