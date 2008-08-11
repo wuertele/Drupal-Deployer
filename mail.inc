@@ -44,7 +44,7 @@ function project_issue_mailhandler($node, $result, $i, $header, $mailbox) {
           $node->$text = trim($node->$text);
           switch ($var) {
             case 'pid':
-              $project = node_load(array('title' => $node->$text, 'type' => 'project_project'));
+              $project = node_load($node->text);
               if ($project->nid) {
                 $entry->pid = $project->nid;
               }
