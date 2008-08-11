@@ -136,17 +136,29 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
   }
 
   if ($type == 'validate') {
+    if ($edit['fckeditor_default'] == 't' && $edit['fckeditor_popup'] == 't') {
+      form_set_error('popup', t('If FCKeditor is enabled by default, popup window must be disabled.'));
+    }
+
+    if ($edit['fckeditor_show_toggle'] == 't' && $edit['fckeditor_popup'] == 't') {
+      form_set_error('popup', t('If toggle is enabled, popup window must be disabled.'));
+    }
+    
+    if (!preg_match('/^\d+%?$/', $edit['fckeditor_width'])) {
+      form_set_error('width', t('Enter valid width. Ex: 400 or 100%'));
+    }
+    
     return array(
-    'fckeditor_default' => $edit['fckeditor_default'],
-    'fckeditor_show_toggle' => $edit['fckeditor_show_toggle'],
-    'fckeditor_show_fieldnamehint' => $edit['fckeditor_show_fieldnamehint'],
-    'fckeditor_popup' => $edit['fckeditor_popup'],
-    'fckeditor_skin' => $edit['fckeditor_skin'],
-    'fckeditor_toolbar' => $edit['fckeditor_toolbar'],
-    'fckeditor_expand' => $edit['fckeditor_expand'],
-    'fckeditor_width' => $edit['fckeditor_width'],
-    'fckeditor_lang' => $edit['fckeditor_lang'],
-    'fckeditor_auto_lang' => $edit['fckeditor_auto_lang'],
+      'fckeditor_default' => $edit['fckeditor_default'],
+      'fckeditor_show_toggle' => $edit['fckeditor_show_toggle'],
+      'fckeditor_show_fieldnamehint' => $edit['fckeditor_show_fieldnamehint'],
+      'fckeditor_popup' => $edit['fckeditor_popup'],
+      'fckeditor_skin' => $edit['fckeditor_skin'],
+      'fckeditor_toolbar' => $edit['fckeditor_toolbar'],
+      'fckeditor_expand' => $edit['fckeditor_expand'],
+      'fckeditor_width' => $edit['fckeditor_width'],
+      'fckeditor_lang' => $edit['fckeditor_lang'],
+      'fckeditor_auto_lang' => $edit['fckeditor_auto_lang'],
     );
   }
   
