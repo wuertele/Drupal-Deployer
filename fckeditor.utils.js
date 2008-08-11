@@ -1,19 +1,31 @@
 // $Id$
-// map of instancename -> boolean indicating if the instance has loaded
-var fckIsRunning = {};
-// map of instancename -> boolean indicating if the instance has launched
-var fckIsLaunching = [];
-// list of id's of converted textareas
-var fckLaunchedTextareaId = [];
-// list of instance names
-var fckLaunchedJsId = [];
-// map of instancename -> boolean indicating if the instance is running for the first time (false indicates it has been toggled)
-var fckFirstrun = {};
 // map of instancename -> FCKeditor object
 var fckInstances = {};
+// this object will store teaser information
+var fckTeaser = { lookup : {}, lookupSetup : false, cache : {} };
 
-var fckIsIE = ( /*@cc_on!@*/false ) ? true : false ;
+/**
+ * Drupal behavior that adds FCKeditors to textareas
+ */
+Drupal.behaviors.fckeditor = function(context) {
+  $('textarea.fckeditor:not(.fckeditor-processed)', context).each(function() {
+    var textarea = $(this).addClass('fckeditor-processed');
+    
+    var taid = textarea.attr('id');
+    if (fckInstances[taid]) {
+      var editorInstance = fckInstances[taid];
+      
+      if(editorInstance.defaultState == 1) {
+        editorInstance.ReplaceTextarea();
+      }
+    }
+  });
+}
 
+/**
+ * This method takes care of replacing a textarea with an FCKeditor
+ * and vice versa.
+ */
 function Toggle(textareaID, TextTextarea, TextRTE)
 {
   var swtch = $('#switch_'+textareaID);
@@ -49,22 +61,23 @@ function Toggle(textareaID, TextTextarea, TextRTE)
         teaser.textarea.val(FCKeditor_trim(text.slice(0,t)));
         text = FCKeditor_trim(text.slice(t+12));
         
-        teaser.textarea.parent().show();
+        teaser.textareaContainer.show();
         teaser.textarea.attr('disabled', '');
-        if ($('input.teaser-button').attr('value') != Drupal.t('Join summary')) {
-          try {$('input.teaser-button').click();} catch(e) {$('input.teaser-button').val(Drupal.t('Join summary'));}
+        if (teaser.button.attr('value') != Drupal.t('Join summary')) {
+          try {teaser.button.click();} catch(e) {teaser.button.val(Drupal.t('Join summary'));}
         }
       } else {
         teaser.textarea.attr('disabled', 'disabled');
-        if ($('input.teaser-button').attr('value') != Drupal.t('Split summary at cursor')) {
-          try {$('input.teaser-button').click();} catch(e) {$('input.teaser-button').val(Drupal.t('Split summary at cursor'));}
+        if (teaser.button.attr('value') != Drupal.t('Split summary at cursor')) {
+          try {teaser.button.click();} catch(e) {teaser.button.val(Drupal.t('Split summary at cursor'));}
         }
       }
       
-      $('div.teaser-button-wrapper').show();
+      teaser.buttonContainer.show();
     } else {
       text = textArea.val();
     }
+    
     textArea.val(text);
     
     textArea.show();
@@ -91,9 +104,9 @@ function Toggle(textareaID, TextTextarea, TextRTE)
         text = textArea.val();
       }
       teaser.textarea.attr('disabled', '');
-      $('div.teaser-button-wrapper').hide();
-      teaser.textarea.parent().hide();
-      teaser.checkbox.parent().show();
+      teaser.buttonContainer.hide();
+      teaser.textareaContainer.hide();
+      teaser.checkboxContainer.show();
     } else {
       text = textArea.val();
     }
@@ -107,46 +120,30 @@ function Toggle(textareaID, TextTextarea, TextRTE)
   }
 }
 
-function CreateToggle(elId, jsId, fckeditorOn)
-{
-  var ta = $('#'+elId);
-  var ta2 = $('fck_' + jsId);
-
-  ta2.value = ta.value;
-  ta.parentNode.insertBefore(ta2, ta);
-  if (fckeditorOn)
-  ta.style.display = 'none';
-  else
-  ta2.style.display = 'none';
-}
-
-// The FCKeditor_OnComplete function is a special function called everytime an
-// editor instance is completely loaded and available for API interactions.
-function FCKeditor_OnComplete( editorInstance )
-{
-  fckIsRunning[editorInstance.Name] = true ;
-  fckLaunchedTextareaId.push(editorInstance.Config['TextareaID']) ;
-  fckLaunchedJsId.push(editorInstance.Name) ;
-  fckFirstrun[editorInstance.Name] = true;
-
+/**
+ * The FCKeditor_OnComplete function is a special function called everytime an
+ * editor instance is completely loaded and available for API interactions.
+ */
+function FCKeditor_OnComplete(editorInstance) {
   // Enable the switch button. It is disabled at startup, waiting the editor to be loaded.
   $('#switch_' + editorInstance.Name).show();
 
   editorInstance.Events.AttachEvent('OnAfterLinkedFieldUpdate', FCKeditor_OnAfterLinkedFieldUpdate);
   
-  
   var teaser = FCKeditor_TeaserInfo(editorInstance.Name);
   
   if(teaser) {
+    // if there is a teaser, prepend it to the text
     if (teaser.textarea.val().length > 0) {
       var text = teaser.textarea.val() + '\n<!--break-->\n' + editorInstance.GetData();
       editorInstance.SetData(text);
     }
     
+    // hide the teaser
     teaser.textarea.attr('disabled', '');
-    $('div.teaser-button-wrapper').hide();
-    teaser.textarea.parent().hide();
-    teaser.checkbox.parent().show();
+    teaser.buttonContainer.hide();
+    teaser.textareaContainer.hide();
+    teaser.checkboxContainer.show();
   }
   
   // cope with resizable
@@ -161,27 +158,14 @@ function FCKeditor_OnComplete( editorInstance )
   editorInstance.LinkedField2 = editorInstance.LinkedField;
   editorInstance.LinkedField = $('<textarea></textarea>');
   
-  //Img_Assist integration
+  // Img_Assist integration
   IntegrateWithImgAssist();	  
 }
 
-function FCKeditor_TeaserInfo(taid) {
-  // TODO add caching
-  var teasers = {};
-  for(x in Drupal.settings.teaser) {
-    teasers[Drupal.settings.teaser[x]] = x;
-  }
-  
-  if (teasers[taid]) {
-    return {
-      textarea : $('#'+teasers[taid]),
-      checkbox : $('#'+Drupal.settings.teaserCheckbox[teasers[taid]]),
-    };
-  } else {
-    return null;
-  }
-}
-
+/**
+ * This method is executed for every FCKeditor instance just after the underlying text field is updated
+ * before the form is submitted.
+ */
 function FCKeditor_OnAfterLinkedFieldUpdate(editorInstance) {
   var textArea = editorInstance.LinkedField2;
   var taid = textArea.id;
@@ -201,12 +185,11 @@ function FCKeditor_OnAfterLinkedFieldUpdate(editorInstance) {
         teaser.textarea.val('');
         teaser.textarea.attr('disabled', 'disabled');
         
-        var teaserbutton = $('input.teaser-button');
         var teaserbuttontxt = Drupal.t('Join summary');
         
-        if (teaserbutton.attr('value') == teaserbuttontxt) {
+        if (teaser.button.attr('value') == teaserbuttontxt) {
           try {
-            teaserbutton.click();
+            teaser.button.click();
           } catch(e) {
             teaserbutton.val(teaserbuttontxt);
           }
@@ -227,21 +210,64 @@ function IntegrateWithImgAssist()
 	}
 }
 
-Drupal.behaviors.fckeditor = function(context) {
-  $('textarea.fckeditor:not(.fckeditor-processed)', context).each(function() {
-    var textarea = $(this).addClass('fckeditor-processed');
-    
-    var taid = textarea.attr('id');
-    if (fckInstances[taid]) {
-      var editorInstance = fckInstances[taid];
-      
-      if(editorInstance.defaultState == 1) {
-        editorInstance.ReplaceTextarea();
-      }
-    }
-  });
-}
-
+/**
+ * Removes leading and trailing whitespace from the input
+ */
 function FCKeditor_trim(text) {
   return text.replace(/^\s+/g, '').replace(/\s+$/g, '');
+}
+
+/**
+ * This function retrieves information about a possible teaser field
+ * associated with the mentioned field.
+ * 
+ * @param taid string HTML id of the main text area
+ */
+function FCKeditor_TeaserInfo(taid) {
+  // if the result is cached, return it
+  if (fckTeaser.cache[taid]) {
+    return fckTeaser.cache[taid];
+  }
+  
+  // build a lookup table
+  if (!fckTeaser.lookupSetup) {
+    fckTeaser.lookupSetup = true;
+    for(var x in Drupal.settings.teaser) {
+      fckTeaser.lookup[Drupal.settings.teaser[x]] = x;
+    }
+  }
+  
+  // find the elements
+  if (fckTeaser.lookup[taid]) {
+    var obj = {
+      textarea : $('#'+fckTeaser.lookup[taid]),
+      checkbox : $('#'+Drupal.settings.teaserCheckbox[fckTeaser.lookup[taid]])
+    };
+    
+    obj.textareaContainer = obj.textarea.parent();
+    obj.checkboxContainer = obj.checkbox.parent();
+    
+    obj.button = $('input.teaser-button', obj.checkbox.parents('div.teaser-checkbox').get(0));
+    obj.buttonContainer = obj.button.parent();
+    
+    fckTeaser.cache[taid] = obj;
+  } else {
+    fckTeaser.cache[taid] = null;
+  }
+  
+  return fckTeaser.cache[taid];
+}
+
+/**
+ * Creates a screen wide popup window containing an FCKeditor
+ */
+function FCKeditor_OpenPopup(popupUrl, jsID, textareaID) {
+  popupUrl = popupUrl + '?var='+ jsID + '&el=' + textareaID;
+  
+  var teaser = FCKeditor_TeaserInfo(textareaID);
+  if (teaser) {
+    popupUrl = popupUrl + '&teaser=' + teaser.textarea.attr('id');
+  }
+  
+  window.open(popupUrl, null, 'toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=no,resizable=1,dependent=yes');
 }
