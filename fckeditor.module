@@ -535,7 +535,6 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
         $default_theme_css = array($themepath . 'style.css');
         $css = array_shift(variable_get('color_' .$theme. '_stylesheets', $default_theme_css));
         
-        $element['#suffix'] .=  $js_id .".Config['EditorAreaCSS'] = '";
         if (file_exists($css)) {
           $cssfiles[] =  $host . $css;
         }
@@ -547,14 +546,18 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
             $cssfiles[] = $host . $value;
           }
         }
+        $element['#suffix'] .=  $js_id .".Config['EditorAreaCSS'] = '".implode(',',$cssfiles)."';\n";
         break;
       case 'self':
         $conf['css_path'] = str_replace("%h%t", "%t", $conf['css_path']);
         $cssfiles[] = str_replace(array('%h', '%t'), array($host, $host . $themepath), $conf['css_path']);
+        $element['#suffix'] .=  $js_id .".Config['EditorAreaCSS'] = '".implode(',',$cssfiles)."';\n";
+        break;
+      case 'none':
+        $element['#suffix'] .=  $js_id .".Config['EditorAreaCSS'] = ".$js_id .".BasePath + 'editor/css/fck_editorarea.css,' + '".implode(',',$cssfiles)."';\n";
         break;
     }
     
-    $element['#suffix'] .=  $js_id .".Config['EditorAreaCSS'] = '".implode(',',$cssfiles)."';\n";
     $element['#suffix'] .= 'fckInstances[\''. $textarea_id . '\'] = '. $js_id .";\n";
     $element['#suffix'] .= "</script>\n";
 
