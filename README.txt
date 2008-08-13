@@ -5,6 +5,7 @@ CONTENTS OF THIS FILE
   * Installation
   * Configuration
   * Known Issues
+    - No FAQs appear after module upgrade
     - <p> tags appear in FAQ question text
 
 
@@ -35,12 +36,14 @@ INSTALLATION
 3. Enable permissions at admin/user/permissions.
 4. Configure the module at admin/settings/faq.
 
+
 UPGRADE NOTICE
 ---------------
 When using categorized FAQ nodes, the disabling of the FAQ module causes the
 vocabulary to lose the association with the FAQ content type. This results in no
 FAQ nodes being displayed when you re-enable the FAQ module. Before opening an
 issue, please verify that this setting is still in place.
+
 
 CONFIGURATION
 -------------
@@ -50,8 +53,16 @@ question and answer text.  In addition, if the 'Taxonomy' module is enabled and
 there are some terms configured for the FAQ node type, it will also be possible
 to put the questions into different categories when editing.
 
+
 KNOWN ISSUES
 -------------
+No FAQs appear after module upgrade
+-----------------------------------
+When using categorized FAQ nodes, the disabling of the FAQ module causes the
+vocabulary to lose the association with the FAQ content type. This results in no
+FAQ nodes being displayed when you re-enable the FAQ module. Before opening an
+issue, please verify that this setting is still in place.
+
 <p> tags appear in FAQ question text
 ------------------------------------
 When using WYSIWYG editors, such as TinyMCE and FCKeditor, <p> and other HTML
@@ -61,3 +72,4 @@ accommodate longer question texts. The p-tags come from the WYSIWYG editor used
 and not the FAQ module. This is because TinyMCE, and other WYSIWYG editors,
 attach themselves to all textareas on a given page.  Details on how to prevent
 this can be found at http://drupal.org/node/294708
+
