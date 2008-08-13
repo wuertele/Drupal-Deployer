@@ -4,6 +4,8 @@ CONTENTS OF THIS FILE
   * Introduction
   * Installation
   * Configuration
+  * Known Issues
+    - <p> tags appear in FAQ question text
 
 
 INTRODUCTION
@@ -16,13 +18,13 @@ The Frequently Asked Questions (faq) module allows users with the 'administer
 faq' permission to create question and answer pairs which they want displayed on
 the 'faq' page.  The 'faq' page is automatically generated from the FAQ nodes
 configured and the layout of this page can be modified on the settings page.
-Users will need the 'view faq' permission to view the 'faq' page. 
+Users will need the 'view faq' permission to view the 'faq' page.
 
 There are 2 blocks included in this module, one shows a list of FAQ categories
 while the other can show a configurable number of recent FAQs added.
 
 Note the function theme_faq_highlights(), which shows the last X recently
-created FAQs, used by one of the blocks, can also be called in a php-filtered 
+created FAQs, used by one of the blocks, can also be called in a php-filtered
 node if desired.
 
 
@@ -47,3 +49,15 @@ creating FAQ nodes (Create content >> FAQ).  This allows you to edit the
 question and answer text.  In addition, if the 'Taxonomy' module is enabled and
 there are some terms configured for the FAQ node type, it will also be possible
 to put the questions into different categories when editing.
+
+KNOWN ISSUES
+-------------
+<p> tags appear in FAQ question text
+------------------------------------
+When using WYSIWYG editors, such as TinyMCE and FCKeditor, <p> and other HTML
+tags may appear in the displayed question text. This is because the faq title or
+question input box is a textarea and not a textfield, so the faq module can
+accommodate longer question texts. The p-tags come from the WYSIWYG editor used
+and not the FAQ module. This is because TinyMCE, and other WYSIWYG editors,
+attach themselves to all textareas on a given page.  Details on how to prevent
+this can be found at http://drupal.org/node/294708
