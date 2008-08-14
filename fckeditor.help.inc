@@ -76,12 +76,13 @@ function fckeditor_help_delegate($path, $arg) {
       );
       $output .= '<a name="fieldinclexcl"></a>';
       $output .= t('<h3>Defining field inclusion/exclusions</h3><p>In order to specifically display FCKeditor on those text areas on which you need it, the FCKeditor module provides a powerfull method to define fields that should be enhanced with FCKeditor. The first choice you have to make is whether you want to display FCKeditor on all textareas and define a list of exceptions, or if you don\'t want to display FCKeditor unless it is specifically enabled. This choice is made in the @inclexclsetting setting.</p><p>Next, the list of exceptions has to be defined. This list follows a specific syntax: the path to a field is defined by appending the field name to the path, separated by a dot. The field <em>edit-log</em> on page <em>node/add/page</em> would thus be addressed as <em>node/add/page.edit-log</em>. You can use wildcards * and ? anywhere in this line. If you have a dot in your field name and it causes problems, you can escape it with a slash (\).</p><p>Some examples:<br/><em>node/add/page</em>: matches all fields on <em>node/add/page</em>.<br/><em>*.edit-log</em>: matches all fields called edit-log on any page.<br/><em>node/add/*</em>: matches all fields on pages such as <em>node/add/page</em>, <em>node/add/story</em>, etc.<br/><em>node/add/*.edit-log</em>: matches all edit-log fields on pages such as <em>node/add/page</em>, <em>node/add/story</em>, etc.<br/><em>node/add/*.edit-user-*</em>: matches fields starting with <em>edit-user-</em> on pages starting with <em>node/add/</em></p>', array('@inclexclsetting' => t('Use inclusion or exclusion mode')));
-      $output .= t('<h3>Installation troubleshooting</h3><p>If your FCKeditor does not show you must check if all files are extracted correctly. The directory %fckeditordir should have the following files: <code>fckeditor.js, fckconfig.js, fckstyles.xml, fcktemplates.xml</code> and a directory named <code>editor</code>.</p>',
+      $output .= t('<h3>Troubleshooting</h3><p>If you are looking for more information, have any troubles in configuration or if you found an issue, please visit the !official.<br/>
+Having problems? Take a look at !list when installing FCKeditor.<br/>
+Read how to tune up FCKeditor to your theme !here.</p>',
       array(
-      '%fckeditordir' => base_path() . drupal_get_path('module', 'fckeditor') .'/fckeditor/')
-      );
-      $output .= t('The correct directory structure is as follows: <blockquote><pre>!structure</pre></blockquote>', array(
-      '!structure' => "modules\n   fckeditor\n      <em>fckeditor.module</em>\n      fckeditor\n         _samples\n         editor\n         <em>COPY_HERE.txt</em>\n         <em>fckconfig.js</em>\n         ..."
+      '!official' => l(t('official project page'), 'http://drupal.org/project/fckeditor'),
+      '!list' => l(t('list of common problems'), 'http://drupal.fckeditor.net/troubleshooting'),
+      '!here' => l(t('here'), 'http://drupal.fckeditor.net/tricks')
       ));
       $output .= t("<h3>Plugins: Teaser break and Pagebreak</h3><p>By default, FCKeditor module comes with two plugins that can handle teaser break (&lt;!--break--&gt;) and pagebreak (&lt;!--pagebreak--&gt;). You can enable any (or even both) of them.<ol><li>Open <code>!fckeditor.config.js</code> and uncomment these three lines: <pre>!code</pre></li><li>The second step is to add buttons to the toolbar (in the same file). The button names are: <code>DrupalBreak, DrupalPageBreak</code>. For example if you have a toolbar with an array of buttons defined as follows: <pre>!buttons1</pre> simply add those two buttons at the end of array: <pre>!buttons2</pre> (remember about single quotes).</li></ol></p>",
       array(
@@ -100,17 +101,17 @@ function fckeditor_help_delegate($path, $arg) {
       )
       );
       // the rest is untranslated for the moment
-      $output .= t("<h3>How to enable the file browser</h3><p>The editor gives the end user the flexibility to create a custom file browser that can be integrated on it. The included file browser allows users to view the content of a specific directory on the server and add new content to that directory (create folders and upload files).</p><p><ol><li>To enable file browsing you need to edit the connector configuration file in your fckeditor module directory, the file should be in:<blockquote><code>!config</code></blockquote></p><p>In this file you will need to enable the file browser by adding one line that includes file with the special authentication function for Drupal (<code>filemanager.config.php</code>). Add this code: <blockquote><code>!code1</code></blockquote> straight below this line: <blockquote><code>!code2</code></blockquote> The config.php file also holds some other important settings, please take a look at it and adjust it to your needs (optional).</p></li>",
+      $output .= t("<h3>How to enable the built-in file browser</h3><p>The editor gives the end user the flexibility to create a custom file browser that can be integrated on it. The included file browser allows users to view the content of a specific directory on the server and add new content to that directory (create folders and upload files).</p><p><ol><li>To enable file browsing you need to edit the connector configuration file in your fckeditor module directory, the file should be in:<blockquote><code>!config</code></blockquote></p><p>In this file you will need to enable the file browser by adding one line that includes file with the special authentication function for Drupal (<code>filemanager.config.php</code>). Add this code: <blockquote><code>!code1</code></blockquote> straight below this line: <blockquote><code>!code2</code></blockquote> The config.php file also holds some other important settings, please take a look at it and adjust it to your needs (optional).</p></li>",
       array(
       '!config' => base_path() . drupal_get_path('module', 'fckeditor') ."/fckeditor/editor/filemanager/connectors/php/config.php",
       '!filesdir' => file_directory_path(),
       '!code1' => 'require_once \'../../../../../filemanager.config.php\';',
-      '!code3' => "\$Config['UserFilesAbsolutePath'] = '' ;",
+      '!code2' => "\$Config['UserFilesAbsolutePath'] = '' ;",
       )
       );
       $output .= t("<li>Locate file named <code>settings.php</code> inside your drupal directory (usually <code>sites/default/settings.php</code>) and set <strong><code>&#36;cookie_domain</code></strong> variable to the appropiate domain (remember to uncomment that line). If you not do this, FCKeditor will claim that file browser is disabled</li>");
       $output .= t('<li>Enabling file uploads is <strong>a security risk</strong>. That\'s why you have to grant a !link to enable the file browser to certain groups (assign the &quot;!allowupload&quot; permissions).</li>', array('!link' => l(t('separate permission'), 'admin/user/permissions'), "!allowupload" => t("allow fckeditor file uploads")));
-      $output .= t('<li>Lastly, adjust the !fb for each !profile.</li></ol>', array('!fb' => t('File browser settings'), '!profile' => l(t('profile'), 'admin/settings/fckeditor')));
+      $output .= t('<li>Lastly, adjust the !fb for each !profile: set "!ft" to "!bi".</li></ol>', array('!bi' => t('Built-in filebrowser'), '!ft' => t('File browser type'), '!fb' => t('File browser settings'), '!profile' => l(t('profile'), 'admin/settings/fckeditor')));
       $output .= t("<h3>Modules: Image Assist</h3><p>Image Assist can be integrated with FCKeditor. To do this, simply copy the <code>!iaf1</code> file to <code>!iaf2</code>.</p>", array("!iaf1" => drupal_get_path('module', 'fckeditor') ."/img_assist_fckeditor.js", "!iaf2" => drupal_get_path('module', 'img_assist') ."/img_assist_fckeditor.js"));
 
       break;

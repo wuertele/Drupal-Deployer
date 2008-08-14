@@ -122,7 +122,7 @@ Uploading images and files
 There are three ways of uploading files: By using the built-in file browser, 
 by using a module like IMCE or using the core upload module.
 
-How to enable the file browser
+How to enable the built-in file browser
 ------------------------------
 The editor gives the end user the flexibility to create a custom file browser 
 that can be integrated on it. 
@@ -158,7 +158,7 @@ directory on the server and add new content to that directory
       In "Administer > User Management > Permissions" assign the
       "allow fckeditor file uploads" permissions.
       
-   4. Lastly, adjust the File browser settings for each profile.
+   4. Lastly, adjust the File browser settings for each profile: set "File browser type" to "Built-in filebrowser".
 
 Modules: Image Assist
 ---------------------
@@ -191,9 +191,9 @@ Credits
  - FCKeditor for Drupal 5.x originally written by:
      Ontwerpwerk (www.ontwerpwerk.nl)
  
- - FCKeditor for Drupal 5.x is currently maintained by FCKeditor team.
+ - FCKeditor for Drupal 6.x is currently maintained by FCKeditor team and Jorrit Schippers.
      http://www.fckeditor.net/
 
  - FCKeditor - The text editor for internet
-     Copyright (C) 2003-2006 Frederico Caldeira Knabben
+     Copyright (C) 2003-2008 Frederico Caldeira Knabben
      http://www.fckeditor.net/
