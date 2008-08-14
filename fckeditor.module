@@ -278,6 +278,7 @@ function fckeditor_process_textarea($element) {
   static $is_running = FALSE;
   static $num = 1;
   global $user;
+  $enabled = true;
 
   //skip this one, surely nobody wants WYSIWYG here
 
@@ -294,40 +295,44 @@ function fckeditor_process_textarea($element) {
     return $element;
   }
 
-  $profile = fckeditor_user_get_profile($user);
-  if (!$profile) {
-    return $element;
-  }
-
-  $conf = array();
-  $conf = $profile->settings;
-
-  if ($conf['allow_user_conf']=='t') {
-    foreach (array('default', 'show_toggle', 'show_fieldnamehint', 'popup', 'skin', 'toolbar', 'expand', 'width', 'lang', 'auto_lang') as $setting) {
-      $conf[$setting] = fckeditor_user_get_setting($user, $profile, $setting);
-    }
-  }
-  if ($conf["popup"]=="t" && $conf["show_toggle"]=="t") {
-    $conf["show_toggle"]="f";
-  }
-
-  $themepath = path_to_theme() .'/';
-  $host = base_path();
-
-  $enabled = fckeditor_is_enabled(empty($conf['excl_mode']) ? '0' : $conf['excl_mode'], empty($conf['excl_regex']) ? '' : $conf['excl_regex'], $element['#id'], $_GET['q']);
-  if ($enabled) {
-    $global_profile = fckeditor_profile_load('FCKeditor Global Profile');
+  
+  $global_profile = fckeditor_profile_load('FCKeditor Global Profile');
+  if ($global_profile) {
     $global_conf = $global_profile->settings;
     if ($global_conf) {
       $enabled = fckeditor_is_enabled(empty($global_conf['excl_mode']) ? '0' : $global_conf['excl_mode'], empty($global_conf['excl_regex']) ? '' : $global_conf['excl_regex'], $element['#id'], $_GET['q']);
     }
   }
+
+  if ($enabled) {
+    $profile = fckeditor_user_get_profile($user, $element['#id']);
+    if ($profile) {
+      $conf = array();
+      $conf = $profile->settings;
+
+      if ($conf['allow_user_conf']=='t') {
+        foreach (array('default', 'show_toggle', 'popup', 'skin', 'toolbar', 'expand', 'width', 'lang', 'auto_lang') as $setting) {
+          $conf[$setting] = fckeditor_user_get_setting($user, $profile, $setting);
+        }
+      }
+      if ($conf["popup"]=="t" && $conf["show_toggle"]=="t") {
+        $conf["show_toggle"]="f";
+      }      
+    }
+    else {
+      $enabled = false;
+    }
+  }
+
+  $themepath = path_to_theme() .'/';
+  $host = base_path();
+
   if (!isset($element['#suffix'])) {
     $element['#suffix'] = '';
   }
   
   // only replace textarea when it has enough rows and it is enabled
-  if ((($element['#rows'] > $conf['min_rows']) || ($conf['min_rows'] <= 1 && empty($element['#rows']))) && $enabled) {
+  if ($enabled && (($element['#rows'] > $conf['min_rows']) || ($conf['min_rows'] <= 1 && empty($element['#rows'])))) {
     $textarea_id = $element['#id'];
     
     if (!isset($element['#attributes'])) {
@@ -568,7 +573,7 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
   }
 
   // display the field id for administrators
-  if (user_access('administer fckeditor') && $conf['show_fieldnamehint'] == 't') {
+  if (user_access('administer fckeditor') && (!isset($global_conf['show_fieldnamehint']) || $global_conf['show_fieldnamehint'] == 't')) {
     module_load_include('admin.inc', 'fckeditor');
     
     $element['#suffix'] .= t('<div class="textarea-identifier description">The ID for !excluding this element is %fieldname</div>', array(
@@ -707,7 +712,6 @@ function fckeditor_user_get_setting($user, $profile, $setting) {
   $default = array(
   'default' => 't',
   'show_toggle' => 't',
-  'show_fieldnamehint' => 't',
   'popup' => 'f',
   'skin' => 'default',
   'toolbar' => 'default',
@@ -727,8 +731,8 @@ function fckeditor_user_get_setting($user, $profile, $setting) {
   return $status;
 }
 
-function fckeditor_user_get_profile($user) {
-  static $profile_name;
+function fckeditor_user_get_profile($user, $element_id = NULL) {
+  $rids = array();
 
   // Since fckeditor_profile_load() makes a db hit, only call it when we're pretty sure
   // we're gonna render fckeditor.
@@ -736,21 +740,39 @@ function fckeditor_user_get_profile($user) {
     $sorted_roles = fckeditor_sorted_roles();
     foreach (array_keys($sorted_roles) as $rid) {
       if (isset($user->roles[$rid])) {
-        break;
+        $rids[] = $rid;
       }
-    }
-
-    if (isset($rid) && isset($user->roles[$rid])) {
-      $profile_name[$user->uid] = db_result(db_query("SELECT s.name FROM {fckeditor_settings} s INNER JOIN {fckeditor_role} r ON r.name = s.name WHERE r.rid='%s'", $rid));
-    }
-    else if ($user->uid == 1) {
-      $profile_name[$user->uid] = db_result(db_query_range("SELECT s.name FROM {fckeditor_settings} s INNER JOIN {fckeditor_role} r ON r.name = s.name ORDER BY r.rid DESC", 1));
     }
   }
 
-  if (isset($profile_name[$user->uid]) && $profile_name[$user->uid]) {
-    $profile = fckeditor_profile_load($profile_name[$user->uid]);
-    return $profile;
+  if ($user->uid == 1 && !sizeof($rids)) {
+    $rids[] = db_query_range("SELECT r.rid FROM {fckeditor_role} r ORDER BY r.rid DESC", 1);
+  }
+
+  $profile_names = array();
+  if (sizeof($rids)) {
+    $result = db_query("SELECT r.rid, s.name FROM {fckeditor_settings} s INNER JOIN {fckeditor_role} r ON r.name = s.name WHERE r.rid IN (". implode(",", $rids) .")");
+    while($row = db_fetch_array($result)) {
+      if (!isset($profile_names[$row['rid']])) {
+        $profile_names[$row['rid']] = array();
+      }
+      array_push($profile_names[$row['rid']], $row['name']);
+    }
+  }
+
+  foreach ($rids as $rid) {
+    if (!empty($profile_names[$rid])) {
+      foreach ($profile_names[$rid] as $profile_name) {
+        $profile = fckeditor_profile_load($profile_name);
+
+        $conf = $profile->settings;
+        $enabled = fckeditor_is_enabled(empty($conf['excl_mode']) ? '0' : $conf['excl_mode'], empty($conf['excl_regex']) ? '' : $conf['excl_regex'], $element_id, $_GET['q']);
+
+        if ($enabled) {
+          return $profile;
+        }
+      }
+    }
   }
 
   return FALSE;

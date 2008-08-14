@@ -363,14 +363,6 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#description' => t('Whether or not to show the disable/enable rich text editor toggle below the textarea. Works only if FCKeditor is not running in a popup window (see below).'),
   );
   
-  $form['appearance']['show_fieldnamehint'] = array(
-  '#type' => 'select',
-  '#title' => t('Show field name hint below each rich text editor'),
-  '#default_value' => !empty($profile->settings['show_fieldnamehint']) ? $profile->settings['show_fieldnamehint'] : 't',
-  '#options' => array('t' => t('true'), 'f' => t('false')),
-  '#description' => t('This only applies for users with %permission permissions', array('%permission' => 'administer fckeditor')),
-  );
-
   $form['appearance']['popup'] = array(
   '#type' => 'select',
   '#title' => t('Use FCKeditor in a popup window'),
@@ -881,6 +873,13 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
     ),
   ); 
   
+  $form['fckeditor_advanced_settings']['show_fieldnamehint'] = array(
+  '#type' => 'select',
+  '#title' => t('Show field name hint below each rich text editor'),
+  '#default_value' => !empty($profile->settings['show_fieldnamehint']) ? $profile->settings['show_fieldnamehint'] : 't',
+  '#options' => array('t' => t('true'), 'f' => t('false')),
+  '#description' => t('This only applies for users with %permission permissions', array('%permission' => 'administer fckeditor')),
+  );  
   
   $form['submit'] = array(
   '#type' => 'submit',
