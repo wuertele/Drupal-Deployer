@@ -121,12 +121,6 @@ $pixture_width = pixture_validate_page_width($pixture_width);
           <div class="feed-icons"><?php print $feed_icons; ?></div>
         <?php endif; ?>
 
-        <?php if ($content_bottom): ?>
-          <div id="content-bottom" class="region region-content_bottom">
-            <?php print $content_bottom; ?>
-          </div> <!-- /#content-bottom -->
-        <?php endif; ?>
-
       </div></div> <!-- /#content-inner, /#content -->
 
       <?php if ($left): ?>
