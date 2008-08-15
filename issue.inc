@@ -1032,7 +1032,7 @@ function project_issue_project_issue_assignees(&$assigned, $node) {
  *   An HTML string of the summary section.
  */
 function theme_project_issue_summary($current_data, $summary_links) {
-  $allowed_tags = array('a', 'em', 'strong');
+  $allowed_tags = array('a', 'em', 'strong', 'div', 'span');
   $rows = array();
   foreach ($current_data as $name => $values) {
     $rows[] = array(filter_xss($values['label'], $allowed_tags) .':', filter_xss($values['current'], $allowed_tags));
