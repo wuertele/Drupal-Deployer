@@ -18,19 +18,23 @@ $pixture_width = theme_get_setting('pixture_width');
 $pixture_width = pixture_validate_page_width($pixture_width);
 ?>
 <body class="<?php print $body_classes; ?>">
-<!-- Pixture Reloaded -->
-  <div id="page" style="width: <?php print $pixture_width; ?>;"><div id="page-inner">
 
-    <div id="header"><div id="header-inner" class="clear-block">
-
-      <?php if ($logo || $site_name || $site_slogan): ?>
-        <div id="logo-title">
-
-          <?php if ($logo): ?>
-            <div id="logo"><a href="<?php print $base_path; ?>" title="<?php print t('Home'); ?>" rel="home"><img src="<?php print $logo; ?>" alt="<?php print t('Home'); ?>" id="logo-image" /></a></div>
-          <?php endif; ?>
-          
-		  <div id="branding">
+  <div id="skip-to-content"><a href="#main-content"><?php print t('Skip to Content'); ?></a></div> 
+  
+    <div id="page" style="width: <?php print $pixture_width; ?>;">
+	
+      <div id="header">
+	  
+        <?php if ($logo): ?>
+          <div id="logo">
+            <a href="<?php print $base_path; ?>" title="<?php print t('Home'); ?>" rel="home"><img src="<?php print $logo; ?>" alt="<?php print t('Home'); ?>" id="logo-image" /></a>
+          </div>
+        <?php endif; ?>
+		  
+        <div id="head-elements">
+		
+          <div id="branding">
+		  
             <?php if ($site_name): ?>
               <?php
                 // Use an H1 only on the homepage
@@ -38,46 +42,34 @@ $pixture_width = pixture_validate_page_width($pixture_width);
               ?>
               <<?php print $tag; ?> id='site-name'>
                 <a href="<?php print $base_path; ?>" title="<?php print t('Home'); ?>" rel="home">
-                  <strong><?php print $site_name; ?></strong>
+                  <?php print $site_name; ?>
                 </a>
               </<?php print $tag; ?>>
             <?php endif; ?>
-
+			
             <?php if ($site_slogan): ?>
-              <div id='site-slogan'><?php print $site_slogan; ?></div>
+              <div id='site-slogan'>
+			    <?php print $site_slogan; ?>
+			  </div>
             <?php endif; ?>
+          
 		  </div> <!-- /#branding -->
-
-        </div> <!-- /#logo-title-slogan -->
-      <?php endif; ?>
-
- 	  <?php if ($search_box): ?>
-        <div id="search-box">
-          <?php print $search_box; ?>
-        </div> <!-- /#search-box -->
-      <?php endif; ?>
-	  
-      <?php if ($primary_links || $secondary_links || $navbar): ?>
-        <div id="navbar"><div id="navbar-inner" class="region region-navbar">
-
-          <?php if ($primary_links): ?>
+         
+		  <?php if ($primary_links): ?>
             <div id="primary">
               <?php print theme('links', $primary_links); ?>
             </div> <!-- /#primary -->
           <?php endif; ?>
+			
+        </div> <!-- /#head-elements -->
 
-          <?php if ($secondary_links): ?>
-            <div id="secondary">
-              <?php print theme('links', $secondary_links); ?>
-            </div> <!-- /#secondary -->
-          <?php endif; ?>
-
-          <?php print $navbar; ?>
-
-        </div></div> <!-- /#navbar-inner, /#navbar -->
-      <?php endif; ?>
-
-    </div></div> <!-- /#header-inner, /#header -->
+ 	    <?php if ($search_box): ?>
+          <div id="search-box">
+            <?php print $search_box; ?>
+          </div> <!-- /#search-box -->
+        <?php endif; ?>
+		
+    </div> <!--/#header -->
 	
     <?php if ($header): ?>
       <div id="header-blocks" class="region region-header">
@@ -85,7 +77,7 @@ $pixture_width = pixture_validate_page_width($pixture_width);
       </div> <!-- /#header-blocks -->
     <?php endif; ?>
 
-    <div id="main"><div id="main-inner" class="clear-block<?php if ($header) { print ' with-header'; } ?>">
+    <div id="main" class="clear-block <?php if ($header) { print ' with-header-blocks'; } ?>">
 
       <div id="content"><div id="content-inner">
 
@@ -102,6 +94,7 @@ $pixture_width = pixture_validate_page_width($pixture_width);
         <?php if ($breadcrumb or $title or $tabs or $help or $messages): ?>
           <div id="content-header">
             <?php print $breadcrumb; ?>
+			<a name="main-content" id="main-content"></a>
             <?php if ($title): ?>
               <h1 class="title"><?php print $title; ?></h1>
             <?php endif; ?>
@@ -116,6 +109,12 @@ $pixture_width = pixture_validate_page_width($pixture_width);
         <div id="content-area">
           <?php print $content; ?>
         </div>
+		
+		<?php if ($content_bottom): ?>
+          <div id="content-bottom" class="region region-content_bottom">
+            <?php print $content_bottom; ?>
+          </div> <!-- /#content-bottom -->
+        <?php endif; ?>
 
         <?php if ($feed_icons): ?>
           <div class="feed-icons"><?php print $feed_icons; ?></div>
@@ -124,28 +123,25 @@ $pixture_width = pixture_validate_page_width($pixture_width);
       </div></div> <!-- /#content-inner, /#content -->
 
       <?php if ($left): ?>
-        <div id="sidebar-left"><div id="sidebar-left-inner" class="region region-left">
+        <div id="sidebar-left" class="region region-left">
           <?php print $left; ?>
-        </div></div> <!-- /#sidebar-left-inner, /#sidebar-left -->
+        </div> <!-- /#sidebar-left -->
       <?php endif; ?>
 
       <?php if ($right): ?>
-        <div id="sidebar-right"><div id="sidebar-right-inner" class="region region-right">
+        <div id="sidebar-right" class="region region-right">
           <?php print $right; ?>
-        </div></div> <!-- /#sidebar-right-inner, /#sidebar-right -->
+        </div> <!-- /#sidebar-right -->
       <?php endif; ?>
 
-    </div></div> <!-- /#main-inner, /#main -->
+    </div> <!-- #main -->
 
-    <div id="footer"><div id="footer-inner" class="region region-footer">
-
+    <div id="footer" class="region region-footer">
       <div id="footer-message"><?php print $footer_message; ?></div>
-
       <?php print $footer; ?>
+    </div> <!-- /#footer -->
 
-    </div></div> <!-- /#footer-inner, /#footer -->
-
-  </div></div> <!-- /#page-inner, /#page -->
+  </div> <!--/#page -->
 
   <?php if ($closure_region): ?>
     <div id="closure-blocks" class="region region-closure"><?php print $closure_region; ?></div>

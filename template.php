@@ -89,6 +89,10 @@ function pixture_reloaded_preprocess_page(&$vars, $hook) {
         $body_classes[] = 'section-node-' . arg(2); // Add 'section-node-edit' or 'section-node-delete'
       }
     }
+	// Add a unique class when viewing a node
+	if (arg(0) == 'node' && is_numeric(arg(1))) { 
+	  $body_classes[] = 'node-full-view'; // Add 'node-full-view'
+	}
   }
   $vars['body_classes'] = implode(' ', $body_classes); // Concatenate with spaces
 }
