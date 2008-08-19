@@ -33,10 +33,9 @@ function getImageCaptcha() {
      // When data is successfully loaded, replace
      // contents of captcha-div with an image CAPTCHA:
      $('div#captcha').html(data);
-     
+
      // Add an onclick-event handler for the new link:
      $('a#audio-captcha').click(getAudioCaptcha);
    });
    return false;
 }
-

@@ -2,6 +2,11 @@
 // $Id$
 
 /**
+ * @file
+ * Tests for the Mollom module.
+ */
+
+/**
  * Define some test keys.  These keys will only work in test mode, so
  * consult the Mollom API documentation for details.  These keys are
  * also Mollom reseller keys.  Do NOT use production keys for testing!
@@ -27,18 +32,18 @@ class MollomWebTestCase extends DrupalWebTestCase {
     // Set up the test keys.
     variable_set('mollom_public_key', MOLLOM_TEST_PUBLIC_KEY);
     variable_set('mollom_private_key', MOLLOM_TEST_PRIVATE_KEY);
-    
+
     // Delete any previously set Mollom servers to make sure we are using
     // the default ones.
     variable_del('mollom_servers');
     //variable_set('mollom_servers', array('http://127.0.0.1:8080'));
-    
+
     // Call the mollom.verifyKey function directly and check that the key
     // is valid.
     $key_is_valid = mollom('mollom.verifyKey');
     $this->assertIdentical($key_is_valid, TRUE, t('The Mollom servers can be contacted and the key pair specified in the mollom.test file is found to be valid.'));
   }
-    
+
   /**
    * Visit the Mollom administration page and edit the administrative
    * settings. Note that this function has the side effect of logging
@@ -79,7 +84,7 @@ class MollomAccessTestCase extends MollomWebTestCase {
     $this->drupalLogin($admin_user);
     $this->drupalGet('admin/settings/mollom');
     $this->assertText(t('@message: the Mollom services are operating correctly. We are now blocking spam.', array('@message' => t('We contacted the Mollom servers to verify your keys'))), t('The Mollom settings page reports that Mollom is working correctly.'));
-  
+
     // Set up invalid test keys.
     variable_set('mollom_public_key', 'invalid-public-key');
     variable_set('mollom_private_key', 'invalid-private-key');
@@ -90,9 +95,9 @@ class MollomAccessTestCase extends MollomWebTestCase {
     $this->drupalGet('admin/settings/mollom');
     $this->assertRaw(t('"messages error"'), t('The Mollom settings page reports that the Mollom keys are invalid.'));
   }
-  
+
   /**
-   * Make sure that the Mollom settings page works for users with the 
+   * Make sure that the Mollom settings page works for users with the
    * 'administer site configuration' permission but not those without
    * it.
    */
@@ -182,7 +187,7 @@ class MollomFallbackTestCase extends MollomWebTestCase {
     // unknown servers, but one real server.
     variable_set('mollom_servers', array(
       'http://fake-host-1',
-      'http://fake-host-2', 
+      'http://fake-host-2',
       'http://xmlrpc1.mollom.com', // The real server.
       'http://fake-host-3',
       )
@@ -406,7 +411,7 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
    * and therefore will not work correctly with the SimpleTest browser.
    */
   function _testCommentNumAll($nid) {
-    return db_result(db_query("SELECT comment_count FROM {node_comment_statistics} WHERE nid = %d", $nid));
+    return db_result(db_query('SELECT comment_count FROM {node_comment_statistics} WHERE nid = %d', $nid));
   }
 }
 
@@ -491,7 +496,7 @@ class MollomContactFormTestCase extends MollomWebTestCase {
 }
 
 class MollomResellerTestCase extends MollomWebTestCase {
-  
+
   function getInfo() {
     return array(
       'name' => t('Key provisioning for Mollom reseller'),
@@ -504,39 +509,44 @@ class MollomResellerTestCase extends MollomWebTestCase {
     parent::setUp('mollom');
     $this->mollomKeySetup();
   }
-    
+
   /**
    * Make sure that resellers can create a new site.
    */
-  function testKeyManagement() {    
+  function testKeyManagement() {
 
     if (MOLLOM_RESELLER_KEY) {
       // Create 3 test sites:
       for ($i = 1; $i <= 3; $i++) {
-        $keys[] = mollom('mollom.createSite', array('url' => 'http://example.com/site-'. $i, 'mail' => 'mail@example.com', 'status' => 0, 'testing' => 1)); 
+        $keys[] = mollom('mollom.createSite', array(
+          'url' => 'http://example.com/site-'. $i,
+          'mail' => 'mail@example.com',
+          'status' => 0,
+          'testing' => 1,
+        ));
         $this->assertEqual(xmlrpc_errno(), FALSE, t('A new site has been registered with Mollom.'));
       }
-    
+
       $sites = mollom('mollom.listSites');
       foreach ($sites as $site) {
         // Retrieve the information from the site:
         $details = mollom('mollom.getSite', array('client_key' => $site));
-        $this->assertEqual($details['mail'], 'mail@example.com', t("The original information is correctly retrieved from Mollom."));
-        $this->assertEqual($details['status'], 0, t("The original information is correctly retrieved from Mollom."));
-        $this->assertEqual($details['testing'], 1, t("The original information is correctly retrieved from Mollom."));
-                         
+        $this->assertEqual($details['mail'], 'mail@example.com', t('The original information is correctly retrieved from Mollom.'));
+        $this->assertEqual($details['status'], 0, t('The original information is correctly retrieved from Mollom.'));
+        $this->assertEqual($details['testing'], 1, t('The original information is correctly retrieved from Mollom.'));
+
         // Perform a safety check to avoid that the tests would delete
         // valid sites in case someone messed up their Mollom settings!
-        if ($details['mail'] == 'mail@example.com' || $details['mail'] == 'root@example.com') { 
+        if ($details['mail'] == 'mail@example.com' || $details['mail'] == 'root@example.com') {
           // Update the information on the site:
           $details['mail'] = 'root@example.com';
           mollom('mollom.updateSite', array('client_key' => $site) + $details);
           $this->assertEqual(xmlrpc_errno(), FALSE, t('The information has been updated on the Mollom server.'));
-      
+
           // Retrieve the information from the site and check if it was updated properly:
           $details = mollom('mollom.getSite', array('client_key' => $site));
-          $this->assertEqual($details['mail'], 'root@example.com', t("The updated information is correctly retrieved from Mollom."));
-      
+          $this->assertEqual($details['mail'], 'root@example.com', t('The updated information is correctly retrieved from Mollom.'));
+
           // Delete the test site:
           mollom('mollom.deleteSite', array('client_key' => $site));
           $this->assertEqual(xmlrpc_errno(), FALSE, t('The Mollom server deleted a site.'));
