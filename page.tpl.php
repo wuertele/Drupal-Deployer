@@ -109,7 +109,7 @@ $pixture_width = pixture_validate_page_width($pixture_width);
           <?php print $content; ?>
         </div>
 		
-		<?php if ($content_bottom): ?>
+        <?php if ($content_bottom): ?>
           <div id="content-bottom" class="region region-content_bottom">
             <?php print $content_bottom; ?>
           </div> <!-- /#content-bottom -->
@@ -137,9 +137,6 @@ $pixture_width = pixture_validate_page_width($pixture_width);
 
     <div id="footer" class="region region-footer">
       <?php print $footer; ?>
-	  <div id="footer-message"><a href="http://adaptivethemes.com">A Drupal Theme by Adaptivethemes.com</a></div>
-      
-	  
     </div> <!-- /#footer -->
 
   </div> <!--/#page -->
