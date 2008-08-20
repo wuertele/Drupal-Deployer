@@ -205,24 +205,20 @@ function pixture_reloaded_preprocess_block(&$vars, $hook) {
 /**
  * Converts a string to a suitable html ID attribute.
  *
- * http://www.w3.org/TR/html4/struct/global.html#h-7.5.2 specifies what makes a
- * valid ID attribute in HTML. This function:
- *
- * - Ensure an ID starts with an alpha character by optionally adding an 'n'.
- * - Replaces any character except A-Z, numbers, and underscores with dashes.
+ * - Preceeds initial numeric with 'n' character.
+ * - Replaces space and underscore with dash.
  * - Converts entire string to lowercase.
+ * - Works for classes too!
  *
- * @param $string
+ * @param string $string
  *   The string
  * @return
  *   The converted string
  */
 function pixture_reloaded_id_safe($string) {
-  // Replace with dashes anything that isn't A-Z, numbers, dashes, or underscores.
-  $string = strtolower(preg_replace('/[^a-zA-Z0-9_-]+/', '-', $string));
-  // If the first character is not a-z, add 'n' in front.
-  if (!ctype_lower($string{0})) { // Don't use ctype_alpha since its locale aware.
-    $string = 'id' . $string;
+  if (is_numeric($string{0})) {
+    // If the first character is numeric, add 'n' in front
+    $string = 'n'. $string;
   }
-  return $string;
+  return strtolower(preg_replace('/[^a-zA-Z0-9-]+/', '-', $string));
 }

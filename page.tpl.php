@@ -24,17 +24,14 @@ $pixture_width = pixture_validate_page_width($pixture_width);
     <div id="page" style="width: <?php print $pixture_width; ?>;">
 	
       <div id="header">
-	  
         <?php if ($logo): ?>
           <div id="logo">
             <a href="<?php print $base_path; ?>" title="<?php print t('Home'); ?>" rel="home"><img src="<?php print $logo; ?>" alt="<?php print t('Home'); ?>" id="logo-image" /></a>
           </div>
         <?php endif; ?>
-		  
-        <div id="head-elements">
 		
+        <div id="head-elements">
           <div id="branding">
-		  
             <?php if ($site_name): ?>
               <?php
                 // Use an H1 only on the homepage
@@ -51,24 +48,21 @@ $pixture_width = pixture_validate_page_width($pixture_width);
               <div id='site-slogan'>
 			    <?php print $site_slogan; ?>
 			  </div>
-            <?php endif; ?>
-          
-		  </div> <!-- /#branding -->
-         
+            <?php endif; ?> 
+          </div> <!-- /#branding -->
+			
+			<?php if ($search_box): ?>
+              <div id="search-box">
+                <?php print $search_box; ?>
+              </div> <!-- /#search-box -->
+            <?php endif; ?>	    
+         </div> <!-- /#head-elements -->
+		  
 		  <?php if ($primary_links): ?>
             <div id="primary">
               <?php print theme('links', $primary_links); ?>
             </div> <!-- /#primary -->
           <?php endif; ?>
-			
-        </div> <!-- /#head-elements -->
-
- 	    <?php if ($search_box): ?>
-          <div id="search-box">
-            <?php print $search_box; ?>
-          </div> <!-- /#search-box -->
-        <?php endif; ?>
-		
     </div> <!--/#header -->
 	
     <?php if ($header): ?>
@@ -137,8 +131,10 @@ $pixture_width = pixture_validate_page_width($pixture_width);
     </div> <!-- #main -->
 
     <div id="footer" class="region region-footer">
-      <div id="footer-message"><?php print $footer_message; ?></div>
       <?php print $footer; ?>
+	  <div id="footer-message"><a href="http://adaptivethemes.com">A Drupal Theme by Adaptivethemes.com</a></div>
+      
+	  
     </div> <!-- /#footer -->
 
   </div> <!--/#page -->
