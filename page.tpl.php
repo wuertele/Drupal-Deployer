@@ -31,7 +31,9 @@ $pixture_width = pixture_validate_page_width($pixture_width);
         <?php endif; ?>
 		
         <div id="head-elements">
+
           <div id="branding">
+
             <?php if ($site_name): ?>
               <?php
                 // Use an H1 only on the homepage
@@ -48,23 +50,26 @@ $pixture_width = pixture_validate_page_width($pixture_width);
               <div id='site-slogan'>
 			    <?php print $site_slogan; ?>
 			  </div>
-            <?php endif; ?> 
+            <?php endif; ?>
+
           </div> <!-- /#branding -->
-			
-			<?php if ($search_box): ?>
-              <div id="search-box">
-                <?php print $search_box; ?>
-              </div> <!-- /#search-box -->
-            <?php endif; ?>	    
-         </div> <!-- /#head-elements -->
-		  
-		  <?php if ($primary_links): ?>
-            <div id="primary">
-              <?php print theme('links', $primary_links); ?>
-            </div> <!-- /#primary -->
+
+          <?php if ($search_box): ?>
+            <div id="search-box">
+              <?php print $search_box; ?>
+            </div> <!-- /#search-box -->
           <?php endif; ?>
+
+        </div> <!-- /#head-elements -->
+
+        <?php if ($primary_links): ?>
+          <div id="primary">
+            <?php print theme('links', $primary_links); ?>
+          </div> <!-- /#primary -->
+        <?php endif; ?>
+
     </div> <!--/#header -->
-	
+
     <?php if ($header): ?>
       <div id="header-blocks" class="region region-header">
         <?php print $header; ?>
