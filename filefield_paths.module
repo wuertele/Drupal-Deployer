@@ -10,89 +10,88 @@
  * Implementation of hook_form_alter().
  */
 function filefield_paths_form_alter(&$form, $form_state, $form_id) {
-  if ($form['widget_module']['#value'] == 'filefield') {
+  if ($form['widget_module']['#value'] == 'filefield' || $form['widget_module']['#value'] == 'imagefield') {
     unset($form['widget']['path_settings']['file_path']['#suffix']);
 
-    $form['widget']['path_settings']['file_path_tokens'] = array(
-      '#type' => 'fieldset',
-      '#title' => 'File path replacement patterns',
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-      '#description' => theme('token_help', 'node')
-    );
-
-    $form['widget']['path_settings']['file_path_cleanup'] = array(
-      '#type' => 'fieldset',
-      '#title' => 'File path cleanup settings',
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE
-    );
-
-    if (module_exists('pathauto')) {
-      $form['widget']['path_settings']['file_path_cleanup']['file_path_pathauto'] = array(
-        '#type' => 'checkbox',
-        '#title' => 'Cleanup using Pathauto.',
-        '#default_value' => variable_get(
-          'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_filepath_pathauto',
-          0
-        ),
-        '#description' => 'Cleanup File path using '. l('Pathauto settings', 'admin/build/path/pathauto')
-      );
-    }
-
-    $form['widget']['path_settings']['file_path_cleanup']['file_path_tolower'] = array(
-      '#type' => 'checkbox',
-      '#title' => 'Convert to lower case.',
-      '#default_value' => variable_get(
-        'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_filepath_tolower',
-        0
-      )
-    );
-
+    // Create file name field
     $form['widget']['path_settings']['file_name'] = array(
       '#type' => 'textfield',
       '#title' => 'File name',
       '#default_value' => variable_get(
         'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_filename',
         '[filefield_paths-name].[filefield_paths-ext]'
+      ),
+      '#weight' => 2
+    );
+
+    $fields = array(
+      'file_path' => array(
+        'title' => 'File path',
+        'weight' => 0
+      ),
+      'file_name' => array(
+        'title' => 'File name',
+        'weight' => 2
       )
     );
 
-    $form['widget']['path_settings']['file_name_tokens'] = array(
-      '#type' => 'fieldset',
-      '#title' => 'File name replacement patterns',
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-      '#description' => theme('token_help', 'field') . theme('token_help', 'node')
-    );
+    foreach ($fields as $field => $data) {
+      // Replacement patterns for field
+      $form['widget']['path_settings'][$field .'_tokens'] = array(
+        '#type' => 'fieldset',
+        '#title' => $data['title'] .' replacement patterns',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#description' => $field == 'file_name' ? theme('token_help', 'field') . theme('token_help', 'node') : theme('token_help', 'node'),
+        '#weight' => $data['weight']
+      );
 
-    $form['widget']['path_settings']['file_name_cleanup'] = array(
-      '#type' => 'fieldset',
-      '#title' => 'File name cleanup settings',
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE
-    );
+      $form['widget']['path_settings'][$field .'_cleanup'] = array(
+        '#type' => 'fieldset',
+        '#title' => $data['title'] .' cleanup settings',
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#weight' => $data['weight'] + 1
+      );
 
-    if (module_exists('pathauto')) {
-      $form['widget']['path_settings']['file_name_cleanup']['file_name_pathauto'] = array(
+      // Cleanup field with Pathauto module
+      if (module_exists('pathauto')) {
+        $form['widget']['path_settings'][$field .'_cleanup'][$field .'_pathauto'] = array(
+          '#type' => 'checkbox',
+          '#title' => 'Cleanup using Pathauto.',
+          '#default_value' => variable_get(
+            'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_'. $field .'_pathauto',
+            0
+          ),
+          '#description' => 'Cleanup '. $data['title'] .' using '. l('Pathauto settings', 'admin/build/path/pathauto')
+        );
+      }
+
+      // Convert field to lower case
+      $form['widget']['path_settings'][$field .'_cleanup'][$field .'_tolower'] = array(
         '#type' => 'checkbox',
-        '#title' => 'Cleanup using Pathauto.',
+        '#title' => 'Convert to lower case.',
         '#default_value' => variable_get(
-          'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_filename_pathauto',
+          'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_'. $field .'_tolower',
           0
         ),
-        '#description' => 'Cleanup File name using '. l('Pathauto settings', 'admin/build/path/pathauto')
+        '#description' => 'Convert '. $data['title'] .' to lower case.'
       );
-    }
 
-    $form['widget']['path_settings']['file_name_cleanup']['file_name_tolower'] = array(
-      '#type' => 'checkbox',
-      '#title' => 'Convert to lower case.',
-      '#default_value' => variable_get(
-        'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_filename_tolower',
-        0
-      )
-    );
+      // Transliterate field with Transliteration module
+      if (module_exists('transliteration')) {
+        $form['widget']['path_settings'][$field .'_cleanup'][$field .'_transliterate'] = array(
+          '#type' => 'checkbox',
+          '#title' => 'Transliterate.',
+          '#default_value' => variable_get(
+            'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_'. $field .'_transliterate',
+            0
+          ),
+          '#description' => 'Transliterate '. $data['title'] .'.'
+        );
+      }
+
+    }
 
     $form['#submit'][] = 'filefield_paths_form_submit';
   }
@@ -102,31 +101,34 @@ function filefield_paths_form_alter(&$form, $form_state, $form_id) {
  * Implementation of hook_form_submit().
  */
 function filefield_paths_form_submit($form, &$form_state) {
-  variable_set(
-    'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_filepath_tolower',
-    $form_state['values']['file_path_tolower']
-  );
+  $fields = array('file_path', 'file_name');
 
   variable_set(
-    'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_filename',
+    'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_file_name',
     $form_state['values']['file_name']
   );
 
-  variable_set(
-    'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_filename_pathauto',
-    $form_state['values']['file_name_pathauto']
-  );
-
-  if (module_exists('pathauto')) {
-    variable_set(
-      'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_filepath_pathauto',
-      $form_state['values']['file_path_pathauto']
-    );
+  foreach ($fields as $field) {
 
     variable_set(
-      'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_filename_tolower',
-      $form_state['values']['file_name_tolower']
+      'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_'. $field .'_tolower',
+      $form_state['values'][$field .'_tolower']
     );
+
+    if (module_exists('pathauto')) {
+      variable_set(
+        'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_'. $field .'_pathauto',
+        $form_state['values'][$field .'_pathauto']
+      );
+    }
+
+    if (module_exists('transliteration')) {
+      variable_set(
+        'filefield_paths_'. $form['type_name']['#value'] .'_'. $form['field_name']['#value'] .'_'. $field .'_transliterate',
+        $form_state['values'][$field .'_transliterate']
+      );
+    }
+
   }
 }
 
@@ -141,11 +143,11 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       $update = FALSE;
 
       foreach ($content_type['fields'] as $field) {
-        if ($field['type'] == 'filefield') {
+        if ($field['type'] == 'filefield' || $field['type'] == 'image') {
 
           // Set base for FileField Paths variables
-          $settings['filepath'] = 'filefield_paths_'. $node->type .'_'. $field['field_name'] .'_filepath';
-          $settings['filename'] = 'filefield_paths_'. $node->type .'_'. $field['field_name'] .'_filename';
+          $settings['filepath'] = 'filefield_paths_'. $node->type .'_'. $field['field_name'] .'_file_path';
+          $settings['filename'] = 'filefield_paths_'. $node->type .'_'. $field['field_name'] .'_file_name';
 
           foreach ($node->$field['field_name'] as $count => $file) {
             if (empty($file['filepath'])) {
@@ -251,15 +253,24 @@ function filefield_paths_token_values($type, $object = NULL) {
  * Process and cleanup strings.
  */
 function filefield_paths_process_string($original, $type = 'global', $object = NULL, $settings) {
+
+  // Process string tokens via Pathauto module
   if (module_exists('pathauto') && variable_get($settings .'_pathauto', 0)) {
-    // Replace Tokens with Pathauto cleaned values
     $placeholders = pathauto_get_placeholders($type, $object);
     $value = str_replace($placeholders['tokens'], $placeholders['values'], $original);
   }
+
+  // Process string tokens via Token module
   else {
    $value = token_replace($original, $type, $object);
   }
 
+  // Transliterate string
+  if (module_exists('transliteration') && variable_get($settings .'_transliterate', 0)) {
+    $value = transliteration_get($value);
+  }
+
+  // Convert string to lower case
   if (variable_get($settings .'_tolower', 0) || (variable_get($settings .'_pathauto', 0) && variable_get('pathauto_case', 0))) {
     // Convert string to lower case
     $value = drupal_strtolower($value);
