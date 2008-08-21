@@ -5,6 +5,7 @@ Comment upload provides the ability to upload "file attachments" to comments.
 Compared to Comment upload 5., the 6.x version still lacks views integration 
 and the automatic display of images.
 
+Comment upload requires at least Drupal 6.4.
 
 INSTALLATION
 ============
