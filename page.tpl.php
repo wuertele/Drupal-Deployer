@@ -23,36 +23,17 @@ $pixture_width = pixture_validate_page_width($pixture_width);
   
     <div id="page" style="width: <?php print $pixture_width; ?>;">
 	
-      <div id="header">
+      <div id="header" class="<?php if ($logo) { print 'with-logo'; } ?>">
+	  
         <?php if ($logo): ?>
           <div id="logo">
-            <a href="<?php print $base_path; ?>" title="<?php print t('Home'); ?>" rel="home"><img src="<?php print $logo; ?>" alt="<?php print t('Home'); ?>" id="logo-image" /></a>
+            <a href="<?php print $base_path; ?>" title="<?php print t('Home'); ?>" rel="home">
+              <img src="<?php print $logo; ?>" alt="<?php print t('Home'); ?>" id="logo-image" />
+            </a>
           </div>
         <?php endif; ?>
-		
+
         <div id="head-elements">
-
-          <div id="branding">
-
-            <?php if ($site_name): ?>
-              <?php
-                // Use an H1 only on the homepage
-                $tag = $is_front ? 'h1' : 'div';
-              ?>
-              <<?php print $tag; ?> id='site-name'>
-                <a href="<?php print $base_path; ?>" title="<?php print t('Home'); ?>" rel="home">
-                  <?php print $site_name; ?>
-                </a>
-              </<?php print $tag; ?>>
-            <?php endif; ?>
-			
-            <?php if ($site_slogan): ?>
-              <div id='site-slogan'>
-			    <?php print $site_slogan; ?>
-			  </div>
-            <?php endif; ?>
-
-          </div> <!-- /#branding -->
 
           <?php if ($search_box): ?>
             <div id="search-box">
@@ -60,11 +41,32 @@ $pixture_width = pixture_validate_page_width($pixture_width);
             </div> <!-- /#search-box -->
           <?php endif; ?>
 
+          <div id="branding">
+            <?php if ($site_name): ?>
+              <?php
+                // Use an H1 only on the homepage
+                $tag = $is_front ? 'h1' : 'div';
+              ?>
+              <<?php print $tag; ?> id="site-name">
+                <a href="<?php print $base_path; ?>" title="<?php print t('Home'); ?>" rel="home">
+                  <strong><?php print $site_name; ?></strong>
+                </a>
+              </<?php print $tag; ?>>
+            <?php endif; ?>
+			
+            <?php if ($site_slogan): ?>
+              <div id="site-slogan"><em><?php print $site_slogan; ?></em></div>
+            <?php endif; ?>
+
+          </div> <!-- /#branding -->
+
         </div> <!-- /#head-elements -->
 
         <?php if ($primary_links): ?>
           <div id="primary">
-            <?php print theme('links', $primary_links); ?>
+		    <div id="primary-inner">
+              <?php print theme('links', $primary_links); ?>
+			</div>
           </div> <!-- /#primary -->
         <?php endif; ?>
 
