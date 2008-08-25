@@ -24,9 +24,7 @@
   </div>
 
   <?php if ($links): ?>
-    <div class="links">
-      <?php print $links; ?>
-    </div>
+    <div class="links clearfix"><?php print $links; ?></div>
   <?php endif; ?>
 
     </div></div>
