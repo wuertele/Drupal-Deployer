@@ -81,6 +81,8 @@ $info = array(
 	'images/sticky-bl.png'                 => array(250, 320,  10,  10),
 	'images/sticky-br.png'                 => array(770, 320,  10,  10),
     'images/sticky-tile.png'               => array(260, 130,  10,  10),
+	
+	'images/sf-hover-tile.png'             => array(  0,  30, 250,   1),
 
     'screenshot.png'                       => array(  0,   0, 700, 420),
   ),

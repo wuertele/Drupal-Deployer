@@ -1,29 +1,36 @@
 <?php // $Id$ ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="<?php print $language->language; ?>" xml:lang="<?php print $language->language; ?>">
-
 <head>
   <title><?php print $head_title; ?></title>
   <?php print $head; ?>
   <?php print $styles; ?>
   <!--[if IE]>
     <?php if (file_exists($directory . '/ie.css')): ?>
-      <link rel="stylesheet" href="<?php print $base_path . $directory; ?>/ie.css" type="text/css">
+      <link type="text/css" rel="stylesheet" media="all" href="<?php print $base_path . $directory; ?>/ie.css" >
     <?php endif; ?>
   <![endif]-->
   <?php print $scripts; ?>
+  <?php if (!empty($superfish)): ?>
+    <script type="text/javascript" src="<?php print $base_path . $directory; ?>/sf/js/superfish.js"></script>
+    <script type="text/javascript"> 
+      $(document).ready(function() { 
+        $('#superfish-inner ul.menu').superfish(); 
+      }); 
+    </script>
+  <?php endif; ?>
 </head>
 <?php
-$pixture_width = theme_get_setting('pixture_width');
-$pixture_width = pixture_validate_page_width($pixture_width);
+  $pixture_width = theme_get_setting('pixture_width');
+  $pixture_width = pixture_validate_page_width($pixture_width);
 ?>
-<body class="<?php print $body_classes; ?>">
+<body class="<?php print $body_classes; ?> <?php if (isset($logo)) { print 'with-logo'; } ?>">
 
   <div id="skip-to-content"><a href="#main-content"><?php print t('Skip to Content'); ?></a></div> 
   
     <div id="page" style="width: <?php print $pixture_width; ?>;">
 	
-      <div id="header" class="<?php if ($logo) { print 'with-logo'; } ?>">
+      <div id="header">
 	  
         <?php if ($logo): ?>
           <div id="logo">
@@ -53,23 +60,28 @@ $pixture_width = pixture_validate_page_width($pixture_width);
                 </a>
               </<?php print $tag; ?>>
             <?php endif; ?>
-			
             <?php if ($site_slogan): ?>
               <div id="site-slogan"><em><?php print $site_slogan; ?></em></div>
             <?php endif; ?>
-
           </div> <!-- /#branding -->
 
         </div> <!-- /#head-elements -->
 
-        <?php if ($primary_links): ?>
-          <div id="primary">
-		    <div id="primary-inner">
-              <?php print theme('links', $primary_links); ?>
-			</div>
-          </div> <!-- /#primary -->
+        <?php if ($primary_links || $superfish): ?>
+          <!-- Primary || Superfish -->
+          <div id="<?php print $primary_links ? 'primary' : 'superfish' ; ?>">
+            <div id="<?php print $primary_links ? 'primary' : 'superfish' ; ?>-inner">
+              <?php if ($primary_links) {
+                      print theme('links', $primary_links); 
+                    }
+                    elseif (!empty($superfish)) {
+                      print $superfish;
+                    }
+              ?>
+            </div> <!-- / inner -->
+          </div> <!-- /primary || superfish -->
         <?php endif; ?>
-
+	   
     </div> <!--/#header -->
 
     <?php if ($header): ?>
@@ -139,12 +151,17 @@ $pixture_width = pixture_validate_page_width($pixture_width);
 
     <div id="footer" class="region region-footer">
       <?php print $footer; ?>
+      <div id="footer-message">
+        <?php print $footer_message; ?>
+      </div> <!-- /#footer-message -->
     </div> <!-- /#footer -->
 
   </div> <!--/#page -->
 
   <?php if ($closure_region): ?>
-    <div id="closure-blocks" class="region region-closure"><?php print $closure_region; ?></div>
+    <div id="closure-blocks" class="region region-closure">
+      <?php print $closure_region; ?>
+    </div>
   <?php endif; ?>
 
   <?php print $closure; ?>

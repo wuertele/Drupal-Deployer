@@ -33,7 +33,7 @@ function phptemplate_settings($saved_settings)
     '#maxlength' => 8,
     '#description' => t('Specify the page width in percent ratio (50-100%) for liquid layout, or in px (800-1600px) for fixed width layout. If an invalid value is specified, the default value (85%) is used instead. You can leave this field blank to use the default value. You need to add either % or px after the number.'),
   );
-
+  
   // Return the additional form widgets
   return $form;
 }
