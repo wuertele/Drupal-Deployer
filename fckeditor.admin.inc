@@ -1052,8 +1052,9 @@ function fckeditor_rebuild_selectors($name = NULL) {
   }
 }
 
-function fckeditor_rule_create($path, $fieldname) {
+function fckeditor_rule_create($nodetype = '*', $path = '*', $fieldname = '*') {
   $rule = new stdClass();
+  $rule->nodetype = $nodetype;
   $rule->path = $path;
   $rule->field = $fieldname;
   
@@ -1062,6 +1063,14 @@ function fckeditor_rule_create($path, $fieldname) {
 
 function fckeditor_parse_rule($rule) {
   $ruleobj = new stdClass();
+  
+  $atpos = strpos($rule, '@');
+  if ($atpos !== false) {
+    $ruleobj->nodetype = substr($rule, 0, $atpos);
+    $rule = substr($rule, $atpos + 1);
+  } else {
+    $ruleobj->nodetype = '*';
+  }
   
   $dotpos = strpos($rule, '.');
   if ($dotpos === FALSE) {
@@ -1079,9 +1088,10 @@ function fckeditor_parse_rule($rule) {
       return NULL;
     }
   }
-  
-  $ruleobj->path = substr($rule, 0, $dotpos);
-  $ruleobj->field = str_replace('\.', '.', substr($rule, $dotpos + 1));
+  else {
+    $ruleobj->path = substr($rule, 0, $dotpos);
+    $ruleobj->field = str_replace('\.', '.', substr($rule, $dotpos + 1));
+  }
   
   return $ruleobj;
 }
@@ -1090,7 +1100,7 @@ function fckeditor_rule_to_regex($rule) {
   static $replace = array('\*' => '.*', '\?' => '.');
   
   $field = str_replace('.', '\.', $rule->field);
-  $regex = '^'. preg_quote($rule->path, '#') .'\.'. preg_quote($field, '#') .'$';
+  $regex = '^'. preg_quote($rule->nodetype, '#') .'@'. preg_quote($rule->path, '#') .'\.'. preg_quote($field, '#') .'$';
   $regex = strtr($regex, $replace);
   
   return $regex;
@@ -1098,7 +1108,11 @@ function fckeditor_rule_to_regex($rule) {
 
 function fckeditor_rule_to_string($rule) {
   $field = str_replace('.', '\.', $rule->field);
-  return $rule->path .'.'. $field;
+  $rulestr = '';
+  if ($rule->nodetype != '*') {
+    $rulestr .= $rule->nodetype.'@';
+  }
+  return $rulestr.$rule->path .'.'. $field;
 }
 
 /**
