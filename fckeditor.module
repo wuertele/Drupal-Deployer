@@ -263,7 +263,7 @@ function fckeditor_is_enabled($excl_mode, $excl_regex, $element_id, $get_q) {
   $nodetype = fckeditor_get_nodetype();
   $element_id = str_replace('.', '\.', $element_id);
   
-  $match = !empty($excl_regex) && preg_match($excl_regex, $nodetype.'@'.$get_q .'.'. $element_id);
+  $match = !empty($excl_regex) && preg_match($excl_regex, $nodetype .'@'. $get_q .'.'. $element_id);
   
   return ($excl_mode == '0' xor $match);
 }
@@ -280,7 +280,7 @@ function fckeditor_process_textarea($element) {
   static $is_running = FALSE;
   static $num = 1;
   global $user;
-  $enabled = true;
+  $enabled = TRUE;
 
   //skip this one, surely nobody wants WYSIWYG here
 
@@ -317,12 +317,12 @@ function fckeditor_process_textarea($element) {
           $conf[$setting] = fckeditor_user_get_setting($user, $profile, $setting);
         }
       }
-      if ($conf["popup"]=="t" && $conf["show_toggle"]=="t") {
-        $conf["show_toggle"]="f";
+      if ($conf['popup'] == 't' && $conf['show_toggle'] == 't') {
+        $conf['show_toggle'] = 'f';
       }      
     }
     else {
-      $enabled = false;
+      $enabled = FALSE;
     }
   }
 
@@ -738,12 +738,10 @@ function fckeditor_user_get_profile($user, $element_id = NULL) {
 
   // Since fckeditor_profile_load() makes a db hit, only call it when we're pretty sure
   // we're gonna render fckeditor.
-  if (!isset($profile_name[$user->uid])) {
-    $sorted_roles = fckeditor_sorted_roles();
-    foreach (array_keys($sorted_roles) as $rid) {
-      if (isset($user->roles[$rid])) {
-        $rids[] = $rid;
-      }
+  $sorted_roles = fckeditor_sorted_roles();
+  foreach (array_keys($sorted_roles) as $rid) {
+    if (isset($user->roles[$rid])) {
+      $rids[] = $rid;
     }
   }
 
@@ -754,7 +752,7 @@ function fckeditor_user_get_profile($user, $element_id = NULL) {
   $profile_names = array();
   if (sizeof($rids)) {
     $result = db_query("SELECT r.rid, s.name FROM {fckeditor_settings} s INNER JOIN {fckeditor_role} r ON r.name = s.name WHERE r.rid IN (". implode(",", $rids) .")");
-    while($row = db_fetch_array($result)) {
+    while (($row = db_fetch_array($result))) {
       if (!isset($profile_names[$row['rid']])) {
         $profile_names[$row['rid']] = array();
       }

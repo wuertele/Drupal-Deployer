@@ -34,7 +34,6 @@
  * Main administrative page
  */
 function fckeditor_admin_main() {
-  $module_drupal_path = drupal_get_path('module', 'fckeditor');
   $editor_path        = fckeditor_path(TRUE);
   $fckconfig_file = $editor_path .'/fckconfig.js';
   if (!file_exists($fckconfig_file)) {    
@@ -1065,10 +1064,11 @@ function fckeditor_parse_rule($rule) {
   $ruleobj = new stdClass();
   
   $atpos = strpos($rule, '@');
-  if ($atpos !== false) {
+  if ($atpos !== FALSE) {
     $ruleobj->nodetype = substr($rule, 0, $atpos);
     $rule = substr($rule, $atpos + 1);
-  } else {
+  }
+  else {
     $ruleobj->nodetype = '*';
   }
   
@@ -1110,9 +1110,9 @@ function fckeditor_rule_to_string($rule) {
   $field = str_replace('.', '\.', $rule->field);
   $rulestr = '';
   if ($rule->nodetype != '*') {
-    $rulestr .= $rule->nodetype.'@';
+    $rulestr .= $rule->nodetype .'@';
   }
-  return $rulestr.$rule->path .'.'. $field;
+  return $rulestr . $rule->path .'.'. $field;
 }
 
 /**
