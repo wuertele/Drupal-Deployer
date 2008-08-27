@@ -15,10 +15,10 @@ function theme_imagefield_formatter_image_plain($element) {
 
   $field = content_fields($element['#field_name']);
   $item = $element['#item'];
-  
+
   if (empty($item['fid']) && $field['use_default_image']) $item = $field['default_image'];
   if (empty($item['filepath']))  $item = array_merge($item, field_file_load($item['fid']));
-  
+
   $class = 'imagefield imagefield-'. $field['field_name'];
   return  theme('imagefield_image', $item, $item['alt'], $item['title'], array('class' => $class));
 }
@@ -42,7 +42,7 @@ function theme_imagefield_formatter_image_imagelink($element) {
   if (empty($element['#item'])) {
     return '';
   }
-  
+
   $item = $element['#item'];
   $imagetag = theme('imagefield_formatter_image_plain', $element);
   $original_image_url = file_create_url($item['filepath']);
@@ -56,7 +56,7 @@ function theme_imagefield_formatter_path_plain($element) {
   if (empty($element['#item'])) {
     return '';
   }
-  
+
   $field = content_fields($element['#field_name']);
   $item = $element['#item'];
   if (empty($item['fid']) && $field['use_default_image'])  $item = $field['default_image'];

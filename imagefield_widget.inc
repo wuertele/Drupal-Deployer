@@ -40,7 +40,7 @@ function imagefield_widget_widget_settings_form($widget) {
     t('The minimum allowed image size expressed as WIDTHxHEIGHT (e.g. 640x480). Set to 0 for no restriction. If an image that is smaller than these dimensions is uploaded it will be rejected.'),
     '#weight' => 2,
   );
- 
+
   $form['file_extensions'] = array(
     '#type' => 'textfield',
     '#title' => t('Permitted upload file extensions.'),
@@ -72,7 +72,7 @@ function imagefield_widget_widget_settings_form($widget) {
     '#description' => t('This value will be used for alternate text by default.'),
     '#suffix' => theme('token_help', 'file'),
   );
-  
+
   $form['title_settings'] = array(
     '#type' => 'fieldset',
     '#title' => t('Title text settings'),
@@ -87,7 +87,7 @@ function imagefield_widget_widget_settings_form($widget) {
     '#description' => t('Enable user input title text for images.'),
   );
 
- 
+
   $form['title_settings']['title'] = array(
     '#type' => 'textfield',
     '#title' => t('Default Title text'),
@@ -111,14 +111,14 @@ function imagefield_widget_widget_settings_save($widget) {
  * @defgroup "FileField widget element callbacks.
  * @{
  *
- * The call backs are called by form elements that leverage the 
+ * The call backs are called by form elements that leverage the
  * filefield_widget_value and filefield_widget_process callbacks.
  * They will be called after the filefield callbacks and their
  * return values will be merged with the filefield callback's.
  */
 function imagefield_widget_widget_value($element, $edit = FALSE) {
-  // handle additional 
-  if ($edit) { 
+  // handle additional
+  if ($edit) {
       return array(
         'alt' => isset($edit['alt']) ? $edit['alt'] : '',
         'title' => isset($edit['title']) ? $edit['title'] : '',
@@ -139,7 +139,7 @@ function imagefield_widget_widget_process($element, $edit, &$form_state, $form) 
   if ($field['widget']['custom_alt']) {
     $element['data']['alt']['#type'] = $file['fid'] ? 'textfield' : 'hidden';
     if (!empty($file['data']['alt'])) $element['data']['alt']['#default_value'] =  $file['data']['alt'];
-  } 
+  }
 
   $element['data']['title'] = array(
     '#type' => 'value',

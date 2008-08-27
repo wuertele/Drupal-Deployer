@@ -35,7 +35,7 @@ function imagefield_file_insert($file) {
 
 function imagefield_file_delete($file) {
   // delete admin thumbnail.
-  if (imagefield_file_is_image($file)) 
+  if (imagefield_file_is_image($file))
     file_delete(imagefield_file_admin_thumb_path($file));
 }
 
@@ -52,6 +52,6 @@ function imagefield_file_admin_thumb_path($file) {
   //dsm($file);
   $file = (object)$file;
   return $file->filepath .'.thumb.jpg';
-} 
+}
 
 
