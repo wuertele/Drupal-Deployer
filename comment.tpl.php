@@ -4,12 +4,8 @@
     <div class="comment-inner-2"><div class="comment-inner-3">
 
     <?php if ($title): ?>
-      <h3 class="title"><?php print $title; if (!empty($new)): ?> <span class="new"><?php print $new; ?></span></h3>   
+      <h3 class="title"><?php print $title; if (!empty($new)): ?> <span class="new"><?php print $new; ?></span><?php endif; ?></h3>   
 	<?php endif; ?>
-	
-    <?php elseif (!empty($new)): ?>
-      <div class="new"><?php print $new; ?></div>
-    <?php endif; ?>
 
     <?php if ($unpublished): ?>
       <div class="unpublished"><?php print t('Unpublished'); ?></div>
