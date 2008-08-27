@@ -6,6 +6,7 @@
 function drupalforfirebug_menu() {
   $items['admin/firebug/exec'] = array(
     'page callback' => 'drupalforfirebug_get_exec_php_callback',
+    'access arguments' => array('Execute Firebug PHP'),
   );
   return $items;
 }
@@ -181,7 +182,11 @@ function drupalforfirebug_get_php_exec($code = NULL) {
 * Outputs a Execute PHP Form
 */
 function drupalforfirebug_get_exec_php_callback() {
-  $code = ($_POST['code']) ? $_POST['code'] : NULL;
+  if (isset($_POST['code'])) {
+    $code = $_POST['code'];
+  } else {
+    $code = NULL;
+  }
   return drupalforfirebug_get_php_exec($code);
 }
 
@@ -257,6 +262,7 @@ function drupalforfirebug_array_compare($a, $b) {
 * Specialized Function to Return an Array Row
 */
 function drupalforfirebug_array_row_build($key, $value, $style, $depth) {
+  $spacing = '';
   for ($x = 0; $x <= $depth; $x++) { 
     $spacing .= '&nbsp;&nbsp;&nbsp;&nbsp;';
   }
@@ -282,6 +288,8 @@ function drupalforfirebug_array_row_build($key, $value, $style, $depth) {
       $colorend = '</font>';
       break;
   }
+
+  $output = '';
   if (is_array($value) || is_object($value)) {
     if ($style == 'DIFFERENT') { // do not highlight if contained item is just changed. 
       $color = '';
@@ -339,7 +347,11 @@ function drupalforfirebug_array_compare_code($a, $b, $c = array()) {
 
       // Set the Proper Element
       if (is_array($a[$akeys[$x]])) { // is b a valid array
-        $c[$akeys[$x]] = drupalforfirebug_array_compare_code($a[$akeys[$x]], $b[$akeys[$x]], $c[$akeys[$x]]);
+        if (isset($c[$akeys[$x]])) {
+          $c[$akeys[$x]] = drupalforfirebug_array_compare_code($a[$akeys[$x]], $b[$akeys[$x]], $c[$akeys[$x]]);
+        } else {
+          $c[$akeys[$x]] = drupalforfirebug_array_compare_code($a[$akeys[$x]], $b[$akeys[$x]], array());
+        }
       } else {
         if (array_key_exists($akeys[$x], array_flip($bkeys))) { // is it in B array?
           if ($a[$akeys[$x]] == $b[$akeys[$x]]) {
