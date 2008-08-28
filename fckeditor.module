@@ -401,8 +401,10 @@ function fckeditor_process_textarea($element) {
     if ($force_simple_toolbar) {
       $toolbar = FCKEDITOR_FORCE_SIMPLE_TOOLBAR_NAME;
     }
-    $element['#suffix'] .= "\n<script type=\"text/javascript\">
-var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
+    
+    drupal_add_js('var '. $js_id .';', 'inline');
+    
+    $js = $js_id ." = new FCKeditor( '". $textarea_id ."' );
 ". $js_id .".defaultState = ". (($fckeditor_on && $conf['popup'] == 'f') ? 1 : 0) .";
 ". $js_id .".BasePath	= '". $editor_path ."/';
 ". $js_id .".Config['PluginsPath']	= '". $module_full_path ."/plugins/';
@@ -410,7 +412,7 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
 ". $js_id .".Config['TextareaID'] = \"". $element['#id'] ."\";";
 
     //if ($conf['appearance_conf'] == 'f') {
-    $element['#suffix'] .= "\n". $js_id .".ToolbarSet = \"". $toolbar ."\";
+    $js .= "\n". $js_id .".ToolbarSet = \"". $toolbar ."\";
 ". $js_id .".Config['SkinPath'] = ". $js_id .".BasePath + \"editor/skins/". $conf['skin'] ."/\";
 ". $js_id .".Config['DefaultLanguage'] = \"". $conf['lang'] ."\";
 ". $js_id .".Config['AutoDetectLanguage'] = ". ($conf['auto_lang']=="t"?"true":"false") .";
@@ -419,7 +421,7 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
 ". $js_id .".Width = \"". $width ."\";\n";
     //}
     //if ($conf['output_conf'] == 'f') {
-    $element['#suffix'] .= "\n". $js_id .".Config['EnterMode'] = '". $conf['enter_mode'] ."';
+    $js .= "\n". $js_id .".Config['EnterMode'] = '". $conf['enter_mode'] ."';
 ". $js_id .".Config['ShiftEnterMode'] = \"". $conf['shift_enter_mode'] ."\";
 ". $js_id .".Config['FontFormats'] = \"". str_replace(",", ";", $conf['font_format']) ."\";
 ". $js_id .".Config['FormatSource'] = ". ($conf['format_source']=="t"?"true":"false") .";
@@ -427,7 +429,7 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
     //}
     
     if (function_exists('img_assist_perm')) { //#275158
-      $element['#suffix'] .= "var fckImgAssistPath = '". base_path() . drupal_get_path('module', 'img_assist') ."';\n";    
+      drupal_add_js("var fckImgAssistPath = '". base_path() . drupal_get_path('module', 'img_assist') ."';", 'inline');
     }
     // add code for filebrowser for users that have access
     if (user_access('allow fckeditor file uploads')==1) {
@@ -463,51 +465,51 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
       }
       
       if ($quickupload) {
-        $element['#suffix'] .= $js_id .".Config['LinkUpload'] = true;\n";
-        $element['#suffix'] .= $js_id .".Config['ImageUpload'] = true;\n";
-        $element['#suffix'] .= $js_id .".Config['FlashUpload'] = true;\n";
-        $element['#suffix'] .= $js_id .".Config['LinkUploadURL'] = '". $upload_path ."';\n";
-        $element['#suffix'] .= $js_id .".Config['ImageUploadURL'] = '". $upload_path ."?Type=Image';\n";
-        $element['#suffix'] .= $js_id .".Config['FlashUploadURL'] = '". $upload_path ."?Type=Flash';\n";
+        $js .= $js_id .".Config['LinkUpload'] = true;\n";
+        $js .= $js_id .".Config['ImageUpload'] = true;\n";
+        $js .= $js_id .".Config['FlashUpload'] = true;\n";
+        $js .= $js_id .".Config['LinkUploadURL'] = '". $upload_path ."';\n";
+        $js .= $js_id .".Config['ImageUploadURL'] = '". $upload_path ."?Type=Image';\n";
+        $js .= $js_id .".Config['FlashUploadURL'] = '". $upload_path ."?Type=Flash';\n";
       }
       else {
-        $element['#suffix'] .= $js_id .".Config['LinkUpload'] = false;\n";
-        $element['#suffix'] .= $js_id .".Config['ImageUpload'] = false;\n";
-        $element['#suffix'] .= $js_id .".Config['FlashUpload'] = false;\n";
+        $js .= $js_id .".Config['LinkUpload'] = false;\n";
+        $js .= $js_id .".Config['ImageUpload'] = false;\n";
+        $js .= $js_id .".Config['FlashUpload'] = false;\n";
       }
       
       switch ($filebrowser) {
         case 'imce':
-          $element['#suffix'] .= $js_id .".Config['LinkBrowser']= true;\n";
-          $element['#suffix'] .= $js_id .".Config['ImageBrowser']= true;\n";
-          $element['#suffix'] .= $js_id .".Config['FlashBrowser']= true;\n";
-          $element['#suffix'] .= $js_id .".Config['LinkBrowserURL']= '". $host ."?q=imce&app=FCKEditor|url@txtUrl';\n";
-          $element['#suffix'] .= $js_id .".Config['ImageBrowserURL']= '". $host ."?q=imce&app=FCKEditor|url@txtUrl|width@txtWidth|height@txtHeight';\n";
-          $element['#suffix'] .= $js_id .".Config['FlashBrowserURL']= '". $host ."?q=imce&app=FCKEditor|url@txtUrl';\n";
+          $js .= $js_id .".Config['LinkBrowser']= true;\n";
+          $js .= $js_id .".Config['ImageBrowser']= true;\n";
+          $js .= $js_id .".Config['FlashBrowser']= true;\n";
+          $js .= $js_id .".Config['LinkBrowserURL']= '". $host ."?q=imce&app=FCKEditor|url@txtUrl';\n";
+          $js .= $js_id .".Config['ImageBrowserURL']= '". $host ."?q=imce&app=FCKEditor|url@txtUrl|width@txtWidth|height@txtHeight';\n";
+          $js .= $js_id .".Config['FlashBrowserURL']= '". $host ."?q=imce&app=FCKEditor|url@txtUrl';\n";
           break;
         case 'builtin':
-          $element['#suffix'] .= $js_id .".Config['LinkBrowser'] = true;\n";
-          $element['#suffix'] .= $js_id .".Config['ImageBrowser'] = true;\n";
-          $element['#suffix'] .= $js_id .".Config['FlashBrowser'] = true;\n";
-          $element['#suffix'] .= $js_id .".Config['LinkBrowserURL'] = '". $editor_path ."/editor/filemanager/browser/default/browser.html?Connector=". $connector_path ."&ServerPath=". $files_path ."';\n";
-          $element['#suffix'] .= $js_id .".Config['ImageBrowserURL'] = '". $editor_path ."/editor/filemanager/browser/default/browser.html?Type=Image&Connector=". $connector_path ."&ServerPath=". $files_path ."';\n";
-          $element['#suffix'] .= $js_id .".Config['FlashBrowserURL'] = '". $editor_path ."/editor/filemanager/browser/default/browser.html?Type=Flash&Connector=". $connector_path ."&ServerPath=". $files_path ."';\n";
+          $js .= $js_id .".Config['LinkBrowser'] = true;\n";
+          $js .= $js_id .".Config['ImageBrowser'] = true;\n";
+          $js .= $js_id .".Config['FlashBrowser'] = true;\n";
+          $js .= $js_id .".Config['LinkBrowserURL'] = '". $editor_path ."/editor/filemanager/browser/default/browser.html?Connector=". $connector_path ."&ServerPath=". $files_path ."';\n";
+          $js .= $js_id .".Config['ImageBrowserURL'] = '". $editor_path ."/editor/filemanager/browser/default/browser.html?Type=Image&Connector=". $connector_path ."&ServerPath=". $files_path ."';\n";
+          $js .= $js_id .".Config['FlashBrowserURL'] = '". $editor_path ."/editor/filemanager/browser/default/browser.html?Type=Flash&Connector=". $connector_path ."&ServerPath=". $files_path ."';\n";
           break;
         default:
         case 'none':
-          $element['#suffix'] .= $js_id .".Config['LinkBrowser'] = false;\n";
-          $element['#suffix'] .= $js_id .".Config['ImageBrowser'] = false;\n";
-          $element['#suffix'] .= $js_id .".Config['FlashBrowser'] = false;\n";
+          $js .= $js_id .".Config['LinkBrowser'] = false;\n";
+          $js .= $js_id .".Config['ImageBrowser'] = false;\n";
+          $js .= $js_id .".Config['FlashBrowser'] = false;\n";
           break;
       }
     }
     else {
-      $element['#suffix'] .= $js_id .".Config['LinkBrowser'] = false;\n";
-      $element['#suffix'] .= $js_id .".Config['ImageBrowser'] = false;\n";
-      $element['#suffix'] .= $js_id .".Config['FlashBrowser'] = false;\n";
-      $element['#suffix'] .= $js_id .".Config['LinkUpload'] = false;\n";
-      $element['#suffix'] .= $js_id .".Config['ImageUpload'] = false;\n";
-      $element['#suffix'] .= $js_id .".Config['FlashUpload'] = false;\n";
+      $js .= $js_id .".Config['LinkBrowser'] = false;\n";
+      $js .= $js_id .".Config['ImageBrowser'] = false;\n";
+      $js .= $js_id .".Config['FlashBrowser'] = false;\n";
+      $js .= $js_id .".Config['LinkUpload'] = false;\n";
+      $js .= $js_id .".Config['ImageUpload'] = false;\n";
+      $js .= $js_id .".Config['FlashUpload'] = false;\n";
     }
     
     if (!empty($conf['js_conf'])) {
@@ -517,7 +519,7 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
         $eqpos = strpos($l, "=");
         if (FALSE !== $eqpos) {
           $option = str_replace("FCKConfig.", "", substr($l, 0, $eqpos));
-          $element['#suffix'] .= "\n". $js_id .".Config['". trim($option) ."'] =". substr($l, $eqpos + 1);
+          $js .= "\n". $js_id .".Config['". trim($option) ."'] =". substr($l, $eqpos + 1);
         }
       }
     }
@@ -526,12 +528,12 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
     if (!empty($conf['css_style']) && $conf['css_style'] == 'theme') {
       if (file_exists($themepath .'/fckstyles.xml')) {
         $styles_xml_path = $host . $themepath .'/fckstyles.xml';
-        $element['#suffix'] .= $js_id .".Config['StylesXmlPath'] = \"". $styles_xml_path ."\";\n";
+        $js .= $js_id .".Config['StylesXmlPath'] = \"". $styles_xml_path ."\";\n";
       }
     }
     else if (!empty($conf['css_style']) && $conf['css_style'] == 'self') {
       $conf['styles_path'] = str_replace("%h%t", "%t", $conf['styles_path']);
-      $element['#suffix'] .=  $js_id .".Config['StylesXmlPath'] = \"". str_replace(array('%h', '%t', '%m'), array($host, $host . $themepath, $module_drupal_path), $conf['styles_path']) ."\";\n";
+      $js .=  $js_id .".Config['StylesXmlPath'] = \"". str_replace(array('%h', '%t', '%m'), array($host, $host . $themepath, $module_drupal_path), $conf['styles_path']) ."\";\n";
     }
     // add custom stylesheet if configured
     // lets hope it exists but we'll leave that to the site admin
@@ -554,20 +556,22 @@ var ". $js_id ." = new FCKeditor( '". $textarea_id ."' );
             $cssfiles[] = $host . $value;
           }
         }
-        $element['#suffix'] .=  $js_id .".Config['EditorAreaCSS'] = '". implode(',', $cssfiles) ."';\n";
+        $js .=  $js_id .".Config['EditorAreaCSS'] = '". implode(',', $cssfiles) ."';\n";
         break;
       case 'self':
         $conf['css_path'] = str_replace("%h%t", "%t", $conf['css_path']);
         $cssfiles[] = str_replace(array('%h', '%t'), array($host, $host . $themepath), $conf['css_path']);
-        $element['#suffix'] .=  $js_id .".Config['EditorAreaCSS'] = '". implode(',', $cssfiles) ."';\n";
+        $js .=  $js_id .".Config['EditorAreaCSS'] = '". implode(',', $cssfiles) ."';\n";
         break;
       case 'none':
-        $element['#suffix'] .=  $js_id .".Config['EditorAreaCSS'] = ". $js_id .".BasePath + 'editor/css/fck_editorarea.css,' + '". implode(',', $cssfiles) ."';\n";
+        $js .=  $js_id .".Config['EditorAreaCSS'] = ". $js_id .".BasePath + 'editor/css/fck_editorarea.css,' + '". implode(',', $cssfiles) ."';\n";
         break;
     }
     
-    $element['#suffix'] .= 'fckInstances[\''. $textarea_id .'\'] = '. $js_id .";\n";
-    $element['#suffix'] .= "</script>\n";
+    $js .= 'fckInstances[\''. $textarea_id .'\'] = '. $js_id .";\n";
+    $js .= "</script>\n";
+    
+    drupal_add_js($js, 'inline');
 
     if ($conf['popup'] == 't') {
       $element['#suffix'] .= ' <span class="fckeditor_popuplink">(<a href="#" onclick="FCKeditor_OpenPopup(\''. $module_full_path .'/fckeditor.popup.html\', \''. $js_id .'\', \''. $element['#id'] .'\'); return false;">'. t('Open rich editor') ."</a>)</span>";
