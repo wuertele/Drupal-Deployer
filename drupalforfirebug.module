@@ -6,7 +6,7 @@
 function drupalforfirebug_menu() {
   $items['admin/firebug/exec'] = array(
     'page callback' => 'drupalforfirebug_get_exec_php_callback',
-    'access arguments' => array('Execute Firebug PHP'),
+    'access arguments' => array('access content'),
   );
   return $items;
 }
@@ -61,9 +61,15 @@ function drupalforfirebug_form_alter(&$form, $form_state, $form_id) {
 */
 function drupalforfirebug_user($op, &$edit, &$account, $category = NULL) {
   global $dfp_runtime;
-  $uid = ($account->uid) ? $account->uid : '*NEW*';
+  if (isset($account->uid)) { 
+    $uid = $account->uid;
+    $name = $account->name;
+  } else {
+    $uid = '*NEW*';
+    $name = '*NEW*';
+  }
   $output = '<fieldset>';
-  $output .= '<legend><strong><em>'. $op .'</em> $account->'. $account->name .  '</strong></legend>';
+  $output .= '<legend><strong><em>'. $op .'</em> $account->'. $name .  '</strong></legend>';
   $output .= '<div>' . '&nbsp;$account = stdClass (' . '</div>';
   $output .= drupalforfirebug_array_compare(objectToArray($account), objectToArray($account));
   // $output .= drupalforfirebug_array_compare(objectToArray($dfp_runtime['drupalforfirebug_user']['original'][$uid], $account);
@@ -158,22 +164,21 @@ function drupalforfirebug_get_php_exec($code = NULL) {
   if (!user_access('Execute Firebug PHP')) {
     $output = '<h4>Execute PHP Code</h4>';
     $output .= 'You do not have the proper permissions to use this functionality.';
-    return $output;
-  }
-  if (!$code) {
-    $output = '<h4>Execute PHP Code</h4>';
-    $output .= drupal_get_form('drupalforfirebug_execute_form');
     print $output;
     exit();
   } else {
-    $output = '<h4>PHP Code Execution Results</h4>';
-    $output .= ob_start();
-    $output .= eval($code);
-    $output .= ob_get_clean();
-    $output .= '<h4>Execute PHP Code</h4>';
-    $output .= drupal_get_form('drupalforfirebug_execute_form');
-    print $output;
-    exit();
+    if (!$code) {
+      $output = '<h4>Execute PHP Code</h4>';
+      $output .= drupal_get_form('drupalforfirebug_execute_form');
+      print $output;
+      exit();
+    } else {
+      $output = eval("print '<h4>PHP Code Execution Results</h4>';" . $code);
+      $output .= '<h4>Execute PHP Code</h4>';
+      $output .= drupal_get_form('drupalforfirebug_execute_form');
+      print $output;
+      exit();
+    }
   }
 }
 
@@ -317,7 +322,9 @@ function drupalforfirebug_array_highlight_code($data, $depth = 0) {
   $output = '';
   foreach($data as $key => $value) {
     if ($key != '#firebug_style') {
-      $output .= drupalforfirebug_array_row_build($key, $value, $data['#firebug_style'][$key], $depth);
+      if (isset($data['#firebug_style'])) {
+        $output .= drupalforfirebug_array_row_build($key, $value, $data['#firebug_style'][$key], $depth);
+      }
     }
   } 
   return $output;
@@ -335,32 +342,36 @@ function drupalforfirebug_array_compare_code($a, $b, $c = array()) {
   for ($x = 0; $x < $maxcount; $x++) {
     if (1 == 1) { // TODO - figure out why this is needed
       // Set the Proper Styling
-      if (array_key_exists($akeys[$x], array_flip($bkeys))) { // is it in B array?
+      if (isset($akeys[$x]) && array_key_exists($akeys[$x], array_flip($bkeys))) { // is it in B array?
         if ($a[$akeys[$x]] == $b[$akeys[$x]]) {
           $c['#firebug_style'][$akeys[$x]] = 'SAME';
         } else {
           $c['#firebug_style'][$akeys[$x]] = 'DIFFERENT';
         }
       } else { // not in B array, must be removed
-        $c['#firebug_style'][$akeys[$x]] = 'REMOVED';
+        if (isset($akeys[$x])) {
+          $c['#firebug_style'][$akeys[$x]] = 'REMOVED';
+        }
       }
 
       // Set the Proper Element
-      if (is_array($a[$akeys[$x]])) { // is b a valid array
+      if (isset($akeys[$x]) && is_array($a[$akeys[$x]])) { // is b a valid array
         if (isset($c[$akeys[$x]])) {
           $c[$akeys[$x]] = drupalforfirebug_array_compare_code($a[$akeys[$x]], $b[$akeys[$x]], $c[$akeys[$x]]);
         } else {
           $c[$akeys[$x]] = drupalforfirebug_array_compare_code($a[$akeys[$x]], $b[$akeys[$x]], array());
         }
       } else {
-        if (array_key_exists($akeys[$x], array_flip($bkeys))) { // is it in B array?
+        if (isset($akeys[$x]) && array_key_exists($akeys[$x], array_flip($bkeys))) { // is it in B array?
           if ($a[$akeys[$x]] == $b[$akeys[$x]]) {
             $c[$akeys[$x]] = $a[$akeys[$x]];
           } else {
             $c[$akeys[$x]] = $b[$akeys[$x]];
           }
         } else { // not in B array, must be removed
-          $c[$akeys[$x]] = $a[$akeys[$x]];
+          if (isset($akeys[$x])) {
+            $c[$akeys[$x]] = $a[$akeys[$x]];
+          }
         }
       }     
     }
