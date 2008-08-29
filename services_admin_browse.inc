@@ -91,7 +91,7 @@ function services_admin_browse_test() {
   $form = array();
   $method = services_method_get(arg(4));
 
-  $form['arg'] = array('#tree' => true);
+  $form['arg'] = array('#tree' => TRUE);
 
   foreach ($method['#args'] as $key => $arg) {
     $form['name'][$key]         = array('#value' => $arg['#name']);
@@ -138,7 +138,7 @@ function services_admin_browse_test_submit($form_id, $form_state) {
   $method = services_method_get(arg(4));
   $args = services_admin_browse_test_unserialize_args($form_state['values']['arg']);
   $result = services_method_call($method['#method'], $args);
-  $_services_admin_browse_test_submit_result = '<pre>'. htmlspecialchars(print_r($result, true)) .'</pre>';
+  $_services_admin_browse_test_submit_result = '<pre>'. htmlspecialchars(print_r($result, TRUE)) .'</pre>';
 }
 
 function services_admin_browse_test_unserialize_args($values) {
