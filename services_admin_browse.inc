@@ -65,12 +65,12 @@ function services_admin_browse_method($method) {
   $output.= '<p>'. $method['#help'] .'</p>';
 
   // List arguments.
-  $output.= '<h3>'. t('Arguments') . ' (' . count($method['#args']) . ')' .'</h3>';
+  $output.= '<h3>'. t('Arguments') .' ('. count($method['#args']) .')</h3>';
   $output .= '<dl id="service-browser-arguments">';
   $count = 0;
   foreach ($method['#args'] as $arg) {
     $count++;
-    $output .= '<dt><em class="type">'. $arg['#type'] .'</em><strong class="name">'. $arg['#name'] .'</strong>'. ' (' . (($arg['#optional']) ? t('optional') : t('required')) . ')'.'</dt>';
+    $output .= '<dt><em class="type">'. $arg['#type'] .'</em><strong class="name">'. $arg['#name'] .'</strong> (' . (($arg['#optional']) ? t('optional') : t('required')) . ')</dt>';
     $output .= '<dd>'. $arg['#description'] .'</dd>';
   }
 
