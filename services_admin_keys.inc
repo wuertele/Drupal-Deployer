@@ -1,6 +1,7 @@
 <?php
 // $Id$
 /**
+ * @author Services Dev Team
  * @file
  *  Generate security keys.
  */
