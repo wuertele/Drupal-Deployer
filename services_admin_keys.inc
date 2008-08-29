@@ -8,11 +8,11 @@ function services_admin_keys_list() {
 
   foreach ($keys as $kid => $key) {
     $row = array();
-    
+
     $row[] = $kid;
     $row[] = $key->title;
     $row[] = $key->domain;
-    
+
     // Populate the operations field.
     $operations = array();
 
@@ -21,7 +21,7 @@ function services_admin_keys_list() {
 
     // Set the delete column.
     $operations[] = array('data' => l(t('delete'), 'admin/build/services/keys/'. $kid .'/delete'));
-    
+
     foreach ($operations as $operation) {
       $operation['class'] = $class;
       $row[] = $operation;
@@ -45,15 +45,15 @@ $key = db_fetch_object(db_query("SELECT * FROM {services_keys} WHERE kid = '%s'"
     '#type' => 'hidden',
     '#default_value' => $key->kid,
   );
-  
+
 if ($key->kid) {
     $form['key'] = array(
       '#type' => 'markup',
       '#title' => t('Key'),
       '#value' => '<strong>'. t('API Key') .':</strong> '. $key->kid,
-    ); 
+    );
   }
-  
+
   $form['title'] = array(
     '#title' => t('Application title'),
     '#type' => 'textfield',
@@ -66,19 +66,19 @@ if ($key->kid) {
     '#default_value' => $key->domain,
     '#description' => t('External domain allowed to use this key.'),
   );
-  
+
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => $key->title ? t('Save key') : t('Create key'),
   );
-  
+
   return $form;
 }
 
 function services_admin_keys_form_submit($form, &$form_state) {
-  
+
   services_admin_keys_save($form_state['values']);
-  
+
   $form_state['redirect']  =  'admin/build/services/keys';
 }
 
@@ -106,7 +106,7 @@ function services_admin_keys_delete_confirm() {
   $kid = arg(4);
 
   $key = db_fetch_object(db_query("SELECT * FROM {services_keys} WHERE kid = '%s'", $kid));
-  
+
   $form['kid'] = array('#type' => 'value', '#value' => $key->kid);
 
   $message = t('Are you sure you want to delete the key %key?', array('%key' => $key->kid));
@@ -118,7 +118,7 @@ function services_admin_keys_delete_confirm() {
 }
 
 function services_admin_keys_delete_confirm_submit($form_id, &$form_state) {
-  
+
   services_admin_keys_delete($form_state['values']['kid']);
 
   $t_args = array('%key' => $form_state['kid']);

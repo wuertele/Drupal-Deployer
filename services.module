@@ -13,23 +13,23 @@ function services_help($path, $arg) {
   switch ($path) {
     case 'admin/help#services':
       return '<p>'. t('Visit the <a href="@handbook_url">Services Handbook</a> for help and information.', array('@handbook_url' => 'http://drupal.org/node/109782')) .'</p>';
-    
+
     case 'admin/build/services':
     case 'admin/build/services/browse':
       $output = '<p>'. t('Services are collections of methods available to remote applications. They are defined in modules, and may be accessed in a number of ways through server modules. Visit the <a href="@handbook_url">Services Handbook</a> for help and information.', array('@handbook_url' => 'http://drupal.org/node/109782')) .'</p>';
       $output .= '<p>'. t('All enabled services and methods are shown. Click on any method to view information or test.') .'</p>';      return $output;
-      
+
     case 'admin/build/services/keys':
       return t('An API key is required to allow an application to access Drupal remotely.');
-      
+
   }
 }
 
 /**
  * Implementation of hook_perm().
  */
-function services_perm() { 
-  return array('access services', 'administer services'); 
+function services_perm() {
+  return array('access services', 'administer services');
 }
 
 /**
@@ -37,7 +37,7 @@ function services_perm() {
  */
 function services_menu() {
   $items = array();
-  
+
   // admin
   $items['admin/build/services'] = array(
     'title' => 'Services',
@@ -46,15 +46,15 @@ function services_menu() {
     'page callback' => 'services_admin_browse_index',
     'file' => 'services_admin_browse.inc',
   );
-  
+
   // browse
-  $items['admin/build/services/browse'] = array( 
+  $items['admin/build/services/browse'] = array(
     'title' => 'Browse',
     'description' => 'Browse and test available remote services.',
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
   );
-  
+
   // API Keys
   $items['admin/build/services/keys'] = array(
     'title' => 'Keys',
@@ -81,7 +81,7 @@ function services_menu() {
     'type' => MENU_LOCAL_TASK,
     'file' => 'services_admin_keys.inc',
   );
-  
+
   // Settings
   $items['admin/build/services/settings'] = array(
     'title' => 'Settings',
@@ -90,7 +90,7 @@ function services_menu() {
     'page arguments' => array('services_admin_settings'),
     'access arguments' => array('administer services'),
     'type' => MENU_LOCAL_TASK,
-    'file' => 'services_admin_browse.inc',    
+    'file' => 'services_admin_browse.inc',
   );
   $items['admin/build/services/settings/general'] = array(
     'title' => 'General',
@@ -100,8 +100,8 @@ function services_menu() {
     'access arguments' => array('administer services'),
     'type' => MENU_DEFAULT_LOCAL_TASK,
     'weight' => -10,
-  ); 
-  
+  );
+
   // method
   $items['admin/build/services/browse/%services_method'] = array(
     'title' => 'Services',
@@ -112,14 +112,14 @@ function services_menu() {
     'type' => MENU_LOCAL_TASK,
     'file' => 'services_admin_browse.inc',
   );
-  
+
   // crossdomain.xml
   $items['crossdomain.xml'] = array(
     'access arguments' => array('access services'),
     'page callback' => 'services_crossdomain_xml',
     'type' => MENU_CALLBACK,
   );
-  
+
   // server
   $items['services/%'] = array(
     'title' => 'Services',
@@ -128,7 +128,7 @@ function services_menu() {
   	'page arguments' => array(1),
     'type' => MENU_CALLBACK,
   );
-  
+
   $items['admin/build/services/keys/%'] = array(
     'title' => t('Edit key'),
     'access arguments' => array('administer services'),
@@ -137,7 +137,7 @@ function services_menu() {
     'file' => 'services_admin_keys.inc',
     'type' => MENU_CALLBACK,
   );
-  
+
   $items['admin/build/services/keys/%/delete'] = array(
     'title' => t($type->name),
     'access arguments' => array('administer services'),
@@ -146,7 +146,7 @@ function services_menu() {
     'file' => 'services_admin_keys.inc',
     'type' => MENU_CALLBACK,
   );
-  
+
   return $items;
 }
 
@@ -167,11 +167,11 @@ function services_server($server_path = null) {
   foreach (module_implements('server_info') as $module) {
     $info = module_invoke($module, 'server_info');
     if ($info['#path'] == $server_path) {
-      
+
       // call the server
       services_set_server_info($module);
       print module_invoke($module, 'server');
-      
+
       // Do not let this output
       exit;
     }
@@ -188,18 +188,18 @@ function services_crossdomain_xml() {
   $output = '<!DOCTYPE cross-domain-policy SYSTEM "http://www.macromedia.com/xml/dtds/cross-domain-policy.dtd">'."\n";
   $output .= '<cross-domain-policy>'."\n";
   $output .= '  <allow-access-from domain="'. $_SERVER['HTTP_HOST'] .'" />'."\n";
-  $output .= '  <allow-access-from domain="*.'. $_SERVER['HTTP_HOST'] .'" />'."\n";  
+  $output .= '  <allow-access-from domain="*.'. $_SERVER['HTTP_HOST'] .'" />'."\n";
   $keys = services_get_keys();
-  
+
   foreach ($keys as $key) {
     if (!empty($key->domain)) {
       $output .= '  <allow-access-from domain="'. $key->domain .'" />'."\n";
       $output .= '  <allow-access-from domain="*.'. $key->domain .'" />'."\n";
     }
   }
-  
+
   $output .= '</cross-domain-policy>';
-  
+
   services_xml_output($output);
 }
 
@@ -233,13 +233,13 @@ function services_get_server_info($server_info = null) {
  */
 function services_error($message) {
   $server_info = services_get_server_info();
-    
+
   // Look for custom error handling function.
   // Should be defined in each server module.
   if (module_hook($server_info->module, 'server_error')) {
     return module_invoke($server_info->module, 'server_error', $message);
   }
-  
+
   // No custom error handling function found.
   return $message;
 }
@@ -249,12 +249,12 @@ function services_error($message) {
  */
 function services_method_call($method_name, $args = array()) {
   $method = services_method_get($method_name);
-  
+
   // Check that method exists.
   if (empty($method)) {
     return services_error(t('Method %name does not exist.', array('%name' => $method_name)));
   }
-  
+
   // Check for missing args.
   foreach ($method['#args'] as $key => $arg) {
     if (!$arg['#optional']) {
@@ -263,7 +263,7 @@ function services_method_call($method_name, $args = array()) {
       }
     }
   }
-  
+
   // Add additonal processing for methods requiring api key
   if (variable_get('services_use_key', TRUE)) {
     $api_key = array_shift($args);
@@ -281,7 +281,7 @@ function services_method_call($method_name, $args = array()) {
       return services_error(t('Invalid API key.'));
     }
   }
-  
+
   // Add additonal processing for methods requiring authentication
   $session_backup = NULL;
   if ($method['#auth'] && variable_get('services_use_sessid', TRUE)) {
@@ -291,14 +291,14 @@ function services_method_call($method_name, $args = array()) {
     }
     $session_backup = services_session_load($sessid);
   }
-  
+
   // Check access
   $access_arguments = isset($method['#access arguments']) ? $method['#access arguments'] : $args;
   // Call default or custom access callback
   if (call_user_func_array($method['#access callback'], $access_arguments) != true) {
     return services_error(t('Access denied.'));
   }
-  
+
   // Change working directory to drupal root to call drupal function,
   // then change it back to server module root to handle return.
   $server_root = getcwd();
@@ -326,56 +326,56 @@ function services_get_all() {
   static $methods_cache;
   if (!isset($methods_cache)) {
     $methods = module_invoke_all('service');
-    
+
     // api_key arg
     $arg_api_key = array(
       '#name' => 'api_key',
       '#type' => 'string',
       '#description' => t('A valid API key.'),
     );
-    
+
     // sessid arg
     $arg_sessid = array(
       '#name' => 'sessid',
       '#type' => 'string',
       '#description' => t('A valid sessid.'),
     );
-    
+
     // domain arg
     $arg_domain_check = array(
       '#name' => 'domain_check',
       '#type' => 'string',
       '#description' => t('A valid domain for the API key.'),
     );
-    
+
     $arg_domain_time_stamp = array(
       '#name' => 'domain_time_stamp',
       '#type' => 'string',
       '#description' => t('Time stamp used to hash key.'),
     );
-    
+
     foreach ($methods as $key => $method) {
-      
+
       // set method defaults
       if (!isset($methods[$key]['#auth'])) {
         $methods[$key]['#auth'] = true;
       }
-      
+
       if (!isset($methods[$key]['#access callback'])) {
         $methods[$key]['#access callback'] = 'user_access';
         if (!isset($methods[$key]['#access arguments'])) {
           $methods[$key]['#access arguments'] = array('access services');
         }
       }
-      
+
       if (!isset($methods[$key]['#args'])) {
         $methods[$key]['#args'] = array();
       }
-      
+
       if ($methods[$key]['#auth'] && variable_get('services_use_sessid', TRUE)) {
         $methods[$key]['#args'] = array_merge(array($arg_sessid), $methods[$key]['#args']);
       }
-      
+
       if (variable_get('services_use_key', TRUE)) {
         $methods[$key]['#args'] = array_merge(array($arg_api_key), $methods[$key]['#args']);
         if(variable_get('services_domain_strict',FALSE)){
@@ -383,7 +383,7 @@ function services_get_all() {
           $methods[$key]['#args'] = array_merge(array($arg_domain_check), $methods[$key]['#args']);
         }
       }
-      
+
       // set defaults for args
       foreach ($methods[$key]['#args'] as $arg_key => $arg) {
         if (is_array($arg)) {
@@ -432,7 +432,7 @@ function services_validate_key($kid,$timestamp,$domain,$hash) {
   if(!variable_get('services_domain_strict', false)){
     $key = services_get_key($kid);
     if ($key) {
-      return TRUE;	
+      return TRUE;
     }
     //compare the domain against the key
     else{
@@ -447,7 +447,7 @@ function services_validate_key($kid,$timestamp,$domain,$hash) {
   	else{
   	  return false;
   	}
-  }    
+  }
 }
 
 function services_get_key($kid) {
@@ -478,7 +478,7 @@ function services_node_load($node, $fields = array()) {
   if (!isset($node->nid)) {
     return null;
   }
-  
+
   // Apply filters to fields
   $body = $node->body;
   $node->body = new StdClass();
@@ -490,7 +490,7 @@ function services_node_load($node, $fields = array()) {
     foreach ($fields as $field) {
       $val->{$field} = $node->{$field};
     }
-  } 
+  }
   else {
     $val = $node;
   }

@@ -6,11 +6,11 @@
  */
 function services_admin_browse_index() {
   $methods = services_get_all();
-  
+
   // Show enable server modules
   $servers = module_implements('server_info');
   $output = '<h2>' . t('Servers') . '</h2>';
-  
+
   if (!empty($servers)) {
     $output .= '<ul>';
     foreach ($servers as $module) {
@@ -24,17 +24,17 @@ function services_admin_browse_index() {
   else {
     $output .= '<p>'. t('You must enable at least one server module to be able to connect remotely. Visit the <a href="@url">modules</a> page to enable server modules.', array('@url' => url('admin/build/modules'))) .'</p>';
   }
-  
-  
+
+
   $output .= '<h2>'. t('Services') .'</h2>';
-  
+
   // group namespaces
   $services = array();
   foreach ($methods as $method) {
     $namespace = substr($method['#method'], 0, strrpos($method['#method'], '.'));
     $services[$namespace][] = $method;
   }
-  
+
   if (count($services)) {
     foreach ($services as $namespace => $methods) {
       $output .= '<h3>'. $namespace .'</h3>';
@@ -48,18 +48,18 @@ function services_admin_browse_index() {
   else {
     $output .= t('No services have been enabled.');
   }
-  
+
   return $output;
 }
 
 function services_admin_browse_method($method) {
   global $_services_admin_browse_test_submit_result;
-  
+
   $output = '';
-  
+
   $output.= '<h3>'. $method['#method'] .'</h3>';
   $output.= '<p>'. $method['#help'] .'</p>';
-  
+
   // List arguments.
   $output.= '<h3>'. t('Arguments') . ' (' . count($method['#args']) . ')' .'</h3>';
   $output .= '<dl id="service-browser-arguments">';
@@ -69,13 +69,13 @@ function services_admin_browse_method($method) {
     $output .= '<dt><em class="type">'. $arg['#type'] .'</em><strong class="name">'. $arg['#name'] .'</strong>'. ' (' . (($arg['#optional']) ? t('optional') : t('required')) . ')'.'</dt>';
     $output .= '<dd>'. $arg['#description'] .'</dd>';
   }
-  
+
   $output .= '</dl>';
-  
+
   // Allow testing of methods
   $output .= '<h3>'. t('Call method') .'</h3>';
   $output .= drupal_get_form('services_admin_browse_test');
-  
+
   // Display results
   if ($_services_admin_browse_test_submit_result) {
     $output .= '<div id="output">';
@@ -90,38 +90,38 @@ function services_admin_browse_method($method) {
 function services_admin_browse_test() {
   $form = array();
   $method = services_method_get(arg(4));
-  
+
   $form['arg'] = array('#tree' => true);
-  
+
   foreach ($method['#args'] as $key => $arg) {
     $form['name'][$key]         = array('#value' => $arg['#name']);
     $form['optional'][$key]     = array('#value' => ($arg['#optional']) ? t('optional') : t('required'));
-    
+
     switch ($arg['#name']) {
       case 'api_key':
         $form['arg'][$key] = array('#type' => 'textfield', '#default_value' => services_admin_browse_get_first_key());
         break;
-      
+
       case 'sessid':
         $form['arg'][$key] = array('#type' => 'textfield', '#default_value' => session_id());
         break;
-          
+
       case 'domain_check':
         $form['arg'][$key] = array('#type' => 'textfield', '#default_value' => $_SERVER['HTTP_HOST']);
         break;
-         
+
       case 'domain_time_stamp':
         $form['arg'][$key] = array('#type' => 'textfield', '#default_value' => time());
         break;
-          
+
       default:
         $form['arg'][$key] = array('#type' => 'textfield');
         break;
     }
-    
+
   }
   $form['submit'] = array('#type' => 'submit', '#value' => t('Call method'));
-  
+
   $form['#redirect'] = false;
   return $form;
 }
@@ -148,14 +148,14 @@ function services_admin_browse_test_unserialize_args($values) {
   for ($c = count($method['#args']) - 1; $c >= 0; $c--) {
     $arg = $method['#args'][$c];
     $value = $values[$c];
-    
+
     // Remove empty values from end of array
     // Once we find a value, we can no longer skip
     if (!is_numeric($value) && empty($value) && !$noskip) {
       continue;
     }
     $noskip = TRUE;
-    
+
     switch ($arg['#type']) {
       case 'array' :
         if (empty($value)) {
@@ -164,15 +164,15 @@ function services_admin_browse_test_unserialize_args($values) {
         else {
           $return[$c] = explode(',', $value);
         }
-        
+
         break;
       default :
         $return[$c] = $value;
     }
   }
-  
+
   if ($return) ksort($return);
-  
+
   return $return;
 }
 
@@ -189,12 +189,12 @@ function theme_services_admin_browse_test($form) {
     $row[] = drupal_render($form['arg'][$key]);
     $rows[] = $row;
   }
-  
+
   $output .= theme('table', $header, $rows);
   $output .= drupal_render($form['submit']);
-  
+
   $output .= drupal_render($form);
-  
+
   return $output;
 }
 
@@ -227,7 +227,7 @@ function services_admin_settings() {
     '#default_value' => variable_get('services_use_sessid', TRUE),
     '#description' => t('When enabled, all method calls must include a valid sessid. Only disable this setting if the application will user browser-based cookies.')
   );
-  
+
   $form['debug'] = array(
     '#title' => t('Debugging'),
     '#type' => 'fieldset',

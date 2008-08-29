@@ -31,7 +31,7 @@ function views_service_service() {
         array(
           '#name'         => 'fields',
           '#type'         => 'array',
-          '#optional'     => TRUE, 
+          '#optional'     => TRUE,
           '#description'  => t('A list of fields to return.')),
         array(
           '#name'         => 'args',
@@ -54,7 +54,7 @@ function views_service_service() {
           '#description'  => t('View name.'),
         ),
       ),
-          
+
       '#return'   => 'string',
       '#help'     => t('Exports the code of a view, same as the output you would get from the Export tab.'),
     ),
@@ -81,20 +81,20 @@ function views_service_service() {
 /**
  * Get a view from the database.
  */
-function views_service_get_view($view_name, $fields = array(), $args = array()) { 
+function views_service_get_view($view_name, $fields = array(), $args = array()) {
   $view = views_get_view($view_name);
   if (is_null($view)) {
     return services_error('View does not exist.');
   }
-  
+
   // Check access
   if (!views_access($view)) {
     return services_error('You do not have access to this view.');
   }
-  
+
   $view->set_arguments($args);
   $view->execute();
-  
+
   foreach ($view->result as $node) {
     $nodes[] = services_node_load(node_load($node->nid), $fields);
   }
@@ -104,24 +104,24 @@ function views_service_get_view($view_name, $fields = array(), $args = array()) 
 /**
  * Export a view.
  */
-function views_service_export_view($view_name) { 
+function views_service_export_view($view_name) {
   $view = views_get_view($view_name);
   if (is_null($view)) {
     return services_error('View does not exist.');
   }
-  
+
   return $view->export();
 }
 
 /**
  * Import a view.
  */
-function views_service_import_view($view_export) { 
+function views_service_import_view($view_export) {
   views_include('view');
   ob_start();
   eval($view_export);
   ob_end_clean();
-    
+
   if (!is_object($view)) {
     return services_error(t('Unable to interpret view code.'));
   }
@@ -142,7 +142,7 @@ function views_service_import_view($view_export) {
   if ($existing_view && $existing_view->type != t('Default')) {
     $view->vid = $existing_view->vid;
   }
-  
+
   $view->save();
   return $view->vid;
 }
