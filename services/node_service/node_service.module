@@ -18,6 +18,19 @@ function node_service_help($path, $arg) {
   }
 }
 
+/**
+ * Implementation of hook_form_alter().
+ */
+function node_service_form_services_admin_settings_alter(&$form, $form_state) {
+  $form['security']['node_access']['#title'] = t('Check node access settings when loading node data');
+  $form['security']['node_access']['#type'] = 'checkbox';
+  $form['security']['node_access']['#description'] = t('When enabled, the node.load method will perform an additional node access view check before providing the node data.');
+  if (variable_get('node_service_node_access', TRUE)) {
+    $form['security']['node_access']['#default_value'] = 1;
+  }
+  $form['#submit'][] = 'node_service_save_access_setting';
+}
+
 function node_service_perm() {
   return array('load raw node data');
 }
@@ -73,6 +86,15 @@ function node_service_service() {
   );
 }
 
+function node_service_save_access_setting($form_id, $form_values) {
+  if ($form_values['values']['node_access'] == 0) {
+    variable_set('node_service_node_access', false);
+    drupal_set_message(t('Node access check disabled for node.load method.'));
+  } else {
+    variable_set('node_service_node_access', true);
+  }
+}
+
 /**
  * Returns a specified node.
  */
@@ -87,8 +109,13 @@ function node_service_load($nid, $fields = array()) {
 }
 
 function node_service_load_access($nid) {
-  $node = node_load($nid);
-  return node_access('view', $node) && user_access('load raw node data');
+  if ((bool)variable_get('node_service_node_access', true)){
+    $node = node_load($nid);
+    return node_access('view', $node) && user_access('load raw node data');
+  }
+  else {
+    return user_access('load raw node data');
+  }
 }
 
 function node_service_save($edit) {
@@ -136,10 +163,6 @@ function node_service_save($edit) {
     return services_error(implode("\n", $errors));
   }
 
-  // assume this is a remnant from using node_save instead of drupal_execute
-  // was messing up log due to missing NULL for variables argument:
-  // http://api.drupal.org/api/function/watchdog/6, fixed and commented out
-  // as drupal_execute already logs the update.
   watchdog('content', '@type: updated %title.',
     array('@type' => t($node->type), '%title' => $node->title),
     WATCHDOG_NOTICE, l(t('view'), 'node/'. $node->nid));
