@@ -1,5 +1,9 @@
 <?php
 // $Id$
+/**
+ * @file
+ *  Browser thru all services and servers.
+ */
 
 /**
  * Callback for 'services/browse'.
@@ -133,7 +137,7 @@ function services_admin_browse_get_first_key() {
   }
 }
 
-function services_admin_browse_test_submit($form_id, $form_state) {
+function services_admin_browse_test_submit($form, $form_state) {
   global $_services_admin_browse_test_submit_result;
   $method = services_method_get(arg(4));
   $args = services_admin_browse_test_unserialize_args($form_state['values']['arg']);
