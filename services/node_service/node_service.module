@@ -31,6 +31,9 @@ function node_service_form_services_admin_settings_alter(&$form, $form_state) {
   $form['#submit'][] = 'node_service_save_access_setting';
 }
 
+/**
+ * Implementation of hook_perm().
+ */
 function node_service_perm() {
   return array('load raw node data');
 }
@@ -86,17 +89,16 @@ function node_service_service() {
   );
 }
 
-function node_service_save_access_setting($form_id, $form_values) {
-  if ($form_values['values']['node_access'] == 0) {
-    variable_set('node_service_node_access', false);
-    drupal_set_message(t('Node access check disabled for node.load method.'));
-  } else {
-    variable_set('node_service_node_access', true);
-  }
-}
-
 /**
  * Returns a specified node.
+ *
+ * @param $nid
+ *   Number. The node ID.
+ * @param $fields
+ *   Array (optinonal). The node fields needed. If its empty,
+ *   all fields will be returned
+ * @return
+ *   Object. The node object with all wanted fields.
  */
 function node_service_load($nid, $fields = array()) {
   $node = services_node_load(node_load(array('nid' => $nid)), $fields);
@@ -108,6 +110,16 @@ function node_service_load($nid, $fields = array()) {
   return $node;
 }
 
+/**
+ * Check if the user has the permission to get the
+ * node's data thru services.
+ *
+ * @param $nid
+ *   Number. The node ID.
+ * @return
+ *   Boolean. TRUE if the user has the permission to get the
+ *   node's data thru services.
+ */
 function node_service_load_access($nid) {
   if ((bool)variable_get('node_service_node_access', true)){
     $node = node_load($nid);
@@ -118,6 +130,16 @@ function node_service_load_access($nid) {
   }
 }
 
+/**
+ * Save a node. It creates a new one, in case the 'nid' field
+ * is missing.
+ *
+ * @param $edit
+ *   Array. The node fields' values, just like created on
+ *   node edit form.
+ * @return
+ *   Number. The node ID.
+ */
 function node_service_save($edit) {
   // Load the required includes for drupal_execute
   module_load_include('inc', 'node', 'node.pages');
@@ -169,6 +191,14 @@ function node_service_save($edit) {
   return $nid;
 }
 
+/**
+ * Check if the user has the permission to save a node.
+ *
+ * @param $node
+ *   Object. The node object.
+ * @return
+ *   Boolean. TRUE if the user has the permission to save a node.
+ */
 function node_service_save_access($node) {
   if (isset($node['nid'])) {
     return node_access('update', $node);
@@ -176,6 +206,24 @@ function node_service_save_access($node) {
   return node_access('create', $node['type']);
 }
 
+function node_service_save_access_setting($form_id, $form_values) {
+  if ($form_values['values']['node_access'] == 0) {
+    variable_set('node_service_node_access', false);
+    drupal_set_message(t('Node access check disabled for node.load method.'));
+  }
+  else {
+    variable_set('node_service_node_access', true);
+  }
+}
+
+/**
+ * Check if the user has the permission to delete a node.
+ *
+ * @param $nid
+ *   Number. The node ID.
+ * @return
+ *   Boolean. TRUE if the user has the permission to delete a node.
+ */
 function node_service_delete_access($nid) {
   $node = node_load($nid);
   return node_access('delete', $node);
