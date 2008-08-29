@@ -36,120 +36,106 @@ function services_perm() {
  * Implementation of hook_menu().
  */
 function services_menu() {
-  $items = array();
-
-  // admin
   $items['admin/build/services'] = array(
-    'title' => 'Services',
-    'description' => 'Allows external applications to communicate with Drupal.',
-    'access arguments' => array('administer services'),
-    'page callback' => 'services_admin_browse_index',
-    'file' => 'services_admin_browse.inc',
+    'title'             => 'Services',
+    'description'       => 'Allows external applications to communicate with Drupal.',
+    'access arguments'  => array('administer services'),
+    'page callback'     => 'services_admin_browse_index',
+    'file'              => 'services_admin_browse.inc',
   );
-
-  // browse
   $items['admin/build/services/browse'] = array(
-    'title' => 'Browse',
-    'description' => 'Browse and test available remote services.',
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-    'weight' => -10,
+    'title'             => 'Browse',
+    'description'       => 'Browse and test available remote services.',
+    'type'              => MENU_DEFAULT_LOCAL_TASK,
+    'weight'            => -10,
   );
-
-  // API Keys
+  $items['admin/build/services/browse/%services_method'] = array(
+    'title'             => 'Services',
+    'description'       => 'Calls a Services method.',
+    'page callback'     => 'services_admin_browse_method',
+    'page arguments'    => array(4),
+    'access arguments'  => array('administer services'),
+    'type'              => MENU_LOCAL_TASK,
+    'file'              =>'services_admin_browse.inc',
+  );
   $items['admin/build/services/keys'] = array(
-    'title' => 'Keys',
-    'description' => 'Manage application access to site services.',
-    'page callback' => 'services_admin_keys_list',
-    'access callback' => 'variable_get',
-    'access arguments' => array('services_use_key', TRUE),
-    'type' => MENU_LOCAL_TASK,
-    'file' => 'services_admin_keys.inc',
+    'title'             => 'Keys',
+    'description'       => 'Manage application access to site services.',
+    'page callback'     => 'services_admin_keys_list',
+    'access callback'   => 'variable_get',
+    'access arguments'  => array('services_use_key', TRUE),
+    'type'              => MENU_LOCAL_TASK,
+    'file'              =>'services_admin_keys.inc',
+  );
+  $items['admin/build/services/keys/%'] = array(
+    'title'             => 'Edit key',
+    'access arguments'  => array('administer services'),
+    'page callback'     => 'drupal_get_form',
+    'page arguments'    => array('services_admin_keys_form'),
+    'file'              =>'services_admin_keys.inc',
+    'type'              => MENU_CALLBACK,
+  );
+  $items['admin/build/services/keys/%/delete'] = array(
+    'title'             => $type->name,
+    'access arguments'  => array('administer services'),
+    'page callback'     => 'drupal_get_form',
+    'page arguments'    => array('services_admin_keys_delete_confirm'),
+    'file'              =>'services_admin_keys.inc',
+    'type'              => MENU_CALLBACK,
   );
   $items['admin/build/services/keys/list'] = array(
-    'title' => 'List',
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-    'access callback' => 'variable_get',
-    'access arguments' => array('services_use_key', TRUE),
-    'weight' => -10,
+    'title'             => 'List',
+    'type'              => MENU_DEFAULT_LOCAL_TASK,
+    'access callback'   => 'variable_get',
+    'access arguments'  => array('services_use_key', TRUE),
+    'weight'            => -10,
   );
   $items['admin/build/services/keys/add'] = array(
-    'title' => 'Create key',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('services_admin_keys_form'),
-    'access callback' => 'variable_get',
-    'access arguments' => array('services_use_key', TRUE),
-    'type' => MENU_LOCAL_TASK,
-    'file' => 'services_admin_keys.inc',
+    'title'             => 'Create key',
+    'page callback'     => 'drupal_get_form',
+    'page arguments'    => array('services_admin_keys_form'),
+    'access callback'   => 'variable_get',
+    'access arguments'  => array('services_use_key', TRUE),
+    'type'              => MENU_LOCAL_TASK,
+    'file'              =>'services_admin_keys.inc',
   );
-
-  // Settings
   $items['admin/build/services/settings'] = array(
-    'title' => 'Settings',
-    'description' => 'Configure service settings.',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('services_admin_settings'),
-    'access arguments' => array('administer services'),
-    'type' => MENU_LOCAL_TASK,
-    'file' => 'services_admin_browse.inc',
+    'title'             => 'Settings',
+    'description'       => 'Configure service settings.',
+    'page callback'     => 'drupal_get_form',
+    'page arguments'    => array('services_admin_settings'),
+    'access arguments'  => array('administer services'),
+    'type'              => MENU_LOCAL_TASK,
+    'file'              =>'services_admin_browse.inc',
   );
   $items['admin/build/services/settings/general'] = array(
-    'title' => 'General',
-    'description' => 'Configure service settings.',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('services_admin_settings'),
-    'access arguments' => array('administer services'),
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-    'weight' => -10,
+    'title'             => 'General',
+    'description'       => 'Configure service settings.',
+    'page callback'     => 'drupal_get_form',
+    'page arguments'    => array('services_admin_settings'),
+    'access arguments'  => array('administer services'),
+    'type'              => MENU_DEFAULT_LOCAL_TASK,
+    'weight'            => -10,
   );
-
-  // method
-  $items['admin/build/services/browse/%services_method'] = array(
-    'title' => 'Services',
-    'description' => 'Calls a Services method.',
-    'page callback' => 'services_admin_browse_method',
-    'page arguments' => array(4),
-    'access arguments' => array('administer services'),
-    'type' => MENU_LOCAL_TASK,
-    'file' => 'services_admin_browse.inc',
-  );
-
-  // crossdomain.xml
   $items['crossdomain.xml'] = array(
-    'access arguments' => array('access services'),
-    'page callback' => 'services_crossdomain_xml',
-    'type' => MENU_CALLBACK,
+    'access arguments'  => array('access services'),
+    'page callback'     => 'services_crossdomain_xml',
+    'type'              => MENU_CALLBACK,
   );
-
-  // server
   $items['services/%'] = array(
-    'title' => 'Services',
-    'access arguments' => array('access services'),
-    'page callback' => 'services_server',
-    'page arguments' => array(1),
-    'type' => MENU_CALLBACK,
-  );
-
-  $items['admin/build/services/keys/%'] = array(
-    'title' => 'Edit key',
-    'access arguments' => array('administer services'),
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('services_admin_keys_form'),
-    'file' => 'services_admin_keys.inc',
-    'type' => MENU_CALLBACK,
-  );
-
-  $items['admin/build/services/keys/%/delete'] = array(
-    'title' => $type->name,
-    'access arguments' => array('administer services'),
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('services_admin_keys_delete_confirm'),
-    'file' => 'services_admin_keys.inc',
-    'type' => MENU_CALLBACK,
+    'title'             => 'Services',
+    'access arguments'  => array('access services'),
+    'page callback'     => 'services_server',
+    'page arguments'    => array(1),
+    'type'              => MENU_CALLBACK,
   );
 
   return $items;
 }
 
+/**
+ * Implementation of hook_theme().
+ */
 function services_theme() {
   return array(
     'services_admin_browse_test' => array(
