@@ -260,7 +260,7 @@ function fckeditor_profile_load($name = '') {
 function fckeditor_is_enabled($excl_mode, $excl_regex, $element_id, $get_q) {
   $front = variable_get('site_frontpage', 'node');
   $excl_regex = str_replace('<front>', $front, $excl_regex);
-  $nodetype = fckeditor_get_nodetype();
+  $nodetype = fckeditor_get_nodetype($get_q);
   $element_id = str_replace('.', '\.', $element_id);
   
   $match = !empty($excl_regex) && preg_match($excl_regex, $nodetype .'@'. $get_q .'.'. $element_id);
@@ -581,7 +581,7 @@ function fckeditor_process_textarea($element) {
     
     $element['#suffix'] .= '<div class="textarea-identifier description">'. t('The ID for !excluding this element is %fieldname', array(
       '!excluding' => l(t('excluding or including'), 'admin/settings/fckeditor'),
-      '%fieldname' => fckeditor_rule_to_string(fckeditor_rule_create(fckeditor_get_nodetype(), $_GET['q'], $element['#id'])),
+      '%fieldname' => fckeditor_rule_to_string(fckeditor_rule_create(fckeditor_get_nodetype($_GET['q']), $_GET['q'], $element['#id'])),
     )) .'</div>';
   }
 
@@ -779,7 +779,7 @@ function fckeditor_user_get_profile($user, $element_id = NULL) {
   return FALSE;
 }
 
-function fckeditor_get_nodetype() {
+function fckeditor_get_nodetype($get_q) {
   static $nodetype;
   
   if (!isset($nodetype)) {
@@ -787,14 +787,18 @@ function fckeditor_get_nodetype() {
     $nodetype = '*';
     if (!empty($menuitem['page_arguments'])) {
       foreach ($menuitem['page_arguments'] as $item) {
-        if (!empty($item) && is_string($item)) {
-          $nodetype = $item;
-        }
         if (!empty($item->nid) && !empty($item->type)) {
           // not 100% valid check if $item is a node
           $nodetype = $item->type;
           break;
         }
+      }
+    }
+
+    if ($nodetype == '*') {
+      $get_q = explode("/", $get_q, 3);
+      if ($get_q[0] == "node" && $get_q[1] == "add" && !empty($get_q[2])) {
+        $nodetype = $get_q[2];
       }
     }
   }
