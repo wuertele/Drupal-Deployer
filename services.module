@@ -499,9 +499,7 @@ function services_session_load($sessid) {
   $backup->session = session_encode();
 
   // Empty current session data
-  foreach ($_SESSION as $key => $value) {
-    unset($_SESSION[$key]);
-  }
+  $_SESSION = array();
 
   // Some client/servers, like XMLRPC, do not handle cookies, so imitate it to make sess_read() function try to look for user,
   // instead of just loading anonymous user :).
@@ -515,6 +513,9 @@ function services_session_load($sessid) {
     services_session_unload($backup);
     return NULL;
   }
+
+  // Prevent saving of this impersonation in case of unexpected failure.
+  session_save_session(FALSE);
 
   return $backup;
 }
@@ -538,11 +539,11 @@ function services_session_unload($backup) {
   sess_write($user->sid, session_encode());
 
   // Empty current session data
-  foreach ($_SESSION as $key => $value) {
-    unset($_SESSION[$key]);
-  }
+  $_SESSION = array();
 
   // Revert to previous user and session data
   $user = $backup;
   session_decode($user->session);
+
+  session_save_session(TRUE);
 }
