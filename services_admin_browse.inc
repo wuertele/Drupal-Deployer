@@ -122,7 +122,7 @@ function services_admin_browse_test() {
   }
   $form['submit'] = array('#type' => 'submit', '#value' => t('Call method'));
 
-  $form['#redirect'] = false;
+  $form['#redirect'] = FALSE;
   return $form;
 }
 
