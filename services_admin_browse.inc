@@ -13,7 +13,7 @@ function services_admin_browse_index() {
 
   // Show enable server modules
   $servers = module_implements('server_info');
-  $output = '<h2>' . t('Servers') . '</h2>';
+  $output = '<h2>'. t('Servers') .'</h2>';
 
   if (!empty($servers)) {
     $output .= '<ul>';
@@ -21,7 +21,7 @@ function services_admin_browse_index() {
       $info = module_invoke($module, 'server_info');
       $name = $info['#name'];
       $path = 'services/'. $info['#path'];
-      $output .= '<li class="leaf">'. l($name. " - /$path", $path) .'</li>';
+      $output .= '<li class="leaf">'. l($name .' - /'. $path, $path) .'</li>';
     }
     $output .= '</ul>';
   }
@@ -35,7 +35,7 @@ function services_admin_browse_index() {
   // group namespaces
   $services = array();
   foreach ($methods as $method) {
-    $namespace = substr($method['#method'], 0, strrpos($method['#method'], '.'));
+    $namespace = drupal_substr($method['#method'], 0, strrpos($method['#method'], '.'));
     $services[$namespace][] = $method;
   }
 
@@ -61,16 +61,17 @@ function services_admin_browse_method($method) {
 
   $output = '';
 
-  $output.= '<h3>'. $method['#method'] .'</h3>';
-  $output.= '<p>'. $method['#help'] .'</p>';
+  $output .= '<h3>'. $method['#method'] .'</h3>';
+  $output .= '<p>'. $method['#help'] .'</p>';
 
   // List arguments.
-  $output.= '<h3>'. t('Arguments') .' ('. count($method['#args']) .')</h3>';
+  $output .= '<h3>'. t('Arguments') .' ('. count($method['#args']) .')</h3>';
   $output .= '<dl id="service-browser-arguments">';
   $count = 0;
   foreach ($method['#args'] as $arg) {
     $count++;
-    $output .= '<dt><em class="type">'. $arg['#type'] .'</em><strong class="name">'. $arg['#name'] .'</strong> (' . (($arg['#optional']) ? t('optional') : t('required')) . ')</dt>';
+    $output .= '<dt><em class="type">'. $arg['#type'] .'</em><strong class="name">'.
+      $arg['#name'] .'</strong> ('. (($arg['#optional']) ? t('optional') : t('required')) .')</dt>';
     $output .= '<dd>'. $arg['#description'] .'</dd>';
   }
 
