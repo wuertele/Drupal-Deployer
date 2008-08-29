@@ -159,7 +159,7 @@ function services_admin_browse_test_unserialize_args($values) {
     switch ($arg['#type']) {
       case 'array' :
         if (empty($value)) {
-          $return[$c] = null;
+          $return[$c] = NULL;
         }
         else {
           $return[$c] = explode(',', $value);
