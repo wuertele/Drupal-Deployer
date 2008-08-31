@@ -10,12 +10,19 @@
       <link type="text/css" rel="stylesheet" media="all" href="<?php print $base_path . $directory; ?>/ie.css" >
     <?php endif; ?>
   <![endif]-->
-  <?php print $scripts; ?>
+	<?php 
+	if (!empty($scripts)) {
+	  print $scripts;
+	}
+	elseif ((empty($scripts)) && (!empty($superfish))) {
+	  print '<script type="text/javascript" src="' . $base_path . 'misc/jquery.js"></script>';
+	}
+	?>
   <?php if (!empty($superfish)): ?>
     <script type="text/javascript" src="<?php print $base_path . $directory; ?>/sf/js/superfish.js"></script>
     <script type="text/javascript"> 
       $(document).ready(function() { 
-        $('#superfish-inner ul.menu').superfish(); 
+        $('#superfish-inner ul').superfish(); 
       }); 
     </script>
   <?php endif; ?>
@@ -24,8 +31,8 @@
   $pixture_width = theme_get_setting('pixture_width');
   $pixture_width = pixture_validate_page_width($pixture_width);
 ?>
-<body class="<?php print $body_classes; ?> <?php if (isset($logo)) { print 'with-logo'; } ?>">
-
+<body id="pixture-reloaded" class="<?php print $body_classes; ?> <?php if (isset($logo)) { print 'with-logo'; } ?>">
+<!--withsf-->
   <div id="skip-to-content"><a href="#main-content"><?php print t('Skip to Content'); ?></a></div> 
   
     <div id="page" style="width: <?php print $pixture_width; ?>;">
