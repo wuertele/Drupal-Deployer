@@ -9,7 +9,6 @@
 /**
  * Implementation of hook_help().
  */
-
 function taxonomy_service_help($path, $arg) {
   switch ($path) {
     case 'admin/help#services_taxonomy':
@@ -22,12 +21,12 @@ function taxonomy_service_help($path, $arg) {
 /**
  * Implementation of hook_service().
  */
-
 function taxonomy_service_service() {
   return array(
     array(
       '#method'   => 'taxonomy.getTree',
       '#callback' => 'taxonomy_service_get_tree',
+      '#file'             => array('file' => 'inc', 'module' => 'taxonomy_service'),
       '#args'     => array(
         array(
           '#name'         => 'vid',
@@ -41,6 +40,7 @@ function taxonomy_service_service() {
     array(
       '#method'   => 'taxonomy.selectNodes',
       '#callback' => 'taxonomy_service_select_nodes',
+      '#file'             => array('file' => 'inc', 'module' => 'taxonomy_service'),
       '#args'     => array(
         array(
           '#name'         => 'tids',
@@ -82,23 +82,4 @@ function taxonomy_service_service() {
       '#help'     => t('Finds all nodes that match selected taxonomy conditions.')
     ),
   );
-}
-
-/**
- * get terms in vocabulary
- */
-function taxonomy_service_get_tree($vid) {
-  return taxonomy_get_tree($vid);
-}
-
-/**
- * select_nodes
- */
-function taxonomy_service_select_nodes($tids = array(), $fields = array(), $operator = 'or', $depth = 0, $pager = TRUE, $order = 'n.sticky DESC, n.created DESC') {
-  $result = taxonomy_select_nodes($tids, $operator, $depth, $pager, $order);
-  while ($node = db_fetch_object($result)) {
-    $nodes[] = services_node_load(node_load($node), $fields);
-  }
-
-  return $nodes;
 }

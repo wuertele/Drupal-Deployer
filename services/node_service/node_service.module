@@ -46,186 +46,49 @@ function node_service_service() {
 
     // node.load
     array(
-      '#method'   => 'node.load',
-      '#callback' => 'node_service_load',
-      '#access callback' => 'node_service_load_access',
-      '#key'      => FALSE,
-      '#args'     => array(
+      '#method'           => 'node.load',
+      '#callback'         => 'node_service_load',
+      '#access callback'  => 'node_service_load_access',
+      '#file'             => array('file' => 'inc', 'module' => 'node_service'),
+      '#key'              => FALSE,
+      '#args'             => array(
         array(
-          '#name'         => 'nid',
-          '#type'         => 'int',
-          '#description'  => t('A node id.')),
+          '#name'           => 'nid',
+          '#type'           => 'int',
+          '#description'    => t('A node id.')),
         array(
-          '#name'         => 'fields',
-          '#type'         => 'array',
-          '#optional'     => TRUE,
-          '#description'  => t('A list of fields to return.'))),
-      '#return'   => 'struct',
-      '#help'     => t('Returns a node.')),
+          '#name'           => 'fields',
+          '#type'           => 'array',
+          '#optional'       => TRUE,
+          '#description'    => t('A list of fields to return.'))),
+      '#return'           => 'struct',
+      '#help'             => t('Returns a node.')),
 
     // node.save
     array(
-      '#method'   => 'node.save',
-      '#callback' => 'node_service_save',
-      '#access callback' => 'node_service_save_access',
-      '#args'     => array(
+      '#method'           => 'node.save',
+      '#callback'         => 'node_service_save',
+      '#access callback'  => 'node_service_save_access',
+      '#file'             => array('file' => 'inc', 'module' => 'node_service'),
+      '#args'             => array(
         array(
-          '#name'         => 'node',
-          '#type'         => 'struct',
-          '#description'  => t('A node object. Upon creation, node object must include "type". Upon update, node object must include "nid" and "changed".'))),
-      '#return'   => 'struct',
-      '#help'     => t('Save a node object into the database.')),
+          '#name'           => 'node',
+          '#type'           => 'struct',
+          '#description'    => t('A node object. Upon creation, node object must include "type". Upon update, node object must include "nid" and "changed".'))),
+      '#return'           => 'struct',
+      '#help'             => t('Save a node object into the database.')),
 
     // node.delete
     array(
-      '#method'   => 'node.delete',
-      '#callback' => 'node_delete',
-      '#access callback' => 'node_service_delete_access',
-      '#args'     => array(
+      '#method'           => 'node.delete',
+      '#callback'         => 'node_delete',
+      '#access callback'  => 'node_service_delete_access',
+      '#file'             => array('file' => 'inc', 'module' => 'node_service'),
+      '#args'             => array(
         array(
-          '#name'         => 'nid',
-          '#type'         => 'int',
-          '#description'  => t('A node id.'))),
-      '#help'     => t('Delete a node.')),
+          '#name'           => 'nid',
+          '#type'           => 'int',
+          '#description'    => t('A node id.'))),
+      '#help'             => t('Delete a node.')),
   );
-}
-
-/**
- * Returns a specified node.
- *
- * @param $nid
- *   Number. The node ID.
- * @param $fields
- *   Array (optinonal). The node fields needed. If its empty,
- *   all fields will be returned
- * @return
- *   Object. The node object with all wanted fields.
- */
-function node_service_load($nid, $fields = array()) {
-  $node = services_node_load(node_load(array('nid' => $nid)), $fields);
-
-  if (!$node) {
-    return services_error(t("Could not find the node."));
-  }
-
-  return $node;
-}
-
-/**
- * Check if the user has the permission to get the
- * node's data thru services.
- *
- * @param $nid
- *   Number. The node ID.
- * @return
- *   Boolean. TRUE if the user has the permission to get the
- *   node's data thru services.
- */
-function node_service_load_access($nid) {
-  if ((bool)variable_get('node_service_node_access', true)){
-    $node = node_load($nid);
-    return node_access('view', $node) and user_access('load raw node data');
-  }
-  else {
-    return user_access('load raw node data');
-  }
-}
-
-/**
- * Save a node. It creates a new one, in case the 'nid' field
- * is missing.
- *
- * @param $edit
- *   Array. The node fields' values, just like created on
- *   node edit form.
- * @return
- *   Number. The node ID.
- */
-function node_service_save($edit) {
-  // Load the required includes for drupal_execute
-  module_load_include('inc', 'node', 'node.pages');
-  $nid = null;
-
-  if ($edit['nid']) {
-    $node = node_load($edit['nid']);
-    if ($node->nid) {
-      // Setup form_state.
-      $form_state = array();
-      $form_state['values'] = (array) $edit;
-      $form_state['values']['op'] = t('Save');
-
-      // Later on in the chain node_form seems to expect a copy of
-      // the old node object.
-      $form_state['node'] = (array) $node;
-
-      $ret = drupal_execute($node->type .'_node_form', $form_state, (object)$node);
-
-      // If the node is immediately reloaded after update, it will
-      // load the OLD cached version.
-      node_load(0, NULL, TRUE);
-
-      // Set $nid, so it can be returned
-      $nid = $node->nid;
-    }
-    else {
-      return services_error(t('Node not found'));
-    }
-  }
-  else {
-    // Setup form_state
-    $form_state = array();
-    $form_state['values'] = (array) $edit;
-    $form_state['values']['op'] = t('Save');
-
-    $ret = drupal_execute($edit['type'] .'_node_form', $form_state, (object)$edit);
-
-    // Fetch $nid out of $form_state
-    $nid = $form_state['nid'];
-  }
-  if ($errors = form_get_errors()) {
-    return services_error(implode("\n", $errors));
-  }
-
-  watchdog('content', '@type: updated %title.',
-    array('@type' => t($node->type), '%title' => $node->title),
-    WATCHDOG_NOTICE, l(t('view'), 'node/'. $node->nid));
-  return $nid;
-}
-
-/**
- * Check if the user has the permission to save a node.
- *
- * @param $node
- *   Object. The node object.
- * @return
- *   Boolean. TRUE if the user has the permission to save a node.
- */
-function node_service_save_access($node) {
-  if (isset($node['nid'])) {
-    return node_access('update', $node);
-  }
-  return node_access('create', $node['type']);
-}
-
-function node_service_save_access_setting($form_id, $form_values) {
-  if ($form_values['values']['node_access'] == 0) {
-    variable_set('node_service_node_access', false);
-    drupal_set_message(t('Node access check disabled for node.load method.'));
-  }
-  else {
-    variable_set('node_service_node_access', true);
-  }
-}
-
-/**
- * Check if the user has the permission to delete a node.
- *
- * @param $nid
- *   Number. The node ID.
- * @return
- *   Boolean. TRUE if the user has the permission to delete a node.
- */
-function node_service_delete_access($nid) {
-  $node = node_load($nid);
-  return node_access('delete', $node);
 }

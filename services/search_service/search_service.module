@@ -27,6 +27,7 @@ function search_service_service() {
       '#method'   => 'search.searchNodes',
       '#callback' => 'search_service_search_nodes',
       '#access arguments' => array('search content'),
+      '#file'             => array('file' => 'inc', 'module' => 'search_service'),
       '#key'      => FALSE,
       '#args'     => array(
         array(
@@ -48,6 +49,7 @@ function search_service_service() {
       '#method'   => 'search.searchUsers',
       '#callback' => 'search_service_search_users',
       '#access arguments' => array('search content'),
+      '#file'             => array('file' => 'inc', 'module' => 'search_service'),
       '#key'      => FALSE,
       '#args'     => array(
         array(
@@ -60,43 +62,4 @@ function search_service_service() {
       '#help'     => t('Searches users according to keys via hook_search.'),
     )
   );
-}
-
-/*
- * Callback for search.searchNodes service.
- */
-function search_service_search_nodes($keys, $simple = FALSE) {
-  // define standard keys for simple set
-  $stdkeys = array('link', 'type', 'title', 'user', 'date', 'snippet');
-
-  // invoke the search hook to generate results
-  $results = module_invoke('node', 'search', 'search', $keys);
-  if ($results and is_array($results) and count($results)) {
-    // if simple results requested, remove extra data
-    if ($simple) {
-      $num = count($results);
-      for ($i = 0; $i<$num; $i++) {
-        $keys = array_keys($results[$i]);
-        foreach ($keys as $key) {
-          if (!in_array($key, $stdkeys)) {
-            unset($results[$i][$key]);
-          }
-        }
-      }
-    }
-    return $results;
-  }
-  return services_error(t('Search returned no results.'));
-}
-
-/*
- * Callback for search.searchNodes service.
- */
-function search_service_search_users($keys) {
-  // invoke the search hook to generate results
-  $results = module_invoke('user', 'search', 'search', $keys);
-  if ($results and is_array($results) and count($results)) {
-    return $results;
-  }
-  return services_error(t('Search returned no results.'));
 }
