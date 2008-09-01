@@ -113,7 +113,7 @@ function services_admin_browse_test() {
         break;
 
       case 'domain_name':
-        $form['arg'][$key] = array('#title' => 'Domain name','#type' => 'textfield', '#default_value' => $_SERVER['HTTP_HOST']);
+        $form['arg'][$key] = array('#title' => 'Domain name', '#type' => 'textfield', '#default_value' => $_SERVER['HTTP_HOST']);
         break;
 
       case 'domain_time_stamp':

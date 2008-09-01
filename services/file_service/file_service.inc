@@ -28,7 +28,7 @@ function file_service_get_files($nid) {
       $send = array();
       foreach ($files as $file) {
         $file = array_shift($files);
-        $filepath = variable_get('file_service_fullpath', '/').$file->filepath;
+        $filepath = variable_get('file_service_fullpath', '/') . $file->filepath;
         $binaryfile = fopen($filepath, 'rb');
         $send[$file->fid]['file'] = base64_encode(fread($binaryfile, filesize($filepath)));
         $send[$file->fid]['filename'] = $file->filename;

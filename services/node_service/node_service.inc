@@ -38,7 +38,7 @@ function node_service_load($nid, $fields = array()) {
  *   node's data thru services.
  */
 function node_service_load_access($nid) {
-  if ((bool)variable_get('node_service_node_access', true)){
+  if ((bool) variable_get('node_service_node_access', TRUE)) {
     $node = node_load($nid);
     return node_access('view', $node) and user_access('load raw node data');
   }
@@ -60,7 +60,7 @@ function node_service_load_access($nid) {
 function node_service_save($edit) {
   // Load the required includes for drupal_execute
   module_load_include('inc', 'node', 'node.pages');
-  $nid = null;
+  $nid = NULL;
 
   if ($edit['nid']) {
     $node = node_load($edit['nid']);
@@ -125,11 +125,11 @@ function node_service_save_access($node) {
 
 function node_service_save_access_setting($form_id, $form_values) {
   if ($form_values['values']['node_access'] == 0) {
-    variable_set('node_service_node_access', false);
+    variable_set('node_service_node_access', FALSE);
     drupal_set_message(t('Node access check disabled for node.load method.'));
   }
   else {
-    variable_set('node_service_node_access', true);
+    variable_set('node_service_node_access', TRUE);
   }
 }
 

@@ -24,7 +24,7 @@ function system_service_mail($mailkey, &$message, $params) {
   $variables = user_mail_tokens($params['account'], $language);
   $message['subject'] = t($params['subject'], $variables, $language->language);
   $message['body'] = t($params['body'], $variables, $language->language);
-  foreach($params['headers'] as $header => $val) {
+  foreach ($params['headers'] as $header => $val) {
     $message['headers'][$header] = $val;
   }
 }
@@ -37,7 +37,7 @@ function system_service_mailprepare($mailkey, $to, $subject, $body, $from = NULL
   $params['subject'] = $subject;
   $params['body'] = $body;
   $params['headers'] = $headers;
-  $status = drupal_mail('system_service',$mailkey, $to, user_preferred_language($to), $params, $from, TRUE);
+  $status = drupal_mail('system_service', $mailkey, $to, user_preferred_language($to), $params, $from, TRUE);
 
   if (!$status) {
     return services_error(t('There was a problem sending your email.'));
