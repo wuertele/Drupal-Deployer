@@ -7,6 +7,38 @@
  */
 
 /**
+ * Get all elements fomr a given file
+ *
+ * @param $fid
+ *   Number. File ID
+ * @return
+ *   Array. All elements fomr a given file
+ */
+function file_service_get($fid) {
+  if ($file = db_fetch_array(db_query('SELECT * FROM {files} WHERE fid = %d', $fid))) {
+    $filepath = file_create_path($file->filepath);
+    $binaryfile = fopen($filepath, 'rb');
+    $file['file'] = base64_encode(fread($binaryfile, filesize($filepath)));
+    fclose($binaryfile);
+    return $file;
+  }
+  else {
+    return services_error(t('There is no file with the given ID.'));
+  }
+}
+
+/**
+ * Check if the user has permission to get a given file
+ */
+function file_service_get($fid) {
+  global $user;
+  if ($file = db_fetch_array(db_query('SELECT * FROM {files} WHERE fid = %d', $fid))) {
+    return ($file['uid'] == $user->uid and user_access('get own binary files')) or
+      ($file['uid'] != $user->uid and user_access('get any binary files'));
+  }
+}
+
+/**
  * Generates an array of base64 encoded files attached to a node
  *
  * @param $nid
@@ -57,37 +89,4 @@ function file_service_get_node_files_access($nid) {
   $node = node_load($nid);
   return ($node->uid == $user->uid and user_access('get own binary files')) or
     ($node->uid != $user->uid and user_access('get any binary files'));
-}
-
-
-/**
- * Get all elements fomr a given file
- *
- * @param $fid
- *   Number. File ID
- * @return
- *   Array. All elements fomr a given file
- */
-function file_service_get_node_files($fid) {
-  if ($file = db_fetch_array(db_query('SELECT * FROM {files} WHERE fid = %d', $fid))) {
-    $filepath = file_create_path($file->filepath);
-    $binaryfile = fopen($filepath, 'rb');
-    $file['file'] = base64_encode(fread($binaryfile, filesize($filepath)));
-    fclose($binaryfile);
-    return $file;
-  }
-  else {
-    return services_error(t('There is no file with the given ID.'));
-  }
-}
-
-/**
- * Check if the user has permission to get a given file
- */
-function file_service_get($fid) {
-  global $user;
-  if ($file = db_fetch_array(db_query('SELECT * FROM {files} WHERE fid = %d', $fid))) {
-    return ($file['uid'] == $user->uid and user_access('get own binary files')) or
-      ($file['uid'] != $user->uid and user_access('get any binary files'));
-  }
 }
