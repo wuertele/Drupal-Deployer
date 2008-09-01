@@ -100,15 +100,19 @@ function services_admin_browse_test() {
   $form['arg'] = array('#tree' => TRUE);
 
   foreach ($method['#args'] as $key => $arg) {
-    $form['name'][$key]         = array('#value' => $arg['#name']);
-    $form['optional'][$key]     = array('#value' => ($arg['#optional']) ? t('optional') : t('required'));
+    $form['name'][$key]         = array(
+      '#value' => $arg['#name']
+    );
+    $form['optional'][$key]     = array(
+      '#value' => ($arg['#optional']) ? t('optional') : t('required')
+    );
 
     switch ($arg['#name']) {
       case 'hash':
         $form['arg'][$key] = array(
           '#title'          => 'Hash',
           '#type'           => 'textfield',
-          '#default_value'  => hash_hmac("sha256", $timestamp . $_SERVER['HTTP_HOST'] . $nonce . arg(4), services_admin_browse_get_first_key())
+          '#default_value'  => hash_hmac('sha256', $timestamp . $_SERVER['HTTP_HOST'] . $nonce . arg(4), services_admin_browse_get_first_key())
         );
         break;
 
@@ -145,9 +149,16 @@ function services_admin_browse_test() {
         break;
 
       default:
-        $form['arg'][$key] = array(
-          '#type'           => 'textfield'
-        );
+        if ($arg['#size'] == 'big') {
+          $form['arg'][$key] = array(
+            '#type'           => 'textarea'
+          );
+        }
+        else {
+          $form['arg'][$key] = array(
+            '#type'           => 'textfield'
+          );
+        }
         break;
     }
 
