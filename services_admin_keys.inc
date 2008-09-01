@@ -42,46 +42,45 @@ function services_admin_keys_list() {
 }
 
 function services_admin_keys_form() {
-$kid = arg(4);
+  $kid = arg(4);
 
-$key = db_fetch_object(db_query("SELECT * FROM {services_keys} WHERE kid = '%s'", $kid));
+  $key = db_fetch_object(db_query("SELECT * FROM {services_keys} WHERE kid = '%s'", $kid));
 
   $form['kid'] = array(
-    '#type' => 'hidden',
-    '#default_value' => $key->kid,
+    '#type'           => 'hidden',
+    '#default_value'  => $key->kid,
   );
 
-if ($key->kid) {
+  if ($key->kid) {
     $form['key'] = array(
-      '#type' => 'markup',
-      '#title' => t('Key'),
-      '#value' => '<strong>'. t('API Key') .':</strong> '. $key->kid,
+      '#type'           => 'markup',
+      '#title'          => t('Key'),
+      '#value'          => '<strong>'. t('API Key') .':</strong> '. $key->kid,
     );
   }
 
   $form['title'] = array(
-    '#title' => t('Application title'),
-    '#type' => 'textfield',
-    '#default_value' => $key->title,
-    '#description' => t('The title of the application or website using the service.'),
+    '#title'          => t('Application title'),
+    '#type'           => 'textfield',
+    '#default_value'  => $key->title,
+    '#description'    => t('The title of the application or website using the service.'),
   );
   $form['domain'] = array(
-    '#title' => t('Allowed domain'),
-    '#type' => 'textfield',
-    '#default_value' => $key->domain,
-    '#description' => t('External domain allowed to use this key.'),
+    '#title'          => t('Allowed domain'),
+    '#type'           => 'textfield',
+    '#default_value'  => $key->domain,
+    '#description'    => t('External domain allowed to use this key.'),
   );
 
   $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => $key->title ? t('Save key') : t('Create key'),
+    '#type'           => 'submit',
+    '#value'          => $key->title ? t('Save key') : t('Create key'),
   );
 
   return $form;
 }
 
 function services_admin_keys_form_submit($form, &$form_state) {
-
   services_admin_keys_save($form_state['values']);
 
   $form_state['redirect']  =  'admin/build/services/keys';
@@ -90,14 +89,17 @@ function services_admin_keys_form_submit($form, &$form_state) {
 function services_admin_keys_save(&$key) {
   $is_existing = FALSE;
   $key['kid'] = !empty($key['kid']) ? $key['kid'] : md5(uniqid(mt_rand(), TRUE));
-  $is_existing =  db_result(db_query("SELECT count(*) FROM {services_keys} WHERE kid = '%s'", $key['kid']));
+  $is_existing =  db_result(db_query("SELECT count(*) FROM {services_keys}
+    WHERE kid = '%s'", $key['kid']));
 
   if ($is_existing) {
-    db_query("UPDATE {services_keys} SET title = '%s', domain = '%s' WHERE kid = '%s'", $key['title'], $key['domain'], $key['kid']);
+    db_query("UPDATE {services_keys} SET title = '%s', domain = '%s'
+      WHERE kid = '%s'", $key['title'], $key['domain'], $key['kid']);
     return SAVED_UPDATED;
   }
   else {
-    db_query("INSERT INTO {services_keys} (kid, title, domain) VALUES ('%s', '%s', '%s')", $key['kid'], $key['title'], $key['domain']);
+    db_query("INSERT INTO {services_keys} (kid, title, domain)
+      VALUES ('%s', '%s', '%s')", $key['kid'], $key['title'], $key['domain']);
     return SAVED_NEW;
   }
 }
