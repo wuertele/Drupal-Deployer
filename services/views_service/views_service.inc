@@ -72,6 +72,8 @@ function views_service_export($view_name) {
  *   Array. The view object.
  * @param $view_name
  *   String (optional). The view name.
+ * @return
+ *   Number. The new view ID
  */
 function views_service_import($view_import, $view_name = '') {
   // Include the necessary files
