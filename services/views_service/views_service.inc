@@ -78,11 +78,15 @@ function views_service_import($view_import, $view_name = '') {
   require_once drupal_get_path('module', 'views') .'/includes/admin.inc';
 
   // Import the the views using the same form as in-site import
-  if (!empty($view_name)) {
-    $form_state['values']['name'] = $view_name;
-  }
+  $form_state['values']['name'] = $view_name;
   $form_state['values']['view'] = $view_import;
   $form_state['values']['op'] = t('Import');
+  drupal_execute('views_ui_import_page', $form_state);
 
-  return drupal_execute('views_ui_import_page', $form_state);
+  // Check if there is a any error
+  if ($errors = form_set_error()) {
+    return services_error($errors);
+  }
+
+  return TRUE;
 }
