@@ -83,7 +83,6 @@ function views_service_import($view_import, $view_name = '') {
   }
   $form_state['values']['view'] = $view_import;
   $form_state['values']['op'] = t('Import');
-  drupal_execute('views_ui_import_page', $form_state);
 
-  return TRUE;
+  return drupal_execute('views_ui_import_page', $form_state);
 }
