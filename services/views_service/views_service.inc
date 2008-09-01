@@ -9,11 +9,11 @@
 /**
  * Get a view from the database.
  *
- * @param view_name
+ * @param $view_name
  *   String. The views name.
- * @param display_id
+ * @param $display_id
  *   String (optional).
- * @param args
+ * @param $args
  *   Array (optional). A list of params.
  * @return
  *   Array. The views return.
@@ -88,5 +88,9 @@ function views_service_import($view_import, $view_name = '') {
     return services_error($errors);
   }
 
-  return TRUE;
+  // At this point, the new view was only cached and now its time
+  // to save it and return the new View ID
+  $view = $form_state['view'];
+  $view->save();
+  return $view->vid;
 }
