@@ -219,7 +219,7 @@ function services_set_server_info($module) {
 
 function services_get_server_info($server_info = NULL) {
   static $info;
-  if (!$info && $server_info) {
+  if (!$info and $server_info) {
     $info = $server_info;
   }
   return $info;
@@ -256,14 +256,14 @@ function services_method_call($method_name, $args = array()) {
   $hash_parameters = array();
   foreach ($method['#args'] as $key => $arg) {
     if (!$arg['#optional']) {
-      if (!is_numeric($args[$key]) && empty($args[$key])) {
+      if (!is_numeric($args[$key]) and empty($args[$key])) {
         return services_error(t('Missing required arguments.'));
       }
     }
 
     // Key is part of the hash
-   if ($arg['#signed'] == TRUE && variable_get('services_use_key', TRUE)) {
-      if (is_numeric($args[$key]) || !empty($args[$key])) {
+   if ($arg['#signed'] == TRUE and variable_get('services_use_key', TRUE)) {
+      if (is_numeric($args[$key]) or !empty($args[$key])) {
         $hash_parameters[] = $args[$key];
       }
       else{
@@ -272,7 +272,7 @@ function services_method_call($method_name, $args = array()) {
     }
   }
 
-  if ($method['#key'] && variable_get('services_use_key', TRUE)) {
+  if ($method['#key'] and variable_get('services_use_key', TRUE)) {
     $hash = array_shift($args);
     $domain = array_shift($args);
     $timestamp = array_shift($args);
@@ -304,7 +304,7 @@ function services_method_call($method_name, $args = array()) {
 
   // Add additonal processing for methods requiring authentication
   $session_backup = NULL;
-  if ($method['#auth'] && variable_get('services_use_sessid', TRUE)) {
+  if ($method['#auth'] and variable_get('services_use_sessid', TRUE)) {
     $sessid = array_shift($args);
     if (empty($sessid)) {
       return services_error(t('Invalid sessid.'));
@@ -402,11 +402,11 @@ function services_get_all() {
         $methods[$key]['#args'] = array();
       }
 
-      if ($methods[$key]['#auth'] && variable_get('services_use_sessid', TRUE)) {
+      if ($methods[$key]['#auth'] and variable_get('services_use_sessid', TRUE)) {
         $methods[$key]['#args'] = array_merge(array($arg_sessid), $methods[$key]['#args']);
       }
 
-      if ($methods[$key]['#key'] && variable_get('services_use_key', TRUE)) {
+      if ($methods[$key]['#key'] and variable_get('services_use_key', TRUE)) {
         $methods[$key]['#args'] = array_merge(array($arg_nonce), $methods[$key]['#args']);
         $methods[$key]['#args'] = array_merge(array($arg_domain_time_stamp), $methods[$key]['#args']);
         $methods[$key]['#args'] = array_merge(array($arg_domain_name), $methods[$key]['#args']);
@@ -537,7 +537,7 @@ function services_session_load($sessid) {
   sess_read($sessid);
 
   // Check if it really loaded user and, for additional security, if user was logged from the same IP. If not, then revert automatically.
-  if ($user->sid != $sessid || $user->hostname != $backup->hostname) {
+  if ($user->sid != $sessid or $user->hostname != $backup->hostname) {
     services_session_unload($backup);
     return NULL;
   }
