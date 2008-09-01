@@ -7,9 +7,9 @@
  */
 
 /**
- * Callback for search.searchNodes service.
+ * Callback for search.nodes service.
  */
-function search_service_search_nodes($keys, $simple = FALSE) {
+function search_service_nodes($keys, $simple = FALSE) {
   // define standard keys for simple set
   $stdkeys = array('link', 'type', 'title', 'user', 'date', 'snippet');
 
@@ -34,9 +34,9 @@ function search_service_search_nodes($keys, $simple = FALSE) {
 }
 
 /**
- * Callback for search.searchNodes service.
+ * Callback for search.users service.
  */
-function search_service_search_users($keys) {
+function search_service_users($keys) {
   // invoke the search hook to generate results
   $results = module_invoke('user', 'search', 'search', $keys);
   if ($results and is_array($results) and count($results)) {
