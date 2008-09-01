@@ -17,7 +17,7 @@
  * @return
  *   Object. The node object with all wanted fields.
  */
-function node_service_load($nid, $fields = array()) {
+function node_service_get($nid, $fields = array()) {
   if (!$node = services_node_load(node_load(array('nid' => $nid)), $fields)) {
     return services_error(t('Could not find the node.'));
   }
@@ -35,7 +35,7 @@ function node_service_load($nid, $fields = array()) {
  *   Boolean. TRUE if the user has the permission to get the
  *   node's data thru services.
  */
-function node_service_load_access($nid) {
+function node_service_get_access($nid) {
   global $user;
   $node = node_load($nid);
   return ($node->uid == $user->uid and user_access('load own node data')) or
