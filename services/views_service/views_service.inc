@@ -32,6 +32,11 @@ function views_service_get($view_name, $fields = array(), $args = array(), $offs
 
 /**
  * Check the access permission to a given views.
+ *
+ * @param view_name
+ *   String. The views name.
+ * @return
+ *   Boolean. TRUE if the user is allowed to load the given view.
  */
 function views_service_get_access($view_name) {
   $view = views_get_view($view_name);
@@ -45,6 +50,11 @@ function views_service_get_access($view_name) {
 
 /**
  * Export a view.
+ *
+ * @param view_name
+ *   String. The views name.
+ * @return
+ *   Array. The view object.
  */
 function views_service_export_view($view_name) {
   $view = views_get_view($view_name);
@@ -57,6 +67,11 @@ function views_service_export_view($view_name) {
 
 /**
  * Import a view.
+ *
+ * @param $view_export
+ *   Array. The view object.
+ * @return
+ *   Number. The view ID.
  */
 function views_service_import_view($view_export) {
   views_include('view');
