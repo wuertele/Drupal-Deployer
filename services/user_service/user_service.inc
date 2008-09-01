@@ -24,6 +24,18 @@ function user_service_delete($uid) {
 }
 
 /**
+ * Check if the user is allowed to delete the user.
+ *
+ * @param $uid
+ *   Number. The user ID.
+ */
+function user_service_delete_access($uid) {
+  global $user;
+  return (($user->uid == $uid and user_access('delete own user')) or
+    ($user->uid != $uid and user_access('delete any user')));
+}
+
+/**
  * Get user details.
  *
  * @param $uid
@@ -37,6 +49,18 @@ function user_service_get($uid) {
 
   // Everything went right.
   return $account;
+}
+
+/**
+ * Check if the user is allowed to get the user data.
+ *
+ * @param $uid
+ *   Number. The user ID.
+ */
+function user_service_get_access($uid) {
+  global $user;
+  return (($user->uid == $uid and user_access('get own user data')) or
+    ($user->uid != $uid and user_access('get any user data')));
 }
 
 /**
@@ -105,4 +129,17 @@ function user_service_save($account) {
   // Everything went right.
   // Return the user ID
   return $account->uid;
+}
+
+/**
+ * Check if the user is allowed to get the user data.
+ *
+ * @param $uid
+ *   Number. The user ID.
+ */
+function user_service_save_access($account) {
+  global $user;
+  return ((empty($account->uid) and user_access('create new users')) or
+    ($user->uid == $account->uid and user_access('update own user data')) or
+    ($user->uid !=  $account->uid and user_access('update any user data')));
 }
