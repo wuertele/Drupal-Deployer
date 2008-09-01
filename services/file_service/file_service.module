@@ -10,7 +10,7 @@
  * Implementation of hook_perm().
  */
 function file_service_perm() {
-  return array('get binary files');
+  return array('get any binary files', 'get own binary files');
 }
 
 /**
@@ -18,19 +18,36 @@ function file_service_perm() {
  */
 function file_service_service() {
   return array(
+    // file.get
     array(
-      '#method'   => 'file.getFiles',
-      '#callback' => 'file_service_get_files',
-      '#access callback' => 'file_service_get_files_access',
-      '#args'     => array(
+      '#method'           => 'file.get',
+      '#callback'         => 'file_service_get',
+      '#access callback'  => 'file_service_get_access',
+      '#args'             => array(
         array(
-          '#name'         => 'nid',
-          '#type'         => 'int',
-          '#description'  => t('A node id.'),
+          '#name'           => 'fid',
+          '#type'           => 'int',
+          '#description'    => t('A file ID.'),
         ),
       ),
-      '#return'   => 'array',
-      '#help'     => t('Returns the files attached to a node.')
+      '#return'           => 'array',
+      '#help'             => t('The file data.')
+    ),
+
+    // file.getNodeFiles
+    array(
+      '#method'           => 'file.getNodeFiles',
+      '#callback'         => 'file_service_get_node_files',
+      '#access callback'  => 'file_service_get_node_files_access',
+      '#args'             => array(
+        array(
+          '#name'           => 'nid',
+          '#type'           => 'int',
+          '#description'    => t('A node ID.'),
+        ),
+      ),
+      '#return'           => 'array',
+      '#help'             => t('Returns the files attached to a node.')
     ),
   );
 }
