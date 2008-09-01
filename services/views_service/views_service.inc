@@ -56,9 +56,9 @@ function views_service_get_access($view_name) {
  * @return
  *   Array. The view object.
  */
-function views_service_export_view($view_name) {
+function views_service_export($view_name) {
   $view = views_get_view($view_name);
-  if (is_NULL($view)) {
+  if (empty($view)) {
     return services_error('View does not exist.');
   }
 
@@ -68,38 +68,22 @@ function views_service_export_view($view_name) {
 /**
  * Import a view.
  *
- * @param $view_export
+ * @param $view_import
  *   Array. The view object.
- * @return
- *   Number. The view ID.
+ * @param $view_name
+ *   String (optional). The view name.
  */
-function views_service_import_view($view_export) {
-  views_include('view');
-  ob_start();
-  eval($view_export);
-  ob_end_clean();
+function views_service_import($view_import, $view_name = '') {
+  // Include the necessary files
+  require_once drupal_get_path('module', 'views') .'/includes/admin.inc';
 
-  if (!is_object($view)) {
-    return services_error(t('Unable to interpret view code.'));
+  // Import the the views using the same form as in-site import
+  if (!empty($view_name)) {
+    $form_state['values']['name'] = $view_name;
   }
+  $form_state['values']['view'] = $view_import;
+  $form_state['values']['op'] = t('Import');
+  drupal_execute('views_ui_import_page', $form_state);
 
-  if (empty($view->api_version) or $view->api_version < 2) {
-    // Check for some value that would only exist on a Views 1 view.
-    if (isset($view->url) or isset($view->page) or isset($view->block)) {
-      views_include('convert');
-      $view = views1_import($view);
-      return services_error(t('You are importing a view created in Views version 1. You may need to adjust some parameters to work correctly in version 2.'));
-    }
-    else {
-      return services_error(t('That view is not compatible with this version of Views.'));
-    }
-  }
-
-  $existing_view = views_get_view($view->name);
-  if ($existing_view and $existing_view->type != t('Default')) {
-    $view->vid = $existing_view->vid;
-  }
-
-  $view->save();
-  return $view->vid;
+  return TRUE;
 }
