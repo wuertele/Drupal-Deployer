@@ -19,10 +19,53 @@ function user_service_help($path, $arg) {
 }
 
 /**
+ * Implementation of hook_perm().
+ */
+function user_service_perm() {
+  return array(
+    'get any user data', 'get own user data',
+    'update any user data', 'update own user data',
+    'create new users',
+    'delete any user', 'delete own user',
+  );
+}
+
+/**
  * Implementation of hook_service().
  */
 function user_service_service() {
   return array(
+    // user.delete
+    array(
+      '#method'           => 'user.delete',
+      '#callback'         => 'user_service_delete',
+      '#file'             => array('file' => 'inc', 'module' => 'user_service'),
+      '#args'             => array(
+        array(
+          '#name'           => 'uid',
+          '#type'           => 'int',
+          '#description'    => t('User ID.'),
+        ),
+      ),
+      '#return'           => 'struct',
+      '#help'             => t('Delete an user.')
+    ),
+
+    // user.get
+    array(
+      '#method'           => 'user.get',
+      '#callback'         => 'user_service_get',
+      '#file'             => array('file' => 'inc', 'module' => 'user_service'),
+      '#args'             => array(
+        array(
+          '#name'           => 'uid',
+          '#type'           => 'int',
+          '#description'    => t('User ID.'),
+        ),
+      ),
+      '#return'           => 'struct',
+      '#help'             => t('Get all user details.')
+    ),
 
     // user.login
     array(
@@ -55,23 +98,6 @@ function user_service_service() {
       '#help'             => t('Logs out a user.')
     ),
 
-    // user.get
-    array(
-      '#method'           => 'user.get',
-      '#callback'         => 'user_service_get',
-      '#file'             => array('file' => 'inc', 'module' => 'user_service'),
-      '#args'             => array(
-        array(
-          '#name'           => 'uid',
-          '#type'           => 'int',
-          '#description'    => t('User ID.'),
-        ),
-      ),
-      '#return'           => 'struct',
-      '#help'             => t('Get all user details.')
-    ),
-
-
     // user.save
     array(
       '#method'           => 'user.save',
@@ -86,23 +112,6 @@ function user_service_service() {
       ),
       '#return'           => 'struct',
       '#help'             => t('Save user details.')
-    ),
-
-
-    // user.delete
-    array(
-      '#method'           => 'user.delete',
-      '#callback'         => 'user_service_delete',
-      '#file'             => array('file' => 'inc', 'module' => 'user_service'),
-      '#args'             => array(
-        array(
-          '#name'           => 'uid',
-          '#type'           => 'int',
-          '#description'    => t('User ID.'),
-        ),
-      ),
-      '#return'           => 'struct',
-      '#help'             => t('Delete an user.')
     ),
   );
 }
