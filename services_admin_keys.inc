@@ -87,8 +87,7 @@ function services_admin_keys_form_submit($form, &$form_state) {
   $form_state['redirect']  =  'admin/build/services/keys';
 }
 
-function services_admin_keys_save($key) {
-
+function services_admin_keys_save(&$key) {
   $is_existing = FALSE;
   $key['kid'] = !empty($key['kid']) ? $key['kid'] : md5(uniqid(mt_rand(), TRUE));
   $is_existing =  db_result(db_query("SELECT count(*) FROM {services_keys} WHERE kid = '%s'", $key['kid']));
