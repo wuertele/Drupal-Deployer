@@ -18,10 +18,8 @@
  *   Object. The node object with all wanted fields.
  */
 function node_service_load($nid, $fields = array()) {
-  $node = services_node_load(node_load(array('nid' => $nid)), $fields);
-
-  if (!$node) {
-    return services_error(t("Could not find the node."));
+  if (!$node = services_node_load(node_load(array('nid' => $nid)), $fields)) {
+    return services_error(t('Could not find the node.'));
   }
 
   return $node;
@@ -38,13 +36,10 @@ function node_service_load($nid, $fields = array()) {
  *   node's data thru services.
  */
 function node_service_load_access($nid) {
-  if ((bool) variable_get('node_service_node_access', TRUE)) {
-    $node = node_load($nid);
-    return node_access('view', $node) and user_access('load raw node data');
-  }
-  else {
-    return user_access('load raw node data');
-  }
+  global $user;
+  $node = node_load($nid);
+  return ($node->uid == $user->uid and user_access('load own node data')) or
+    ($node->uid != $user->uid and user_access('load any node data'));
 }
 
 /**
@@ -121,16 +116,6 @@ function node_service_save_access($node) {
     return node_access('update', $node);
   }
   return node_access('create', $node['type']);
-}
-
-function node_service_save_access_setting($form_id, $form_values) {
-  if ($form_values['values']['node_access'] == 0) {
-    variable_set('node_service_node_access', FALSE);
-    drupal_set_message(t('Node access check disabled for node.load method.'));
-  }
-  else {
-    variable_set('node_service_node_access', TRUE);
-  }
 }
 
 /**
