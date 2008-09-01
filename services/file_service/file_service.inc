@@ -30,11 +30,13 @@ function file_service_get($fid) {
 /**
  * Check if the user has permission to get a given file
  */
-function file_service_get($fid) {
+function file_service_get_access($fid) {
   global $user;
-  if ($file = db_fetch_array(db_query('SELECT * FROM {files} WHERE fid = %d', $fid))) {
-    return ($file['uid'] == $user->uid and user_access('get own binary files')) or
-      ($file['uid'] != $user->uid and user_access('get any binary files'));
+  if (user_access('get any binary files')) {
+    return TRUE;
+  }
+  elseif ($file = db_fetch_array(db_query('SELECT * FROM {files} WHERE fid = %d', $fid))) {
+    return $file['uid'] == $user->uid and user_access('get own binary files');
   }
 }
 
@@ -86,7 +88,10 @@ function file_service_get_node_files($nid) {
  */
 function file_service_get_node_files_access($nid) {
   global $user;
-  $node = node_load($nid);
-  return ($node->uid == $user->uid and user_access('get own binary files')) or
-    ($node->uid != $user->uid and user_access('get any binary files'));
+  if (user_access('get any binary files')) {
+    return TRUE;
+  }
+  elseif ($node = node_load($nid)) {
+    return $node->uid == $user->uid and user_access('get own binary files');
+  }
 }
