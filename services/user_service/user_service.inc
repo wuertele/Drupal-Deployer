@@ -13,6 +13,12 @@
  *   Number. The user ID.
  */
 function user_service_delete($uid) {
+  $account = user_load($uid);
+  if (empty($account)) {
+    return services_error(t('There is no user with such ID.'));
+  }
+  user_delete($account, $uid);
+
   // Everything went right.
   return TRUE;
 }
@@ -24,8 +30,13 @@ function user_service_delete($uid) {
  *   Number. The user ID.
  */
 function user_service_get($uid) {
+  $account = user_load($uid);
+  if (empty($account)) {
+    return services_error(t('There is no user with such ID.'));
+  }
+
   // Everything went right.
-  return TRUE;
+  return $account;
 }
 
 /**
@@ -86,7 +97,12 @@ function user_service_logout() {
  * @param $user_data
  *   Object. The user object with all user data.
  */
-function user_service_save($user_data) {
+function user_service_save($account) {
+  if (!$account = user_save($account)) {
+    return services_error(t('Error on saving the user.'));
+  }
+
   // Everything went right.
-  return TRUE;
+  // Return the user ID
+  return $account->uid;
 }
