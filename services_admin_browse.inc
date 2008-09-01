@@ -104,20 +104,24 @@ function services_admin_browse_test() {
     $form['optional'][$key]     = array('#value' => ($arg['#optional']) ? t('optional') : t('required'));
 
     switch ($arg['#name']) {
-      case 'api_key':
-        $form['arg'][$key] = array('#type' => 'textfield', '#default_value' => services_admin_browse_get_first_key());
+      case 'hash':
+        $form['arg'][$key] = array('#title' => 'Hash', '#type' => 'textfield', '#default_value' => hash_hmac("sha256", $timestamp . $_SERVER['HTTP_HOST'] . $nonce . arg(4), services_admin_browse_get_first_key()));
         break;
 
       case 'sessid':
-        $form['arg'][$key] = array('#type' => 'textfield', '#default_value' => session_id());
+        $form['arg'][$key] = array('#title' => 'Session id', '#type' => 'textfield', '#default_value' => session_id());
         break;
 
-      case 'domain_check':
-        $form['arg'][$key] = array('#type' => 'textfield', '#default_value' => $_SERVER['HTTP_HOST']);
+      case 'domain_name':
+        $form['arg'][$key] = array('#title' => 'Domain name','#type' => 'textfield', '#default_value' => $_SERVER['HTTP_HOST']);
         break;
 
       case 'domain_time_stamp':
-        $form['arg'][$key] = array('#type' => 'textfield', '#default_value' => time());
+        $form['arg'][$key] = array('#title' => 'Timestamp', '#type' => 'textfield', '#default_value' => $timestamp);
+        break;
+
+      case 'nonce':
+        $form['arg'][$key] = array('#title' => 'Nonce', '#type' => 'textfield', '#default_value' => $nonce);
         break;
 
       default:
@@ -190,7 +194,14 @@ function theme_services_admin_browse_test($form) {
   $rows = array();
   foreach (element_children($form['name']) as $key => $type) {
     $row = array();
-    $row[] = drupal_render($form['name'][$key]);
+    if (isset($form['arg'][$key]['#title'])) {
+      $row[] = $form['arg'][$key]['#title'];
+      unset($form['arg'][$key]['#title']);
+      unset($form['name'][$key]);
+    }
+    else {
+      $row[] = drupal_render($form['name'][$key]);
+    }
     $row[] = drupal_render($form['optional'][$key]);
     $row[] = drupal_render($form['arg'][$key]);
     $rows[] = $row;
@@ -219,13 +230,15 @@ function services_admin_settings() {
     '#type' => 'checkbox',
     '#title' => t('Use keys'),
     '#default_value' => variable_get('services_use_key', TRUE),
-    '#description' => t('When enabled, all method calls must include a valid key.')
+    '#description' => t('When enabled all method calls need to provide a validation token to autheciate themselves with the server.'),
   );
-  $form['security']['services_domain_strict'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Strict domain checking'),
-    '#default_value' => variable_get('services_domain_strict', FALSE),
-    '#description' => t('When enabled, all method calls must include their domain to validate against the key.')
+  $form['security']['services_key_expiry'] = array(
+    '#type' => 'textfield',
+    '#prefix' => "<div id='services-key-expiry'>",
+    '#suffix' => "</div>",
+    '#title' => t('Token expiry time'),
+    '#default_value' => variable_get('services_key_expiry', 30),
+    '#description' => t('The time frame for which the token will be valid. Default is 30 secs'),
   );
   $form['security']['services_use_sessid'] = array(
     '#type' => 'checkbox',
@@ -234,16 +247,22 @@ function services_admin_settings() {
     '#description' => t('When enabled, all method calls must include a valid sessid. Only disable this setting if the application will user browser-based cookies.')
   );
 
-  $form['debug'] = array(
-    '#title' => t('Debugging'),
-    '#type' => 'fieldset',
-  );
-  $form['debug']['services_debug'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Enable debug mode'),
-    '#default_value' => variable_get('services_debug', TRUE),
-    '#description' => t('When enabled, debugging features will be enabled.')
-  );
+  services_admin_js($form);
 
   return system_settings_form($form);
+}
+
+/**
+ * UI enhancement for services page
+ */
+function services_admin_js($form) {
+  $out = <<<EOJS
+  $(document).ready(function() {
+    $("#services-key-expiry")[$("#edit-services-use-key").attr('checked') ? 'show' : 'hide']();
+    $("#edit-services-use-key").click(function() {
+      $("#services-key-expiry")[$(this).attr('checked') ? 'show' : 'hide']();
+   });
+  });
+EOJS;
+  drupal_add_js($out, 'inline', 'footer');
 }

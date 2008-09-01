@@ -37,6 +37,33 @@ function services_schema() {
     ),
     'primary key' => array('kid')
   );
+
+  $schema['services_timestamp_nonce'] = array(
+    'description' => 'Stores timestamp against nonce for repeat attacks.',
+    'fields' => array(
+      'timestamp' => array(
+        'description' => 'The timestamp used with the Nonce.',
+        'type'        => 'varchar',
+        'length'      => 32,
+        'not null'    => TRUE,
+        'default'     => ''
+      ),
+      'nonce' => array(
+        'description' => 'The random string used on the request.',
+        'type'        => 'varchar',
+        'length'      => 32,
+        'not null'    => TRUE,
+        'default'     => ''
+      ),
+      'domain' => array(
+        'description' => 'The domain that submitted the request.',
+        'type'        => 'varchar',
+        'length'      => 255,
+        'not null'    => TRUE,
+        'default'     => ''
+      ),
+    ),
+  );
   return $schema;
 }
 
@@ -55,4 +82,41 @@ function services_uninstall() {
   variable_del('services_use_key');
   variable_del('services_use_sessid');
   variable_del('services_debug');
+}
+
+/**
+ * Implementation of hook_update().
+ *
+ * Create the nonce table
+ */
+function services_update_6001 () {
+  $schema['services_timestamp_nonce'] = array(
+    'description' => 'Stores timestamp against nonce for repeat attacks.',
+    'fields' => array(
+      'timestamp' => array(
+        'description' => 'The timestamp used with the Nonce.',
+        'type'        => 'varchar',
+        'length'      => 32,
+        'not null'    => TRUE,
+        'default'     => ''
+      ),
+      'nonce' => array(
+        'description' => 'The random string used on the request.',
+        'type'        => 'varchar',
+        'length'      => 32,
+        'not null'    => TRUE,
+        'default'     => ''
+      ),
+      'domain' => array(
+        'description' => 'The domain that submitted the request.',
+        'type'        => 'varchar',
+        'length'      => 255,
+        'not null'    => TRUE,
+        'default'     => ''
+      ),
+    ),
+  );
+  $update = array();
+  db_create_table($update, 'services_timestamp_nonce', $schema['services_timestamp_nonce']);
+  return $update;
 }

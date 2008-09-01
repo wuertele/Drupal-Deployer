@@ -7,6 +7,17 @@
  */
 
 /**
+ * Implementation of hook_cron().
+ *
+ * Clear down old values from the nonce table.
+ */
+function services_cron() {
+  $expiry_time = time() - variable_get('services_key_expiry', 30);
+  db_query("DELETE FROM {services_timestamp_nonce}
+    WHERE timestamp < %d", $expiry_time);
+}
+
+/**
  * Implementation of hook_help().
  */
 function services_help($path, $arg) {
@@ -241,29 +252,52 @@ function services_method_call($method_name, $args = array()) {
     return services_error(t('Method %name does not exist.', array('%name' => $method_name)));
   }
 
-  // Check for missing args.
+  // Check for missing args and identify if arg is required in the hash.
+  $hash_parameters = array();
   foreach ($method['#args'] as $key => $arg) {
     if (!$arg['#optional']) {
       if (!is_numeric($args[$key]) && empty($args[$key])) {
         return services_error(t('Missing required arguments.'));
       }
     }
+
+    // Key is part of the hash
+   if ($arg['#signed'] == TRUE && variable_get('services_use_key', TRUE)) {
+      if (is_numeric($args[$key]) || !empty($args[$key])) {
+        $hash_parameters[] = $args[$key];
+      }
+      else{
+        $hash_parameters[] = '';
+      }
+    }
   }
 
-  // Add additonal processing for methods requiring api key
-  if (variable_get('services_use_key', TRUE)) {
-    $api_key = array_shift($args);
-    $domain = NULL;
-    $timestamp = NULL;
-    $hash =  NULL;
-    // Check strict domain matching.
-    if (variable_get('services_domain_strict', FALSE)) {
-      $domain = array_shift($args);
-      $timestamp = array_shift($args);
-      $hash = $api_key;
-      $api_key = db_result(db_query("SELECT kid FROM {services_keys} WHERE domain = '%s'", $domain));
+  if ($method['#key'] && variable_get('services_use_key', TRUE)) {
+    $hash = array_shift($args);
+    $domain = array_shift($args);
+    $timestamp = array_shift($args);
+    $nonce = array_shift($args);
+
+    $expiry_time = $timestamp + variable_get('services_key_expiry', 30);
+
+    if ($expiry_time < time()) {
+      return services_error(t('Token has expired.'));
     }
-    if (!services_validate_key($api_key, $timestamp, $domain, $hash)) {
+
+    // Still in time but has it been used before
+    if (db_result(db_query("SELECT count(*) FROM {services_timestamp_nonce}
+        WHERE domain = '%s' AND timestamp = %d AND nonce = '%s'",
+        $domain, $timestamp, $nonce))) {
+      return services_error(t('Token has been used previously for a request.'));
+    }
+    else{
+      db_query("INSERT INTO {services_timestamp_nonce} (domain, timestamp, nonce)
+        VALUES ('%s', %d, '%s')", $domain, $timestamp, $nonce);
+    }
+
+    $api_key = db_result(db_query("SELECT kid FROM {services_keys} WHERE domain = '%s'", $domain));
+
+    if (!services_validate_key($api_key, $timestamp, $domain, $nonce, $method_name, $hash_parameters, $hash)) {
       return services_error(t('Invalid API key.'));
     }
   }
@@ -315,7 +349,7 @@ function services_get_all() {
 
     // api_key arg
     $arg_api_key = array(
-      '#name' => 'api_key',
+      '#name' => 'hash',
       '#type' => 'string',
       '#description' => t('A valid API key.'),
     );
@@ -340,11 +374,21 @@ function services_get_all() {
       '#description' => t('Time stamp used to hash key.'),
     );
 
+    $arg_nonce = array(
+      '#name' => 'nonce',
+      '#type' => 'string',
+      '#description' => t('One time use nonce also used hash key.'),
+    );
+
     foreach ($methods as $key => $method) {
 
       // set method defaults
       if (!isset($methods[$key]['#auth'])) {
         $methods[$key]['#auth'] = TRUE;
+      }
+
+      if (!isset($methods[$key]['#key'])) {
+        $methods[$key]['#key'] = TRUE;
       }
 
       if (!isset($methods[$key]['#access callback'])) {
@@ -362,12 +406,11 @@ function services_get_all() {
         $methods[$key]['#args'] = array_merge(array($arg_sessid), $methods[$key]['#args']);
       }
 
-      if (variable_get('services_use_key', TRUE)) {
+      if ($methods[$key]['#key'] && variable_get('services_use_key', TRUE)) {
+        $methods[$key]['#args'] = array_merge(array($arg_nonce), $methods[$key]['#args']);
+        $methods[$key]['#args'] = array_merge(array($arg_domain_time_stamp), $methods[$key]['#args']);
+        $methods[$key]['#args'] = array_merge(array($arg_domain_name), $methods[$key]['#args']);
         $methods[$key]['#args'] = array_merge(array($arg_api_key), $methods[$key]['#args']);
-        if (variable_get('services_domain_strict', FALSE)) {
-          $methods[$key]['#args'] = array_merge(array($arg_domain_time_stamp), $methods[$key]['#args']);
-          $methods[$key]['#args'] = array_merge(array($arg_domain_check), $methods[$key]['#args']);
-        }
       }
 
       // set defaults for args
@@ -414,26 +457,10 @@ function services_method_get($method_name) {
   return $method_cache[$method_name];
 }
 
-function services_validate_key($kid, $timestamp, $domain, $hash) {
-  if (!variable_get('services_domain_strict', FALSE)) {
-    $key = services_get_key($kid);
-    if ($key) {
-      return TRUE;
-    }
-    //compare the domain against the key
-    else {
-      return FALSE;
-    }
-  }
-  else {
-    $rehash = md5($kid . $timestamp . $domain);
-    if ($rehash == $hash) {
-      return TRUE;
-    }
-    else {
-      return FALSE;
-    }
-  }
+function services_validate_key($kid, $timestamp, $domain, $nonce, $method_name, $hash_parameters, $hash) {
+  $hash_parameters_string = implode(';', $hash_parameters);
+  $rehash = hash_hmac("sha256", $timestamp . $domain . $nonce . $method_name . $hash_parameters_string, $kid);
+  return ($rehash == $hash) ? TRUE : FALSE;
 }
 
 function services_get_key($kid) {
