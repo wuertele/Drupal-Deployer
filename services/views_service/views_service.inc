@@ -30,8 +30,13 @@ function views_service_get_actualview($view_name, $display_id = NULL, $args = ar
   if (!views_access($view)) {
     return services_error('You do not have access to this view.');
   }
+
+  // Put all arguments and then execute
   $view->set_arguments($args);
+  $view->set_offset($offset);
+  $view->set_items_per_page($limit);
   $view->execute();
+
   foreach ($view->result as $node) {
     $new_node = new stdClass;
     $view_fields = $view->display[$display_id]->handler->handlers['field'];
@@ -45,8 +50,17 @@ function views_service_get_actualview($view_name, $display_id = NULL, $args = ar
 
 /**
  * Get a view from the database.
+ *
+ * @param view_name
+ *   String. The views name.
+ * @param display_id
+ *   String (optional).
+ * @param args
+ *   Array (optional). A list of params.
+ * @return
+ *   Array. The views return.
  */
-function views_service_get_view($view_name, $fields = array(), $args = array()) {
+function views_service_get_view($view_name, $fields = array(), $args = array(), $offset = 0, $limit = 0) {
   $view = views_get_view($view_name);
   if (is_NULL($view)) {
     return services_error('View does not exist.');
@@ -57,7 +71,10 @@ function views_service_get_view($view_name, $fields = array(), $args = array()) 
     return services_error('You do not have access to this view.');
   }
 
-  $view->set_arguments($args);
+  // Put all arguments and then execute
+  $view->set_arguments($args, FALSE);
+  $view->set_offset($offset);
+  $view->set_items_per_page($limit);
   $view->execute();
 
   foreach ($view->result as $node) {
