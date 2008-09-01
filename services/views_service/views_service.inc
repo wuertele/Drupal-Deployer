@@ -7,48 +7,6 @@
  */
 
 /**
- * Get an actual view from the database.
- *
- * @param view_name
- *   String. The views name.
- * @param display_id
- *   String (optional).
- * @param args
- *   Array (optional). A list of params.
- * @return
- *   Array. The views return.
- */
-function views_service_get_actualview($view_name, $display_id = NULL, $args = array()) {
-  if ($display_id === NULL or trim($display_id) === '') {
-    $display_id = 'default';
-  }
-  $view = views_get_view($view_name);
-  if (is_null($view)) {
-    return services_error('View does not exist.');
-  }
-  // Check access
-  if (!views_access($view)) {
-    return services_error('You do not have access to this view.');
-  }
-
-  // Put all arguments and then execute
-  $view->set_arguments($args);
-  $view->set_offset($offset);
-  $view->set_items_per_page($limit);
-  $view->execute();
-
-  foreach ($view->result as $node) {
-    $new_node = new stdClass;
-    $view_fields = $view->display[$display_id]->handler->handlers['field'];
-    foreach ($view_fields as $f_key => $f_val) {
-      $new_node->{$f_key} = $f_val->render($node);
-    }
-    $nodes[] = $new_node;
-  }
-  return $nodes;
-}
-
-/**
  * Get a view from the database.
  *
  * @param view_name
@@ -60,16 +18,8 @@ function views_service_get_actualview($view_name, $display_id = NULL, $args = ar
  * @return
  *   Array. The views return.
  */
-function views_service_get_view($view_name, $fields = array(), $args = array(), $offset = 0, $limit = 0) {
+function views_service_get($view_name, $fields = array(), $args = array(), $offset = 0, $limit = 0) {
   $view = views_get_view($view_name);
-  if (is_NULL($view)) {
-    return services_error('View does not exist.');
-  }
-
-  // Check access
-  if (!views_access($view)) {
-    return services_error('You do not have access to this view.');
-  }
 
   // Put all arguments and then execute
   $view->set_arguments($args, FALSE);
@@ -77,10 +27,20 @@ function views_service_get_view($view_name, $fields = array(), $args = array(), 
   $view->set_items_per_page($limit);
   $view->execute();
 
-  foreach ($view->result as $node) {
-    $nodes[] = services_node_load(node_load($node->nid), $fields);
+  return $view->result;
+}
+
+/**
+ * Check the access permission to a given views.
+ */
+function views_service_get_access($view_name) {
+  $view = views_get_view($view_name);
+  if (empty($view)) {
+    return FALSE;
   }
-  return $nodes;
+
+  global $user;
+  return views_access($view);
 }
 
 /**
