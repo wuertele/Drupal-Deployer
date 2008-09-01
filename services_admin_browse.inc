@@ -105,32 +105,57 @@ function services_admin_browse_test() {
 
     switch ($arg['#name']) {
       case 'hash':
-        $form['arg'][$key] = array('#title' => 'Hash', '#type' => 'textfield', '#default_value' => hash_hmac("sha256", $timestamp . $_SERVER['HTTP_HOST'] . $nonce . arg(4), services_admin_browse_get_first_key()));
+        $form['arg'][$key] = array(
+          '#title'          => 'Hash',
+          '#type'           => 'textfield',
+          '#default_value'  => hash_hmac("sha256", $timestamp . $_SERVER['HTTP_HOST'] . $nonce . arg(4), services_admin_browse_get_first_key())
+        );
         break;
 
       case 'sessid':
-        $form['arg'][$key] = array('#title' => 'Session id', '#type' => 'textfield', '#default_value' => session_id());
+        $form['arg'][$key] = array(
+          '#title'          => 'Session id',
+          '#type'           => 'textfield',
+          '#default_value'  => session_id()
+        );
         break;
 
       case 'domain_name':
-        $form['arg'][$key] = array('#title' => 'Domain name', '#type' => 'textfield', '#default_value' => $_SERVER['HTTP_HOST']);
+        $form['arg'][$key] = array(
+          '#title'          => 'Domain name',
+          '#type'           => 'textfield',
+          '#default_value'  => $_SERVER['HTTP_HOST']
+        );
         break;
 
       case 'domain_time_stamp':
-        $form['arg'][$key] = array('#title' => 'Timestamp', '#type' => 'textfield', '#default_value' => $timestamp);
+        $form['arg'][$key] = array(
+          '#title'          => 'Timestamp',
+          '#type'           => 'textfield',
+          '#default_value'  => $timestamp
+        );
         break;
 
       case 'nonce':
-        $form['arg'][$key] = array('#title' => 'Nonce', '#type' => 'textfield', '#default_value' => $nonce);
+        $form['arg'][$key] = array(
+          '#title'          => 'Nonce',
+          '#type'           => 'textfield',
+          '#default_value'  => $nonce
+        );
         break;
 
       default:
-        $form['arg'][$key] = array('#type' => 'textfield');
+        $form['arg'][$key] = array(
+          '#type'           => 'textfield'
+        );
         break;
     }
 
   }
-  $form['submit'] = array('#type' => 'submit', '#value' => t('Call method'));
+  $form['submit'] = array(
+    '#type'           => 'submit',
+    '#value'          => t('Call method')
+  );
 
   $form['#redirect'] = FALSE;
   return $form;
@@ -222,29 +247,29 @@ function services_admin_settings() {
   $node_types = node_get_types('names');
   $defaults = isset($node_types['blog']) ? array('blog' => 1) : array();
   $form['security'] = array(
-    '#title' => t('Security'),
-    '#type' => 'fieldset',
-    '#description' => t('Changing security settings will require you to adjust all method calls. This will affect all applications using site services.'),
+    '#title'        => t('Security'),
+    '#type'         => 'fieldset',
+    '#description'  => t('Changing security settings will require you to adjust all method calls. This will affect all applications using site services.'),
   );
   $form['security']['services_use_key'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Use keys'),
-    '#default_value' => variable_get('services_use_key', TRUE),
-    '#description' => t('When enabled all method calls need to provide a validation token to autheciate themselves with the server.'),
+    '#type'           => 'checkbox',
+    '#title'          => t('Use keys'),
+    '#default_value'  => variable_get('services_use_key', TRUE),
+    '#description'    => t('When enabled all method calls need to provide a validation token to autheciate themselves with the server.'),
   );
   $form['security']['services_key_expiry'] = array(
-    '#type' => 'textfield',
-    '#prefix' => "<div id='services-key-expiry'>",
-    '#suffix' => "</div>",
-    '#title' => t('Token expiry time'),
-    '#default_value' => variable_get('services_key_expiry', 30),
-    '#description' => t('The time frame for which the token will be valid. Default is 30 secs'),
+    '#type'           => 'textfield',
+    '#prefix'         => "<div id='services-key-expiry'>",
+    '#suffix'         => "</div>",
+    '#title'          => t('Token expiry time'),
+    '#default_value'  => variable_get('services_key_expiry', 30),
+    '#description'    => t('The time frame for which the token will be valid. Default is 30 secs'),
   );
   $form['security']['services_use_sessid'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Use sessid'),
-    '#default_value' => variable_get('services_use_sessid', TRUE),
-    '#description' => t('When enabled, all method calls must include a valid sessid. Only disable this setting if the application will user browser-based cookies.')
+    '#type'           => 'checkbox',
+    '#title'          => t('Use sessid'),
+    '#default_value'  => variable_get('services_use_sessid', TRUE),
+    '#description'    => t('When enabled, all method calls must include a valid sessid. Only disable this setting if the application will user browser-based cookies.')
   );
 
   services_admin_js($form);
