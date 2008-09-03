@@ -63,7 +63,7 @@ function services_admin_browse_method($method) {
   $output = '';
 
   $output .= '<h3>'. $method['#method'] .'</h3>';
-  $output .= '<p>'. $method['#help'] .'</p>';
+  $output .= '<p>'. $method['#description'] .'</p>';
 
   // List arguments.
   $output .= '<h3>'. t('Arguments') .' ('. count($method['#args']) .')</h3>';

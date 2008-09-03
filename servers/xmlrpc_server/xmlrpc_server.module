@@ -10,6 +10,9 @@
  * Execute Services if called by the Drupal standard XML RPC
  * URL, xmlrpc.php.
  *
+ * @param ...
+ *   Depends. The amount and type of arguments varies from
+ *   service to service. They are captured by func_get_args().
  * @return
  *   Depends. It depends on each service
  */
@@ -44,19 +47,21 @@ function xmlrpc_server_server_info() {
  */
 function xmlrpc_server_server_error($message) {
   static $xmlrpcusererr;
-  if (!is_array($message)) {
-    $message = array($message);
+
+  // Transform the array message into a string
+  if (is_array($message)) {
+    $message = implode(' ', $message);
   }
 
-  $message = implode(' ', $message);
-
-  return xmlrpc_error($xmlrpcusererr + 1, strip_tags($message));
+  return xmlrpc_error(++$xmlrpcusererr, strip_tags($message));
 }
 
 /**
  * Implementation of hook_xmlrpc().
  */
 function xmlrpc_server_xmlrpc() {
+  // Convert all services to a Drupal standard
+  // XML RPC services.
   $callbacks = array();
   foreach (services_get_all() as $method) {
     $args = array();
@@ -72,7 +77,7 @@ function xmlrpc_server_xmlrpc() {
       $method['#method'],
       '_xmlrpc_server_call_wrapper',
       array_merge(array($method['#return']), $args),
-      $method['#help']);
+      $method['#description']);
   }
   return $callbacks;
 }
