@@ -15,6 +15,7 @@ function _services_oauth_server_init() {
   static $server;
   if (empty($server)) {
     module_load_include('oauth_lib.php', 'services');
+
     /**
     * Database abstraction class
     */
@@ -38,11 +39,13 @@ function _services_oauth_server_init() {
       }
 
       function lookup_nonce($consumer, $token, $nonce, $timestamp) {
-        $nonce_1 = db_result(db_query("SELECT nonce FROM {oauth_nonce}
-          WHERE nonce_timestamp='%s'", $timestamp));
-        if (!$nonce_1) {
-          db_query("INSERT INTO {oauth_nonce} (nonce, nonce_timestamp)
-            VALUES ('%s', %d)", $nonce, $timestamp);
+        if (!$nonce_1 = db_result(db_query("SELECT nonce FROM {oauth_nonce}
+          WHERE nonce_timestamp='%s'", $timestamp))) {
+          $sql = array(
+            'nonce'           => $nonce,
+            'nonce_timestamp' => $timestamp
+          );
+          drupal_write_record('oauth_nonce', $sql);
           return NULL;
         }
         return $nonce_1;
@@ -52,47 +55,48 @@ function _services_oauth_server_init() {
         $user_id = db_result(db_query("SELECT uid FROM {oauth_consumer}
           WHERE consumer_key='%s'", $consumer->key));
         $token = new OAuthToken(user_password(32), user_password(32));
-        db_query("INSERT INTO {oauth_token}
-          (application_key, consumer_key, type, token_key, token_secret, uid)
-          VALUES ('%s', '%s', '%s', '%s', '%s', %d)",
-          $application_key, $consumer->key, 'request', $token->key, $token->secret, $user_id);
+        $sql = array(
+          'application_key' => $application_key,
+          'consumer_key'    => $consumer->key,
+          'type'            => 'request',
+          'token_key'       => $token->key,
+          'token_secret'    => $token->secret,
+          'uid'             => $user_id
+        );
+        drupal_write_record('oauth_token', $sql);
         return $token;
       }
 
       /**
-      *
-      * @param session_id
-      *    is session id corresponding to logged in user
-      *    we are storing session id in oauth_services table to keep track of users and issued access tokens
-      *
-      * @param user_id
-      *    user_id is actually $user->id but we are fetching it from oauth_consumer table and using it to get session_id from sessions
-      *    table and also storing its value to oauth_token table (corresponding to access token here)
-      *
-      */
+       *
+       * @param session_id
+       *    is session id corresponding to logged in user
+       *    we are storing session id in oauth_services table to keep track of users and issued access tokens
+       *
+       * @param user_id
+       *    user_id is actually $user->id but we are fetching it from oauth_consumer table and using it to get session_id from sessions
+       *    table and also storing its value to oauth_token table (corresponding to access token here)
+       *
+       */
       function new_access_token($request_token, $consumer, $user = NULL) {
         if ($object = db_fetch_object(db_query("SELECT * FROM {oauth_token}
           WHERE type='request' and token_key = '%s'", $request_token->key))) {
           if ($object->authorized) {
             $token = new OAuthToken(user_password(32), user_password(32));
-            $user_id = db_result(db_query("SELECT uid FROM {oauth_consumer} WHERE consumer_key = '%s'", $consumer->key));
-            $session_id = db_result(db_query("SELECT sid FROM {sessions} WHERE uid=%d", $user_id));
-            if (variable_get('oauth_use_coolauth', 0)) {
-              db_query("INSERT INTO {oauth_token}
-                (application_key, consumer_key, type, token_key, token_secret, uid)
-                VALUES ('%s', '%s', '%s', '%s', '%s', %d)",
-                $object->application_key, $consumer->key, 'access', $token->key, $token->secret, $user_id);
-            }
-            else {
-              db_query("INSERT INTO {oauth_token}
-                (application_key, consumer_key, type, token_key, token_secret, uid)
-                VALUES ('%s', '%s', '%s', '%s', '%s', %d)", 'NULL',
-                $consumer->key, 'access', $token->key, $token->secret, $user_id);
-            }
-            db_query("DELETE FROM {oauth_token} WHERE type='request' AND token_key='%s'", $request_token->key);
-            if (variable_get('oauth_use_with_services', 0)) {
-              db_query("UPDATE {oauth_services} SET token_key = '%s' WHERE session_id= '%s'", $token->key, $session_id);
-            }
+            $user_id = db_result(db_query("SELECT uid FROM {oauth_consumer}
+              WHERE consumer_key = '%s'", $consumer->key));
+            $sql = array(
+              'application_key' => (variable_get('services_use_coolauth', 0) : $object->application_key ? 'NULL'),
+              'consumer_key'    => $consumer->key,
+              'type'            => 'access',
+              'token_key'       => $token->key,
+              'token_secret'    => $token->secret,
+              'uid'             => $user_id
+            );
+            drupal_write_record('oauth_token', $sql);
+
+            db_query("DELETE FROM {oauth_token} WHERE
+              type='request' AND token_key='%s'", $request_token->key);
             return $token;
           }
         }
