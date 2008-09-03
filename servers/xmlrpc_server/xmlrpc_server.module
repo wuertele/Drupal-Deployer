@@ -7,6 +7,29 @@
  */
 
 /**
+ * Execute Services if called by the Drupal standard XML RPC
+ * URL, xmlrpc.php.
+ *
+ * @return
+ *   Depends. It depends on each service
+ */
+function _xmlrpc_server_call_wrapper() {
+  $xmlrpc_server = xmlrpc_server_get();
+  $method_name = $xmlrpc_server->message->methodname;
+  $args = func_get_args();
+  return services_method_call($method_name, $args);
+}
+
+/**
+ * Implementation of hook_server().
+ */
+function xmlrpc_server_server() {
+  require_once './includes/xmlrpc.inc';
+  require_once './includes/xmlrpcs.inc';
+  return xmlrpc_server(xmlrpc_server_xmlrpc());
+}
+
+/**
  * Implementation of hook_server_info().
  */
 function xmlrpc_server_server_info() {
@@ -16,12 +39,23 @@ function xmlrpc_server_server_info() {
   );
 }
 
-function xmlrpc_server_server() {
-  require_once './includes/xmlrpc.inc';
-  require_once './includes/xmlrpcs.inc';
-  return xmlrpc_server(xmlrpc_server_xmlrpc());
+/**
+ * Implementation of hook_server_error().
+ */
+function xmlrpc_server_server_error($message) {
+  static $xmlrpcusererr;
+  if (!is_array($message)) {
+    $message = array($message);
+  }
+
+  $message = implode(' ', $message);
+
+  return xmlrpc_error($xmlrpcusererr + 1, strip_tags($message));
 }
 
+/**
+ * Implementation of hook_xmlrpc().
+ */
 function xmlrpc_server_xmlrpc() {
   $callbacks = array();
   foreach (services_get_all() as $method) {
@@ -36,27 +70,9 @@ function xmlrpc_server_xmlrpc() {
     }
     $callbacks[] = array(
       $method['#method'],
-      'xmlrpc_server_call_wrapper',
+      '_xmlrpc_server_call_wrapper',
       array_merge(array($method['#return']), $args),
       $method['#help']);
   }
   return $callbacks;
-}
-
-function xmlrpc_server_call_wrapper() {
-  $xmlrpc_server = xmlrpc_server_get();
-  $method_name = $xmlrpc_server->message->methodname;
-  $args = func_get_args();
-  return services_method_call($method_name, $args);
-}
-
-function xmlrpc_server_server_error($message) {
-  static $xmlrpcusererr;
-  if (!is_array($message)) {
-    $message = array($message);
-  }
-
-  $message = implode(' ', $message);
-
-  return xmlrpc_error($xmlrpcusererr + 1, strip_tags($message));
 }
