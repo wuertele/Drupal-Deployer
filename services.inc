@@ -30,6 +30,27 @@ function _services_crossdomain_xml() {
 }
 
 /**
+ * Prepare an error message for returning to the XMLRPC caller.
+ *
+ * @param $message
+ *   String. The error message.
+ * @return
+ *   String. Depends on the services server.
+ */
+function services_error($message) {
+  $server_info = services_get_server_info();
+
+  // Look for custom error handling function.
+  // Should be defined in each server module.
+  if ($server_info && module_hook($server_info->module, 'server_error')) {
+    return module_invoke($server_info->module, 'server_error', $message);
+  }
+
+  // No custom error handling function found.
+  return $message;
+}
+
+/**
  * Callback for server endpoint
  */
 function _services_server($server_path = NULL) {
