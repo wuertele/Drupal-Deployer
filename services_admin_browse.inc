@@ -21,10 +21,12 @@ function services_admin_browse_index() {
     $services = array();
     foreach ($methods as $method) {
       $namespace = drupal_substr($method['#method'], 0, strrpos($method['#method'], '.'));
-      $services[$namespace][] = $method;
+      $services[$namespace][$method['#method']] = $method;
     }
+    ksort($services);
 
     foreach ($services as $namespace => $methods) {
+      ksort($methods);
       $output .= '<h2>'. $namespace .'</h2>';
       $output .= '<ul>';
       foreach ($methods as $method) {
