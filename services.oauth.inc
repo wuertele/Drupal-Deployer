@@ -155,11 +155,11 @@ function _services_oauth_server_init() {
 function _services_token_access() {
   if (empty($_GET['oauth_token'])) {
     drupal_set_message('OAuth token is not included in request.', 'error');
-    drupal_access_denied();
+    return drupal_access_denied();
   }
-  if (empty($_GET['oauth_consumer_key'])) {
+  elseif (empty($_GET['oauth_consumer_key'])) {
     drupal_set_message('Please include a valid consumer key in your request.', 'error');
-    drupal_access_denied();
+    return drupal_access_denied();
   }
   $server = _services_oauth_server_init();
 
@@ -194,13 +194,19 @@ function _services_token_auth() {
   // Redirect to the right form, or present an error.
   global $user;
   if ($user->uid != 0) {
-    if (user_access('authorize external services')) {
-      return drupal_get_form('_services_token_auth_form');
+    if (empty($_GET['oauth_token'])) {
+      drupal_set_message('OAuth token is not included in request.', 'error');
+      return drupal_access_denied();
     }
-    else {
+    elseif (empty($_GET['oauth_callback'])) {
+      drupal_set_message('Please include a valid callback url in your request.', 'error');
+      return drupal_access_denied();
+    }
+    elseif (!user_access('authorize external services')) {
       drupal_set_message('error', t('You are not authorized to allow external services access to this system.'));
-      drupal_access_denied();
+      return drupal_access_denied();
     }
+    return drupal_get_form('_services_token_auth_form');
   }
   else {
     return drupal_get_form('user_login');
@@ -216,14 +222,6 @@ function _services_token_auth() {
  * @ingroup $form
  */
 function _services_token_auth_form() {
-  if (empty($_GET['oauth_token'])) {
-    drupal_set_message('OAuth token is not included in request.', 'error');
-    drupal_access_denied();
-  }
-  if (empty($_GET['oauth_callback'])) {
-    drupal_set_message('Please include a valid callback url in your request.', 'error');
-    drupal_access_denied();
-  }
   /// @todo tripple check image reference.
 
   $form['oauth_callback'] = array(
