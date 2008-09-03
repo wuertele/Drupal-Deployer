@@ -15,23 +15,23 @@ function services_schema() {
     'fields' => array(
       'kid' => array(
         'description' => 'The service key ID.',
-        'type' => 'varchar',
-        'length' => 32,
-        'not null' => TRUE,
+        'type'      => 'varchar',
+        'length'    => 32,
+        'not null'  => TRUE,
         'default' => ''
       ),
       'title' => array(
         'description' => 'The title of the service key.',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => TRUE,
+        'type'      => 'varchar',
+        'length'    => 255,
+        'not null'  => TRUE,
         'default' => ''
       ),
       'domain' => array(
         'description' => 'The domain of the service key.',
-        'type' => 'varchar',
-        'length' => 255,
-        'not null' => TRUE,
+        'type'      => 'varchar',
+        'length'    => 255,
+        'not null'  => TRUE,
         'default' => ''
       ),
     ),
@@ -66,6 +66,81 @@ function services_schema() {
       ),
     ),
   );
+  $schema['services_token'] = array(
+    'fields' => array(
+      'uid' => array(
+        'type'      => 'int',
+        'unsigned'  => TRUE,
+        'not null'  => TRUE,
+        'default'   => 0
+      ),
+      'application_key' => array(
+        'type'      => 'varchar',
+        'length'    => 32,
+        'not null'  => TRUE
+      ),
+      'consumer_key' => array(
+        'type'      => 'varchar',
+        'length'    => 32,
+        'not null'  => TRUE
+      ),
+      'type' => array(
+        'type'      => 'varchar',
+        'length'    => 7,
+        'not null'  => TRUE
+      ),
+      'token_key' => array(
+        'type'      => 'varchar',
+        'length'    => 32,
+        'not null'  => TRUE
+      ),
+      'token_secret' => array(
+        'type'      => 'varchar',
+        'length'    => 32,
+        'not null'  => TRUE
+      ),
+      'authorized' => array(
+        'type'      => 'int',
+        'size'      => 'tiny',
+        'not null'  => TRUE,
+        'default'   => 0
+      ),
+     ),
+   'primary key' => array('token_key'),
+   'unique keys' => array(
+      'token_key' => array('token_key')
+    ),
+   'indexes' => array(
+      'token_key_type' => array('token_key', 'type'),
+    ),
+  );
+  $schema['services_consumer'] = array(
+    'description' => t('Stores records for service consumers'),
+    'fields' => array(
+      'uid' => array(
+        'type'      => 'int',
+        'unsigned'  => TRUE,
+        'not null'  => TRUE
+      ),
+      'consumer_key' => array(
+        'type'      => 'varchar',
+        'length'    => 32,
+        'not null'  => TRUE
+      ),
+      'consumer_secret' => array(
+        'type'      => 'varchar',
+        'length'    => 32,
+        'not null'  => TRUE
+      ),
+    ),
+   'primary key' => array('uid'),
+   'unique keys' => array(
+     'uid' => array('uid')
+   ),
+   'indexes' => array(
+      'consumer_key' => array('consumer_key'),
+    ),
+  );
   return $schema;
 }
 
@@ -92,36 +167,21 @@ function services_uninstall() {
  * Create the nonce table
  */
 function services_update_6001() {
-  $schema['services_timestamp_nonce'] = array(
-    'description' => 'Stores timestamp against nonce for repeat attacks.',
-    'fields' => array(
-      'nonce' => array(
-        'description' => 'The random string used on the request.',
-        'type'        => 'varchar',
-        'length'      => 32,
-        'not null'    => TRUE,
-        'default'     => ''
-      ),
-      'timestamp' => array(
-        'description' => 'The timestamp used with the Nonce.',
-        'type'        => 'int',
-        'not null'    => TRUE,
-        'default'     => ''
-      ),
-      'domain' => array(
-        'description' => 'The domain that submitted the request.',
-        'type'        => 'varchar',
-        'length'      => 255,
-        'not null'    => TRUE,
-        'default'     => ''
-      ),
-      'primary key' => array('nonce'),
-      'indexes' => array(
-        'timestamp' => array('timestamp'),
-      ),
-    ),
-  );
+  $schema = services_schema();
   $update = array();
   db_create_table($update, 'services_timestamp_nonce', $schema['services_timestamp_nonce']);
+  return $update;
+}
+
+/**
+ * Implementation of hook_update().
+ *
+ * Create the nonce table
+ */
+function services_update_6002() {
+  $schema = services_schema();
+  $update = array();
+  db_create_table($update, 'services_consumer', $schema['services_consumer']);
+  db_create_table($update, 'services_token', $schema['services_token']);
   return $update;
 }
