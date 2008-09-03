@@ -96,7 +96,7 @@ function services_admin_browse_method($method) {
 
 function services_admin_browse_test() {
   $form = array();
-  $method = services_method_get(arg(4));
+  $method = _services_service_get(arg(4));
 
   $form['arg'] = array('#tree' => TRUE);
 
@@ -182,7 +182,7 @@ function services_admin_browse_get_first_key() {
 
 function services_admin_browse_test_submit($form, $form_state) {
   global $_services_admin_browse_test_submit_result;
-  $method = services_method_get(arg(4));
+  $method = _services_service_get(arg(4));
   $args = services_admin_browse_test_unserialize_args($form_state['values']['arg']);
   module_load_include('inc', 'services');
   $result = services_method_call($method['#method'], $args);
@@ -190,7 +190,7 @@ function services_admin_browse_test_submit($form, $form_state) {
 }
 
 function services_admin_browse_test_unserialize_args($values) {
-  $method = services_method_get(arg(4));
+  $method = _services_service_get(arg(4));
   $noskip = FALSE;
   // Convert args
   for ($c = count($method['#args']) - 1; $c >= 0; $c--) {

@@ -77,7 +77,7 @@ function _services_key_validate($kid, $timestamp, $domain, $nonce, $method_name,
  * This is the magic function through which all remote method calls must pass.
  */
 function services_method_call($method_name, $args = array(), $ignore_hash = FALSE) {
-  $method = services_method_get($method_name);
+  $method = _services_service_get($method_name);
 
   // Check that method exists.
   if (empty($method)) {
@@ -230,6 +230,27 @@ function _services_server_info_get($server_info = NULL) {
 }
 
 /**
+ * Get the into from a service.
+ *
+ * @param $method_name
+ *   String. The service name
+ * @return
+ *   Object. The service info.
+ */
+function _services_service_get($method_name) {
+  static $method_cache;
+  if (!isset($method_cache[$method_name])) {
+    foreach (services_service_get_all() as $method) {
+      if ($method_name == $method['#method']) {
+        $method_cache[$method_name] = $method;
+        break;
+      }
+    }
+  }
+  return $method_cache[$method_name];
+}
+
+/**
  * Build a complete list of all services available,
  *
  * @note This should probably be cached in drupal cache.
@@ -322,7 +343,7 @@ function services_service_get_all() {
  * Menu wildcard loader for browsing Service methods.
  */
 function services_service_load($method) {
-  $method = services_method_get($method);
+  $method = _services_service_get($method);
   return isset($method) ? $method : FALSE;
 }
 
