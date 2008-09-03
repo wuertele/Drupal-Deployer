@@ -28,3 +28,25 @@ function services_crossdomain_xml() {
 
   services_xml_output($output);
 }
+
+/**
+ * Callback for server endpoint
+ */
+function services_server($server_path = NULL) {
+  // Find which module the server is part of
+  foreach (module_implements('server_info') as $module) {
+    $info = module_invoke($module, 'server_info');
+    if ($info['#path'] == $server_path) {
+
+      // call the server
+      services_set_server_info($module);
+      print module_invoke($module, 'server');
+
+      // Do not let this output
+      module_invoke_all('exit');
+      exit;
+    }
+  }
+  // return 404 if the service doesn't exist
+  drupal_not_found();
+}
