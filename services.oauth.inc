@@ -21,16 +21,30 @@ function _services_oauth_server_init() {
     */
     class DrupalOAuthDataStore extends OAuthDataStore {
       function lookup_consumer($consumer_key) {
-      $result = db_query("SELECT * FROM {oauth_consumer} WHERE consumer_key='%s'", $consumer_key);
+        $result = db_query("SELECT * FROM {oauth_consumer}
+          WHERE consumer_key = '%s'", $consumer_key);
         if ($object = db_fetch_object($result)) {
           return new OAuthConsumer($object->consumer_key, $object->consumer_secret);
         }
         return NULL;
       }
 
+      /**
+       * Check if the token exists.
+       *
+       * @param $consumer
+       *   Object. The service consumer information.
+       * @param $token_type
+       *   Strint. The type of the token: 'request' or 'access'.
+       * @param $token
+       *   Strint. The token value.
+       * @return
+       *   String or NULL. The existing token or NULL in
+       *   case it doesnt exist.
+       */
       function lookup_token($consumer, $token_type, $token) {
         $result = db_query("SELECT * FROM {oauth_token}
-          WHERE type='%s' AND consumer_key='%s' AND token_key = '%s'",
+          WHERE type = '%s' AND consumer_key = '%s' AND token_key = '%s'",
           $token_type, $consumer->key, $token);
         if ($object = db_fetch_object($result)) {
           return new OAuthToken($object->token_key, $object->token_secret);
@@ -38,9 +52,24 @@ function _services_oauth_server_init() {
         return NULL;
       }
 
+      /**
+       * Check if the nonce value exists. If not, generate one.
+       *
+       * @param $consumer
+       *   Object. The service consumer information.
+       * @param $token
+       *   Strint. The current token.
+       * @param $nonce
+       *   Strint. A new nonce value, in case a one doesnt current exit.
+       * @param $timestamp
+       *   number. The current time.
+       * @return
+       *   String or NULL. The existing nonce value or NULL in
+       *   case it doesnt exist.
+       */
       function lookup_nonce($consumer, $token, $nonce, $timestamp) {
         if (!$nonce_1 = db_result(db_query("SELECT nonce FROM {oauth_nonce}
-          WHERE nonce_timestamp='%s'", $timestamp))) {
+          WHERE nonce_timestamp = '%s'", $timestamp))) {
           $sql = array(
             'nonce'           => $nonce,
             'nonce_timestamp' => $timestamp
@@ -51,9 +80,17 @@ function _services_oauth_server_init() {
         return $nonce_1;
       }
 
+      /**
+       * Generate a new request token.
+       *
+       * @param $consumer
+       *   Object. The service consumer information.
+       * @param $application_key
+       *   Strint. This application key.
+       */
       function new_request_token($consumer, $application_key = NULL) {
         $user_id = db_result(db_query("SELECT uid FROM {oauth_consumer}
-          WHERE consumer_key='%s'", $consumer->key));
+          WHERE consumer_key = '%s'", $consumer->key));
         $token = new OAuthToken(user_password(32), user_password(32));
         $sql = array(
           'application_key' => $application_key,
@@ -68,19 +105,18 @@ function _services_oauth_server_init() {
       }
 
       /**
+       * Generate a new access token and delete the old request token.
        *
-       * @param session_id
-       *    is session id corresponding to logged in user
-       *    we are storing session id in oauth_services table to keep track of users and issued access tokens
-       *
-       * @param user_id
-       *    user_id is actually $user->id but we are fetching it from oauth_consumer table and using it to get session_id from sessions
-       *    table and also storing its value to oauth_token table (corresponding to access token here)
-       *
+       * @param $request_token
+       *   Strint. The old request token.
+       * @param $consumer
+       *   Object. The service consumer information.
+       * @param $user
+       *   Object (optional). The user information.
        */
       function new_access_token($request_token, $consumer, $user = NULL) {
         if ($object = db_fetch_object(db_query("SELECT * FROM {oauth_token}
-          WHERE type='request' and token_key = '%s'", $request_token->key))) {
+          WHERE type = 'request' AND token_key = '%s'", $request_token->key))) {
           if ($object->authorized) {
             $token = new OAuthToken(user_password(32), user_password(32));
             $user_id = db_result(db_query("SELECT uid FROM {oauth_consumer}
@@ -96,7 +132,7 @@ function _services_oauth_server_init() {
             drupal_write_record('oauth_token', $sql);
 
             db_query("DELETE FROM {oauth_token} WHERE
-              type='request' AND token_key='%s'", $request_token->key);
+              type = 'request' AND token_key = '%s'", $request_token->key);
             return $token;
           }
         }
