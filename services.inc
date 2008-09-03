@@ -131,7 +131,7 @@ function services_method_call($method_name, $args = array(), $ignore_hash = FALS
     // Key is part of the hash
   if ($arg['#signed'] == TRUE and variable_get('services_use_key', TRUE)) {
       if (is_numeric($args[$key]) or !empty($args[$key])) {
-        if (is_array($args[$key]) || is_object($args[$key])){
+        if (is_array($args[$key]) or is_object($args[$key])) {
           $hash_parameters[] = serialize($args[$key]);
         }
         else{
