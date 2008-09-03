@@ -183,6 +183,7 @@ function services_admin_browse_test_submit($form, $form_state) {
   global $_services_admin_browse_test_submit_result;
   $method = services_method_get(arg(4));
   $args = services_admin_browse_test_unserialize_args($form_state['values']['arg']);
+  module_load_include('inc', 'services');
   $result = services_method_call($method['#method'], $args);
   $_services_admin_browse_test_submit_result = '<pre>'. htmlspecialchars(print_r($result, TRUE)) .'</pre>';
 }
