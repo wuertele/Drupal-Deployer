@@ -37,7 +37,6 @@ function services_schema() {
     ),
     'primary key' => array('kid')
   );
-
   $schema['services_timestamp_nonce'] = array(
     'description' => 'Stores timestamp against nonce for repeat attacks.',
     'fields' => array(
@@ -84,7 +83,6 @@ function services_uninstall() {
   drupal_uninstall_schema('services');
   variable_del('services_use_key');
   variable_del('services_use_sessid');
-  variable_del('services_debug');
 }
 
 /**
@@ -96,17 +94,16 @@ function services_update_6001() {
   $schema['services_timestamp_nonce'] = array(
     'description' => 'Stores timestamp against nonce for repeat attacks.',
     'fields' => array(
-      'timestamp' => array(
-        'description' => 'The timestamp used with the Nonce.',
-        'type'        => 'varchar',
-        'length'      => 32,
-        'not null'    => TRUE,
-        'default'     => 0
-      ),
       'nonce' => array(
         'description' => 'The random string used on the request.',
         'type'        => 'varchar',
         'length'      => 32,
+        'not null'    => TRUE,
+        'default'     => ''
+      ),
+      'timestamp' => array(
+        'description' => 'The timestamp used with the Nonce.',
+        'type'        => 'int',
         'not null'    => TRUE,
         'default'     => ''
       ),
@@ -116,6 +113,10 @@ function services_update_6001() {
         'length'      => 255,
         'not null'    => TRUE,
         'default'     => ''
+      ),
+      'primary key' => array('nonce'),
+      'indexes' => array(
+        'timestamp' => array('timestamp'),
       ),
     ),
   );
