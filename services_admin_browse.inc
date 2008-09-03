@@ -96,6 +96,7 @@ function services_admin_browse_method($method) {
 
 function services_admin_browse_test() {
   $form = array();
+  module_load_include('inc', 'services');
   $method = _services_service_get(arg(4));
 
   $form['arg'] = array('#tree' => TRUE);

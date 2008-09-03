@@ -375,14 +375,6 @@ function services_service_get_all() {
 }
 
 /**
- * Menu wildcard loader for browsing Service methods.
- */
-function services_service_load($method) {
-  $method = _services_service_get($method);
-  return isset($method) ? $method : FALSE;
-}
-
-/**
  * Backup current session data and import user session.
  */
 function _services_session_load($sessid) {
