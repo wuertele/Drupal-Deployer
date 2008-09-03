@@ -47,7 +47,7 @@ function _services_crossdomain_xml() {
  *   String. Depends on the services server.
  */
 function services_error($message) {
-  $server_info = services_get_server_info();
+  $server_info = _services_server_info_get();
 
   // Look for custom error handling function.
   // Should be defined in each server module.
@@ -164,7 +164,7 @@ function services_method_call($method_name, $args = array(), $ignore_hash = FALS
   // Change working directory to drupal root to call drupal function,
   // then change it back to server module root to handle return.
   $server_root = getcwd();
-  $server_info = services_get_server_info();
+  $server_info = _services_server_info_get();
   if ($server_info) {
     chdir($server_info->drupal_path);
   }
@@ -194,7 +194,7 @@ function _services_server($server_path = NULL) {
       $server_info = new stdClass();
       $server_info->module = $module;
       $server_info->drupal_path = getcwd();
-      services_get_server_info($server_info);
+      _services_server_info_get($server_info);
       print module_invoke($module, 'server');
 
       // Do not let this output
@@ -204,6 +204,29 @@ function _services_server($server_path = NULL) {
   }
   // return 404 if the service doesn't exist
   drupal_not_found();
+}
+
+/**
+ * Get the into from the current server. If none was yet set,
+ * then set the server given as current.
+ *
+ * @param $server_info
+ *   Object (optional). The current server info.
+ * @return
+ *   Object. The current server info. Or FALSE if none was set
+ *   and none was given.
+ */
+function _services_server_info_get($server_info = NULL) {
+  static $info;
+  if (empty($info)) {
+    if (!empty($server_info)) {
+      $info = $server_info;
+    }
+    else {
+      return FALSE;
+    }
+  }
+  return $info;
 }
 
 /**
