@@ -86,3 +86,25 @@ function _services_token_request() {
     $_GET['q'] = $q;
   }
 }
+
+/**
+ * Authorize a request token.
+ *
+ * Redirects to login form if not logged in, and displays the grant access form once logged in.
+ */
+function _services_token_auth() {
+  // Redirect to the right form, or present an error.
+  global $user;
+  if ($user->uid != 0) {
+    if (user_access('authorize external services')) {
+      return drupal_get_form('oauth_grant_access');
+    }
+    else {
+      drupal_set_message('error', t('You are not authorized to allow external services access to this system.'));
+      drupal_access_denied();
+    }
+  }
+  else {
+    return drupal_get_form('user_login');
+  }
+}
