@@ -9,7 +9,7 @@
 /**
  * Callback for crossdomain.xml
  */
-function services_crossdomain_xml() {
+function _services_crossdomain_xml() {
   global $base_url;
   $output = '<!DOCTYPE cross-domain-policy SYSTEM "http://www.macromedia.com/xml/dtds/cross-domain-policy.dtd">'."\n";
   $output .= '<cross-domain-policy>'."\n";
@@ -32,7 +32,7 @@ function services_crossdomain_xml() {
 /**
  * Callback for server endpoint
  */
-function services_server($server_path = NULL) {
+function _services_server($server_path = NULL) {
   // Find which module the server is part of
   foreach (module_implements('server_info') as $module) {
     $info = module_invoke($module, 'server_info');
