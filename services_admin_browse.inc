@@ -174,7 +174,7 @@ function services_admin_browse_test() {
 }
 
 function services_admin_browse_get_first_key() {
-  $keys = services_get_keys();
+  $keys = services_key_get_all();
   foreach ($keys as $kid => $key) {
     return $kid;
   }

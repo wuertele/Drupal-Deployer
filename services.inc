@@ -15,7 +15,7 @@ function _services_crossdomain_xml() {
   $output .= '<cross-domain-policy>'."\n";
   $output .= '  <allow-access-from domain="'. check_plain($_SERVER['HTTP_HOST']) .'" />'."\n";
   $output .= '  <allow-access-from domain="*.'. check_plain($_SERVER['HTTP_HOST']) .'" />'."\n";
-  $keys = services_get_keys();
+  $keys = services_key_get_all();
 
   foreach ($keys as $key) {
     if (!empty($key->domain)) {
@@ -57,6 +57,41 @@ function services_error($message) {
 
   // No custom error handling function found.
   return $message;
+}
+
+/**
+ * Get a single key info based on its ID.
+ *
+ * @param $kid
+ *   Number. The key ID.
+ * @return
+ *   Object. The key info.
+ */
+function services_key_get($kid) {
+  $keys = services_key_get_all();
+  foreach ($keys as $key) {
+    if ($key->kid == $kid) {
+      return $key;
+    }
+  }
+}
+
+/**
+ * Get a keys' info.
+ *
+ * @return
+ *   Array. A list of keys' info.
+ */
+function services_key_get_all() {
+  static $keys;
+  if (!$keys) {
+    $keys = array();
+    $result = db_query("SELECT * FROM {services_keys}");
+    while ($key = db_fetch_object($result)) {
+      $keys[$key->kid] = $key;
+    }
+  }
+  return $keys;
 }
 
 /**
