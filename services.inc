@@ -109,7 +109,7 @@ function services_method_call($method_name, $args = array(), $ignore_hash = FALS
     }
   }
 
-  if ($method['#key'] and variable_get('services_use_key', TRUE)) {
+  if (empty($method['#no_key']) and variable_get('services_use_key', TRUE)) {
     $hash = array_shift($args);
     $domain = array_shift($args);
     $timestamp = array_shift($args);
