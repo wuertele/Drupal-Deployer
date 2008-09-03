@@ -7,55 +7,34 @@
  */
 
 /**
- * Callback for 'services/browse'.
+ * List all services available.
  */
 function services_admin_browse_index() {
   module_load_include('inc', 'services');
   $methods = services_service_get_all();
 
-  // Show enable server modules
-  $servers = module_implements('server_info');
-  $output = '<h2>'. t('Servers') .'</h2>';
-
-  if (!empty($servers)) {
-    $output .= '<ul>';
-    foreach ($servers as $module) {
-      $info = module_invoke($module, 'server_info');
-      $name = $info['#name'];
-      $path = 'services/'. $info['#path'];
-      $output .= '<li class="leaf">'. l($name .' - /'. $path, $path) .'</li>';
-    }
-    $output .= '</ul>';
+  if (empty($methods)) {
+    return t('No services have been enabled.');
   }
   else {
-    $output .= '<p>'. t('You must enable at least one server module to be able to connect remotely. Visit the <a href="@url">modules</a> page to enable server modules.', array('@url' => url('admin/build/modules'))) .'</p>';
-  }
+    // Group namespaces
+    $services = array();
+    foreach ($methods as $method) {
+      $namespace = drupal_substr($method['#method'], 0, strrpos($method['#method'], '.'));
+      $services[$namespace][] = $method;
+    }
 
-
-  $output .= '<h2>'. t('Services') .'</h2>';
-
-  // group namespaces
-  $services = array();
-  foreach ($methods as $method) {
-    $namespace = drupal_substr($method['#method'], 0, strrpos($method['#method'], '.'));
-    $services[$namespace][] = $method;
-  }
-
-  if (count($services)) {
     foreach ($services as $namespace => $methods) {
-      $output .= '<h3>'. $namespace .'</h3>';
+      $output .= '<h2>'. $namespace .'</h2>';
       $output .= '<ul>';
       foreach ($methods as $method) {
         $output .= '<li class="leaf">'. l($method['#method'], 'admin/build/services/browse/'. $method['#method']) .'</li>';
       }
       $output .= '</ul>';
     }
-  }
-  else {
-    $output .= t('No services have been enabled.');
-  }
 
-  return $output;
+    return $output;
+  }
 }
 
 function services_admin_browse_method($method) {
