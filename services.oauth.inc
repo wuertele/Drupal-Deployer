@@ -176,62 +176,60 @@ function _services_token_auth() {
  * @ingroup $form
  */
 function _services_token_auth_form() {
-  if($_GET['oauth_token'] == ''){
-    drupal_set_message("error, OAuth token is not included in request. Whole API documentation for OAuth and cool auth is at http://drupal.org/node.");
+  if (empty($_GET['oauth_token'])) {
+    drupal_set_message('OAuth token is not included in request.', 'error');
     drupal_access_denied();
   }
-  if($_GET['oauth_callback'] == ''){
-    drupal_set_message("error, Please include a valid callback url in your request OR read API documentation over http://drupal.org");
+  if (empty($_GET['oauth_callback'])) {
+    drupal_set_message('Please include a valid callback url in your request.', 'error');
     drupal_access_denied();
   }
-  module_invoke('services');
-  $services = services_get_all();
-
-  #todo tripple check image reference.
+  /// @todo tripple check image reference.
 
   $form['oauth_callback'] = array(
-    '#type' => 'hidden',
-    '#value' => $_GET['oauth_callback']
+    '#type'   => 'hidden',
+    '#value'  => $_GET['oauth_callback']
   );
   $form['oauth_token'] = array(
-    '#type' => 'hidden',
-    '#value' => $_GET['oauth_token']
+    '#type'   => 'hidden',
+    '#value'  => $_GET['oauth_token']
   );
   $form['oauth_consumer_key'] = array(
-    '#type' => 'hidden',
-    '#value' => $_GET['oauth_consumer_key'],
+    '#type'   => 'hidden',
+    '#value'  => $_GET['oauth_consumer_key'],
   );
   $form['oauth_nonce'] = array(
-    '#type' => 'hidden',
-    '#value' => $_GET['oauth_nonce'],
+    '#type'   => 'hidden',
+    '#value'  => $_GET['oauth_nonce'],
   );
   $form['oauth_nonce_timestamp'] = array(
-    '#type' => 'hidden',
-    '#value' => $_GET['oauth_timestamp'],
+    '#type'   => 'hidden',
+    '#value'  => $_GET['oauth_timestamp'],
   );
-  if(variable_get('oauth_use_with_services', 0)){
+  if (variable_get('oauth_use_with_services', 0)) {
     $form['services'] = array(
-    '#title' => t('Select services'),
-    '#type' => 'fieldset',
-  );
+      '#description'  => t('Select which services you will allow %consumer use in your behalf',
+        array('%consumer' => $_GET['oauth_callback'])
+      ),
+      '#title'        => t('Services'),
+      '#tree'         => TRUE,
+      '#type'         => 'fieldset',
+    );
 
-  foreach ( $services as $service ){
-    $method_name = $service['#method'];
-
-    $form['services'][$method_name] = array(
-      '#title' => $service['#method'],
-      '#type' => 'radios',
-      '#options' => array( 0 => t('access'), 1 => t('block')),
-      '#default_value' => 1,
+  // Display all services avaialbe
+  module_load_include('inc', 'services');
+  foreach (services_service_get_all() as $service) {
+    $form['services'][$service['#method']] = array(
+      '#title'          => $service['#method'],
+      '#type'           => 'checkbox',
+      '#default_value'  => 0,
     );
     }
   }
   $form['confirm'] = array(
-    '#type' => 'submit',
-    '#value' => t('Grant access'),
-    '#weight' =>  10,
+    '#type'   => 'submit',
+    '#value'  => t('Grant access'),
   );
-  $form['#tree'] = TRUE;
   return $form;
 }
 
