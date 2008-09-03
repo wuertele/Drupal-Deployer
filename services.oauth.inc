@@ -86,7 +86,7 @@ function _services_oauth_server_init() {
             $user_id = db_result(db_query("SELECT uid FROM {oauth_consumer}
               WHERE consumer_key = '%s'", $consumer->key));
             $sql = array(
-              'application_key' => (variable_get('services_use_coolauth', 0) : $object->application_key ? 'NULL'),
+              'application_key' => (variable_get('services_use_coolauth', 0) ? $object->application_key : 'NULL'),
               'consumer_key'    => $consumer->key,
               'type'            => 'access',
               'token_key'       => $token->key,
