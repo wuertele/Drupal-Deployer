@@ -10,6 +10,7 @@
  * Callback for 'services/browse'.
  */
 function services_admin_browse_index() {
+  module_load_include('inc', 'services');
   $methods = services_service_get_all();
 
   // Show enable server modules
