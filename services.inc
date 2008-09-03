@@ -123,7 +123,7 @@ function services_method_call($method_name, $args = array(), $ignore_hash = FALS
     if (empty($sessid)) {
       return services_error(t('Invalid sessid.'));
     }
-    $session_backup = services_session_load($sessid);
+    $session_backup = _services_session_load($sessid);
   }
 
   // Load the proper file
@@ -152,7 +152,7 @@ function services_method_call($method_name, $args = array(), $ignore_hash = FALS
 
   // Add additonal processing for methods requiring authentication.
   if ($session_backup !== NULL) {
-    services_session_unload($session_backup);
+    _services_session_unload($session_backup);
   }
 
   return $result;
@@ -178,4 +178,69 @@ function _services_server($server_path = NULL) {
   }
   // return 404 if the service doesn't exist
   drupal_not_found();
+}
+
+/**
+ * Backup current session data and import user session.
+ */
+function _services_session_load($sessid) {
+  global $user;
+
+  // If user's session is already loaded, just return current user's data
+  if ($user->sid == $sessid) {
+    return $user;
+  }
+
+  // Make backup of current user and session data
+  $backup = $user;
+  $backup->session = session_encode();
+
+  // Empty current session data
+  $_SESSION = array();
+
+  // Some client/servers, like XMLRPC, do not handle cookies, so imitate it to make sess_read() function try to look for user,
+  // instead of just loading anonymous user :).
+  if (!isset($_COOKIE[session_name()])) $_COOKIE[session_name()] = $sessid;
+
+  // Load session data
+  sess_read($sessid);
+
+  // Check if it really loaded user and, for additional security, if user was logged from the same IP. If not, then revert automatically.
+  if ($user->sid != $sessid or $user->hostname != $backup->hostname) {
+    _services_session_unload($backup);
+    return NULL;
+  }
+
+  // Prevent saving of this impersonation in case of unexpected failure.
+  session_save_session(FALSE);
+
+  return $backup;
+}
+
+/**
+ * Revert to previously backuped session.
+ */
+function _services_session_unload($backup) {
+  global $user;
+
+  // No point in reverting if it's the same user's data
+  if ($user->sid == $backup->sid) {
+    return;
+  }
+
+  // Some client/servers, like XMLRPC, do not handle cookies, so imitate it to make sess_read() function try to look for user,
+  // instead of just loading anonymous user :).
+  if (!isset($_COOKIE[session_name()])) $_COOKIE[session_name()] = $sessid;
+
+  // Save current session data
+  sess_write($user->sid, session_encode());
+
+  // Empty current session data
+  $_SESSION = array();
+
+  // Revert to previous user and session data
+  $user = $backup;
+  session_decode($user->session);
+
+  session_save_session(TRUE);
 }
