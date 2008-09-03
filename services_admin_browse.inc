@@ -10,7 +10,7 @@
  * Callback for 'services/browse'.
  */
 function services_admin_browse_index() {
-  $methods = services_get_all();
+  $methods = services_service_get_all();
 
   // Show enable server modules
   $servers = module_implements('server_info');
