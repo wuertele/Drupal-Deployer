@@ -50,6 +50,12 @@ function services_error($message) {
   return $message;
 }
 
+function _services_key_validate($kid, $timestamp, $domain, $nonce, $method_name, $hash_parameters, $hash) {
+  $hash_parameters = array_merge(array($timestamp, $domain, $nonce, $method_name), $hash_parameters);
+  $rehash = hash_hmac("sha256", implode(';', $hash_parameters), $kid);
+  return $rehash == $hash;
+}
+
 /**
  * This is the magic function through which all remote method calls must pass.
  */
@@ -111,7 +117,7 @@ function services_method_call($method_name, $args = array(), $ignore_hash = FALS
 
     $api_key = db_result(db_query("SELECT kid FROM {services_keys} WHERE domain = '%s'", $domain));
 
-    if (!services_validate_key($api_key, $timestamp, $domain, $nonce, $method_name, $hash_parameters, $hash)) {
+    if (!_services_key_validate($api_key, $timestamp, $domain, $nonce, $method_name, $hash_parameters, $hash)) {
       return services_error(t('Invalid API key.'));
     }
   }
