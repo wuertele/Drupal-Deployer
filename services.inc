@@ -230,6 +230,95 @@ function _services_server_info_get($server_info = NULL) {
 }
 
 /**
+ * Build a complete list of all services available,
+ *
+ * @note This should probably be cached in drupal cache.
+ */
+function services_service_get_all() {
+  static $methods_cache;
+  if (!isset($methods_cache)) {
+    $methods = module_invoke_all('service');
+
+    // api_key arg
+    $arg_api_key = array(
+      '#name' => 'hash',
+      '#type' => 'string',
+      '#description' => t('A valid API key.'),
+    );
+
+    // sessid arg
+    $arg_sessid = array(
+      '#name' => 'sessid',
+      '#type' => 'string',
+      '#description' => t('A valid sessid.'),
+    );
+
+    // domain arg
+    $arg_domain_check = array(
+      '#name' => 'domain_check',
+      '#type' => 'string',
+      '#description' => t('A valid domain for the API key.'),
+    );
+
+    $arg_domain_time_stamp = array(
+      '#name' => 'domain_time_stamp',
+      '#type' => 'string',
+      '#description' => t('Time stamp used to hash key.'),
+    );
+
+    $arg_nonce = array(
+      '#name' => 'nonce',
+      '#type' => 'string',
+      '#description' => t('One time use nonce also used hash key.'),
+    );
+
+    foreach ($methods as $key => $method) {
+      if (!isset($methods[$key]['#access callback'])) {
+        $methods[$key]['#access callback'] = 'user_access';
+        if (!isset($methods[$key]['#access arguments'])) {
+          $methods[$key]['#access arguments'] = array('access services');
+        }
+      }
+
+      if (!isset($methods[$key]['#args'])) {
+        $methods[$key]['#args'] = array();
+      }
+
+      if (empty($methods[$key]['#no_auth']) and variable_get('services_use_sessid', TRUE)) {
+        $methods[$key]['#args'] = array_merge(array($arg_sessid), $methods[$key]['#args']);
+      }
+
+      if (empty($methods[$key]['#no_key']) and variable_get('services_use_key', TRUE)) {
+        $methods[$key]['#args'] = array_merge(array($arg_nonce), $methods[$key]['#args']);
+        $methods[$key]['#args'] = array_merge(array($arg_domain_time_stamp), $methods[$key]['#args']);
+        $methods[$key]['#args'] = array_merge(array($arg_domain_name), $methods[$key]['#args']);
+        $methods[$key]['#args'] = array_merge(array($arg_api_key), $methods[$key]['#args']);
+      }
+
+      // set defaults for args
+      foreach ($methods[$key]['#args'] as $arg_key => $arg) {
+        if (is_array($arg)) {
+          if (!isset($arg['#optional'])) {
+            $methods[$key]['#args'][$arg_key]['#optional'] = FALSE;
+          }
+        }
+        else {
+          $arr_arg = array();
+          $arr_arg['#name'] = t('unnamed');
+          $arr_arg['#type'] = $arg;
+          $arr_arg['#description'] = t('No description given.');
+          $arr_arg['#optional'] = FALSE;
+          $methods[$key]['#args'][$arg_key] = $arr_arg;
+        }
+      }
+      reset($methods[$key]['#args']);
+    }
+    $methods_cache = $methods;
+  }
+  return $methods_cache;
+}
+
+/**
  * Backup current session data and import user session.
  */
 function _services_session_load($sessid) {
