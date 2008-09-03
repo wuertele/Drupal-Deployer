@@ -141,7 +141,7 @@ function services_method_call($method_name, $args = array(), $ignore_hash = FALS
 
   // Add additonal processing for methods requiring authentication
   $session_backup = NULL;
-  if (empty($method['#auth_skip']) and variable_get('services_use_sessid', TRUE)) {
+  if (empty($method['#no_auth']) and variable_get('services_use_sessid', TRUE)) {
     $sessid = array_shift($args);
     if (empty($sessid)) {
       return services_error(t('Invalid sessid.'));
