@@ -190,8 +190,11 @@ function _services_server($server_path = NULL) {
     $info = module_invoke($module, 'server_info');
     if ($info['#path'] == $server_path) {
 
-      // call the server
-      services_set_server_info($module);
+      // Call the server
+      $server_info = new stdClass();
+      $server_info->module = $module;
+      $server_info->drupal_path = getcwd();
+      services_get_server_info($server_info);
       print module_invoke($module, 'server');
 
       // Do not let this output
