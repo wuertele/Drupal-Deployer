@@ -108,3 +108,39 @@ function _services_token_auth() {
     return drupal_get_form('user_login');
   }
 }
+
+/**
+ * Access the OAuth services
+ */
+function _services_token_access() {
+  if (empty($_GET['oauth_token'])) {
+    drupal_set_message('OAuth token is not included in request.', 'error');
+    drupal_access_denied();
+  }
+  if (empty($_GET['oauth_consumer_key'])) {
+    drupal_set_message('Please include a valid consumer key in your request.', 'error');
+    drupal_access_denied();
+  }
+  $server = _oauth_init_server();
+
+  // Remove the q variable from the query string, as it will break
+  // the signature validation.
+  $q = $_GET['q'];
+  unset($_GET['q']);
+
+  try {
+    global $user;
+    $req = OAuthRequest::from_request();
+    $token = $server->fetch_access_token($req);
+    parse_str($token);
+    print $token;
+  }
+  catch (OAuthException $e) {
+    print($e->getMessage() . "\n<hr />\n");
+    print_r($req);
+    die();
+  }
+
+  // Set the $_GET['q'] back to it's original value
+  $_GET['q'] = $q;
+}
