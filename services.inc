@@ -26,7 +26,16 @@ function _services_crossdomain_xml() {
 
   $output .= '</cross-domain-policy>';
 
-  services_xml_output($output);
+  // Include the XML header before the content
+  $output = '<?xml version="1.0"?>'."\n". $output;
+  header('Connection: close');
+  header('Content-Length: '. drupal_strlen($output));
+  header('Content-Type: text/xml');
+  header('Date: '. date('r'));
+
+  // Print the XML
+  echo $output;
+  exit;
 }
 
 /**
@@ -50,6 +59,14 @@ function services_error($message) {
   return $message;
 }
 
+/**
+ * Check it the given key is valud.
+ *
+ * @param $kid
+ *   Number. Key ID.
+ * @return
+ *   Boolean. TRUE if the key is valid.
+ */
 function _services_key_validate($kid, $timestamp, $domain, $nonce, $method_name, $hash_parameters, $hash) {
   $hash_parameters = array_merge(array($timestamp, $domain, $nonce, $method_name), $hash_parameters);
   $rehash = hash_hmac("sha256", implode(';', $hash_parameters), $kid);
