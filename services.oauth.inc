@@ -178,7 +178,7 @@ function _services_oauth_server_init() {
 
 function _services_oauth_test() {
   global $user;
-  $consumer = _services_consumer_get($uid);
+  $consumer = _services_consumer_get($user->uid);
   $form['oauth_consumer_key'] = array(
     '#default_value'  => $consumer->key,
     '#title'          => t('Consumer Key'),
@@ -223,7 +223,7 @@ function _services_oauth_test_submit(&$form, &$form_state) {
   $test = drupal_http_request($url, array(), 'GET');
   if ($test->code == 200) {
     drupal_set_message(t('Resquest token test succeeded!'), 'ok');
-    if ($form_state['values']['stage'] == 0) {
+    if ($form_state['values']['stage'] <= 0) {
       return;
     }
   }
@@ -233,26 +233,49 @@ function _services_oauth_test_submit(&$form, &$form_state) {
   }
 
   // Authentication token
+//   parse_str($test->data);
+//   $url_options = array(
+//     'query'     => array(
+//       'oauth_token'         => $oauth_token,
+//       'oauth_token_secret'  => $oauth_token_secret,
+//       'oauth_callback'      => url('admin/services', array('absolute' => TRUE)),
+//     ),
+//     'absolute'  => TRUE,
+//   );
+//   $url  = url('services/auth', $url_options);
+//   $test = drupal_http_request($url, array(), 'GET');
+//   if ($test->code == 200) {
+//     drupal_set_message(t('Authentication token test succeeded!'), 'ok');
+//     if ($form_state['values']['stage'] <= 1) {
+//       return;
+//     }
+//   }
+//   else {
+//     drupal_set_message(t('Authentication token test failed: %message', array('%message' => $test->data)), 'error');
+//     return;
+//   }
+
+  // Access token
   parse_str($test->data);
   $url_options = array(
     'query'     => array(
-      'oauth_token'     => $oauth_token,
-      'oauth_callback'  => url('admin/services', array('absolute' => TRUE)),
+      'oauth_token'         => $oauth_token,
+      'oauth_consumer_key'  => $form_state['values']['oauth_consumer_key'],
+      'oauth_timestamp'     => time(),
     ),
     'absolute'  => TRUE,
   );
-  $url  = url('services/auth', $url_options);
+  $url  = url('services/access', $url_options);
   $test = drupal_http_request($url, array(), 'GET');
   dpm($test);
   if ($test->code == 200) {
-    parse_str($test->data);
-    drupal_set_message(t('Authentication token test succeeded!'), 'ok');
-    if ($form_state['values']['stage'] == 1) {
+    drupal_set_message(t('Access token test succeeded!'), 'ok');
+    if ($form_state['values']['stage'] <= 2) {
       return;
     }
   }
   else {
-    drupal_set_message(t('Authentication token test failed: %message', array('%message' => $test->data)), 'error');
+    drupal_set_message(t('Access token test failed: %message', array('%message' => $test->data)), 'error');
     return;
   }
 }
