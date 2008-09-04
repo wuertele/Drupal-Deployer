@@ -7,6 +7,7 @@
  */
 
 function services_admin_keys_list() {
+  module_load_include('inc', 'services');
   $keys = services_key_get_all();
   $header = array(t('Key'), t('Title'), t('Domain'), array('data' => t('Operations'), 'colspan' => '2'));
   $rows = array();
