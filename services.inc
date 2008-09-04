@@ -159,11 +159,9 @@ function _services_server_info_get($server_info = NULL) {
 /**
  * Execute a given service.
  */
-function _services_service_call($method_name, $args = array(), $ignore_hash = FALSE) {
-  $method = _services_service_get($method_name);
-
+function _services_service_call($method_name, $args = array()) {
   // Check that method exists.
-  if (empty($method)) {
+  if (!$method = _services_service_get($method_name)) {
     return services_error(t('Method %name does not exist.', array('%name' => $method_name)));
   }
 
@@ -173,21 +171,6 @@ function _services_service_call($method_name, $args = array(), $ignore_hash = FA
     if (!$arg['#optional']) {
       if (!is_numeric($args[$key]) and empty($args[$key])) {
         return services_error(t('Missing required arguments.'));
-      }
-    }
-
-    // Key is part of the hash
-  if ($arg['#signed'] == TRUE and variable_get('services_use_key', TRUE)) {
-      if (is_numeric($args[$key]) or !empty($args[$key])) {
-        if (is_array($args[$key]) or is_object($args[$key])) {
-          $hash_parameters[] = serialize($args[$key]);
-        }
-        else{
-          $hash_parameters[] = $args[$key];
-        }
-      }
-      else{
-        $hash_parameters[] = '';
       }
     }
   }
