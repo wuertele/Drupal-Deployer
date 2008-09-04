@@ -63,6 +63,9 @@ Note: this instruction assumes that you install FCKeditor in
       You may copy the needed configuration lines from the default FCKeditor 
       configuration settings (sites/all/modules/fckeditor/fckeditor/fckconfig.js), 
       the lines in fckeditor.config.js will override most settings.
+      WARNING: clear browser's cache after you modify any of the javascript files.
+      If you don't do this, you may notice that browser is ignoring all your changes.
+
 
 Installation troubleshooting
 ----------------------------

@@ -1,6 +1,11 @@
 // $Id$
 
 /*
+ WARNING: clear browser's cache after you modify this file.
+ If you don't do this, you may notice that browser is ignoring all your changes.
+*/
+
+/*
  Define as many toolbars as you need, you can change toolbar names
  DrupalBasic will be forced on some smaller textareas (if enabled)
  if you change the name of DrupalBasic, you have to update 
