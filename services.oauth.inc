@@ -176,6 +176,11 @@ function _services_oauth_server_init() {
   return $server;
 }
 
+/**
+ * Test the OAuth implementation.
+ *
+ * @ingroup form
+ */
 function _services_oauth_test() {
   global $user;
   $consumer = _services_consumer_get($user->uid);
@@ -207,6 +212,12 @@ function _services_oauth_test() {
   return $form;
 }
 
+/**
+ * Test the OAuth implementation. Test request token, auth token,
+ * access token and a simple service test.
+ *
+ * @ingroup form
+ */
 function _services_oauth_test_submit(&$form, &$form_state) {
   module_load_include('oauth_lib.php', 'services');
 
@@ -353,8 +364,6 @@ function _services_token_auth() {
  * @ingroup $form
  */
 function _services_token_auth_form() {
-  /// @todo tripple check image reference.
-
   $form['oauth_callback'] = array(
     '#type'   => 'hidden',
     '#value'  => $_GET['oauth_callback']
@@ -400,6 +409,53 @@ function _services_token_auth_form() {
     '#value'  => t('Grant access'),
   );
   return $form;
+}
+
+/**
+ * Asks users for granting proper access/deny permissions for different services
+ * Authorizes an existing oauth request token and redirects to sender.
+ *
+ * @ingroup form
+ */
+function _services_token_auth_form_submit(&$form, &$form_state) {
+  global $user;
+
+  module_load_include('inc', 'services');
+  foreach (services_service_get_all() as $service) {
+    $method_name = $service['#method'];
+    if (!empty($form_state['values']['services'][$method_name])) {
+      $services[$method_name] = TRUE;
+    }
+  }
+
+  // Save into the DB
+  $sql = array(
+    'consumer_key'  => $form_state['values']['oauth_consumer_key'],
+    'services'      => $services,
+    'timestamp'     => $form_state['values']['oauth_nonce_timestamp'],
+    'session_id'    => $user->sid,
+  );
+  drupal_write_record('services_services', $sql);
+
+  // Start the OAuth server
+  $server = _services_oauth_server_init();
+
+  $q = $_GET['q'];
+  unset($_GET['q']);
+  try {
+    $req = OAuthRequest::from_request();
+    oauth_authorize_request_token($form_state['values']['oauth_token']);
+    drupal_goto($req->get_parameter('oauth_callback'));
+  } catch (OAuthException $e) {
+    print($e->getMessage() . "\n<hr />\n");
+    print_r($req);
+    die();
+  }
+
+  // Set the $_GET['q'] back to it's original value
+  $_GET['q'] = $q;
+
+  $form_state['redirect'] = $form_state['values']['oauth_callback'];
 }
 
 /**
