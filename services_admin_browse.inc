@@ -133,11 +133,11 @@ function _services_admin_service_test($form_state, $service) {
  *   Prints the services result in JSON format.
  */
 function _services_admin_service_test_js() {
-  $service = $_POST['service_name'];
-  $arg = $_POST['args'];
+  $service  = $_POST['service_name'];
+  $args     = $_POST['arg'];
   module_load_include('inc', 'services');
-  $result = services_method_call($service, $arg);
-  drupal_json(array('status' => TRUE, 'data' => $result));
+  $result = services_method_call($service, $args);
+  drupal_json(array('status' => TRUE, 'data' => print_r($result, TRUE)));
   exit();
 }
 
@@ -167,40 +167,21 @@ function theme__services_admin_service_test($form) {
   return $output;
 }
 
-/*
- * Callback for admin page
+/**
+ * Configure the Services module
  */
 function services_admin_settings() {
-  $node_types = node_get_types('names');
-  $defaults = isset($node_types['blog']) ? array('blog' => 1) : array();
   $form['security'] = array(
     '#title'        => t('Security'),
     '#type'         => 'fieldset',
     '#description'  => t('Changing security settings will require you to adjust all method calls. This will affect all applications using site services.'),
   );
-  $form['security']['services_use_key'] = array(
+  $form['security']['services_use_oauth'] = array(
     '#type'           => 'checkbox',
-    '#title'          => t('Use keys'),
-    '#default_value'  => variable_get('services_use_key', TRUE),
-    '#description'    => t('When enabled all method calls need to provide a validation token to autheciate themselves with the server.'),
+    '#title'          => t('Use OAuth'),
+    '#default_value'  => variable_get('services_use_oauth', TRUE),
+    '#description'    => t('When enabled, all method calls must include a valid OAuth access token and consumer token.')
   );
-  $form['security']['services_key_expiry'] = array(
-    '#type'           => 'textfield',
-    '#prefix'         => "<div id='services-key-expiry'>",
-    '#suffix'         => "</div>",
-    '#title'          => t('Token expiry time'),
-    '#default_value'  => variable_get('services_key_expiry', 30),
-    '#description'    => t('The time frame for which the token will be valid. Default is 30 secs'),
-  );
-  $form['security']['services_use_sessid'] = array(
-    '#type'           => 'checkbox',
-    '#title'          => t('Use sessid'),
-    '#default_value'  => variable_get('services_use_sessid', TRUE),
-    '#description'    => t('When enabled, all method calls must include a valid sessid. Only disable this setting if the application will user browser-based cookies.')
-  );
-
-  services_admin_js($form);
-
   return system_settings_form($form);
 }
 
