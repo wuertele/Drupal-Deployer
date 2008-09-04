@@ -30,7 +30,7 @@ function services_admin_browse_index() {
       $output .= '<h2>'. $namespace .'</h2>';
       $output .= '<ul>';
       foreach ($methods as $method) {
-        $output .= '<li class="leaf">'. l($method['#method'], 'admin/build/services/browse/'. $method['#method']) .'</li>';
+        $output .= '<li class="leaf">'. l($method['#method'], 'admin/build/services/services/'. $method['#method']) .'</li>';
       }
       $output .= '</ul>';
     }
@@ -39,13 +39,17 @@ function services_admin_browse_index() {
   }
 }
 
+/**
+ * Allow users to test a given service.
+ *
+ * @param $method
+ *   Object. The service info.
+ */
 function services_admin_browse_method($method) {
   global $_services_admin_browse_test_submit_result;
 
-  $output = '';
-
-  $output .= '<h3>'. $method['#method'] .'</h3>';
-  $output .= '<p>'. $method['#description'] .'</p>';
+  $output = '<h3>'. $method['#method'] .'</h3>'.
+    '<p>'. $method['#description'] .'</p>';
 
   // List arguments.
   $output .= '<h3>'. t('Arguments') .' ('. count($method['#args']) .')</h3>';
@@ -61,8 +65,8 @@ function services_admin_browse_method($method) {
   $output .= '</dl>';
 
   // Allow testing of methods
-  $output .= '<h3>'. t('Call method') .'</h3>';
-  $output .= drupal_get_form('services_admin_browse_test');
+  $output .= '<h3>'. t('Call method') .'</h3>'.
+    drupal_get_form('services_admin_browse_test');
 
   // Display results
   if ($_services_admin_browse_test_submit_result) {
