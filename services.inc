@@ -86,7 +86,7 @@ function services_key_get_all() {
   static $keys;
   if (!$keys) {
     $keys = array();
-    $result = db_query("SELECT * FROM {services_keys}");
+    $result = db_query('SELECT * FROM {services_keys}');
     while ($key = db_fetch_object($result)) {
       $keys[$key->kid] = $key;
     }
@@ -104,7 +104,7 @@ function services_key_get_all() {
  */
 function _services_key_validate($kid, $timestamp, $domain, $nonce, $method_name, $hash_parameters, $hash) {
   $hash_parameters = array_merge(array($timestamp, $domain, $nonce, $method_name), $hash_parameters);
-  $rehash = hash_hmac("sha256", implode(';', $hash_parameters), $kid);
+  $rehash = hash_hmac('sha256', implode(';', $hash_parameters), $kid);
   return $rehash == $hash;
 }
 
@@ -294,41 +294,8 @@ function services_service_get_all() {
   static $methods_cache;
   if (!isset($methods_cache)) {
     $methods = module_invoke_all('service');
-
-    // api_key arg
-    $arg_api_key = array(
-      '#name' => 'hash',
-      '#type' => 'string',
-      '#description' => t('A valid API key.'),
-    );
-
-    // sessid arg
-    $arg_sessid = array(
-      '#name' => 'sessid',
-      '#type' => 'string',
-      '#description' => t('A valid sessid.'),
-    );
-
-    // domain arg
-    $arg_domain_check = array(
-      '#name' => 'domain_check',
-      '#type' => 'string',
-      '#description' => t('A valid domain for the API key.'),
-    );
-
-    $arg_domain_time_stamp = array(
-      '#name' => 'domain_time_stamp',
-      '#type' => 'string',
-      '#description' => t('Time stamp used to hash key.'),
-    );
-
-    $arg_nonce = array(
-      '#name' => 'nonce',
-      '#type' => 'string',
-      '#description' => t('One time use nonce also used hash key.'),
-    );
-
     foreach ($methods as $key => $method) {
+      // Add the access functions of each service
       if (!isset($methods[$key]['#access callback'])) {
         $methods[$key]['#access callback'] = 'user_access';
         if (!isset($methods[$key]['#access arguments'])) {
@@ -340,18 +307,23 @@ function services_service_get_all() {
         $methods[$key]['#args'] = array();
       }
 
-      if (empty($methods[$key]['#no_auth']) and variable_get('services_use_sessid', TRUE)) {
-        $methods[$key]['#args'] = array_merge(array($arg_sessid), $methods[$key]['#args']);
+      // Add OAuth fields in case the OAuth keys are required
+      if (empty($methods[$key]['#no_auth']) and variable_get('services_use_oauth', TRUE)) {
+        array_unshift($methods[$key]['#args'],
+          array(
+            '#name'         => 'oauth_consumer_key',
+            '#type'         => 'string',
+            '#description'  => t('OAuth consumer key.'),
+          ),
+          array(
+            '#name'         => 'oauth_token_access',
+            '#type'         => 'string',
+            '#description'  => t('OAuth access token.'),
+          )
+        );
       }
 
-      if (empty($methods[$key]['#no_key']) and variable_get('services_use_key', TRUE)) {
-        $methods[$key]['#args'] = array_merge(array($arg_nonce), $methods[$key]['#args']);
-        $methods[$key]['#args'] = array_merge(array($arg_domain_time_stamp), $methods[$key]['#args']);
-        $methods[$key]['#args'] = array_merge(array($arg_domain_name), $methods[$key]['#args']);
-        $methods[$key]['#args'] = array_merge(array($arg_api_key), $methods[$key]['#args']);
-      }
-
-      // set defaults for args
+      // Set defaults for args
       foreach ($methods[$key]['#args'] as $arg_key => $arg) {
         if (is_array($arg)) {
           if (!isset($arg['#optional'])) {
