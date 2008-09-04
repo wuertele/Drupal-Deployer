@@ -109,9 +109,57 @@ function _services_key_validate($kid, $timestamp, $domain, $nonce, $method_name,
 }
 
 /**
- * This is the magic function through which all remote method calls must pass.
+ * Callback for server endpoint
  */
-function services_method_call($method_name, $args = array(), $ignore_hash = FALSE) {
+function _services_server($server_path = NULL) {
+  // Find which module the server is part of
+  foreach (module_implements('server_info') as $module) {
+    $info = module_invoke($module, 'server_info');
+    if ($info['#path'] == $server_path) {
+
+      // Call the server
+      $server_info = new stdClass();
+      $server_info->module = $module;
+      $server_info->drupal_path = getcwd();
+      _services_server_info_get($server_info);
+      print module_invoke($module, 'server');
+
+      // Do not let this output
+      module_invoke_all('exit');
+      exit;
+    }
+  }
+  // return 404 if the service doesn't exist
+  drupal_not_found();
+}
+
+/**
+ * Get the into from the current server. If none was yet set,
+ * then set the server given as current.
+ *
+ * @param $server_info
+ *   Object (optional). The current server info.
+ * @return
+ *   Object. The current server info. Or FALSE if none was set
+ *   and none was given.
+ */
+function _services_server_info_get($server_info = NULL) {
+  static $info;
+  if (empty($info)) {
+    if (!empty($server_info)) {
+      $info = $server_info;
+    }
+    else {
+      return FALSE;
+    }
+  }
+  return $info;
+}
+
+/**
+ * Execute a given service.
+ */
+function _services_service_call($method_name, $args = array(), $ignore_hash = FALSE) {
   $method = _services_service_get($method_name);
 
   // Check that method exists.
@@ -214,54 +262,6 @@ function services_method_call($method_name, $args = array(), $ignore_hash = FALS
   }
 
   return $result;
-}
-
-/**
- * Callback for server endpoint
- */
-function _services_server($server_path = NULL) {
-  // Find which module the server is part of
-  foreach (module_implements('server_info') as $module) {
-    $info = module_invoke($module, 'server_info');
-    if ($info['#path'] == $server_path) {
-
-      // Call the server
-      $server_info = new stdClass();
-      $server_info->module = $module;
-      $server_info->drupal_path = getcwd();
-      _services_server_info_get($server_info);
-      print module_invoke($module, 'server');
-
-      // Do not let this output
-      module_invoke_all('exit');
-      exit;
-    }
-  }
-  // return 404 if the service doesn't exist
-  drupal_not_found();
-}
-
-/**
- * Get the into from the current server. If none was yet set,
- * then set the server given as current.
- *
- * @param $server_info
- *   Object (optional). The current server info.
- * @return
- *   Object. The current server info. Or FALSE if none was set
- *   and none was given.
- */
-function _services_server_info_get($server_info = NULL) {
-  static $info;
-  if (empty($info)) {
-    if (!empty($server_info)) {
-      $info = $server_info;
-    }
-    else {
-      return FALSE;
-    }
-  }
-  return $info;
 }
 
 /**

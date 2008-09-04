@@ -136,35 +136,9 @@ function _services_admin_service_test_js() {
   $service  = $_POST['service_name'];
   $args     = $_POST['arg'];
   module_load_include('inc', 'services');
-  $result = services_method_call($service, $args);
+  $result = _services_service_call($service, $args);
   drupal_json(array('status' => TRUE, 'data' => print_r($result, TRUE)));
   exit();
-}
-
-/**
- * Theme service testing form
- *
- * @param $form
- *   Array. The service testing form.
- *
- * @ingroup themable
- */
-function theme__services_admin_service_test($form) {
-  global $_services_admin_browse_test_submit_result;
-  $service = $form['service']['#value'];
-
-  // Testing fields
-  $output .= drupal_render($form);
-
-  // Testing results
-  if ($_services_admin_browse_test_submit_result) {
-    $output .= '<div id="output">';
-    $output .= '<h3>'. t('Result') .'</h3>';
-    $output .= '<code>'. $_services_admin_browse_test_submit_result .'</code>';
-    $output .= '</div>';
-  }
-
-  return $output;
 }
 
 /**
