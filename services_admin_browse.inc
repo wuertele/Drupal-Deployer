@@ -184,18 +184,3 @@ function services_admin_settings() {
   );
   return system_settings_form($form);
 }
-
-/**
- * UI enhancement for services page
- */
-function services_admin_js($form) {
-  $out = <<<EOJS
-  $(document).ready(function() {
-    $("#services-key-expiry")[$("#edit-services-use-key").attr('checked') ? 'show' : 'hide']();
-    $("#edit-services-use-key").click(function() {
-      $("#services-key-expiry")[$(this).attr('checked') ? 'show' : 'hide']();
-   });
-  });
-EOJS;
-  drupal_add_js($out, 'inline', 'footer');
-}
