@@ -3,10 +3,10 @@
   <div class="block-inner">
 
   <?php if ($block->subject): ?>
-    <h2 class="title"><?php print $block->subject; ?></h2>
+    <h2 class="block-title"><?php print $block->subject; ?></h2>
   <?php endif; ?>
 
-  <div class="content">
+  <div class="block-content">
     <div class="block-content-inner">
       <?php print $block->content; ?>
     </div>
