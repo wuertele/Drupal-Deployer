@@ -197,3 +197,30 @@ function services_theme() {
     ),
   );
 }
+
+/**
+ * Implementation of hook_user
+ */
+function services_user($op, &$edit, $account, $category) {
+  global $user;
+  if ($op == 'view' and $account->uid == $user->uid and user_access('consume provided services')) {
+    module_load_include('oauth.inc', 'services');
+    $consumer = _services_consumer_get($account->uid);
+    $account->content['consumer_key'] = array(
+      '#type'       => 'user_profile_category',
+      '#attributes' => array('class' => 'user-member'),
+      '#title'      => t('Web services'),
+      '#weight'     => 5,
+    );
+    $account->content['consumer_key']['key'] = array(
+      '#title'      => t('Consumer key'),
+      '#type'       => 'user_profile_item',
+      '#value'      => $consumer->key,
+    );
+    $account->content['consumer_key']['secret'] = array(
+      '#title'      => t('Consumer secret'),
+      '#type'       => 'user_profile_item',
+      '#value'      => $consumer->secret,
+    );
+  }
+}

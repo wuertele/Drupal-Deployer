@@ -7,6 +7,33 @@
  */
 
 /**
+ * Return consumer object related to a user. If the consumer
+ * does not exist, it will be created.
+ *
+ * @param $uid
+ *   Number. User ID to retrieve consumer object for.
+ * @return
+ *   Object. OAuth service consumer.
+ */
+function _services_consumer_get($uid) {
+  module_load_include('oauth_lib.php', 'services');
+
+  $result = db_query('SELECT * FROM {services_consumer} WHERE uid = %d', $uid);
+  if ($object = db_fetch_array($result)) {
+    return new OAuthConsumer($object['consumer_key'], $object['consumer_secret']);
+  }
+  else {
+    $sql = array(
+      'uid'             => $uid,
+      'consumer_key'    => user_password(32),
+      'consumer_secret' => user_password(32),
+    );
+    drupal_write_record('services_consumer', $sql);
+    return new OAuthConsumer($sql['consumer_key'], $sql['consumer_secret']);
+  }
+}
+
+/**
  * Initialize and store an OAuthServer object.
  *
  * Here we initialize all signature objects - yAy this module supports all 3 supported signature methods
