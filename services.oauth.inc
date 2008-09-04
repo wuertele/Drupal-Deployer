@@ -89,17 +89,17 @@ function _services_oauth_server_init() {
        * @param $nonce
        *   Strint. A new nonce value, in case a one doesnt current exit.
        * @param $timestamp
-       *   number. The current time.
+       *   Number. The current time.
        * @return
        *   String or NULL. The existing nonce value or NULL in
        *   case it doesnt exist.
        */
       function lookup_nonce($consumer, $token, $nonce, $timestamp) {
         if (!$nonce_1 = db_result(db_query("SELECT nonce FROM {services_timestamp_nonce}
-          WHERE nonce_timestamp = '%s'", $timestamp))) {
+          WHERE timestamp = '%s'", $timestamp))) {
           $sql = array(
-            'nonce'           => $nonce,
-            'nonce_timestamp' => $timestamp
+            'nonce'     => $nonce,
+            'timestamp' => $timestamp
           );
           drupal_write_record('services_timestamp_nonce', $sql);
           return NULL;
@@ -174,6 +174,87 @@ function _services_oauth_server_init() {
     $server->add_signature_method(new OAuthSignatureMethod_RSA_SHA1());
   }
   return $server;
+}
+
+function _services_oauth_test() {
+  global $user;
+  $consumer = _services_consumer_get($uid);
+  $form['oauth_consumer_key'] = array(
+    '#default_value'  => $consumer->key,
+    '#title'          => t('Consumer Key'),
+    '#type'           => 'textfield',
+  );
+  $form['oauth_consumer_secret'] = array(
+    '#default_value'  => $consumer->secret,
+    '#title'          => t('Consumer Secret'),
+    '#type'           => 'textfield',
+  );
+  $form['stage'] = array(
+    '#default_value'  => 1,
+    '#options'        => array(
+      t('Resquest token'),
+      t('Authentication token'),
+      t('Access token'),
+      t('Example service'),
+    ),
+    '#title'          => t('Stage'),
+    '#type'           => 'radios',
+  );
+  $form['submit'] = array(
+    '#type'           => 'submit',
+    '#value'          => t('Test OAuth'),
+  );
+  return $form;
+}
+
+function _services_oauth_test_submit(&$form, &$form_state) {
+  module_load_include('oauth_lib.php', 'services');
+
+  // Resquet token
+  $url_options = array(
+    'query'     => array(
+      'oauth_consumer_key'    => $form_state['values']['oauth_consumer_key'],
+      'oauth_consumer_secret' => $form_state['values']['oauth_consumer_secret'],
+      'oauth_timestamp'       => time(),
+    ),
+    'absolute'  => TRUE,
+  );
+  $url  = url('services/request', $url_options);
+  $test = drupal_http_request($url, array(), 'GET');
+  if ($test->code == 200) {
+    drupal_set_message(t('Resquest token test succeeded!'), 'ok');
+    if ($form_state['values']['stage'] == 0) {
+      return;
+    }
+  }
+  else {
+    drupal_set_message(t('Resquest token test failed: %message', array('%message' => $test->data)), 'error');
+    return;
+  }
+
+  // Authentication token
+  parse_str($test->data);
+  $url_options = array(
+    'query'     => array(
+      'oauth_token'     => $oauth_token,
+      'oauth_callback'  => url('admin/services', array('absolute' => TRUE)),
+    ),
+    'absolute'  => TRUE,
+  );
+  $url  = url('services/auth', $url_options);
+  $test = drupal_http_request($url, array(), 'GET');
+  dpm($test);
+  if ($test->code == 200) {
+    parse_str($test->data);
+    drupal_set_message(t('Authentication token test succeeded!'), 'ok');
+    if ($form_state['values']['stage'] == 1) {
+      return;
+    }
+  }
+  else {
+    drupal_set_message(t('Authentication token test failed: %message', array('%message' => $test->data)), 'error');
+    return;
+  }
 }
 
 /**

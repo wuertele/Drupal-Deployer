@@ -735,5 +735,3 @@ class OAuthUtil {
     return rawurldecode($string);
   }
 }
-
-?>
