@@ -34,8 +34,15 @@ function mollom_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
-    ),
-    'indexes' => array(
+      'languages' => array(
+          'description' => t("The language(s) that the content might be written in."),
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => '',
+          ),
+      ),
+      'indexes' => array(
      'session' => array('session'),
     ),
     'primary key' => array('did'),
@@ -57,4 +64,13 @@ function mollom_install() {
 function mollom_uninstall() {
   db_query("DELETE FROM {variable} WHERE name LIKE 'mollom_%'");
   drupal_uninstall_schema('mollom');
+}
+
+/**
+ * An update function to add the language field.
+ */
+function mollom_update_1() {
+   $ret = array();
+   db_add_field($ret, 'mollom', 'languages', array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => ''));
+   return $ret;
 }
