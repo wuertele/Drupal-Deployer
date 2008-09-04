@@ -79,162 +79,90 @@ function services_admin_browse_method($method) {
   return $output;
 }
 
-function services_admin_browse_test() {
-  $form = array();
-  module_load_include('inc', 'services');
-  $method = _services_service_get(arg(4));
-
-  $form['arg'] = array('#tree' => TRUE);
-
-  foreach ($method['#args'] as $key => $arg) {
-    $form['name'][$key]         = array(
-      '#value' => $arg['#name']
+/**
+ * Allow users to test a given service.
+ *
+ * @param $method
+ *   Object. The service info.
+ *
+ * @ingroup form
+ */
+function _services_admin_service_test($form_state, $service) {
+  // Testing fields
+  $form['arg'] = array(
+    '#tree'   => TRUE,
+  );
+  foreach ($service['#args'] as $key => $arg) {
+    $form['arg'][$key] = array(
+      '#description'  => $arg['#description'],
+      '#required'     => !$arg['#optional'],
+      '#title'        => $arg['#name'],
+      '#type'         => 'textfield',
     );
-    $form['optional'][$key]     = array(
-      '#value' => ($arg['#optional']) ? t('optional') : t('required')
-    );
-
-    switch ($arg['#name']) {
-      case 'hash':
-        $form['arg'][$key] = array(
-          '#title'          => 'Hash',
-          '#type'           => 'textfield',
-          '#default_value'  => hash_hmac('sha256', $timestamp . $_SERVER['HTTP_HOST'] . $nonce . arg(4), services_admin_browse_get_first_key())
-        );
-        break;
-
-      case 'sessid':
-        $form['arg'][$key] = array(
-          '#title'          => 'Session id',
-          '#type'           => 'textfield',
-          '#default_value'  => session_id()
-        );
-        break;
-
-      case 'domain_name':
-        $form['arg'][$key] = array(
-          '#title'          => 'Domain name',
-          '#type'           => 'textfield',
-          '#default_value'  => $_SERVER['HTTP_HOST']
-        );
-        break;
-
-      case 'domain_time_stamp':
-        $form['arg'][$key] = array(
-          '#title'          => 'Timestamp',
-          '#type'           => 'textfield',
-          '#default_value'  => $timestamp
-        );
-        break;
-
-      case 'nonce':
-        $form['arg'][$key] = array(
-          '#title'          => 'Nonce',
-          '#type'           => 'textfield',
-          '#default_value'  => $nonce
-        );
-        break;
-
-      default:
-        if ($arg['#size'] == 'big') {
-          $form['arg'][$key] = array(
-            '#type'           => 'textarea'
-          );
-        }
-        else {
-          $form['arg'][$key] = array(
-            '#type'           => 'textfield'
-          );
-        }
-        break;
+    if ($arg['#size'] == 'big') {
+      $form['arg'][$key]['#type'] = 'textarea';
     }
-
   }
+
+  $form['service'] = array(
+    '#value'          => $service,
+    '#type'           => 'value',
+  );
+  $form['service_name'] = array(
+    '#value'          => $service['#method'],
+    '#type'           => 'hidden',
+  );
+
   $form['submit'] = array(
+    '#ahah' => array(
+      'path'      => 'admin/build/services/js',
+      'wrapper'   => 'services-test-result',
+      'progress'  => array('type' => 'bar', 'message' => t('Please wait...')),
+    ),
+    '#suffix'         => '<div id="services-test-result"></div>',
     '#type'           => 'submit',
     '#value'          => t('Call method')
   );
-
-  $form['#redirect'] = FALSE;
   return $form;
 }
 
-function services_admin_browse_get_first_key() {
-  $keys = services_key_get_all();
-  foreach ($keys as $kid => $key) {
-    return $kid;
-  }
-}
-
-function services_admin_browse_test_submit($form, $form_state) {
-  global $_services_admin_browse_test_submit_result;
-  $method = _services_service_get(arg(4));
-  $args = services_admin_browse_test_unserialize_args($form_state['values']['arg']);
+/**
+ * AJAX callback to return a service test.
+ *
+ * @return
+ *   Prints the services result in JSON format.
+ */
+function _services_admin_service_test_js() {
+  $service = $_POST['service_name'];
+  $arg = $_POST['args'];
   module_load_include('inc', 'services');
-  $result = services_method_call($method['#method'], $args);
-  $_services_admin_browse_test_submit_result = '<pre>'. htmlspecialchars(print_r($result, TRUE)) .'</pre>';
+  $result = services_method_call($service, $arg);
+  drupal_json(array('status' => TRUE, 'data' => $result));
+  exit();
 }
 
-function services_admin_browse_test_unserialize_args($values) {
-  $method = _services_service_get(arg(4));
-  $noskip = FALSE;
-  // Convert args
-  for ($c = count($method['#args']) - 1; $c >= 0; $c--) {
-    $arg = $method['#args'][$c];
-    $value = $values[$c];
+/**
+ * Theme service testing form
+ *
+ * @param $form
+ *   Array. The service testing form.
+ *
+ * @ingroup themable
+ */
+function theme__services_admin_service_test($form) {
+  global $_services_admin_browse_test_submit_result;
+  $service = $form['service']['#value'];
 
-    // Remove empty values from end of array
-    // Once we find a value, we can no longer skip
-    if (!is_numeric($value) and empty($value) and !$noskip) {
-      continue;
-    }
-    $noskip = TRUE;
-
-    switch ($arg['#type']) {
-      case 'array' :
-        if (empty($value)) {
-          $return[$c] = NULL;
-        }
-        else {
-          $return[$c] = explode(',', $value);
-        }
-
-        break;
-      default :
-        $return[$c] = $value;
-    }
-  }
-
-  if ($return) ksort($return);
-
-  return $return;
-}
-
-function theme_services_admin_browse_test($form) {
-  $output = '';
-  $output .= drupal_render($form['test']);
-
-  $header = array(t('Name'), t('Required'), t('Value'));
-  $rows = array();
-  foreach (element_children($form['name']) as $key => $type) {
-    $row = array();
-    if (isset($form['arg'][$key]['#title'])) {
-      $row[] = $form['arg'][$key]['#title'];
-      unset($form['arg'][$key]['#title']);
-      unset($form['name'][$key]);
-    }
-    else {
-      $row[] = drupal_render($form['name'][$key]);
-    }
-    $row[] = drupal_render($form['optional'][$key]);
-    $row[] = drupal_render($form['arg'][$key]);
-    $rows[] = $row;
-  }
-
-  $output .= theme('table', $header, $rows);
-  $output .= drupal_render($form['submit']);
-
+  // Testing fields
   $output .= drupal_render($form);
+
+  // Testing results
+  if ($_services_admin_browse_test_submit_result) {
+    $output .= '<div id="output">';
+    $output .= '<h3>'. t('Result') .'</h3>';
+    $output .= '<code>'. $_services_admin_browse_test_submit_result .'</code>';
+    $output .= '</div>';
+  }
 
   return $output;
 }
