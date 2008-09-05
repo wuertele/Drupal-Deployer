@@ -471,7 +471,4 @@ function _services_token_request() {
     print_r($req);
     die();
   }
-
-  // Set the $_GET['q'] back to it's original value
-  $_GET['q'] = $q;
 }
