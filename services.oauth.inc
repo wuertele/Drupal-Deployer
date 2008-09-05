@@ -300,7 +300,7 @@ function _services_oauth_test_submit(&$form, &$form_state) {
 /**
  * Access the OAuth services
  */
-function _services_token_access($token_key, $consumer_key) {
+function _services_token_access($consumer_key, $token_key) {
   $server = _services_oauth_server_init();
 
   $arguments = array(
@@ -425,7 +425,7 @@ function _services_token_auth_form_submit(&$form, &$form_state) {
     'authorized'  => 1,
     'uid'         => $user->uid,
     'token_key'   => $form_state['values']['oauth_token'],
-    'services'    => $services,
+    'services'    => serialize($services),
   );
   drupal_write_record('services_token', $sql, 'token_key');
 
