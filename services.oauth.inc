@@ -295,14 +295,6 @@ function _services_oauth_test_submit(&$form, &$form_state) {
  * Access the OAuth services
  */
 function _services_token_access() {
-  if (empty($_GET['oauth_token'])) {
-    drupal_set_message('OAuth token is not included in request.', 'error');
-    return drupal_access_denied();
-  }
-  elseif (empty($_GET['oauth_consumer_key'])) {
-    drupal_set_message('Please include a valid consumer key in your request.', 'error');
-    return drupal_access_denied();
-  }
   $server = _services_oauth_server_init();
 
   // Remove the q variable from the query string, as it will break
@@ -446,7 +438,8 @@ function _services_token_auth_form_submit(&$form, &$form_state) {
     $req = OAuthRequest::from_request();
     oauth_authorize_request_token($form_state['values']['oauth_token']);
     drupal_goto($req->get_parameter('oauth_callback'));
-  } catch (OAuthException $e) {
+  }
+  catch (OAuthException $e) {
     print($e->getMessage() . "\n<hr />\n");
     print_r($req);
     die();
