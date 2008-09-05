@@ -300,29 +300,23 @@ function _services_oauth_test_submit(&$form, &$form_state) {
 /**
  * Access the OAuth services
  */
-function _services_token_access() {
+function _services_token_access($token_key, $consumer_key) {
   $server = _services_oauth_server_init();
 
-  // Remove the q variable from the query string, as it will break
-  // the signature validation.
-  $q = $_GET['q'];
-  unset($_GET['q']);
+  $arguments = array(
+    'oauth_token'           => $token_key,
+    'oauth_consumer_key'    => $consumer_key,
+    'oauth_timestamp'       => time(),
+  );
 
   try {
-    global $user;
-    $req = OAuthRequest::from_request();
+    $req = OAuthRequest::from_request(NULL, NULL, $arguments);
     $token = $server->fetch_access_token($req);
-//     parse_str($token);
-    print $token;
+    return $token;
   }
   catch (OAuthException $e) {
-    print($e->getMessage() ."\n<hr />\n");
-    print_r($req);
-    die();
+    return services_error($e->getMessage());
   }
-
-  // Set the $_GET['q'] back to it's original value
-  $_GET['q'] = $q;
 }
 
 /**
@@ -448,7 +442,7 @@ function _services_token_request($consumer_key, $consumer_secret) {
   $arguments = array(
     'oauth_consumer_key'    => $consumer_key,
     'oauth_consumer_secret' => $consumer_secret,
-    'oauth_timestamp'        => time(),
+    'oauth_timestamp'       => time(),
   );
 
   try {
