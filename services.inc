@@ -10,15 +10,14 @@
  * Callback for crossdomain.xml
  */
 function _services_crossdomain_xml() {
-  global $base_url;
-  $output = '<!DOCTYPE cross-domain-policy SYSTEM "http://www.macromedia.com/xml/dtds/cross-domain-policy.dtd">'."\n";
-  $output .= '<cross-domain-policy>'."\n";
-  $output .= '  <allow-access-from domain="'. check_plain($_SERVER['HTTP_HOST']) .'" />'."\n";
-  $output .= '  <allow-access-from domain="*.'. check_plain($_SERVER['HTTP_HOST']) .'" />'."\n";
-  $output .= '</cross-domain-policy>';
+  $output = '<?xml version="1.0"?>'."\n".
+    '<!DOCTYPE cross-domain-policy SYSTEM "http://www.macromedia.com/xml/dtds/cross-domain-policy.dtd">'."\n".
+    '<cross-domain-policy>'."\n".
+    '  <allow-access-from domain="'. check_plain($_SERVER['HTTP_HOST']) .'" />'."\n".
+    '  <allow-access-from domain="*.'. check_plain($_SERVER['HTTP_HOST']) .'" />'."\n".
+    '</cross-domain-policy>';
 
   // Include the XML header before the content
-  $output = '<?xml version="1.0"?>'."\n". $output;
   header('Connection: close');
   header('Content-Length: '. drupal_strlen($output));
   header('Content-Type: text/xml');
