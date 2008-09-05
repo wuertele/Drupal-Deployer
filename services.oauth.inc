@@ -455,62 +455,24 @@ function _services_token_auth_form_submit(&$form, &$form_state) {
  * Generate a request token from the request
  */
 function _services_token_request() {
-  if (variable_get('services_use_coolauth', FALSE)) {
-    if (empty($_GET['application_key'])) {
-      drupal_set_message("error", t('Please use a valid application key in your request OR read whole API documentation carefully', TRUE));
-      drupal_access_denied();
-    }
-    $application_key = $_GET['application_key'];
-    $application_secret = db_result(db_query("SELECT application_secret FROM {oauth_cool_auth} WHERE application_key=%d", $application_key));
-    if (!$application_secret) {
-      drupal_set_message('error', t("Your Application key is not valid", TRUE));
-      drupal_access_denied();
-    }
-    $required_hash = md5($application_secret . $_GET['oauth_nonce']);
+  $server = _services_oauth_server_init();
+  // Remove the q variable from the query string, as it will break
+  // the signature validation.
+  $q = $_GET['q'];
+  unset($_GET['q']);
 
-    if ($_GET['application_sig'] == $required_hash) {
-      $server = _services_oauth_server_init();
-      // Remove the q variable from the query string, as it will break
-      // the signature validation.
-      $q = $_GET['q'];
-      unset($_GET['q']);
-
-      try {
-        $req = OAuthRequest::from_request();
-        $token = $server->fetch_request_token($req, $application_key);
-        print $token;
-        die();
-      }
-      catch (OAuthException $e) {
-        print($e->getMessage() ."\n<hr />\n");
-
-        print_r($req);
-        die();
-      }
-      // Set the $_GET['q'] back to it's original value
-      $_GET['q'] = $q;
-    }
+  try {
+    $req = OAuthRequest::from_request();
+    $token = $server->fetch_request_token($req, $application_key);
+    print $token;
+    die();
   }
-  else {
-    $server = _services_oauth_server_init();
-    // Remove the q variable from the query string, as it will break
-    // the signature validation.
-    $q = $_GET['q'];
-    unset($_GET['q']);
+  catch (OAuthException $e) {
+    print($e->getMessage() ."\n<hr />\n");
 
-    try {
-      $req = OAuthRequest::from_request();
-      $token = $server->fetch_request_token($req, $application_key);
-      print $token;
-      die();
-    }
-    catch (OAuthException $e) {
-      print($e->getMessage() ."\n<hr />\n");
-
-      print_r($req);
-      die();
-    }
-    // Set the $_GET['q'] back to it's original value
-    $_GET['q'] = $q;
+    print_r($req);
+    die();
   }
+  // Set the $_GET['q'] back to it's original value
+  $_GET['q'] = $q;
 }
