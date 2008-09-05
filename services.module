@@ -7,17 +7,6 @@
  */
 
 /**
- * Implementation of hook_cron().
- *
- * Clear down old values from the nonce table.
- */
-function services_cron() {
-  $expiry_time = time() - variable_get('services_key_expiry', 30);
-  db_query("DELETE FROM {services_timestamp_nonce}
-    WHERE timestamp < %d", $expiry_time);
-}
-
-/**
  * Implementation of hook_help().
  */
 function services_help($path, $arg) {
@@ -138,7 +127,7 @@ function services_service_load($method) {
  */
 function services_user($op, &$edit, $account, $category) {
   global $user;
-  if ($op == 'view' and $account->uid == $user->uid and user_access('consume provided services')) {
+  if ($op == 'view' and $account->uid == $user->uid and user_access('access services')) {
     module_load_include('oauth.inc', 'services');
     $consumer = _services_consumer_get($account->uid);
     $account->content['consumer_key'] = array(

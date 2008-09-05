@@ -336,7 +336,7 @@ function _services_token_auth() {
       drupal_set_message('Please include a valid callback url in your request.', 'error');
       return drupal_access_denied();
     }
-    elseif (!user_access('authorize external services')) {
+    elseif (!user_access('access services')) {
       drupal_set_message('error', t('You are not authorized to allow external services access to this system.'));
       return drupal_access_denied();
     }
