@@ -158,17 +158,21 @@ function _services_service_call($method_name, $args = array()) {
     }
   }
 
-  // Add additonal processing for methods requiring authentication
+  // Check the OAuth authentication
   $session_backup = NULL;
   if (empty($method['#no_auth']) and variable_get('services_use_oauth', TRUE)) {
-    $sessid = array_shift($args);
-    if (empty($sessid)) {
-      return services_error(t('Invalid sessid.'));
+    $consumer_key = array_shift($args);
+    $token_access = array_shift($args);
+    if (empty($consumer_key)) {
+      return services_error(t('Invalid consumer key.'));
+    }
+    elseif (empty($token_access)) {
+      return services_error(t('Invalid access token.'));
     }
     $session_backup = _services_session_load($sessid);
   }
 
-  // Load the proper file
+  // Load the file where the service callback is
   if ($file = $method['#file']) {
     module_load_include($file['file'], $file['module']);
   }
