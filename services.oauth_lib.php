@@ -75,10 +75,10 @@ class OAuthSignatureMethod_HMAC_SHA1 extends OAuthSignatureMethod {
       ($token) ? $token->secret : ""
     );
 
-    $key_parts = array_map(array('OAuthUtil','urlencodeRFC3986'), $key_parts);
+    $key_parts = array_map(array('OAuthUtil', 'urlencodeRFC3986'), $key_parts);
     $key = implode('&', $key_parts);
 
-    return base64_encode( hash_hmac('sha1', $base_string, $key, true));
+    return base64_encode( hash_hmac('sha1', $base_string, $key, TRUE));
   }
 }
 
@@ -94,7 +94,8 @@ class OAuthSignatureMethod_PLAINTEXT extends OAuthSignatureMethod {
 
     if ($token) {
       array_push($sig, OAuthUtil::urlencodeRFC3986($token->secret));
-    } else {
+    }
+    else {
       array_push($sig, '');
     }
 
@@ -189,7 +190,7 @@ class OAuthRequest {
   */
   public static function from_request($http_method=NULL, $http_url=NULL, $parameters=NULL) {
     $scheme = (!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] != "on") ? 'http' : 'https';
-    @$http_url or $http_url = $scheme . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+    @$http_url or $http_url = $scheme .'://'. $_SERVER['HTTP_HOST'] . request_uri();
     @$http_method or $http_method = $_SERVER['REQUEST_METHOD'];
 
     $request_headers = OAuthRequest::get_headers();
@@ -232,9 +233,9 @@ class OAuthRequest {
                       "oauth_nonce" => OAuthRequest::generate_nonce(),
                       "oauth_timestamp" => OAuthRequest::generate_timestamp(),
                       "oauth_consumer_key" => $consumer->key);
-    if($parameters[application_secret]){
+    if ($parameters['application_secret']) {
       $parameters['application_sig'] = md5($parameters['application_secret'] . $defaults['oauth_nonce']);
-      $parameters[application_secret] = '';
+      $parameters['application_secret'] = '';
     }
     $parameters = array_merge($defaults, $parameters);
 
@@ -349,7 +350,7 @@ class OAuthRequest {
   * builds a url usable for a GET request
   */
   public function to_url() {
-    $out = $this->get_normalized_http_url() . "?";
+    $out = $this->get_normalized_http_url() ."?";
     $out .= $this->to_postdata();
     return $out;
   }
@@ -370,11 +371,11 @@ class OAuthRequest {
   * builds the Authorization: header
   */
   public function to_header() {
-    $out ='"Authorization: OAuth realm="",';
+    $out = '"Authorization: OAuth realm="",';
     $total = array();
     foreach ($this->parameters as $k => $v) {
       if (drupal_substr($k, 0, 5) != "oauth") continue;
-      $out .= ','. OAuthUtil::urlencodeRFC3986($k) .'="'. OAuthUtil::urlencodeRFC3986($v) . '"';
+      $out .= ','. OAuthUtil::urlencodeRFC3986($k) .'="'. OAuthUtil::urlencodeRFC3986($v) .'"';
     }
     return $out;
   }
