@@ -47,7 +47,7 @@ function _services_crossdomain_xml() {
  *   String. Depends on the services server.
  */
 function services_error($message) {
-  $server_info = _services_server_info_get();
+  $server_info = _services_server_get();
 
   // Look for custom error handling function.
   // Should be defined in each server module.
@@ -121,7 +121,7 @@ function _services_server($server_path = NULL) {
       $server_info = new stdClass();
       $server_info->module = $module;
       $server_info->drupal_path = getcwd();
-      _services_server_info_get($server_info);
+      _services_server_get($server_info);
       print module_invoke($module, 'server');
 
       // Do not let this output
@@ -143,7 +143,7 @@ function _services_server($server_path = NULL) {
  *   Object. The current server info. Or FALSE if none was set
  *   and none was given.
  */
-function _services_server_info_get($server_info = NULL) {
+function _services_server_get($server_info = NULL) {
   static $info;
   if (empty($info)) {
     if (!empty($server_info)) {
@@ -230,7 +230,7 @@ function _services_service_call($method_name, $args = array()) {
   // Change working directory to drupal root to call drupal function,
   // then change it back to server module root to handle return.
   $server_root = getcwd();
-  $server_info = _services_server_info_get();
+  $server_info = _services_server_get();
   if ($server_info) {
     chdir($server_info->drupal_path);
   }
