@@ -141,27 +141,24 @@ function _services_oauth_server_init() {
        *   Strint. The old request token.
        * @param $consumer
        *   Object. The service consumer information.
-       * @param $user
-       *   Object (optional). The user information.
        */
       function new_access_token($token_old, $consumer) {
-        if ($object = db_fetch_object(db_query("SELECT * FROM {services_token}
+        if ($object = db_fetch_array(db_query("SELECT * FROM {services_token}
           WHERE type = 'request' AND token_key = '%s'", $token_old->key))) {
           if ($object->authorized) {
             $token_new = new OAuthToken(user_password(32), user_password(32));
-            $user_id = db_result(db_query("SELECT uid FROM {services_consumer}
-              WHERE consumer_key = '%s'", $consumer->key));
             $sql = array(
               'consumer_key'    => $consumer->key,
               'type'            => 'access',
               'token_key'       => $token_new->key,
               'token_secret'    => $token_new->secret,
-              'uid'             => $user_id
+              'uid'             => $object['uid'],
+              'services'        => serialize($object['services'])
             );
             drupal_write_record('services_token', $sql);
 
-            db_query("DELETE FROM {services_token} WHERE
-              type = 'request' AND token_key = '%s'", $token_old->key);
+            db_query("DELETE FROM {services_token} WHERE token_key = '%s'",
+              $token_old->key);
             return $token_new;
           }
         }
