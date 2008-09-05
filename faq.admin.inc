@@ -24,7 +24,7 @@ function faq_settings_page($op = NULL) {
 }
 
 /**
- * Define a form to edit the page header and descriptive text
+ * Define a form to edit the page header and descriptive text.
  *
  * @return
  *   The general settings form code stored in the $form variable, before
@@ -227,14 +227,14 @@ function faq_categories_settings_form() {
 
   $form['faq_category_misc']['faq_hide_child_terms'] = array(
     '#type' => 'checkbox',
-    '#title' => t("Only show sub-categories when parent category is selected"),
+    '#title' => t('Only show sub-categories when parent category is selected'),
     '#description' => t("This allows the user more control over how and when sub-categories are displayed.  It does not affect the 'Categories inline' display."),
     '#default_value' => variable_get('faq_hide_child_terms', FALSE),
   );
 
   $form['faq_category_misc']['faq_show_term_page_children'] = array(
     '#type' => 'checkbox',
-    '#title' => t("Show sub-categories on FAQ category pages"),
+    '#title' => t('Show sub-categories on FAQ category pages'),
     '#description' => t("Sub-categories with 'faq' nodes will be displayed on the per category FAQ page.  This will also happen if 'Only show sub-categories when parent category is selected' is set."),
     '#default_value' => variable_get('faq_show_term_page_children', FALSE),
   );
@@ -255,10 +255,17 @@ function faq_categories_settings_form() {
     $form['faq_category_advanced']['faq_omit_vocabulary'] = array(
       '#type' => 'select',
       '#title' => t('Omit vocabulary'),
-      '#description' => t("Terms from these vocabularies will be excluded from the FAQ pages."),
+      '#description' => t('Terms from these vocabularies will be excluded from the FAQ pages.'),
       '#default_value' => variable_get('faq_omit_vocabulary', 0),
       '#options' => $vocab_options,
       '#multiple' => TRUE,
+    );
+
+    $form['faq_category_advanced']['faq_enable_term_links'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Enable FAQ taxonomy links'),
+      '#description' => t('Node links to taxonomy terms will be re-written to point at the FAQ pages instead.'),
+      '#default_value' => variable_get('faq_enable_term_links', 1),
     );
   }
 
@@ -309,8 +316,8 @@ function faq_weight_settings_form($form_state) {
         $options[$term->tid] = $term->name;
         $form['choose_cat']['faq_category'] = array(
           '#type' => 'select',
-          '#title' => t("Choose a category"),
-          '#description' => t("Choose a category that you wish to order the questions for."),
+          '#title' => t('Choose a category'),
+          '#description' => t('Choose a category that you wish to order the questions for.'),
           '#options' => $options,
           '#multiple' => FALSE,
         );
@@ -390,7 +397,7 @@ function faq_weight_settings_form($form_state) {
 
     $form['weight']['order_no_cats'] = array(
       '#type' => 'select',
-      '#title' => t("Question Order"),
+      '#title' => t('Question Order'),
       '#description' => t("This determines the order of the questions and answers on the FAQ page.  Just select one or more questions and use the arrows to change their position in the list.  You can also order the list by the question creation date !desc or !asc.", array('!desc' => $desc, '!asc' => $asc)),
       '#options' => $options,
       '#multiple' => TRUE,
