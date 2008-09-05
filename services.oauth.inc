@@ -149,7 +149,7 @@ function _services_oauth_server_init() {
             $user_id = db_result(db_query("SELECT uid FROM {services_consumer}
               WHERE consumer_key = '%s'", $consumer->key));
             $sql = array(
-              'application_key' => 'NULL',
+              'application_key' => NULL,
               'consumer_key'    => $consumer->key,
               'type'            => 'access',
               'token_key'       => $token->key,
@@ -421,10 +421,9 @@ function _services_token_auth_form_submit(&$form, &$form_state) {
 
   // Save into the DB
   $sql = array(
+    'token_key'     => $form_state['values']['oauth_token'],
     'consumer_key'  => $form_state['values']['oauth_consumer_key'],
     'services'      => $services,
-    'timestamp'     => $form_state['values']['oauth_nonce_timestamp'],
-    'session_id'    => $user->sid,
   );
   drupal_write_record('services_services', $sql);
 
@@ -435,7 +434,13 @@ function _services_token_auth_form_submit(&$form, &$form_state) {
   unset($_GET['q']);
   try {
     $req = OAuthRequest::from_request();
-    oauth_authorize_request_token($form_state['values']['oauth_token']);
+    global $user;
+    $sql = array(
+      'authorized'  => 1,
+      'uid'         => $user->uid,
+      'token_key'   => $key,
+    );
+    drupal_write_record('oauth_token', $sql, 'token_key');
     drupal_goto($req->get_parameter('oauth_callback'));
   }
   catch (OAuthException $e) {
