@@ -1,7 +1,15 @@
 <?php
-// vim: foldmethod=marker
+// $Id$
+/**
+ * @author OAuth
+ * @author Services Dev Team (port to Drupal and fixed to use Drupal
+ *   code compliance)
+ * @file
+ *  OAuth PHP integration.
+ */
 
-/* Generic exception class
+/**
+ * Generic exception class
  */
 class OAuthException extends Exception {
   // pass
@@ -24,18 +32,18 @@ class OAuthToken {
   public $secret;
 
   /**
-   * key = the token
-   * secret = the token secret
-   */
+  * key = the token
+  * secret = the token secret
+  */
   function __construct($key, $secret) {
     $this->key = $key;
     $this->secret = $secret;
   }
 
   /**
-   * generates the basic string serialization of a token that a server
-   * would respond to request_token and access_token calls with
-   */
+  * generates the basic string serialization of a token that a server
+  * would respond to request_token and access_token calls with
+  */
   function to_string() {
     return "oauth_token=" . OAuthUtil::urlencodeRFC3986($this->key) .
         "&oauth_token_secret=" . OAuthUtil::urlencodeRFC3986($this->secret);
@@ -177,8 +185,8 @@ class OAuthRequest {
 
 
   /**
-   * attempt to build up a request from what was passed to the server
-   */
+  * attempt to build up a request from what was passed to the server
+  */
   public static function from_request($http_method=NULL, $http_url=NULL, $parameters=NULL) {
     $scheme = (!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] != "on") ? 'http' : 'https';
     @$http_url or $http_url = $scheme . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
@@ -216,8 +224,8 @@ class OAuthRequest {
   }
 
   /**
-   * pretty much a helper function to set up the request
-   */
+  * pretty much a helper function to set up the request
+  */
   public static function from_consumer_and_token($consumer, $token, $http_method, $http_url, $parameters=NULL) {
     @$parameters or $parameters = array();
     $defaults = array("oauth_version" => OAuthRequest::$version,
@@ -249,17 +257,17 @@ class OAuthRequest {
   }
 
   /**
-   * Returns the normalized parameters of the request
-   *
-   * This will be all (except oauth_signature) parameters,
-   * sorted first by key, and if duplicate keys, then by
-   * value.
-   *
-   * The returned string will be all the key=value pairs
-   * concated by &.
-   *
-   * @return string
-   */
+  * Returns the normalized parameters of the request
+  *
+  * This will be all (except oauth_signature) parameters,
+  * sorted first by key, and if duplicate keys, then by
+  * value.
+  *
+  * The returned string will be all the key=value pairs
+  * concated by &.
+  *
+  * @return string
+  */
   public function get_signable_parameters() {
     // Grab all parameters
     $params = $this->parameters;
@@ -297,12 +305,12 @@ class OAuthRequest {
   }
 
   /**
-   * Returns the base string of this request
-   *
-   * The base string defined as the method, the url
-   * and the parameters (normalized), each urlencoded
-   * and the concated with &.
-   */
+  * Returns the base string of this request
+  *
+  * The base string defined as the method, the url
+  * and the parameters (normalized), each urlencoded
+  * and the concated with &.
+  */
   public function get_signature_base_string() {
     $parts = array(
       $this->get_normalized_http_method(),
@@ -316,16 +324,16 @@ class OAuthRequest {
   }
 
   /**
-   * just uppercases the http method
-   */
+  * just uppercases the http method
+  */
   public function get_normalized_http_method() {
     return strtoupper($this->http_method);
   }
 
   /**
-   * parses the url and rebuilds it to be
-   * scheme://host/path
-   */
+  * parses the url and rebuilds it to be
+  * scheme://host/path
+  */
   public function get_normalized_http_url() {
     $parts = parse_url($this->http_url);
 
@@ -337,8 +345,8 @@ class OAuthRequest {
   }
 
   /**
-   * builds a url usable for a GET request
-   */
+  * builds a url usable for a GET request
+  */
   public function to_url() {
     $out = $this->get_normalized_http_url() . "?";
     $out .= $this->to_postdata();
@@ -346,8 +354,8 @@ class OAuthRequest {
   }
 
   /**
-   * builds the data one would send in a POST request
-   */
+  * builds the data one would send in a POST request
+  */
   public function to_postdata() {
     $total = array();
     foreach ($this->parameters as $k => $v) {
@@ -358,8 +366,8 @@ class OAuthRequest {
   }
 
   /**
-   * builds the Authorization: header
-   */
+  * builds the Authorization: header
+  */
   public function to_header() {
     $out ='"Authorization: OAuth realm="",';
     $total = array();
@@ -387,15 +395,15 @@ class OAuthRequest {
   }
 
   /**
-   * util function: current timestamp
-   */
+  * util function: current timestamp
+  */
   private static function generate_timestamp() {
     return time();
   }
 
   /**
-   * util function: current nonce
-   */
+  * util function: current nonce
+  */
   private static function generate_nonce() {
     $mt = microtime();
     $rand = mt_rand();
@@ -404,9 +412,9 @@ class OAuthRequest {
   }
 
   /**
-   * util function for turning the Authorization: header into
-   * parameters, has to do some unescaping
-   */
+  * util function for turning the Authorization: header into
+  * parameters, has to do some unescaping
+  */
   private static function split_header($header) {
     // this should be a regex
     // error cases: commas in parameter values
@@ -427,8 +435,8 @@ class OAuthRequest {
   }
 
   /**
-   * helper to try to sort out headers for people who aren't running apache
-   */
+  * helper to try to sort out headers for people who aren't running apache
+  */
   private static function get_headers() {
     if (function_exists('apache_request_headers')) {
       // we need this to get the actual Authorization: header
@@ -470,9 +478,9 @@ class OAuthServer {
   // high level functions
 
   /**
-   * process a request_token request
-   * returns the request token on success
-   */
+  * process a request_token request
+  * returns the request token on success
+  */
   public function fetch_request_token(&$request, $application_key = NULL) {
     $this->get_version($request);
 
@@ -489,9 +497,9 @@ class OAuthServer {
   }
 
   /**
-   * process an access_token request
-   * returns the access token on success
-   */
+  * process an access_token request
+  * returns the access token on success
+  */
   public function fetch_access_token(&$request) {
     $this->get_version($request);
 
@@ -508,8 +516,8 @@ class OAuthServer {
   }
 
   /**
-   * verify an api call, checks all the parameters
-   */
+  * verify an api call, checks all the parameters
+  */
   public function verify_request(&$request) {
     $this->get_version($request);
     $consumer = $this->get_consumer($request);
@@ -520,8 +528,8 @@ class OAuthServer {
 
   // Internals from here
   /**
-   * version 1
-   */
+  * version 1
+  */
   private function get_version(&$request) {
     $version = $request->get_parameter("oauth_version");
     if (!$version) {
@@ -534,8 +542,8 @@ class OAuthServer {
   }
 
   /**
-   * figure out the signature with some defaults
-   */
+  * figure out the signature with some defaults
+  */
   private function get_signature_method(&$request) {
     $signature_method =
         @$request->get_parameter("oauth_signature_method");
@@ -552,8 +560,8 @@ class OAuthServer {
   }
 
   /**
-   * try to find the consumer for the provided request's consumer key
-   */
+  * try to find the consumer for the provided request's consumer key
+  */
   private function get_consumer(&$request) {
     $consumer_key = @$request->get_parameter("oauth_consumer_key");
     if (!$consumer_key) {
@@ -569,8 +577,8 @@ class OAuthServer {
   }
 
   /**
-   * try to find the token for the provided request's token key
-   */
+  * try to find the token for the provided request's token key
+  */
   private function get_token(&$request, $consumer, $token_type="access") {
     $token_field = @$request->get_parameter('oauth_token');
     $token = $this->data_store->lookup_token(
@@ -583,9 +591,9 @@ class OAuthServer {
   }
 
   /**
-   * all-in-one function to check the signature on a request
-   * should guess the signature method appropriately
-   */
+  * all-in-one function to check the signature on a request
+  * should guess the signature method appropriately
+  */
   private function check_signature(&$request, $consumer, $token, $signature = NULL) {
     // this should probably be in a different method
     $timestamp = @$request->get_parameter('oauth_timestamp');
@@ -599,11 +607,11 @@ class OAuthServer {
     $signature = $request->get_parameter('oauth_signature');
     $valid_sig = $signature_method->check_signature($request, $consumer, $token, $signature);
 
-	/*
-	 * this is commented out for Drupal implementation as it gives
-	 * error messages with signature methods other than PLAIN TEXT for no reason
-	 * It is working very fine without this method
-	 *
+  /*
+  * this is commented out for Drupal implementation as it gives
+  * error messages with signature methods other than PLAIN TEXT for no reason
+  * It is working very fine without this method
+  *
     if (!$valid_sig) {
       throw new OAuthException("Invalid signature");
     }
@@ -611,8 +619,8 @@ class OAuthServer {
   }
 
   /**
-   * check that the timestamp is new enough
-   */
+  * check that the timestamp is new enough
+  */
   private function check_timestamp($timestamp) {
     // verify that timestamp is recentish
     $now = time();
@@ -622,8 +630,8 @@ class OAuthServer {
   }
 
   /**
-   * check that the nonce is not repeated
-   */
+  * check that the nonce is not repeated
+  */
   private function check_nonce($consumer, $token, $nonce, $timestamp) {
     // verify that the nonce is uniqueish
     $found = $this->data_store->lookup_nonce($consumer, $token, $nonce, $timestamp);
@@ -662,8 +670,8 @@ class OAuthDataStore {
 
 }
 
-
-/*  A very naive dbm-based oauth storage
+/**
+ *  A very naive dbm-based oauth storage
  */
 class SimpleOAuthDataStore extends OAuthDataStore {
   private $dbh;

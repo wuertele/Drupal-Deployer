@@ -444,7 +444,7 @@ function _services_token_auth_form_submit(&$form, &$form_state) {
     drupal_goto($req->get_parameter('oauth_callback'));
   }
   catch (OAuthException $e) {
-    print($e->getMessage() . "\n<hr />\n");
+    print($e->getMessage() ."\n<hr />\n");
     print_r($req);
     die();
   }
