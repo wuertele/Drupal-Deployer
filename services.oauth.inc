@@ -306,7 +306,7 @@ function _services_token_access() {
     global $user;
     $req = OAuthRequest::from_request();
     $token = $server->fetch_access_token($req);
-    parse_str($token);
+//     parse_str($token);
     print $token;
   }
   catch (OAuthException $e) {
@@ -356,30 +356,31 @@ function _services_token_auth() {
  * @ingroup $form
  */
 function _services_token_auth_form() {
+  $_GET['oauth_callback'] = urldecode($_GET['oauth_callback']);
   $form['oauth_callback'] = array(
-    '#type'   => 'value',
-    '#value'  => urldecode($_GET['oauth_callback'])
+    '#type'   => 'hidden',
+    '#value'  => $_GET['oauth_callback']
   );
   $form['oauth_token'] = array(
-    '#type'   => 'value',
+    '#type'   => 'hidden',
     '#value'  => $_GET['oauth_token']
   );
   $form['oauth_consumer_key'] = array(
-    '#type'   => 'value',
+    '#type'   => 'hidden',
     '#value'  => $_GET['oauth_consumer_key'],
   );
   $form['oauth_nonce'] = array(
-    '#type'   => 'value',
+    '#type'   => 'hidden',
     '#value'  => $_GET['oauth_nonce'],
   );
   $form['oauth_nonce_timestamp'] = array(
-    '#type'   => 'value',
+    '#type'   => 'hidden',
     '#value'  => $_GET['oauth_timestamp'],
   );
 
   $form['services'] = array(
     '#description'  => t('Select which services you will allow %consumer use in your behalf',
-      array('%consumer' => urldecode($_GET['oauth_callback']))
+      array('%consumer' => $_GET['oauth_callback'])
     ),
     '#title'        => t('Services'),
     '#tree'         => TRUE,
@@ -448,11 +449,6 @@ function _services_token_auth_form_submit(&$form, &$form_state) {
     print_r($req);
     die();
   }
-
-  // Set the $_GET['q'] back to it's original value
-  $_GET['q'] = $q;
-
-  $form_state['redirect'] = $form_state['values']['oauth_callback'];
 }
 
 /**
