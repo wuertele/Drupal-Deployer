@@ -292,6 +292,12 @@ function _services_oauth_test_submit(&$form, &$form_state) {
 
 /**
  * Access the OAuth services
+ *
+ * @param $consumer_key
+ *   String. The consumer key, which is linked to a Drupal user.
+ * @param $token_key
+ *   String. The request token, which will be replaced by the
+ *   access token.
  */
 function _services_token_access($consumer_key, $token_key) {
   $server = _services_oauth_server_init();
@@ -338,6 +344,7 @@ function _services_token_auth() {
     return drupal_get_form('_services_token_auth_form');
   }
   else {
+    $_GET['destination'] = url('services/auth');
     return drupal_get_form('user_login');
   }
 }
@@ -430,6 +437,11 @@ function _services_token_auth_form_submit(&$form, &$form_state) {
 
 /**
  * Generate a request token from the request
+ *
+ * @param $consumer_key
+ *   String. The consumer key, which is linked to a Drupal user.
+ * @param $consumer_secret
+ *   String. The consumer secret, something like the consumer password.
  */
 function _services_token_request($consumer_key, $consumer_secret) {
   $server = _services_oauth_server_init();
