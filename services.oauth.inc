@@ -318,18 +318,20 @@ function _services_token_access($consumer_key, $token_key) {
  * Redirects to login form if not logged in, and displays the grant access form once logged in.
  */
 function _services_token_auth() {
+  // Check some important arguments
+  if (empty($_GET['oauth_token'])) {
+    drupal_set_message('Please include a valid OAuth token in your request.', 'error');
+    return drupal_access_denied();
+  }
+  elseif (empty($_GET['oauth_callback'])) {
+    drupal_set_message('Please include a valid callback url in your request.', 'error');
+    return drupal_access_denied();
+  }
+
   // Redirect to the right form, or present an error.
   global $user;
   if ($user->uid != 0) {
-    if (empty($_GET['oauth_token'])) {
-      drupal_set_message('OAuth token is not included in request.', 'error');
-      return drupal_access_denied();
-    }
-    elseif (empty($_GET['oauth_callback'])) {
-      drupal_set_message('Please include a valid callback url in your request.', 'error');
-      return drupal_access_denied();
-    }
-    elseif (!user_access('access services')) {
+    if (!user_access('access services')) {
       drupal_set_message('error', t('You are not authorized to allow external services access to this system.'));
       return drupal_access_denied();
     }
