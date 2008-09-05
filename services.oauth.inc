@@ -442,22 +442,21 @@ function _services_token_auth_form_submit(&$form, &$form_state) {
 /**
  * Generate a request token from the request
  */
-function _services_token_request() {
+function _services_token_request($consumer_key, $consumer_secret) {
   $server = _services_oauth_server_init();
-  // Remove the q variable from the query string, as it will break
-  // the signature validation.
-  $q = $_GET['q'];
-  unset($_GET['q']);
+
+  $arguments = array(
+    'oauth_consumer_key'    => $consumer_key,
+    'oauth_consumer_secret' => $consumer_secret,
+    'oauth_timestamp'        => time(),
+  );
 
   try {
-    $req = OAuthRequest::from_request();
+    $req = OAuthRequest::from_request(NULL, NULL, $arguments);
     $token = $server->fetch_request_token($req, $application_key);
-    print $token;
-    die();
+    return $token;
   }
   catch (OAuthException $e) {
-    print($e->getMessage() ."\n<hr />\n");
-    print_r($req);
-    die();
+    return services_error($e->getMessage());
   }
 }
