@@ -205,7 +205,7 @@ function _services_service_get($method_name) {
 function services_service_get_all() {
   static $methods_cache;
   if (!isset($methods_cache)) {
-    $methods = module_invoke_all('service');
+    $methods = module_invoke_all('service_info');
     foreach ($methods as $key => $method) {
       // Add the access functions of each service
       if (!isset($methods[$key]['#access callback'])) {
