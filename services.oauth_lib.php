@@ -233,7 +233,7 @@ class OAuthRequest {
                       "oauth_timestamp" => OAuthRequest::generate_timestamp(),
                       "oauth_consumer_key" => $consumer->key);
     if($parameters[application_secret]){
-      $parameters['application_sig'] = md5($parameters['application_secret'].$defaults['oauth_nonce']);
+      $parameters['application_sig'] = md5($parameters['application_secret'] . $defaults['oauth_nonce']);
       $parameters[application_secret] = '';
     }
     $parameters = array_merge($defaults, $parameters);
@@ -287,16 +287,17 @@ class OAuthRequest {
 
     // Generate key=value pairs
     $pairs = array();
-    foreach ($params as $key=>$value ) {
+    foreach ($params as $key => $value) {
       if (is_array($value)) {
         // If the value is an array, it's because there are multiple
         // with the same key, sort them, then add all the pairs
         natsort($value);
         foreach ($value as $v2) {
-          $pairs[] = $key . '=' . $v2;
+          $pairs[] = $key .'='. $v2;
         }
-      } else {
-        $pairs[] = $key . '=' . $value;
+      }
+      else {
+        $pairs[] = $key .'='. $value;
       }
     }
 
@@ -327,7 +328,7 @@ class OAuthRequest {
   * just uppercases the http method
   */
   public function get_normalized_http_method() {
-    return strtoupper($this->http_method);
+    return drupal_strtoupper($this->http_method);
   }
 
   /**
@@ -338,10 +339,10 @@ class OAuthRequest {
     $parts = parse_url($this->http_url);
 
     // FIXME: port should handle according to http://groups.google.com/group/oauth/browse_thread/thread/1b203a51d9590226
-    $port = (isset($parts['port']) && $parts['port'] != '80') ? ':' . $parts['port'] : '';
+    $port = (isset($parts['port']) && $parts['port'] != '80') ? ':'. $parts['port'] : '';
     $path = (isset($parts['path'])) ? $parts['path'] : '';
 
-    return $parts['scheme'] . '://' . $parts['host'] . $port . $path;
+    return $parts['scheme'] .'://'. $parts['host'] . $port . $path;
   }
 
   /**
@@ -359,7 +360,7 @@ class OAuthRequest {
   public function to_postdata() {
     $total = array();
     foreach ($this->parameters as $k => $v) {
-      $total[] = OAuthUtil::urlencodeRFC3986($k) . "=" . OAuthUtil::urlencodeRFC3986($v);
+      $total[] = OAuthUtil::urlencodeRFC3986($k) ."=". OAuthUtil::urlencodeRFC3986($v);
     }
     $out = implode("&", $total);
     return $out;
@@ -372,8 +373,8 @@ class OAuthRequest {
     $out ='"Authorization: OAuth realm="",';
     $total = array();
     foreach ($this->parameters as $k => $v) {
-      if (substr($k, 0, 5) != "oauth") continue;
-      $out .= ',' . OAuthUtil::urlencodeRFC3986($k) . '="' . OAuthUtil::urlencodeRFC3986($v) . '"';
+      if (drupal_substr($k, 0, 5) != "oauth") continue;
+      $out .= ','. OAuthUtil::urlencodeRFC3986($k) .'="'. OAuthUtil::urlencodeRFC3986($v) . '"';
     }
     return $out;
   }
@@ -423,13 +424,13 @@ class OAuthRequest {
     foreach ($parts as $param) {
       $param = ltrim($param);
       // skip the "realm" param, nobody ever uses it anyway
-      if (substr($param, 0, 5) != "oauth") continue;
+      if (drupal_substr($param, 0, 5) != "oauth") continue;
 
       $param_parts = explode("=", $param);
 
       // rawurldecode() used because urldecode() will turn a "+" in the
       // value into a space
-      $out[$param_parts[0]] = rawurldecode(substr($param_parts[1], 1, -1));
+      $out[$param_parts[0]] = rawurldecode(drupal_substr($param_parts[1], 1, -1));
     }
     return $out;
   }
@@ -447,11 +448,11 @@ class OAuthRequest {
     // that $_SERVER actually contains what we need
     $out = array();
     foreach ($_SERVER as $key => $value) {
-      if (substr($key, 0, 5) == "HTTP_") {
+      if (drupal_substr($key, 0, 5) == "HTTP_") {
         // this is chaos, basically it is just there to capitalize the first
         // letter of every word that is not an initial HTTP and strip HTTP
         // code from przemek
-        $key = str_replace(" ", "-", ucwords(strtolower(str_replace("_", " ", substr($key, 5)))));
+        $key = str_replace(" ", "-", ucwords(strtolower(str_replace("_", " ", drupal_substr($key, 5)))));
         $out[$key] = $value;
       }
     }
