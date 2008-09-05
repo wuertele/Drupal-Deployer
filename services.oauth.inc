@@ -118,15 +118,12 @@ function _services_oauth_server_init() {
        *
        * @param $consumer
        *   Object. The service consumer information.
-       * @param $application_key
-       *   Strint. This application key.
        */
-      function new_request_token($consumer, $application_key = NULL) {
+      function new_request_token($consumer) {
         $user_id = db_result(db_query("SELECT uid FROM {services_consumer}
           WHERE consumer_key = '%s'", $consumer->key));
         $token = new OAuthToken(user_password(32), user_password(32));
         $sql = array(
-          'application_key' => $application_key,
           'consumer_key'    => $consumer->key,
           'type'            => 'request',
           'token_key'       => $token->key,
@@ -147,7 +144,7 @@ function _services_oauth_server_init() {
        * @param $user
        *   Object (optional). The user information.
        */
-      function new_access_token($token_old, $consumer, $user = NULL) {
+      function new_access_token($token_old, $consumer) {
         if ($object = db_fetch_object(db_query("SELECT * FROM {services_token}
           WHERE type = 'request' AND token_key = '%s'", $token_old->key))) {
           if ($object->authorized) {
@@ -155,7 +152,6 @@ function _services_oauth_server_init() {
             $user_id = db_result(db_query("SELECT uid FROM {services_consumer}
               WHERE consumer_key = '%s'", $consumer->key));
             $sql = array(
-              'application_key' => NULL,
               'consumer_key'    => $consumer->key,
               'type'            => 'access',
               'token_key'       => $token_new->key,
@@ -447,7 +443,7 @@ function _services_token_request($consumer_key, $consumer_secret) {
 
   try {
     $req = OAuthRequest::from_request(NULL, NULL, $arguments);
-    $token = $server->fetch_request_token($req, $application_key);
+    $token = $server->fetch_request_token($req);
     return $token;
   }
   catch (OAuthException $e) {
