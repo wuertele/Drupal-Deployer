@@ -9,7 +9,7 @@
 /**
  * List all services available.
  */
-function services_admin_browse_index() {
+function _services_admin_service_list() {
   module_load_include('inc', 'services');
   $methods = services_service_get_all();
 
