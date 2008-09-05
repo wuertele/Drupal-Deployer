@@ -149,7 +149,7 @@ function _services_oauth_server_init() {
             $user_id = db_result(db_query("SELECT uid FROM {services_consumer}
               WHERE consumer_key = '%s'", $consumer->key));
             $sql = array(
-              'application_key' => (variable_get('services_use_coolauth', 0) ? $object->application_key : 'NULL'),
+              'application_key' => 'NULL',
               'consumer_key'    => $consumer->key,
               'type'            => 'access',
               'token_key'       => $token->key,
@@ -376,17 +376,16 @@ function _services_token_auth_form() {
     '#type'   => 'hidden',
     '#value'  => $_GET['oauth_timestamp'],
   );
-  if (variable_get('oauth_use_with_services', 0)) {
-    $form['services'] = array(
-      '#description'  => t('Select which services you will allow %consumer use in your behalf',
-        array('%consumer' => $_GET['oauth_callback'])
-      ),
-      '#title'        => t('Services'),
-      '#tree'         => TRUE,
-      '#type'         => 'fieldset',
-    );
 
-  // Display all services avaialbe
+  $form['services'] = array(
+    '#description'  => t('Select which services you will allow %consumer use in your behalf',
+      array('%consumer' => $_GET['oauth_callback'])
+    ),
+    '#title'        => t('Services'),
+    '#tree'         => TRUE,
+    '#type'         => 'fieldset',
+  );
+  // Display all services available
   module_load_include('inc', 'services');
   foreach (services_service_get_all() as $service) {
     $form['services'][$service['#method']] = array(
@@ -394,8 +393,8 @@ function _services_token_auth_form() {
       '#type'           => 'checkbox',
       '#default_value'  => 0,
     );
-    }
   }
+
   $form['confirm'] = array(
     '#type'   => 'submit',
     '#value'  => t('Grant access'),
