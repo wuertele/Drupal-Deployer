@@ -47,13 +47,19 @@ function _services_oauth_server_init() {
     * Database abstraction class
     */
     class DrupalOAuthDataStore extends OAuthDataStore {
+      /**
+       * Check if consumer exists from a given consumer key.
+       *
+       * @param $consumer_key
+       *   String. The consumer key.
+       */
       function lookup_consumer($consumer_key) {
         $result = db_query("SELECT * FROM {services_consumer}
           WHERE consumer_key = '%s'", $consumer_key);
         if ($object = db_fetch_object($result)) {
           return new OAuthConsumer($object->consumer_key, $object->consumer_secret);
         }
-        return NULL;
+        throw new OAuthException('Consumer not found');
       }
 
       /**
@@ -76,7 +82,7 @@ function _services_oauth_server_init() {
         if ($object = db_fetch_object($result)) {
           return new OAuthToken($object->token_key, $object->token_secret);
         }
-        return NULL;
+        throw new OAuthException('Token not found');
       }
 
       /**
@@ -134,36 +140,36 @@ function _services_oauth_server_init() {
       /**
        * Generate a new access token and delete the old request token.
        *
-       * @param $request_token
+       * @param $token_old
        *   Strint. The old request token.
        * @param $consumer
        *   Object. The service consumer information.
        * @param $user
        *   Object (optional). The user information.
        */
-      function new_access_token($request_token, $consumer, $user = NULL) {
+      function new_access_token($token_old, $consumer, $user = NULL) {
         if ($object = db_fetch_object(db_query("SELECT * FROM {services_token}
-          WHERE type = 'request' AND token_key = '%s'", $request_token->key))) {
+          WHERE type = 'request' AND token_key = '%s'", $token_old))) {
           if ($object->authorized) {
-            $token = new OAuthToken(user_password(32), user_password(32));
+            $token_new = new OAuthToken(user_password(32), user_password(32));
             $user_id = db_result(db_query("SELECT uid FROM {services_consumer}
               WHERE consumer_key = '%s'", $consumer->key));
             $sql = array(
               'application_key' => NULL,
               'consumer_key'    => $consumer->key,
               'type'            => 'access',
-              'token_key'       => $token->key,
-              'token_secret'    => $token->secret,
+              'token_key'       => $token_new->key,
+              'token_secret'    => $token_new->secret,
               'uid'             => $user_id
             );
             drupal_write_record('services_token', $sql);
 
             db_query("DELETE FROM {services_token} WHERE
-              type = 'request' AND token_key = '%s'", $request_token->key);
-            return $token;
+              type = 'request' AND token_key = '%s'", $token_old->key);
+            return $token_new;
           }
         }
-        return NULL;
+        throw new OAuthException('Invalid request token');
       }
     }
 
