@@ -357,29 +357,29 @@ function _services_token_auth() {
  */
 function _services_token_auth_form() {
   $form['oauth_callback'] = array(
-    '#type'   => 'hidden',
-    '#value'  => $_GET['oauth_callback']
+    '#type'   => 'value',
+    '#value'  => urldecode($_GET['oauth_callback'])
   );
   $form['oauth_token'] = array(
-    '#type'   => 'hidden',
+    '#type'   => 'value',
     '#value'  => $_GET['oauth_token']
   );
   $form['oauth_consumer_key'] = array(
-    '#type'   => 'hidden',
+    '#type'   => 'value',
     '#value'  => $_GET['oauth_consumer_key'],
   );
   $form['oauth_nonce'] = array(
-    '#type'   => 'hidden',
+    '#type'   => 'value',
     '#value'  => $_GET['oauth_nonce'],
   );
   $form['oauth_nonce_timestamp'] = array(
-    '#type'   => 'hidden',
+    '#type'   => 'value',
     '#value'  => $_GET['oauth_timestamp'],
   );
 
   $form['services'] = array(
     '#description'  => t('Select which services you will allow %consumer use in your behalf',
-      array('%consumer' => $_GET['oauth_callback'])
+      array('%consumer' => urldecode($_GET['oauth_callback']))
     ),
     '#title'        => t('Services'),
     '#tree'         => TRUE,
@@ -473,10 +473,10 @@ function _services_token_request() {
   }
   catch (OAuthException $e) {
     print($e->getMessage() ."\n<hr />\n");
-
     print_r($req);
     die();
   }
+
   // Set the $_GET['q'] back to it's original value
   $_GET['q'] = $q;
 }
