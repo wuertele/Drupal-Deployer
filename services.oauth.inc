@@ -416,8 +416,6 @@ function _services_token_auth_form() {
  * @ingroup form
  */
 function _services_token_auth_form_submit(&$form, &$form_state) {
-  global $user;
-
   module_load_include('inc', 'services');
   foreach (services_service_get_all() as $service) {
     $method_name = $service['#method'];
@@ -426,28 +424,19 @@ function _services_token_auth_form_submit(&$form, &$form_state) {
     }
   }
 
-  // Start the OAuth server
-  $server = _services_oauth_server_init();
+  // Save the list of all services that the user allowed the
+  // consumer to do
+  global $user;
+  $sql = array(
+    'authorized'  => 1,
+    'uid'         => $user->uid,
+    'token_key'   => $form_state['values']['oauth_token'],
+    'services'    => $services,
+  );
+  drupal_write_record('services_token', $sql, 'token_key');
 
-  $q = $_GET['q'];
-  unset($_GET['q']);
-  try {
-    $req = OAuthRequest::from_request();
-    global $user;
-    $sql = array(
-      'authorized'  => 1,
-      'uid'         => $user->uid,
-      'token_key'   => $form_state['values']['oauth_token'],
-      'services'    => $services,
-    );
-    drupal_write_record('services_token', $sql, 'token_key');
-    drupal_goto($req->get_parameter('oauth_callback'));
-  }
-  catch (OAuthException $e) {
-    print($e->getMessage() ."\n<hr />\n");
-    print_r($req);
-    die();
-  }
+  // Return to the consumer site
+  drupal_goto($form_state['values']['oauth_callback']);
 }
 
 /**
