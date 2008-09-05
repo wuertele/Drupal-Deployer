@@ -104,7 +104,7 @@ function _services_admin_service_test_js() {
 /**
  * Configure the Services module
  */
-function services_admin_settings() {
+function _services_admin_settings() {
   $form['security'] = array(
     '#title'        => t('Security'),
     '#type'         => 'fieldset',
