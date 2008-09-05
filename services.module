@@ -91,26 +91,64 @@ function services_menu() {
     'title'             => 'Services',
     'type'              => MENU_CALLBACK,
   );
-  $items['services/request'] = array(
-    'access arguments'  => array('access services'),
-    'file'              => 'services.oauth.inc',
-    'page callback'     => '_services_token_request',
-    'type'              => MENU_CALLBACK,
-  );
   $items['services/auth'] = array(
     'access arguments'  => array('access services'),
     'file'              => 'services.oauth.inc',
     'page callback'     => '_services_token_auth',
     'type'              => MENU_CALLBACK,
   );
-  $items['services/access'] = array(
-    'access arguments'  => array('access services'),
-    'file'              => 'services.oauth.inc',
-    'page callback'     => '_services_token_access',
-    'type'              => MENU_CALLBACK,
-  );
 
   return $items;
+}
+
+/**
+ * Implementation of hook_service().
+ */
+function services_service() {
+  return array(
+    array(
+      '#method'           => 'system.tokenRequest',
+      '#description'      => t('Request a OAuth request token.'),
+      '#callback'         => '_services_token_request',
+      '#access argument'  => array('access services'),
+      '#no_auth'          => TRUE,
+      '#file'             => array('file' => 'oauth.inc', 'module' => 'services'),
+      '#args'             => array(
+        array(
+          '#name'           => 'consumer_key',
+          '#type'           => 'varchar',
+          '#description'    => t('Consumer key.'),
+        ),
+        array(
+          '#name'           => 'consumer_secret',
+          '#type'           => 'varchar',
+          '#description'    => t('Consumer secret.'),
+        ),
+      ),
+      '#return'           => 'array',
+    ),
+    array(
+      '#method'           => 'system.tokenAccess',
+      '#description'      => t('Request a OAuth access token.'),
+      '#callback'         => '_services_token_access',
+      '#access argument'  => array('access services'),
+      '#no_auth'          => TRUE,
+      '#file'             => array('file' => 'oauth.inc', 'module' => 'services'),
+      '#args'             => array(
+        array(
+          '#name'           => 'consumer_key',
+          '#type'           => 'varchar',
+          '#description'    => t('Consumer key.'),
+        ),
+        array(
+          '#name'           => 'token_key',
+          '#type'           => 'varchar',
+          '#description'    => t('OAuth Resquest token.'),
+        ),
+      ),
+      '#return'           => 'array',
+    ),
+  );
 }
 
 /**
