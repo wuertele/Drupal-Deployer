@@ -44,46 +44,6 @@ function services_admin_browse_index() {
  *
  * @param $method
  *   Object. The service info.
- */
-function services_admin_browse_method($method) {
-  global $_services_admin_browse_test_submit_result;
-
-  $output = '<h3>'. $method['#method'] .'</h3>'.
-    '<p>'. $method['#description'] .'</p>';
-
-  // List arguments.
-  $output .= '<h3>'. t('Arguments') .' ('. count($method['#args']) .')</h3>';
-  $output .= '<dl id="service-browser-arguments">';
-  $count = 0;
-  foreach ($method['#args'] as $arg) {
-    $count++;
-    $output .= '<dt><em class="type">'. $arg['#type'] .'</em><strong class="name">'.
-      $arg['#name'] .'</strong> ('. (($arg['#optional']) ? t('optional') : t('required')) .')</dt>';
-    $output .= '<dd>'. $arg['#description'] .'</dd>';
-  }
-
-  $output .= '</dl>';
-
-  // Allow testing of methods
-  $output .= '<h3>'. t('Call method') .'</h3>'.
-    drupal_get_form('services_admin_browse_test');
-
-  // Display results
-  if ($_services_admin_browse_test_submit_result) {
-    $output .= '<div id="output">';
-    $output .= '<h3>'. t('Result') .'</h3>';
-    $output .= '<code>'. $_services_admin_browse_test_submit_result .'</code>';
-    $output .= '</div>';
-  }
-
-  return $output;
-}
-
-/**
- * Allow users to test a given service.
- *
- * @param $method
- *   Object. The service info.
  *
  * @ingroup form
  */
