@@ -453,7 +453,7 @@ class OAuthRequest {
         // this is chaos, basically it is just there to capitalize the first
         // letter of every word that is not an initial HTTP and strip HTTP
         // code from przemek
-        $key = str_replace(" ", "-", ucwords(strtolower(str_replace("_", " ", drupal_substr($key, 5)))));
+        $key = str_replace(" ", "-", ucwords(drupal_strtolower(str_replace("_", " ", drupal_substr($key, 5)))));
         $out[$key] = $value;
       }
     }
