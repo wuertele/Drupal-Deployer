@@ -149,7 +149,7 @@ function _services_oauth_server_init() {
        */
       function new_access_token($token_old, $consumer, $user = NULL) {
         if ($object = db_fetch_object(db_query("SELECT * FROM {services_token}
-          WHERE type = 'request' AND token_key = '%s'", $token_old))) {
+          WHERE type = 'request' AND token_key = '%s'", $token_old->key))) {
           if ($object->authorized) {
             $token_new = new OAuthToken(user_password(32), user_password(32));
             $user_id = db_result(db_query("SELECT uid FROM {services_consumer}
@@ -445,9 +445,9 @@ function _services_token_auth_form_submit(&$form, &$form_state) {
     $sql = array(
       'authorized'  => 1,
       'uid'         => $user->uid,
-      'token_key'   => $key,
+      'token_key'   => $form_state['values']['oauth_token'],
     );
-    drupal_write_record('oauth_token', $sql, 'token_key');
+    drupal_write_record('services_token', $sql, 'token_key');
     drupal_goto($req->get_parameter('oauth_callback'));
   }
   catch (OAuthException $e) {
