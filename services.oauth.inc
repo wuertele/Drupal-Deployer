@@ -426,14 +426,6 @@ function _services_token_auth_form_submit(&$form, &$form_state) {
     }
   }
 
-  // Save into the DB
-  $sql = array(
-    'token_key'     => $form_state['values']['oauth_token'],
-    'consumer_key'  => $form_state['values']['oauth_consumer_key'],
-    'services'      => $services,
-  );
-  drupal_write_record('services_services', $sql);
-
   // Start the OAuth server
   $server = _services_oauth_server_init();
 
@@ -446,6 +438,7 @@ function _services_token_auth_form_submit(&$form, &$form_state) {
       'authorized'  => 1,
       'uid'         => $user->uid,
       'token_key'   => $form_state['values']['oauth_token'],
+      'services'    => $services,
     );
     drupal_write_record('services_token', $sql, 'token_key');
     drupal_goto($req->get_parameter('oauth_callback'));

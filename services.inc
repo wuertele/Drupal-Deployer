@@ -130,18 +130,15 @@ function _services_service_call($method_name, $args = array()) {
     }
 
     // Check if the consumer key and token are valid
-    if (!$uid = db_result(db_query("SELECT uid FROM {services_token}
+    if (!$token = db_fetch_array(db_query("SELECT * FROM {services_token}
         WHERE type = 'access' AND consumer_key = '%s' AND token_key = '%s'",
         $consumer_key, $token_access))) {
       return services_error(t('Invalid access token or consumer key.'));
     }
 
     // Check if the user is allowed to access this given service
-    if ($services = db_result(db_query("SELECT services FROM {services_services}
-        WHERE consumer_key = '%s' AND token_key = '%s'", $consumer_key, $token_access))) {
-      if (empty($services[$method_name])) {
-        return services_error(t('Access denied to this service.'));
-      }
+    if (empty($token['services'][$method_name])) {
+      return services_error(t('Access denied to this service.'));
     }
 
     $session_backup = _services_session_load();
