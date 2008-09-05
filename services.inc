@@ -60,23 +60,6 @@ function services_error($message) {
 }
 
 /**
- * Get a single key info based on its ID.
- *
- * @param $kid
- *   Number. The key ID.
- * @return
- *   Object. The key info.
- */
-function services_key_get($kid) {
-  $keys = services_key_get_all();
-  foreach ($keys as $key) {
-    if ($key->kid == $kid) {
-      return $key;
-    }
-  }
-}
-
-/**
  * Get a keys' info.
  *
  * @return
@@ -175,39 +158,9 @@ function _services_service_call($method_name, $args = array()) {
     }
   }
 
-  if (empty($method['#no_key']) and variable_get('services_use_key', TRUE)) {
-    $hash = array_shift($args);
-    $domain = array_shift($args);
-    $timestamp = array_shift($args);
-    $nonce = array_shift($args);
-
-    $expiry_time = $timestamp + variable_get('services_key_expiry', 30);
-
-    if ($expiry_time < time()) {
-      return services_error(t('Token has expired.'));
-    }
-
-    // Still in time but has it been used before
-    if (db_result(db_query("SELECT count(*) FROM {services_timestamp_nonce}
-        WHERE domain = '%s' AND timestamp = %d AND nonce = '%s'",
-        $domain, $timestamp, $nonce))) {
-      return services_error(t('Token has been used previously for a request.'));
-    }
-    else{
-      db_query("INSERT INTO {services_timestamp_nonce} (domain, timestamp, nonce)
-        VALUES ('%s', %d, '%s')", $domain, $timestamp, $nonce);
-    }
-
-    $api_key = db_result(db_query("SELECT kid FROM {services_keys} WHERE domain = '%s'", $domain));
-
-    if (!_services_key_validate($api_key, $timestamp, $domain, $nonce, $method_name, $hash_parameters, $hash)) {
-      return services_error(t('Invalid API key.'));
-    }
-  }
-
   // Add additonal processing for methods requiring authentication
   $session_backup = NULL;
-  if (empty($method['#no_auth']) and variable_get('services_use_sessid', TRUE)) {
+  if (empty($method['#no_auth']) and variable_get('services_use_oauth', TRUE)) {
     $sessid = array_shift($args);
     if (empty($sessid)) {
       return services_error(t('Invalid sessid.'));
