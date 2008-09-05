@@ -15,15 +15,6 @@ function _services_crossdomain_xml() {
   $output .= '<cross-domain-policy>'."\n";
   $output .= '  <allow-access-from domain="'. check_plain($_SERVER['HTTP_HOST']) .'" />'."\n";
   $output .= '  <allow-access-from domain="*.'. check_plain($_SERVER['HTTP_HOST']) .'" />'."\n";
-  $keys = services_key_get_all();
-
-  foreach ($keys as $key) {
-    if (!empty($key->domain)) {
-      $output .= '  <allow-access-from domain="'. check_plain($key->domain) .'" />'."\n";
-      $output .= '  <allow-access-from domain="*.'. check_plain($key->domain) .'" />'."\n";
-    }
-  }
-
   $output .= '</cross-domain-policy>';
 
   // Include the XML header before the content
@@ -57,38 +48,6 @@ function services_error($message) {
 
   // No custom error handling function found.
   return $message;
-}
-
-/**
- * Get a keys' info.
- *
- * @return
- *   Array. A list of keys' info.
- */
-function services_key_get_all() {
-  static $keys;
-  if (!$keys) {
-    $keys = array();
-    $result = db_query('SELECT * FROM {services_keys}');
-    while ($key = db_fetch_object($result)) {
-      $keys[$key->kid] = $key;
-    }
-  }
-  return $keys;
-}
-
-/**
- * Check it the given key is valud.
- *
- * @param $kid
- *   Number. Key ID.
- * @return
- *   Boolean. TRUE if the key is valid.
- */
-function _services_key_validate($kid, $timestamp, $domain, $nonce, $method_name, $hash_parameters, $hash) {
-  $hash_parameters = array_merge(array($timestamp, $domain, $nonce, $method_name), $hash_parameters);
-  $rehash = hash_hmac('sha256', implode(';', $hash_parameters), $kid);
-  return $rehash == $hash;
 }
 
 /**
