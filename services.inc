@@ -119,15 +119,22 @@ function _services_service_call($method_name, $args = array()) {
   // Check the OAuth authentication
   $session_backup = NULL;
   if (empty($method['#no_auth']) and variable_get('services_use_oauth', TRUE)) {
+    // Check if the needed keys are present
     $consumer_key = array_shift($args);
     $token_access = array_shift($args);
     if (empty($consumer_key)) {
-      return services_error(t('Invalid consumer key.'));
+      return services_error(t('Consumer key missing.'));
     }
     elseif (empty($token_access)) {
-      return services_error(t('Invalid access token.'));
+      return services_error(t('Access token missing.'));
     }
-    $session_backup = _services_session_load($sessid);
+    elseif (!$uid = db_result(db_query("SELECT uid FROM {services_token}
+        WHERE type = 'access' AND consumer_key = '%s' AND token_key = '%s'",
+        $consumer_key, $token_access))) {
+      return services_error(t('Invalid access token or consumer key.'));
+    }
+
+    $session_backup = _services_session_load();
   }
 
   // Load the file where the service callback is
