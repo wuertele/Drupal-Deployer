@@ -17,30 +17,6 @@ function services_install() {
  * Implementation of hook_schema().
  */
 function services_schema() {
-  $schema['services_keys'] = array(
-    'description' => 'Stores all Service keys.',
-    'fields' => array(
-      'kid' => array(
-        'description' => 'The service key ID.',
-        'type'      => 'varchar',
-        'length'    => 32,
-        'not null'  => TRUE
-      ),
-      'title' => array(
-        'description' => 'The title of the service key.',
-        'type'      => 'varchar',
-        'length'    => 255,
-        'not null'  => TRUE
-      ),
-      'domain' => array(
-        'description' => 'The domain of the service key.',
-        'type'      => 'varchar',
-        'length'    => 255,
-        'not null'  => TRUE
-      ),
-    ),
-    'primary key' => array('kid')
-  );
   $schema['services_timestamp_nonce'] = array(
     'description' => 'Stores timestamp against nonce for repeat attacks.',
     'fields' => array(
@@ -150,9 +126,7 @@ function services_schema() {
  */
 function services_uninstall() {
   drupal_uninstall_schema('services');
-  variable_del('services_use_key');
-  variable_del('services_use_sessid');
-  variable_del('services_use_coolauth');
+  variable_del('services_use_oauth');
 }
 
 /**
@@ -161,9 +135,12 @@ function services_uninstall() {
  * Create the nonce table
  */
 function services_update_6001() {
-  $schema = services_schema();
   $update = array();
+
+  // Install new databases
+  $schema = services_schema();
   db_create_table($update, 'services_timestamp_nonce', $schema['services_timestamp_nonce']);
+
   return $update;
 }
 
@@ -173,9 +150,19 @@ function services_update_6001() {
  * Create the nonce table
  */
 function services_update_6002() {
-  $schema = services_schema();
   $update = array();
+
+  // Install new databases
+  $schema = services_schema();
   db_create_table($update, 'services_consumer', $schema['services_consumer']);
   db_create_table($update, 'services_token', $schema['services_token']);
+
+  // Delete unused DB tables
+  db_query('DROP TABLE {services_keys}');
+
+  // Delete unused variables
+  variable_del('services_use_key');
+  variable_del('services_use_sessid');
+
   return $update;
 }
