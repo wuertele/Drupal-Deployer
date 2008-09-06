@@ -463,8 +463,8 @@ function services_method_get($method_name) {
 }
 
 function services_validate_key($kid, $timestamp, $domain, $nonce, $method_name, $hash_parameters, $hash) {
-  $hash_parameters_string = implode(';', $hash_parameters);
-  $rehash = hash_hmac("sha256", $timestamp . $domain . $nonce . $method_name . $hash_parameters_string, $kid);
+  $hash_parameters = array_merge(array($timestamp, $domain, $nonce, $method_name), $hash_parameters);
+  $rehash = hash_hmac("sha256", implode(';', $hash_parameters), $kid);
   return ($rehash == $hash) ? TRUE : FALSE;
 }
 
