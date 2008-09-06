@@ -18,38 +18,11 @@
  *   Object. The node object with all wanted fields.
  */
 function node_service_get($nid, $fields = array()) {
-  if (!$node = _services_node_load(node_load(array('nid' => $nid)), $fields)) {
+  if (!$node = services_node_load(node_load(array('nid' => $nid)), $fields)) {
     return services_error(t('Could not find the node.'));
   }
 
   return $node;
-}
-
-/**
- * Make any changes we might want to make to node.
- */
-function _services_node_load($node, $fields = array()) {
-  if (!isset($node->nid)) {
-    return NULL;
-  }
-
-  // Apply filters to fields
-  $body = $node->body;
-  $node->body = new stdClass();
-  $node->body_value = $body;
-  $node->body = check_markup($body, $node->format, FALSE);
-
-  // Loop through and get only requested fields
-  if (count($fields) > 0) {
-    foreach ($fields as $field) {
-      $val->{$field} = $node->{$field};
-    }
-  }
-  else {
-    $val = $node;
-  }
-
-  return $val;
 }
 
 /**

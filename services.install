@@ -7,6 +7,67 @@
  */
 
 /**
+ * Implementation of hook_schema().
+ */
+function services_schema() {
+  $schema['services_keys'] = array(
+    'description' => 'Stores all Service keys.',
+    'fields' => array(
+      'kid' => array(
+        'description' => 'The service key ID.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => ''
+      ),
+      'title' => array(
+        'description' => 'The title of the service key.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''
+      ),
+      'domain' => array(
+        'description' => 'The domain of the service key.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''
+      ),
+    ),
+    'primary key' => array('kid')
+  );
+
+  $schema['services_timestamp_nonce'] = array(
+    'description' => 'Stores timestamp against nonce for repeat attacks.',
+    'fields' => array(
+      'timestamp' => array(
+        'description' => 'The timestamp used with the Nonce.',
+        'type'        => 'varchar',
+        'length'      => 32,
+        'not null'    => TRUE,
+        'default'     => ''
+      ),
+      'nonce' => array(
+        'description' => 'The random string used on the request.',
+        'type'        => 'varchar',
+        'length'      => 32,
+        'not null'    => TRUE,
+        'default'     => ''
+      ),
+      'domain' => array(
+        'description' => 'The domain that submitted the request.',
+        'type'        => 'varchar',
+        'length'      => 255,
+        'not null'    => TRUE,
+        'default'     => ''
+      ),
+    ),
+  );
+  return $schema;
+}
+
+/**
  * Implementation of hook_install().
  */
 function services_install() {
@@ -14,119 +75,13 @@ function services_install() {
 }
 
 /**
- * Implementation of hook_schema().
- */
-function services_schema() {
-  $schema['services_consumer'] = array(
-    'description' => t('Consumer keys for users that can consume services.'),
-    'fields' => array(
-      'uid' => array(
-        'description' => t('User ID from {user}.uid.'),
-        'type'        => 'int',
-        'unsigned'    => TRUE,
-        'not null'    => TRUE
-      ),
-      'consumer_key' => array(
-        'description' => t('Consumer key allow the user to contact the services API as an external application.'),
-        'type'        => 'varchar',
-        'length'      => 32,
-        'not null'    => TRUE
-      ),
-      'consumer_secret' => array(
-        'description' => t('Consumer key "password".'),
-        'type'        => 'varchar',
-        'length'      => 32,
-        'not null'    => TRUE
-      ),
-    ),
-    'primary key' => array('uid'),
-    'unique keys' => array(
-      'consumer_key' => array('consumer_key')
-    ),
-  );
-  $schema['services_token'] = array(
-    'description' => t('Tokens for request and services accesses.'),
-    'fields' => array(
-      'token_key' => array(
-        'description' => t('Tokens for request and services accesses.'),
-        'type'        => 'varchar',
-        'length'      => 32,
-        'not null'    => TRUE
-      ),
-      'token_secret' => array(
-        'description' => t('Token "password".'),
-        'type'        => 'varchar',
-        'length'      => 32,
-        'not null'    => TRUE
-      ),
-      'type' => array(
-        'description' => t('Type of the token: request or access.'),
-        'type'        => 'varchar',
-        'length'      => 7,
-        'not null'    => TRUE
-      ),
-      'uid' => array(
-        'description' => t('User ID from {user}.uid.'),
-        'type'        => 'int',
-        'unsigned'    => TRUE,
-        'not null'    => TRUE
-      ),
-      'consumer_key' => array(
-        'description' => t('Consumer key from {services_consumer}.consumer_key.'),
-        'type'        => 'varchar',
-        'length'      => 32,
-        'not null'    => TRUE
-      ),
-      'services' => array(
-        'description' => t('An array of services that the use allowed the consuemr to do.'),
-        'type'        => 'text',
-      ),
-      'authorized' => array(
-        'description' => t('In case its a request token, it checks if the user already authorized him to get an access token.'),
-        'type'        => 'int',
-        'size'        => 'tiny',
-        'default'     => 0
-      ),
-    ),
-   'primary key' => array('token_key'),
-   'indexes' => array(
-      'token_key_type' => array('token_key', 'type'),
-    ),
-  );
-  $schema['services_timestamp_nonce'] = array(
-    'description' => t('Stores timestamp against nonce for repeat attacks.'),
-    'fields' => array(
-      'nonce' => array(
-        'description' => t('The random string used on the request.'),
-        'type'        => 'varchar',
-        'length'      => 32,
-        'not null'    => TRUE
-      ),
-      'timestamp' => array(
-        'description' => t('The timestamp used with the Nonce.'),
-        'type'        => 'int',
-        'not null'    => TRUE
-      ),
-      'domain' => array(
-        'description' => t('The domain that submitted the request.'),
-        'type'        => 'varchar',
-        'length'      => 255
-      ),
-    ),
-    'primary key' => array('nonce'),
-    'indexes' => array(
-      'timestamp' => array('timestamp'),
-    ),
-  );
-  return $schema;
-}
-
-/**
  * Implementation of hook_uninstall().
  */
 function services_uninstall() {
   drupal_uninstall_schema('services');
-  variable_del('services_use_oauth');
+  variable_del('services_use_key');
+  variable_del('services_use_sessid');
+  variable_del('services_debug');
 }
 
 /**
@@ -135,34 +90,33 @@ function services_uninstall() {
  * Create the nonce table
  */
 function services_update_6001() {
+  $schema['services_timestamp_nonce'] = array(
+    'description' => 'Stores timestamp against nonce for repeat attacks.',
+    'fields' => array(
+      'timestamp' => array(
+        'description' => 'The timestamp used with the Nonce.',
+        'type'        => 'varchar',
+        'length'      => 32,
+        'not null'    => TRUE,
+        'default'     => ''
+      ),
+      'nonce' => array(
+        'description' => 'The random string used on the request.',
+        'type'        => 'varchar',
+        'length'      => 32,
+        'not null'    => TRUE,
+        'default'     => ''
+      ),
+      'domain' => array(
+        'description' => 'The domain that submitted the request.',
+        'type'        => 'varchar',
+        'length'      => 255,
+        'not null'    => TRUE,
+        'default'     => ''
+      ),
+    ),
+  );
   $update = array();
-
-  // Install new databases
-  $schema = services_schema();
   db_create_table($update, 'services_timestamp_nonce', $schema['services_timestamp_nonce']);
-
-  return $update;
-}
-
-/**
- * Implementation of hook_update().
- *
- * Create the nonce table
- */
-function services_update_6002() {
-  $update = array();
-
-  // Install new databases
-  $schema = services_schema();
-  db_create_table($update, 'services_consumer', $schema['services_consumer']);
-  db_create_table($update, 'services_token', $schema['services_token']);
-
-  // Delete unused DB tables
-  db_query('DROP TABLE {services_keys}');
-
-  // Delete unused variables
-  variable_del('services_use_key');
-  variable_del('services_use_sessid');
-
   return $update;
 }
