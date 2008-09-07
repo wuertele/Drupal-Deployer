@@ -33,9 +33,6 @@ function amazon_media_views_data() {
   _amazon_make_simple_number_field($data, 'amazon_book', 'numberofpages', 'Pages', 'The number of pages in an Amazon book product.');
   _amazon_make_simple_text_field($data, 'amazon_book', 'publicationdate', 'Publication date');
 
-
-
-
   // Define the base group of this table. Fields that don't
   // have a group defined will go into this field by default.
   $data['amazon_dvd']['table']['group']  = t('Amazon');
@@ -53,7 +50,6 @@ function amazon_media_views_data() {
   _amazon_make_simple_number_field($data, 'amazon_dvd', 'regioncode', 'Region code', 'The region code of an Amazon DVD product.');
   _amazon_make_simple_number_field($data, 'amazon_dvd', 'runningtime', 'Running time', 'The length of an Amazon video product, in minutes.');
 
-
   // Define the base group of this table. Fields that don't
   // have a group defined will go into this field by default.
   $data['amazon_music']['table']['group']  = t('Amazon');
@@ -70,7 +66,6 @@ function amazon_media_views_data() {
   _amazon_make_simple_text_field($data, 'amazon_music', 'label', 'Label', 'The label that published an Amazon music product.');
   _amazon_make_simple_text_field($data, 'amazon_music', 'studio', 'Studio', 'The studio that published an Amazon music product.');
   _amazon_make_simple_number_field($data, 'amazon_music', 'numberofdiscs', 'Number of discs', 'The number of discs inclued in an Amazon music product.');
-
 
   // Define the base group of this table. Fields that don't
   // have a group defined will go into this field by default.
