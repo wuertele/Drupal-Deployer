@@ -25,14 +25,14 @@ $(document).ready(function() {
     // Stop the timer.
     clearTimeout(this.sfTimer);
     // Display child lists.
-    $('> ul', this).css('left', 'auto')
+    $('> ul', this).css({left: 'auto', display: 'block'})
       // Immediately hide nephew lists.
-      .parent().siblings('li').children('ul').css('left', '-999em');
+      .parent().siblings('li').children('ul').css({left: '-999em', display: 'none'});
   }, function() {
     // Start the timer.
     var uls = $('> ul', this);
     this.sfTimer = setTimeout(function() {
-      uls.css('left', '-999em');
+      uls.css({left: '-999em', display: 'none'});
     }, 400);
   });
 });
