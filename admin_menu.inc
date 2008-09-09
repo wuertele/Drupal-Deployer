@@ -346,7 +346,7 @@ function admin_menu_theme_settings() {
   $form['tweaks']['admin_menu_tweak_modules'] = array(
     '#type' => 'checkbox',
     '#title' => t('Collapse fieldsets on modules page'),
-    '#default_value' => variable_get('admin_menu_tweak_modules', 1),
+    '#default_value' => variable_get('admin_menu_tweak_modules', 0),
     '#description' => t('If enabled, fieldsets on the <a href="!modules-url">Site building &raquo; Modules</a> page will be initially collapsed.', array('!modules-url' => url('admin/build/modules'))),
   );
   if (module_exists('util')) {
