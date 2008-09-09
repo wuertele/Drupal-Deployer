@@ -1,11 +1,15 @@
-<?php
-// $Id$
-
+<?php // $Id$
+/*
+ * @file 
+ *  color.inc
+ *
+ * Implimentaion of color.inc for Pixture Reloaded
+ */
 $info = array(
 
   // Pre-defined color schemes
   'schemes' => array(
-	// base, link, gradation(top), gradation(bottom), text
+    // base, link, gradation(top), gradation(bottom), text
     '#eb52c1,#b21f88,#b800a6,#ff6bfe,#555555' => t('Girly Pink (Default)'),
     '#de8291,#c55964,#861509,#f8306a,#555555' => t('Red Carpet'),
     '#d59648,#865518,#572e05,#eb8919,#555555' => t('Caramel Brown'),
@@ -27,16 +31,19 @@ $info = array(
 
   // Images to copy over
   'copy' => array(
-    'images/menu-collapsed.gif',
-    'images/menu-expanded.gif',
-    'images/menu-leaf.gif',
+    //'images/menu-collapsed.gif',
+    //'images/menu-expanded.gif',
+    'images/large-alert.png',
+    'images/bullet-round.png',
+    'images/bullet-sm-arrow-right.png',
+    'images/bullet-sm-arrow-down.png',
     'images/button.gif',
     'images/button-o.gif',
-	'images/teaser-tl.png',
-	'images/teaser-tr.png',
-	'images/teaser-bl.png',
-	'images/teaser-br.png',
-	'images/logo.png',
+    'images/teaser-tl.png',
+    'images/teaser-tr.png',
+    'images/teaser-bl.png',
+    'images/teaser-br.png',
+    'images/logo.png',
   ),
 
   // CSS files (excluding @import) to rewrite with new color scheme.
@@ -51,7 +58,7 @@ $info = array(
   // Color areas to fill (x, y, width, height)
   'fill' => array(
     'base' => array(0, 0, 800, 570),
-    'link' => array(240, 530, 40, 40),	
+    'link' => array(240, 530, 40, 40),
   ),
 
   // Coordinates of all the theme slices (x, y, width, height)
@@ -61,8 +68,8 @@ $info = array(
     'images/bg-header.png'                 => array(792,   0,   8, 120),
     'images/bg-footer.png'                 => array(792,   0,   8,  88),
     'images/bg-menu.png'                   => array(  0,  88,   8,  32),
-	'images/bg-title.png'                  => array( 20, 130,  10,  10),
-	'images/bg-wall.png'                   => array(792, 120,   8, 408),
+    'images/bg-title.png'                  => array( 20, 130,  10,  10),
+    'images/bg-wall.png'                   => array(792, 120,   8, 408),
 
     'images/bg-bar-lite.png'               => array(  0, 530,   8,  40),
     'images/bg-bar.png'                    => array( 20, 530,   8,  40),
@@ -70,19 +77,19 @@ $info = array(
     'images/bg-lbar-lite.png'              => array(270, 530,   8,  40),
     'images/bg-lbar.png'                   => array(250, 530,   8,  40),
 
-	'images/block-tl.png'                  => array( 10, 130,  10,  30),
-	'images/block-tr.png'                  => array( 20, 130, 210,  30),
-	'images/block-bl.png'                  => array( 10, 330,  10,  10),
-	'images/block-br.png'                  => array( 20, 330, 210,  10),
-	'images/block-tile.png'                => array( 20, 330,  10,  10),
+    'images/block-tl.png'                  => array( 10, 130,  10,  30),
+    'images/block-tr.png'                  => array( 20, 130, 210,  30),
+    'images/block-bl.png'                  => array( 10, 330,  10,  10),
+    'images/block-br.png'                  => array( 20, 330, 210,  10),
+    'images/block-tile.png'                => array( 20, 330,  10,  10),
 
-	'images/sticky-tl.png'                 => array(250, 130,  10,  10),
-	'images/sticky-tr.png'                 => array(770, 130,  10,  10),
-	'images/sticky-bl.png'                 => array(250, 320,  10,  10),
-	'images/sticky-br.png'                 => array(770, 320,  10,  10),
+    'images/sticky-tl.png'                 => array(250, 130,  10,  10),
+    'images/sticky-tr.png'                 => array(770, 130,  10,  10),
+    'images/sticky-bl.png'                 => array(250, 320,  10,  10),
+    'images/sticky-br.png'                 => array(770, 320,  10,  10),
     'images/sticky-tile.png'               => array(260, 130,  10,  10),
-	
-	'images/sf-hover-tile.png'             => array(  0,  30, 250,   1),
+
+    'images/sf-hover-tile.png'             => array(  0,  30, 250,   1),
 
     'screenshot.png'                       => array(  0,   0, 700, 420),
   ),

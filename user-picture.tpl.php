@@ -1,7 +1,9 @@
 <?php
 // $Id$
 /**
- * @file user-picture.tpl.php
+ * @file
+ *  user-picture.tpl.php
+ *
  * Default theme implementation to present an picture configured for the
  * user's account.
  *
@@ -15,7 +17,7 @@
  */
 ?>
 <?php if (!empty($picture)): ?>
-<div class="picture">
-  <?php print $picture; ?>
-</div>
+  <div class="picture">
+    <?php print $picture; ?>
+  </div>
 <?php endif; ?>
