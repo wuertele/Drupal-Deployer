@@ -56,7 +56,7 @@ Note: this instruction assumes that you install FCKeditor in
       <a> <p> <span> <div> <h1> <h2> <h3> <h4> <h5> <h6> <img> <map> <area> <hr> 
       <br> <br /> <ul> <ol> <li> <dl> <dt> <dd> <table> <tr> <td> <em> <b> <u> <i> <strong> 
       <font> <del> <ins> <sub> <sup> <quote> <blockquote> <pre> <address> <code> 
-      <cite> <embed> <object> <strike> <caption>.
+      <cite> <embed> <object> <param> <strike> <caption>.
    7. To have a better control over line breaks, you may disable Line break converter 
       in the chosen filter (recommended).
    8. Modify the fckeditor.config.js file to custom your needs (optional).
