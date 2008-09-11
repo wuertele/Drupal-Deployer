@@ -26,26 +26,29 @@ function cck_fieldgroup_tabs_menu() {
  */
 function cck_fieldgroup_tabs_admin_settings() {
   $form = array();
-  $form['cck_fieldset_tabs_residual'] = array(
+  $form['cck_fieldset_basics'] = array('#type' => 'fieldset', '#title' => t('Basics Tab Info'));
+  $form['cck_fieldset_basics']['cck_fieldset_tabs_residual'] = array(
     '#type' => 'radios',
     '#title' => t('Basics tab'),
     '#description' => t('Enable this option to give nodes with tabs a new tab containing all fields (e.g., node title and body) not already on a tab.'),
     '#options' => array(t('Disabled'), t('Enabled')),
     '#default_value' => variable_get('cck_fieldset_tabs_residual', 0),
   );
-  $form['cck_fieldset_tabs_residual_title'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Tab title'),
-    '#description' => t('Enter a title for the "Basics" tab.'),
-    '#default_value' => variable_get('cck_fieldset_tabs_residual_title', t('Basics')),
-  );
-  $form['cck_fieldset_tabs_residual_weight'] = array(
+  $form['cck_fieldset_basics']['cck_fieldset_tabs_residual_weight'] = array(
     '#type' => 'weight',
     '#delta' => 30,
-    '#title' => t('Tab weight'),
+    '#title' => t('Basics Tab weight'),
     '#description' => t('Enter a weight for the "Basics" tab.'),
     '#default_value' => variable_get('cck_fieldset_tabs_residual_weight', -20),
   );
+  $form['cck_fieldset_titles'] = array('#type' => 'fieldset', '#title' => t('Basics Tab Titles'));
+  foreach (node_get_types() as $type => $object) {
+    $form['cck_fieldset_titles']['cck_fieldset_tabs_residual_title_'.$type] = array(
+      '#type' => 'textfield',
+      '#title' => t('%type', array('%type' => $object->name)),
+      '#default_value' => variable_get('cck_fieldset_tabs_residual_title_'.$type, t('Basics')),
+    );
+  }
 
   $form = system_settings_form($form);
   return $form;
@@ -78,9 +81,10 @@ function cck_fieldgroup_tabs_form_alter(&$form, $form_state, $form_id) {
         unset($form[$group_name]);
       }
     }
-    if (isset($form['fieldgroup_tabs']) && variable_get('cck_fieldset_tabs_residual', FALSE)) {
+    $node_type = $form['type']['#value'];
+    if (isset($form['fieldgroup_tabs']) && variable_get('cck_fieldset_tabs_residual_title_'.$node_type, variable_get('cck_fieldset_tabs_residual', FALSE))) {
       // Add residual content to a tab if desired.
-      $title = t(variable_get('cck_fieldset_tabs_residual_title', t('Basics')));
+      $title = t(variable_get('cck_fieldset_tabs_residual_title_'.$node_type, variable_get('cck_fieldset_tabs_residual_title', t('Basics'))));
       $residual = array(
         '#type' => 'tabpage',
         // Pass the value through t() if needed.
