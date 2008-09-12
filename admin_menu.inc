@@ -108,7 +108,7 @@ function admin_menu_admin_menu(&$deleted) {
   global $base_url;
 
   $links = array();
-  $icon_path = drupal_get_normal_path(variable_get('site_frontpage', 'node'));
+  $icon_path = '<front>';
 
   // Add 'administer' item to the icon menu.
   $links[] = array(
@@ -292,15 +292,15 @@ function admin_menu_adjust_items(&$menu_links, &$sort) {
       unset($menu_links[$path], $sort[$path]);
     }
   }
-
-  // Add the icon containing special links.
-  $links[] = array(
+  $icon_link = array(
     'title' => theme('admin_menu_icon'),
-    'path' => drupal_get_normal_path(variable_get('site_frontpage', 'node')),
+    'path' => '<front>',
     'weight' => -100,
     'parent_path' => '<root>',
     'options' => array('extra class' => 'admin-menu-icon', 'html' => TRUE),
   );
+  // Add the icon containing special links.
+  $links[] = $icon_link;
   // Add link to show current authenticated/anonymous users - we will add the
   // data dynamically in the _alter hook.
   $links[] = array(
@@ -352,7 +352,27 @@ function admin_menu_theme_settings() {
   if (module_exists('util')) {
     $form['tweaks']['admin_menu_tweak_modules']['#description'] .= '<br /><strong>'. t('If you installed Utility module for this purpose, you can safely uninstall it now!') .'</strong>';
   }
-  return system_settings_form($form);
+  $form = system_settings_form($form);
+  $form['wipe description'] = array(
+    '#type' => 'item',
+    '#value' => t('If you are seeing a duplicated menu or other problems, you may use this button to delete everything in the menu and rebuild it.'),
+  );
+  $form['wipe'] = array(
+    '#type' => 'submit',
+    '#value' => t('Wipe and rebuild'),
+    '#submit' => array('admin_menu_wipe'),
+  );
+
+  return $form;
+}
+
+/**
+ * Wipe the menu so it can be rebuilt from scratch.
+ */
+function admin_menu_wipe() {
+  db_query("DELETE FROM {menu_links} WHERE menu_name = 'admin_menu'");
+  menu_cache_clear('admin_menu');
+  variable_set('admin_menu_rebuild_links', TRUE);
 }
 
 /**
