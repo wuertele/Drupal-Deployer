@@ -25,10 +25,12 @@ function amazon_views_plugins() {
         'help' => t('Display the item as a fully themed Amazon product.'),
         'handler' => 'amazon_views_plugin_row_amazon_view',
         'theme' => 'amazon_views_view_row_item',
-        'base' => array('amazon_item'), // only works with 'node' as base.
+        'theme file' => 'amazon.theme.inc',
+        'theme path' => drupal_get_path('module', 'amazon'),
+        'base' => array('amazon_item'),
         'uses options' => TRUE,
         'type' => 'normal',
-        'file' => 'amazon.views_handlers.inc',
+        'parent' => 'views_plugin_row',
       ),
     ),
   );
@@ -40,33 +42,17 @@ function amazon_views_plugins() {
 function amazon_views_handlers() {
   return array(
     'handlers' => array(
-      '' => array(
-        'parent' => '',
-        'file' => 'amazon.views_handlers.inc',
+      'views_handler_field_amazon_image' => array(
+        'parent' => 'views_handler_field',
       ),
-      '' => array(
-        'parent' => '',
-        'file' => 'amazon.views_handlers.inc',
+      'views_handler_field_amazon_participant' => array(
+        'parent' => 'views_handler_field_prerender_list',
       ),
-      '' => array(
-        'parent' => '',
-        'file' => 'amazon.views_handlers.inc',
+      'views_handler_field_amazon_title' => array(
+        'parent' => 'views_handler_field',
       ),
-      '' => array(
-        'parent' => '',
-        'file' => 'amazon.views_handlers.inc',
-      ),
-      '' => array(
-        'parent' => '',
-        'file' => 'amazon.views_handlers.inc',
-      ),
-      '' => array(
-        'parent' => '',
-        'file' => 'amazon.views_handlers.inc',
-      ),
-      '' => array(
-        'parent' => '',
-        'file' => 'amazon.views_handlers.inc',
+      'views_handler_filter_amazon_node_module' => array(
+        'parent' => 'views_handler_filter_in_operator',
       ),
     ),
   );

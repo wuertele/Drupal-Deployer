@@ -615,5 +615,32 @@ function amazon_token_values($type, $object = NULL, $options = array()) {
  * Implementation of hook_views_api.
  */
 function amazon_views_api() {
-  return array('api' => 2);
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'amazon') . '/includes',
+  );
+}
+
+/**
+ * Template helper for theme_amazon_views_view_row_item
+ */
+function template_preprocess_amazon_views_view_row_item(&$vars) {
+  $options = $vars['options'];
+  $vars['amazon_item'] = ''; // make sure var is defined.
+  $asin = $vars['row']->asin;
+  $items = amazon_item_lookup($asin);
+  if (empty($items[$asin])) {
+    return;
+  }
+  else {
+    $item = $items[$asin];
+    $item['view'] = $vars['view'];
+    $vars['amazon_item'] = $item;
+    if ($options['display_format'] == 'inline') {
+      $vars['content'] = theme('amazon_item_inline', $item, $options['display_format']);
+    }
+    else {
+      $vars['content'] = theme('amazon_item', $item, $options['display_format']);
+    }
+  }
 }

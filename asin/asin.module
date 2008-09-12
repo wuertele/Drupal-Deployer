@@ -14,6 +14,9 @@ function asin_theme() {
     'asin_text' => array(
       'arguments' => array('element'),
     ),
+    'asin_lookup' => array(
+      'arguments' => array('element'),
+    ),
     'asin_formatter_default' => array(
       'arguments' => array('element'),
     ),
@@ -220,6 +223,14 @@ function asin_widget_info() {
         'default value' => CONTENT_CALLBACK_DEFAULT,
       ),
     ),
+    'asin_lookup' => array(
+      'label' => t('Lookup by title'),
+      'field types' => array('asin'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+      'callbacks' => array(
+        'default value' => CONTENT_CALLBACK_DEFAULT,
+      ),
+    ),
   );
 }
 
@@ -237,6 +248,10 @@ function asin_elements() {
     'asin_text' => array(
       '#input' => TRUE,
       '#process' => array('asin_text_process'),
+    ),
+    'asin_lookup' => array(
+      '#input' => TRUE,
+      '#process' => array('asin_lookup_process'),
     ),
   );
 }
@@ -316,6 +331,73 @@ function asin_text_validate($element, &$form_state) {
 
 
 function theme_asin_text($element) {
+  drupal_add_css(drupal_get_path('module', 'asin') .'/asin.css', 'module', 'all', FALSE);
+  $output = $element['#children'];
+  if (!empty($element['#value']) && !empty($element['#value']['asin'])) {
+    $asin = $element['#value']['asin'];
+    if ($data = amazon_item_lookup(array($asin))) {
+      $output .= '<p class="asin-edit-title">'. check_plain($data[$asin]['title']) .'</p>';
+    }
+  }
+  return $output;
+}
+
+
+
+
+
+
+
+/**
+ * Process an individual element.
+ *
+ * Build the form element. When creating a form using FAPI #process,
+ * note that $element['#value'] is already set.
+ *
+ * The $fields array is in $form['#field_info'][$element['#field_name']].
+ */
+function asin_lookup_process($element, $edit, $form_state, $form) {
+  $field = $form['#field_info'][$element['#field_name']];
+
+  $asin_key = $element['#columns'][0];
+  $element[$asin_key] = array(
+    '#type' => 'hidden',
+    '#required' => $element['#required'],
+    '#default_value' => isset($element['#value'][$asin_key]) ? $element['#value'][$asin_key] : NULL,
+    '#delta' => $element['#delta'],
+  );
+
+  $element[''] = array(
+    '#type' => 'textfield',
+    '#title' => $element['#title'],
+    '#description' => $element['#description'],
+    '#required' => $element['#required'],
+    '#field_name' => $element['#field_name'],
+    '#type_name' => $element['#type_name'],
+  );
+
+  // Used so that hook_field('validate') knows where to flag an error.
+  $element['_error_element'] = array(
+    '#type' => 'value',
+    '#value' => implode('][', array_merge($element['#parents'], array($asin_key))),
+  );
+
+  return $element;
+}
+
+
+/**
+ * Validate an select element.
+ *
+ * Remove the wrapper layer and set the right element's value.
+ */
+function asin_lookup_validate($element, &$form_state) {
+  array_pop($element['#parents']);
+  form_set_value($element, $form_state['values'][$element['#field_name']], $form_state);
+}
+
+
+function theme_asin_lookup($element) {
   drupal_add_css(drupal_get_path('module', 'asin') .'/asin.css', 'module', 'all', FALSE);
   $output = $element['#children'];
   if (!empty($element['#value']) && !empty($element['#value']['asin'])) {
