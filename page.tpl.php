@@ -113,7 +113,7 @@
           </div> <!-- /#content-top -->
         <?php endif; ?>
 
-        <div id="content-header">
+        <div id="content-header" class="clearfix">
           <?php if (!empty($breadcrumb)): ?><?php print $breadcrumb; ?><?php endif; ?>
           <a name="main-content" id="main-content"></a>
           <?php if (!empty($title)): ?><h1 class="title"><?php print $title; ?></h1><?php endif; ?>
