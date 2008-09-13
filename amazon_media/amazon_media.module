@@ -29,7 +29,15 @@ function amazon_media_theme() {
 // amazon_item tpl's.
 function amazon_media_theme_registry_alter(&$theme_registry) {
   if (!empty($theme_registry['amazon_item'])) {
+    // We'll try our best to avoid stepping on theme template files.
+    // God, how I hate template inheritance.
+    if (count($theme_registry['amazon_item']['theme paths']) > 1) {
+      $theme = array_pop($theme_registry['amazon_item']['theme paths']);
+    }
     $theme_registry['amazon_item']['theme paths'][] = drupal_get_path('module', 'amazon_media');
+    if (isset($theme)) {
+      $theme_registry['amazon_item']['theme paths'][] = $theme;
+    }
   }
 }
 
