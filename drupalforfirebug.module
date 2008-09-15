@@ -13,21 +13,26 @@ function drupalforfirebug_menu() {
 }
 
 /**
+ * Implementation of hook_theme()
+ *
+ * Register our functions.
+ */
+function drupalforfirebug_theme() {
+  return array(
+    'drupalforfirebug_field_object' => array(
+      'arguments' => array('type' => NULL, 'id' => NULL, 'data' => NULL),
+    ),
+  );
+}
+
+/**
 *  Implementation of hook_nodeapi() 
 */
 function drupalforfirebug_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
   global $dfp_runtime;
-  if (isset($node->nid)) {
-    $nid = $node->nid;
-  } else {
-    $nid = '*NEW*';
-  }
-  $output = '<fieldset>';
-  $output .= '<legend><strong><em>' . $op . '</em> $node->'.$nid . '</strong></legend>';
-  $output .= '<div>' . '&nbsp;$node = stdClass Object (' . '</div>';
-  $output .= drupalforfirebug_array_compare(objectToArray($dfp_runtime['drupalforfirebug_nodes']['original'][$node->type][$nid]), objectToArray($node));
-  $output .= '<div>' . '&nbsp;);</div>';
-  $output .= '</fieldset>';
+  $nid = (isset($node->nid)) ? $node->nid : '*NEW*';
+  $data = drupalforfirebug_array_compare((array) $dfp_runtime['drupalforfirebug_nodes']['original'][$node->type][$nid], (array) $node);
+  $output = theme('drupalforfirebug_field_object', 'node', $node->nid, $op, $data);
   drupalforfirebug_log($output, 'hook_nodeapi');
 }
 
@@ -36,12 +41,8 @@ function drupalforfirebug_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 */
 function drupalforfirebug_views_pre_view(&$view, &$display_id, &$args) {
   global $dfp_runtime;
-  $output = '<fieldset>';
-  $output .= '<legend><strong>' . $view->name . '</strong></legend>';
-  $output .= '<div>' . '&nbsp;$view = stdClass Object (' . '</div>';
-  $output .= drupalforfirebug_array_compare(objectToArray($dfp_runtime['drupalforfirebug_views']['original'][$view->name]), objectToArray($view));
-  $output .= '<div>' . '&nbsp;);</div>';
-  $output .= '</fieldset>';
+  $data = drupalforfirebug_array_compare((array) $dfp_runtime['drupalforfirebug_views']['original'][$view->name], (array) $view);
+  $output = theme('drupalforfirebug_field_object', 'view', $view->name, $data);
   drupalforfirebug_log($output, 'hook_views');
 }
 
@@ -51,12 +52,8 @@ function drupalforfirebug_views_pre_view(&$view, &$display_id, &$args) {
 function drupalforfirebug_form_alter(&$form, $form_state, $form_id) {
   global $dfp_runtime;
   if ($form_id != 'drupalforfirebug_execute_form') {
-    $output = '<fieldset>';
-    $output .= '<legend><strong>'. $form_id .  '</strong></legend>';
-    $output .= '<div>' . '&nbsp;$form = array (' . '</div>';
-    $output .= drupalforfirebug_array_compare($dfp_runtime['drupalforfirebug_forms']['original'][$form_id], $form);
-    $output .= '<div>' . '&nbsp;);</div>';
-    $output .= '</fieldset>';
+    $data = drupalforfirebug_array_compare($dfp_runtime['drupalforfirebug_forms']['original'][$form_id], $form);
+    $output = theme('drupalforfirebug_field_object', 'form', $form_id, $data);
     drupalforfirebug_log($output, 'hook_form_alter');
   }
 }
@@ -73,13 +70,8 @@ function drupalforfirebug_user($op, &$edit, &$account, $category = NULL) {
     $uid = '*NEW*';
     $name = '*NEW*';
   }
-  $output = '<fieldset>';
-  $output .= '<legend><strong><em>'. $op .'</em> $account->'. $name .  '</strong></legend>';
-  $output .= '<div>' . '&nbsp;$account = stdClass (' . '</div>';
-  $output .= drupalforfirebug_array_compare(objectToArray($account), objectToArray($account));
-  // $output .= drupalforfirebug_array_compare(objectToArray($dfp_runtime['drupalforfirebug_user']['original'][$uid], $account);
-  $output .= '<div>' . '&nbsp;);</div>';
-  $output .= '</fieldset>';
+  $data = drupalforfirebug_array_compare((array) $account, (array) $account);
+  $output = theme('drupalforfirebug_field_object', 'user', $op, $uid, $data);
   drupalforfirebug_log($output, 'hook_user');
 }
 
@@ -310,7 +302,7 @@ function drupalforfirebug_array_row_build($key, $value, $style, $depth) {
     } else {
       $output .= "<div>$spacing <font color=grey> [$key] => stdClass ($colorend </div>";
     }
-    $output .= drupalforfirebug_array_highlight_code(objectToArray($value), $depth + 1);
+    $output .= drupalforfirebug_array_highlight_code((array) $value, $depth + 1);
     $output .= "<div>$spacing $color ) $colorend </div>";
   } else {
     if ($key || $value) {
@@ -442,11 +434,21 @@ function html_show_array($array){
   return $output;
 }
 
-// Function to Convert Objects to Arrays
-function objectToArray($object) {
-  $array=array();
-  foreach($object as $member=>$data) {
-    $array[$member]=$data;
-  }
-  return $array;
+
+/**
+ * Theme function for fieldsets that wrap object dumps
+ *
+ * For efficiency and consistent behavior in firebug window
+ */
+function theme_drupalforfirebug_field_object($marker, $id, $op = NULL, $data) {
+  $output = '<fieldset class="toggler">';
+  $output .= '<legend><strong><a href="#"><em>' . $op . '</em> $'. $marker .'->'. $id . '</a></strong></legend>';
+  $output .= '<div class="content" style="display: none;">';
+  $output .= '<div>' . '&nbsp;$'. $marker .' = stdClass Object (' . '</div>';
+  $output .= $data;
+  $output .= '<div>' . '&nbsp;);</div>';
+  $output .= '</div>';
+  $output .= '</fieldset>';
+  
+  return $output;
 }
