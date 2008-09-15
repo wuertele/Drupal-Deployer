@@ -1,9 +1,22 @@
 <?php
 // $Id$
+
 /**
  * @file
  * The Global Redirect module redirects for all paths which have aliases but are not using the aliases which reduces the risk of duplicate content
  */
+
+
+define('GLOBALREDIRECT_FEATURE_DISABLED', -1);
+
+define('GLOBALREDIRECT_TRAILINGZERO_TAXTERM', 1);
+define('GLOBALREDIRECT_TRAILINGZERO_ALL', 2);
+
+define('GLOBALREDIRECT_NONCLEAN2CLEAN_ENABLED', 1);
+
+define('GLOBALREDIRECT_DESLASH_ENABLED', 1);
+
+
 /**
  * Implementation of hook_help().
  */
@@ -73,7 +86,23 @@ function globalredirect_init() {
     }
 
     // Trim any trailing slash off the end (eg, 'node/1/' to 'node/1')
-    $request = trim($_GET['q'], '/');
+    $request = (bool)variable_get('globalredirect_deslash', GLOBALREDIRECT_DESLASH_ENABLED) ? trim($_GET['q'], '/') : $_GET['q'];
+
+    //Optional stripping of "/0". Defaultly disabled
+    switch (variable_get('globalredirect_trailingzero', GLOBALREDIRECT_FEATURE_DISABLED)) {
+      case GLOBALREDIRECT_TRAILINGZERO_TAXTERM :
+        // If 'taxonomy/term/*' only. If not, break out.
+        if (drupal_substr($request, 0, 14) != 'taxonomy/term/') {
+          break;
+        }
+        // If it is, fall through to general trailing zero method
+      case GLOBALREDIRECT_TRAILINGZERO_ALL :
+        // If last 2 characters of URL are /0 then trim them off
+        if (drupal_substr($request, -2) == '/0') {
+          $request = rtrim($request, '/0');
+        }
+    }
+
 
     // Check the path (eg, node/123) for the request
     $alias = drupal_get_path_alias($request);
@@ -84,7 +113,7 @@ function globalredirect_init() {
     }
 
     //If no alias was returned, the final check is to direct non-clean to clean - if clean is enabled
-    if ((bool)variable_get('clean_url', 0) && strpos(request_uri(), '?q=')) {
+    if (((bool)variable_get('globalredirect_nonclean2clean', GLOBALREDIRECT_NONCLEAN2CLEAN_ENABLED)) && ((bool)variable_get('clean_url', 0)) && strpos(request_uri(), '?q=')) {
       drupal_goto($request, $query_string, NULL, 301);
     }
 
