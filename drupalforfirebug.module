@@ -307,7 +307,7 @@ function drupalforfirebug_array_row_build($key, $value, $style, $depth) {
     $output .= drupalforfirebug_array_highlight_code((array) $value, $depth + 1);
     $output .= "<div>$spacing $color ) $colorend </div>";
   } else {
-    if ($key || $value) {
+    if (isset($key) || isset($value)) {
       $output .= "<div>$spacing $color [$key] => [$value] $colorend </div>";
     }
   } 
@@ -339,54 +339,52 @@ function drupalforfirebug_array_compare_code($a, $b, $c = array()) {
   $akeys = is_array($a) ? array_keys($a) : array();
   $bkeys = is_array($b) ? array_keys($b) : array();
   for ($x = 0; $x < $maxcount; $x++) {
-    if (1 == 1) { // TODO - figure out why this is needed
-      // Set the Proper Styling
+    // Set the Proper Styling
+    if (isset($akeys[$x]) && array_key_exists($akeys[$x], array_flip($bkeys))) { // is it in B array?
+      if ($a[$akeys[$x]] == $b[$akeys[$x]]) {
+        $c['#firebug_style'][$akeys[$x]] = 'SAME';
+      } else {
+        $c['#firebug_style'][$akeys[$x]] = 'DIFFERENT';
+      }
+    } else { // not in B array, must be removed
+      if (isset($akeys[$x])) {
+        $c['#firebug_style'][$akeys[$x]] = 'REMOVED';
+      }
+    }
+
+    // Set the Proper Element
+    if (isset($akeys[$x]) && is_array($a[$akeys[$x]])) { // is b a valid array
+      if (isset($c[$akeys[$x]])) {
+        $c[$akeys[$x]] = drupalforfirebug_array_compare_code($a[$akeys[$x]], $b[$akeys[$x]], $c[$akeys[$x]]);
+      } else {
+        $c[$akeys[$x]] = drupalforfirebug_array_compare_code($a[$akeys[$x]], $b[$akeys[$x]], array());
+      }
+    } else {
       if (isset($akeys[$x]) && array_key_exists($akeys[$x], array_flip($bkeys))) { // is it in B array?
         if ($a[$akeys[$x]] == $b[$akeys[$x]]) {
-          $c['#firebug_style'][$akeys[$x]] = 'SAME';
+          $c[$akeys[$x]] = $a[$akeys[$x]];
         } else {
-          $c['#firebug_style'][$akeys[$x]] = 'DIFFERENT';
+          $c[$akeys[$x]] = $b[$akeys[$x]];
         }
       } else { // not in B array, must be removed
         if (isset($akeys[$x])) {
-          $c['#firebug_style'][$akeys[$x]] = 'REMOVED';
+          $c[$akeys[$x]] = $a[$akeys[$x]];
         }
       }
+    }     
+  }
+  if (isset($bkeys[$x]) && isset($b[$bkeys[$x]])) { // does b have a valid argument
+    // Set the Proper Styling
+    if (array_key_exists($bkeys[$x], array_flip($akeys))) { // is it in A array? 
+      // exists in the A array, already processed
+    } else {
+      $c[$bkeys[$x]] = $b[$bkeys[$x]];
+      $c['#firebug_style'][$bkeys[$x]] = 'ADDED';
+    } 
 
-      // Set the Proper Element
-      if (isset($akeys[$x]) && is_array($a[$akeys[$x]])) { // is b a valid array
-        if (isset($c[$akeys[$x]])) {
-          $c[$akeys[$x]] = drupalforfirebug_array_compare_code($a[$akeys[$x]], $b[$akeys[$x]], $c[$akeys[$x]]);
-        } else {
-          $c[$akeys[$x]] = drupalforfirebug_array_compare_code($a[$akeys[$x]], $b[$akeys[$x]], array());
-        }
-      } else {
-        if (isset($akeys[$x]) && array_key_exists($akeys[$x], array_flip($bkeys))) { // is it in B array?
-          if ($a[$akeys[$x]] == $b[$akeys[$x]]) {
-            $c[$akeys[$x]] = $a[$akeys[$x]];
-          } else {
-            $c[$akeys[$x]] = $b[$akeys[$x]];
-          }
-        } else { // not in B array, must be removed
-          if (isset($akeys[$x])) {
-            $c[$akeys[$x]] = $a[$akeys[$x]];
-          }
-        }
-      }     
-    }
-    if ($b[$bkeys[$x]] || $bkeys[$x]) { // does b have a valid argument
-      // Set the Proper Styling
-      if (array_key_exists($bkeys[$x], array_flip($akeys))) { // is it in A array? 
-        // exists in the A array, already processed
-      } else {
-        $c[$bkeys[$x]] = $b[$bkeys[$x]];
-        $c['#firebug_style'][$bkeys[$x]] = 'ADDED';
-      } 
-
-      // Set the Proper Element
-      if (isset($a[$bkeys[$x]]) && is_array($b[$bkeys[$x]])) { // is b a valid array
-        $c[$bkeys[$x]] = drupalforfirebug_array_compare_code($a[$bkeys[$x]], $b[$bkeys[$x]], $c[$bkeys[$x]]);
-      }
+    // Set the Proper Element
+    if (isset($a[$bkeys[$x]]) && is_array($b[$bkeys[$x]])) { // is b a valid array
+      $c[$bkeys[$x]] = drupalforfirebug_array_compare_code($a[$bkeys[$x]], $b[$bkeys[$x]], $c[$bkeys[$x]]);
     }
   }
   return $c;
