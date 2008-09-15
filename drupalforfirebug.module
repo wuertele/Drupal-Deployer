@@ -52,7 +52,21 @@ function drupalforfirebug_views_pre_view(&$view, &$display_id, &$args) {
 function drupalforfirebug_form_alter(&$form, $form_state, $form_id) {
   global $dfp_runtime;
   if ($form_id != 'drupalforfirebug_execute_form') {
-    $data = drupalforfirebug_array_compare($dfp_runtime['drupalforfirebug_forms']['original'][$form_id], $form);
+    $form_modified = (array) $form;
+    // Remove recursive elements in panels module
+    if (isset($form_modified->panels_display['#value']->owner->display)) {
+      unset($form_modified->panels_display['#value']->owner->display);
+    }
+    if ($form_modified->panels_display['#value']->display->owner) {
+      unset($form_modified->panels_display['#value']->display->owner);
+    }
+    if (isset($form_modified['#parameters'][1]->owner->display)) {
+      unset($form_modified['#parameters'][1]->owner->display);
+    }
+    if (isset($form_modified['#parameters'][1]->display->owner)) {
+      unset($form_modified['#parameters'][1]->display->owner);
+    }
+    $data = drupalforfirebug_array_compare($dfp_runtime['drupalforfirebug_forms']['original'][$form_id], $form_modified);
     $output = theme('drupalforfirebug_field_object', 'form', $form_id, NULL, $data);
     drupalforfirebug_log($output, 'hook_form_alter');
   }
