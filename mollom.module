@@ -736,7 +736,7 @@ function _mollom_fallback() {
     form_set_error('mollom', t("The spam filter that is installed on this site is currently not available. Per the site's policy, we are unable to accept new submissions until that problem is resolved. Please try resubmitting the form in a couple minutes."));
   }
 
-  watchdog('mollom', 'Mollom was unavailable (error: @errno - %error_msg)', array('@errno' => xmlrpc_errno(), '%error_msg' => xmlrpc_error_msg()), WATCHDOG_ERROR);
+  watchdog('mollom', 'Mollom was unavailable (servers: %servers, error: @errno - %error_msg)', array('%servers' => variable_get('mollom_servers', array()), '@errno' => xmlrpc_errno(), '%error_msg' => xmlrpc_error_msg()), WATCHDOG_ERROR);
 }
 
 /**
@@ -1018,6 +1018,27 @@ function _mollom_verify_key() {
 }
 
 /**
+ * This function is used to refresh the list of servers that can be used to contact Mollom.
+ */
+function _mollom_retrieve_server_list() {
+  // Start from a hard coded list of servers:
+  $servers = array('http://xmlrpc1.mollom.com', 'http://xmlrpc2.mollom.com', 'http://xmlrpc3.mollom.com');
+
+  // Use the list of servers to retrieve a list of servers from mollom.com:
+  foreach ($servers as $server) {
+    $result = xmlrpc($server .'/'. MOLLOM_API_VERSION, 'mollom.getServerList', _mollom_authentication());
+    if (!xmlrpc_errno()) {
+      return $result;
+    }
+    else {
+      watchdog('mollom', 'Error @errno: %server - %message - mollom.getServerList', array('@errno' => xmlrpc_errno(), '%server' => $server, '%message' => xmlrpc_error_msg()), WATCHDOG_ERROR);
+    }
+  }
+  
+  return array();
+}
+
+/**
  * Call a remote procedure at the Mollom server.  This function will
  * automatically add the information required to authenticate against
  * Mollom.
@@ -1028,9 +1049,9 @@ function mollom($method, $data = array()) {
   $servers = variable_get('mollom_servers', NULL);
 
   if ($servers == NULL) {
-    // Bootstrap the list of servers with a hardcoded list:
-    $servers = array('http://xmlrpc1.mollom.com', 'http://xmlrpc2.mollom.com', 'http://xmlrpc3.mollom.com');
-
+    // Retrieve a new list of servers:
+    $servers = _mollom_retrieve_server_list();
+    
     // Store the list of servers in the database:
     variable_set('mollom_servers', $servers);
   }
@@ -1053,7 +1074,7 @@ function mollom($method, $data = array()) {
 
         if ($errno == MOLLOM_REFRESH) {
           // Retrieve a list of valid Mollom servers from mollom.com:
-          $servers = xmlrpc($server .'/'. MOLLOM_API_VERSION, 'mollom.getServerList', _mollom_authentication());
+          $servers = _mollom_retrieve_server_list();
 
           // Store the updated list of servers in the database:
           variable_set('mollom_servers', $servers);
@@ -1081,7 +1102,7 @@ function mollom($method, $data = array()) {
   _mollom_fallback();
 
   // If everything failed, we reset the server list to force Mollom to request a new list:
-  variable_set('mollom_servers', array());
+  variable_del('mollom_servers');
 
   // Report this error:
   watchdog('mollom', 'No Mollom servers could be reached or all servers returned an error -- the server list was emptied.', WATCHDOG_ERROR);
