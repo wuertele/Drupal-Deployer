@@ -75,10 +75,20 @@ function globalredirect_init() {
       $query_string = NULL;
     }
 
+    // Establish the language prefix that should be used, ie. the one that drupal_goto() would use
+    $options = array('prefix' => '');
+    if (function_exists('language_url_rewrite')) {
+      // Note that language_url_rewrite() takes path (by reference) as the first argument but does not use it at all
+      $path = $_REQUEST['q'];
+      language_url_rewrite($path, $options); 
+    }
+    $prefix = rtrim($options['prefix'], '/');
+
+
     // Do a check if this is a frontpage
     if (drupal_is_front_page()) {
-      // If the current reques is NOT the language prefix (eg, /de/node) then redirect to the prefix
-      if ($_REQUEST['q'] != $language->prefix) {
+      // Redirect if the current request does not refer to the frontpage in the configured fashion (with or without a prefix)
+      if ($_REQUEST['q'] != $prefix) {
         drupal_goto('', $query_string, NULL, 301);
       }
       // If we've got to this point then we're on a frontpage with a VALID request path (such as a language-prefix frontpage such as '/de')
@@ -104,11 +114,14 @@ function globalredirect_init() {
     }
 
 
-    // Check the path (eg, node/123) for the request
+    // Find an alias (if any) for the request
     $alias = drupal_get_path_alias($request);
+    if ($prefix && $alias) {
+      $prefix .= '/';
+    }
 
-    // Compare the request to the alias. If we have a language prefix then prefix the alias and compare. This also works as a 'deslashing' agent too
-    if ((empty($language->prefix) ? $alias : $language->prefix .'/'. $alias) != $_REQUEST['q']) {
+    // Compare the request to the alias. This also works as a 'deslashing' agent. If we have a language prefix then prefix the alias
+    if ($_REQUEST['q'] != $prefix . $alias) {
       drupal_goto($alias, $query_string, NULL, 301);
     }
 
