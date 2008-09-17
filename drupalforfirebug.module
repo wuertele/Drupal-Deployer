@@ -52,6 +52,7 @@ function drupalforfirebug_form_alter(&$form, $form_state, $form_id) {
   global $dfp_runtime;
   if ($form_id != 'drupalforfirebug_execute_form') {
     $form_modified = (array) $form;
+
     // Remove recursive elements in panels module
     if (isset($form_modified->panels_display['#value']->owner->display)) {
       unset($form_modified->panels_display['#value']->owner->display);
@@ -65,6 +66,9 @@ function drupalforfirebug_form_alter(&$form, $form_state, $form_id) {
     if (isset($form_modified['#parameters'][1]->display->owner)) {
       unset($form_modified['#parameters'][1]->display->owner);
     }
+
+    // TODO - figure out way to remove all recursive calls
+
     $data = drupalforfirebug_array_compare($dfp_runtime['drupalforfirebug_forms']['original'][$form_id], $form_modified);
     $output = theme('drupalforfirebug_field_object', 'form', $form_id, NULL, $data);
     drupalforfirebug_log($output, 'hook_form_alter');
@@ -323,7 +327,7 @@ function drupalforfirebug_array_row_build($key, $value, $style, $depth) {
     $output .= "<div>$spacing $color ) $colorend </div>";
   } else {
     if (isset($key) || isset($value)) {
-      $output .= "<div>$spacing $color [$key] => [$value] $colorend </div>";
+      $output .= "<div>$spacing $color [$key] => [" . check_plain($value) . "] $colorend </div>";
     }
   } 
   return $output; 
