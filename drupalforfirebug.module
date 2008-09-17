@@ -52,23 +52,6 @@ function drupalforfirebug_form_alter(&$form, $form_state, $form_id) {
   global $dfp_runtime;
   if ($form_id != 'drupalforfirebug_execute_form') {
     $form_modified = (array) $form;
-
-    // Remove recursive elements in panels module
-    if (isset($form_modified->panels_display['#value']->owner->display)) {
-      unset($form_modified->panels_display['#value']->owner->display);
-    }
-    if (isset($form_modified->panels_display['#value']->display->owner)) {
-      unset($form_modified->panels_display['#value']->display->owner);
-    }
-    if (isset($form_modified['#parameters'][1]->owner->display)) {
-      unset($form_modified['#parameters'][1]->owner->display);
-    }
-    if (isset($form_modified['#parameters'][1]->display->owner)) {
-      unset($form_modified['#parameters'][1]->display->owner);
-    }
-
-    // TODO - figure out way to remove all recursive calls
-
     $data = drupalforfirebug_array_compare($dfp_runtime['drupalforfirebug_forms']['original'][$form_id], $form_modified);
     $output = theme('drupalforfirebug_field_object', 'form', $form_id, NULL, $data);
     drupalforfirebug_log($output, 'hook_form_alter');
@@ -323,7 +306,7 @@ function drupalforfirebug_array_row_build($key, $value, $style, $depth) {
     } else {
       $output .= "<div>$spacing <font color=grey> [$key] => stdClass ($colorend </div>";
     }
-    $output .= drupalforfirebug_array_highlight_code((array) $value, $depth + 1);
+    $output .= drupalforfirebug_array_highlight_code($value, $depth + 1);
     $output .= "<div>$spacing $color ) $colorend </div>";
   } else {
     if (isset($key) || isset($value)) {
@@ -337,6 +320,18 @@ function drupalforfirebug_array_row_build($key, $value, $style, $depth) {
 * Specialized Array Data Style Function
 */
 function drupalforfirebug_array_highlight_code($data, $depth = 0) {
+  // Smartly Handling Recursion for Objects
+  if (is_object($data)) {
+    $data = (array) $data;
+    static $refChain = array();
+    foreach ($refChain as $refVal) {
+      if ($refVal === $data) {
+        $data = array('**Recursion Detected**');
+      }
+    }
+    array_push($refChain, $data);
+  }
+
   $output = '';
   foreach($data as $key => $value) {
     if ((string) $key != '#firebug_style') {
