@@ -17,6 +17,7 @@ Drupal.behaviors.fckeditor = function(context) {
       
       if(editorInstance.defaultState == 1) {
         editorInstance.ReplaceTextarea();
+        $('#img_assist-link-' + taid).hide();
       }
     }
   });
@@ -83,6 +84,7 @@ function Toggle(textareaID, TextTextarea, TextRTE)
     textArea.show();
     textAreaContainer.show();
     editorFrame.hide();
+    $('#img_assist-link-' + textareaID).show();
     
     // fix the grippie
     if(textAreaContainer.length > 0) { // if we're in a container, textarea resizing is enabled
@@ -117,6 +119,7 @@ function Toggle(textareaID, TextTextarea, TextRTE)
     textArea.hide();
     textAreaContainer.hide();
     editorFrame.show();
+    $('#img_assist-link-' + textareaID).hide();
   }
 }
 

@@ -58,6 +58,19 @@ FCKConfig.ToolbarSets['DrupalFiltered'] = [
 ['JustifyLeft','JustifyCenter','JustifyRight','DrupalBreak','ShowBlocks'],
 ] ;
 
+//helper function to add button at the end of the toolbar
+function addToolbarElement(element, toolbar, pos){
+  var ts = FCKConfig.ToolbarSets ;
+  if (ts[toolbar]) {
+    var len=ts[toolbar].length;
+    if (pos>=len) pos=len-1;
+    if (ts[toolbar][(len -pos -1)] == '/') pos++;
+    if (pos>=len) pos=len-1;
+    if (!ts[toolbar][(len -pos -1)]) pos++;
+    FCKConfig.ToolbarSets[toolbar][(len -pos -1)].push(element);
+  }
+}
+
 // Protect PHP code tags (<?...?>) so FCKeditor will not break them when
 // switching from Source to WYSIWYG.
 // Uncommenting this line doesn't mean the user will not be able to type PHP
