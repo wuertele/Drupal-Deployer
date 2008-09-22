@@ -36,7 +36,7 @@
  *
  * @todo Improve me!!
  * Returns absolute path or false on failure
- * 
+ *
  * @return string|boolean
  */
 function fckeditor_get_document_root_full_path() {
@@ -79,7 +79,7 @@ function fckeditor_get_document_root_full_path() {
  * Given an url path return the physical directory that it corresponds to.
  *
  * Returns absolute path or false on failure
- * 
+ *
  * @param string $path
  * @return @return string|boolean
  */
@@ -96,7 +96,7 @@ function fckeditor_resolve_url($path) {
   if ($document_root !== FALSE) {
     return $document_root . $path;
   }
-  
+
   return FALSE;
 }
 
@@ -113,7 +113,7 @@ function fckeditor_load_toolbar_options() {
         $line = fgets($fp, 1024);
         $matches = array();
         if (preg_match('/FCKConfig\.ToolbarSets\[("|\')(.*?)\\1\]/i', $line, $matches)) {
-          $arr[$matches[2]] = ucfirst($matches[2]);
+          $arr[$matches[2]] = drupal_ucfirst($matches[2]);
         }
       }
       fclose($fp);
@@ -126,7 +126,7 @@ function fckeditor_load_toolbar_options() {
         $line = fgets($fp, 1024);
         $matches = array();
         if (preg_match('/FCKConfig\.ToolbarSets\[("|\')(.*?)\\1\]/i', $line, $matches)) {
-          $arr[$matches[2]] = ucfirst($matches[2]);
+          $arr[$matches[2]] = drupal_ucfirst($matches[2]);
         }
       }
       fclose($fp);
@@ -157,7 +157,7 @@ function fckeditor_load_skin_options() {
           continue;
         }
         if (is_dir($skin_dir . DIRECTORY_SEPARATOR . $file)) {
-          $arr[$file] = ucfirst($file);
+          $arr[$file] = drupal_ucfirst($file);
         }
       }
       closedir( $dh );
@@ -189,7 +189,7 @@ function fckeditor_load_lang_options() {
         $matches = array();
         if (is_file($lang_dir . DIRECTORY_SEPARATOR . $file) && preg_match('/^(.*?)\.js$/', $file, $matches)) {
           $lang = $matches[1];
-          $arr[$lang] = strtoupper($lang);
+          $arr[$lang] = drupal_strtoupper($lang);
         }
       }
       closedir( $dh );

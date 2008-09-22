@@ -40,17 +40,17 @@ function CheckAuthentication() {
   if (!isset($authenticated)) {
     if (!empty($_SERVER['SCRIPT_FILENAME'])) {
       $drupal_path = dirname(dirname(dirname(dirname($_SERVER['SCRIPT_FILENAME']))));
-      if(!file_exists($drupal_path .'/includes/bootstrap.inc')) {
+      if (!file_exists($drupal_path .'/includes/bootstrap.inc')) {
         $drupal_path = dirname(dirname(dirname($_SERVER['SCRIPT_FILENAME'])));
         $depth = 2;
         do {
           $drupal_path = dirname($drupal_path);
-          $depth ++;          
+          $depth ++;
         }
-        while (!($bootstrapFileFound = file_exists($drupal_path .'/includes/bootstrap.inc')) && $depth<10);
+        while (!($bootstrap_file_found = file_exists($drupal_path .'/includes/bootstrap.inc')) && $depth<10);
       }
     }
-    if (!isset($bootstrapFileFound) || !$bootstrapFileFound) {
+    if (!isset($bootstrap_file_found) || !$bootstrap_file_found) {
       $drupal_path = '../../../';
       if (!file_exists($drupal_path .'/includes/bootstrap.inc')) {
         $drupal_path = '../..';
@@ -58,10 +58,10 @@ function CheckAuthentication() {
           $drupal_path .= '/..';
           $depth = substr_count($drupal_path, '..');
         }
-        while (!($bootstrapFileFound = file_exists($drupal_path .'/includes/bootstrap.inc')) && $depth < 10);
+        while (!($bootstrap_file_found = file_exists($drupal_path .'/includes/bootstrap.inc')) && $depth < 10);
       }
     }
-    if (!isset($bootstrapFileFound) || $bootstrapFileFound) {
+    if (!isset($bootstrap_file_found) || $bootstrap_file_found) {
       $fck_cwd = getcwd();
       chdir($drupal_path);
       require_once './includes/bootstrap.inc';
@@ -80,10 +80,10 @@ function CheckAuthentication() {
 
 /**
  * Note:
- * Although in FCKeditor 2.5 $Config['Enabled'] is not used anymore, 
+ * Although in FCKeditor 2.5 $Config['Enabled'] is not used anymore,
  * CheckAuthentication() must be called once to initialize session
  * before sending any content
- * Static $authenticated variable is being assigned, so 
+ * Static $authenticated variable is being assigned, so
  * application performance is not affected
  */
 $Config['Enabled'] = CheckAuthentication();
