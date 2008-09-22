@@ -8,7 +8,7 @@
 /*
  Define as many toolbars as you need, you can change toolbar names
  DrupalBasic will be forced on some smaller textareas (if enabled)
- if you change the name of DrupalBasic, you have to update 
+ if you change the name of DrupalBasic, you have to update
  FCKEDITOR_FORCE_SIMPLE_TOOLBAR_NAME in fckeditor.module
  */
 
@@ -19,7 +19,7 @@ FCKConfig.Plugins.Add( 'imgassist' ) ;
 //FCKConfig.Plugins.Add( 'drupalpagebreak' ) ;
 
 /*
- This toolbar is dedicated to users with "Full HTML" access 
+ This toolbar is dedicated to users with "Full HTML" access
  some of commands used here (like 'FontName') use inline styles,
  which unfortunately are stripped by "Filtered HTML" filter
  */

@@ -34,7 +34,7 @@ function InitFCKeditorImgAssist() {
         return false;
       }
     }
-    
+
     //FCKeditor enabled and running == textarea not displayed
     if ( myTextarea.style.display == 'none' ) {
       var opener = window.opener;
@@ -66,4 +66,4 @@ function InitFCKeditorImgAssist() {
 
     oldInsertToEditor(content);
   };
-} 
+}

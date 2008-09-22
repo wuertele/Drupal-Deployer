@@ -33,7 +33,7 @@
 function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
   if ($type == 'form' && $category == 'account' && user_access('access fckeditor')) {
     module_load_include('lib.inc', 'fckeditor');
-    
+
     $profile = fckeditor_user_get_profile($user);
     $toolbar_options = fckeditor_load_toolbar_options();
     $skin_options = fckeditor_load_skin_options();
@@ -143,11 +143,11 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
     if (isset($edit['fckeditor_show_toggle'], $edit['fckeditor_popup']) && $edit['fckeditor_show_toggle'] == 't' && $edit['fckeditor_popup'] == 't') {
       form_set_error('popup', t('If toggle is enabled, popup window must be disabled.'));
     }
-    
+
     if (isset($edit['fckeditor_width']) && !preg_match('/^\d+%?$/', $edit['fckeditor_width'])) {
       form_set_error('width', t('Enter valid width. Example: 400 or 100%.'));
     }
-    
+
     return array(
       'fckeditor_default' => $edit['fckeditor_default'],
       'fckeditor_show_toggle' => $edit['fckeditor_show_toggle'],
@@ -161,6 +161,6 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
       'fckeditor_auto_lang' => $edit['fckeditor_auto_lang'],
     );
   }
-  
+
   return NULL;
 }

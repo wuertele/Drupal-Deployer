@@ -34,11 +34,11 @@ var FCKDrupalBreak = function( name )
 
 FCKDrupalBreak.prototype.Execute = function()
 {
-	if ( FCK.EditMode != FCK_EDITMODE_WYSIWYG ) 
+	if ( FCK.EditMode != FCK_EDITMODE_WYSIWYG )
 		return ;
-	
+
 	FCKUndo.SaveUndoStep() ;
-		
+
 	switch ( this.Name )
 	{
 		case 'Break' :
@@ -51,11 +51,11 @@ FCKDrupalBreak.prototype.Execute = function()
 		break;
 		default :
 		break;
-	}	
+	}
 }
 
 FCKDrupalBreak.prototype.RemoveOldBreaks = function()
-{	
+{
 	// get all elements in FCK document
 	var elements = FCK.EditorDocument.getElementsByTagName( 'img' ) ;
 
@@ -84,9 +84,9 @@ FCKDrupalBreak.prototype.MoveBreakOutsideElement = function()
 	{
 		if ( element.getAttribute( '_drupalbreak' ) == "true" )
 		{
-			while( ( next = element.parentNode.nodeName.toLowerCase() ) != 'body' ) 
+			while( ( next = element.parentNode.nodeName.toLowerCase() ) != 'body' )
 			{
-				//if we are inside p or div, close immediately this tag, insert break tag, 
+				//if we are inside p or div, close immediately this tag, insert break tag,
 				//create new element and move remaining siblings to the next element
 				if ( ( next == 'div' || next == 'p' ) && ( element.parentNode.parentNode.nodeName.toLowerCase() == 'body' ) )
 				{
@@ -109,14 +109,14 @@ FCKDrupalBreak.prototype.MoveBreakOutsideElement = function()
 						element.parentNode.parentNode.insertBefore( element, element.parentNode.nextSibling ) ;
 					else
 						element.parentNode.parentNode.appendChild( element ) ;
-						
+
 					if ( !oParent.childNodes.length )
 						FCK.EditorDocument.body.removeChild( oParent ) ;
-						
+
 					//we must be sure the bogus node is available to make cursor blinking
 					if ( FCKBrowserInfo.IsGeckoLike )
 						FCKTools.AppendBogusBr( oParent ) ;
-						
+
 					break ;
 				}
 				else
@@ -125,8 +125,8 @@ FCKDrupalBreak.prototype.MoveBreakOutsideElement = function()
 						element.parentNode.parentNode.insertBefore( element, element.parentNode.nextSibling ) ;
 					else
 						element.parentNode.parentNode.appendChild( element ) ;
-				}		
-			}	
+				}
+			}
 		}
 	}
 }
@@ -170,7 +170,7 @@ FCKDrupalBreaksProcessor.ProcessDocument = function( document )
 					oFakeImage.setAttribute( "_drupalbreak", "true" ) ;
 					oFakeImage.style.borderTop = oFakeImage.style.borderBottom = pBreakBorderStyle ;
 					node.parentNode.insertBefore( oFakeImage, node ) ;
-					node.parentNode.removeChild( node ) ;						
+					node.parentNode.removeChild( node ) ;
 				}
 			}
 		}
@@ -185,14 +185,14 @@ FCK.Config.ProtectedSource.Revert = function( html, clearBin )
 {
 	// Call the original code.
 	var result = FCK.Config.ProtectedSource._RevertOld ( html, clearBin ) ;
-	
+
 	if ( typeof FCKDrupalPageBreak !="undefined" && typeof FCKDrupalBreak !="undefined" )
 		var re = /<(p|div)>((?:<!--pagebreak-->|<!--break-->)+)<\/\1>/gi ;
 	else if ( typeof FCKDrupalBreak !="undefined" )
 		var re = /<(p|div)>(<!--break-->)+<\/\1>/gi ;
 	else if ( typeof FCKDrupalPageBreak !="undefined" )
 		var re = /<(p|div)>(<!--pagebreak-->)+<\/\1>/gi ;
-		
+
 	result = result.replace( re, '$2' );
 	return result ;
 }

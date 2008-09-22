@@ -32,11 +32,11 @@ var FCKDrupalPageBreak = function( name )
 
 FCKDrupalPageBreak.prototype.Execute = function()
 {
-	if ( FCK.EditMode != FCK_EDITMODE_WYSIWYG ) 
+	if ( FCK.EditMode != FCK_EDITMODE_WYSIWYG )
 		return ;
-	
+
 	FCKUndo.SaveUndoStep() ;
-		
+
 	switch ( this.Name )
 	{
 		case 'Break' :
@@ -47,7 +47,7 @@ FCKDrupalPageBreak.prototype.Execute = function()
 		break;
 		default :
 		break;
-	}	
+	}
 }
 
 FCKDrupalPageBreak.prototype.MoveBreakOutsideElement = function()
@@ -63,9 +63,9 @@ FCKDrupalPageBreak.prototype.MoveBreakOutsideElement = function()
 	{
 		if ( element.getAttribute( '_drupalpagebreak' ) == "true" )
 		{
-			while( ( next = element.parentNode.nodeName.toLowerCase() ) != 'body' ) 
+			while( ( next = element.parentNode.nodeName.toLowerCase() ) != 'body' )
 			{
-				//if we are inside p or div, close immediately this tag, insert break tag, 
+				//if we are inside p or div, close immediately this tag, insert break tag,
 				//create new element and move remaining siblings to the next element
 				if ( ( next == 'div' || next == 'p' ) && ( element.parentNode.parentNode.nodeName.toLowerCase() == 'body' ) )
 				{
@@ -88,18 +88,18 @@ FCKDrupalPageBreak.prototype.MoveBreakOutsideElement = function()
 						element.parentNode.parentNode.insertBefore( element, element.parentNode.nextSibling ) ;
 					else
 						element.parentNode.parentNode.appendChild( element ) ;
-						
+
 					if ( !oParent.childNodes.length )
 						FCK.EditorDocument.body.removeChild( oParent ) ;
-					
+
 					//if we put pagebreak next to another pagrebreak, remove it
 					if ( element.nextSibling && element.nextSibling.getAttribute( '_drupalpagebreak' ) == "true")
 						element.parentNode.removeChild( element.nextSibling ) ;
-						
+
 					//we must be sure the bogus node is available to make cursor blinking
 					if ( FCKBrowserInfo.IsGeckoLike )
 						FCKTools.AppendBogusBr( oParent ) ;
-						
+
 					break ;
 				}
 				else
@@ -108,10 +108,10 @@ FCKDrupalPageBreak.prototype.MoveBreakOutsideElement = function()
 						element.parentNode.parentNode.insertBefore( element, element.parentNode.nextSibling ) ;
 					else
 						element.parentNode.parentNode.appendChild( element ) ;
-				}				
-			}			
+				}
+			}
 		}
-	}	
+	}
 }
 
 FCKDrupalPageBreak.prototype.GetState = function()
@@ -148,12 +148,12 @@ FCKDrupalPageBreaksProcessor.ProcessDocument = function( document )
 				var PContent;
 				if (re.test(node.nodeValue))
 					PContent = FCKConfig.ProtectedSource.Revert('<!--' + node.nodeValue + '-->', false);
-										
-				if (node.nodeValue == 'pagebreak' || PContent == '<!--pagebreak-->') {					
+
+				if (node.nodeValue == 'pagebreak' || PContent == '<!--pagebreak-->') {
 					var oFakeImage = FCKDocumentProcessor_CreateFakeImage( 'FCK__PageBreak', node.cloneNode(true) ) ;
 					oFakeImage.setAttribute( "_drupalpagebreak", "true" ) ;
 					node.parentNode.insertBefore( oFakeImage, node ) ;
-					node.parentNode.removeChild( node ) ;						
+					node.parentNode.removeChild( node ) ;
 				}
 			}
 		}
@@ -168,14 +168,14 @@ FCK.Config.ProtectedSource.Revert = function( html, clearBin )
 {
 	// Call the original code.
 	var result = FCK.Config.ProtectedSource._RevertOld ( html, clearBin ) ;
-	
+
 	if ( typeof FCKDrupalPageBreak !="undefined" && typeof FCKDrupalBreak !="undefined" )
 		var re = /<(p|div)>((?:<!--pagebreak-->|<!--break-->)+)<\/\1>/gi ;
 	else if ( typeof FCKDrupalBreak !="undefined" )
 		var re = /<(p|div)>(<!--break-->)+<\/\1>/gi ;
 	else if ( typeof FCKDrupalPageBreak !="undefined" )
 		var re = /<(p|div)>(<!--pagebreak-->)+<\/\1>/gi ;
-		
+
 	result = result.replace( re, '$2' );
 	return result ;
 }
