@@ -204,13 +204,13 @@ function FCKeditor_OnAfterLinkedFieldUpdate(editorInstance) {
 
 function IntegrateWithImgAssist()
 {
-	var link = document.getElementsByTagName("a");
-	for (var i = 0; i < link.length; i++) {
-		cl = link[i].className;
-		if ( cl == "img_assist-link") {
-			link[i].href = link[i].href.replace("/load/textarea", "/load/fckeditor");
-		}
-	}
+  var link = document.getElementsByTagName("a");
+  for (var i = 0; i < link.length; i++) {
+    cl = link[i].className;
+    if ( cl == "img_assist-link") {
+      link[i].href = link[i].href.replace("/load/textarea", "/load/fckeditor");
+    }
+  }
 }
 
 /**

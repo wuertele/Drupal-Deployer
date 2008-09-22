@@ -76,10 +76,10 @@ function addToolbarElement(element, toolbar, pos){
 // Uncommenting this line doesn't mean the user will not be able to type PHP
 // code in the source. This kind of prevention must be done in the server side
 // (as does Drupal), so just leave this line as is.
-FCKConfig.ProtectedSource.Add( /<\?[\s\S]*?\?>/g ) ;	// PHP style server side code
+FCKConfig.ProtectedSource.Add( /<\?[\s\S]*?\?>/g ) ; // PHP style server side code
 
-var _FileBrowserLanguage	= 'php' ;
-var _QuickUploadLanguage	= 'php' ;
+var _FileBrowserLanguage = 'php' ;
+var _QuickUploadLanguage = 'php' ;
 
 // This overrides the IndentLength/IndentUnit settings.
 FCKConfig.IndentClasses = ['rteindent1','rteindent2','rteindent3','rteindent4'] ;
