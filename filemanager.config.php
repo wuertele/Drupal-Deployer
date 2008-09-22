@@ -96,8 +96,8 @@ else {
   // Nothing in session? Shouldn't happen... anyway let's try to upload it in the (almost) right place
   // Path to user files relative to the document root.
   $Config['UserFilesPath'] = strtr(base_path(), array(
-  '/modules/fckeditor/fckeditor/editor/filemanager/connectors/php' => '',
-  '/modules/fckeditor/fckeditor/editor/filemanager/browser/default/connectors/php' => '',
-  '/modules/fckeditor/fckeditor/editor/filemanager/upload/php' => '',
+    '/modules/fckeditor/fckeditor/editor/filemanager/connectors/php' => '',
+    '/modules/fckeditor/fckeditor/editor/filemanager/browser/default/connectors/php' => '',
+    '/modules/fckeditor/fckeditor/editor/filemanager/upload/php' => '',
   )) . file_directory_path() .'/';
 }
