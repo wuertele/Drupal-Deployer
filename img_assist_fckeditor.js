@@ -29,7 +29,7 @@ function InitFCKeditorImgAssist() {
             oEditor.InsertHtml(content) ;
           }
           else {
-            alert('Inserting image into FCKeditor is allowed only in WYSIWYG mode');
+            alert(Drupal.t('Inserting image into FCKeditor is allowed only in WYSIWYG mode.'));
           }
         }
       }

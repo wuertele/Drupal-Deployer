@@ -37,30 +37,15 @@ function fckeditor_admin_main() {
   $editor_path        = fckeditor_path(TRUE);
   $fckconfig_file = $editor_path .'/fckconfig.js';
   if (!file_exists($fckconfig_file)) {    
-    drupal_set_message(t('checking for %filename', array('%filename' => $fckconfig_file)));
-    drupal_set_message(
-    t('The FCKeditor component is not installed correctly. Please go to the !fckeditorlink to download the latest version. After that you must extract the files to %fckeditorpath and make sure that the directory %fckeditorsubdir and the file %fckeditorfile exist. Refer to the !readme for more information.',
-    array(
-    '!fckeditorlink' => l(t('FCKeditor homepage'), 'http://www.fckeditor.net/download'),
-    '!readme' => l('readme.txt', 'admin/help/fckeditor'),
-    '%fckeditorpath' => $editor_path .'/fckeditor/',
-    '%fckeditorsubdir' => $editor_path .'/editor',
-    '%fckeditorfile' => $editor_path .'/fckeditor.js')),
-    'error');
-    
-    drupal_set_message(
-    t('If you have FCKeditor already installed please edit !editg and update FCKeditor path.',
-    array(
-      '!editg' => l(t('FCKeditor Global Profile'), 'admin/settings/fckeditor/editg'))
-    ), "warning");
-
+    drupal_set_message(t('Checking for %filename.', array('%filename' => $fckconfig_file)));
+    drupal_set_message(t('The FCKeditor component is not installed correctly. Please go to the <a href="!fckeditorlink">FCKeditor homepage</a> to download the latest version. After that you must extract the files to %fckeditorpath and make sure that the directory %fckeditorsubdir and the file %fckeditorfile exist. Refer to the <a href="!readme">readme.txt</a> for more information.', array('!fckeditorlink' => url('http://www.fckeditor.net/download'), '!readme' => url('admin/help/fckeditor'), '%fckeditorpath' => $editor_path .'/fckeditor/', '%fckeditorsubdir' => $editor_path .'/editor', '%fckeditorfile' => $editor_path .'/fckeditor.js')), 'error');
+    drupal_set_message(t('If you have FCKeditor already installed please edit <a href="!editg">FCKeditor Global Profile</a> and update FCKeditor path.', array('!editg' => url('admin/settings/fckeditor/editg'))), 'warning');
     return FALSE;
   }
   
   $access_fckeditor_roles = user_roles(FALSE, 'access fckeditor');
   if (!$access_fckeditor_roles) {
-    drupal_set_message(t('There is currently no role with the <strong>!access</strong> permission. Visit !acl administration section.',
-    array("!access" => t("access fckeditor"), "!acl" => l(t("Permissions"), "admin/user/permissions"))), "warning");
+    drupal_set_message(t('There is currently no role with the "access fckeditor" permission. Visit <a href="!acl">permissions</a> administration section.', array('!acl' => url('admin/user/permissions'))), 'warning');
   } 
   else {
     $result = db_query_range("SELECT name FROM {fckeditor_settings} WHERE name<>'FCKeditor Global Profile'", 0, 1);
@@ -78,7 +63,7 @@ function fckeditor_admin_main() {
     }
     $rids = array_unique($rids);        
     if (!$has_profiles) {
-      drupal_set_message(t("No FCKeditor profiles found. At this moment, nobody is able to use FCKeditor. Create new profile below."), "error");
+      drupal_set_message(t('No FCKeditor profiles found. At this moment, nobody is able to use FCKeditor. Create new profile below.'), 'error');
     }
     else {
       //not all roles with access fckeditor has their FCKeditor profile assigned
@@ -89,7 +74,7 @@ function fckeditor_admin_main() {
           $list .= "<li>". $access_fckeditor_roles[$rid] ."</li>";
         }
         $list .= "</ul>";
-        drupal_set_message(t("Not all roles with <strong>!access</strong> permission are associated with FCKeditor profiles. As a result, users having the following roles may be unable to use FCKeditor: !list Create new or edit FCKeditor profiles below and in the <strong>Basic setup</strong> section, check &quot;Roles allowed to use this profile&quot;.", array("!access" => l(t("access fckeditor"), "admin/user/permissions"), "!list" => $list)), "warning");
+        drupal_set_message(t('Not all roles with <a href="!access">access fckeditor</a> permission are associated with FCKeditor profiles. As a result, users having the following roles may be unable to use FCKeditor: !list Create new or edit FCKeditor profiles below and in the <em>Basic setup</em> section, check "Roles allowed to use this profile".', array('!access' => url('admin/user/permissions'), '!list' => $list)), 'warning');
       }
     }   
   }
@@ -131,15 +116,15 @@ function fckeditor_profile_overview() {
     $output .= '<p>'. l(t('Create new profile'), 'admin/settings/fckeditor/add') .'</p>';
   }
   else {
-    drupal_set_message(t('No profiles found. Click here to !create.', array('!create' => l(t("create a new profile"), 'admin/settings/fckeditor/add'))));
+    drupal_set_message(t('No profiles found. Click here to <a href="!create">create a new profile</a>.', array('!create' => url('admin/settings/fckeditor/add'))));
   }
 
   $rows = array();
   if (!isset($profiles['FCKeditor Global Profile'])) {
-    drupal_set_message(t('Global Profile not found. Click here to !create.', array('!create' => l(t("create the global profile"), 'admin/settings/fckeditor/addg'))));
+    drupal_set_message(t('Global profile not found. Click here to <a href="!create">create the global profile</a>.', array('!create' => url('admin/settings/fckeditor/addg'))));
   }
   else {
-    $output .= "<h3>". t("Global Settings") ."</h3>";
+    $output .= "<h3>". t("Global settings") ."</h3>";
     $rows[] = array(
       array('data' => t('FCKeditor Global Profile'), 'valign' => 'top'), 
       array('data' => l(t('edit'), 'admin/settings/fckeditor/editg') ." ". l(t('delete'), 'admin/settings/fckeditor/delete/FCKeditor Global Profile'), 'valign' => 'top')
@@ -202,10 +187,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   $roles = $orig_roles;
 
   if (!empty($profile->rids) && !user_roles(FALSE, 'access fckeditor')) {
-    drupal_set_message(t('You haven\'t assigned <code>!access1</code> !permissions yet.<br/>It is recommended to assign the <code>!access1</code> !permissions before updating FCKeditor profiles.',
-    array(
-    '!access1' => t('access fckeditor'),
-    '!permissions' => l(t('permissions'), 'admin/user/permissions'))), 'warning');
+    drupal_set_message(t('You haven\'t assigned "access fckeditor" <a href="!permissions">permissions</a> yet. It is recommended to assign the "access fckeditor" <a href="!permissions">permissions</a> before updating FCKeditor profiles.', array('!permissions' => url('admin/user/permissions'))), 'warning');
   }
 
   if (empty($profile->name)) {
@@ -218,13 +200,6 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     if (count($orig_roles) != count($roles)) {
       drupal_set_message(t('Not all user roles are shown since they already have fckeditor profiles. You must first unassign profiles in order to add them to a new one.'));
     }
-    $btn = t('Create profile');
-  }
-  else if (arg(3) == 'clone') {
-    $btn = t('Create profile');
-  }
-  else {
-    $btn = t('Update profile');
   }
 
   $form['basic'] = array(
@@ -280,7 +255,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#title' => t('Roles allowed to use this profile'),
   '#default_value' => !empty($profile->rids) ? array_keys((array) $profile->rids) : array(),
   '#options' => $roles,
-  '#description' =>  t('Only roles with \'!access1\' permission will be shown here. If no role is available, make sure that you have assigned the \'!access1\' !permission.', array('!access1' => t('access fckeditor'), '!permission' => l(t("permission"), "admin/user/permissions"))),
+  '#description' =>  t('Only roles with "access fckeditor" permission will be shown here. If no role is available, make sure that you have assigned the "access fckeditor" <a href="!permission">permission</a>.', array('!permission' => url('admin/user/permissions'))),
   '#required' => TRUE
   );
 
@@ -288,8 +263,8 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#type' => 'select',
   '#title' => t('Allow users to customize FCKeditor appearance'),
   '#default_value' => !empty($profile->settings['allow_user_conf']) ? $profile->settings['allow_user_conf'] : 'f',
-  '#options' => array('f' => t('false'), 't' => t('true')),
-  '#description' => t('If allowed, users will be able to override <code>Editor appearance</code> by visiting their profile page.'),
+  '#options' => array('f' => t('False'), 't' => t('True')),
+  '#description' => t('If allowed, users will be able to override the "Editor appearance" by visiting their profile page.'),
   );
 
   $form['fckeditor_exclude_settings'] = array(
@@ -310,7 +285,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#type' => 'select',
   '#title' => t('Use inclusion or exclusion mode'),
   '#default_value' => (empty($profile->settings['excl_mode']) || in_array($profile->settings['excl_mode'], array(0, 2))) ? 0 : 1,
-  '#options' => array('0' => t('exclude'), '1' => t('include')),
+  '#options' => array('0' => t('Exclude'), '1' => t('Include')),
   '#description' => t('Choose the way of disabling/enabling FCKeditor on selected fields/paths (see below). Use exclude to disable FCKeditor on selected fields/paths. Use include if you want to load FCKeditor only on selected paths/fields.'),
   );
 
@@ -327,7 +302,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#prefix' => '<div style="margin-left:20px">',
   '#suffix' => '</div>',
   '#default_value' => !empty($profile->settings['excl']) ? $profile->settings['excl'] : '',
-  '#description' => t('Enter the paths to the textarea fields on which you want to enable or disable FCKeditor.') .' '. t('Paths are formed by appending the field name to the path of the page, separated by a dot. Please see the !helppagelink for more information about defining field names.', array('!helppagelink' => l(t('help page'), 'admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
+  '#description' => t('Enter the paths to the textarea fields on which you want to enable or disable FCKeditor.') .' '. t('Paths are formed by appending the field name to the path of the page, separated by a dot. Please see the <a href="!helppagelink">help page</a> for more information about defining field names.', array('!helppagelink' => url('admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
   );
   
   $form['fckeditor_exclude_settings']['simple_incl'] = array(
@@ -336,7 +311,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#cols' => 60,
   '#rows' => 5,
   '#default_value' => !empty($profile->settings['simple_incl']) ? $profile->settings['simple_incl'] : '',
-  '#description' => t('Enter the paths to the textarea fields on which you want to force the simplified toolbar.') .' '. t('Paths are formed by appending the field name to the path of the page, separated by a dot. Please see the !helppagelink for more information about defining field names.', array('!helppagelink' => l(t('help page'), 'admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
+  '#description' => t('Enter the paths to the textarea fields on which you want to force the simplified toolbar.') .' '. t('Paths are formed by appending the field name to the path of the page, separated by a dot. Please see the <a href="!helppagelink">help page</a> for more information about defining field names.', array('!helppagelink' => url('admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
   );
 
   $form['appearance'] = array(
@@ -350,7 +325,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#type' => 'select',
   '#title' => t('Default state'),
   '#default_value' => !empty($profile->settings['default']) ? $profile->settings['default'] : 't',
-  '#options' => array('t' => t('enabled'), 'f' => t('disabled')),
+  '#options' => array('t' => t('Enabled'), 'f' => t('Disabled')),
   '#description' => t('Default editor state. If disabled, rich text editor may still be enabled using toggle or popup window.'),
   );
 
@@ -358,7 +333,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#type' => 'select',
   '#title' => t('Show disable/enable rich text editor toggle'),
   '#default_value' => !empty($profile->settings['show_toggle']) ? $profile->settings['show_toggle'] : 't',
-  '#options' => array('t' => t('true'), 'f' => t('false')),
+  '#options' => array('t' => t('True'), 'f' => t('False')),
   '#description' => t('Whether or not to show the disable/enable rich text editor toggle below the textarea. Works only if FCKeditor is not running in a popup window (see below).'),
   );
   
@@ -366,7 +341,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#type' => 'select',
   '#title' => t('Use FCKeditor in a popup window'),
   '#default_value' => !empty($profile->settings['popup']) ? $profile->settings['popup'] : 'f',
-  '#options' => array('f' => t('false'), 't' => t('true')),
+  '#options' => array('f' => t('False'), 't' => t('True')),
   '#description' => t('If this option is enabled a link to a popup window will be used instead of a textarea replace.'),
   );
 
@@ -383,14 +358,14 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#title' => t('Toolbar'),
   '#default_value' => !empty($profile->settings['toolbar']) ? $profile->settings['toolbar'] : 'default',
   '#options' => $toolbar_options,
-  '#description' => t('Choose a default toolbar set. To define new toolbar, edit <code>fckeditor.config.js</code> located in !module_path.', array('!module_path' => drupal_get_path('module', 'fckeditor'))),
+  '#description' => t('Choose a default toolbar set. To define new toolbar, edit "fckeditor.config.js" located in "!module_path".', array('!module_path' => drupal_get_path('module', 'fckeditor'))),
   );
 
   $form['appearance']['expand'] = array(
   '#type' => 'select',
   '#title' => t('Start the toolbar expanded'),
   '#default_value' => !empty($profile->settings['expand']) ? $profile->settings['expand'] : 't',
-  '#options' => array('t' => t('enabled'), 'f' => t('disabled')),
+  '#options' => array('t' => t('Enabled'), 'f' => t('Disabled')),
   '#description' => t('The toolbar start expanded or collapsed.'),
   );
 
@@ -398,7 +373,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#type' => 'textfield',
   '#title' => t('Width'),
   '#default_value' => !empty($profile->settings['width']) ? $profile->settings['width'] : '100%',
-  '#description' => t("Width in pixels or percent. Ex: 400 or 100%"),
+  '#description' => t("Width in pixels or percent. Example: 400 or 100%."),
   '#size' => 40,
   '#maxlength' => 128,
   );
@@ -415,7 +390,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#type' => 'select',
   '#title' => t('Auto-detect language'),
   '#default_value' => !empty($profile->settings['auto_lang']) ? $profile->settings['auto_lang'] : 't',
-  '#options' => array('t' => t('true'), 'f' => t('false')),
+  '#options' => array('t' => t('True'), 'f' => t('False')),
   '#description' => t('Use auto detect user language feature.')
   );
   
@@ -465,7 +440,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#type' => 'select',
   '#title' => t('Apply source formatting'),
   '#default_value' => !empty($profile->settings['format_source']) ? $profile->settings['format_source'] : 't',
-  '#options' => array('t' => t('true'), 'f' => ('false')),
+  '#options' => array('t' => t('True'), 'f' => ('False')),
   '#description' => t('When set to "true" the editor will format the XHTML when switching from WYSIWYG view to Source view, by inserting line breaks on some tags endings and indenting paragraphs, tables and lists.'),
   );
 
@@ -482,8 +457,8 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#type' => 'select',
   '#title' => t('Ignore this section, use default settings defined in config files'),
   '#default_value' => $profile->settings['output_conf'] ? $profile->settings['output_conf'] : 'f',
-  '#options' => array('f' => t('false'), 't' => t('true')),
-  '#description' => t('Although it is less handy, defining settings only in config files (<code>fckconfig.js</code> and <code>fckeditor.config.js</code>) will slightly leverage your traffic and improve load time of your site. <br/>Warning: if set to true, all changes made in <code>Cleanup and output</code> will have no affect on FCKeditor\'s behaviour.'),
+  '#options' => array('f' => t('False'), 't' => t('True')),
+  '#description' => t('Although it is less handy, defining settings only in config files ("fckconfig.js" and "fckeditor.config.js") will slightly leverage your traffic and improve load time of your site. <br/>Warning: if set to true, all changes made in "Cleanup and output" will have no affect on FCKeditor\'s behaviour.'),
   );
   */
 
@@ -498,8 +473,8 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#type' => 'select',
   '#title' => t('Editor CSS'),
   '#default_value' => !empty($profile->settings['css_mode']) ? $profile->settings['css_mode'] : 'theme',
-  '#options' => array('theme' => t('use theme css'), 'self' => t('define css'), 'none' => t('FCKeditor default')),
-  '#description' => t('Defines the CSS to be used in the editor area.<br />use theme css - load style.css from current site theme.<br/>define css - enter path for css file below.<br />FCKeditor default - uses default CSS from editor.')
+  '#options' => array('theme' => t('Use theme css'), 'self' => t('Define css'), 'none' => t('FCKeditor default')),
+  '#description' => t('Defines the CSS to be used in the editor area.<br />Use theme css - load style.css from current site theme.<br/>Define css - enter path for css file below.<br />FCKeditor default - uses default CSS from editor.')
   );
 
   $form['css']['css_path'] = array(
@@ -508,15 +483,15 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#default_value' => !empty($profile->settings['css_path']) ? $profile->settings['css_path'] : "",
   '#size' => 40,
   '#maxlength' => 255,
-  '#description' => t('Enter path to CSS file (<em>example: css/editor.css</em>) or a list of css files seperated by a comma (<em>example: /themes/garland/style.css,http://example.com/style.css</em>).<br />Macros: %h (host name: !host), %t (path to theme: !theme)<br />Be sure to select "define css" above.', array('!host' => base_path(), '!theme' => base_path() . path_to_theme() .'/'))
+  '#description' => t('Enter path to CSS file (Example: "css/editor.css") or a list of css files seperated by a comma (Example: "/themes/garland/style.css,http://example.com/style.css"). Make sure to select "Define css" above.<br />Available placeholders:<br /><strong>%h</strong> - host name (!host).<br /><strong>%t</strong> - path to theme (!theme).', array('!host' => base_path(), '!theme' => base_path() . path_to_theme() .'/'))
   );
 
   $form['css']['css_style'] = array(
   '#type' => 'select',
   '#title' => t('Predefined styles'),
   '#default_value' => !empty($profile->settings['css_style']) ? $profile->settings['css_style'] : 'theme',
-  '#options' => array('theme' => t('use theme fckstyles.xml'), 'self' => t('define path to fckstyles.xml'), 'default' => t('FCKeditor default')),
-  '#description' => t('Define the location of <code>fckstyles.xml</code> file. It is used by the &quot;Style&quot; dropdown list available in the Default toolbar.<br />Copy !fckstyles.xml inside your theme directory (<code>!theme</code>) and adjust it to your needs.', array('!fckstyles.xml' => fckeditor_path(TRUE) .'/fckstyles.xml', '!theme' => path_to_theme() .'/fckstyles.xml'))
+  '#options' => array('theme' => t('Use theme fckstyles.xml'), 'self' => t('Define path to fckstyles.xml'), 'default' => t('FCKeditor default')),
+  '#description' => t('Define the location of "fckstyles.xml" file. It is used by the "Style" dropdown list available in the default toolbar. Copy "!fckstyles.xml" inside your theme directory ("!theme") and adjust it to your needs.', array('!fckstyles.xml' => fckeditor_path(TRUE) .'/fckstyles.xml', '!theme' => path_to_theme() .'/fckstyles.xml'))
   );
 
   $form['css']['styles_path'] = array(
@@ -525,7 +500,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#default_value' => !empty($profile->settings['styles_path']) ? $profile->settings['styles_path'] : "",
   '#size' => 40,
   '#maxlength' => 255,
-  '#description' => t('Enter path to XML file with predefined styles (<em>example: /fckstyles.xml</em>).<br />Macros: %h (host name: !host), %t (path to theme: !theme), %m (path to FCKeditor module: !module)<br />Be sure to select "define path to fckstyles.xml" above.', array('!host' => base_path(), '!theme' => base_path() . path_to_theme() .'/', '!module' => drupal_get_path('module', 'fckeditor')))
+  '#description' => t('Enter path to XML file with predefined styles (Example: "/fckstyles.xml"). Be sure to select "define path to fckstyles.xml" above.<br />Available placeholders:<br /><strong>%h</strong> - host name (!host).<br /><strong>%t</strong> - path to theme (!theme).<br /><strong>%m</strong> - path to FCKeditor module (!module).', array('!host' => base_path(), '!theme' => base_path() . path_to_theme() .'/', '!module' => drupal_get_path('module', 'fckeditor')))
   );
 
   $form['fckeditor_upload_settings'] = array(
@@ -533,12 +508,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#title' => t('File browser settings'),
   '#collapsible' => TRUE,
   '#collapsed' => TRUE,
-  '#description' => t('Set file browser settings. A file browser will allow you to explore the files contained on the server and embed them as links, images or flash movies. Besides the built-in FCKeditor file browser, you can also use a contributed module like !imce. The quick upload setting controls whether images, flash movies and files can be uploaded using the Upload tab of the respective dialogs. Please note that these options require manual configuration, check !readme for more information.<br />',
-    array(
-    '!imce' => l(t('IMCE'), 'http://drupal.org/project/imce'),
-    '!readme' => l('readme.txt', 'admin/help/fckeditor'),
-    )
-    )
+  '#description' => t('Set file browser settings. A file browser will allow you to explore the files contained on the server and embed them as links, images or flash movies. Besides the built-in FCKeditor file browser, you can also use a contributed module like <a href="!imce">IMCE</a>. The quick upload setting controls whether images, flash movies and files can be uploaded using the upload tab of the respective dialogs. Please note that these options require manual configuration, check <a href="!readme">readme.txt</a> for more information.', array('!imce' => url('http://drupal.org/project/imce'), '!readme' => url('admin/help/fckeditor')))
   );    
   
   $filebrowsers = array(
@@ -560,7 +530,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   
   $form['fckeditor_upload_settings']['quickupload'] = array(
     '#type' => 'select',
-    '#options' => array('f' => t('false'), 't' => t('true')),
+    '#options' => array('f' => t('False'), 't' => t('True')),
     '#title' => t('Allow quick uploads'),
     '#default_value' => !empty($profile->settings['quickupload']) ? $profile->settings['quickupload'] : 'f',
     '#description' => t('The quick upload functionality can be disabled and enabled independently of the file browser. It will always use the settings below.'),
@@ -575,7 +545,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#default_value' => !empty($profile->settings['UserFilesPath']) ? $profile->settings['UserFilesPath'] : "%b%f/",
     '#size' => 40,
     '#maxlength' => 255,
-    '#description' => t('Path to uploaded files relative to the document root.<br />Available wildcard characters:<br/><strong>%b</strong> - base URL path of the Drupal installation (!base).<br/><strong>%f</strong> - Drupal file system path where the files are stored (!files).<br /><strong>%u</strong> - User ID.<br /><strong>%n</strong> - User name.<br />Current path: !path', array('!path' => $current_user_files_path, '!files' => file_directory_path(), '!base' => base_path())),
+    '#description' => t('Path to uploaded files relative to the document root.<br />Available placeholders:<br/><strong>%b</strong> - base URL path of the Drupal installation (!base).<br/><strong>%f</strong> - Drupal file system path where the files are stored (!files).<br /><strong>%u</strong> - User ID.<br /><strong>%n</strong> - Username.<br />Current path: !path', array('!path' => $current_user_files_path, '!files' => file_directory_path(), '!base' => base_path())),
   );
   
   $form['fckeditor_upload_settings']['UserFilesAbsolutePath'] = array(
@@ -584,7 +554,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#default_value' => !empty($profile->settings['UserFilesAbsolutePath']) ? $profile->settings['UserFilesAbsolutePath'] : "%d%b%f/",
     '#size' => 40,
     '#maxlength' => 255,
-    '#description' => t('The path to the local directory (in the server) which points to the path defined above. If empty, FCKeditor will try to discover the right path.<br />Available wildcard characters:<br/><strong>%d</strong> - server path to document root (!root).<br /><strong>%b</strong> - base URL path of the Drupal installation (!base).<br/><strong>%f</strong> - Drupal file system path where the files are stored (!files).<br /><strong>%u</strong> - User ID.<br /><strong>%n</strong> - User name.<br />Current path: !path', array('!path' => $current_user_files_absolute_path, '!files' => file_directory_path(), '!base' => base_path(), '!root' => $_SERVER['DOCUMENT_ROOT'])),
+    '#description' => t('The path to the local directory (in the server) which points to the path defined above. If empty, FCKeditor will try to discover the right path.<br />Available placeholders:<br/><strong>%d</strong> - server path to document root (!root).<br /><strong>%b</strong> - base URL path of the Drupal installation (!base).<br/><strong>%f</strong> - Drupal file system path where the files are stored (!files).<br /><strong>%u</strong> - User ID.<br /><strong>%n</strong> - Username.<br />Current path: !path', array('!path' => $current_user_files_absolute_path, '!files' => file_directory_path(), '!base' => base_path(), '!root' => $_SERVER['DOCUMENT_ROOT'])),
   );
 
   if (variable_get('file_downloads', '') == FILE_DOWNLOADS_PRIVATE) {
@@ -606,20 +576,12 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   '#default_value' => !empty($profile->settings['js_conf']) ? $profile->settings['js_conf'] : "",
   '#cols' => 60,
   '#rows' => 5,
-  '#description' => t('Warning: to change FCKeditor configuration globally, you should modify the config file: <code>!fckeditor_config</code>.<br/>Sometimes it is required to change the FCKeditor configuration for selected profile. Use this box to define settings that are uniqe for this profile.<br/>Available options are listed in the !docs.<br/>Warning: if you make something wrong here, FCKeditor may fail to load.<br/>For example to disable some advanced tabs in dialog windows in FCKeditor, add the following: !example',
-  array(
-  '!fckeditor_config' => drupal_get_path('module', 'fckeditor') ."/fckeditor.config.js",
-  '!docs' => l(t("FCKeditor documentation"), "http://docs.fckeditor.net/FCKeditor_2.x/Developers_Guide/Configuration/Configuration_Options"),
-  "!example" => "<pre>LinkDlgHideTarget = true ;
-LinkDlgHideAdvanced = true ;
-ImageDlgHideLink = true ;
-ImageDlgHideAdvanced = true ;
-FlashDlgHideAdvanced = true ;</pre>")
-));
+  '#description' => t('To change FCKeditor configuration globally, you should modify the config file: "!fckeditor_config". Sometimes it is required to change the FCKeditor configuration for a single profile only. Use this box to define settings that are unique for this profile. Available options are listed in the <a href="!docs">FCKeditor documentation</a>. Add the following code snippet to disable some advanced tabs in dialog windows of FCKeditor: <pre>@code</pre><strong>Warning</strong>: If you make something wrong here, FCKeditor may fail to load.', array('!fckeditor_config' => drupal_get_path('module', 'fckeditor') ."/fckeditor.config.js", '!docs' => 'http://docs.fckeditor.net/FCKeditor_2.x/Developers_Guide/Configuration/Configuration_Options', '@code' => "LinkDlgHideTarget = true;\nLinkDlgHideAdvanced = true;\nImageDlgHideLink = true;\nImageDlgHideAdvanced = true;\nFlashDlgHideAdvanced = true;"))
+  );
 
   $form['submit'] = array(
     '#type' => 'submit',
-    '#value' => $btn
+    '#value' => t('Save')
   );
 
   return $form;
@@ -642,7 +604,7 @@ function fckeditor_admin_profile_form_validate($form, $form_state) {
   fckeditor_admin_profile_validate_fieldpaths('simple_incl', $edit['simple_incl']);
   
   if (!preg_match('/^\d+$/', trim($edit['min_rows']))) {
-    form_set_error('min_rows', t('Minimum rows must be a valid number'));
+    form_set_error('min_rows', t('Minimum rows must be a valid number.'));
   }
 
   if ($edit['default'] == 't' && $edit['popup'] == 't') {
@@ -662,12 +624,12 @@ function fckeditor_admin_profile_form_validate($form, $form_state) {
   elseif (!isset($edit['_profile']) || ($edit['_profile']->name != $edit['name'])) {
     $result = fckeditor_profile_load($edit['name']);
     if (!empty($result)) {
-      form_set_error('name', t('The profile name must be unique. A profile with this name already exists'));
+      form_set_error('name', t('The profile name must be unique. A profile with this name already exists.'));
     }
   }
 
   if (!preg_match('/^\d+%?$/', $edit['width'])) {
-    form_set_error('width', t('Enter valid width. Ex: 400 or 100%'));
+    form_set_error('width', t('Enter valid width. Example: 400 or 100%.'));
   }
 
   if (!empty($edit['css_path'])) {
@@ -780,13 +742,13 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
   $form['common']['rank'] = array('#type' => 'textfield',
   '#title' => t('Role precedence'),
   '#default_value' => implode('>', $rids),
-  '#description' => t('A user having <strong>multiple roles</strong> gets the permissions of the highest one. Sort role IDs according to their <strong>precedence from higher to lower</strong> by putting > in between.<br />'),
+  '#description' => t('A user having <strong>multiple roles</strong> gets the permissions of the highest one. Sort role IDs according to their <strong>precedence from higher to lower</strong> by putting > in between.'),
   );
   if ($rids) {
-    $form['common']['rank']['#description'] .= t('Here is the id-name pairs of roles having access to FCKeditor:') .'<div>'. implode('<br />', $rtext) .'</div>';
+    $form['common']['rank']['#description'] .= '<br />'. t('Here is the id-name pairs of roles having access to FCKeditor:') .'<div>'. implode('<br />', $rtext) .'</div>';
   }
   else {
-    $form['common']['rank']['#description'] .= t('You haven\'t assigned the <code>!access1</code> !permissions yet.', array('!access1' => t('access fckeditor'), '!permissions' => l(t('permissions'), 'admin/user/permissions')));
+    $form['common']['rank']['#description'] .= '<br />'. t('You haven\'t assigned the "access fckeditor" <a href="!permissions">permissions</a> yet.', array('!permissions' => url('admin/user/permissions')));
   }
   
   $form['fckeditor_exclude_settings'] = array(
@@ -800,7 +762,7 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
   '#type' => 'select',
   '#title' => t('Use inclusion or exclusion mode'),
   '#default_value' => (empty($profile->settings['excl_mode']) || in_array($profile->settings['excl_mode'], array(0, 2))) ? 0 : 1,
-  '#options' => array('0' => t('exclude'), '1' => t('include')),
+  '#options' => array('0' => t('Exclude'), '1' => t('Include')),
   '#description' => t('Choose the way of disabling/enabling FCKeditor on selected fields/paths (see below). Use exclude to disable FCKeditor on selected fields/paths. Use include if you want to load FCKeditor only on selected paths/fields.'),
   );
   /**
@@ -816,7 +778,7 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
   '#prefix' => '<div style="margin-left:20px">',
   '#suffix' => '</div>',
   '#default_value' => !empty($profile->settings['excl']) ? $profile->settings['excl'] : '',
-  '#description' => t('Enter the paths to the textarea fields on which you want to enable or disable FCKeditor.') .' '. t('Paths are formed by appending the field name to the path of the page, separated by a dot. Please see the !helppagelink for more information about defining field names.', array('!helppagelink' => l(t('help page'), 'admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
+  '#description' => t('Enter the paths to the textarea fields on which you want to enable or disable FCKeditor.') .' '. t('Paths are formed by appending the field name to the path of the page, separated by a dot. Please see the <a href="!helppagelink">help page</a> for more information about defining field names.', array('!helppagelink' => url('admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
   );
   
   $form['fckeditor_exclude_settings']['simple_incl'] = array(
@@ -825,7 +787,7 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
   '#cols' => 60,
   '#rows' => 5,
   '#default_value' => !empty($profile->settings['simple_incl']) ? $profile->settings['simple_incl'] : '',
-  '#description' => t('Enter the paths to the textarea fields on which you want to force the simplified toolbar.') .' '. t('Paths are formed by appending the field name to the path of the page, separated by a dot. Please see the !helppagelink for more information about defining field names.', array('!helppagelink' => l(t('help page'), 'admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
+  '#description' => t('Enter the paths to the textarea fields on which you want to force the simplified toolbar.') .' '. t('Paths are formed by appending the field name to the path of the page, separated by a dot. Please see the <a href="!helppagelink">help page</a> for more information about defining field names.', array('!helppagelink' => url('admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
   );
   
   $form['fckeditor_advanced_settings'] = array(
@@ -843,18 +805,7 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
   '#default_value' =>  isset($profile->settings['fckeditor_path']) ? $profile->settings['fckeditor_path'] : '%m/fckeditor',
   '#size' => 40,
   '#maxlength' => 128,
-  '#description' => t('Path to FCKeditor (the HTML editor, downloaded from !fckeditornet) relative to the document root.
-    <br />Available wildcard characters:
-    <br/><strong>%b</strong> - base URL path of the Drupal installation (!base).
-    <br/><strong>%m</strong> - base URL path where FCKeditor module is stored (!files).
-    <br />Current path: !path', 
-      array(
-      '!path' => fckeditor_path(FALSE),
-      '!base' => base_path(),
-      '!files' => base_path() . $module_drupal_path ,
-      '!fckeditornet' => l('www.fckeditor.net', 'http://www.fckeditor.net/download')
-      )
-    ),
+  '#description' => t('Path to FCKeditor (the HTML editor, downloaded from <a href="!fckeditornet">www.fckeditor.net</a>) relative to the document root.<br />Available placeholders:<br /><strong>%b</strong> - base URL path of the Drupal installation (!base).<br /><strong>%m</strong> - base URL path where FCKeditor module is stored (!files).<br />Current path: !path', array('!path' => fckeditor_path(FALSE), '!base' => base_path(), '!files' => base_path() . $module_drupal_path , '!fckeditornet' => 'http://www.fckeditor.net/download')),
   '#required' => TRUE
   ); 
 
@@ -864,20 +815,15 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
   '#default_value' =>  isset($profile->settings['fckeditor_local_path'])?$profile->settings['fckeditor_local_path']:'',
   '#size' => 40,
   '#maxlength' => 128,
-  '#description' => t('The path to the local directory (on the server) which points to the path defined above. Enter either an absolute server path or path relative to index.php.<br />If empty, FCKeditor module will try to find the right path.
-    <br />Current path: !path', 
-      array(
-    '!path' => fckeditor_path(TRUE),
-      )
-    ),
+  '#description' => t('The path to the local directory (on the server) which points to the path defined above. Enter either an absolute server path or path relative to "index.php". If empty, FCKeditor module will try to find the right path.<br />Current path: !path', array('!path' => fckeditor_path(TRUE))),
   ); 
   
   $form['fckeditor_advanced_settings']['show_fieldnamehint'] = array(
   '#type' => 'select',
   '#title' => t('Show field name hint below each rich text editor'),
   '#default_value' => !empty($profile->settings['show_fieldnamehint']) ? $profile->settings['show_fieldnamehint'] : 't',
-  '#options' => array('t' => t('true'), 'f' => t('false')),
-  '#description' => t('This only applies for users with %permission permissions', array('%permission' => 'administer fckeditor')),
+  '#options' => array('t' => t('True'), 'f' => t('False')),
+  '#description' => t('This only applies for users with "administer fckeditor" permissions.'),
   );  
   
   $form['submit'] = array(
@@ -972,21 +918,16 @@ function fckeditor_admin_profile_delete_form($form_state, $profile) {
     '#type' => 'value',
     '#value' => $profile,
   );
-  
-  $form['warning'] = array(
-    '#type' => 'item',
-    '#value' => t('You\'re about to delete the FCKeditor profile, read the question below carefully.'),
-  );
-  
+
   $form['question'] = array(
     '#type' => 'item',
-    '#value' => t('Are you sure that you want to delete profile %profile?', array('%profile' => $profile->name)),
+    '#value' => t('Are you sure that you want to delete the FCKeditor profile %profile?', array('%profile' => $profile->name)),
   );
   
   $form['delete'] = array(
     '#type' => 'submit',
     '#id' => 'delete',
-    '#value' => t('Yes, delete!'),
+    '#value' => t('Delete'),
   );
   
   $form['back'] = array(
@@ -1003,7 +944,7 @@ function fckeditor_admin_profile_delete_form_submit($form, &$form_state) {
   
   if ($form_state['clicked_button']['#id'] == 'delete') {
     fckeditor_profile_delete($v['_profile']->name);
-    drupal_set_message(t('Deleted profile'));
+    drupal_set_message(t('Deleted FCKeditor profile.'));
   }
   
   $form_state['redirect'] = 'admin/settings/fckeditor';

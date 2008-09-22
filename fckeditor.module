@@ -65,10 +65,7 @@ function fckeditor_user($type, $edit, &$user, $category = NULL) {
  *  Run if there is old menu information in database
  */
 function fckeditor_admin($arg = NULL) {
-  drupal_set_message(
-  t('The FCKeditor component is not installed correctly. You should run the  !fupdatelink immediately.',
-  array(
-  '!fupdatelink' => l(t('database update script'), 'update.php'))), 'error');
+  drupal_set_message(t('The FCKeditor component is not installed correctly. You should run the <a href="!fupdatelink">database update script</a> immediately.', array('!fupdatelink' => url('update.php'))), 'error');
   return FALSE;
 }
 
@@ -123,7 +120,7 @@ function fckeditor_menu() {
 
   $items['admin/settings/fckeditor'] = array(
   'title' => 'FCKeditor settings',
-  'description' => 'Configure the rich editor.',
+  'description' => 'Configure the rich text editor.',
   'page callback' => 'fckeditor_admin_main',
   'file' => 'fckeditor.admin.inc',
   'access arguments' => array('administer fckeditor'),
@@ -132,7 +129,7 @@ function fckeditor_menu() {
   
   $items['admin/settings/fckeditor/add'] = array(
   'title' => 'Add new FCKeditor profile',
-  'description' => 'Configure the rich editor.',
+  'description' => 'Configure the rich text editor.',
   'page callback' => 'drupal_get_form',
   'page arguments' => array('fckeditor_admin_profile_form'),
   'file' => 'fckeditor.admin.inc',
@@ -142,7 +139,7 @@ function fckeditor_menu() {
   
   $items['admin/settings/fckeditor/clone/%fckeditor_profile'] = array(
   'title' => 'Clone FCKeditor profile',
-  'description' => 'Configure the rich editor.',
+  'description' => 'Configure the rich text editor.',
   'page callback' => 'drupal_get_form',
   'page arguments' => array('fckeditor_admin_profile_clone_form', 4),
   'file' => 'fckeditor.admin.inc',
@@ -152,7 +149,7 @@ function fckeditor_menu() {
   
   $items['admin/settings/fckeditor/edit/%fckeditor_profile'] = array(
   'title' => 'Edit FCKeditor profile',
-  'description' => 'Configure the rich editor.',
+  'description' => 'Configure the rich text editor.',
   'page callback' => 'drupal_get_form',
   'page arguments' => array('fckeditor_admin_profile_form', 4),
   'file' => 'fckeditor.admin.inc',
@@ -162,7 +159,7 @@ function fckeditor_menu() {
   
   $items['admin/settings/fckeditor/delete/%fckeditor_profile'] = array(
   'title' => 'Delete FCKeditor profile',
-  'description' => 'Configure the rich editor.',
+  'description' => 'Configure the rich text editor.',
   'page callback' => 'drupal_get_form',
   'page arguments' => array('fckeditor_admin_profile_delete_form', 4),
   'file' => 'fckeditor.admin.inc',
@@ -172,7 +169,7 @@ function fckeditor_menu() {
   
   $items['admin/settings/fckeditor/addg'] = array(
   'title' => 'Add FCKeditor Global profile',
-  'description' => 'Configure the rich editor.',
+  'description' => 'Configure the rich text editor.',
   'page callback' => 'drupal_get_form',
   'page arguments' => array('fckeditor_admin_global_profile_form', 'add'),
   'file' => 'fckeditor.admin.inc',
@@ -182,7 +179,7 @@ function fckeditor_menu() {
   
   $items['admin/settings/fckeditor/editg'] = array(
   'title' => 'Edit FCKeditor Global profile',
-  'description' => 'Configure the rich editor.',
+  'description' => 'Configure the rich text editor.',
   'page callback' => 'drupal_get_form',
   'page arguments' => array('fckeditor_admin_global_profile_form', 'edit'),
   'file' => 'fckeditor.admin.inc',
@@ -358,9 +355,9 @@ function fckeditor_process_textarea($element) {
       }
       $content .= $element['#value'];
       $wysiwyg_link = '';
-      $wysiwyg_link .= "<a href=\"javascript:Toggle('{$textarea_id}','". str_replace("'", "\\'", t("Switch to plain text editor")) ."','". str_replace("'", "\\'", t("Switch to rich text editor")) ."');\" id=\"switch_{$textarea_id}\" ". ($fckeditor_on?"style=\"display:none\"":"") .">";
-      $wysiwyg_link .= $fckeditor_on ? t("Switch to plain text editor") : t("Switch to rich text editor");
-      $wysiwyg_link .= "</a>";
+      $wysiwyg_link .= "<a href=\"javascript:Toggle('{$textarea_id}','". str_replace("'", "\\'", t('Switch to plain text editor')) ."','". str_replace("'", "\\'", t('Switch to rich text editor')) ."');\" id=\"switch_{$textarea_id}\" ". ($fckeditor_on?"style=\"display:none\"":"") .">";
+      $wysiwyg_link .= $fckeditor_on ? t('Switch to plain text editor.') : t('Switch to rich text editor.');
+      $wysiwyg_link .= '</a>';
       
       // Make sure to append to #suffix so it isn't completely overwritten
       $element['#suffix'] .= $wysiwyg_link;
@@ -571,7 +568,7 @@ function fckeditor_process_textarea($element) {
     drupal_add_js('var '. $js_id .';if (Drupal.jsEnabled) {'. $js .'}', 'inline');
 
     if ($conf['popup'] == 't') {
-      $element['#suffix'] .= ' <span class="fckeditor_popuplink">(<a href="#" onclick="FCKeditor_OpenPopup(\''. $module_full_path .'/fckeditor.popup.html\', \''. $js_id .'\', \''. $element['#id'] .'\'); return false;">'. t('Open rich editor') ."</a>)</span>";
+      $element['#suffix'] .= ' <span class="fckeditor_popuplink">(<a href="#" onclick="FCKeditor_OpenPopup(\''. $module_full_path .'/fckeditor.popup.html\', \''. $js_id .'\', \''. $element['#id'] .'\'); return false;">'. t('Open rich text editor') ."</a>)</span>";
     }
   }
 
@@ -579,10 +576,7 @@ function fckeditor_process_textarea($element) {
   if (user_access('administer fckeditor') && (!isset($global_conf['show_fieldnamehint']) || $global_conf['show_fieldnamehint'] == 't')) {
     module_load_include('admin.inc', 'fckeditor');
     
-    $element['#suffix'] .= '<div class="textarea-identifier description">'. t('The ID for !excluding this element is %fieldname', array(
-      '!excluding' => l(t('excluding or including'), 'admin/settings/fckeditor'),
-      '%fieldname' => fckeditor_rule_to_string(fckeditor_rule_create(fckeditor_get_nodetype($_GET['q']), $_GET['q'], $element['#id'])),
-    )) .'</div>';
+    $element['#suffix'] .= '<div class="textarea-identifier description">'. t('The ID for <a href="!excluding">excluding or including</a> this element is %fieldname.', array('!excluding' => url('admin/settings/fckeditor'), '%fieldname' => fckeditor_rule_to_string(fckeditor_rule_create(fckeditor_get_nodetype($_GET['q']), $_GET['q'], $element['#id'])))) .'</div>';
   }
 
   return $element;
