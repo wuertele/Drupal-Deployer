@@ -5,7 +5,6 @@ foreach (element_children($form['title']) as $key) {
   $row = array();
   $row[] = drupal_render($form['title'][$key]);
   $row[] = drupal_render($form['pattern'][$key]);
-  
   $rows[] = $row;
 }
 
