@@ -105,7 +105,13 @@ function cck_fieldgroup_tabs_form_alter(&$form, $form_state, $form_id) {
   }
   else if ($form_id == 'content_display_overview_form') {
     if (isset($form['#groups']) && $form['#groups']) {
-      $contexts = _content_admin_display_contexts($form['#contexts_selector']);
+      // Check for old CCK behaviour - TODO Remove with next CCK RC
+      if (function_exists('_content_admin_display_contexts')) {
+        $contexts = _content_admin_display_contexts($form['#contexts_selector']);
+      }
+      else {
+        $contexts = content_build_modes($form['#contexts']);
+      }
       foreach ($form['#groups'] as $name) {
         foreach (array_keys($contexts) as $key) {
           $form[$name][$key]['format']['#options']['tabs'] = t('tabs');
