@@ -22,6 +22,25 @@ function cck_fieldgroup_tabs_menu() {
 }
 
 /**
+ *  Implementation of hook_menu_alter()
+ *
+ *  Modified AHAH callbacks to handle the changes CCK Fieldgroup Tabs make to form structure
+ */
+function cck_fieldgroup_tabs_menu_alter(&$callbacks) {
+  // For CCK multi-value elements
+  if (isset($callbacks['content/js_add_more'])) {
+    $callbacks['content/js_add_more']['page callback'] = 'cck_fieldgroup_tabs_content_add_more_js';
+  }
+  // For Imagefield/Filefield upload elements
+  if (isset($callbacks['filefield/ahah/%/%/%'])) {
+    $callbacks['filefield/ahah/%/%/%']['page callback'] = 'cck_fieldgroup_tabs_filefield_js';
+  }
+}
+
+// Load up modified AHAH callback functions
+module_load_include('inc', 'cck_fieldgroup_tabs', 'cck_fieldgroup_tabs_ahah');
+
+/**
  * Admin settings.
  */
 function cck_fieldgroup_tabs_admin_settings() {
