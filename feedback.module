@@ -16,23 +16,26 @@ function feedback_perm() {
 /**
  * Implementation of hook_menu().
  */
-function feedback_menu($may_cache) {
+function feedback_menu() {
   $items = array();
-  if ($may_cache) {
-    $items[] = array(
-      'path' => 'admin/logs/feedback',
-      'title' => t('Feedback messages'),
-      'description' => t('View feedback messages.'),
-      'callback' => 'drupal_get_form',
-      'callback arguments' => 'feedback_admin_view_form',
-      'access' => user_access('view feedback messages'),
-    );
-  }
-  else if (user_access('access feedback form')) {
+  $items['admin/reports/feedback'] = array(
+    'title' => 'Feedback messages',
+    'description' => 'View feedback messages.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => 'feedback_admin_view_form',
+    'access arguments' => array('view feedback messages'),
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_init().
+ */
+function feedback_init() {
+  if (user_access('access feedback form')) {
     drupal_add_css(drupal_get_path('module', 'feedback') . '/feedback.css');
     drupal_add_js(drupal_get_path('module', 'feedback') . '/feedback.js');
   }
-  return $items;
 }
 
 /**
@@ -47,7 +50,7 @@ function feedback_block($op = 'list', $delta = 0, $edit = array()) {
     $block = array();
     switch($delta) {
       case 'form':
-        if (!user_access('access feedback form') || $_GET['q'] == 'admin/logs/feedback') {
+        if (!user_access('access feedback form') || $_GET['q'] == 'admin/reports/feedback') {
           break;
         }
         $block['subject'] = t('Feedback');
@@ -62,7 +65,7 @@ function feedback_block($op = 'list', $delta = 0, $edit = array()) {
  * Implementation of hook_footer().
  */
 function feedback_footer($main = 0) {
-  if (user_access('access feedback form') && $_GET['q'] != 'admin/logs/feedback') {
+  if (user_access('access feedback form') && $_GET['q'] != 'admin/reports/feedback') {
     $block = (object)module_invoke('feedback', 'block', 'view', 'form');
     $block->module = 'feedback';
     $block->delta = 'form';
@@ -206,8 +209,7 @@ function feedback_mask_path($path) {
 function feedback_add_entry($message, $location) {
   global $user;
 
-  $fid = db_next_id("{feedback}_fid");
-  db_query("INSERT INTO {feedback} (fid, uid, message, location, location_masked, timestamp, useragent) VALUES (%d, %d, '%s', '%s', '%s', %d, '%s')", $fid, $user->uid, trim($message), $location, feedback_mask_path($location), time(), $_SERVER['HTTP_USER_AGENT']);
+  db_query("INSERT INTO {feedback} (uid, message, location, location_masked, timestamp, useragent) VALUES (%d, %d, '%s', '%s', '%s', %d, '%s')", $user->uid, trim($message), $location, feedback_mask_path($location), time(), $_SERVER['HTTP_USER_AGENT']);
 }
 
 /**

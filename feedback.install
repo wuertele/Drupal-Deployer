@@ -2,88 +2,59 @@
 // $Id$
 
 /**
+ * Implementation of hook_schema().
+ */
+function feedback_schema() {
+  $schema['feedback'] = array(
+    'description' => t('Stores all feedback messages.'),
+    'fields' => array(
+      'fid' => array('type' => 'serial', 'unsigned' => TRUE, 'not null' => TRUE,
+        'description' => t('The primary identifier for a feedback message.'),
+      ),
+      'uid' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0,
+        'description' => t('The user id of the author of a feedback message.'),
+      ),
+      'status' => array('type' => 'int', 'size' => 'tiny', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0,
+        'description' => t('The status of a feedback message.'),
+      ),
+      'message' => array('type' => 'text', 'size' => 'big', 'not null' => TRUE,
+        'description' => t('The actual feedback message.'),
+      ),
+      'location' => array('type' => 'text', 'not null' => TRUE,
+        'description' => t('The internal Drupal path of the page feedback message was entered in.'),
+      ),
+      'location_masked' => array('type' => 'text', 'not null' => TRUE,
+        'description' => t('The masked Drupal path of the page feedback message was entered in.'),
+      ),
+      'useragent' => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE,
+        'description' => t('The user agent of the feedback message author.'),
+      ),
+      'timestamp' => array('type' => 'int', 'not null' => TRUE, 'default' => 0,
+        'description' => t('The UNIX timestamp when the feedback message was created.'),
+      ),
+    ),
+    'primary key' => array('fid'),
+    'indexes' => array(
+      'location' => array(array('location', 32)),
+      'location_masked' => array(array('location_masked', 32)),
+    ),
+  );
+  return $schema;
+}
+
+/**
  * Implementation of hook_install().
  */
 function feedback_install() {
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      db_query("CREATE TABLE {feedback} (
-        fid int unsigned NOT NULL default '0',
-        uid int unsigned NOT NULL default '0',
-        status tinyint unsigned NOT NULL default '0',
-        message longtext NOT NULL,
-        location text NOT NULL,
-        location_masked text NOT NULL,
-        timestamp int NOT NULL,
-        useragent varchar(255) NOT NULL,
-        PRIMARY KEY (fid),
-        KEY location (location(32)),
-        KEY location_masked (location_masked(32))
-      ) /*!40100 DEFAULT CHARACTER SET UTF8 */ ");
-      break;
-
-    case 'pgsql':
-      db_query("CREATE TABLE {feedback} (
-        fid int_unsigned NOT NULL default '0',
-        uid int_unsigned NOT NULL default '0',
-        status smallint NOT NULL default '0',
-        message text NOT NULL,
-        location text NOT NULL,
-        location_masked text NOT NULL,
-        timestamp int NOT NULL,
-        useragent varchar(255) NOT NULL,
-        PRIMARY KEY (fid)
-      )");
-      db_query("CREATE INDEX {feedback}_fid_idx ON {feedback} (fid)");
-      db_query("CREATE INDEX {feedback}_location_idx ON {feedback} (location)");
-      db_query("CREATE INDEX {feedback}_location_masked_idx ON {feedback} (location_masked)");
-      break;
-  }
+  drupal_install_schema('feedback');
 }
 
 /**
  * Implementation of hook_uninstall().
  */
 function feedback_uninstall() {
-  db_query("DROP TABLE {feedback}");
+  drupal_uninstall_schema('feedback');
   db_query("DELETE FROM {variable} WHERE name LIKE 'feedback_%%'");
 }
 
-/**
- * Add location_masked column to {feedback} table.
- */
-function feedback_update_5200() {
-  $ret = array();
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      $ret[] = update_sql("ALTER TABLE {feedback} ADD location_masked text NOT NULL AFTER location");
-      $ret[] = update_sql("ALTER TABLE {feedback} ADD KEY location_masked (location_masked(32))");
-      break;
 
-    case 'pgsql':
-      db_add_column($ret, 'feedback', 'location_masked', 'text', array('not null' => TRUE));
-      $ret[] = update_sql("CREATE INDEX {feedback}_location_masked_idx ON {feedback} (location_masked)");
-      break;
-  }
-  return $ret;
-}
-
-/**
- * Add user agent column.
- */
-function feedback_update_5201() {
-  $ret = array();
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      $ret[] = update_sql("ALTER TABLE {feedback} ADD useragent varchar(255) NOT NULL");
-      break;
-
-    case 'pgsql':
-      db_add_column($ret, 'feedback', 'useragent', 'varchar(255)', array('not null' => TRUE));
-      break;
-  }
-  return $ret;
-}
