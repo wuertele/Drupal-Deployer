@@ -138,14 +138,14 @@ function fckeditor_install() {
  */
 function fckeditor_schema() {
   $schema['fckeditor_settings'] = array(
-    'description' => t('Stores FCKeditor profile settings'),
-    'fields' => array(
-    'name'    => array(
-      'type' => 'varchar',
-      'not null' => TRUE,
-      'default' => '',
-      'length' => 128,
-      'description' => t('Name of the FCKeditor profile'),
+  'description' => t('Stores FCKeditor profile settings'),
+  'fields' => array(
+  'name'    => array(
+  'type' => 'varchar',
+  'not null' => TRUE,
+  'default' => '',
+  'length' => 128,
+  'description' => t('Name of the FCKeditor profile'),
     ),
     'settings'    => array(
       'type' => 'text',
@@ -195,6 +195,7 @@ function fckeditor_requirements($phase) {
     );
 
     $available_version_error = '';
+    $requirements['fckeditor']['severity'] = REQUIREMENT_OK;
 
     if (!_fckeditor_requirements_isinstalled()) {
       $sourcepath = fckeditor_path(TRUE);
@@ -202,29 +203,36 @@ function fckeditor_requirements($phase) {
       $requirements['fckeditor']['description'] = t('FCKeditor was not found at %sourcepath', array('%sourcepath' => $sourcepath));
       $requirements['fckeditor']['severity'] = REQUIREMENT_ERROR;
     }
+    //Let's wait with version checking until a formal way of informing about new FCKeditor releases by fckeditor.net site is available
+    /*
     elseif (($installed_version = _fckeditor_requirements_getinstalledversion()) === NULL) {
-      $requirements['fckeditor']['description'] = t('FCKeditor version could not be determined');
-      $requirements['fckeditor']['severity'] = REQUIREMENT_INFO;
+    $requirements['fckeditor']['description'] = t('FCKeditor version could not be determined');
+    $requirements['fckeditor']['severity'] = REQUIREMENT_INFO;
     }
     elseif (($available_version = _fckeditor_requirements_getavailableversion($available_version_error)) === NULL) {
-      $requirements['fckeditor']['description'] = t('The latest available FCKeditor version could not be determined, the HTTP error while fetching the version information was: @error', array('@error' => $available_version_error));
-      $requirements['fckeditor']['severity'] = REQUIREMENT_INFO;
+    $requirements['fckeditor']['description'] = t('The latest available FCKeditor version could not be determined, the HTTP error while fetching the version information was: @error', array('@error' => $available_version_error));
+    $requirements['fckeditor']['severity'] = REQUIREMENT_INFO;
     }
     elseif (version_compare($installed_version, $available_version, '<')) {
-      $requirements['fckeditor']['severity'] = REQUIREMENT_WARNING;
-      $requirements['fckeditor']['description'] = t('The latest available FCKeditor version is @version. You can download it at !fcklink.', array('@version' => $available_version, '!fcklink' => l('FCKeditor.net', 'http://fckeditor.net')));
+    $requirements['fckeditor']['severity'] = REQUIREMENT_WARNING;
+    $requirements['fckeditor']['description'] = t('The latest available FCKeditor version is @version. You can download it at !fcklink.', array('@version' => $available_version, '!fcklink' => l('FCKeditor.net', 'http://fckeditor.net')));
     }
-    elseif (_fckeditor_requirements_cookiedomainrequired() && !_fckeditor_requirements_cookiedomainset()) {
-      $requirements['fckeditor']['severity'] = REQUIREMENT_ERROR;
-      $requirements['fckeditor']['description'] = t('You are using a feature that requires $cookie_domain to be set, but it is not set in your settings.php.');
-    }
-    else {
-      $requirements['fckeditor']['severity'] = REQUIREMENT_OK;
+    */
+    elseif (_fckeditor_requirements_builtin_filebrowser_enabled()) {
+      if (!_fckeditor_requirements_cookiedomainset()) {
+        $requirements['fckeditor']['severity'] = REQUIREMENT_ERROR;
+        $requirements['fckeditor']['description'] = t('You are using a feature that requires $cookie_domain to be set, but it is not set in your settings.php.');
+      }
+      elseif ($error = _fckeditor_requirements_filemanager_config_check()) {
+        $requirements['fckeditor']['severity'] = REQUIREMENT_ERROR;
+        $requirements['fckeditor']['description'] = $error;
+      }
     }
 
+    /*
     if (!empty($installed_version)) {
-      $requirements['fckeditor']['value'] = $installed_version;
-    }
+    $requirements['fckeditor']['value'] = $installed_version;
+    }*/
   }
 
   return $requirements;
@@ -237,7 +245,7 @@ function fckeditor_requirements($phase) {
  *
  * This function is used by fckeditor_requirements()
  *
- * @return boolean True iff FCKeditor is installed
+ * @return boolean True if FCKeditor is installed
  */
 function _fckeditor_requirements_isinstalled() {
   module_load_include('module', 'fckeditor');
@@ -268,6 +276,60 @@ function _fckeditor_requirements_getinstalledversion() {
     return $matches[1];
   }
   return NULL;
+}
+
+/**
+ * Executed when built-in file browser is enabled
+ * Returns FALSE if no errors are found in config.php file, otherwise it returns an error message.
+ *
+ * @return string|boolean
+ */
+function _fckeditor_requirements_filemanager_config_check() {
+  module_load_include('module', 'fckeditor');
+  $editor_path = fckeditor_path(TRUE);
+  $config_path = $editor_path .'/editor/filemanager/connectors/php/config.php';
+
+  if (!file_exists($config_path)) {
+    return t('!config not found. Make sure that you have uploaded all files or didn\'t remove that file accidentally.', array('!config' => 'editor/filemanager/connectors/php/config.php'));
+  }
+
+  if (!is_readable($config_path)) {
+    return t('FCKeditor needs read permission to !config.', array('!config' => 'editor/filemanager/connectors/php/config.php'));
+  }
+
+  $config_contents = file($config_path);
+
+  //not a 100% valid check, but well... let's have at least some error checking
+  $require_once_found = FALSE;
+  $require_once_line = 0;
+  $userfiles_absolute_path_line = 0;
+  $force_single_extension_line = 0;
+  
+  if ($config_contents)
+  foreach ($config_contents as $line_num => $line) {
+    //make sure it doesn't start with a comment, unfortunately we're not protected if code is commented with /* */
+    if (!$require_once_found && strpos($line, "filemanager.config.php") !== false && !preg_match(",^(?://|\#|\*|/\*),", trim($line))) {
+      $require_once_found = TRUE;
+      $require_once_line = $line_num;
+    }
+    if (!$userfiles_absolute_path_line && strpos($line, '$Config[\'UserFilesAbsolutePath\']') !== false && !preg_match(",^(?://|\#|\*|/\*),", trim($line))) {
+      $userfiles_absolute_path_line = $line_num;
+    }
+    if (!$force_single_extension_line && strpos($line, '$Config[\'ForceSingleExtension\']') !== false && !preg_match(",^(?://|\#|\*|/\*),", trim($line))) {
+      $force_single_extension_line = $line_num;
+    }
+  }
+  
+  if (!$require_once_found) {
+    return t('You are using a feature that requires manul integration into config.php. Read instructions about enabling built-in file browser and add "require_once ..." statement in editor/filemanager/connectors/php/config.php.');
+  }
+  
+  if ($userfiles_absolute_path_line && $force_single_extension_line && (
+  $require_once_line < $userfiles_absolute_path_line || $require_once_line > $force_single_extension_line)) {
+    return t('You are using a feature that requires manul integration into config.php. You have added "require_once ..." statement in editor/filemanager/connectors/php/config.php, but in the wrong line.');
+  }
+
+  return FALSE;
 }
 
 /**
@@ -303,7 +365,7 @@ function _fckeditor_requirements_getavailableversion(&$error) {
  *
  * @return boolean True iff any profile requires $cookie_domain
  */
-function _fckeditor_requirements_cookiedomainrequired() {
+function _fckeditor_requirements_builtin_filebrowser_enabled() {
   module_load_include('module', 'fckeditor');
   $profiles = fckeditor_profile_load();
 
