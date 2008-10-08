@@ -80,7 +80,7 @@ Note: this instruction assumes that you install FCKeditor in
       You may copy the needed configuration lines from the default FCKeditor
       configuration settings (sites/all/modules/fckeditor/fckeditor/fckconfig.js),
       the lines in fckeditor.config.js will override most settings.
-      In fckeditor.config.js you may add your own toolbars with selected buttons.
+      In fckeditor.config.js you may define your own toolbars with selected buttons.
       WARNING: clear browser's cache after you modify any of the javascript files.
       If you don't do this, you may notice that browser is ignoring all your changes.
 
