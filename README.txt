@@ -80,6 +80,7 @@ Note: this instruction assumes that you install FCKeditor in
       You may copy the needed configuration lines from the default FCKeditor
       configuration settings (sites/all/modules/fckeditor/fckeditor/fckconfig.js),
       the lines in fckeditor.config.js will override most settings.
+      In fckeditor.config.js you may add your own toolbars with selected buttons.
       WARNING: clear browser's cache after you modify any of the javascript files.
       If you don't do this, you may notice that browser is ignoring all your changes.
 
@@ -190,8 +191,8 @@ Upgrading instructions
 This instruction assumes that you are upgrading FCKeditor module [M] and FCKeditor (the editor)[E] at the same time. 
 Instructions specific for module upgrades are tagged with [M], steps that must be taken when upgrading FCKeditor (the editor) are marked with [E].
 
-   1. [M] Download the latest version of FCKeditor module from http://drupal.org/project/fckeditor (it is advised to read release notes before going further)
-   2. [E] Download the latest version of FCKeditor from http://www.fckeditor.net/download (it is advised to read "what's new" before going further: http://www.fckeditor.net/whatsnew)
+   1. [M] Download the latest version of FCKeditor module from http://drupal.org/project/fckeditor (it is advised to read release notes before going further).
+   2. [E] Download the latest version of FCKeditor from http://www.fckeditor.net/download (it is advised to read "what's new" before going further: http://www.fckeditor.net/whatsnew).
    3. [M] Back up your database.
    4. [EM] Place the site in "Off-line" mode, to let the database updates run without interruption and avoid displaying errors to end users of the site.
    5. [E] If you have used the FCKeditor built-in file browser, make a backup of sites/all/modules/fckeditor/fckeditor/editor/filemanager/connectors/php/config.php
@@ -202,14 +203,15 @@ Instructions specific for module upgrades are tagged with [M], steps that must b
       [M] If you are upgrading module only, remember to leave the modules/fckeditor/fckeditor directory. 
       [E] When upgrading the editor, remove contents of modules/fckeditor/fckeditor directory only.
       WARNING: if you don't remove old files and just rename fckeditor directory instead e.g. to fckeditor_old, Drupal may use module from the fckeditor_old directory.
-   9. [M] Upload FCKeditor module (extracted files and folders) to sites/all/modules directory
+   9. [M] Upload FCKeditor module (extracted files and folders) to sites/all/modules directory.
    10. [E] Upload FCKeditor (extracted files and folders from the fckeditor directory) to sites/modules/fckeditor/fckeditor (i.e. where COPY HERE.txt file exists)
    11. [E] Replace the new config.php (see step 5) file with the old one (or RECOMMENDED way: perform again step with adding require_once '../../../../../filemanager.config.php'; to config.php)
    12. [E] Replace the new spellchecker.php with the old one (see step 6) (or RECOMMENDED way: configure new spellchecker.php following the settings from the old file).
-   13. [E] Apply your modifications to default configuration in fckeditor.config.js file (see step 7)
-   14. [M] Run update.php.
-   15. [EM] Put the site back online.
-
+   13. [E] Apply your modifications to default configuration in fckeditor.config.js file (see step 7).
+   14. [M] If you're using Image Assist module, copy the new img_assist_fckeditor.js to modules/img_assist folder.
+   15. [M] Run update.php.
+   16. [EM] Put the site back online.
+   
 Help & Contribution
 -------------------
 If you are looking for more information, have any troubles in configuration or if
