@@ -642,7 +642,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
 /**
  * Profile validation.
  */
-function fckeditor_admin_profile_form_validate($form, $form_state) {
+function fckeditor_admin_profile_form_validate($form, &$form_state) {
   $edit =& $form_state['values'];
 
   //include mode and all other fields are empty, invalid
@@ -893,7 +893,7 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
   return $form;
 }
 
-function fckeditor_admin_global_profile_form_validate($form, $form_state) {
+function fckeditor_admin_global_profile_form_validate($form, &$form_state) {
   $edit =& $form_state['values'];
 
   //include mode and all other fields are empty, invalid
