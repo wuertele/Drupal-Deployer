@@ -260,12 +260,12 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   );
 
   $form['basic']['allow_user_conf'] = array(
-    '#type' => 'select',
+    '#type' => 'radios',
     '#title' => t('Allow users to customize FCKeditor appearance'),
     '#default_value' => !empty($profile->settings['allow_user_conf']) ? $profile->settings['allow_user_conf'] : 'f',
     '#options' => array(
-      'f' => t('False'),
-      't' => t('True')
+      'f' => t('No'),
+      't' => t('Yes')
     ),
     '#description' => t('If allowed, users will be able to override the "Editor appearance" by visiting their profile page.'),
   );
@@ -285,7 +285,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   );
 
   $form['fckeditor_exclude_settings']['excl_mode'] = array(
-    '#type' => 'select',
+    '#type' => 'radios',
     '#title' => t('Use inclusion or exclusion mode'),
     '#default_value' => (empty($profile->settings['excl_mode']) || in_array($profile->settings['excl_mode'], array(0, 2))) ? 0 : 1,
     '#options' => array(
@@ -328,7 +328,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   );
 
   $form['appearance']['default'] = array(
-    '#type' => 'select',
+    '#type' => 'radios',
     '#title' => t('Default state'),
     '#default_value' => !empty($profile->settings['default']) ? $profile->settings['default'] : 't',
     '#options' => array(
@@ -339,23 +339,23 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   );
 
   $form['appearance']['show_toggle'] = array(
-    '#type' => 'select',
+    '#type' => 'radios',
     '#title' => t('Show disable/enable rich text editor toggle'),
     '#default_value' => !empty($profile->settings['show_toggle']) ? $profile->settings['show_toggle'] : 't',
     '#options' => array(
-      't' => t('True'),
-      'f' => t('False')
+      't' => t('Show'),
+      'f' => t('Hide')
     ),
     '#description' => t('Whether or not to show the disable/enable rich text editor toggle below the textarea. Works only if FCKeditor is not running in a popup window (see below).'),
   );
 
   $form['appearance']['popup'] = array(
-    '#type' => 'select',
+    '#type' => 'radios',
     '#title' => t('Use FCKeditor in a popup window'),
     '#default_value' => !empty($profile->settings['popup']) ? $profile->settings['popup'] : 'f',
     '#options' => array(
-      'f' => t('False'),
-      't' => t('True')
+      'f' => t('No'),
+      't' => t('Yes')
     ),
     '#description' => t('If this option is enabled a link to a popup window will be used instead of a textarea replace.'),
   );
@@ -377,12 +377,12 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   );
 
   $form['appearance']['expand'] = array(
-    '#type' => 'select',
+    '#type' => 'radios',
     '#title' => t('Start the toolbar expanded'),
     '#default_value' => !empty($profile->settings['expand']) ? $profile->settings['expand'] : 't',
     '#options' => array(
-      't' => t('Enabled'),
-      'f' => t('Disabled')
+      't' => t('Expanded'),
+      'f' => t('Collapsed')
     ),
     '#description' => t('The toolbar start expanded or collapsed.'),
   );
@@ -405,12 +405,12 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   );
 
   $form['appearance']['auto_lang'] = array(
-    '#type' => 'select',
+    '#type' => 'radios',
     '#title' => t('Auto-detect language'),
     '#default_value' => !empty($profile->settings['auto_lang']) ? $profile->settings['auto_lang'] : 't',
     '#options' => array(
-      't' => t('True'),
-      'f' => t('False')
+      't' => t('Enabled'),
+      'f' => t('Disabled')
     ),
     '#description' => t('Use auto detect user language feature.')
   );
@@ -469,23 +469,23 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   );
 
   $form['output']['format_source'] = array(
-    '#type' => 'select',
+    '#type' => 'radios',
     '#title' => t('Apply source formatting'),
     '#default_value' => !empty($profile->settings['format_source']) ? $profile->settings['format_source'] : 't',
     '#options' => array(
-      't' => t('True'),
-      'f' => ('False')
+      't' => t('Yes'),
+      'f' => t('No')
     ),
     '#description' => t('When set to "true" the editor will format the XHTML when switching from WYSIWYG view to Source view, by inserting line breaks on some tags endings and indenting paragraphs, tables and lists.'),
   );
 
   $form['output']['format_output'] = array(
-    '#type' => 'select',
+    '#type' => 'radios',
     '#title' => t('Format output'),
     '#default_value' => !empty($profile->settings['format_output']) ? $profile->settings['format_output'] : 't',
     '#options' => array(
-      't' => t('True'),
-      'f' => t('False')
+      't' => t('Yes'),
+      'f' => t('No')
     ),
     '#description' => t('When set to "true" the editor will format the XHTML output by inserting line breaks on some tags endings and indenting paragraphs, tables and lists.'),
   );
@@ -578,12 +578,12 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   );
 
   $form['fckeditor_upload_settings']['quickupload'] = array(
-    '#type' => 'select',
+    '#type' => 'radios',
     '#title' => t('Allow quick uploads'),
     '#default_value' => !empty($profile->settings['quickupload']) ? $profile->settings['quickupload'] : 'f',
     '#options' => array(
-      'f' => t('False'),
-      't' => t('True')
+      'f' => t('No'),
+      't' => t('Yes')
     ),
     '#description' => t('The quick upload functionality can be disabled and enabled independently of the file browser. It will always use the settings below.'),
   );
@@ -812,7 +812,7 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
   );
 
   $form['fckeditor_exclude_settings']['excl_mode'] = array(
-    '#type' => 'select',
+    '#type' => 'radios',
     '#title' => t('Use inclusion or exclusion mode'),
     '#default_value' => (empty($profile->settings['excl_mode']) || in_array($profile->settings['excl_mode'], array(0, 2))) ? 0 : 1,
     '#options' => array(
@@ -875,12 +875,12 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
   );
 
   $form['fckeditor_advanced_settings']['show_fieldnamehint'] = array(
-    '#type' => 'select',
+    '#type' => 'radios',
     '#title' => t('Show field name hint below each rich text editor'),
     '#default_value' => !empty($profile->settings['show_fieldnamehint']) ? $profile->settings['show_fieldnamehint'] : 't',
     '#options' => array(
-      't' => t('True'),
-      'f' => t('False')
+      't' => t('Yes'),
+      'f' => t('No')
     ),
     '#description' => t('This only applies for users with "administer fckeditor" permissions.'),
   );

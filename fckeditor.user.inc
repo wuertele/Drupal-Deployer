@@ -50,7 +50,7 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
       );
 
       $form['fckeditor']['fckeditor_default'] = array(
-        '#type' => 'select',
+        '#type' => 'radios',
         '#title' => t('Default state'),
         '#default_value' => isset($user->fckeditor_default) ? $user->fckeditor_default : (isset($profile->settings['default']) ? $profile->settings['default'] : 'f'),
         '#options' => array(
@@ -61,35 +61,35 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
       );
 
       $form['fckeditor']['fckeditor_show_toggle'] = array(
-        '#type' => 'select',
+        '#type' => 'radios',
         '#title' => t('Show disable/enable rich text editor toggle'),
         '#default_value' => isset($user->fckeditor_show_toggle) ? $user->fckeditor_show_toggle : (isset($profile->settings['show_toggle']) ? $profile->settings['show_toggle'] : 't'),
         '#options' => array(
-          't' => t('True'),
-          'f' => t('False')
+          't' => t('Yes'),
+          'f' => t('No')
         ),
         '#description' => t('Whether or not to show the disable/enable rich text editor toggle below the textarea. Works only if FCKeditor is not running a popup window (see below).'),
       );
 
       if (user_access('administer fckeditor')) {
         $form['fckeditor']['fckeditor_show_fieldnamehint'] = array(
-          '#type' => 'select',
+          '#type' => 'radios',
           '#title' => t('Show field name hint below each rich text editor'),
           '#default_value' => !empty($user->fckeditor_show_fieldnamehint) ? $user->fckeditor_show_fieldnamehint : 't',
           '#options' => array(
-            't' => t('True'),
-            'f' => t('False')
+            't' => t('Yes'),
+            'f' => t('No')
           ),
         );
       }
 
       $form['fckeditor']['fckeditor_popup'] = array(
-        '#type' => 'select',
+        '#type' => 'radios',
         '#title' => t('Use FCKeditor in a popup window'),
         '#default_value' => isset($user->fckeditor_popup) ? $user->fckeditor_popup : (isset($profile->settings['popup']) ? $profile->settings['popup'] : 'f'),
         '#options' => array(
-          'f' => t('False'),
-          't' => t('True')
+          'f' => t('No'),
+          't' => t('Yes')
         ),
         '#description' => t('If this option is enabled a link to a popup window will be used instead of a textarea replace.'),
       );
@@ -115,8 +115,8 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
         '#title' => t('Start the toolbar expanded'),
         '#default_value' => isset($user->fckeditor_expand) ? $user->fckeditor_expand : (isset($profile->settings['expand']) ? $profile->settings['expand'] : 't'),
         '#options' => array(
-          't' => t('Enabled'),
-          'f' => t('Disabled')
+          't' => t('Expanded'),
+          'f' => t('Collapsed')
         ),
         '#description' => t('The toolbar start expanded or collapsed.'),
       );
@@ -139,12 +139,12 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
       );
 
       $form['fckeditor']['fckeditor_auto_lang'] = array(
-        '#type' => 'select',
+        '#type' => 'radios',
         '#title' => t('Auto-detect language'),
         '#default_value' => isset($user->fckeditor_auto_lang) ? $user->fckeditor_auto_lang : (isset($profile->settings['auto_lang']) ? $profile->settings['auto_lang'] : 't'),
         '#options' => array(
-          't' => t('True'),
-          'f' => t('False')
+          't' => t('Yes'),
+          'f' => t('No')
         ),
         '#description' => t('Use auto detect user language feature.')
       );
