@@ -1,5 +1,22 @@
 $Id$
 
+CONTENTS OF THIS FILE
+---------------------
+
+ * Overview
+ * Required components
+ * More information and licence
+ * Requirements
+ * Configuration
+ * Installation troubleshooting
+ * Plugins: Teaser break and Pagebreak
+ * Uploading images and files
+ * How to enable the built-in file browser
+ * Modules: Image Assist
+ * Upgrading instructions
+ * Help & Contribution
+ * Credits
+
 Overview
 --------
 This module allows Drupal to replace textarea fields with the
@@ -52,7 +69,7 @@ Note: this instruction assumes that you install FCKeditor in
       some more advanced settings.
    6. For the Rich Text Editing to work you also need to configure your filters
       for the users that may access Rich Text Editing.
-      Either grant those users Full HTML access or use the following:
+      Either grant those users Full HTML access or use the following tags:
       <a> <p> <span> <div> <h1> <h2> <h3> <h4> <h5> <h6> <img> <map> <area> <hr>
       <br> <br /> <ul> <ol> <li> <dl> <dt> <dd> <table> <tr> <td> <em> <b> <u> <i> <strong>
       <font> <del> <ins> <sub> <sup> <quote> <blockquote> <pre> <address> <code>
@@ -168,6 +185,31 @@ Modules: Image Assist
 Image Assist can be integrated with FCKeditor.
 To do this, simply copy the modules/fckeditor/img_assist_fckeditor.js file to modules/img_assist/img_assist_fckeditor.js.
 
+Upgrading instructions
+----------------------
+This instruction assumes that you are upgrading FCKeditor module [M] and FCKeditor (the editor)[E] at the same time. 
+Instructions specific for module upgrades are tagged with [M], steps that must be taken when upgrading FCKeditor (the editor) are marked with [E].
+
+   1. [M] Download the latest version of FCKeditor module from http://drupal.org/project/fckeditor (it is advised to read release notes before going further)
+   2. [E] Download the latest version of FCKeditor from http://www.fckeditor.net/download (it is advised to read "what's new" before going further: http://www.fckeditor.net/whatsnew)
+   3. [M] Back up your database.
+   4. [EM] Place the site in "Off-line" mode, to let the database updates run without interruption and avoid displaying errors to end users of the site.
+   5. [E] If you have used the FCKeditor built-in file browser, make a backup of sites/all/modules/fckeditor/fckeditor/editor/filemanager/connectors/php/config.php
+   6. [E] If you have configured spellchecker, make a backup of sites/all/modules/fckeditor/fckeditor/editor/dialog/fck_spellerpages/spellerpages/server-scripts/spellchecker.php
+   7. [E] If you have made any changes inside of sites/all/modules/fckeditor/fckeditor.config.js (or sites/all/modules/fckeditor/fckeditor/fckconfig.js), write down your changes and add them again after uploading new files (e.g. own toolbar definitions, re-enable a plugin etc.). Try to not make any changes to fckconfig.js and add everything to fckeditor.config.js.
+   8. Delete old files:
+      [EM]* Simply remove modules/fckeditor directory if upgrading both, the editor and the module. 
+      [M] If you are upgrading module only, remember to leave the modules/fckeditor/fckeditor directory. 
+      [E] When upgrading the editor, remove contents of modules/fckeditor/fckeditor directory only.
+      WARNING: if you don't remove old files and just rename fckeditor directory instead e.g. to fckeditor_old, Drupal may use module from the fckeditor_old directory.
+   9. [M] Upload FCKeditor module (extracted files and folders) to sites/all/modules directory
+   10. [E] Upload FCKeditor (extracted files and folders from the fckeditor directory) to sites/modules/fckeditor/fckeditor (i.e. where COPY HERE.txt file exists)
+   11. [E] Replace the new config.php (see step 5) file with the old one (or RECOMMENDED way: perform again step with adding require_once '../../../../../filemanager.config.php'; to config.php)
+   12. [E] Replace the new spellchecker.php with the old one (see step 6) (or RECOMMENDED way: configure new spellchecker.php following the settings from the old file).
+   13. [E] Apply your modifications to default configuration in fckeditor.config.js file (see step 7)
+   14. [M] Run update.php.
+   15. [EM] Put the site back online.
+
 Help & Contribution
 -------------------
 If you are looking for more information, have any troubles in configuration or if
@@ -177,12 +219,12 @@ you found an issue, please visit the official project page:
 Having problems? Take a look at list of common problems when installing FCKeditor:
   http://drupal.fckeditor.net/troubleshooting
 
-How to tune up FCKeditor to your theme:
+How to tune up FCKeditor to your theme and configure spell checker:
   http://drupal.fckeditor.net/tricks
 
 We would like to encourage you to join our team if you can help in any way.
 If you can translate FCKeditor module, please use fckeditor.pot file as a template
-(located in "po" directory) and send us the translated file so that we could attach it.
+(located in "translations" directory) and send us the translated file so that we could attach it.
 Any help is appreciated.
 
 Credits

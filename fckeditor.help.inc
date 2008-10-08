@@ -68,12 +68,14 @@ function fckeditor_help_delegate($path, $arg) {
       $output .= '<a name="fieldinclexcl"></a>';
       $output .= '<h3>'. t('Defining field inclusion/exclusions') .'</h3>';
       $output .= '<p>'. t('In order to specifically display FCKeditor on those text areas on which you need it, the FCKeditor module provides a powerfull method to define fields that should be enhanced with FCKeditor. The first choice you have to make is whether you want to display FCKeditor on all textareas and define a list of exceptions, or if you don\'t want to display FCKeditor unless it is specifically enabled. This choice is made in the "Use inclusion or exclusion mode" setting.') .'</p>';
-      $output .= '<p>'. t('Next, the list of exceptions has to be defined. This list follows a specific syntax: the path to a field is defined by appending the field name to the path, separated by a dot. The field "edit-log" on page "node/add/page" would thus be addressed as "node/add/page.edit-log". You can use wildcards * and ? anywhere in this line. If you have a dot in your field name and it causes problems, you can escape it with a slash (\).') .'</p>';
+      $output .= '<p>'. t('Next, the list of exceptions has to be defined. This list follows a specific syntax: the path to a field is defined by specifying the content type followed by "@" character, specifying the path followed by dot and appending the field name at the end. You may decide to not use the content type. The field "edit-log" on page "node/add/page" would thus be addressed as "node/add/page.edit-log". You can use wildcards * and ? anywhere in this line. If you have a dot in your field name and it causes problems, you can escape it with a slash (\).') .'</p>';
 
       $output .= '<strong>'. t('Some examples:') .'</strong>';
       $output .= '<ul>';
       $output .= '<li>'. t('"node/add/page": matches all fields on "node/add/page".') .'</li>';
       $output .= '<li>'. t('"*.edit-log": matches all fields called edit-log on any page.') .'</li>';
+      $output .= '<li>'. t('"blog@*.edit-body": matches all fields of type "blog" called edit-log, on any page.') .'</li>';
+      $output .= '<li>'. t('"forum@*.*": matches all fields of type "forum" on any page.') .'</li>';
       $output .= '<li>'. t('"node/add/*": matches all fields on pages such as "node/add/page", "node/add/story", etc.') .'</li>';
       $output .= '<li>'. t('"node/add/*.edit-log": matches all edit-log fields on pages such as "node/add/page", "node/add/story", etc.') .'</li>';
       $output .= '<li>'. t('"node/add/*.edit-user-*": matches fields starting with "edit-user-" on pages starting with "node/add/"') .'</li>';
