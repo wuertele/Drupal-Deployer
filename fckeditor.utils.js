@@ -15,9 +15,22 @@ Drupal.behaviors.fckeditor = function(context) {
     if (fckInstances[taid]) {
       var editorInstance = fckInstances[taid];
 
-      if(editorInstance.defaultState == 1) {
-        editorInstance.ReplaceTextarea();
-        $('#img_assist-link-' + taid).hide();
+      if (editorInstance.defaultState == 1) {
+        if (textarea.attr('class').indexOf("filterxss") != -1) {
+          $.post(Drupal.settings.basePath + 'fckeditor/xss', {
+            text: $('#' + taid).val()
+            }, 
+            function(text) {
+              $('#' + taid).val(text);
+              $('#img_assist-link-' + taid).hide();
+              editorInstance.ReplaceTextarea();
+            }
+          );
+        }
+        else {
+          editorInstance.ReplaceTextarea();
+          $('#img_assist-link-' + taid).hide();          
+        }
       }
     }
   });

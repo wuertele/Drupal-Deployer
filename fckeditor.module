@@ -118,6 +118,14 @@ function fckeditor_process_input($element) {
 function fckeditor_menu() {
   $items = array();
 
+  $items['fckeditor/xss'] = array(
+    'title' => 'Edit FCKeditor Global profile',
+    'description' => 'Configure the rich text editor.',
+    'page callback' => 'fckeditor_filter_xss',
+    'access arguments' => array('access fckeditor'),
+    'type' => MENU_CALLBACK,
+  );
+  
   $items['admin/settings/fckeditor'] = array(
     'title' => 'FCKeditor settings',
     'description' => 'Configure the rich text editor.',
@@ -188,6 +196,11 @@ function fckeditor_menu() {
   );
 
   return $items;
+}
+
+function fckeditor_filter_xss() {
+  echo filter_xss_admin($_POST['text']);
+  exit;
 }
 
 /**
@@ -345,6 +358,11 @@ function fckeditor_process_textarea($element) {
       $element['#attributes']['class'] .= ' fckeditor';
     }
 
+    $menuitem = menu_get_item();
+    if (!empty($menuitem['map'][1]) && is_object($menuitem['map'][1]) && $menuitem['map'][1]->format) {
+      $element['#attributes']['class'] .= ' filterxss';
+    }
+    
     $js_id = 'oFCK_'. $num++;
     $fckeditor_on = ($conf['default']=='t') ? 1 : 0 ;
 
