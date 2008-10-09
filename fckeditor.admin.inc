@@ -309,6 +309,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#suffix' => '</div>',
     '#default_value' => !empty($profile->settings['excl']) ? $profile->settings['excl'] : '',
     '#description' => t('Enter the paths to the textarea fields on which you want to enable or disable FCKeditor.') .' '. t('Please see the <a href="!helppagelink">help page</a> for more information about defining field names. Short instruction is available below.', array('!helppagelink' => url('admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))) .' <ul><li>'. t('Path structure: <strong>content_type@path.element_id</strong>'). '</li><li>'. t('The following wildcards are available: "*", "?".') .'</li><li>'. t('Content type is optional. You may even specify only path or field id.') .'</li><li>'. t('Examples:') .'<ul><li><em>blog@*.edit-body</em> - '. t('matches all fields of type "blog" called edit-body, on any page.') .'<li><em>node/add/*.edit-user-*</em> - '. t('matches fields starting with "edit-user-" on pages starting with "node/add/') .'</li></ul></li></ul>',
+    '#fckeditor' => FALSE,
   );
 
   $form['fckeditor_exclude_settings']['simple_incl'] = array(
@@ -318,6 +319,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#rows' => 5,
     '#default_value' => !empty($profile->settings['simple_incl']) ? $profile->settings['simple_incl'] : '',
     '#description' => t('Enter the paths to the textarea fields on which you want to force the simplified toolbar.') .' '. t('Please see the <a href="!helppagelink">help page</a> for more information about defining field names. Take a look at the exclusion settings (above) for short instruction.', array('!helppagelink' => url('admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
+    '#fckeditor' => FALSE,
   );
 
   $form['appearance'] = array(
@@ -628,7 +630,8 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#default_value' => !empty($profile->settings['js_conf']) ? $profile->settings['js_conf'] : "",
     '#cols' => 60,
     '#rows' => 5,
-    '#description' => t('To change FCKeditor configuration globally, you should modify the config file: "!fckeditor_config". Sometimes it is required to change the FCKeditor configuration for a single profile only. Use this box to define settings that are unique for this profile. Available options are listed in the <a href="!docs">FCKeditor documentation</a>. Add the following code snippet to disable some advanced tabs in dialog windows of FCKeditor: <pre>@code</pre><strong>Warning</strong>: If you make something wrong here, FCKeditor may fail to load.', array('!fckeditor_config' => drupal_get_path('module', 'fckeditor') ."/fckeditor.config.js", '!docs' => 'http://docs.fckeditor.net/FCKeditor_2.x/Developers_Guide/Configuration/Configuration_Options', '@code' => "LinkDlgHideTarget = true;\nLinkDlgHideAdvanced = true;\nImageDlgHideLink = true;\nImageDlgHideAdvanced = true;\nFlashDlgHideAdvanced = true;"))
+    '#description' => t('To change FCKeditor configuration globally, you should modify the config file: "!fckeditor_config". Sometimes it is required to change the FCKeditor configuration for a single profile only. Use this box to define settings that are unique for this profile. Available options are listed in the <a href="!docs">FCKeditor documentation</a>. Add the following code snippet to disable some advanced tabs in dialog windows of FCKeditor: <pre>@code</pre><strong>Warning</strong>: If you make something wrong here, FCKeditor may fail to load.', array('!fckeditor_config' => drupal_get_path('module', 'fckeditor') ."/fckeditor.config.js", '!docs' => 'http://docs.fckeditor.net/FCKeditor_2.x/Developers_Guide/Configuration/Configuration_Options', '@code' => "LinkDlgHideTarget = true;\nLinkDlgHideAdvanced = true;\nImageDlgHideLink = true;\nImageDlgHideAdvanced = true;\nFlashDlgHideAdvanced = true;")),
+    '#fckeditor' => FALSE,
   );
 
   $form['submit'] = array(
@@ -835,6 +838,7 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
     '#suffix' => '</div>',
     '#default_value' => !empty($profile->settings['excl']) ? $profile->settings['excl'] : '',
     '#description' => t('Enter the paths to the textarea fields on which you want to enable or disable FCKeditor.') .' '. t('Please see the <a href="!helppagelink">help page</a> for more information about defining field names. Short instruction is available below.', array('!helppagelink' => url('admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))) .' <ul><li>'. t('Path structure: <strong>content_type@path.element_id</strong>'). '</li><li>'. t('The following wildcards are available: "*", "?".') .'</li><li>'. t('Content type is optional. You may even specify only path or field id.') .'</li><li>'. t('Examples:') .'<ul><li><em>blog@*.edit-body</em> - '. t('matches all fields of type "blog" called edit-body, on any page.') .'<li><em>node/add/*.edit-user-*</em> - '. t('matches fields starting with "edit-user-" on pages starting with "node/add/') .'</li></ul></li></ul>',
+    '#fckeditor' => FALSE,
   );
 
   $form['fckeditor_exclude_settings']['simple_incl'] = array(
@@ -844,6 +848,7 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
     '#rows' => 5,
     '#default_value' => !empty($profile->settings['simple_incl']) ? $profile->settings['simple_incl'] : '',
     '#description' => t('Enter the paths to the textarea fields on which you want to force the simplified toolbar.') .' '. t('Please see the <a href="!helppagelink">help page</a> for more information about defining field names. Take a look at the exclusion settings (above) for short instruction.', array('!helppagelink' => url('admin/help/fckeditor', array('fragment' => 'fieldinclexcl')))),
+    '#fckeditor' => FALSE,
   );
 
   $form['fckeditor_advanced_settings'] = array(
