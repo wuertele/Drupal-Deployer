@@ -16,12 +16,12 @@ Drupal.behaviors.fckeditor = function(context) {
       var editorInstance = fckInstances[taid];
 
       if (editorInstance.defaultState == 1) {
-        if (textarea.attr('class').indexOf("filterxss") != -1) {
+        if (textarea.attr('class').indexOf("filterxss1") != -1 || textarea.attr('class').indexOf("filterxss2") != -1) {
           $.post(Drupal.settings.basePath + 'fckeditor/xss', {
             text: $('#' + taid).val()
             }, 
             function(text) {
-              $('#' + taid).val(text);
+              textarea.val(text);
               $('#img_assist-link-' + taid).hide();
               editorInstance.ReplaceTextarea();
             }
@@ -29,7 +29,7 @@ Drupal.behaviors.fckeditor = function(context) {
         }
         else {
           editorInstance.ReplaceTextarea();
-          $('#img_assist-link-' + taid).hide();          
+          $('#img_assist-link-' + taid).hide();
         }
       }
     }
@@ -46,8 +46,20 @@ function Toggle(textareaID, TextTextarea, TextRTE)
 
   // check if this FCKeditor was initially disabled
   if (fckInstances[textareaID].defaultState == 0) {
-    fckInstances[textareaID].defaultState = 1;
-    fckInstances[textareaID].ReplaceTextarea();
+    fckInstances[textareaID].defaultState = 2;
+    if ($('#' + textareaID).attr('class').indexOf("filterxss2") != -1) {
+      $.post(Drupal.settings.basePath + 'fckeditor/xss', {
+        text: $('#' + textareaID).val()
+        }, 
+        function(text) {
+          $('#' + textareaID).val(text);
+          fckInstances[textareaID].ReplaceTextarea();
+        }
+      );
+    }
+    else {
+      fckInstances[textareaID].ReplaceTextarea();
+    }
     swtch.text(TextTextarea);
     // simply return: ReplaceTextarea will take the contents of the textarea for us
     return;
@@ -69,7 +81,7 @@ function Toggle(textareaID, TextTextarea, TextRTE)
     // check if we have to take care of teasers
     var teaser = FCKeditor_TeaserInfo(textareaID);
 
-    if(teaser) {
+    if (teaser) {
       var t = text.indexOf('<!--break-->');
       if (t != -1) {
         teaser.textarea.val(FCKeditor_trim(text.slice(0,t)));
@@ -99,12 +111,7 @@ function Toggle(textareaID, TextTextarea, TextRTE)
     editorFrame.hide();
     $('#img_assist-link-' + textareaID).show();
 
-    // fix the grippie
-    if(textAreaContainer.length > 0) { // if we're in a container, textarea resizing is enabled
-      var grippie = $('div.grippie', textAreaContainer).get(0);
-      grippie.style.marginRight = '0px';
-      grippie.style.marginRight = (grippie.offsetWidth - textArea.get(0).offsetWidth) +'px';
-    }
+    $(textArea).parent().children(".grippie").show();
   } else {
     // switch from textarea to fck
     swtch.text(TextTextarea);
@@ -112,7 +119,7 @@ function Toggle(textareaID, TextTextarea, TextRTE)
     // check if we have to take care of teasers
     var teaser = FCKeditor_TeaserInfo(textareaID);
 
-    if(teaser) {
+    if (teaser) {
       if (teaser.textarea.val().length > 0) {
         text = teaser.textarea.val() + '\n<!--break-->\n' + textArea.val();
       } else {
@@ -130,7 +137,8 @@ function Toggle(textareaID, TextTextarea, TextRTE)
 
     // Switch the DIVs display.
     textArea.hide();
-    textAreaContainer.hide();
+    textAreaContainer.show();
+    $(editorInstance.LinkedField).parent().children(".grippie").hide();
     editorFrame.show();
     $('#img_assist-link-' + textareaID).hide();
   }
@@ -141,20 +149,21 @@ function Toggle(textareaID, TextTextarea, TextRTE)
  * editor instance is completely loaded and available for API interactions.
  */
 function FCKeditor_OnComplete(editorInstance) {
+  
   // Enable the switch button. It is disabled at startup, waiting the editor to be loaded.
   $('#switch_' + editorInstance.Name).show();
-
   editorInstance.Events.AttachEvent('OnAfterLinkedFieldUpdate', FCKeditor_OnAfterLinkedFieldUpdate);
 
   var teaser = FCKeditor_TeaserInfo(editorInstance.Name);
 
-  if(teaser) {
-    // if there is a teaser, prepend it to the text
-    if (teaser.textarea.val().length > 0) {
-      var text = teaser.textarea.val() + '\n<!--break-->\n' + editorInstance.GetData();
-      editorInstance.SetData(text);
+  if (teaser) {
+    // if there is a teaser, prepend it to the text, only when switched to FCKeditor using toggle
+    if (fckInstances[editorInstance.Name].defaultState == 2) {
+      if (teaser.textarea.val().length > 0) {
+        var text = teaser.textarea.val() + '\n<!--break-->\n' + editorInstance.GetData();
+        editorInstance.SetData(text);
+      }
     }
-
     // hide the teaser
     teaser.textarea.attr('disabled', '');
     teaser.buttonContainer.hide();
@@ -162,12 +171,7 @@ function FCKeditor_OnComplete(editorInstance) {
     teaser.checkboxContainer.show();
   }
 
-  // cope with resizable
-  var container = $(editorInstance.LinkedField).parents('div.resizable-textarea');
-  if(container.length) {
-    container.after($('iframe', container));
-    container.hide();
-  }
+  $(editorInstance.LinkedField).parent().children(".grippie").hide();
 
   // very ugly hack to circumvent FCKeditor from re-updating textareas on submission. We do that ourselves
   // FCKeditor will happily update the fake textarea while we will use the proper one
@@ -188,13 +192,13 @@ function FCKeditor_OnAfterLinkedFieldUpdate(editorInstance) {
 
   var teaser = FCKeditor_TeaserInfo(taid);
 
-  if($(textArea).is(':hidden')) {
+  if ($(textArea).is(':hidden')) {
     var text = editorInstance.GetData();
     textArea.value = text;
     // only update the teaser field if this field is associated with a teaser field
-    if(teaser) {
+    if (teaser) {
       var t = text.indexOf('<!--break-->');
-      if(t != -1) {
+      if (t != -1) {
         teaser.textarea.val(FCKeditor_trim(text.slice(0,t)));
         textArea.value = FCKeditor_trim(text.slice(t+12));
       } else {

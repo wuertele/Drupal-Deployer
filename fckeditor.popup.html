@@ -2,8 +2,9 @@
 <head>
   <title>FCKeditor</title>
   <!-- $id$ -->
+  
   <script type="text/javascript">
-
+document.write('<scr' + 'ipt src="' + window.opener['Drupal'].settings.basePath + 'misc/jquery.js"></scr' + 'ipt>');
 // #### URLParams: holds all URL passed parameters (like ?Param1=Value1&Param2=Value2)
 var FCKURLParams = new Object() ;
 
@@ -47,7 +48,6 @@ function Ok()
     var t = text.indexOf('<!--break-->');
     var textarea = window.opener.document.getElementById( FCKURLParams[ 'el' ] );
     var teaser = window.opener.document.getElementById( FCKURLParams[ 'teaser' ] );
-    console.debug(teaser.parentNode.style.display);
     // for now, do nothing when the body field is in joined mode
     if(t != -1 && teaser.parentNode.style.display != 'none') {
       teaser.value = FCKeditor_trim(text.slice(0,t));
@@ -62,6 +62,23 @@ function Ok()
 
   window.opener.focus() ;
   window.close() ;
+}
+
+var oEditor;
+
+function FCKeditor_OnComplete( editorInstance )
+{
+  oEditor = editorInstance;
+  var textarea = window.opener.document.getElementById( editorInstance.Name );
+  if ($(textarea).attr('class').indexOf("filterxss2") != -1) {
+    $.post(window.opener['Drupal'].settings.basePath + 'fckeditor/xss', {
+      text: oFCKeditor.Value
+      }, 
+      function(text) {
+        oEditor.SetData(text);
+      }
+    );
+  }
 }
 
 function Cancel()
@@ -94,10 +111,18 @@ if(IaObj){
 // For now, it is not possible to retrieve the output HTML, so we must do it by
 // hand. Future implementations of FCKeditor could bring a
 // oFCKeditor.CreateHtml() function.
-document.write( '<input type="hidden" id="' + oFCKeditor.InstanceName + '" name="' + oFCKeditor.InstanceName + '" value="' + oFCKeditor._HTMLEncode( oFCKeditor.Value ) + '" style="display:none" />' ) ;
+
+var textarea = window.opener.document.getElementById( FCKURLParams[ 'el' ] );
+if ($(textarea).attr('class').indexOf("filterxss2") != -1) {
+  var initialHTML = '';
+}
+else {
+  var initialHTML = oFCKeditor.Value;
+}
+
+document.write( '<input type="hidden" id="' + oFCKeditor.InstanceName + '" name="' + oFCKeditor.InstanceName + '" value="' + oFCKeditor._HTMLEncode( initialHTML ) + '" style="display:none" />' ) ;
 document.write( oFCKeditor._GetConfigHtml() ) ;
 document.write( oFCKeditor._GetIFrameHtml() ) ;
-
         </script>
       </td>
     </tr>
