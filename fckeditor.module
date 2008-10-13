@@ -395,9 +395,23 @@ function fckeditor_process_textarea($element) {
       else {
         //check for HTML filter
         $menuitem = menu_get_item();
-        if (!empty($menuitem['map'][1]) && is_object($menuitem['map'][1]) && in_array($menuitem['map'][1]->format, fckeditor_html_filter_formats())) {
-          $element['#attributes']['class'] .= ' '. $xss_class;
+        
+        if (!empty($menuitem['map'][1])) {
+          if (is_object($menuitem['map'][1]) && in_array($menuitem['map'][1]->format, fckeditor_html_filter_formats())) {
+            $element['#attributes']['class'] .= ' '. $xss_class;
+          }
+        }        
+        else if (arg(0) == 'comment' && arg(1) == 'edit' && is_numeric(arg(2))) {
+          $comment = _comment_load(arg(2));
+          
+          if (in_array($comment->format, fckeditor_html_filter_formats())) {
+            $element['#attributes']['class'] .= ' '. $xss_class;
+          }
         }
+        //force XSS check if we don't have an information about input format
+        else {
+          $element['#attributes']['class'] .= ' '. $xss_class;
+        }        
       }
     }
     
