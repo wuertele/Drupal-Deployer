@@ -10,7 +10,7 @@
  * Implementation of hook_form_alter().
  */
 function filefield_paths_form_alter(&$form, $form_state, $form_id) {
-  if ($form['widget_module']['#value'] == 'filefield' || $form['widget_module']['#value'] == 'imagefield') {
+  if (preg_match('/[filefield|image]/', $form['basic']['type']['#value']) && isset($form['widget']['path_settings'])) {
     unset($form['widget']['path_settings']['file_path']['#suffix']);
 
     // Create file name field
@@ -142,7 +142,7 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       $content_type = content_types($node->type);
 
       foreach ($content_type['fields'] as $field) {
-        if ($field['type'] == 'filefield' || $field['type'] == 'image') {
+        if (preg_match('/[filefield|image]/', $field['type']) && is_array($node->$field['field_name'])) {
 
           foreach ($node->$field['field_name'] as $count => &$file) {
             if (empty($file['filepath'])) {
@@ -165,15 +165,11 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       $update = FALSE;
 
       foreach ($content_type['fields'] as $field) {
-        if ($field['type'] == 'filefield' || $field['type'] == 'image') {
+        if (preg_match('/[filefield|image]/', $field['type']) && is_array($node->$field['field_name'])) {
 
           // Set base for FileField Paths variables
           $settings['filepath'] = 'filefield_paths_'. $node->type .'_'. $field['field_name'] .'_file_path';
           $settings['filename'] = 'filefield_paths_'. $node->type .'_'. $field['field_name'] .'_file_name';
-
-          if (empty($node->$field['field_name'])) {
-            continue;
-          }
 
           foreach ($node->$field['field_name'] as $count => $file) {
             if (empty($file['filepath']) || empty($file['data']['process'])) {
@@ -307,6 +303,9 @@ function filefield_paths_process_string($original, $type = 'global', $object = N
   // Transliterate string
   if (module_exists('transliteration') && variable_get($settings .'_transliterate', 0)) {
     $value = transliteration_get($value);
+    if ($type == 'field') {
+      $value = transliteration_clean_filename($value);
+    }
   }
 
   // Convert string to lower case
