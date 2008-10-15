@@ -86,3 +86,5 @@ FCKConfig.IndentClasses = ['rteindent1','rteindent2','rteindent3','rteindent4'] 
 
 // [ Left, Center, Right, Justified ]
 FCKConfig.JustifyClasses = ['rteleft','rtecenter','rteright','rtejustify'] ;
+//Set to 'encode' if you want to obfuscate emails with javascript
+FCKConfig.EMailProtection = 'none' ;
