@@ -160,7 +160,7 @@ function FCKeditor_OnComplete(editorInstance) {
     // if there is a teaser, prepend it to the text, only when switched to FCKeditor using toggle
     if (fckInstances[editorInstance.Name].defaultState == 2) {
       if (teaser.textarea.val().length > 0) {
-        var text = teaser.textarea.val() + '\n<!--break-->\n' + editorInstance.GetData();
+        var text = teaser.textarea.val() + '\n<!--break-->\n' + editorInstance.GetData(true);
         editorInstance.SetData(text);
       }
     }
@@ -193,7 +193,7 @@ function FCKeditor_OnAfterLinkedFieldUpdate(editorInstance) {
   var teaser = FCKeditor_TeaserInfo(taid);
 
   if ($(textArea).is(':hidden')) {
-    var text = editorInstance.GetData();
+    var text = editorInstance.GetData(true);
     textArea.value = text;
     // only update the teaser field if this field is associated with a teaser field
     if (teaser) {
