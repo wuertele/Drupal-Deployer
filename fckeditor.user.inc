@@ -165,19 +165,6 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
     if (isset($edit['fckeditor_width']) && !preg_match('/^\d+%?$/', $edit['fckeditor_width'])) {
       form_set_error('width', t('Enter valid width. Example: 400 or 100%.'));
     }
-
-    return array(
-      'fckeditor_default' => $edit['fckeditor_default'],
-      'fckeditor_show_toggle' => $edit['fckeditor_show_toggle'],
-      'fckeditor_show_fieldnamehint' => $edit['fckeditor_show_fieldnamehint'],
-      'fckeditor_popup' => $edit['fckeditor_popup'],
-      'fckeditor_skin' => $edit['fckeditor_skin'],
-      'fckeditor_toolbar' => $edit['fckeditor_toolbar'],
-      'fckeditor_expand' => $edit['fckeditor_expand'],
-      'fckeditor_width' => $edit['fckeditor_width'],
-      'fckeditor_lang' => $edit['fckeditor_lang'],
-      'fckeditor_auto_lang' => $edit['fckeditor_auto_lang'],
-    );
   }
 
   return NULL;
