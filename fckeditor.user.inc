@@ -155,15 +155,15 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
 
   if ($type == 'validate') {
     if (isset($edit['fckeditor_default'], $edit['fckeditor_popup']) && $edit['fckeditor_default'] == 't' && $edit['fckeditor_popup'] == 't') {
-      form_set_error('popup', t('If FCKeditor is enabled by default, popup window must be disabled.'));
+      form_set_error('fckeditor_popup', t('If FCKeditor is enabled by default, popup window must be disabled.'));
     }
 
     if (isset($edit['fckeditor_show_toggle'], $edit['fckeditor_popup']) && $edit['fckeditor_show_toggle'] == 't' && $edit['fckeditor_popup'] == 't') {
-      form_set_error('popup', t('If toggle is enabled, popup window must be disabled.'));
+      form_set_error('fckeditor_popup', t('If toggle is enabled, popup window must be disabled.'));
     }
 
     if (isset($edit['fckeditor_width']) && !preg_match('/^\d+%?$/', $edit['fckeditor_width'])) {
-      form_set_error('width', t('Enter valid width. Example: 400 or 100%.'));
+      form_set_error('fckeditor_width', t('Enter valid width. Example: 400 or 100%.'));
     }
   }
 
