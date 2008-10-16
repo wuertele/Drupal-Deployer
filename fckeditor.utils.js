@@ -16,6 +16,7 @@ Drupal.behaviors.fckeditor = function(context) {
       var editorInstance = fckInstances[taid];
 
       if (editorInstance.defaultState == 1) {
+        $(".img_assist-button").hide();        
         if (textarea.attr('class').indexOf("filterxss1") != -1 || textarea.attr('class').indexOf("filterxss2") != -1) {
           $.post(Drupal.settings.basePath + 'fckeditor/xss', {
             text: $('#' + taid).val()
@@ -60,6 +61,7 @@ function Toggle(textareaID, TextTextarea, TextRTE)
     else {
       fckInstances[textareaID].ReplaceTextarea();
     }
+    $(".img_assist-button").hide();
     swtch.text(TextTextarea);
     // simply return: ReplaceTextarea will take the contents of the textarea for us
     return;
@@ -109,6 +111,7 @@ function Toggle(textareaID, TextTextarea, TextRTE)
     textArea.show();
     textAreaContainer.show();
     editorFrame.hide();
+    $(".img_assist-button").show();
     $('#img_assist-link-' + textareaID).show();
 
     $(textArea).parent().children(".grippie").show();
@@ -141,6 +144,7 @@ function Toggle(textareaID, TextTextarea, TextRTE)
     $(editorInstance.LinkedField).parent().children(".grippie").hide();
     editorFrame.show();
     $('#img_assist-link-' + textareaID).hide();
+    $(".img_assist-button").hide();
   }
 }
 
