@@ -18,6 +18,7 @@ Drupal.behaviors.fckeditor = function(context) {
       if (editorInstance.defaultState == 1) {
         editorInstance.ReplaceTextarea();
         $('#img_assist-link-' + taid).hide();
+        $(".img_assist-button").hide();
       }
     }
   });
@@ -36,6 +37,7 @@ function Toggle(textareaID, TextTextarea, TextRTE)
     fckInstances[textareaID].defaultState = 2;
     fckInstances[textareaID].ReplaceTextarea();
     swtch.text(TextTextarea);
+    $(".img_assist-button").hide();
     // simply return: ReplaceTextarea will take the contents of the textarea for us
     return;
   }
@@ -85,7 +87,7 @@ function Toggle(textareaID, TextTextarea, TextRTE)
     textAreaContainer.show();
     editorFrame.hide();
     $('#img_assist-link-' + textareaID).show();
-
+    $(".img_assist-button").show();
     $(textArea).parent().children(".grippie").show();
   } else {
     // switch from textarea to fck
@@ -116,6 +118,7 @@ function Toggle(textareaID, TextTextarea, TextRTE)
     $(editorInstance.LinkedField).parent().children(".grippie").hide();
     editorFrame.show();
     $('#img_assist-link-' + textareaID).hide();
+    $(".img_assist-button").hide();
   }
 }
 
