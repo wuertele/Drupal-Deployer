@@ -136,12 +136,12 @@ function FCKeditor_OnComplete(editorInstance) {
 
   if (teaser) {
     // if there is a teaser, prepend it to the text, only when switched to FCKeditor using toggle
-    if (fckInstances[editorInstance.Name].defaultState == 2) {
+    //if (fckInstances[editorInstance.Name].defaultState == 2) {
       if (teaser.textarea.val().length > 0) {
         var text = teaser.textarea.val() + '\n<!--break-->\n' + editorInstance.GetData(true);
         editorInstance.SetData(text);
       }
-    }
+    //}
     // hide the teaser
     teaser.textarea.attr('disabled', '');
     teaser.buttonContainer.hide();
