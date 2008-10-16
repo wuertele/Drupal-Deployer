@@ -270,37 +270,6 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#description' => t('If allowed, users will be able to override the "Editor appearance" by visiting their profile page.'),
   );
 
-  $form['security'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Security'),
-    '#description' => t('Because Drupal stores content in an unmodified form, it is necessary to perform additional security checks before passing any unsafe value to FCKeditor. Without XSS filters, when you decide to edit an article which contains malformed data, any malicious code will be executed by your browser. You don\'t need to turn those filters on for users that are editing only their own content. However, unless you trust all your users, it is strongly advised to enable XSS filters for all accounts that can edit other\'s nodes (e.g. administrators, moderators).'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE
-  );
-  
-  $form['security']['xss'] = array(
-    '#type' => 'radios',
-    '#title' => t('XSS filter'),
-    '#default_value' => isset($profile->settings['xss']) ? $profile->settings['xss'] : '1',
-    '#options' => array(
-      '2' => t('Enable XSS filter on all textareas replaced by FCKeditor'),
-      '1' => t('Enable XSS filter only on textareas associated with HTML filter'),
-      '0' => t('Disable XSS filter'),
-    ),
-    '#description' => t('Choose on which textareas FCKeditor should call a XSS filter before displaying it. Note that original user\'s data will be altered to protect you against hacking attempts. If you decide to disable XSS filter completely, it is advised to disable FCKeditor by default and manually check if HTML code is secure before switching to FCKeditor.'),
-  );
-
-  $form['security']['xss_t'] = array(
-    '#type' => 'radios',
-    '#title' => t('XSS filter settings'),
-    '#default_value' => isset($profile->settings['xss_t']) ? $profile->settings['xss_t'] : '1',
-    '#options' => array(
-      '2' => t('Always run XSS filter when FCKeditor is loaded for the first time.'),
-      '1' => t('Run XSS filter only when FCKeditor starts automatically.'),
-    ),
-    '#description' => t('Applies only if XSS filter is enabled above. If you decide to run XSS filter when FCKeditor starts automatically, you\'ll not be protected when toggling manually from plain textarea to FCKeditor or when using FCKeditor in a popup mode. You may choose this option if you can detect XSS by yourself just by looking at the HTML code.'),
-  );
-  
   $form['fckeditor_exclude_settings'] = array(
     '#type' => 'fieldset',
     '#title' => t('Visibility settings'),

@@ -118,14 +118,6 @@ function fckeditor_process_input($element) {
 function fckeditor_menu() {
   $items = array();
 
-  $items['fckeditor/xss'] = array(
-    'title' => 'XSS Filter',
-    'description' => 'XSS Filter.',
-    'page callback' => 'fckeditor_filter_xss',
-    'access arguments' => array('access fckeditor'),
-    'type' => MENU_CALLBACK,
-  );
-  
   $items['admin/settings/fckeditor'] = array(
     'title' => 'FCKeditor settings',
     'description' => 'Configure the rich text editor.',
@@ -196,25 +188,6 @@ function fckeditor_menu() {
   );
 
   return $items;
-}
-
-/**
- * AJAX callback - XSS filter
- */
-function fckeditor_filter_xss() {
-  if (!isset($_POST['text']) || !is_string($_POST['text'])) {
-    exit;
-  }
-
-  $text = strtr($_POST['text'], array('<!--' => '__COMMENT__START__', '-->' => '__COMMENT__END__'));
-  preg_match_all("|</?([a-z][a-z0-9]*)(?:\b[^>]*)>|i", $text, $matches);
-  $tags = array_unique($matches[1]);
-  
-  $secure_text = filter_xss($text, $tags);
-  $secure_text = strtr($secure_text, array('__COMMENT__START__' => '<!--', '__COMMENT__END__' => '-->'));
-  
-  echo $secure_text;
-  exit;
 }
 
 /**
@@ -345,12 +318,6 @@ function fckeditor_process_textarea($element) {
       if ($conf['popup'] == 't' && $conf['show_toggle'] == 't') {
         $conf['show_toggle'] = 'f';
       }
-      if (!isset($conf['xss'])) {
-        $conf['xss'] = 1;
-      }
-      if (!isset($conf['xss_t'])) {
-        $conf['xss_t'] = 1;
-      }
     }
     else {
       $enabled = FALSE;
@@ -376,43 +343,6 @@ function fckeditor_process_textarea($element) {
     }
     else {
       $element['#attributes']['class'] .= ' fckeditor';
-    }
-
-    //it's not a problem when adding new content
-    if ($conf['xss'] && arg(1) != "add") {
-      //let FCKeditor know when perform XSS checks
-      if ($conf['xss_t'] == 1) {
-        $xss_class = 'filterxss1';
-      }
-      else {
-        $xss_class = 'filterxss2';
-      }
-    
-      //always enabled
-      if ($conf['xss'] == 2) {
-        $element['#attributes']['class'] .= ' '. $xss_class;
-      }
-      else {
-        //check for HTML filter
-        $menuitem = menu_get_item();
-        
-        if (!empty($menuitem['map'][1])) {
-          if (is_object($menuitem['map'][1]) && in_array($menuitem['map'][1]->format, fckeditor_html_filter_formats())) {
-            $element['#attributes']['class'] .= ' '. $xss_class;
-          }
-        }        
-        else if (arg(0) == 'comment' && arg(1) == 'edit' && is_numeric(arg(2))) {
-          $comment = _comment_load(arg(2));
-          
-          if (in_array($comment->format, fckeditor_html_filter_formats())) {
-            $element['#attributes']['class'] .= ' '. $xss_class;
-          }
-        }
-        //force XSS check if we don't have an information about input format
-        else {
-          $element['#attributes']['class'] .= ' '. $xss_class;
-        }        
-      }
     }
     
     $js_id = 'oFCK_'. $num++;
@@ -733,19 +663,6 @@ function fckeditor_html_filter_formats() {
   $r = db_query("SELECT format FROM {filters} WHERE module = 'filter' AND delta = 0");
   while ($row = db_fetch_object($r)) {
     $return[] = $row->format;
-  }
-  
-  //Let other filter modules that call filter_xss() add more formats 
-  //that should be considered as implementing HTML filter by FCKeditor
-  foreach (module_implements('implements_filter_xss') as $name) {
-    $function = $name .'_implements_filter_xss';
-    $result = $function();
-    if (isset($result) && is_array($result)) {
-      $return = array_merge($return, $result);
-    }
-    else if (isset($result)) {
-      $return[] = $result;
-    }
   }
   
   return $return;
