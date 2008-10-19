@@ -5,15 +5,14 @@
  */
 Drupal.feedbackSetup = function() {
   $block = $('#block-feedback-form');
-  $block.children().eq(0)
-    .wrap('<div class="feedback-link"></div>').parent()
+  $block.find('span.feedback-link')
     .prepend('<span id="feedback-form-toggle">[ + ]</span> ')
     .css('cursor', 'pointer')
     .toggle(function() {
-        Drupal.feedbackFormToggle(this, false);
+        Drupal.feedbackFormToggle($block, false);
       },
       function() {
-        Drupal.feedbackFormToggle(this, true);
+        Drupal.feedbackFormToggle($block, true);
       }
     );
   $block.find('form')
@@ -33,13 +32,13 @@ Drupal.feedbackSetup = function() {
 /**
  * Collapse or uncollapse the feedback form block.
  */
-Drupal.feedbackFormToggle = function(node, enable) {
-  $(node).parent().find('.content').slideToggle('medium');
+Drupal.feedbackFormToggle = function($block, enable) {
+  $block.find('.content').slideToggle('medium');
   if (enable) {
-    $('#feedback-form-toggle', node).html('[ + ]');
+    $('#feedback-form-toggle', $block).html('[ + ]');
   }
   else {
-    $('#feedback-form-toggle', node).html('[ &minus; ]');
+    $('#feedback-form-toggle', $block).html('[ &minus; ]');
   }
 }
 
