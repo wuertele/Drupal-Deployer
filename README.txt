@@ -16,8 +16,6 @@ Bug reports, feature suggestions and latest developments:
 
 -- REQUIREMENTS --
 
-* jQuery Update v2.x
-
 * BrowsCap (optional to record user agents)
 
 
