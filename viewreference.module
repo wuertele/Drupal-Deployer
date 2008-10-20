@@ -216,10 +216,11 @@ function theme_viewreference_formatter_default($element) {
     $view = db_fetch_object(db_query("SELECT name, position FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
     $args = viewreference_get_element_args($element);
     $output = '';
-    //$output .= views_embed_view($view->name, $view->position);
+    //$output .= views_embed_view($view->name, $view->position, $args);
     $view_object = views_get_view($view->name);
     $output .= $view_object->preview($view->position, $args);
   }
+  drupal_set_message("<pre>".print_r($view->position,true));
   return $output;
 }
 
@@ -429,7 +430,7 @@ function viewreference_select_process($element, $edit, $form_state, $form) {
   if ($field['dsv_arguments'] == 1 || $field['php_arguments'] == 1) {
 
     if ($field['rows'] == 1) {
-      $args_widget = 'text_textfield';
+      $args_widget = 'textfield';
     }
     else {
       $args_widget = 'textarea';
@@ -582,6 +583,7 @@ function viewreference_autocomplete_validate($element, &$form_state) {
  * Implementation of hook_allowed_values().
  */
 function viewreference_allowed_values($field) {
+
   $options = _viewreference_potential_references($field, TRUE);
   
   foreach ($options as $key => $value) {
