@@ -236,7 +236,7 @@ function admin_menu_admin_menu(&$deleted) {
           $links[] = array(
             'title' => $match[4],
             'description' => $match[3],
-            'path' => $match[1],
+            'path' => urldecode($match[1]),
             'weight' => 20,
             'query' => 'destination',
             'parent_path' => 'logout',
