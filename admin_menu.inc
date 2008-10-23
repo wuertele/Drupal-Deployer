@@ -213,19 +213,36 @@ function admin_menu_admin_menu(&$deleted) {
     }
   }
 
+  // Add clear-cache.
+  $links[] = array(
+    'title' => 'Flush all caches',
+    'path' => 'admin_menu/flush-cache',
+    'query' => 'destination',
+    'weight' => 20,
+    'parent_path' => $icon_path,
+  );
+  $caches = array(
+    'admin_menu' => 'Administration menu',
+    'cache' => 'Cache tables',
+    'menu' => 'Menu',
+    'requisites' => 'Page requisites',
+    'theme' => 'Theme registry',
+  );
+  foreach ($caches as $name => $title) {
+    $links[] = array(
+      'title' => $title,
+      'path' => 'admin_menu/flush-cache/' . $name,
+      'query' => 'destination',
+      'parent_path' => 'admin_menu/flush-cache',
+    );
+  }
+
   // Add devel module links
   if (module_exists('devel')) {
     // Add variable editor.
     $links[] = array(
       'title' => 'Variable editor',
       'path' => 'devel/variable',
-      'weight' => 20,
-      'parent_path' => $icon_path,
-    );
-    // Add clear-cache.
-    $links[] = array(
-      'title' => 'Empty cache',
-      'path' => 'devel/cache/clear',
       'weight' => 20,
       'parent_path' => $icon_path,
     );
@@ -453,5 +470,54 @@ function admin_menu_toggle_modules() {
     actions_synchronize();
   }
   drupal_goto('');
+}
+
+/**
+ * Flush all caches or a specific one.
+ *
+ * @param $name
+ *   (optional) Name of cache to flush.
+ */
+function admin_menu_flush_cache($name = NULL) {
+  switch ($name) {
+    case 'admin_menu':
+      admin_menu_wipe();
+      break;
+
+    case 'cache':
+      // Don't clear cache_form - in-progress form submissions may break.
+      // Ordered so clearing the page cache will always be the last action.
+      $core = array('cache', 'cache_block', 'cache_filter', 'cache_page');
+      $cache_tables = array_merge(module_invoke_all('flush_caches'), $core);
+      foreach ($cache_tables as $table) {
+        cache_clear_all('*', $table, TRUE);
+      }
+      break;
+
+    case 'menu':
+      module_invoke('menu', 'rebuild');
+      break;
+
+    case 'requisites':
+      // Change query-strings on css/js files to enforce reload for all users.
+      _drupal_flush_css_js();
+
+      drupal_clear_css_cache();
+      drupal_clear_js_cache();
+      break;
+
+    case 'theme':
+      module_invoke('system', 'theme_data');
+      drupal_rebuild_theme_registry();
+      break;
+
+    default:
+      // Flush all caches; no need to re-implement this.
+      module_load_include('inc', 'system', 'system.admin');
+      $form_state = array();
+      system_clear_cache_submit($form_state, NULL);
+      break;
+  }
+  drupal_goto();
 }
 
