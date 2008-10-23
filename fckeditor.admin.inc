@@ -270,6 +270,57 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#description' => t('If allowed, users will be able to override the "Editor appearance" by visiting their profile page.'),
   );
 
+  $form['security'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Security'),
+    '#description' => t('Because Drupal stores content in an unmodified form, it is necessary to perform additional security checks before FCKeditor renders the Html content for editing.') .' '. t('Without security filters, when you decide to edit an article which contains a malicious attack (like xss), that code will be rendered along with the html and therefore executed by your browser.') .' '. t('Before FCKeditor renders the content in its editor, it makes an AJAX call to check the node\'s textarea for which filters are checked below and are in the textarea\'s input format.') .' '. t('For example, if you\'re using a Filtered HTML input format and have checked the HTML filter below, it will be executed. However, if you edit node with Full HTML input format assigned, HTML filter will not be executed.') .' '. t('Most obvious is when using a custom module\'s security filter which allows html attributes but strips attribute xss when viewed, but FCKeditor will attempt to show original content when edited which could be malicious. Now same filter if checked below will run when edited to clean up content.'),    
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE
+  );
+  
+  $all = filter_list_all();
+
+  $form['security']['filters'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Security filters'),
+    '#description' => t('Please choose carefully all filters that protect your content (probably not all filters listed below are security filters).'),
+    '#tree' => TRUE,
+  );
+  
+  //don't bother administrator with filters that definitely are not security filters
+  $modules_with_filters_to_skip = array('amazon_filter', 'asy', 'bbcode', 'blockquote', 'bookpost', 'chessboard', 'citation_filter', 'codefilter', 'collapse_text', 'contextlinks', 'coolfilter', 'dialectic', 'dript', 'dme', 'drutex', 'embedfilter', 'ext_link_page', 'extlink', 'elf', 'flickr', 'flickrstickr', 'footnotes', 'formdefaults', 'freelinking', 'gallery', 'geogebra', 'geshifilter', 'gotwo', 'googtube', 'gotcha', 'gtspam', 'hidden_content', 'img_assist', 'image_filter', 'inlinetags', 'insert_view', 'insertframe', 'insertnode', 'interwiki', 'jlightbox', 'jsmath', 'language_sections', 'link_node', 'lootz', 'markdown', 'marksmarty', 'mobile_codes', 'mykml', 'nofollowlist', 'oagwt', 'paging', 'pathfilter', 'pearwiki_filter', 'php', 'pirate', 'reptag', 'scrippet', 'scripturefilter', 'signwriter', 'slideshowpro', 'smartlinebreakconverter', 'smartypants', 'smileys', 'spamspan', 'spam_tokens', 'spoiler', 'table_altrow', 'tablemanager', 'tableofcontents', 'textile', 'tooltips', 'twikifilter', 'typogrify', 'unwrap', 'urlclass', 'urlicon', 'url_replace_filter', 'username_highlighter', 'video_filter', 'quote');
+
+  if (!isset($profile->settings['ss'])) {
+    $profile->settings['filters']['filter/0'] = 1;
+  }
+
+  foreach ($all as $id => $filter) {
+    if (in_array(strtolower($filter->module), $modules_with_filters_to_skip)) {
+      continue;
+    }
+    //skip line break converter and email -> link
+    if ($filter->module == 'filter' && in_array($filter->delta, array(1, 2))) {
+      continue;
+    }
+    $form['security']['filters'][$id] = array(
+      '#type' => 'checkbox',
+      '#title' => $filter->name,
+      '#default_value' => !empty($profile->settings['filters'][$id]),
+      '#description' => module_invoke($filter->module, 'filter', 'description', $filter->delta),
+    );
+  }
+
+  $form['security']['ss'] = array(
+    '#type' => 'radios',
+    '#title' => t('Security settings'),
+    '#default_value' => isset($profile->settings['ss']) ? $profile->settings['ss'] : '2',
+    '#options' => array(
+      '2' => t('Always run security filters for FCKeditor.'),
+      '1' => t('Run security filters only when FCKeditor is set to start automatically.'),
+    ),
+    '#description' => t('There are two ways of starting FCKeditor: automatically and manually (via toggle or in a popup). If you decide to apply security filters only when FCKeditor starts automatically, you\'ll not be protected when toggling manually from plain textarea to FCKeditor or when using FCKeditor in a popup mode. So choose this option only, if you can detect various attacks (mainly XSS) by yourself just by looking at the HTML code.'),
+  );
+    
   $form['fckeditor_exclude_settings'] = array(
     '#type' => 'fieldset',
     '#title' => t('Visibility settings'),
