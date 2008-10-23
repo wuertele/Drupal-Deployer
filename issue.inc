@@ -82,7 +82,7 @@ function project_issue_page() {
 function project_issue_update_project($pid, $cid = NULL, $rid = NULL) {
 
   // Prevent a malicious user from snooping this callback directly.
-  $error = array('error' => t('Malicious attempt to access unauthorized information detected.'));
+  $error = array('error' => t('An error was detected. Please try again.'));
   $node = node_load($pid);
   if ($node) {
     if (!node_access('view', $node)) {
