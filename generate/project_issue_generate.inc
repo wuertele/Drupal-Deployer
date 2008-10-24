@@ -15,11 +15,25 @@ if (!ini_get('safe_mode')) {
 function project_issue_generate_issues($number) {
   require_once(drupal_get_path('module', 'devel') .'/devel_generate.inc');
 
+  $empty_variables = array();
+  // After retrieving the possible values for each of these variables, we
+  // need to check and make sure that at least one value was returned. If
+  // not, we're likely to get fatal errors later on in this function.
   $projects = _project_issue_generate_get_field('projects');
+  if (empty($projects)) { $empty_variables[] = 'projects'; }
   $categories = _project_issue_generate_get_field('categories');
+  if (empty($categories)) { $empty_variables[] = 'categories'; }
   $priorities = _project_issue_generate_get_field('priorities');
+  if (empty($priorities)) { $empty_variables[] = 'priorities'; }
   $users = _project_issue_generate_get_field('users');
+  if (empty($users)) { $empty_variables[] = 'users'; }
   $loaded_users = array();
+
+  // Return now if any of the above variables were empty.
+  if (!empty($empty_variables)) {
+    drupal_set_message(t('No values for %variables could be found to use with automatically generated issues, so no issues were created.', array('%variables' => implode(', ', $empty_variables))), 'error');
+    return;
+  }
 
   srand((double) microtime() * 1000000);
   for ($i = 0; $i < $number; $i++) {
@@ -64,11 +78,27 @@ function project_issue_generate_issues($number) {
  *  Number of comments to generate.
  */
 function project_issue_generate_issue_comments($number) {
+  $empty_variables = array();
+  // After retrieving the possible values for each of these variables, we
+  // need to check and make sure that at least one value was returned. If
+  // not, we're likely to get fatal errors later on in this function.
   $issues = _project_issue_generate_get_field('issues');
+  if (empty($issues)) { $empty_variables[] = 'issues'; }
   $projects = _project_issue_generate_get_field('projects');
+  if (empty($projects)) { $empty_variables[] = 'projects'; }
   $categories = _project_issue_generate_get_field('categories');
+  if (empty($categories)) { $empty_variables[] = 'categories'; }
   $priorities = _project_issue_generate_get_field('priorities');
+  if (empty($priorities)) { $empty_variables[] = 'priorities'; }
   $users = _project_issue_generate_get_field('users');
+  if (empty($users)) { $empty_variables[] = 'users'; }
+
+  // Return now if any of the above variables were empty.
+  if (!empty($empty_variables)) {
+    drupal_set_message(t('No values for %variables could be found to use with automatically generated comments, so no issue comments were created.', array('%variables' => implode(', ', $empty_variables))), 'error');
+    return;
+  }
+
   srand((double) microtime() * 1000000);
 
   for ($i = 0; $i < $number; $i++) {
