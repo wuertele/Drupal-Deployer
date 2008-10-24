@@ -7,9 +7,11 @@ updates about available releases.
 
 For background, see http://drupal.org/node/128827
 
+Note that the module currently requires mysql 5.x or greater in order to
+display usage statistics.
+
 This module was written by:
 - Andrew Morton (http://drupal.org/user/34869) "drewish"
 - Derek Wright (http://drupal.org/user/46549) "dww"
 
 $Id$
-$Name$

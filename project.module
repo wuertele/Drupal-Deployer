@@ -1210,3 +1210,24 @@ function project_use_cvs($project) {
   }
 }
 
+/**
+ * Determines if the current site supports caching of project-related pages.
+ *
+ * The pages can be cached if:
+ *   1. Anonymous users have the 'access projects' permission.
+ *   2. No node access modules are installed.
+ *
+ * @return TRUE if the output can be cached, FALSE otherwise.
+ */
+function project_can_cache() {
+  $grants = module_implements('node_grants');
+  if (!empty($grants)) {
+    return FALSE;
+  }
+  $allowed_roles = user_roles(FALSE, 'access projects');
+  if (!isset($allowed_roles[DRUPAL_ANONYMOUS_RID])) {
+    return FALSE;
+  }
+
+  return TRUE;
+}
