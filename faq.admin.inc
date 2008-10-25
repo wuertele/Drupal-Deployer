@@ -313,7 +313,7 @@ function faq_weight_settings_form($form_state) {
         if (!taxonomy_term_count_nodes($term->tid, 'faq')) {
           continue;
         }
-        $options[$term->tid] = $term->name;
+        $options[$term->tid] = faq_tt("taxonomy:term:$term->tid:name", $term->name);
         $form['choose_cat']['faq_category'] = array(
           '#type' => 'select',
           '#title' => t('Choose a category'),

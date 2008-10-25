@@ -103,14 +103,14 @@ function template_preprocess_faq_category_questions_inline(&$variables) {
   // Configure header.
   $variables['category_depth'] = $term->depth;
   if ($category_display == 'hide_qa') {
-    $variables['header_title'] = l($term->name, "faq/$term->tid");
+    $variables['header_title'] = l(faq_tt("taxonomy:term:$term->tid:name", $term->name), "faq/$term->tid");
   }
   else {
-    $variables['header_title'] = check_plain($term->name);
+    $variables['header_title'] = check_plain(faq_tt("taxonomy:term:$term->tid:name", $term->name));
   }
 
   // Configure category description.
-  $variables['description'] = check_markup($term->description);
+  $variables['description'] = check_markup(faq_tt("taxonomy:term:$term->tid:description", $term->description));
 
   // Get list of sub-categories if necessary.
   $child_categories = array();
