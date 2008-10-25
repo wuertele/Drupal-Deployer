@@ -282,7 +282,7 @@ function faq_nodeapi(&$node, $op, $teaser, $page) {
 
 
 /**
- * Display a FAQ node.
+ * Implementation of hook_view().
  *
  * @param $node
  *   Which node to show.
@@ -295,29 +295,7 @@ function faq_nodeapi(&$node, $op, $teaser, $page) {
  *   The node object.
  */
 function faq_view($node, $teaser = FALSE, $page = FALSE) {
-
-  if ($page) {
-    $breadcrumb = array();
-
-    if (module_exists("taxonomy") && $node->taxonomy) {
-      foreach ($node->taxonomy as $term) {
-        $current = $term;
-        continue;
-      }
-      $breadcrumb[] = l($current->name, 'faq/'. $current->tid);
-      while ($parents = taxonomy_get_parents($current->tid)) {
-        $current = array_shift($parents);
-        $breadcrumb[] = l($current->name, 'faq/'. $current->tid);
-      }
-    }
-    $breadcrumb[] = l(variable_get('faq_title', 'Frequently Asked Questions'), 'faq');
-    $breadcrumb[] = l(t('Home'), NULL);
-    $breadcrumb = array_reverse($breadcrumb);
-    drupal_set_breadcrumb($breadcrumb);
-  }
-
   $node = node_prepare($node, $teaser);
-
   return $node;
 }
 
@@ -348,26 +326,15 @@ function faq_page($tid = 0) {
     $tid = 0;
   }
 
-  // Configure the breadcrumb trail.
-  $breadcrumb = array();
-
-  if (!empty($tid) && $current = taxonomy_get_term($tid)) {
+  // configure the breadcrumb trail.
+  if (!empty($tid) && $current_term = taxonomy_get_term($tid)) {
     if (!drupal_lookup_path('alias', arg(0) .'/'. arg(1)) && module_exists('pathauto')) {
       $placeholders = pathauto_get_placeholders('taxonomy', taxonomy_get_term($tid));
       if ($alias = pathauto_create_alias('faq', 'insert', $placeholders, arg(0) .'/'. arg(1), arg(1))) {
         drupal_goto($alias);
       }
     }
-
-    $breadcrumb[] = l($current->name, 'faq/'. $current->tid);
-    while ($parents = taxonomy_get_parents($current->tid)) {
-      $current = array_shift($parents);
-      $breadcrumb[] = l($current->name, 'faq/'. $current->tid);
-    }
-    $breadcrumb[] = l(variable_get('faq_title', 'Frequently Asked Questions'), 'faq');
-    $breadcrumb[] = l(t('Home'), NULL);
-    $breadcrumb = array_reverse($breadcrumb);
-    drupal_set_breadcrumb($breadcrumb);
+    faq_set_breadcrumb($current_term);
   }
 
 
@@ -1254,3 +1221,38 @@ function faq_pathauto($op) {
   }
 }
 
+/**
+ * Function to set up the FAQ breadcrumbs for a given taxonomy term.
+ *
+ * @param $term
+ *   The taxonomy term object.
+ */
+function faq_set_breadcrumb($term = NULL) {
+  $breadcrumb = array();
+
+  if (module_exists("taxonomy") && $term) {
+    $breadcrumb[] = l($term->name, 'faq/'. $term->tid);
+    while ($parents = taxonomy_get_parents($term->tid)) {
+      $term = array_shift($parents);
+      $breadcrumb[] = l($term->name, 'faq/'. $term->tid);
+    }
+  }
+  $breadcrumb[] = l(variable_get('faq_title', 'Frequently Asked Questions'), 'faq');
+  $breadcrumb[] = l(t('Home'), NULL);
+  $breadcrumb = array_reverse($breadcrumb);
+  return drupal_set_breadcrumb($breadcrumb);
+}
+
+/**
+ * Implementation of template_preprocess_page().
+ *
+ * Override the breadcrumbs for faq nodes.
+ */
+function faq_preprocess_page(&$variables) {
+  if ($variables['node'] && $variables['node']->type == 'faq' && module_exists("taxonomy") && !empty($variables['node']->taxonomy)) {
+    foreach ($variables['node']->taxonomy as $term) {
+      continue;
+    }
+    $variables['breadcrumb'] = theme('breadcrumb', faq_set_breadcrumb($term));
+  }
+}
