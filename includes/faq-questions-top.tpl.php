@@ -27,6 +27,7 @@
  *   Represents the number of items.
  */
 ?>
+<a name="top"></a>
 <?php print $questions_list ?>
 <br />
 <?php $key = 0; ?>

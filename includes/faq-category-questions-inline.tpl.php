@@ -61,7 +61,9 @@ else {
   $hdr = 'h5';
 }
 
-?><div class="faq_category_group">
+?>
+<a name="top"></a>
+<div class="faq_category_group">
   <!-- category header with title, link, image, description, and count of
   questions inside -->
   <div class="faq_qa_header">

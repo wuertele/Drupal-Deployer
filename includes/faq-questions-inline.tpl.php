@@ -22,7 +22,9 @@
  * $use_teaser
  *   Tells whether $node['body'] contains the full body or just the teaser
  */
-?><div>
+?>
+<a name="top"></a>
+<div>
 <?php if (count($nodes)): ?>
   <?php foreach ($nodes as $node): ?>
     <?php // Cycle through the $nodes array so that we now have a $node variable to work with. ?>
