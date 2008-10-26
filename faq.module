@@ -16,10 +16,10 @@ function faq_help($path, $arg) {
 
   switch ($path) {
     case "admin/help#faq":
-      $output .= '<p>'. t("This module allows users with the 'administer faq' permission to create question and answer pairs which will be displayed on the 'faq' page.  The 'faq' page is automatically generated from the FAQ nodes configured and the layout of this page can be modified on the settings page.  Users will need the 'view faq' permission in order to view the 'faq' page.") .'</p>'.
+      $output .= '<p>'. t("This module allows users with the 'administer faq' permission to create question and answer pairs which will be displayed on the 'faq' page.  The 'faq' page is automatically generated from the FAQ nodes configured and the layout of this page can be modified on the settings page.  Users will need the 'view faq page' permission in order to view the 'faq' page.") .'</p>'.
         '<p>'. t("To create a question and answer, the user must create a 'FAQ' node (Create content >> FAQ).  This screen allows the user to edit the question and answer text.  If the 'Taxonomy' module is enabled and there are some terms configured for the FAQ node type, it will also be possible to put the questions into different categories when editing.") .'</p>'.
         '<p>'. t("The 'Frequently Asked Questions' settings configuration screen will allow users with 'administer faq' permissions to specify different layouts of the questions and answers.") .'</p>'.
-        '<p>'. t("All users with 'view faq' permissions will be able to view the generated FAQ page at 'www.example.com/faq'.") .'</p>';
+        '<p>'. t("All users with 'view faq page' permissions will be able to view the generated FAQ page at 'www.example.com/faq'.") .'</p>';
       return $output;
     case "admin/modules#description":
       return t("Allows the user to configure the layout of questions and answers on a FAQ page.");
@@ -33,7 +33,7 @@ function faq_help($path, $arg) {
  * Implementation of hook_perm().
  */
 function faq_perm() {
-  return array('administer faq', 'view faq', 'edit own faq', 'edit faq', 'create faq');
+  return array('administer faq', 'view faq page', 'edit own faq', 'edit faq', 'create faq');
 }
 
 
@@ -63,20 +63,16 @@ function faq_access($op, $node, $account = NULL) {
     }
   }
   elseif ($op == 'view') {
-    // No permission to view any faq nodes.
-    if (!user_access('view faq')) {
+    // Node author is viewing the node, so grant access.
+    if ($account->uid == $node->uid && $account->uid != 0) {
+      return TRUE;
+    }
+    // Node is not published, and it's not the node author, so refuse access.
+    elseif (!$node->status) {
       return FALSE;
-    }
-    // Have permission and node is published.
-    elseif ($node->nid && $node->status) {
-      return TRUE;
-    }
-    // Have permission, node is unpublished but it's their node.
-    elseif ($account->uid == $node->uid && $account->uid != 0) {
-      return TRUE;
     }
     else {
-      return FALSE;
+      return NULL;
     }
   }
 }
@@ -91,7 +87,7 @@ function faq_menu() {
     'title' => 'Frequently Asked Questions',
     'page callback' => 'faq_page',
     'access callback' => 'user_access',
-    'access arguments' => array('view faq'),
+    'access arguments' => array('view faq page'),
     'weight' => 1
   );
   $items['faq/%'] = array(
@@ -99,7 +95,7 @@ function faq_menu() {
     'page callback' => 'faq_page',
     'page arguments' => array(1),
     'access callback' => 'user_access',
-    'access arguments' => array('view faq'),
+    'access arguments' => array('view faq page'),
   );
 
   $items['admin/settings/faq'] = array(
