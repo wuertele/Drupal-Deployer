@@ -1,6 +1,5 @@
 <?php
 // $Id$
-// $Name$
 
 function project_issue_comment(&$arg, $op) {
   // $arg can be a comment object, or a form or form_values.

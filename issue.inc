@@ -1,6 +1,5 @@
 <?php
 // $Id$
-// $Name$
 
 function project_issue_page() {
   global $user;
