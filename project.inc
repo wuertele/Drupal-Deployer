@@ -1,6 +1,5 @@
 <?php
 // $Id$
-// $Name$
 
 /**
  * Implementation of hook_form().
