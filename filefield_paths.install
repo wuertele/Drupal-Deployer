@@ -2,9 +2,119 @@
 // $Id$
 
 /**
+ * Implementation of hook_schema().
+ */
+function filefield_paths_schema() {
+  $schema['filefield_paths'] = array(
+    'fields' => array(
+      'type' => array('type' => 'varchar', 'length' => 32, 'not null' => TRUE, 'default' => ''),
+      'field' => array('type' => 'varchar', 'length' => 32, 'not null' => TRUE, 'default' => ''),
+      'filename' => array('type' => 'text', 'size' => 'medium', 'not null' => TRUE, 'serialize' => TRUE),
+      'filepath' => array('type' => 'text', 'size' => 'medium', 'not null' => TRUE, 'serialize' => TRUE),
+    ),
+    'unique keys' => array(
+      'type_field' => array('type', 'field'),
+    ),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function filefield_paths_install() {
+  drupal_install_schema('filefield_paths');
+}
+
+/**
  * Implementation of hook_uninstall().
  */
 function filefield_paths_uninstall() {
-  db_query("DELETE FROM {variable} WHERE name LIKE 'filefield_paths_%'");
+  drupal_uninstall_schema('filefield_paths');
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function filefield_paths_update_6100() {
+  $ret = array();
+
+  if (db_table_exists('filefield_paths')) {
+    return $ret;
+  }
+
+  $schema['filefield_paths'] = array(
+    'fields' => array(
+      'type' => array('type' => 'varchar', 'length' => 32, 'not null' => TRUE, 'default' => ''),
+      'field' => array('type' => 'varchar', 'length' => 32, 'not null' => TRUE, 'default' => ''),
+      'filename' => array('type' => 'text', 'size' => 'medium', 'not null' => TRUE, 'serialize' => TRUE),
+      'filepath' => array('type' => 'text', 'size' => 'medium', 'not null' => TRUE, 'serialize' => TRUE),
+    ),
+    'unique keys' => array(
+      'type_field' => array('type', 'field'),
+    ),
+  );
+
+  db_create_table($ret, 'filefield_paths', $schema['filefield_paths']);
+
+  $fields = array();
+  $content_type = content_types();
+
+  foreach ($content_type as $type) {
+    $types[] = $type['type'];
+
+    foreach ($type['fields'] as $field) {
+      if (preg_match('/\bfilefield\b|\bimage\b/', $field['type'])) {
+
+        if (!in_array($field['field_name'], $fields)) {
+          $fields[] = $field['field_name'];
+        }
+
+      }
+    }
+  }
+
+  $types = implode('|', $types);
+  $fields = implode('|', $fields);
+
+  $result = db_query("SELECT * FROM {variable} WHERE name LIKE 'filefield_paths_%'");
+
+  while ($variable = db_fetch_object($result)) {
+    $pattern = '/filefield_paths_('. $types .')_('. $fields .')_(file_name|file_path)_?(.*)/';
+
+    if (preg_match($pattern, $variable->name, $results)) {
+      if (empty($results[4])) {
+        $results[4] = 'value';
+      }
+
+      $data[$results[1]][$results[2]][$results[3]][$results[4]] = unserialize($variable->value);
+    }
+  }
+
+  foreach ($data as $type => $type_data) {
+    foreach ($type_data as $field => $field_data) {
+      $result = db_fetch_object(
+        db_query("SELECT widget_settings FROM {content_node_field_instance} ".
+        "WHERE field_name = '%s' AND type_name = '%s'", $field, $type)
+      );
+      $widget_settings = unserialize($result->widget_settings);
+      $field_data['file_path']['value'] = $widget_settings['file_path'];
+
+      $result = db_query(
+        "INSERT INTO {filefield_paths} (type, field, filename, filepath) VALUES ('%s', '%s', '%s', '%s')",
+        $type, $field, serialize($field_data['file_name']), serialize($field_data['file_path']), true
+      );
+
+      $ret[] = array('success' => $result !== FALSE, 'query' => check_plain("
+        INSERT INTO {filefield_paths} (type, field, filename, filepath) VALUES ('". $type ."', '".
+        $field ."', '". serialize($field_data['file_name']) ."', '". serialize($field_data['file_path']) ."')
+      "));
+    }
+  }
+
+  $ret[] = update_sql("DELETE FROM {variable} WHERE name LIKE 'filefield_paths_%'");
   cache_clear_all('variables', 'cache');
+
+  return $ret;
 }
