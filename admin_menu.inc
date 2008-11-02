@@ -356,6 +356,12 @@ function admin_menu_theme_settings() {
     '#default_value' => variable_get('admin_menu_margin_top', 1),
     '#description' => t('If enabled, the output of this site will be shifted for approx. 20 pixels from the top of the viewport to make room for the Administration Menu. If this setting is disabled, some absolute or fixed positioned page elements at the top of the viewport may be covered by Administration Menu.'),
   );
+  $form['admin_menu_position_fixed'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use fixed instead of absolute positioning'),
+    '#default_value' => variable_get('admin_menu_position_fixed', 0),
+    '#description' => t('If enabled, the administration menu will always stay at the top of the browser viewport, even if you scroll down the page.') .'<br />'. t('<strong>Note:</strong> In some browsers this setting might cause malformed page contents, a disappearing cursor and not editable select lists in forms. If such effects occur, this setting should be disabled.'),
+  );
   $form['tweaks'] = array(
     '#type' => 'fieldset',
     '#title' => t('Drupal Administration Tweaks'),

@@ -2,8 +2,13 @@
 
 $(document).ready(function() {
   // Apply margin-top if enabled; directly applying marginTop doesn't work in IE.
-  if ($('#admin-menu').size() && Drupal.settings.admin_menu.margin_top) {
-    $('body').addClass('admin-menu');
+  if ($('#admin-menu').size()) {
+    if (Drupal.settings.admin_menu.margin_top) {
+      $('body').addClass('admin-menu');
+    }
+    if (Drupal.settings.admin_menu.position_fixed) {
+      $('#admin-menu').css('position', 'fixed');
+    }
   }
 
   // Collapse fieldsets on Modules page. For why multiple selectors see #111719.
