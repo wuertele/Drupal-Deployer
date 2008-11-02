@@ -110,14 +110,6 @@ function admin_menu_admin_menu(&$deleted) {
   $links = array();
   $icon_path = '<front>';
 
-  // Add 'administer' item to the icon menu.
-  $links[] = array(
-    'title' => 'Administer',
-    'path' => 'admin',
-    'weight' => 10,
-    'parent_path' => $icon_path,
-  );
-
   // Add system update links.
   $links[] = array(
     'title' => 'Run cron',
