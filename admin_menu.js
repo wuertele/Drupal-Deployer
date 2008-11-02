@@ -9,6 +9,13 @@ $(document).ready(function() {
     if (Drupal.settings.admin_menu.position_fixed) {
       $('#admin-menu').css('position', 'fixed');
     }
+    // Move page tabs into administration menu.
+    if (Drupal.settings.admin_menu.tweak_tabs) {
+      $('ul.tabs.primary li').each(function() {
+        $(this).addClass('admin-menu-tab').appendTo('#admin-menu > ul');
+      });
+      $('ul.tabs.secondary').appendTo('#admin-menu > ul > li.admin-menu-tab.active');
+    }
   }
 
   // Collapse fieldsets on Modules page. For why multiple selectors see #111719.

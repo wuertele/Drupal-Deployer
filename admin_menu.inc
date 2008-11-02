@@ -367,6 +367,12 @@ function admin_menu_theme_settings() {
   if (module_exists('util')) {
     $form['tweaks']['admin_menu_tweak_modules']['#description'] .= '<br /><strong>'. t('If you installed Utility module for this purpose, you can safely uninstall it now!') .'</strong>';
   }
+  $form['tweaks']['admin_menu_tweak_tabs'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Move page tabs into administration menu'),
+    '#default_value' => variable_get('admin_menu_tweak_tabs', 0),
+    '#description' => t('If enabled, tabs of the current page (usually displayed next or below the page title) will be moved into the administration menu. This feature requires that the theme is using the CSS classes <code>tabs primary</code> and <code>tabs secondary</code> for tabs (like Garland).'),
+  );
   $form = system_settings_form($form);
   $form['wipe description'] = array(
     '#type' => 'item',
