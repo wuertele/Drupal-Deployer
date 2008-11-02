@@ -169,10 +169,8 @@ function admin_menu_tree_output($tree) {
 
   foreach ($tree as $data) {
     $extra_class = isset($data['link']['localized_options']['extra class']) ? $data['link']['localized_options']['extra class'] : NULL;
-    // Omit alias lookups.
-    $data['link']['localized_options']['alias'] = TRUE;
+    $link = admin_menu_item_link($data['link']);
 
-    $link = theme('menu_item_link', $data['link']);
     if ($data['below']) {
       $output .= theme('admin_menu_item', $link, $data['link']['has_children'], admin_menu_tree_output($data['below']), $data['link']['in_active_trail'], $extra_class);
     }
@@ -181,6 +179,18 @@ function admin_menu_tree_output($tree) {
     }
   }
   return $output ? "\n<ul>". $output .'</ul>' : '';
+}
+
+/**
+ * High-performance implementation of theme_menu_item_link().
+ *
+ * This saves us a theme() call and does only the absolute minimum to get
+ * the admin menu links rendered.
+ */
+function admin_menu_item_link($link) {
+  // Omit alias lookups.
+  $link['localized_options']['alias'] = TRUE;
+  return '<a href="'. check_url(url($link['href'], $link['localized_options'])) .'">'. (!empty($link['localized_options']['html']) ? $link['title'] : check_plain($link['title'])) .'</a>';
 }
 
 /**
@@ -210,7 +220,6 @@ function theme_admin_menu_item($link, $has_children, $menu = '', $in_active_trai
   }
   return '<li'. (!empty($class) ? ' class="'. $class .'"' : '') .'>'. $link . $menu .'</li>';
 }
-
 
 /**
  * Implementation of hook_form_[form_id]_alter().
