@@ -301,15 +301,14 @@ function admin_menu_adjust_items(&$menu_links, &$sort) {
       unset($menu_links[$path], $sort[$path]);
     }
   }
-  $icon_link = array(
+  // Add the icon containing special links.
+  $links[] = array(
     'title' => theme('admin_menu_icon'),
     'path' => '<front>',
     'weight' => -100,
     'parent_path' => '<root>',
     'options' => array('extra class' => 'admin-menu-icon', 'html' => TRUE),
   );
-  // Add the icon containing special links.
-  $links[] = $icon_link;
   // Add link to show current authenticated/anonymous users - we will add the
   // data dynamically in the _alter hook.
   $links[] = array(

@@ -260,6 +260,7 @@ function admin_menu_menu_alter() {
  * as the current page path or the number of users.
  */
 function admin_menu_translated_menu_link_alter(&$item, $map) {
+  global $user, $base_url;
   static $access_all;
 
   if (!isset($access_all)) {
@@ -280,14 +281,19 @@ function admin_menu_translated_menu_link_alter(&$item, $map) {
   if (!$item['access']) {
     return;
   }
+  if ($item['link_path'] == $base_url . '/update.php' && $user->uid != 1) {
+    $item['access'] = FALSE;
+    return;
+  }
+  if ($item['link_path'] == 'http://drupal.org' && !user_access('display drupal links')) {
+    $item['access'] = FALSE;
+    return;
+  }
   // Fix destination query strings
   if (isset($item['localized_options']['query'])) {
     if ($item['localized_options']['query'] == 'destination') {
       $item['localized_options']['query'] = drupal_get_destination();
     }
-  }
-  if (($item['link_path'] == 'http://drupal.org') && !user_access('display drupal links')) {
-    $item['access'] = FALSE;
   }
   if ($extra = variable_get('admin_menu_display', 0)) {
     $item['title'] .= ' '. $extra[0] .': '. $item[$extra];
