@@ -41,6 +41,9 @@ function amazon_views_plugins() {
  */
 function amazon_views_handlers() {
   return array(
+    'info' => array(
+      'path' => drupal_get_path('module', 'amazon') . '/includes',
+    ),
     'handlers' => array(
       'views_handler_field_amazon_image' => array(
         'parent' => 'views_handler_field',
