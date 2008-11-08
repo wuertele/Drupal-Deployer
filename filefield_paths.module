@@ -25,7 +25,7 @@ function filefield_paths_form_alter(&$form, $form_state, $form_id) {
   }
 
   // Set variables for Upload.module
-  else if (module_exists('upload') && $form['#id'] == 'node-type-form') {
+  elseif (module_exists('upload') && $form['#id'] == 'node-type-form') {
     $ffp = array(
       'show' => TRUE,
       'type' => $form['#node_type']->type,
@@ -280,6 +280,11 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         }
       }
 
+      // Check if and files need to be processed
+      if (!is_array($ffp['#types'])) {
+        break;
+      }
+
       // Load fields settings
       foreach ($ffp['#types'] as $field => $temp) {
         $result = db_fetch_object(
@@ -445,13 +450,13 @@ function filefield_paths_file_move(&$file, $replace = FILE_EXISTS_RENAME) {
     $dirs[] = $dir;
     $path = file_create_path(implode($dirs, '/'));
     if (!field_file_check_directory($path, FILE_CREATE_DIRECTORY, $form_item)) {
-      watchdog('filefield_paths', t('FileField Paths failed to create directory (%d).', array('%d' => $path)), WATCHDOG_ERROR);
+      watchdog('filefield_paths', 'FileField Paths failed to create directory (%d).', array('%d' => $path), WATCHDOG_ERROR);
       return FALSE;
     }
   }
 
   if (!file_move($file['field']['filepath'], $dest .'/'. $file['filename']['new'], $replace)) {
-    watchdog('filefield_paths', t('FileField Paths failed to move file (%o) to (%n).', array('%o' => $file['filepath']['old'], '%n' => $dest .'/'. $file['filename']['new'])), WATCHDOG_ERROR);
+    watchdog('filefield_paths', 'FileField Paths failed to move file (%o) to (%n).', array('%o' => $file['filepath']['old'], '%n' => $dest .'/'. $file['filename']['new']), WATCHDOG_ERROR);
     return FALSE;
   }
 
