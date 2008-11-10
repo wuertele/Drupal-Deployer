@@ -661,13 +661,17 @@ If Mollom made a mistake and some spam slipped through, you can report it to Mol
     );
 
     $forms = _mollom_protectable_forms();
-    foreach ($forms as $formid => $details) {
-      $name = 'mollom_'. $formid;
-      $form['spam'][$name] = array(
-        '#type' => 'checkbox',
-        '#title' => t('Protect @name', array('@name' => $details['name'])),
-        '#default_value' => variable_get($name, MOLLOM_MODE_DISABLED),
-      );
+    foreach ($forms as $form_id => $details) {
+      $mode = _mollom_get_mode($form_id);
+      $name = 'mollom_'. $form_id;
+
+        $form['spam'][$name] = array(
+          '#type' => 'checkbox',
+          '#title' => ($mode == MOLLOM_MODE_ANALYSIS) ? 
+             t('Protect @name using text analyis and CAPTCHA backup', array('@name' => $details['name'])) :
+             t('Protect @name using CAPTCHAs only', array('@name' => $details['name'])),
+          '#default_value' => variable_get($name, MOLLOM_MODE_DISABLED),
+        );
     }
 
     $form['server'] = array(
