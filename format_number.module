@@ -150,7 +150,7 @@ function format_number($number, $decimals = 0) {
  *   If input is empty string, return FALSE when number is strictly required,
  *   otherwise an empty string is returned as 0.
  * @return number
- *   A valid PHP number.
+ *   A valid PHP number. FALSE when input cannot be deciphered.
  */
 function parse_formatted_number($formatted_number, $strictly_required = TRUE) {
   static $format_options, $decimal_point_options, $thousands_separator_options;
@@ -169,13 +169,13 @@ function parse_formatted_number($formatted_number, $strictly_required = TRUE) {
   // Extract the sign.
   $is_negative = FALSE;
   if ($formatted_number[0] == '-' || $formatted_number[0] == '+') {
-    $is_negative = TRUE;
+    $is_negative = ($formatted_number[0] == '-' ? TRUE : FALSE);
     $formatted_number = drupal_substr($formatted_number, 1);
   }
   else {
     $last_char = $formatted_number[drupal_strlen($formatted_number)-1];
     if ($last_char == '-' || $last_char == '+') {
-      $is_negative = TRUE;
+      $is_negative = ($last_char == '-' ? TRUE : FALSE);
       $formatted_number = drupal_substr($formatted_number, 0, -1);
     }
   }
@@ -190,7 +190,7 @@ function parse_formatted_number($formatted_number, $strictly_required = TRUE) {
   }
 
   // When 2 non-numeric symbols are present, the first one should be the
-  // thousands separator, the second one should be decimal separator.
+  // thousands separator, the second one should be a decimal separator.
   if ($non_numeric_symbols_count == 2) {
     // Extract and validate thousands separator.
     $thousands_sep = array_keys($non_numeric_symbols);
@@ -220,14 +220,14 @@ function parse_formatted_number($formatted_number, $strictly_required = TRUE) {
     }
   }
 
-  // When only one non-numeric symbol is present, we need to decide if it is a
-  // thousands separator or a decimal point.
+  // When only one non-numeric symbol is present, we need to figure out
+  // if it is a thousands separator or a decimal point.
   else if ($non_numeric_symbols_count == 1) {
     $unknown_symbol = array_keys($non_numeric_symbols);
     $unknown_symbol = array_shift($unknown_symbol);
 
     // When unknown symbol is used more than once, it can only be a
-    // thousands separator, but it should be one allowed.
+    // thousands separator, but it should be valid one.
     if ($non_numeric_symbols[$unknown_symbol] > 1) {
       if (!isset($thousands_separator_options[$unknown_symbol])) {
         // This symbol is not a valid thousands separator.
@@ -237,7 +237,7 @@ function parse_formatted_number($formatted_number, $strictly_required = TRUE) {
       $formatted_number = str_replace($unknown_symbol, '', $formatted_number);
     }
 
-    // When unknown symbol is not a dot (.) or a comma (,)...
+    // When unknown symbol is not a dot (.), nor a comma (,)...
     else if ($unknown_symbol != '.' && $unknown_symbol != ',') {
       if (isset($decimal_point_options[$unknown_symbol])) {
         // This is a valid decimal point symbol.
@@ -253,8 +253,8 @@ function parse_formatted_number($formatted_number, $strictly_required = TRUE) {
       }
     }
 
-    // Unknown symbol is used once and it is a dot (.) or a comma (,).
-    // Use site/user settings to decide.
+    // Unknown symbol is used once and it is a dot (.) or a comma (,), then
+    // fall back to check site/user settings to figure out its meaning.
     else {
       if ($unknown_symbol == $format_options['decimal_point']) {
         // This is a valid decimal point symbol.

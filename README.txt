@@ -65,7 +65,7 @@ function format_number($number, $decimals = 0) {}
  *   If input is empty string, return FALSE when number is strictly required,
  *   otherwise an empty string is returned as 0.
  * @return number
- *   A valid PHP number.
+ *   A valid PHP number. FALSE when input cannot be deciphered.
  */
 function parse_formatted_number($formatted_number, $strictly_required = TRUE) {}
 
