@@ -53,7 +53,7 @@ function token_rules_input_evaluator_apply($text, $used_vars, &$state) {
   static $token_cache = array();
 
   if ($used_vars) {
-    $vars = rules_get_variables($used_vars, $state);
+    $vars = rules_get_variables(drupal_map_assoc($used_vars), $state);
     if (!$vars) {
       //there not all needed variables available!
       return FALSE;
