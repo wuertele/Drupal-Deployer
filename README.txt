@@ -5,6 +5,14 @@
 ;; Original author: markus_petrux at drupal.org (October 2008)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+CONTENTS
+========
+* OVERVIEW
+* INSTALLATION
+* PHP API
+* JAVASCRIPT API
+
+
 OVERVIEW
 ========
 
@@ -40,8 +48,8 @@ INSTALLATION
   settings) is available when the user profile is edited.
 
 
-USAGE
-=====
+PHP API
+=======
 
 - Other modules may use the following functions exposed by this module:
 
@@ -52,22 +60,31 @@ USAGE
  * @param float $number
  *   The number being formatted.
  * @param int $decimals
- *   Number of decimal digits.
+ *   Number of decimal digits. Use -1 for any number if decimals.
+ * @return string
+ *   The formatted number.
  */
 function format_number($number, $decimals = 0) {}
 
 /**
  * Parse a formatted number.
  *
+ * This function implements lenient parsing when possible, and only falls
+ * back to site/user defined symbols when in doubt.
+ * See http://www.unicode.org/reports/tr35/tr35-11.html#Lenient_Parsing
+ *
+ * @todo
+ *  The algorithm probably needs optimization (using regular expressions?).
+ *
  * @param string $formatted_number
  *   A number formatted with localized thousands separator and decimal point.
- * @param boolean $strictly_required
+ * @param boolean $required
  *   If input is empty string, return FALSE when number is strictly required,
  *   otherwise an empty string is returned as 0.
  * @return number
  *   A valid PHP number. FALSE when input cannot be deciphered.
  */
-function parse_formatted_number($formatted_number, $strictly_required = TRUE) {}
+function parse_formatted_number($formatted_number, $required = TRUE) {}
 
 /**
  * Get the site/user defined thousands separator and decimal point characters.
@@ -82,3 +99,43 @@ function parse_formatted_number($formatted_number, $strictly_required = TRUE) {}
  *   If name exists, its value is returned.
  */
 function format_number_get_options($name = NULL) {}
+
+/**
+ * Expose a javascript version of the Format Number API.
+ */
+function format_number_add_js() {}
+
+
+JAVASCRIPT API
+==============
+
+/**
+ * Format a number with (site default or user defined) thousands separator
+ * and decimal point.
+ *
+ * Formatting options are expected to be at Drupal.settings.format_number.
+ *
+ * @param float number
+ *   The number being formatted.
+ * @param int decimals
+ *   Number of decimal digits. Use -1 for any number of decimals.
+ * @return string
+ *   The formatted number.
+ */
+Drupal.formatNumber = function(number, decimals) {}
+
+/**
+ * Parse a number with (site default or user defined) thousands separator
+ * and decimal point.
+ *
+ * Formatting options are expected to be at Drupal.settings.format_number.
+ *
+ * @param string number
+ *   A number formatted with localized thousands separator and decimal point.
+ * @param boolean required
+ *   FALSE to return "" when input is empty string. Otherwise, result is always
+ *   returned as a valid number. Default is TRUE.
+ * @return number
+ *   A valid number.
+ */
+Drupal.parseNumber = function(number, required) {}
