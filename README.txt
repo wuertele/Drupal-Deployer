@@ -140,8 +140,8 @@ You can enable any (or even both) of them.
 Uploading images and files
 --------------------------
 
-There are three ways of uploading files: By using the built-in file browser,
-by using a module like IMCE or using the core upload module.
+There are three ways of uploading files: By using the built-in file browser, 
+by using modules like IMCE, Image Browser or by using the core upload module.
 
 How to enable the built-in file browser
 ------------------------------

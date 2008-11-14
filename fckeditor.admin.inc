@@ -610,7 +610,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#title' => t('File browser settings'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
-    '#description' => t('Set file browser settings. A file browser will allow you to explore the files contained on the server and embed them as links, images or flash movies. Besides the built-in FCKeditor file browser, you can also use a contributed module like <a href="!imce">IMCE</a>. The quick upload setting controls whether images, flash movies and files can be uploaded using the upload tab of the respective dialogs. Please note that these options require manual configuration, check <a href="!readme">readme.txt</a> for more information.', array('!imce' => url('http://drupal.org/project/imce'), '!readme' => url('admin/help/fckeditor')))
+    '#description' => t('Set file browser settings. A file browser will allow you to explore the files contained on the server and embed them as links, images or flash movies. Besides the built-in FCKeditor file browser, you can also use a contributed module like <a href="!imce">IMCE</a> or <a href="!ib">Image Browser</a>. The quick upload setting controls whether images, flash movies and files can be uploaded using the upload tab of the respective dialogs. Please note that these options require manual configuration, check <a href="!readme">readme.txt</a> for more information.', array('!imce' => url('http://drupal.org/project/imce'), '!ib' => url('http://drupal.org/project/imagebrowser'), '!readme' => url('admin/help/fckeditor')))
   );
 
   $filebrowsers = array(
@@ -620,6 +620,10 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
 
   if (module_exists('imce')) {
     $filebrowsers['imce'] = t('IMCE');
+  }
+
+  if (module_exists('imagebrowser')) {
+    $filebrowsers['ib'] = t('Image Browser');
   }
 
   $form['fckeditor_upload_settings']['filebrowser'] = array(
@@ -638,7 +642,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
       'f' => t('No'),
       't' => t('Yes')
     ),
-    '#description' => t('The quick upload functionality can be disabled and enabled independently of the file browser. It will always use the settings below.'),
+    '#description' => t('The quick upload functionality can be disabled and enabled independently of the file browser. It will always use the settings below. To enable quick uploads you must follow the same configuration procedure as when enabling the built-in file browser.'),
   );
 
   $current_user_files_path = empty($profile->settings['UserFilesPath']) ? "" : strtr($profile->settings['UserFilesPath'], array("%f" => file_directory_path(), "%u" => "UID", "%b" => base_path(), "%n" => "UNAME"));
