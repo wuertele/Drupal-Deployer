@@ -108,7 +108,7 @@ Drupal.parseNumber = function(number, required) {
 
   // Truncate from first non-numeric character (at this point only 0-9 and
   // just one dot are allowed).
-  // This should also restore back the sing (if necessary) and convert the
+  // This should also restore back the sign (if necessary) and convert the
   // string into a pure javascript number (integer or float).
   return number.replace(/^([0-9]*\.?[0-9]+)?.*$/, "$1") * (is_negative ? -1 : 1);
 }
