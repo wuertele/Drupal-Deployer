@@ -46,7 +46,7 @@ function formatted_number_theme() {
 /**
  * Helper function for field info/settings.
  */
-function _formatted_number_get_fields_info() {
+function formatted_number_get_fields_info() {
   $fields = array(
     'formatted_tinyint' => array(
       'label' => t('Formatted tiny integer'),
@@ -143,7 +143,7 @@ function _formatted_number_get_fields_info() {
  */
 function formatted_number_field_info() {
   $fields = array();
-  foreach (_formatted_number_get_fields_info() as $key => $info) {
+  foreach (formatted_number_get_fields_info() as $key => $info) {
     $fields[$key] = array(
       'label' => $info['label'],
       'description' => $info['description'],
@@ -201,7 +201,7 @@ function formatted_number_field_settings($op, $field) {
             $default_value = format_number($default_value, $decimals);
           }
         }
-        $fields_info = _formatted_number_get_fields_info();
+        $fields_info = formatted_number_get_fields_info();
         $field_maxlength = $fields_info[$field['type']]['maxlength'];
         $form[$name] = array(
           '#type' => 'textfield',
@@ -232,9 +232,7 @@ function formatted_number_field_settings($op, $field) {
           '#description' => t('The number of digits to the right of the decimal point.'),
         );
       }
-      format_number_add_js();
-      drupal_add_css(drupal_get_path('module', 'formatted_number') .'/formatted_number.css');
-      drupal_add_js(drupal_get_path('module', 'formatted_number') .'/formatted_number.js');
+      formatted_number_add_js();
       return $form;
 
     case 'validate':
@@ -243,7 +241,7 @@ function formatted_number_field_settings($op, $field) {
           form_set_error('min', t('"Minimum" must be a valid number.'));
         }
         else if ($field['min'] != '') {
-          $limit = _formatted_number_get_number_limit($field['type'], 'min', $field['precision'], $field['decimals']);
+          $limit = formatted_number_get_number_limit($field['type'], 'min', $field['precision'], $field['decimals']);
           if ((float)$field['min'] < $limit) {
             form_set_error('min', t('"Minimum" cannot be lower than !num.', array('!num' => format_number($limit, (isset($field['decimals']) ? $field['decimals'] : 0)))));
           }
@@ -254,7 +252,7 @@ function formatted_number_field_settings($op, $field) {
           form_set_error('max', t('"Maximum" must be a valid number.'));
         }
         else if ($field['max'] != '') {
-          $limit = _formatted_number_get_number_limit($field['type'], 'max', $field['precision'], $field['decimals']);
+          $limit = formatted_number_get_number_limit($field['type'], 'max', $field['precision'], $field['decimals']);
           if ((float)$field['max'] > $limit) {
             form_set_error('max', t('"Maximum" cannot be greater than !num.', array('!num' => format_number($limit, (isset($field['decimals']) ? $field['decimals'] : 0)))));
           }
@@ -276,7 +274,7 @@ function formatted_number_field_settings($op, $field) {
       return $field_option_names;
 
     case 'database columns':
-      $fields_info = _formatted_number_get_fields_info();
+      $fields_info = formatted_number_get_fields_info();
       $db_column = $fields_info[$field['type']]['db_column'];
       if ($field['type'] == 'formatted_decimal') {
         $db_column += array(
@@ -290,6 +288,13 @@ function formatted_number_field_settings($op, $field) {
 }
 
 /**
+ * Implementation of hook_content_is_empty().
+ */
+function formatted_number_content_is_empty($item, $field) {
+  return !is_numeric($item['value']);
+}
+
+/**
  * Implementation of hook_field().
  */
 function formatted_number_field($op, &$node, $field, &$items, $teaser, $page) {
@@ -300,7 +305,7 @@ function formatted_number_field($op, &$node, $field, &$items, $teaser, $page) {
         if (is_array($item) && isset($item['_error_element'])) {
           unset($item['_error_element']);
         }
-        $errors = _formatted_number_validate_field_value($field, $item['value']);
+        $errors = formatted_number_validate_field_value($field, $item['value']);
         if (!empty($errors)) {
           foreach ($errors as $message) {
             form_set_error($error_element, $message);
@@ -309,13 +314,6 @@ function formatted_number_field($op, &$node, $field, &$items, $teaser, $page) {
       }
     }
   }
-}
-
-/**
- * Implementation of hook_content_is_empty().
- */
-function formatted_number_content_is_empty($item, $field) {
-  return !preg_match('#[1-9]#', (string)$item['value']);
 }
 
 /**
@@ -380,13 +378,13 @@ function formatted_number_elements() {
 function formatted_number_widget_process($element, $edit, $form_state, $form) {
   $field_name = $element['#field_name'];
   $field = $form['#field_info'][$field_name];
-  $field_key  = $element['#columns'][0];
+  $field_key = $element['#columns'][0];
 
   $field_precision = (isset($field['precision']) && (int)$field['precision'] > 0 ? (int)$field['precision'] : 12);
   $field_decimals = (isset($field['decimals']) && (int)$field['decimals'] >= 0 ? (int)$field['decimals'] : 0);
   $field_min = parse_formatted_number($field['min']);
   if (!is_numeric($field_min)) {
-    $field_min = _formatted_number_get_number_limit($field['type'], 'min', $field_precision, $field_decimals);
+    $field_min = formatted_number_get_number_limit($field['type'], 'min', $field_precision, $field_decimals);
   }
 
   // Compute maxlength for the input textfield.
@@ -470,7 +468,7 @@ function formatted_number_widget_validate($element, &$form_state) {
       form_set_error($error_element, t('The specified number !num is invalid.', array('!num' => $element['#value'][$field_key])));
       return;
     }
-    $errors = _formatted_number_validate_field_value($field, $value);
+    $errors = formatted_number_validate_field_value($field, $value);
     if (!empty($errors)) {
       $error_element = implode('][', $element['#parents']) .']['. $field_key;
       foreach ($errors as $message) {
@@ -488,7 +486,7 @@ function formatted_number_widget_validate($element, &$form_state) {
 }
 
 /**
- * Helper function used to validate a formatted number field.
+ * Helper function to validate a formatted number field.
  *
  * @param array $field
  *   The field array.
@@ -497,16 +495,16 @@ function formatted_number_widget_validate($element, &$form_state) {
  * @return array
  *   An array with error messages or empty if value is correct.
  */
-function _formatted_number_validate_field_value($field, $value) {
+function formatted_number_validate_field_value($field, $value) {
   $field_precision = (isset($field['precision']) && (int)$field['precision'] > 0 ? (int)$field['precision'] : 12);
   $field_decimals = (isset($field['decimals']) && (int)$field['decimals'] >= 0 ? (int)$field['decimals'] : 0);
-  $field_min = parse_formatted_number($field['min']);
-  $field_max = parse_formatted_number($field['max']);
+  $field_min = (isset($field['min']) ? parse_formatted_number($field['min']) : NULL);
+  $field_max = (isset($field['max']) ? parse_formatted_number($field['max']) : NULL);
   if (!is_numeric($field_min)) {
-    $field_min = _formatted_number_get_number_limit($field['type'], 'min', $field_precision, $field_decimals);
+    $field_min = formatted_number_get_number_limit($field['type'], 'min', $field_precision, $field_decimals);
   }
   if (!is_numeric($field_max)) {
-    $field_max = _formatted_number_get_number_limit($field['type'], 'max', $field_precision, $field_decimals);
+    $field_max = formatted_number_get_number_limit($field['type'], 'max', $field_precision, $field_decimals);
   }
   $errors = array();
   $value = trim($value);
@@ -535,10 +533,10 @@ function _formatted_number_validate_field_value($field, $value) {
  * @param int $decimals
  * @return float
  */
-function _formatted_number_get_number_limit($type, $direction, $precision = 0, $decimals = 0) {
+function formatted_number_get_number_limit($type, $direction, $precision = 0, $decimals = 0) {
   static $fields_info;
   if (!isset($fields_info)) {
-    $fields_info = _formatted_number_get_fields_info();
+    $fields_info = formatted_number_get_fields_info();
   }
   if (isset($fields_info[$type][$direction])) {
     return $fields_info[$type][$direction];
@@ -548,19 +546,30 @@ function _formatted_number_get_number_limit($type, $direction, $precision = 0, $
 }
 
 /**
- * Render the form element for CCK formatted numbers.
+ * Add javascript/styles for Formatted Number Widgets.
+ */
+function formatted_number_add_js() {
+  static $ready;
+  if (!isset($ready)) {
+    $ready = TRUE;
+    format_number_add_js();
+    drupal_add_css(drupal_get_path('module', 'formatted_number') .'/formatted_number.css');
+    drupal_add_js(drupal_get_path('module', 'formatted_number') .'/formatted_number.js');
+  }
+}
+
+/**
+ * Display a CCK Number (widget).
  *
  * @ingroup themeable
  */
 function theme_formatted_number($element) {
-  format_number_add_js();
-  drupal_add_css(drupal_get_path('module', 'formatted_number') .'/formatted_number.css');
-  drupal_add_js(drupal_get_path('module', 'formatted_number') .'/formatted_number.js');
+  formatted_number_add_js();
   return $element['#children'];
 }
 
 /**
- * Display a CCK 'unformatted' number.
+ * Display a CCK Number (unformatted).
  *
  * @ingroup themeable
  */
@@ -569,18 +578,17 @@ function theme_formatted_number_formatter_unformatted($element) {
 }
 
 /**
- * Display a CCK formatted number.
+ * Display a CCK Number (formatted).
  *
  * @ingroup themeable
  */
 function theme_formatted_number_formatter_generic($element) {
-  $field = content_fields($element['#field_name'], $element['#type_name']);
   $value = $element['#item']['value'];
-
-  if (empty($value) && $value === '') {
+  if (!is_numeric($value)) {
     return '';
   }
 
+  $field = content_fields($element['#field_name'], $element['#type_name']);
   $decimals = ($element['#formatter'] == 'nozeros' ? -1 : (isset($field['decimals']) ? (int)$field['decimals'] : 0));
   $formatted_number = format_number($value, $decimals);
 
