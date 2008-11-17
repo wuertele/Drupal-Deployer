@@ -461,11 +461,8 @@ function _xmlsitemap_update_cache($page = NULL) {
  * @return A string containing the site map index
  */
 function _xmlsitemap_output_index($link_count) {
-  $output = '';
-  global $base_path;
-  $xsl_path = file_directory_path() .'/xmlsitemap/gss.xsl';
-  $xsl_path = file_exists($xsl_path) ? _xmlsitemap_file_create_url($xsl_path) : $base_path . drupal_get_path('module', 'xmlsitemap') .'/gss/gss.xsl';
-  $output .= '<?xml version="1.0" encoding="UTF-8"?>'."\n";
+  $xsl_path = url(drupal_get_path('module', 'xmlsitemap') .'/gss/gss.xsl');
+  $output = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
   $output .= '<?xml-stylesheet type="text/xsl" href="'. $xsl_path .'" ?>'."\n";
   $output .= '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'."\n";
   $output .= '              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'."\n";
@@ -505,13 +502,10 @@ function _xmlsitemap_chunk_last_change($time, $value) {
  * @return A string containing a chunk of the site map
  */
 function _xmlsitemap_output_chunk($chunk) {
-  $output = '';
-  global $base_path;
   if (!ini_get('safe_mode')) {
     set_time_limit(240);
   }
-  $xsl_path = file_directory_path() .'/xmlsitemap/gss.xsl';
-  $xsl_path = file_exists($xsl_path) ? _xmlsitemap_file_create_url($xsl_path) : $base_path . drupal_get_path('module', 'xmlsitemap') .'/gss/gss.xsl';
+  $xsl_path =  url(drupal_get_path('module', 'xmlsitemap') .'/gss/gss.xsl');
   $output .= '<?xml version="1.0" encoding="UTF-8"?>'."\n";
   $output .= '<?xml-stylesheet type="text/xsl" href="'. $xsl_path .'" ?>'."\n";
   $output .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'."\n";
@@ -538,15 +532,6 @@ function _xmlsitemap_file_create_url($path) {
       return $GLOBALS['base_url'] .'/'. file_directory_path() .'/'. str_replace('\\', '/', $path);
     case FILE_DOWNLOADS_PRIVATE:
       return xmlsitemap_url('system/files/'. $path, NULL, NULL, NULL, TRUE);
-  }
-}
-
-/**
- * Implementation of hook_file_download().
- */
-function xmlsitemap_file_download($file) {
-  if ($file == 'xmlsitemap/gss.xsl') {
-    return array('Content-Type:');
   }
 }
 
