@@ -71,16 +71,18 @@ function xmlsitemap_menu() {
     'type' => MENU_CALLBACK,
     'access arguments' => $access_content
   );
-  $chunk_count = variable_get('xmlsitemap_chunk_count', 0);
-  for ($chunk = 0; $chunk < $chunk_count; ++$chunk) {
-    $items["sitemap$chunk.xml"] = array(
-      'title' => 'Site map !number',
-      'title arguments' => array('!number' => $chunk),
-      'page callback' => '_xmlsitemap_output',
-      'page arguments' => array((string)$chunk),
-      'type' => MENU_CALLBACK,
-      'access arguments' => $access_content
-    );
+  $chunk_size = variable_get('xmlsitemap_chunk_size', 50000);
+  if (_xmlsitemap_link_count() / $chunk_size > 1 || !empty($xml)) {
+    for ($chunk = 0; $chunk < _xmlsitemap_link_count() / $chunk_size + count(_xmlsitemap_xml()); ++$chunk) {
+      $items["sitemap$chunk.xml"] = array(
+        'title' => 'Site map !number',
+        'title arguments' => array('!number' => $chunk),
+        'page callback' => '_xmlsitemap_output',
+        'page arguments' => array((string)$chunk),
+        'type' => MENU_CALLBACK,
+        'access arguments' => $access_content
+      );
+    }
   }
 
   return $items;
@@ -354,50 +356,34 @@ function _xmlsitemap_xsl() {
  * @return None
  */
 function _xmlsitemap_output($chunk = NULL) {
+  if (variable_get('xmlsitemap_update', FALSE)) {
+    _xmlsitemap_update();
+  }
   drupal_set_header('Content-type: text/xml; charset=utf-8');
-  global $user;
-  $dest = file_directory_path() .'/xmlsitemap';
-  file_check_directory($dest, FILE_CREATE_DIRECTORY);
+  $chunk_size = variable_get('xmlsitemap_chunk_size', 50000);
+  $xml = _xmlsitemap_xml();
   if (isset($chunk)) {
-    $dest .= "/sitemap$chunk.xml.gz";
-    $type = t('Site map @chunk', array('@chunk' => $chunk));
-  }
-  else {
-    $dest .= '/sitemap.xml.gz';
-    $link_count = _xmlsitemap_link_count();
-    $chunk_size = variable_get('xmlsitemap_chunk_size', 50000);
-    $type = $link_count > $chunk_size ? t('Site map index') : t('Site map');
-  }
-  $status = TRUE;
-  if (!file_exists($dest) || variable_get('xmlsitemap_update', FALSE)) {
-    $page = isset($chunk) ? $chunk : 'index';
-    $status = _xmlsitemap_update_cache($page);
-  }
-  if ($status) {
-    if (strpos($_SERVER['HTTP_ACCEPT_ENCODING'], 'gzip') === FALSE || zlib_get_coding_type() !== FALSE || extension_loaded('eAccelerator') || (variable_get('cache', CACHE_DISABLED) != CACHE_DISABLED && empty($user->uid))) {
-      readgzfile($dest);
+    if ($chunk < _xmlsitemap_link_count() / $chunk_size) {
+      _xmlsitemap_output_chunk($chunk);
+    }
+    elseif ($chunk < _xmlsitemap_link_count() / $chunk_size + count($xml)) {
+      $previous = (integer) _xmlsitemap_link_count() / $chunk_size + 1;
+      print $xml[$chunk - $previous];
     }
     else {
-      drupal_set_header('Content-Encoding: gzip');
-      print file_get_contents($dest);
-    }
-    if (variable_get('xmlsitemap_log_access', FALSE)) {
-      $message = array_shift(module_invoke_all('xmlsitemap_engines', 'access', $type));
-      if (isset($message)) {
-        watchdog('xmlsitemap', $message);
-      }
-      else {
-        watchdog('xmlsitemap', '!sitemap downloaded by @user-agent at @address.', array(
-          '!sitemap' => $type,
-          '@user-agent' => $_SERVER['HTTP_USER_AGENT'],
-          '@address' => ip_address(),
-        ));
-      }
+      drupal_not_found();
     }
   }
   else {
-    drupal_not_found();
+    if (_xmlsitemap_link_count() > $chunk_size || count($xml) > 0) {
+      _xmlsitemap_output_index();
+    }
+    else {
+      _xmlsitemap_output_chunk();
+    }
   }
+  drupal_page_footer();
+  exit;
 }
 
 /**
@@ -411,73 +397,50 @@ function _xmlsitemap_link_count() {
 }
 
 /**
- * Update the cached site map files.
- * @return TRUE if the update was successful, FALSE otherwise.
+ * Get site maps returned by hook_xmlsitemap_links().
+ * @return An array of site maps or an empty array.
  */
-function _xmlsitemap_update_cache($page = NULL) {
-  global $user;
-  $current_user = $user;
-  $user = user_load(array('uid' => 0));
-  $path = file_directory_path() .'/xmlsitemap';
-  file_check_directory($path, FILE_CREATE_DIRECTORY);
-  $node_count = db_result(db_query("SELECT COUNT(*) FROM {node}"));
-  $dest = $path .'/sitemap.xml.gz';
-  $link_count = _xmlsitemap_link_count();
-  $chunk_size = variable_get('xmlsitemap_chunk_size', 50000);
-  $status = TRUE;
-  if ($link_count > $chunk_size) {
-    $data = gzencode(_xmlsitemap_output_index($link_count));
-    if (file_save_data($data, $dest, FILE_EXISTS_REPLACE) === 0 && ($page == 'index' || !isset($page))) {
-      $status = FALSE;
-    }
-    for ($chunk = 0; $chunk < $link_count / $chunk_size; ++$chunk) {
-      $dest = $path ."/sitemap$chunk.xml.gz";
-      $data = gzencode(_xmlsitemap_output_chunk($chunk));
-      if (file_save_data($data, $dest, FILE_EXISTS_REPLACE) === 0 && ($page == $chunk || !isset($page))) {
-        $status = FALSE;
+function _xmlsitemap_xml() {
+  static $xml;
+  if (!isset($xml)) {
+    $xml = array();
+    foreach (module_implements('xmlsitemap_links') as $module) {
+      $sitemap = module_invoke($module, 'xmlsitemap_links', 'xml');
+      if (!empty($sitemap)) {
+        $xml[] = $sitemap;
       }
     }
   }
-  else {
-    $chunk = 0;
-    $data = gzencode(_xmlsitemap_output_chunk($chunk));
-    if (file_save_data($data, $dest, FILE_EXISTS_REPLACE) === 0 && ($page == 'index' || !isset($page))) {
-      $status = FALSE;
-    }
-  }
-  variable_set('xmlsitemap_chunk_count', $chunk);
-  variable_set('xmlsitemap_update', FALSE);
-  if (!$status) {
-    drupal_set_message(t('Unable to load site map. Make sure that there is an xmlsitemap directory in your files directory and that it is writable by Drupal.'), 'error');
-  }
-  $user = $current_user;
-  return $status;
+  return $xml;
 }
 
 /**
  * Generate the site map index.
- * @param $link_count:
- * An integer containing the total number of links in the site
- * @return A string containing the site map index
  */
-function _xmlsitemap_output_index($link_count) {
-  $xsl_path = url(drupal_get_path('module', 'xmlsitemap') .'/gss/gss.xsl');
-  $output = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
-  $output .= '<?xml-stylesheet type="text/xsl" href="'. $xsl_path .'" ?>'."\n";
-  $output .= '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'."\n";
-  $output .= '              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'."\n";
-  $output .= '              xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9'."\n";
-  $output .= '                                  http://www.sitemaps.org/schemas/sitemap/0.9/siteindex.xsd">'."\n";
+function _xmlsitemap_output_index() {
+  print '<?xml version="1.0" encoding="UTF-8"?>'."\n";
+  print '<?xml-stylesheet type="text/xsl" href="'. xmlsitemap_url(drupal_get_path('module', 'xmlsitemap') .'/gss/gss.xsl') .'" ?>'."\n";
+  print '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'."\n";
+  print '              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'."\n";
+  print '              xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9'."\n";
+  print '                                  http://www.sitemaps.org/schemas/sitemap/0.9/siteindex.xsd">'."\n";
+  $xml = count(_xmlsitemap_xml());
   $chunk_size = variable_get('xmlsitemap_chunk_size', 50000);
-  for ($chunk = 0; $chunk < $link_count / $chunk_size; ++$chunk) {
-    $output .= '<sitemap><loc>'. xmlsitemap_url("sitemap$chunk.xml", NULL, NULL, NULL, TRUE) .'</loc>';
-    $previous = $chunk * $chunk_size;
-    $links = array_slice(_xmlsitemap_links(), $previous, $chunk_size);
-    $output .= '<lastmod>'. gmdate('Y-m-d\TH:i:s+00:00', array_reduce($links, '_xmlsitemap_chunk_last_change')) .'</lastmod>';
-    $output .= "</sitemap>\n";
+  for ($chunk = 0; $chunk < _xmlsitemap_link_count() / $chunk_size + $xml; ++$chunk) {
+    print '  <sitemap>'."\n";
+    print '    <loc>'. xmlsitemap_url("sitemap$chunk.xml", NULL, NULL, NULL, TRUE) .'</loc>'."\n";
+    if ($chunk < _xmlsitemap_link_count() / $chunk_size) {
+      $from = $chunk * $chunk_size;
+      if (!empty($chunk_size)) {
+        $lastmod = db_result(db_query_range("SELECT lastmod FROM {xmlsitemap} ORDER BY lastmod DESC, loc", $from, $chunk_size));
+        if (isset($lastmod) && $lastmod !== FALSE) {
+          print '    <lastmod>'. gmdate('Y-m-d\TH:i:s+00:00', $lastmod) .'</lastmod>'."\n";
+        }
+      }
+    }
+    print '  </sitemap>'."\n";
   }
-  $output .= '</sitemapindex>';
-  return $output;
+  print '</sitemapindex>';
 }
 
 /**
@@ -496,43 +459,34 @@ function _xmlsitemap_chunk_last_change($time, $value) {
 }
 
 /**
- * Generate a chunk of the site map.
- * @param $chunk:
- * An integer specifying which chunk of the site map to display
- * @return A string containing a chunk of the site map
+ * Display a chunk of the site map.
+ * @param $chunk: An integer specifying which chunk of the site map to display
  */
-function _xmlsitemap_output_chunk($chunk) {
-  if (!ini_get('safe_mode')) {
-    set_time_limit(240);
-  }
-  $xsl_path =  url(drupal_get_path('module', 'xmlsitemap') .'/gss/gss.xsl');
-  $output .= '<?xml version="1.0" encoding="UTF-8"?>'."\n";
-  $output .= '<?xml-stylesheet type="text/xsl" href="'. $xsl_path .'" ?>'."\n";
-  $output .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'."\n";
-  $output .= '        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'."\n";
-  $output .= '        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9'."\n";
-  $output .= '                            http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">'."\n";
+function _xmlsitemap_output_chunk($chunk = 0) {
+  print '<?xml version="1.0" encoding="UTF-8"?>'."\n";
+  print '<?xml-stylesheet type="text/xsl" href="'. xmlsitemap_url(drupal_get_path('module', 'xmlsitemap') .'/gss/gss.xsl') .'" ?>'."\n";
+  print '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'."\n";
+  print '        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'."\n";
+  print '        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9'."\n";
+  print '                            http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">'."\n";
   $chunk_size = variable_get('xmlsitemap_chunk_size', 50000);
-  $previous = $chunk * $chunk_size;
-  $output .= implode("\n", _xmlsitemap_format(array_slice(_xmlsitemap_links(), $previous, $chunk_size)));
-  $output .= "\n</urlset>";
-  return $output;
-}
-
-/**
- * Modified version of file_create_url(). Allows us to remove language
- * prefixes.
- * @param $path: the path to the file
- * @return A URL to the file
- */
-function _xmlsitemap_file_create_url($path) {
-  $path = trim(substr($path, strlen(file_directory_path())), '\\/');
-  switch (variable_get('file_downloads', FILE_DOWNLOADS_PUBLIC)) {
-    case FILE_DOWNLOADS_PUBLIC:
-      return $GLOBALS['base_url'] .'/'. file_directory_path() .'/'. str_replace('\\', '/', $path);
-    case FILE_DOWNLOADS_PRIVATE:
-      return xmlsitemap_url('system/files/'. $path, NULL, NULL, NULL, TRUE);
+  $start = $chunk * $chunk_size;
+  $links = db_query_range("SELECT * FROM {xmlsitemap} ORDER BY lastmod DESC, changefreq, priority DESC, loc", $start , $chunk_size);
+  while ($link = db_fetch_array($links)) {
+    print '  <url>'."\n";
+    print '    <loc>'. check_url($link['loc']) .'</loc>'."\n";
+    if (isset($link['lastmod'])) {
+      print '    <lastmod>'. gmdate('Y-m-d\TH:i:s+00:00', $link['lastmod']) .'</lastmod>'."\n";
+    }
+    if (isset($link['changefreq'])) {
+      print '    <changefreq>'. xmlsitemap_frequency($link['changefreq']) .'</changefreq>'."\n";
+    }
+    if (isset($link['priority']) && $link['priority'] <= 1 && $link['priority'] >= 0) {
+      print '    <priority>'. number_format($link['priority'], 1) .'</priority>'."\n";
+    }
+    print '  </url>'."\n";
   }
+  print '</urlset>';
 }
 
 /**
@@ -550,33 +504,6 @@ function _xmlsitemap_links() {
       array_multisort($lastmod, $entries);
     }
     $links = $entries;
-  }
-  return $links;
-}
-
-/**
- * Process an array of links.
- * @param $entries: An array of links to process
- * @return A string of formatted links
- */
-function _xmlsitemap_format($entries) {
-  $links = array();
-  foreach ($entries as $entry) {
-    if (isset($entry['#loc'])) {
-      $link = '  <url>'."\n";
-      $link .= '    <loc>'. check_url($entry['#loc']) .'</loc>'."\n";
-      if (isset($entry['#lastmod'])) {
-        $link .= '    <lastmod>'. gmdate('Y-m-d\TH:i:s+00:00', $entry['#lastmod']) .'</lastmod>'."\n";
-      }
-      if (isset($entry['#changefreq'])) {
-        $link .= '    <changefreq>'. _xmlsitemap_frequency($entry['#changefreq']) .'</changefreq>'."\n";
-      }
-      if (isset($entry['#priority']) && $entry['#priority'] <= 1 && $entry['#priority'] >= 0) {
-        $link .= '    <priority>'. number_format($entry['#priority'], 1) .'</priority>'."\n";
-      }
-      $link .= '  </url>';
-      $links[] = $link;
-    }
   }
   return $links;
 }
