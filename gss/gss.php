@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<<?php print '?xml version="1.0" encoding="UTF-8"?' ?>>
 
 <xsl:stylesheet version="2.0"
                 xmlns:html="http://www.w3.org/TR/REC-html40"
@@ -12,8 +12,8 @@
     <html>
       <head>
         <title>Site map file</title>
-        <link href="/sites/all/modules/xmlsitemap/gss/gss.css" type="text/css" rel="stylesheet"/>
-        <script src="/sites/all/modules/xmlsitemap/gss/gss.js"></script>
+        <link href="<?php print base_path() . drupal_get_path('module', 'xmlsitemap') ?>/gss/gss.css" type="text/css" rel="stylesheet"/>
+        <script src="<?php print base_path() . drupal_get_path('module', 'xmlsitemap') ?>/gss/gss.js"></script>
       </head>
 
       <!-- Store in $fileType if we are in a sitemap or in a siteindex -->
