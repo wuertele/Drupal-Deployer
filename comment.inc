@@ -42,6 +42,20 @@ function project_issue_comment(&$arg, $op) {
       $form['project_info']['#tree'] = TRUE;
       $form['project_info']['#weight'] = -2;
 
+      // Remove the form item that displays the current project, and
+      // replace the static single project value with a select list
+      // of all projects to make swapping simpler.
+      unset($form['project_info']['project_display']);
+      $uris = NULL;
+      $projects = array(t('<none>')) + project_projects_select_options($uris);
+      $form['project_info']['pid'] = array(
+        '#type' => 'select',
+        '#title' => t('Project'),
+        '#default_value' => $node->pid,
+        '#options' => $projects,
+        '#required' => TRUE,
+      );
+
       $form['issue_info']['#weight'] = -1;
       $form['#prefix'] = '<div class="project-issue"><div class="node-form"><div class="standard">';
       $form['#suffix'] = '</div></div></div>';

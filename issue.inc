@@ -681,7 +681,7 @@ function project_issue_form($node, $include_metadata_fields = FALSE) {
   $form['#prefix'] = '<div class="project-issue">';
   $form['#suffix'] = '</div>';
 
-  // Fetch a list of all projects to make swapping simpler
+  // Fetch a list of all projects to test for access.
   $uris = NULL;
   $projects = array(t('<none>')) + project_projects_select_options($uris);
   if (count($projects) == 1) {
@@ -780,12 +780,14 @@ function project_issue_form($node, $include_metadata_fields = FALSE) {
       '#prefix' => '<div class="inline-options">',
       '#suffix' => '</div>',
     );
-    $form['project_info']['pid'] = array(
-      '#type' => 'select',
+    $form['project_info']['project_display'] = array(
+      '#type' => 'item',
       '#title' => t('Project'),
-      '#default_value' => $node->pid,
-      '#options' => $projects,
-      '#required' => TRUE,
+      '#value' => check_plain($project->title),
+    );
+    $form['project_info']['pid'] = array(
+      '#type' => 'value',
+      '#value' => $node->pid,
     );
     if ($releases) {
       $form['project_info']['rid'] = array(
