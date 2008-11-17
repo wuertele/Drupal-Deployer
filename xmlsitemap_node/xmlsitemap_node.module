@@ -2,7 +2,8 @@
 // $Id$
 
 /**
- * @file Adds nodes to the site map.
+ * @file
+ * Adds nodes to the site map.
  */
 
 /**
@@ -136,10 +137,11 @@ function xmlsitemap_node_priority($node) {
       $maxcomments = db_result(db_query("SELECT MAX(comment_count) FROM {node_comment_statistics}"));
     }
   }
-  $priority = $node->priority_override;
-  if (!isset($node->priority_override)) {
-    $priority = 0;
-    $priority += variable_get("xmlsitemap_node_type_priority_$node->type", 0.5);
+  if (isset($node->priority_override)) {
+    $priority = $node->priority_override;
+  }
+  else {
+    $priority = variable_get("xmlsitemap_node_type_priority_$node->type", 0.5);
     if ($node->promote) {
       $priority += $promote_priority;
     }
@@ -336,16 +338,12 @@ function xmlsitemap_node_comment($comment, $op) {
  * @return None
  */
 function _xmlsitemap_node_submit($form, &$form_state) {
-  switch ($form_id) {
-    case 'node_type_form':
-      $op = isset($form_state['values']['op']) ? $form_state['values']['op'] : '';
-      $type = isset($form_state['values']['old_type']) ? $form_state['values']['old_type'] : trim($form_state['values']['type']);
-      $priority = $form_state['values']['xmlsitemap_node_type_priority'];
-      $old_priority = $form_state['values']['xmlsitemap_old_priority'];
-      if ($op == t('Save content type') && $priority != $old_priority || $op == t('Reset to defaults') && $old_priority != 0.1) {
-        xmlsitemap_update_sitemap();
-      }
-      break;
+  $op   = isset($form_state['values']['op']) ? $form_state['values']['op'] : '';
+  $type = isset($form_state['values']['old_type']) ? $form_state['values']['old_type'] : trim($form_state['values']['type']);
+  $priority = $form_state['values']['xmlsitemap_node_type_priority'];
+  $old_priority = $form_state['values']['xmlsitemap_old_priority'];
+  if ($op == t('Save content type') && $priority != $old_priority || $op == t('Reset to defaults') && $old_priority != 0.1) {
+    xmlsitemap_update_sitemap();
   }
 }
 
@@ -395,135 +393,3 @@ function xmlsitemap_node_cron() {
     xmlsitemap_update_sitemap();
   }
 }
-
-/**
- * Implementation of hook_views_style_plugins().
- */
-function xmlsitemap_node_views_style_plugins() {
-  return array(
-    'xmlsitemap_sitemap' => array(
-      'name' => t('XML Sitemap: Sitemap'),
-      'theme' => 'xmlsitemap_node_view_sitemap',
-    ),
-    'xmlsitemap_news' => array(
-      'name' => t('XML Sitemap: News'),
-      'theme' => 'xmlsitemap_node_view_news',
-    ),
-  );
-}
-
-/**
- * Implementation of hook_views_query_alter().
- */
-function xmlsitemap_node_views_query_alter(&$query, &$view, $summary = NULL, $level = NULL) {
-  switch ($view->page_type) {
-    case 'xmlsitemap_news':
-      $query->add_field('created', 'node');
-    case 'xmlsitemap_sitemap':
-      $xn_join = array(
-        'left' => array(
-          'table' => 'node',
-          'field' => 'nid',
-        ),
-        'right' => array(
-          'field' => 'nid',
-        ),
-      );
-      $ua_join = array(
-        'left' => array(
-          'table' => 'xmlsitemap_node',
-          'field' => 'pid',
-        ),
-        'right' => array(
-          'field' => 'pid',
-        ),
-      );
-      $query->add_table('xmlsitemap_node', FALSE, 1, $xn_join);
-      $query->add_table('url_alias', FALSE, 1, $ua_join);
-      if (module_exists('comment')) {
-        $query->add_table('node_comment_statistics');
-        $query->add_field('comment_count', 'node_comment_statistics');
-        $query->add_field('last_comment_timestamp', 'node_comment_statistics');
-        $query->add_field('previous_comment', 'xmlsitemap_node');
-      }
-      $query->add_field('type', 'node');
-      $query->add_field('promote', 'node');
-      $query->add_field('changed', 'node');
-      $query->add_field('previously_changed', 'xmlsitemap_node');
-      $query->add_field('priority_override', 'xmlsitemap_node');
-      $query->add_field('dst', 'url_alias', 'alias');
-      break;
-  }
-}
-
-/**
- * Register theming functions
- */
-function xmlsitemap_node_theme() {
-  return array(
-    'xmlsitemap_node_view_sitemap' => array(
-      arguments => array('view', 'nodes', 'type'),
-    ),
-    'xmlsitemap_node_view_news' => array(
-      arguments => array('view', 'nodes', 'type'),
-    ),
-  );
-}
-
-/**
- * Display the nodes of a view as an XML site map.
- */
-function theme_xmlsitemap_node_view_sitemap($view, $nodes, $type) {
-  drupal_set_header('Content-Type: text/xml; charset=utf-8');
-  $xsl_path = file_directory_path() .'/xmlsitemap/gss.xsl';
-  $xsl_path = file_exists($xsl_path) ? _xmlsitemap_file_create_url($xsl_path) : $base_path . drupal_get_path('module', 'xmlsitemap') .'/gss/gss.xsl';
-  $output .= '<?xml version="1.0" encoding="UTF-8"?>'."\n";
-  $output .= '<?xml-stylesheet type="text/xsl" href="'. $xsl_path .'" ?>'."\n";
-  $output .= '<urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'."\n";
-  $output .= '        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9"'."\n";
-  $output .= '        url="http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd"'."\n";
-  $output .= '        xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
-  foreach ($nodes as $node) {
-    $lastmod = variable_get('xmlsitemap_node_count_comments', TRUE) ? max($node->changed, $node->last_comment_timestamp) : $node->changed;
-    $output .= '  <url>'."\n";
-    $output .= '    <loc>'. xmlsitemap_url('node/'. $node->nid, $node->alias, NULL, NULL, TRUE) .'</loc>'."\n";
-    $output .= '    <lastmod>'. gmdate('Y-m-d\TH:i:s+00:00', $lastmod) .'</lastmod>'."\n";
-    $output .= '    <changefreq>'. _xmlsitemap_frequency(xmlsitemap_node_frequency($node)) .'</changefreq>'."\n";
-    $output .= '    <priority>'. number_format(xmlsitemap_node_priority($node), 1) .'</priority>'."\n";
-    $output .= '  </url>'."\n";
-  }
-  $output .= '</urlset>';
-  print $output;
-  module_invoke_all('exit');
-  exit;
-}
-
-/**
- * Display the nodes of a view as a Google News site map.
- */
-function theme_xmlsitemap_node_view_news($view, $nodes, $type) {
-  drupal_set_header('Content-Type: text/xml; charset=utf-8');
-  $output .= '<?xml version="1.0" encoding="UTF-8"?>'."\n";
-  $output .= '<urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'."\n";
-  $output .= '        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9"'."\n";
-  $output .= '        url="http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd"'."\n";
-  $output .= '        xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'."\n";
-  $output .= '        xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">'."\n";
-  foreach ($nodes as $node) {
-    $lastmod = variable_get('xmlsitemap_node_count_comments', TRUE) ? max($node->changed, $node->last_comment_timestamp) : $node->changed;
-    $output .= '  <url>'."\n";
-    $output .= '    <loc>'. xmlsitemap_url('node/'. $node->nid, $node->alias, NULL, NULL, TRUE) .'</loc>'."\n";
-    $output .= '    <lastmod>'. gmdate('Y-m-d\TH:i:s+00:00', $lastmod) .'</lastmod>'."\n";
-    $output .= '    <changefreq>'. _xmlsitemap_frequency(xmlsitemap_node_frequency($node)) .'</changefreq>'."\n";
-    $output .= '    <priority>'. number_format(xmlsitemap_node_priority($node), 1) .'</priority>'."\n";
-    $output .= '    <news:news>'."\n";
-    $output .= '      <news:publication_date>'. gmdate('Y-m-d\TH:i:s+00:00', $node->created) .'</news:publication_date>'."\n";
-    $output .= '    </news:news>'."\n";
-    $output .= '  </url>'."\n";
-  }
-  $output .= '</urlset>';
-  print $output;
-  module_invoke_all('exit');
-  exit;
-}
-
