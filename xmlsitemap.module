@@ -231,9 +231,9 @@ function xmlsitemap_theme() {
  * @ingroup themeable
  */
 function theme_xmlsitemap_settings_additional($form) {
-  $output = '';
-  $output .= drupal_render($form['xmlsitemap_additional_links_priority']);
+  $output = drupal_render($form['xmlsitemap_additional_links_priority']);
   $header = array(t('Delete'), t('Path'), t('Priority'));
+  $rows = array();
   foreach (element_children($form['link']) as $id) {
     $row = array();
     $row[] = isset($form['delete'][$id]) ? drupal_render($form['delete'][$id]) : array_merge(array('header' => TRUE, 'valign' => 'bottom'), theme('table_select_header_cell'));
@@ -487,6 +487,21 @@ function _xmlsitemap_output_chunk($chunk = 0) {
     print '  </url>'."\n";
   }
   print '</urlset>';
+}
+
+/**
+ * Modified version of file_create_url(). Allows us to remove language prefixes.
+ * @param $path: the path to the file
+ * @return A URL to the file
+ */
+function xmlsitemap_file_create_url($path, $alias = NULL) {
+  $path = trim(substr($path, strlen(file_directory_path())), '\\/');
+  if (variable_get('file_downloads', FILE_DOWNLOADS_PUBLIC) == FILE_DOWNLOADS_PRIVATE) {
+    return xmlsitemap_url('system/files/'. $path, $alias, NULL, NULL, TRUE);
+  }
+  else {
+    return "$GLOBALS[base_url]/". file_directory_path() .'/'. str_replace('\\', '/', $path);
+  }
 }
 
 /**
@@ -751,14 +766,28 @@ function xmlsitemap_exit() {
 }
 
 /**
+ * Update the site map if content has changed.
+ */
+function _xmlsitemap_update() {
+  db_query("DELETE FROM {xmlsitemap}");
+  $link = array(
+    'loc' => xmlsitemap_url(NULL, NULL, NULL, NULL, TRUE),
+    'changefreq' => 'always',
+    'priority' => variable_get('xmlsitemap_front_page_priority', 1)
+  );
+  db_query("INSERT INTO {xmlsitemap} (loc, changefreq, priority) VALUES ('%s', %d, %f)", $link);
+  module_invoke_all('xmlsitemap_links');
+  menu_rebuild();
+  cache_clear_all(xmlsitemap_url('sitemap', NULL, NULL, NULL, TRUE), 'cache_page', TRUE);
+  variable_set('xmlsitemap_update', FALSE);
+}
+
+/**
  * Submit the site map to search engines.
  * @return None
  */
 function _xmlsitemap_ping() {
-  $status = _xmlsitemap_update_cache();
-  if ($status) {
-    module_invoke_all('xmlsitemap_engines', 'ping');
-    variable_set('xmlsitemap_changed', FALSE);
-  }
+  module_invoke_all('xmlsitemap_engines', 'ping');
+  variable_set('xmlsitemap_changed', FALSE);
 }
 
