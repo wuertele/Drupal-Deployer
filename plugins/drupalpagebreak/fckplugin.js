@@ -122,7 +122,7 @@ FCKDrupalPageBreak.prototype.GetState = function()
 // Register the Drupal tag commands.
 FCKCommands.RegisterCommand( 'DrupalPageBreak', new FCKDrupalPageBreak( 'Break' ) ) ;
 // Create the Drupal tag buttons.
-var oDrupalItem = new FCKToolbarButton( 'DrupalPageBreak', 'Break', null, FCK_TOOLBARITEM_ICONTEXT, true, true ) ;
+var oDrupalItem = new FCKToolbarButton( 'DrupalPageBreak', 'Page', FCKLang.DrupalPageBreakTitle, FCK_TOOLBARITEM_ICONTEXT, true, true ) ;
 oDrupalItem.IconPath = FCKConfig.PluginsPath + 'drupalpagebreak/drupalpagebreak.gif';
 FCKToolbarItems.RegisterItem( 'DrupalPageBreak', oDrupalItem ) ;
 

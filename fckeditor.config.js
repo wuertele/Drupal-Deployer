@@ -14,9 +14,9 @@
 
 //uncomment these three lines to enable teaser break and page break plugins
 //remember to add 'DrupalBreak' and 'DrupalPageBreak' buttons to the toolbar
-FCKConfig.Plugins.Add( 'drupalbreak' ) ;
+FCKConfig.Plugins.Add( 'drupalbreak', 'en' ) ;
 FCKConfig.Plugins.Add( 'imgassist' ) ;
-//FCKConfig.Plugins.Add( 'drupalpagebreak' ) ;
+//FCKConfig.Plugins.Add( 'drupalpagebreak', 'en' ) ;
 
 /*
  This toolbar is dedicated to users with "Full HTML" access
