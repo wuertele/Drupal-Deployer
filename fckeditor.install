@@ -224,14 +224,17 @@ function fckeditor_requirements($phase) {
     $requirements['fckeditor']['description'] = t('The latest available FCKeditor version is @version. You can download it at !fcklink.', array('@version' => $available_version, '!fcklink' => l('FCKeditor.net', 'http://fckeditor.net')));
     }
     */
-    elseif (_fckeditor_requirements_builtin_filebrowser_enabled()) {
-      if (!_fckeditor_requirements_cookiedomainset()) {
-        $requirements['fckeditor']['severity'] = REQUIREMENT_ERROR;
-        $requirements['fckeditor']['description'] = t('You are using a feature that requires $cookie_domain to be set, but it is not set in your settings.php.');
-      }
-      elseif ($error = _fckeditor_requirements_filemanager_config_check()) {
-        $requirements['fckeditor']['severity'] = REQUIREMENT_ERROR;
-        $requirements['fckeditor']['description'] = $error;
+    else {
+      $profile_name = _fckeditor_requirements_builtin_filebrowser_enabled();
+      if ($profile_name !== FALSE) {
+        if (!_fckeditor_requirements_cookiedomainset()) {
+          $requirements['fckeditor']['severity'] = REQUIREMENT_ERROR;
+          $requirements['fckeditor']['description'] = t('You are using a feature that requires $cookie_domain to be set, but it is not set in your settings.php (either built-in filebrowser or quick uploads are enabled in the !profile profile).', array('!profile' => l($profile_name, 'admin/settings/fckeditor/edit/'. urlencode($profile_name))));
+        }
+        elseif ($error = _fckeditor_requirements_filemanager_config_check($profile_name)) {
+          $requirements['fckeditor']['severity'] = REQUIREMENT_ERROR;
+          $requirements['fckeditor']['description'] = $error;
+        }
       }
     }
 
@@ -290,7 +293,7 @@ function _fckeditor_requirements_getinstalledversion() {
  *
  * @return string|boolean
  */
-function _fckeditor_requirements_filemanager_config_check() {
+function _fckeditor_requirements_filemanager_config_check($profile_name) {
   module_load_include('module', 'fckeditor');
   $editor_path = fckeditor_path(TRUE);
   $config_path = $editor_path .'/editor/filemanager/connectors/php/config.php';
@@ -327,12 +330,12 @@ function _fckeditor_requirements_filemanager_config_check() {
   }
   
   if (!$require_once_found) {
-    return t('You are using a feature that requires manul integration into config.php. Read instructions about enabling built-in file browser and add "require_once ..." statement in editor/filemanager/connectors/php/config.php.');
+    return t('You are using a feature that requires manul integration into config.php (either built-in filebrowser or quick uploads are enabled in the !profile profile). Read instructions about enabling built-in file browser and add "require_once ..." statement in editor/filemanager/connectors/php/config.php.', array('!profile' => l($profile_name, 'admin/settings/fckeditor/edit/'. urlencode($profile_name))));
   }
   
   if ($userfiles_absolute_path_line && $force_single_extension_line && (
   $require_once_line < $userfiles_absolute_path_line || $require_once_line > $force_single_extension_line)) {
-    return t('You are using a feature that requires manul integration into config.php. You have added "require_once ..." statement in editor/filemanager/connectors/php/config.php, but in the wrong line.');
+    return t('You are using a feature that requires manul integration into config.php (either built-in filebrowser or quick uploads are enabled in the !profile profile). You have added "require_once ..." statement in editor/filemanager/connectors/php/config.php, but in the wrong line.', array('!profile' => l($profile_name, 'admin/settings/fckeditor/edit/'. urlencode($profile_name))));
   }
 
   return FALSE;
@@ -377,7 +380,7 @@ function _fckeditor_requirements_builtin_filebrowser_enabled() {
 
   foreach ($profiles as $profile) {
     if ((isset($profile->settings['filebrowser']) && $profile->settings['filebrowser'] == 'builtin') || (isset($profile->settings['quickupload']) && $profile->settings['quickupload'] == 't')) {
-      return TRUE;
+      return $profile->name;
     }
   }
 
