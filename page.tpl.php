@@ -13,6 +13,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="<?php print $language->language; ?>" xml:lang="<?php print $language->language; ?>">
 <head>
   <title><?php print $head_title; ?></title>
+		<meta http-equiv="Content-Style-Type" content="text/css" />
   <?php print $head; ?>
   <?php print $styles; ?>
   <!--[if IE]>
@@ -20,6 +21,11 @@
       <link type="text/css" rel="stylesheet" media="all" href="<?php print $base_path . $directory; ?>/ie.css" >
     <?php endif; ?>
   <![endif]-->
+		<style>
+  * {
+    filter: expression(document.execCommand("BackgroundImageCache", false, true));
+  }
+</style>
 	<?php print $scripts; ?>
   <?php if ((theme_get_setting('pixture_superfish')) && ($superfish)): ?>
     <script type="text/javascript">
