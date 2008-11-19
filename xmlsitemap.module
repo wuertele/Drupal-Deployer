@@ -13,12 +13,44 @@ function xmlsitemap_help($path, $arg) {
   switch ($path) {
     case 'admin/settings/xmlsitemap':
     case 'admin/settings/xmlsitemap/settings':
-      return t('Configure the site map. Your site map is at !url.', array('!url' => '<a href="'. xmlsitemap_url('sitemap.xml', drupal_lookup_path('alias', 'sitemap.xml') ? drupal_lookup_path('alias', 'sitemap.xml') : NULL, NULL, NULL, TRUE) .'">'. xmlsitemap_url('sitemap.xml', drupal_lookup_path('alias', 'sitemap.xml') ? drupal_lookup_path('alias', 'sitemap.xml') : NULL, NULL, NULL, TRUE) .'</a>'));
+      $output = t('Configure the site map. Your site map is at !url.', array('!url' => l(xmlsitemap_url('sitemap.xml', drupal_lookup_path('alias', 'sitemap.xml') ? drupal_lookup_path('alias', 'sitemap.xml') : NULL, NULL, NULL, TRUE), xmlsitemap_url('sitemap.xml', drupal_lookup_path('alias', 'sitemap.xml') ? drupal_lookup_path('alias', 'sitemap.xml') : NULL, NULL, NULL, TRUE))));
+      break;
     case 'admin/settings/xmlsitemap/engines':
-      return t('Configure behavior for search engines.');
-    case 'admin/settings/xmlsitemap/additional':
-      return t('Set up additional links for your site map.');
+      $output = t('Configure behavior for search engines.');
+      break;
+    case 'admin/help#xmlsitemap':
+      $output = '<p>'. t('XML Sitemap automatically creates a site map that conforms to the !sitemaps.org specification. This helps search engines keep their search results up to date.', array('!sitemaps.org' => l('sitemaps.org', 'http://www.sitemaps.org'))) ."</p>\n";
+      $output .= '<p>'. t('Your site map is at !sitemap.xml.', array('!sitemap.xml' => l(xmlsitemap_url('sitemap.xml', drupal_lookup_path('alias', 'sitemap.xml') ? drupal_lookup_path('alias', 'sitemap.xml') : NULL, NULL, NULL, TRUE), xmlsitemap_url('sitemap.xml', drupal_lookup_path('alias', 'sitemap.xml') ? drupal_lookup_path('alias', 'sitemap.xml') : NULL, NULL, NULL, TRUE)))) .'</p>';
+      $output .= '<h3>'. t('Supporting modules') ."</h3>\n";
+      $output .= '<p>'. t('By itself, the XML Sitemap module adds only the front page of your site to the site map. Other types of links are handled by supporting modules.') ."</p>\n";
+      $optional = '';
+      if (module_exists('xmlsitemap_menu')) {
+        $optional .= '<dt>'. t('XML Sitemap: Menu') ."</dt>\n";
+        $optional .= '<dd>'. t('<em>XML Sitemap: Menu</em> allows menu items to be added to the site map. You can choose the menus to include on the XML Sitemap administration page and can add and remove menu items on the !menu administration page. The priority of a menu item is determined by its weight.', array('!menu administration' => l('menu administration', 'admin/build/menu'))) ."</dd>\n";
+      }
+      if (module_exists('xmlsitemap_node')) {
+        $optional .= '<dt>'. t('XML Sitemap: Node') ."</dt>\n";
+        $optional .= '<dd>'. t('<em>XML Sitemap: Node</em> adds nodes (content) to the site map. The default priority of a node is determined by a combination of its !content type priority, whether it appears on the front page of your site, and the number of comments it has received. You can override the default priority for individual nodes when you add or edit a node.', array('!content type' => l('content type', 'admin/content/types'))) ."</dd>\n";
+      }
+      if (module_exists('xmlsitemap_term')) {
+        $optional .= '<dt>'. t('XML Sitemap: Term') ."</dt>\n";
+        $optional .= '<dd>'. t('<em>XML Sitemap: Term</em> adds !taxonomy terms (categories) to the site map. You can change the default priority when you add or edit a vocabulary, and you can override the default priority when you add or edit individual terms.', array('!taxonomy terms' => l('taxonomy terms', 'admin/content/taxonomy'))) ."</dd>\n";
+      }
+      if (module_exists('xmlsitemap_user')) {
+        $optional .= '<dt>'. t('XML Sitemap: User') ."</dt>\n";
+        $optional .= '<dd>'. t('<em>XML Sitemap: User</em> adds user profiles to the site map. The <em>anonymous user</em> role must be given permission to access user profiles on the !access control page. You can change the default user priority on the !user settings page. The !user role priority will override the default user priority. You can override both the default priority and the role priority when you add or edit a user.', array('!access control' => l('access control', 'admin/user/access'), '!user settings' => l('user settings', 'admin/user/settings'), '!user role' => l('user role', 'admin/user/roles'))) ."</dd>\n";
+      }
+      if (!empty($optional)) {
+        $output .= "<dl>\n$optional</dl>\n";
+      }
+      $output .= '<p>'. t('Links may be assigned a priority between 0.0 and 1.0. The default priority is 0.5. A priority of <em>Not in site map</em> excludes a link from the site map.') .'</p>';
+      $output .= '<p>'. t('More information is available in the !XML Sitemap documentation.', array('!sitemaps.org' => l('sitemaps.org', 'http://www.sitemaps.org'), '!XML Sitemap documentation' => l('XML Sitemap documentation', 'http://drupal.org/handbook/modules/gsitemap'))) ."</p>\n";
+      break;
+    default:
+      $output = '';
+      break;
   }
+  return $output;
 }
 
 /**
@@ -245,14 +277,12 @@ function _xmlsitemap_output($chunk = NULL) {
   exit;
 }
 
-/**
- * Count the total number of links in the site.
- * @return An integer containing the total number of links
- */
 function _xmlsitemap_link_count() {
-  static $count;
-  $count = isset($count) ? $count : count(_xmlsitemap_links());
-  return $count;
+  static $link_count;
+  if (!isset($link_count)) {
+    $link_count = db_result(db_query("SELECT COUNT(*) FROM {xmlsitemap}"));
+  }
+  return $link_count;
 }
 
 /**
@@ -410,97 +440,6 @@ function _xmlsitemap_frequency($interval) {
     }
   }
   return $frequency;
-}
-
-/**
- * Implementation of hook_xmlsitemap_links().
- */
-function xmlsitemap_xmlsitemap_links($type = NULL, $excludes = array()) {
-  $links = array();
-  if (!isset($type)) {
-    global $base_url;
-    $links[] = array('#loc' => "$base_url/", '#changefreq' => 'always', '#priority' => variable_get('xmlsitemap_front_page_priority', 1));
-    $links = array_merge($links, _xmlsitemap_additional_links());
-    $links = array_merge($links, module_invoke_all('gsitemap'));
-    $links = array_merge($links, _xmlsitemap_xml_links());
-    if (!empty($links)) {
-      foreach ($links as $key => $link) {
-        $loc[$key] = $link['#loc'];
-      }
-      array_multisort($loc, $links);
-    }
-  }
-  return $links;
-}
-
-/**
- * Get additional links.
- * @return An array of links. Each link is an array containing the XML
- * values for a site map URL.
- */
-function _xmlsitemap_additional_links() {
-  $links = array();
-  $result = db_query("
-    SELECT xa.*, ua.dst AS alias FROM {xmlsitemap_additional} xa
-    LEFT JOIN {url_alias} ua ON xa.pid = ua.pid
-  ");
-  while ($link = db_fetch_object($result)) {
-    $age = time() - $link->last_changed;
-    if (!empty($link->previously_changed)) {
-      $interval = $link->last_changed - $link->previously_changed;
-    }
-    else {
-      $interval = 0;
-    }
-    $links[] = array(
-      '#loc' => xmlsitemap_url($link->path, $link->alias, NULL, NULL, TRUE),
-      '#lastmod' => $link->last_changed,
-      '#changefreq' => max($age, $interval),
-      '#priority' => isset($link->priority) ? $link->priority : variable_get('xmlsitemap_additional_links_priority', 0.1),
-    );
-  }
-  return $links;
-}
-
-/**
- * Extract links from site maps returned by hook_xmlsitemap_links().
- * @return An array of links.
- */
-function _xmlsitemap_xml_links() {
-  $links = array();
-  $xml = module_invoke_all('xmlsitemap_links', 'xml');
-  $xml = array_merge($xml, module_invoke_all('gsitemap', 'xml'));
-  foreach ($xml as $entries) {
-    $start = strpos($entries, '<url>');
-    if ($start !== FALSE) {
-      $length = strpos($entries, '</urlset>') - $start;
-      $entries = substr($entries, $start, $length);
-      $entries = explode('<url>', $entries);
-      foreach ($entries as $value) {
-        if (($start = strpos($value, '<loc>')) !== FALSE) {
-          $length = $start + strlen('<loc>');
-          $link['#loc'] = substr($value, $length, strpos($value, '</loc>') - $length);
-          if (($start = strpos($value, '<lastmod>')) !== FALSE) {
-            $length = $start + strlen('<lastmod>');
-            $t = array_shift(explode('+', substr($value, $length, strpos($value, '</lastmod>') - $length)));
-            $t = explode('T', $t);
-            $t = array_merge(explode('-', $t[0]), explode(':', $t[1]));
-            $link['#lastmod'] = gmmktime($t[3], $t[4], $t[5], $t[1], $t[2], $t[0]);
-          }
-          if (($start = strpos($value, '<changefreq>')) !== FALSE) {
-            $length = $start + strlen('<changefreq>');
-            $link['#changefreq'] = substr($value, $length, strpos($value, '</changefreq>') - $length);
-          }
-          if (($start = strpos($value, '<priority>')) !== FALSE) {
-            $length = $start + strlen('<priority>');
-            $link['#priority'] = substr($value, $length, strpos($value, '</priority>') - $length);
-          }
-          $links[] = $link;
-        }
-      }
-    }
-  }
-  return $links;
 }
 
 /**
