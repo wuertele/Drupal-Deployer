@@ -98,7 +98,11 @@ Drupal.parseNumber = function(number, required) {
 
   // Remove thousands separators, if any.
   if (Drupal.settings.format_number.thousands_sep.length > 0) {
-    number = number.replace(new RegExp("[" + Drupal.settings.format_number.thousands_sep + "]", "g"), "");
+    var thsep = Drupal.settings.format_number.thousands_sep;
+    if (thsep == "\u00A0") {
+      thsep += " ";
+    }
+    number = number.replace(new RegExp("[" + thsep + "]", "g"), "");
   }
 
   // Translate decimal point, if necessary.
