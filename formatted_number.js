@@ -59,7 +59,11 @@ Drupal.formatted_number = {};
 Drupal.formatted_number.clearThousandsSep = function(element) {
   var number = $(element).val();
   if (number.length > 0 && Drupal.settings.format_number.thousands_sep.length > 0) {
-    number = number.replace(new RegExp("["+ Drupal.settings.format_number.thousands_sep +"]", "g"), "");
+    var thsep = Drupal.settings.format_number.thousands_sep;
+    if (thsep == "\u00A0") {
+      thsep += " ";
+    }
+    number = number.replace(new RegExp("["+ thsep +"]", "g"), "");
     $(element).val(number);
   }
 }
