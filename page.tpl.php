@@ -21,11 +21,6 @@
       <link type="text/css" rel="stylesheet" media="all" href="<?php print $base_path . $directory; ?>/ie.css" >
     <?php endif; ?>
   <![endif]-->
-		<style>
-  * {
-    filter: expression(document.execCommand("BackgroundImageCache", false, true));
-  }
-</style>
 	<?php print $scripts; ?>
   <?php if ((theme_get_setting('pixture_superfish')) && ($superfish)): ?>
     <script type="text/javascript">
