@@ -5,49 +5,81 @@
  * Implementation of hook_schema().
  */
 function xmlsitemap_schema() {
-  $schema['xmlsitemap_additional'] = array(
+  $schema['xmlsitemap'] = array(
     'description' => t('The base table for xmlsitemap.'),
     'fields' => array(
-      'path' => array(
+      'loc' => array(
         'description' => t('The path of this node.'),
         'type' => 'varchar',
         'length' => 128,
         'not null' => TRUE,
         'default' => '',
       ),
-      'pid' => array(
-        'description' => t('The id of the path.'),
+      'lastmod' => array(
+        'description' => t('Last change time.'),
         'type' => 'int',
         'unsigned' => TRUE,
         'default' => 0,
       ),
-      'last_changed' => array(
-        'description' => t('Keeps track of new changes.'),
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'previously_changed' => array(
-        'description' => t('Keeps track of old changes.'),
+      'changefreq' => array(
+        'description' => t('The frequency of the changes.'),
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
       ),
       'priority' => array(
-        'description' => t('Stores the index value.'),
+        'description' => t('The priority of this node in the sitemap.'),
         'type' => 'float',
         'not null' => FALSE,
       ),
     ),
-    'indexes' => array(
-      'pid' => array('pid'),
-    ),
-    'primary key' => array('path'),
+    'primary key' => array('loc'),
   );
 
   return $schema;
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_update_6000() {
+  $ret = array();
+  // Drop  unused tables.
+  if (db_table_exists('xmlsitemap_additional')) {
+    db_drop_table($ret, 'xmlsitemap_additional');
+  }
+  // Remove unused variables.
+  if (db_result(db_query("SELECT COUNT(*) FROM {variable} WHERE name = 'xmlsitemap\_%'"))) {
+    $ret[] = update_sql("DELETE FROM {variable} WHERE name = 'xmlsitemap\_%'");
+  }
+  // Remove temporary files created by previous versions.
+  $path = file_directory_path() .'/xmlsitemap';
+  if ($dir = @opendir($path)) {
+    while (($file = readdir($dir)) !== FALSE) {
+      if ($file != '.' && $file != '..') {
+        unlink("$path/$file");
+      }
+    }
+    closedir($dir);
+    rmdir($path);
+    $ret[] = array(
+      'success' => TRUE,
+      'query' => 'DELETE TEMPORARY FILES',
+    );
+  }
+  if (!db_table_exists('xmlsitemap')) {
+    $schema = xmlsitemap_schema();
+    db_create_table($ret, $schema['xmlsitemap']);
+  }
+  return $ret;
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_update_6100() {
+  return xmlsitemap_update_6000();
 }
 
 /**
@@ -63,10 +95,8 @@ function xmlsitemap_install() {
  * Implementation of hook_uninstall().
  */
 function xmlsitemap_uninstall() {
-  // Drop my tables.
-  $settings = db_query("SELECT name FROM {variable} WHERE name LIKE 'xmlsitemap\_%'");
-  while ($variable = db_fetch_object($settings)) {
-    variable_del($variable->name);
-  }
+  // Remove the used variables.
+  db_query("DELETE FROM {variable} WHERE name LIKE 'xmlsitemap\_%'");
+  // Drop the tables.
   drupal_uninstall_schema('xmlsitemap');
 }
