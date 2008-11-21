@@ -104,7 +104,9 @@ $depth = 0;
         <div class="faq_answer">
         <strong><?php print $answer_label; ?></strong>
         <?php print $node['body']; ?>
-        <?php print $node['links']; ?>
+        <?php if (isset($node['links'])): ?>
+          <?php print $node['links']; ?>
+        <?php endif; ?>
         </div> <!-- Close div: faq_answer -->
 
       <?php endforeach; ?>

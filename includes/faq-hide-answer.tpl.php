@@ -29,7 +29,9 @@
 
     <div class="faq_answer faq_dd_hide_answer">
     <?php print $node['body']; ?>
-    <?php print $node['links']; ?>
+    <?php if (isset($node['links'])): ?>
+      <?php print $node['links']; ?>
+    <?php endif; ?>
     </div> <!-- Close div: faq_answer faq_dd_hide_answer -->
   <?php endforeach; ?>
 <?php endif; ?>
