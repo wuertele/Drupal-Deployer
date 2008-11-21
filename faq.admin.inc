@@ -392,8 +392,11 @@ function faq_weight_settings_form($form_state) {
       '#type' => 'value',
       '#value' => $category,
     );
-    $asc = '<a href="#" onclick="faq_order_by_date(\'ASC\');">ascending</a>';
-    $desc = '<a href="#" onclick="faq_order_by_date(\'DESC\');">descending</a>';
+
+    // Can't generate these links using l() - it doesn't allow an empty
+    // fragment.
+    $asc = '<a href="#" onclick="faq_order_by_date(\'ASC\');">'. t('ascending') .'</a>';
+    $desc = '<a href="#" onclick="faq_order_by_date(\'DESC\');">'. t('descending') .'</a>';
 
     $form['weight']['order_no_cats'] = array(
       '#type' => 'select',

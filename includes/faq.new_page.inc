@@ -7,7 +7,7 @@
  */
 
 /**
- * Create the code of the FAQ page if set to show the answer in a new page.
+ * Create FAQ page if set to show the answer in a new page.
  *
  * @param &$variables
  *   Array reference of arguments given to the theme() function.
@@ -28,8 +28,7 @@ function template_preprocess_faq_new_page(&$variables) {
 }
 
 /**
- * Create the code of the FAQ page if set to show the answer in a new page
- * when the category-sorted question is clicked.
+ * Create categorized FAQ page if set to show answer in a new page.
  *
  * @param &$variables
  *   Array reference of arguments given to the theme() function.

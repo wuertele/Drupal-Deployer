@@ -81,7 +81,7 @@ $depth = 0;
 
   <?php if (!$answer_category_name || $display_header): ?>
 
-    <!-- include subcategories -->
+    <!-- Include subcategories. -->
     <?php if (count($subcat_body_list)): ?>
       <?php foreach ($subcat_body_list as $i => $subcat_html): ?>
         <?php print $subcat_html; ?>
@@ -93,11 +93,11 @@ $depth = 0;
       <div>
     <?php endif; ?>
 
-    <!-- list questions (in title link) and answers (in body) -->
+    <!-- List questions (in title link) and answers (in body). -->
     <?php if (count($nodes)): ?>
       <?php foreach ($nodes as $i => $node): ?>
 
-        <div class="faq_question"><?php //strong question label here? ?>
+        <div class="faq_question"><?php // Strong question label here? ?>
         <?php print $node['question']; ?>
         </div> <!-- Close div: faq_question -->
 
@@ -124,4 +124,4 @@ $depth = 0;
     <?php $depth--; endwhile; ?>
   <?php endif; ?>
 <?php
-endif; //if display_answers
+endif; // if display_answers

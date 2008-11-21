@@ -142,7 +142,7 @@ else {
   <?php endif; ?>
 
   <?php if ($answer_category_name): ?>
-    <!-- display header before answers in some layouts -->
+    <!-- Display header before answers in some layouts. -->
     <<?php print $hdr; ?> class="faq_header">
     <?php print $term_image; ?>
     <?php print $category_name; ?>
@@ -150,14 +150,14 @@ else {
     <div class="clear-block"></div>
   <?php endif; ?>
 
-  <?php // list questions (in title link) and answers (in body) ?>
+  <?php // List questions (in title link) and answers (in body). ?>
   <div class="faq_category_group">
   <div>
 
   <?php if (count($nodes)): ?>
     <?php foreach ($nodes as $i => $node): ?>
 
-      <div class="faq_question"><?php //strong question label here? ?>
+      <div class="faq_question"><?php // Strong question label here? ?>
       <?php print $node['question']; ?>
       </div> <!-- Close div: faq_question -->
 

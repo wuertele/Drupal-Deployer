@@ -7,8 +7,7 @@
  */
 
 /**
- * Create the structure of the FAQ page if set to show/hide the answers when
- * the question is clicked.
+ * Create FAQ page if set to show/hide answer when question is clicked.
  *
  * @param &$variables
  *   Array reference of arguments given to the theme() function.
@@ -36,8 +35,7 @@ function template_preprocess_faq_hide_answer(&$variables) {
 }
 
 /**
- * Create the code of the FAQ page if set to show/hide the category-sorted
- * answers when the question is clicked.
+ * Create categorized FAQ page if set to show answer when question is clicked.
  *
  * @param &$variables
  *   Array reference of arguments given to the theme() function.

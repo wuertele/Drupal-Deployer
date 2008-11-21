@@ -48,8 +48,7 @@ function template_preprocess_faq_questions_top(&$variables) {
 }
 
 /**
- * Create the layout of the FAQ page if set to show the questions on top, all
- * sorted by categories.
+ * Create categorized questions for FAQ page if set to show questions on top.
  *
  * @param &$variables
  *   Array reference of arguments given to the theme() function.
@@ -169,8 +168,7 @@ function template_preprocess_faq_category_questions_top(&$variables) {
 }
 
 /**
- * Create the layout of the answers for the FAQ page if set to show the
- * questions on top, all sorted by categories.
+ * Create categorized answers for FAQ page if set to show the questions on top.
  *
  * @param &$variables
  *   Array reference of arguments given to the theme() function.

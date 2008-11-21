@@ -7,7 +7,7 @@
  */
 
 /**
- * Create the code of the FAQ page if set to show the questions inline.
+ * Create the FAQ page if set to show the questions inline.
  *
  * @param &$variables
  *   Array reference of arguments given to the theme() function.
@@ -44,8 +44,7 @@ function template_preprocess_faq_questions_inline(&$variables) {
 }
 
 /**
- * Create the code of the FAQ page if set to show/hide the category-sorted
- * questions inline.
+ * Create categorized FAQ page if set to show/hide the questions inline.
  *
  * @param &$variables
  *   Array reference of arguments given to the theme() function.
