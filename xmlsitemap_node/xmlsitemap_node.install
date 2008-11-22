@@ -2,22 +2,6 @@
 // $Id$
 
 /**
- * Implementation of hook_requirements().
- */
-function xmlsitemap_node_requirements($phase) {
-  $t = get_t();
-  $requirements = array();
-  if (in_array($GLOBALS['db_type'], array('mysql', 'mysqli')) && version_compare(db_version(), '4.0.14') < 0) {
-    $requirements['xmlsitemap_node_sql'] = array(
-      'title' => $t('XML Sitemap: Node'),
-      'value' => $t('Your MySQL version is too low. &ldquo;XML Sitemap: Node&rdquo; requires MySQL 4.0.14 or higher.'),
-      'severity' => REQUIREMENT_ERROR,
-    );
-  }
-  return $requirements;
-}
-
-/**
  * Implementation of hook_install().
  */
 function xmlsitemap_node_install() {           
@@ -30,7 +14,7 @@ function xmlsitemap_node_install() {
  */
 function xmlsitemap_node_schema() {
   $schema['xmlsitemap_node'] = array(
-    'description' => t('The base table for xmlsitemap.'),
+    'description' => t('The base table for xmlsitemap_node.'),
     'fields' => array(
       'nid' => array(
         'description' => t('The path of this node.'),
@@ -72,52 +56,6 @@ function xmlsitemap_node_schema() {
   return $schema;
 }
 
-
-/**
- * Transfer data from Google Sitemap if it is installed.
- */
-function _xmlsitemap_node_gsitemap_replace() {
-  if (db_result(db_query("
-    SELECT 1 FROM {system}
-    WHERE type = 'module' AND name = 'gsitemap' AND (status = 1 OR schema_version >= 0)
-  "))) {
-    switch ($GLOBALS['db_type']) {
-      case 'mysql':
-      case 'mysqli':
-        db_query("
-          UPDATE {xmlsitemap_node} xn, {url_alias} ua SET xn.pid = ua.pid
-          WHERE xn.pid IS NULL AND ua.src = CONCAT('node/', CAST(xn.nid AS CHAR))
-        ");
-        break;
-      case 'pgsql':
-        db_query("
-          UPDATE {xmlsitemap_node} SET pid = {url_alias}.pid FROM {url_alias}
-          WHERE {xmlsitemap_node}.pid IS NULL AND {url_alias}.src = CONCAT('node/', CAST(nid AS VARCHAR))
-        ");
-        break;
-    }
-    db_query("
-      INSERT INTO {xmlsitemap_node} (nid, pid, last_changed, previously_changed, last_comment, previous_comment, priority_override)
-      SELECT nid, pid, last_changed, previously_changed, last_comment, previous_comment, priority_override FROM {gsitemap}
-    ");
-    $settings = db_query("SELECT * FROM {variable} WHERE name LIKE 'gsitemap\_%wt'");
-    while ($variable = db_fetch_object($settings)) {
-      $ts = strlen('gsitemap_');
-      $tl = strlen('wt');
-      $type = substr($variable->name, $ts, -$tl);
-      if (node_get_types('type', $type) === FALSE) {
-        variable_set("xmlsitemap_node_${type}_priority", (float) unserialize($variable->value));
-      }
-      else {
-        variable_set("xmlsitemap_node_type_priority_$type", (float) unserialize($variable->value));
-      }
-      variable_del($variable->name);
-    }
-    $variable = db_fetch_object(db_query("SELECT * FROM {variable} WHERE name = 'gsitemap_countcom'"));
-    variable_set('xmlsitemap_node_count_comments', unserialize($variable->value));
-    variable_del($variable->name);
-  }
-}
 
 /**
  * Implementation of hook_enable().
