@@ -2,6 +2,13 @@
 // $Id$
 
 /**
+ * Implementation of hook_enable().
+ */
+function xmlsitemap_enable() {
+  xmlsitemap_update_sitemap();
+}
+
+/**
  * Implementation of hook_schema().
  */
 function xmlsitemap_schema() {
@@ -38,6 +45,24 @@ function xmlsitemap_schema() {
   );
 
   return $schema;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function xmlsitemap_install() {
+  // Create my tables.
+  db_query("DELETE FROM {url_alias} WHERE dst LIKE 'sitemap%.xml'");
+  drupal_install_schema('xmlsitemap');
+  if ($GLOBALS['db_type'] == 'pgsql') {
+    db_query('CREATE OR REPLACE FUNCTION first(anyelement, anyelement) RETURNS anyelement AS \'SELECT COALESCE($1, $2);\' LANGUAGE \'sql\';');
+    @db_query("DROP AGGREGATE first(anyelement)");
+    db_query("CREATE AGGREGATE first(
+      sfunc = first,
+      basetype = anyelement,
+      stype = anyelement
+    );");
+  }
 }
 
 /**
@@ -84,6 +109,12 @@ function xmlsitemap_update_6000() {
       stype = anyelement
     );");
   }
+  cache_clear_all(xmlsitemap_url('sitemap.xml', NULL, NULL, NULL, TRUE), 'cache_page', TRUE);
+  variable_set('xmlsitemap_update', FALSE);
+  $ret[] = array(
+    'success' => TRUE,
+    'query' => 'CLEAR MODULE CACHE',
+  );
   return $ret;
 }
 
@@ -113,39 +144,7 @@ function xmlsitemap_update_6102() {
  * Clears the cache to be sure the sitemap is updated.
  */
 function xmlsitemap_update_6103() {
-  cache_clear_all(xmlsitemap_url('sitemap.xml', NULL, NULL, NULL, TRUE), 'cache_page', TRUE);
-  variable_set('xmlsitemap_update', FALSE);
-  return array(
-    0 => array(
-      'success' => TRUE,
-      'query' => 'CLEAR DRUPAL CACHE',
-    )
-  )
-}
-
-/**
- * Implementation of hook_install().
- */
-function xmlsitemap_install() {
-  // Create my tables.
-  db_query("DELETE FROM {url_alias} WHERE dst LIKE 'sitemap%.xml'");
-  drupal_install_schema('xmlsitemap');
-  if ($GLOBALS['db_type'] == 'pgsql') {
-    db_query('CREATE OR REPLACE FUNCTION first(anyelement, anyelement) RETURNS anyelement AS \'SELECT COALESCE($1, $2);\' LANGUAGE \'sql\';');
-    @db_query("DROP AGGREGATE first(anyelement)");
-    db_query("CREATE AGGREGATE first(
-      sfunc = first,
-      basetype = anyelement,
-      stype = anyelement
-    );");
-  }
-}
-
-/**
- * Implementation of hook_enable().
- */
-function xmlsitemap_enable() {
-  xmlsitemap_update_sitemap();
+  return xmlsitemap_update_6000();
 }
 
 /**
