@@ -2,14 +2,6 @@
 // $Id$
 
 /**
- * Implementation of hook_install().
- */
-function xmlsitemap_node_install() {           
-  drupal_install_schema('xmlsitemap_node');
-  _xmlsitemap_node_gsitemap_replace();
-}
-
-/**
  * Implementation of hook_schema().
  */
 function xmlsitemap_node_schema() {
@@ -18,11 +10,6 @@ function xmlsitemap_node_schema() {
     'fields' => array(
       'nid' => array(
         'description' => t('The path of this node.'),
-        'type' => 'int',
-        'unsigned' => TRUE,
-      ),
-      'pid' => array(
-        'description' => t('The id of the path.'),
         'type' => 'int',
         'unsigned' => TRUE,
       ),
@@ -46,9 +33,6 @@ function xmlsitemap_node_schema() {
         'description' => t('Stores the index value.'),
         'type' => 'float',
       ),
-    ),
-    'indexes' => array(
-      'pid' => array('pid'),
     ),
     'primary key' => array('nid'),
   );
@@ -138,14 +122,10 @@ function xmlsitemap_node_disable() {
 }
 
 /**
- * Implementation of hook_uninstall().
+ * Implementation of hook_install().
  */
-function xmlsitemap_node_uninstall() {
-  drupal_uninstall_schema('xmlsitemap_node');
-  $settings = db_query("SELECT name FROM {variable} WHERE name LIKE 'xmlsitemap\_node\_%'");
-  while ($variable = db_fetch_array($settings)) {
-    variable_del($variable->name);
-  }
+function xmlsitemap_node_install() {           
+  drupal_install_schema('xmlsitemap_node');
 }
 
 /**
@@ -160,7 +140,7 @@ function xmlsitemap_node_update_1() {
     $bad_nids[] = $node->nid;
   }
   if (!empty($bad_nids)) {
-    $ret[] = update_sql("DELETE FROM {xmlsitemap_node} WHERE nid IN (". db_escape_string(implode(', ', $bad_nids)) .")");
+    $ret[] = update_sql("DELETE FROM {xmlsitemap_node} WHERE nid IN (". implode(', ', $bad_nids) .")");
     $ret[] = update_sql(_xmlsitemap_node_insert_query());
     xmlsitemap_update_sitemap();
   }
@@ -207,3 +187,37 @@ function xmlsitemap_node_update_3() {
   return $ret;
 }
 
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function xmlsitemap_node_update_6000() {
+  $ret = array();
+  $result = array();
+  @db_drop_field($result, 'xmlsitemap_node', 'pid');
+  if ($result[0]['success']) {
+    $ret = array_merge($ret, $result);
+  }
+  $result = array();
+  @db_drop_index($result, 'xmlsitemap_node', 'pid');
+  if ($result[0]['success']) {
+    $ret = array_merge($ret, $result);
+  }
+  return $ret;
+}
+
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function xmlsitemap_node_update_6100() {
+  return xmlsitemap_node_update_6000();
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function xmlsitemap_node_uninstall() {
+  drupal_uninstall_schema('xmlsitemap_node');
+  db_query("DELETE FROM {variable} WHERE name LIKE 'xmlsitemap\_node\_%'");
+}
