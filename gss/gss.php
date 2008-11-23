@@ -1,13 +1,9 @@
-<?php /* $Id$ */ ?>
 <<?php print '?xml version="1.0" encoding="UTF-8"?' ?>>
-
 <xsl:stylesheet version="2.0"
                 xmlns:html="http://www.w3.org/TR/REC-html40"
                 xmlns:sitemap="http://www.sitemaps.org/schemas/sitemap/0.9"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
-
   <xsl:output method="html" version="1.0" encoding="iso-8859-1" indent="yes"/>
-
   <!-- Root template -->
   <xsl:template match="/">
     <html>
@@ -24,10 +20,8 @@
 		  <xsl:otherwise>siteindex</xsl:otherwise>
         </xsl:choose>
       </xsl:variable>
-
       <!-- Body -->
       <body onLoad="initXsl('table0','{$fileType}');">
-
         <!-- Text and table -->
         <h1 id="head1">Site map file:</h1>
           <xsl:choose>
@@ -37,7 +31,6 @@
       </body>
     </html>
   </xsl:template>
-
   <!-- siteindexTable template -->
   <xsl:template name="siteindexTable">
     <h2>Number of site maps in this index: <xsl:value-of select="count(sitemap:sitemapindex/sitemap:sitemap)"></xsl:value-of></h2>
@@ -52,7 +45,6 @@
       </xsl:apply-templates>
     </table>
   </xsl:template>
-
   <!-- sitemapTable template -->
   <xsl:template name="sitemapTable">
     <h2>Number of URLs in this site map: <xsl:value-of select="count(sitemap:urlset/sitemap:url)"></xsl:value-of></h2>
@@ -69,7 +61,6 @@
       </xsl:apply-templates>
     </table>
   </xsl:template>
-
   <!-- sitemap:url template -->
   <xsl:template match="sitemap:url">
     <tr>
@@ -82,7 +73,6 @@
       <td><xsl:value-of select="sitemap:priority"/></td>
     </tr>
   </xsl:template>
-
   <!-- sitemap:sitemap template -->
   <xsl:template match="sitemap:sitemap">
     <tr>
@@ -93,6 +83,5 @@
       <td><xsl:value-of select="sitemap:lastmod"/></td>
     </tr>
   </xsl:template>
-
 </xsl:stylesheet>
-
+<?php /* $Id$ */ ?>
