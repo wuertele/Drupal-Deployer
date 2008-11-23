@@ -67,7 +67,6 @@ function xmlsitemap_node_enable() {
       break;
   }
   db_query(_xmlsitemap_node_insert_query());
-  db_query(_xmlsitemap_node_updatepid_query());
   xmlsitemap_update_sitemap();
 }
 
@@ -85,33 +84,6 @@ function _xmlsitemap_node_insert_query() {
     WHERE xn.nid IS NULL
     GROUP BY n.nid, n.changed, s.last_comment_timestamp
   ";
-}
-
-/**
- * Build SQL query for updating pids in xmlsitemap_node table.
- * @return Query string
- */
-function _xmlsitemap_node_updatepid_query() {
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      $query = "
-        UPDATE {xmlsitemap_node} xn INNER JOIN {url_alias} ua
-        ON ua.src = CONCAT('node/', CAST(xn.nid AS CHAR))
-        SET xn.pid = ua.pid
-        WHERE xn.pid IS NULL
-      ";
-      break;
-    case 'pgsql':
-      $query = "
-        UPDATE {xmlsitemap_node}
-        SET pid = {url_alias}.pid
-        FROM {url_alias}
-        WHERE {url_alias}.src = CONCAT('node/', CAST(nid AS VARCHAR)) AND {xmlsitemap_node}.pid IS NULL
-      ";
-      break;
-  }
-  return $query;
 }
 
 /**
