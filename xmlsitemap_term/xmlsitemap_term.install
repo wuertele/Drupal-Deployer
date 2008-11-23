@@ -6,14 +6,9 @@
  */
 function xmlsitemap_term_schema() {
   $schema['xmlsitemap_term'] = array(
-    'description' => t('The base table for xmlsitemap.'),
+    'description' => t('The base table for xmlsitemap_term.'),
     'fields' => array(
       'tid' => array(
-        'description' => t('The id of the path.'),
-        'type' => 'int',
-        'unsigned' => TRUE,
-      ),
-      'pid' => array(
         'description' => t('The id of the path.'),
         'type' => 'int',
         'unsigned' => TRUE,
@@ -31,9 +26,6 @@ function xmlsitemap_term_schema() {
         'type' => 'float',
       ),
     ),
-    'indexes' => array(
-      'pid' => array('pid'),
-    ),
     'primary key' => array('tid'),
   );
 
@@ -48,35 +40,12 @@ function xmlsitemap_term_enable() {
   if ($weight !== FALSE) {
     db_query("UPDATE {system} SET weight = %d WHERE type = 'module' AND name = 'xmlsitemap_term'", ++$weight);
   }
-  $query = "
+  db_query("
     INSERT INTO {xmlsitemap_term} (tid, last_changed)
     SELECT td.tid, %d FROM {term_data} td
     LEFT JOIN {xmlsitemap_term} xt ON xt.tid = td.tid
     WHERE xt.tid IS NULL
-  ";
-  db_query($query, time());
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      db_query("
-        UPDATE {xmlsitemap_term} xt INNER JOIN {url_alias} ua
-        ON ua.src = CONCAT('taxonomy/term/', CAST(xt.tid AS CHAR))
-        OR ua.src = CONCAT('forum/', CAST(xt.tid AS CHAR))
-        SET xt.pid = ua.pid
-        WHERE xt.pid IS NULL
-      ");
-      break;
-    case 'pgsql':
-      db_query("
-        UPDATE {xmlsitemap_term}
-        SET pid = {url_alias}.pid
-        FROM {url_alias}
-        WHERE {url_alias}.src = CONCAT('taxonomy/term/', CAST(tid AS VARCHAR))
-        OR {url_alias}.src = CONCAT('forum/', CAST(tid AS VARCHAR))
-        AND {xmlsitemap_term}.pid IS NULL
-      ");
-      break;
-  }
+  ", time());
   xmlsitemap_update_sitemap();
 }
 
@@ -89,21 +58,10 @@ function xmlsitemap_term_disable() {
 
 
 /**
- * Implementation of hook_uninstall().
+ * Implementation of hook_install().
  */
 function xmlsitemap_term_install() {
   drupal_install_schema('xmlsitemap_term');
-}
-
-/**
- * Implementation of hook_uninstall().
- */
-function xmlsitemap_term_uninstall() {
-  $settings = db_query("SELECT name FROM {variable} WHERE name LIKE 'xmlsitemap\_term\_%'");
-  while ($variable = db_fetch_object($settings)) {
-    variable_del($variable->name);
-  }
-  drupal_uninstall_schema('xmlsitemap_term');
 }
 
 /**
@@ -136,3 +94,36 @@ function xmlsitemap_term_update_1() {
   return $ret;
 }
 
+/**
+ * Implementation of hook_update_N().
+ * Updates the SQL tables.
+ */
+function xmlsitemap_term_update_6000() {
+  $ret = array();
+  $result = array();
+  @db_drop_field($result, 'xmlsitemap_term', 'pid');
+  if ($result[0]['success']) {
+    $ret = array_merge($ret, $result);
+  }
+  $result = array();
+  @db_drop_index($result, 'xmlsitemap_term', 'pid');
+  if ($result[0]['success']) {
+    $ret = array_merge($ret, $result);
+  }
+  return $ret;
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_term_update_6100() {
+  return xmlsitemap_term_update_6000();
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function xmlsitemap_term_uninstall() {
+  drupal_uninstall_schema('xmlsitemap_term');
+  db_query("DELETE FROM {variable} WHERE name LIKE 'xmlsitemap\_term\_%'");
+}
