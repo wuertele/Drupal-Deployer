@@ -1,10 +1,10 @@
 <<?php print '?xml version="1.0" encoding="UTF-8"?' ?>>
+<?php /* $Id$ */ ?>
 <xsl:stylesheet version="2.0"
                 xmlns:html="http://www.w3.org/TR/REC-html40"
                 xmlns:sitemap="http://www.sitemaps.org/schemas/sitemap/0.9"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:output method="html" version="1.0" encoding="iso-8859-1" indent="yes"/>
-  <!-- <?php print '$Id$' ?> -->
   <!-- Root template -->
   <xsl:template match="/">
     <html>
@@ -13,7 +13,6 @@
         <link href="<?php print base_path() . drupal_get_path('module', 'xmlsitemap') ?>/gss/gss.css" type="text/css" rel="stylesheet"/>
         <script src="<?php print base_path() . drupal_get_path('module', 'xmlsitemap') ?>/gss/gss.js"></script>
       </head>
-
       <!-- Store in $fileType if we are in a sitemap or in a siteindex -->
       <xsl:variable name="fileType">
         <xsl:choose>
