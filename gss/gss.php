@@ -4,6 +4,7 @@
                 xmlns:sitemap="http://www.sitemaps.org/schemas/sitemap/0.9"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:output method="html" version="1.0" encoding="iso-8859-1" indent="yes"/>
+  <!-- <?php print '$Id$' ?> -->
   <!-- Root template -->
   <xsl:template match="/">
     <html>
@@ -84,4 +85,3 @@
     </tr>
   </xsl:template>
 </xsl:stylesheet>
-<?php /* $Id$ */ ?>
