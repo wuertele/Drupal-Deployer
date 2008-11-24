@@ -2,81 +2,6 @@
 // $Id$
 
 /**
- * Implementation of hook_requirements().
- */
-function xmlsitemap_user_requirements($phase) {
-  $t = get_t();
-  $requirements = array();
-  if (in_array($GLOBALS['db_type'], array('mysql', 'mysqli')) && version_compare(db_version(), '4.0.14') < 0) {
-    $requirements['xmlsitemap_user_sql'] = array(
-      'title' => $t('XML Sitemap: User'),
-      'value' => $t('Your MySQL version is too low. &ldquo;XML Sitemap: User&rdquo; requires MySQL 4.0.14 or higher.'),
-      'severity' => REQUIREMENT_ERROR,
-    );
-  }
-  return $requirements;
-}
-
-/**
- * Implementation of hook_schema().
- */
-function xmlsitemap_user_schema() {
-  $schema['xmlsitemap_user'] = array(
-    'description' => t('The base table for xmlsitemap.'),
-    'fields' => array(
-      'uid' => array(
-        'description' => t('The id of the path.'),
-        'type' => 'int',
-        'unsigned' => TRUE,
-      ),
-      'pid' => array(
-        'description' => t('The id of the path.'),
-        'type' => 'int',
-        'unsigned' => TRUE,
-      ),
-      'last_changed' => array(
-        'description' => t('Keeps track of new changes.'),
-        'type' => 'int',
-      ),
-      'previously_changed' => array(
-        'description' => t('Keeps track of old changes.'),
-        'type' => 'int',
-      ),
-      'priority_override' => array(
-        'description' => t('Stores the index value.'),
-        'type' => 'float',
-      ),
-    ),
-    'indexes' => array(
-      'pid' => array('pid'),
-    ),
-    'primary key' => array('uid'),
-  );
-
-  $schema['xmlsitemap_user_role'] = array(
-    'description' => t('The base table for xmlsitemap.'),
-    'fields' => array(
-      'rid' => array(
-        'description' => t('The id of the path.'),
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-      ),
-      'priority' => array(
-        'description' => t('Stores the index value.'),
-        'type' => 'float',
-      ),
-    ),
-    'indexes' => array(
-      'pid' => array('rid'),
-    ),
-    'primary key' => array('rid'),
-  );
-
-  return $schema;
-}
-
-/**
  * Implementation of hook_enable().
  */
 function xmlsitemap_user_enable() {
@@ -126,17 +51,58 @@ function xmlsitemap_user_disable() {
 }
 
 /**
+ * Implementation of hook_schema().
+ */
+function xmlsitemap_user_schema() {
+  $schema['xmlsitemap_user'] = array(
+    'description' => t('The base table for xmlsitemap_user.'),
+    'fields' => array(
+      'uid' => array(
+        'description' => t('The user ID.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+      ),
+      'last_changed' => array(
+        'description' => t('Keeps track of new changes.'),
+        'type' => 'int',
+      ),
+      'previously_changed' => array(
+        'description' => t('Keeps track of old changes.'),
+        'type' => 'int',
+      ),
+      'priority_override' => array(
+        'description' => t('Stores the index value.'),
+        'type' => 'float',
+      ),
+    ),
+    'primary key' => array('uid'),
+  );
+
+  $schema['xmlsitemap_user_role'] = array(
+    'description' => t('The base table for xmlsitemap.'),
+    'fields' => array(
+      'rid' => array(
+        'description' => t('The role ID.'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'priority' => array(
+        'description' => t('Stores the index value.'),
+        'type' => 'float',
+      ),
+    ),
+    'primary key' => array('rid'),
+  );
+
+  return $schema;
+}
+
+/**
  * Implementation of hook_install().
  */
 function xmlsitemap_user_install() {
   drupal_install_schema('xmlsitemap_user');
-}
-
-/**
- * Implementation of hook_uninstall().
- */
-function xmlsitemap_user_uninstall() {
-  drupal_uninstall_schema('xmlsitemap_user');
 }
 
 /**
@@ -163,3 +129,39 @@ function xmlsitemap_user_update_1() {
   return $ret;
 }
 
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_user_update_6000() {
+  $ret = array();
+  $result = array();
+  @db_drop_index(&$result, 'xmlsitemap_user', 'pid');
+  if ($result[0]['success']) {
+    $ret = result;
+  }
+  $result = array();
+  @db_drop_field(&$result, 'xmlsitemap_user', 'pid');
+  if ($result[0]['success']) {
+    $ret = array_merge($ret, $result);
+  }
+  $result = array();
+  @db_drop_index(&$result, 'xmlsitemap_user_role', 'pid');
+  if ($result[0]['success']) {
+    $ret = array_merge($ret, $result);
+  }
+  return $ret;
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_user_update_6100() {
+  return xmlsitemap_user_update_6000();
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function xmlsitemap_user_uninstall() {
+  drupal_uninstall_schema('xmlsitemap_user');
+}
