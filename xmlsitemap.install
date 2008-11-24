@@ -18,7 +18,7 @@ function xmlsitemap_schema() {
       'loc' => array(
         'description' => t('The path of this node.'),
         'type' => 'varchar',
-        'length' => 128,
+        'length' => 256,
         'not null' => TRUE,
         'default' => '',
       ),
@@ -110,7 +110,6 @@ function xmlsitemap_update_6000() {
     );");
   }
   cache_clear_all(xmlsitemap_url('sitemap.xml', NULL, NULL, NULL, TRUE), 'cache_page', TRUE);
-  variable_set('xmlsitemap_update', FALSE);
   $ret[] = array(
     'success' => TRUE,
     'query' => 'CLEAR MODULE CACHE',
@@ -141,10 +140,32 @@ function xmlsitemap_update_6102() {
 
 /**
  * Implementation of hook_update_N().
- * Clears the cache to be sure the sitemap is updated.
  */
 function xmlsitemap_update_6103() {
-  return xmlsitemap_update_6000();
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_update_6104() {
+  $ret = array();
+  db_drop_primary_key($ret, 'xmlsitemap');
+  db_change_field($ret, 'xmlsitemap', 'loc', 'loc', 
+    array(
+      'description' => t('The path of this node.'),
+      'type' => 'varchar',
+      'length' => 256,
+      'not null' => TRUE,
+      'default' => '',
+    ),
+    array('primary key' => array('loc'))
+  )
+  variable_set('xmlsitemap_update', TRUE);
+  $ret[] = array(
+    'success' => TRUE,
+    'query' => 'FORCE SITEMAP UPDATE',
+  );
 }
 
 /**
