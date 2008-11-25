@@ -109,6 +109,8 @@ function fckeditor_elements() {
  * AJAX callback - XSS filter
  */
 function fckeditor_filter_xss() {
+  $GLOBALS['devel_shutdown'] = FALSE;
+
   if (!isset($_POST['text']) || !is_string($_POST['text']) || !is_array($_POST['filters'])) {
     exit;
   }
@@ -120,7 +122,11 @@ function fckeditor_filter_xss() {
     $module = strtok($module_delta, "/");
     $delta = strtok("/");
     $format = strtok("/");
-    
+
+    if (!module_hook($module, 'filter')) {
+      continue;
+    }
+
     //built-in filter module, a special case where we would like to strip XSS and nothing more
     if ($module == 'filter' && $delta == 0) {
       preg_match_all("|</?([a-z][a-z0-9]*)(?:\b[^>]*)>|i", $text, $matches);
