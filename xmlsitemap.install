@@ -149,21 +149,30 @@ function xmlsitemap_update_6103() {
  */
 function xmlsitemap_update_6104() {
   $ret = array();
-  db_drop_primary_key($ret, 'xmlsitemap');
-  db_change_field($ret, 'xmlsitemap', 'loc', 'loc', 
+  @db_drop_primary_key($ret, 'xmlsitemap');
+  @db_change_field($ret, 'xmlsitemap', 'loc', 'loc', 
     array(
       'description' => t('The path of this node.'),
       'type' => 'varchar',
       'length' => 256,
       'not null' => TRUE,
       'default' => '',
-    ),
-  )
-  variable_set('xmlsitemap_update', TRUE);
-  $ret[] = array(
-    'success' => TRUE,
-    'query' => 'FORCE SITEMAP UPDATE',
+    )
   );
+  if (!variable_get('xmlsitemap_update', FALSE)) {
+    variable_set('xmlsitemap_update', TRUE);
+    $ret[] = array(
+      'success' => TRUE,
+      'query' => 'FORCE SITEMAP UPDATE',
+    );
+  }
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_update_6105() {
+  return xmlsitemap_update_6104();
 }
 
 /**
