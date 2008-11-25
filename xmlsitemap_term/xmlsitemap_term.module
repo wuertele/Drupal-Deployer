@@ -238,7 +238,11 @@ function xmlsitemap_term_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
   switch ($op) {
     case 'insert':
       if (!empty($node->taxonomy)) {
-        db_query("UPDATE {xmlsitemap_term} SET previously_changed = last_changed, last_changed = %d WHERE tid IN(". implode(', ', array_keys($node->taxonomy)) .")", $node->created);
+        $taxonomy_keys = array_keys($node->taxonomy);
+        db_query(
+          "UPDATE {xmlsitemap_term} SET previously_changed = last_changed, last_changed = %d WHERE tid IN(". db_placeholders($taxonomy_keys, 'int') .")",
+          array_merge(array($node->created), $taxonomy_keys)
+        );
         xmlsitemap_update_sitemap();
       }
       break;
@@ -247,13 +251,20 @@ function xmlsitemap_term_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       $xmlsitemap_term_taxonomy = empty($node->xmlsitemap_term_taxonomy) ? array() : array_keys($node->xmlsitemap_term_taxonomy);
       $terms = array_merge(array_diff($taxonomy, $xmlsitemap_term_taxonomy), array_diff($xmlsitemap_term_taxonomy, $taxonomy));
       if (!empty($terms)) {
-        db_query("UPDATE {xmlsitemap_term} SET previously_changed = last_changed, last_changed = %d WHERE tid IN(". implode(', ', $terms) .")", $node->changed);
+        db_query(
+          "UPDATE {xmlsitemap_term} SET previously_changed = last_changed, last_changed = %d WHERE tid IN(". db_placeholders($terms, 'varchar') .")",
+          array_merge(array($node->changed), $terms)
+        );
         xmlsitemap_update_sitemap();
       }
       break;
     case 'delete':
       if (!empty($node->taxonomy)) {
-        db_query("UPDATE {xmlsitemap_term} SET previously_changed = last_changed, last_changed = %d WHERE tid IN(". implode(', ', array_keys($node->taxonomy)) .")", time());
+        $taxonomy_keys = array_keys($node->taxonomy);
+        db_query(
+          "UPDATE {xmlsitemap_term} SET previously_changed = last_changed, last_changed = %d WHERE tid IN(". db_placeholders($taxonomy_keys, 'int') .")",
+          array_merge(array(time(), $taxonomy_keys))
+        );
         xmlsitemap_update_sitemap();
       }
       break;
