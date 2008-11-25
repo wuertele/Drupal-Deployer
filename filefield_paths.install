@@ -15,6 +15,7 @@ function filefield_paths_schema() {
       'field' => array('type' => 'varchar', 'length' => 32, 'not null' => TRUE, 'default' => ''),
       'filename' => array('type' => 'text', 'size' => 'medium', 'not null' => TRUE, 'serialize' => TRUE),
       'filepath' => array('type' => 'text', 'size' => 'medium', 'not null' => TRUE, 'serialize' => TRUE),
+      'filealias' => array('type' => 'text', 'size' => 'medium', 'not null' => TRUE, 'serialize' => TRUE),
     ),
     'unique keys' => array(
       'type_field' => array('type', 'field'),
@@ -29,6 +30,8 @@ function filefield_paths_schema() {
  */
 function filefield_paths_install() {
   drupal_install_schema('filefield_paths');
+
+  variable_set('filefield_paths_schema_version', 6101);
 }
 
 /**
@@ -36,6 +39,8 @@ function filefield_paths_install() {
  */
 function filefield_paths_uninstall() {
   drupal_uninstall_schema('filefield_paths');
+
+  variable_del('filefield_paths_schema_version');
 }
 
 /**
@@ -120,5 +125,17 @@ function filefield_paths_update_6100() {
   $ret[] = update_sql("DELETE FROM {variable} WHERE name LIKE 'filefield_paths_%'");
   cache_clear_all('variables', 'cache');
 
+  return $ret;
+}
+
+function filefield_paths_update_6101() {
+  $ret = array();
+
+  $schema_version = variable_get('filefield_paths_schema_version', 6100);
+  if ($schema_version < 5101 || $schema_version == 6100) {
+    db_add_field($ret, 'filefield_paths', 'filealias', array('type' => 'text', 'size' => 'medium', 'not null' => TRUE, 'serialize' => TRUE));
+  }
+
+  variable_set('filefield_paths_schema_version', 6101);
   return $ret;
 }
