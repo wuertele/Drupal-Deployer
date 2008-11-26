@@ -81,7 +81,7 @@ function xmlsitemap_update_6000() {
   if (db_result(db_query("SELECT COUNT(*) FROM {variable} WHERE name = 'xmlsitemap\_%'"))) {
     $ret[] = update_sql("DELETE FROM {variable} WHERE name = 'xmlsitemap\_%'");
   }
-  if (_xmlsitemap_remove_tmp_files(file_directory_path() .'/xmlsitemap')) {
+  if (_xmlsitemap_delete_tmp_files(file_directory_path() .'/xmlsitemap')) {
     $ret[] = array(
       'success' => TRUE,
       'query' => 'DELETE TEMPORARY FILES',
@@ -172,10 +172,11 @@ function xmlsitemap_update_6105() {
 
 /**
  * Implementation of hook_update_N().
+ * Try to remove any temporary files left.
  */
 function xmlsitemap_update_6106() {
   $ret = array();
-  if (_xmlsitemap_remove_tmp_files(file_directory_path() .'/xmlsitemap')) {
+  if (_xmlsitemap_delete_tmp_files(file_directory_path() .'/xmlsitemap')) {
     $ret[] = array(
       'success' => TRUE,
       'query' => 'DELETE TEMPORARY FILES',
@@ -195,10 +196,18 @@ function xmlsitemap_uninstall() {
 }
 
 /*****************************************************************************
- * Private module functions.
+ * Private functions.
  ****************************************************************************/
 
-function _xmmsitemap_delete_temp_files($path) {
+/**
+ * Remove temporary files, and folders up to four levels.
+ *
+ * @param $path
+ *        The path of the folder to remove.
+ * @return
+ *        Boolean value; TRUE on success.
+ */
+function _xmlsitemap_delete_tmp_files($path) {
   static $count = 0;
   $error = FALSE;
   $count++;
