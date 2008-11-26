@@ -215,10 +215,8 @@ function theme_viewreference_formatter_default($element) {
   if (!empty($element['#item']['view_id']) && is_numeric($element['#item']['view_id'])) {
     $view = db_fetch_object(db_query("SELECT name, position FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
     $args = viewreference_get_element_args($element);
-    $output = '';
-    //$output .= views_embed_view($view->name, $view->position, $args);
     $view_object = views_get_view($view->name);
-    $output .= $view_object->preview($view->position, $args);
+    $output = $view_object->preview($view->position, $args);
   }
   return $output;
 }
@@ -228,8 +226,9 @@ function theme_viewreference_formatter_default($element) {
  */
 function theme_viewreference_formatter_plain($element) {
   if (!empty($element['#item']['view_id']) && is_numeric($element['#item']['view_id'])) {
-    $view = db_fetch_object(db_query("SELECT title FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
-    $output = t(check_plain($view->title));
+    $view = db_fetch_object(db_query("SELECT name, position, title FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
+    $view_object = views_get_view($view->name);
+    $output = t(check_plain($title));
   }
   return $output;
 }
@@ -239,21 +238,20 @@ function theme_viewreference_formatter_plain($element) {
  */
 function theme_viewreference_formatter_link($element) {
   if (!empty($element['#item']['view_id']) && is_numeric($element['#item']['view_id'])) {
-    $view = db_fetch_object(db_query("SELECT title, name FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
+    $view = db_fetch_object(db_query("SELECT name, position, title FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
     $view_object = views_get_view($view->name);
-    $output = '';
-
-    if (isset($view_object->display['page']->display_options['path']) && $view_object->disabled != 1) {
-      $args = viewreference_arguments_string_to_array($element['#item']['arguments']);
+    if (isset($view_object->display[$view->position]->display_options['path']) && !$view_object->disabled) {
+      $args = viewreference_get_element_args($element);
       $url_args = implode("/", $args);
-      $path = $view_object->display['page']->display_options['path'];
+      $path = $view_object->display[$view->position]->display_options['path'];
       if ($url_args) {
         $path .= "/". $url_args;
       }
-      $output .= l(t(check_plain($view->title)), $path);
+      $title = $view_object->get_title() ? $view_object->get_title() : $view->title;
+      $output = l(t(check_plain($title)), $view_object->get_url($args, $path));
     }
     else {
-      $output .= t(check_plain($view->title));
+      $output = t(check_plain($title));
     }
   }
   return $output;
@@ -310,17 +308,21 @@ function viewreference_elements() {
   return array(
     'viewreference_select' => array(
       '#input' => TRUE,
-      '#columns' => array('uid'), '#delta' => 0,
+      '#columns' => array('uid'),
+      '#delta' => 0,
       '#process' => array('viewreference_select_process'),
       ),
     'viewreference_autocomplete' => array(
       '#input' => TRUE,
-      '#columns' => array('name'), '#delta' => 0,
+      '#columns' => array('name'),
+      '#delta' => 0,
       '#process' => array('viewreference_autocomplete_process'),
       '#autocomplete_path' => FALSE,
+      '#submit' => array('viewreference_autocomplete_submission'),
       ),
     );
 }
+
 
 /**
  * Implementation of hook_widget().
@@ -354,7 +356,6 @@ function viewreference_elements() {
  *   the form item for a single element for this field
  */
 function viewreference_widget(&$form, &$form_state, $field, $items, $delta = 0) {
-  //error_log('items'.print_r($items,true));
   switch ($field['widget']['type']) {
     case 'viewreference_select':
       $element = array(
@@ -386,9 +387,9 @@ function viewreference_autocomplete_value($element, $edit = FALSE) {
     $vid = $element['#default_value'][$field_key];
     $value = db_result(db_query("SELECT title FROM {viewreference} WHERE view_id = '%d'", $vid));
     $value .= ' [view:'. $vid .']';
-    return array($field_key => $value, $element['#columns'][1] => $element['#default_value'][$args_key]);
+    return array($field_key => $value, $args_key => $element['#default_value'][$args_key]);
   }
-  return array($field_key => NULL, $element['#columns'][1] => $element['#default_value'][$args_key]);
+  return array($field_key => NULL, $args_key => NULL);
 }
 
 /**
@@ -437,7 +438,7 @@ function viewreference_select_process($element, $edit, $form_state, $form) {
 
     $element[$element['#columns'][1]] = array(
       '#type' => $args_widget,
-      '#default_value' => isset($element['#value'][$element['#columns'][1]]) ? $element['#value'][$element['#columns'][1]] : '',
+      '#default_value' => is_string($element['#value'][$element['#columns'][1]]) ? $element['#value'][$element['#columns'][1]] : '',
       '#element_validate' => array('viewreference_arguments_validate'),
       '#title' => $element['#title'] .' '. t('arguments'),
       '#suffix' => t('</div>'),
@@ -463,6 +464,7 @@ function viewreference_select_process($element, $edit, $form_state, $form) {
   return $element;
 }
 
+
 /**
  * Process an individual element.
  *
@@ -476,7 +478,7 @@ function viewreference_autocomplete_process($element, $edit, $form_state, $form)
 
   $element[$element['#columns'][0]] = array(
     '#type' => 'text_textfield',
-    '#default_value' => isset($element['#value']) ? $element['#value'] : '',
+    '#default_value' => isset($element['#value'][$element['#columns'][0]]) ? $element['#value'][$element['#columns'][0]] : '',
     '#autocomplete_path' => 'viewreference/autocomplete/'. $element['#field_name'],
     '#element_validate' => array('viewreference_autocomplete_validate'),
     '#prefix' => t(
@@ -505,7 +507,7 @@ function viewreference_autocomplete_process($element, $edit, $form_state, $form)
 
     $element[$element['#columns'][1]] = array(
       '#type' => $args_widget,
-      '#default_value' => isset($element['#value'][$element['#columns'][1]]) ? $element['#value'][$element['#columns'][1]] : '',
+      '#default_value' => is_string($element['#value'][$element['#columns'][1]]) ? $element['#value'][$element['#columns'][1]] : '',
       '#element_validate' => array('viewreference_arguments_validate'),
       '#title' => $element['#title'] .' '. t('arguments'),
       '#suffix' => t('</div>'),
@@ -582,7 +584,6 @@ function viewreference_autocomplete_validate($element, &$form_state) {
  * Implementation of hook_allowed_values().
  */
 function viewreference_allowed_values($field) {
-
   $options = _viewreference_potential_references($field, TRUE);
   
   foreach ($options as $key => $value) {
@@ -593,6 +594,7 @@ function viewreference_allowed_values($field) {
   }
   return $options;
 }
+
 
 /**
  * Fetch an array of all candidate referenced views,
