@@ -1,6 +1,10 @@
 <?php
 // $Id$
 
+/*****************************************************************************
+ * Drupal hooks.
+ ****************************************************************************/
+
 /**
  * Implementation of hook_enable().
  */
@@ -77,16 +81,7 @@ function xmlsitemap_update_6000() {
   if (db_result(db_query("SELECT COUNT(*) FROM {variable} WHERE name = 'xmlsitemap\_%'"))) {
     $ret[] = update_sql("DELETE FROM {variable} WHERE name = 'xmlsitemap\_%'");
   }
-  // Remove temporary files created by previous versions.
-  $path = file_directory_path() .'/xmlsitemap';
-  if ($dir = @opendir($path)) {
-    while (($file = readdir($dir)) !== FALSE) {
-      if ($file != '.' && $file != '..') {
-        unlink("$path/$file");
-      }
-    }
-    closedir($dir);
-    rmdir($path);
+  if (_xmlsitemap_remove_tmp_files(file_directory_path() .'/xmlsitemap')) {
     $ret[] = array(
       'success' => TRUE,
       'query' => 'DELETE TEMPORARY FILES',
@@ -176,6 +171,20 @@ function xmlsitemap_update_6105() {
 }
 
 /**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_update_6105() {
+  $ret = array();
+  if (_xmlsitemap_remove_tmp_files(file_directory_path() .'/xmlsitemap')) {
+    $ret[] = array(
+      'success' => TRUE,
+      'query' => 'DELETE TEMPORARY FILES',
+    );
+  }
+  return $ret;
+}
+
+/**
  * Implementation of hook_uninstall().
  */
 function xmlsitemap_uninstall() {
@@ -183,4 +192,32 @@ function xmlsitemap_uninstall() {
   drupal_uninstall_schema('xmlsitemap');
   // Remove the used variables.
   db_query("DELETE FROM {variable} WHERE name LIKE 'xmlsitemap\_%'");
+}
+
+/*****************************************************************************
+ * Private module functions.
+ ****************************************************************************/
+
+function _xmmsitemap_delete_temp_files($path) {
+  static $count = 0;
+  $error = FALSE;
+  $count++;
+  if ($dir = @opendir($path)) {
+    while (($file = readdir($dir)) !== FALSE) {
+      if ($file != '.' && $file != '..') {
+        $fpath = "$path/$file";
+        if (is_dir($fpath)) {
+          if ($count < 5) {
+            $error |= _xmmsitemap_delete_temp_files($fpath);
+          }
+        }
+        else {
+          $error |= @unlink($fpath);
+        }
+      }
+    }
+    closedir($dir);
+    $error |= @rmdir($path);
+  }
+  return $error;
 }
