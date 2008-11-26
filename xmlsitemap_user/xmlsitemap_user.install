@@ -15,25 +15,6 @@ function xmlsitemap_user_enable() {
     LEFT JOIN {xmlsitemap_user} xu ON xu.uid = u.uid
     WHERE u.uid <> 0 AND xu.uid IS NULL
   ");
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      db_query("
-        UPDATE {xmlsitemap_user} xu INNER JOIN {url_alias} ua
-        ON ua.src = CONCAT('user/', CAST(xu.uid AS CHAR))
-        SET xu.pid = ua.pid
-        WHERE xu.pid IS NULL
-      ");
-      break;
-    case 'pgsql':
-      db_query("
-        UPDATE {xmlsitemap_user}
-        SET pid = {url_alias}.pid
-        FROM {url_alias}
-        WHERE {url_alias}.src = CONCAT('user/', CAST(uid AS VARCHAR)) AND {xmlsitemap_user}.pid IS NULL
-      ");
-      break;
-  }
   db_query("
     INSERT INTO {xmlsitemap_user_role} (rid)
     SELECT r.rid FROM {role} r
@@ -114,13 +95,13 @@ function xmlsitemap_user_update_1() {
   switch ($GLOBALS['db_type']) {
     case 'mysql':
     case 'mysqli':
-      $ret[] = update_sql("
+      $ret[] = @update_sql("
         UPDATE {xmlsitemap_user} xu, {url_alias} ua SET xu.pid = ua.pid
         WHERE xu.pid IS NULL AND ua.src = CONCAT('user/', CAST(xu.uid AS CHAR))
       ");
       break;
     case 'pgsql':
-      $ret[] = update_sql("
+      $ret[] = @update_sql("
         UPDATE {xmlsitemap_user} SET pid = {url_alias}.pid FROM {url_alias}
         WHERE {xmlsitemap_user}.pid IS NULL AND {url_alias}.src = CONCAT('user/', CAST(uid AS VARCHAR))
       ");
@@ -135,17 +116,17 @@ function xmlsitemap_user_update_1() {
 function xmlsitemap_user_update_6000() {
   $ret = array();
   $result = array();
-  @db_drop_index(&$result, 'xmlsitemap_user', 'pid');
+  @db_drop_index($result, 'xmlsitemap_user', 'pid');
   if ($result[0]['success']) {
     $ret = $result;
   }
   $result = array();
-  @db_drop_field(&$result, 'xmlsitemap_user', 'pid');
+  @db_drop_field($result, 'xmlsitemap_user', 'pid');
   if ($result[0]['success']) {
     $ret = array_merge($ret, $result);
   }
   $result = array();
-  @db_drop_index(&$result, 'xmlsitemap_user_role', 'pid');
+  @db_drop_index($result, 'xmlsitemap_user_role', 'pid');
   if ($result[0]['success']) {
     $ret = array_merge($ret, $result);
   }
@@ -156,6 +137,13 @@ function xmlsitemap_user_update_6000() {
  * Implementation of hook_update_N().
  */
 function xmlsitemap_user_update_6100() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_user_update_6101() {
   return xmlsitemap_user_update_6000();
 }
 
