@@ -228,6 +228,7 @@ function theme_viewreference_formatter_plain($element) {
   if (!empty($element['#item']['view_id']) && is_numeric($element['#item']['view_id'])) {
     $view = db_fetch_object(db_query("SELECT name, position, title FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
     $view_object = views_get_view($view->name);
+    $title = $view_object->get_title() ? $view_object->get_title() : $view->title;
     $output = t(check_plain($title));
   }
   return $output;
@@ -318,7 +319,6 @@ function viewreference_elements() {
       '#delta' => 0,
       '#process' => array('viewreference_autocomplete_process'),
       '#autocomplete_path' => FALSE,
-      '#submit' => array('viewreference_autocomplete_submission'),
       ),
     );
 }
@@ -554,7 +554,7 @@ function viewreference_select_validate($element, &$form_state) {
 function viewreference_autocomplete_validate($element, &$form_state) {
   $field_name = $element['#field_name'];
   $field = content_fields($field_name);
-  $field_key  = $element['#columns'][0];
+  $field_key = $element['#columns'][0];
   $delta = $element['#delta'];
   $value = $element['#value'][$field_key];
   $vid = NULL;
@@ -579,6 +579,7 @@ function viewreference_autocomplete_validate($element, &$form_state) {
   form_set_value($element, $vid, $form_state);
   return $element;
 }
+
 
 /**
  * Implementation of hook_allowed_values().
