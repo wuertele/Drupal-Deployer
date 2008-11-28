@@ -19,7 +19,7 @@
  * Menu callback; display the site map.
  * @param $chunk
  *  An integer specifying which chunk of the site map is being requested.
- * If not set and there is more than one chunk, display the site map index.
+ *  If not set and there is more than one chunk, display the site map index.
  */
 function xmlsitemap_output($chunk = NULL) {
   if (variable_get('xmlsitemap_update', FALSE)) {
