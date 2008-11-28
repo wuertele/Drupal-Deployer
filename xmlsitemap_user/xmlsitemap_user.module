@@ -184,10 +184,10 @@ function xmlsitemap_user_user($op, &$edit, &$account, $category = NULL) {
         );
         $options = xmlsitemap_priority_options('both');
         if (isset($account->roles)) {
-          $default = db_fetch_object(db_query("
-            SELECT MIN(priority) AS min, SUM(priority) AS sum FROM {xmlsitemap_user_role}
-            WHERE rid IN (". implode(', ', array_keys($account->roles)) .")
-          "));
+          $roles = array_keys($account->roles);
+          $default = db_fetch_object(db_query("SELECT MIN(priority) AS min, SUM(priority) AS sum FROM {xmlsitemap_user_role}
+            WHERE rid IN (". db_placeholders($roles), 'varchar') .")", $roles)
+          );
         }
         if (isset($default)) {
           $default_priority = $default->min < 0 ? -1 : min($default->sum, 1);
@@ -200,7 +200,7 @@ function xmlsitemap_user_user($op, &$edit, &$account, $category = NULL) {
           '#title' => t('Site map priority'),
           '#default_value' => isset($priority) ? $priority : 'NULL',
           '#options' => $options,
-          '#description' => t('The default priority is %priority.', array('%priority' => $options[(string)$default])),
+          '#description' => t('The default priority is %priority.', array('%priority' => $options[(string)$default_priority])),
         );
       }
       else {
