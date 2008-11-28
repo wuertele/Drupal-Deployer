@@ -14,19 +14,13 @@ INSTALLATION
 ------------
 See INSTALL.txt in this directory.
 
-SPECIALIZED SITE MAPS
----------------------
-You can create specialized site maps using Views. To do so, enable both Views
-and XML Sitemap: Node and create a new view. In the Page settings, choose XML
-Sitemap: Sitemap as the view type for a regular site map or XML Sitemap: News
-for a Google News site map.
-
 KNOWN ISSUES
 ------------
 Users who have not enabled clean URLs have reported receiving an
 "Unsupported file format" error from Google. The solution is to replace
 "?q=sitemap.xml" at the end of the submission URL with
-"index.php?q=sitemap.xml". Submission URLs for each search engine can be
+"index.php?q=sitemap.xml", or to enable the clean URLs.
+Submission URLs for each search engine can be
 configured at http://www.example.com/?q=admin/settings/xmlsitemap/engines.
 
 MORE INFORMATION
