@@ -131,11 +131,11 @@ function xmlsitemap_user_user($op, &$edit, &$account, $category = NULL) {
         $priority = db_result(db_query("SELECT priority_override FROM {xmlsitemap_user} WHERE uid = %d", $account->uid));
         $priority = isset($priority) && $priority !== FALSE ? $priority : 'NULL';
       }
-      db_query("
-        UPDATE {xmlsitemap_user}
+      db_query("UPDATE {xmlsitemap_user}
         SET last_changed = %d, previously_changed = last_changed, priority_override = %s
-        WHERE uid = %d
-      ", time(), $priority, $account->uid);
+        WHERE uid = %d",
+        time(), $priority, $account->uid
+      );
       $edit['xmlsitemap_user_priority'] = NULL;
       xmlsitemap_update_sitemap();
       break;
@@ -227,8 +227,7 @@ function _xmlsitemap_user_links() {
       $cast = 'VARCHAR';
       break;
   }
-  $result = db_query("
-    SELECT u.uid, xu.last_changed, xu.previously_changed, xu.priority_override, SUM(xur.priority) as priority, $coalesce(ua.dst) AS alias
+  $result = db_query("SELECT u.uid, xu.last_changed, xu.previously_changed, xu.priority_override, SUM(xur.priority) as priority, $coalesce(ua.dst) AS alias
     FROM {users} u
     LEFT JOIN {users_roles} ur ON u.uid = ur.uid
     LEFT JOIN {xmlsitemap_user_role} xur ON ur.rid = xur.rid
@@ -236,8 +235,9 @@ function _xmlsitemap_user_links() {
     LEFT JOIN {url_alias} ua ON ua.src = CONCAT('user/', CAST(u.uid AS $cast))
     WHERE (xu.priority_override IS NULL OR xu.priority_override >= 0) AND u.uid <> %d AND u.uid > 0 AND u.status <> 0
     GROUP BY u.uid, xu.last_changed, xu.previously_changed, xu.priority_override
-    HAVING COUNT(xu.priority_override) > 0 OR (SUM(xur.priority) IS NULL AND %f <> -1 OR MIN(xur.priority) <> -1)
-  ", _xmlsitemap_user_frontpage(), variable_get('xmlsitemap_user_default_priority', 0.5));
+    HAVING COUNT(xu.priority_override) > 0 OR (SUM(xur.priority) IS NULL AND %f <> -1 OR MIN(xur.priority) <> -1)",
+    _xmlsitemap_user_frontpage(), variable_get('xmlsitemap_user_default_priority', 0.5)
+  );
   while ($user = db_fetch_object($result)) {
     $age = time() - $user->last_changed;
     $interval = empty($user->previously_changed) ? 0 : $user->last_changed - $user->previously_changed;

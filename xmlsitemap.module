@@ -1,5 +1,4 @@
 <?php 
-
 // $Id$
 
 /**
@@ -367,6 +366,7 @@ function _xmlsitemap_link_count() {
 function _xmlsitemap_links() {
   static $links;
   if (!isset($links)) {
+    module_load_all_includes('inc', 'includes/xmlsitemap');
     $entries = module_invoke_all('xmlsitemap_links');
     if (!empty($entries)) {
       foreach ($entries as $key => $link) {
@@ -444,6 +444,7 @@ function _xmlsitemap_output_index() {
  * Submit the site map to search engines.
  */
 function _xmlsitemap_ping() {
+  module_load_all_includes('inc', 'includes/xmlsitemap');
   module_invoke_all('xmlsitemap_engines', 'ping');
   variable_set('xmlsitemap_changed', FALSE);
 }
@@ -466,6 +467,7 @@ function _xmlsitemap_submit_on_exit() {
 function _xmlsitemap_update() {
   db_query("DELETE FROM {xmlsitemap}");
   db_query("INSERT INTO {xmlsitemap} (loc, lastmod, changefreq, priority) VALUES ('%s', %d, %d, %f)", xmlsitemap_url(NULL, NULL, NULL, NULL, TRUE),time() - 1, 1, variable_get('xmlsitemap_front_page_priority', 1));
+  module_load_all_includes('inc', 'includes/xmlsitemap');
   module_invoke_all('xmlsitemap_links');
   menu_rebuild();
   cache_clear_all(xmlsitemap_url('sitemap.xml', NULL, NULL, NULL, TRUE), 'cache_page', TRUE);
@@ -481,6 +483,7 @@ function _xmlsitemap_xml() {
   static $xml;
   if (!isset($xml)) {
     $xml = array();
+    module_load_all_includes('inc', 'includes/xmlsitemap');
     foreach (module_implements('xmlsitemap_links') as $module) {
       $sitemap = module_invoke($module, 'xmlsitemap_links', 'xml');
       if (!empty($sitemap)) {

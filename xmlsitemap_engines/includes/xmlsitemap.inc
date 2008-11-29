@@ -12,10 +12,13 @@
  */
 
 /*****************************************************************************
- * Private functions.
+ * Drupal hooks.
  ****************************************************************************/
 
-function _xmlsitemap_engines_engine_handler($op, $type) {
+/**
+ * Implementation of hook_xmlsitemap_engines().
+ */
+function xmlsitemap_engines_xmlsitemap_engines($op, $type = NULL) {
   switch ($op) {
     case 'form':
       // Google fields.
@@ -143,12 +146,12 @@ function _xmlsitemap_engines_engine_handler($op, $type) {
       if (variable_get('xmlsitemap_engines_live_submit', FALSE)) {
         xmlsitemap_engines_submit_sitemap('Windows Live', 'xmlsitemap_engines_live_url', 'http://webmaster.live.com/ping.aspx?siteMap='. $sitemap_url);
       }
-      return NULL;
+      break;
     case 'access':
       if (strpos($_SERVER['HTTP_USER_AGENT'], 'Googlebot') !== FALSE) {
         return t('!sitemap downloaded by Google.', array('!sitemap' => $type));
       }
-      return NULL;
+      break;
   }
 }
 

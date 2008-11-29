@@ -95,8 +95,7 @@ function xmlsitemap_file_xmlsitemap_links($type = NULL, $excludes = array()) {
       $excludes = array('');
     }
     $query_args = array_merge(array_merge(array(strlen(file_directory_path()) + 2), $excludes), array(_xmlsitemap_file_frontpage()));
-    $result = db_query(db_rewrite_sql("
-      SELECT n.nid, n.type, n.promote, f.fid, f.filepath, s.comment_count, xn.priority_override, xf.changed, xf.previously_changed, ua.dst AS alias
+    $result = db_query(db_rewrite_sql("SELECT n.nid, n.type, n.promote, f.fid, f.filepath, s.comment_count, xn.priority_override, xf.changed, xf.previously_changed, ua.dst AS alias
       FROM {node} n
       INNER JOIN {files} f ON n.nid = f.nid
       INNER JOIN {file_revisions} r ON f.fid = r.fid AND n.vid = r.vid
@@ -108,8 +107,9 @@ function xmlsitemap_file_xmlsitemap_links($type = NULL, $excludes = array()) {
       AND (n.type NOT IN ('". db_placeholders($excludes, 'varchar') ."') AND xn.priority_override IS NULL OR xn.priority_override >= 0)
       AND f.filepath <> '%s'
       AND r.list = 1
-      GROUP BY n.nid, n.type, n.promote, f.fid, f.filepath, s.comment_count, xn.priority_override, xf.changed, xf.previously_changed, ua.dst
-    "), $query_args);
+      GROUP BY n.nid, n.type, n.promote, f.fid, f.filepath, s.comment_count, xn.priority_override, xf.changed, xf.previously_changed, ua.dst"),
+      $query_args
+    );
     while ($file = db_fetch_object($result)) {
       $access = array();
       if (variable_get('file_downloads', FILE_DOWNLOADS_PUBLIC) == FILE_DOWNLOADS_PRIVATE) {
