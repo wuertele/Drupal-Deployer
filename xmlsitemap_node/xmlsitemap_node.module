@@ -88,7 +88,8 @@ function xmlsitemap_node_form_alter(&$form, &$form_state, $form_id) {
         $form['xmlsitemap_node'] = array(
           '#type' => 'fieldset',
           '#title' => t('Content priority'),
-          '#description' => t('The default priority for specific content types can be set on the !link pages.', array('!link' => l(t('content type settings'), 'admin/content/types')))
+          '#description' => t('The default priority for specific content types can be set on the !link pages.', array('!link' => l(t('content type settings'), 'admin/content/types'))),
+          '#collapsible' => TRUE,
         );
         $form['xmlsitemap_node']['xmlsitemap_node_promote_priority'] = array(
           '#type' => 'select',
@@ -131,7 +132,7 @@ function xmlsitemap_node_node_type($op, $info) {
 }
 
 /**
- * Implmentation of hook_nodeapi().
+ * Implementation of hook_nodeapi().
  */
 function xmlsitemap_node_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
   switch ($op) {
@@ -140,22 +141,28 @@ function xmlsitemap_node_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
       $node->priority_override = isset($priority) && $priority !== FALSE ? $priority : 'NULL';
       break;
     case 'insert':
-      $node->priority_override = isset($node->priority_override) ? $node->priority_override : 'NULL';
+      if (!isset($node->priority_override)) {
+        $node->priority_override = 'NULL';
+      }
       db_query("INSERT INTO {xmlsitemap_node} (nid, last_changed, priority_override) VALUES (%d, %d, %s)", $node->nid, $node->changed, $node->priority_override);
       if ($node->status) {
         xmlsitemap_update_sitemap();
       }
       break;
     case 'update':
-      if (!isset($node->priority_override)) {
-        $priority = db_result(db_query("SELECT priority_override FROM {xmlsitemap_node} WHERE nid = %d", $node->nid));
-        $node->priority_override = isset($priority) && $priority !== FALSE ? $priority : 'NULL';
+      if (isset($node->priority_override)) {
+        $query = "UPDATE {xmlsitemap_node}
+          SET previously_changed = last_changed, last_changed = %d, priority_override = %s
+          WHERE nid = %d";
+        $args = array($node->changed, $node->priority_override, $node->nid);
       }
-      db_query("
-        UPDATE {xmlsitemap_node}
-        SET previously_changed = last_changed, last_changed = %d, priority_override = %s
-        WHERE nid = %d
-      ", $node->changed, $node->priority_override, $node->nid);
+      else {
+        $query = "UPDATE {xmlsitemap_node}
+          SET previously_changed = last_changed, last_changed = %d
+          WHERE nid = %d";
+        $args = array($node->changed, $node->nid);
+      }
+      db_query($query, $args);
       if ($node->status || $node->xmlsitemap_node_status) {
         xmlsitemap_update_sitemap();
       }
