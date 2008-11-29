@@ -140,25 +140,24 @@ function xmlsitemap_term_taxonomy($op, $type, $array = NULL) {
   }
   else {
     switch ($op) {
+      case 'delete':
+        db_query("DELETE FROM {xmlsitemap_term} WHERE tid = %d", $array['tid']);
+        break;
       case 'insert':
-        $priority = isset($array['xmlsitemap_term_priority']) ? $array['xmlsitemap_term_priority'] : 'NULL';
-        db_query("
-          INSERT INTO {xmlsitemap_term} (tid, last_changed, priority_override) VALUES (%d, %d, %s)
-        ", $array['tid'], time(), $priority);
+        db_query("INSERT INTO {xmlsitemap_term} (tid, last_changed, priority_override) VALUES (%d, %d, %s)",
+          $array['tid'], time(), isset($array['xmlsitemap_term_priority']) ? $array['xmlsitemap_term_priority'] : 'NULL'
+        );
         break;
       case 'update':
-        if (!isset($array['xmlsitemap_term_priority'])) {
+        if (isset($array['xmlsitemap_term_priority'])) {
+          db_query("UPDATE {xmlsitemap_term} SET priority_override = %s WHERE tid = %d",
+            $array['xmlsitemap_term_priority'], $array['tid']
+          );
+        }
+        else {
           $priority = db_result(db_query("SELECT priority_override FROM {xmlsitemap_term} WHERE tid = %d", $array['tid']));
           $array['xmlsitemap_term_priority'] = isset($priority) && $priority !== FALSE ? $priority : 'NULL';
         }
-        db_query("
-          UPDATE {xmlsitemap_term}
-          SET priority_override = %s
-          WHERE tid = %d
-        ", $array['xmlsitemap_term_priority'], $array['tid']);
-        break;
-      case 'delete':
-        db_query("DELETE FROM {xmlsitemap_term} WHERE tid = %d", $array['tid']);
         break;
     }
     xmlsitemap_update_sitemap();
