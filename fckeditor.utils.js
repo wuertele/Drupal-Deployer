@@ -17,7 +17,7 @@ Drupal.behaviors.fckeditor = function(context) {
 
       if (editorInstance.defaultState == 1) {
         if (textarea.attr('class').indexOf("filterxss1") != -1 || textarea.attr('class').indexOf("filterxss2") != -1) {
-          $.post(Drupal.settings.basePath + 'fckeditor/xss', {
+          $.post(Drupal.settings.basePath + 'index.php?q=fckeditor/xss', {
             text: $('#' + taid).val(),
             'filters[]': Drupal.settings.fckeditor_filters[fckInstances[taid].DrupalId]
             }, 
@@ -51,7 +51,7 @@ function Toggle(textareaID, TextTextarea, TextRTE, xss_check)
   if (fckInstances[textareaID].defaultState == 0) {
     fckInstances[textareaID].defaultState = 2;
     if ($('#' + textareaID).attr('class').indexOf("filterxss2") != -1) {
-      $.post(Drupal.settings.basePath + 'fckeditor/xss', {
+      $.post(Drupal.settings.basePath + 'index.php?q=fckeditor/xss', {
         text: $('#' + textareaID).val(),
         'filters[]': Drupal.settings.fckeditor_filters[fckInstances[textareaID].DrupalId]
         }, 
