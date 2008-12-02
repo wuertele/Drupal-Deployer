@@ -8,6 +8,14 @@ function autoload_init() {
 }
 
 /**
+ * Implementation of hook_flush_caches9).
+ */
+function autoload_flush_caches() {
+  // Force a rescan of the autload hook.
+  autoload_get_lookup(TRUE);
+}
+
+/**
  * Autoload function for registered classes.
  */
 function autoload_class($class) {
@@ -17,12 +25,7 @@ function autoload_class($class) {
     $lookup = autoload_get_lookup();
   }
 
-  // If we don't have a record for the class, bypass the cache and try again.
-  if (empty($lookup[$class])) {
-    $lookup = autoload_get_lookup(TRUE);
-  }
-
-  if (!empty($lookup[$class])) {
+   if (!empty($lookup[$class])) {
     require_once dirname($_SERVER['SCRIPT_FILENAME']) .'/'. $lookup[$class];
   }
 }
