@@ -345,7 +345,7 @@ function admin_menu_theme_settings() {
     '#type' => 'checkbox',
     '#title' => t('Adjust top margin'),
     '#default_value' => variable_get('admin_menu_margin_top', 1),
-    '#description' => t('If enabled, the output of this site will be shifted for approx. 20 pixels from the top of the viewport to make room for the Administration Menu. If this setting is disabled, some absolute or fixed positioned page elements at the top of the viewport may be covered by Administration Menu.'),
+    '#description' => t('If enabled, the site output is shifted down approximately 20 pixels from the top of the viewport to display the administration menu. If disabled, some absolute- or fixed-positioned page elements may be covered by the administration menu.'),
   );
   $form['admin_menu_position_fixed'] = array(
     '#type' => 'checkbox',
@@ -364,7 +364,7 @@ function admin_menu_theme_settings() {
     '#description' => t('If enabled, fieldsets on the <a href="!modules-url">modules</a> page are automatically collapsed when loading the page.', array('!modules-url' => url('admin/build/modules'))),
   );
   if (module_exists('util')) {
-    $form['tweaks']['admin_menu_tweak_modules']['#description'] .= '<br /><strong>'. t('If you installed Utility module for this purpose, you can safely uninstall it now!') .'</strong>';
+    $form['tweaks']['admin_menu_tweak_modules']['#description'] .= '<br /><strong>'. t('If the Utility module was installed for this purpose, it can be safely disabled and uninstalled.') .'</strong>';
   }
   $form['tweaks']['admin_menu_tweak_tabs'] = array(
     '#type' => 'checkbox',
