@@ -11,7 +11,7 @@ function _admin_menu_rebuild_links() {
   $menu_links = array();
   foreach ($menu as $path => $item) {
     // Exclude menu callbacks, include items below admin/* and node/add/*.
-    if ($item['type'] != MENU_CALLBACK && (($item['_parts'][0] == 'admin' && count($item['_parts']) > 1) || (strpos($path, 'node/add') !== FALSE))) {
+    if ($item['type'] != MENU_CALLBACK && (($item['_parts'][0] == 'admin' && count($item['_parts']) > 1) || (strpos($path, 'node/add') === 0))) {
       // TODO: handle local tasks with wildcards
       if (!strpos($path, '%')) {
         $item = admin_menu_link_build($item);
