@@ -358,7 +358,12 @@ function project_project_view($node, $teaser = false, $page = false) {
         $node->content[$section] = array(
           '#value' => theme('item_list', $values['links'], $values['name']),
           '#weight' => !empty($values['weight']) ? $values['weight'] : 0,
+          '#prefix' => '<div class="project-links-section" id="project-links-section-'. $section .'">',
+          '#suffix' => '</div>',
         );
+        if (!empty($values['clear'])) {
+          $node->content[$section]['#suffix'] .= '<br style="clear:both;" />';
+        }
       }
     }
   }
