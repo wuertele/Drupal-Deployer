@@ -16,8 +16,11 @@
 //remember to add 'DrupalBreak' and 'DrupalPageBreak' buttons to the toolbar
 FCKConfig.Plugins.Add( 'drupalbreak', 'en,pl' ) ;
 FCKConfig.Plugins.Add( 'imgassist' ) ;
+//To enable plugins below you should install additional Drupal modules.
+//Please refer to the README.txt for more instructions.
 //FCKConfig.Plugins.Add( 'drupalpagebreak', 'en,pl' ) ;
-
+//FCKConfig.Plugins.Add( 'linktonode', 'en,pl' ) ;
+//FCKConfig.Plugins.Add( 'linktomenu', 'en,pl' ) ;
 /*
  This toolbar is dedicated to users with "Full HTML" access
  some of commands used here (like 'FontName') use inline styles,
@@ -30,6 +33,13 @@ FCKConfig.ToolbarSets['DrupalFull'] = [
 ['Bold','Italic','Underline','StrikeThrough','-','Subscript','Superscript'],
 ['OrderedList','UnorderedList','-','Outdent','Indent','Blockquote'],
 ['JustifyLeft','JustifyCenter','JustifyRight'],
+/* 
+ * EXPERIMENTAL
+ * Uncomment the line below to enable linktonode and linktomenu buttons
+ * ATTENTION: Link to Content module must be installed first!
+ * Remember to load appropriate plugins with FCKConfig.Plugins.Add command a couple of lines above
+ */
+//['Link','Unlink','LinkToNode','LinkToMenu','Anchor'],
 ['Link','Unlink','Anchor'],
 ['Image','Flash','Table','Rule','SpecialChar','DrupalBreak'],
 //uncomment this line to enable teaser break and page break buttons
@@ -49,6 +59,13 @@ FCKConfig.ToolbarSets['DrupalFiltered'] = [
 ['Source'],
 ['Cut','Copy','Paste','PasteText','PasteWord'],
 ['Undo','Redo','-','Find','Replace','-','SelectAll','RemoveFormat'],
+/* 
+ * EXPERIMENTAL
+ * Uncomment the line below to enable linktonode and linktomenu buttons
+ * ATTENTION: Link to Content module must be installed first!
+ * Remember to load appropriate plugins with FCKConfig.Plugins.Add command a couple of lines above
+ */
+//['Link','Unlink','LinkToNode','LinkToMenu','Anchor'],
 ['Link','Unlink','Anchor'],
 ['Image','Flash','Table','Rule','Smiley','SpecialChar'],
 '/',
