@@ -25,7 +25,7 @@
 
       <?php if (!empty($submitted)): ?>
         <div class="submitted"><abbr title="<?php print format_date($node->created, 'custom', "l, F j, Y - H:i"); ?>">
-	      <?php print format_date($node->created, 'custom', "F j, Y"); ?></abbr> <?php print t('by'); ?> <em><?php print $name; ?></em>
+	       <?php print $date; ?></abbr> <?php print t('by'); ?> <em><?php print $name; ?></em>
         </div>
       <?php endif; ?>
 
