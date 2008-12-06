@@ -44,9 +44,31 @@ function user_register_notify_setup_email(&$edit, &$account) {
   // In case when accounts must be created with administrator's approval
   // there is already a 'pending approval' e-mail notification.
   if ($account->uid != 1 && (variable_get('user_register', 1) == 1 ? $account->status : !$account->status)) {
+    $notify_type = variable_get('user_register_notify_type', 'Custom');
     $from = variable_get('site_mail', ini_get('sendmail_from'));
-    $to = variable_get('user_register_notify_mailto', $from);
     $params = array('account' => $account);
+
+    switch ($notify_type) {
+      case 'Custom':
+        $to = variable_get('user_register_notify_mailto', $from);
+        break;
+      case 'Both':
+        $to = variable_get('user_register_notify_mailto', $from);
+        // There is no break there for a reson.
+      case 'Role':
+        $roles = implode(',', variable_get('user_register_notify_roles', array()));
+        if (!empty($roles)) {
+          $result = db_query("SELECT mail FROM {users} AS u INNER JOIN {users_roles} AS r ON u.uid = r.uid WHERE r.rid IN('%s')", $roles);
+          $emails = array();
+          while ($mail = db_fetch_object($result)) {
+            $emails[] = $mail->mail;
+          }
+          if (!empty($emails)) {
+            $to = $to .' '. implode(' ', $emails);
+          }
+        }
+        break;
+    }
 
     drupal_mail(
       'user_register_notify',
@@ -55,7 +77,7 @@ function user_register_notify_setup_email(&$edit, &$account) {
       language_default(),
       $params,
       $from,
-      true // Automatically send
+      TRUE // Automatically send
       );
   }
 }
@@ -86,7 +108,7 @@ function user_register_notify_mail($key, &$message, $params) {
     $uaccount = $params['account'];
     $account_data = "";
     if (module_exists('profile')) {
-      $result = db_query('SELECT f.name, f.type, v.value FROM {profile_fields} f INNER JOIN {profile_values} v ON f.fid = v.fid WHERE uid = %d', $uaccount->uid);
+      $result = db_query('SELECT f.title, f.type, v.value FROM {profile_fields} f INNER JOIN {profile_values} v ON f.fid = v.fid WHERE uid = %d', $uaccount->uid);
       while ($field = db_fetch_object($result)) {
         switch ($field->type) {
           case 'date':
