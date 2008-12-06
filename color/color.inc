@@ -77,9 +77,9 @@ $info = array(
     'images/bg-lbar-lite.png'              => array(270, 530,   8,  40),
     'images/bg-lbar.png'                   => array(250, 530,   8,  40),
 
-    'images/block-tl.png'                  => array( 10, 130,  10,  30),
+    'images/block-tl.png'                  => array( 10, 130, 210,  30),
     'images/block-tr.png'                  => array( 20, 130, 210,  30),
-    'images/block-bl.png'                  => array( 10, 330,  10,  10),
+    'images/block-bl.png'                  => array( 10, 330, 210,  10),
     'images/block-br.png'                  => array( 20, 330, 210,  10),
     'images/block-tile.png'                => array( 20, 330,  10,  10),
 
