@@ -256,3 +256,21 @@ function pixture_reloaded_id_safe($string) {
   }
   return strtolower(preg_replace('/[^a-zA-Z0-9-]+/', '-', $string));
 }
+
+/**
+ * Implementation of HOOK_theme().
+ */
+function pixture_reloaded_theme(){
+  return array(
+    'search_theme_form' => array(
+      'arguments' => array('form' => NULL),
+    ),
+  );
+}
+
+// The new theme function called by hook_theme.
+function pixture_reloaded_search_theme_form($form) {
+  // hide the label
+  $form['search_theme_form']['#title'] = NULL;
+  return drupal_render($form);
+}
