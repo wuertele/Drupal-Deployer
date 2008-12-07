@@ -22,13 +22,6 @@
     <?php endif; ?>
   <![endif]-->
 	<?php print $scripts; ?>
-  <?php if ((theme_get_setting('pixture_superfish')) && ($superfish)): ?>
-    <script type="text/javascript">
-      $(document).ready(function() {
-        $('#superfish-inner ul').superfish();
-      });
-    </script>
-  <?php endif; ?>
 </head>
 <?php
   $pixture_width = theme_get_setting('pixture_width');
