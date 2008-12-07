@@ -1,13 +1,16 @@
 <?php // $Id$
+
 /**
  * @file
  *  template.php
  */
+
 /**
- * Initialize theme settings
+ * Initialize theme settings for page width.
  */
 $pixture_width = theme_get_setting('pixture_width');
 pixture_validate_page_width($pixture_width);
+
 /**
  * Check the page width theme settings and reset to default
  * if the value is null, or invalid value is specified
@@ -15,10 +18,10 @@ pixture_validate_page_width($pixture_width);
 function pixture_validate_page_width($width) {
   global $theme_key;
 
-/**
- * The default values for the theme variables. Make sure $defaults exactly
- * matches the $defaults in the theme-settings.php file.
- */
+  /**
+   * The default values for the theme variables. Make sure $defaults exactly
+   * matches the $defaults in the theme-settings.php file.
+   */
   $defaults = array(             // <-- change this array
     'pixture_width' => '85%',
   );
@@ -48,16 +51,17 @@ function pixture_validate_page_width($width) {
   theme_get_setting('', TRUE);
   return $defaults['pixture_width'];
 }
+
 /**
- * Initialize theme settings
+ * Initialize theme settings for superfish.
  */
 if (is_null(theme_get_setting('pixture_superfish'))) {  // <-- change this line
   global $theme_key;
 
- /**
-  * The default values for the theme variables. Make sure $defaults exactly
-  * matches the $defaults in the theme-settings.php file.
-  */
+  /**
+   * The default values for the theme variables. Make sure $defaults exactly
+   * matches the $defaults in the theme-settings.php file.
+   */
   $defaults = array(             // <-- change this array
     'pixture_superfish' => 0,
   );
@@ -76,9 +80,41 @@ if (is_null(theme_get_setting('pixture_superfish'))) {  // <-- change this line
 }
 // Conditionally load the Superfish JS
 if (theme_get_setting('pixture_superfish')) {
-  drupal_add_css(drupal_get_path('theme', 'pixture_reloaded') .'/sf/css/superfish.css', 'theme');
+  drupal_add_css(drupal_get_path('theme', 'pixture_reloaded') .'/sf/css/superfish.css', 'theme', 'all', FALSE);
   drupal_add_js(drupal_get_path('theme', 'pixture_reloaded') .'/sf/js/superfish.js', 'theme');
 }
+
+/**
+ * Initialize theme settings for search overlabel.
+ */
+if (is_null(theme_get_setting('pixture_searchlabel'))) {  // <-- change this line
+  global $theme_key;
+
+ /**
+  * The default values for the theme variables. Make sure $defaults exactly
+  * matches the $defaults in the theme-settings.php file.
+  */
+  $defaults = array(             // <-- change this array
+    'pixture_searchlabel' => 0,
+  );
+
+  // Get default theme settings.
+  $settings = theme_get_settings($theme_key);
+
+  // Save default theme settings.
+  variable_set(
+    str_replace('/', '_', 'theme_'. $theme_key .'_settings'),
+    array_merge($defaults, $settings)
+  );
+  // Force refresh of Drupal internals.
+  theme_get_setting('', TRUE);
+  return $defaults['pixture_searchlabel'];
+}
+// Conditionally load the overlabel JS
+if (theme_get_setting('pixture_searchlabel')) {
+  drupal_add_js(drupal_get_path('theme', 'pixture_reloaded') .'/ol/overlabel.js', 'theme');
+}
+
 /**
  * Override or insert PHPTemplate variables into the page templates.
  *
@@ -130,6 +166,7 @@ function pixture_reloaded_preprocess_page(&$vars, $hook) {
   }
   $vars['body_classes'] = implode(' ', $body_classes); // Concatenate with spaces
 }
+
 /**
  * Override or insert PHPTemplate variables into the node templates.
  *
@@ -165,6 +202,7 @@ function pixture_reloaded_preprocess_node(&$vars, $hook) {
   $node_classes[] = 'node-type-'. $vars['node']->type;
   $vars['node_classes'] = implode(' ', $node_classes); // Concatenate with spaces
 }
+
 /**
  * Override or insert PHPTemplate variables into the comment templates.
  *
@@ -215,6 +253,7 @@ function pixture_reloaded_preprocess_comment(&$vars, $hook) {
     $vars['title'] = '';
   }
 }
+
 /**
  * Override or insert PHPTemplate variables into the block templates.
  *
@@ -236,6 +275,86 @@ function pixture_reloaded_preprocess_block(&$vars, $hook) {
   $vars['block_classes'] = implode(' ', $block_classes);
 
 }
+
+/**
+ * Override or insert PHPTemplate variables into the search_theme_form template.
+ *
+ * @param $vars
+ *   A sequential array of variables to pass to the theme template.
+ * @param $hook
+ *   The name of the theme function being called (not used in this case.)
+ */ 
+function pixture_reloaded_preprocess_search_theme_form(&$vars, $hook) {
+ 
+  // Modify elements of the search form
+  $vars['form']['search_theme_form']['#title'] = t('Search this site');
+ 
+  // Set a default value for the search box, don't use if using the theme setting to
+		// move the label into the search box
+  //$vars['form']['search_theme_form']['#value'] = t('Search');
+ 
+  // Change the text on the submit button
+  //$vars['form']['submit']['#value'] = t('Go');
+ 
+  // Rebuild the rendered version (search form only, rest remains unchanged)
+  unset($vars['form']['search_theme_form']['#printed']);
+  $vars['search']['search_theme_form'] = drupal_render($vars['form']['search_theme_form']);
+ 
+  // Rebuild the rendered version (submit button, rest remains unchanged)
+  unset($vars['form']['submit']['#printed']);
+  $vars['search']['submit'] = drupal_render($vars['form']['submit']);
+ 
+  // Collect all form elements to make it easier to print the whole form.
+  $vars['search_form'] = implode($vars['search']);
+}
+
+/**
+ * Return a themed form element.
+ *
+ * @param element
+ *   An associative array containing the properties of the element. 
+	*   Properties used: title, description, id, required
+ * @param $value
+ *    The form element's data.
+ */
+// Remove colons proceeding a question mark, such as in Poll questions.
+function phptemplate_form_element($element, $value) {
+  $output = theme_form_element($element, $value);
+  return preg_replace('@([.!?]):\s*(<span.*</span>){0,1}(</label>)@i', '$1$2$3', $output);
+}
+// Remove all colons form form elements.
+function pixture_reloaded_form_element($element, $value) {
+  // This is also used in the installer, pre-database setup.
+  $t = get_t();
+
+  $output = '<div class="form-item"';
+  if (!empty($element['#id'])) {
+    $output .= ' id="'. $element['#id'] .'-wrapper"';
+  }
+  $output .= ">\n";
+  $required = !empty($element['#required']) ? '<span class="form-required" title="'. $t('This field is required.') .'">*</span>' : '';
+
+  if (!empty($element['#title'])) {
+    $title = $element['#title'];
+    if (!empty($element['#id'])) {
+      $output .= ' <label for="'. $element['#id'] .'">'. $t('!title !required', array('!title' => filter_xss_admin($title), '!required' => $required)) ."</label>\n";
+    }
+    else {
+      $output .= ' <label>'. $t('!title !required', array('!title' => filter_xss_admin($title), '!required' => $required)) ."</label>\n";
+    }
+  }
+
+  $output .= " $value\n";
+
+  if (!empty($element['#description'])) {
+    $output .= ' <div class="description">'. $element['#description'] ."</div>\n";
+  }
+
+  $output .= "</div>\n";
+
+  return $output;
+}
+
 /**
  * Converts a string to a suitable html ID attribute.
  *
@@ -255,22 +374,4 @@ function pixture_reloaded_id_safe($string) {
     $string = 'n'. $string;
   }
   return strtolower(preg_replace('/[^a-zA-Z0-9-]+/', '-', $string));
-}
-
-/**
- * Implementation of HOOK_theme().
- */
-function pixture_reloaded_theme(){
-  return array(
-    'search_theme_form' => array(
-      'arguments' => array('form' => NULL),
-    ),
-  );
-}
-
-// The new theme function called by hook_theme.
-function pixture_reloaded_search_theme_form($form) {
-  // hide the label
-  $form['search_theme_form']['#title'] = NULL;
-  return drupal_render($form);
 }
