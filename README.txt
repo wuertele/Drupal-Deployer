@@ -14,6 +14,9 @@ and decimal point are inherited from the Format Number API module.
 Numeric types supported: signed or unsigned integers (tiny, small, medium, int),
 decimal and float.
 
+Integrates with:
+- Diff (http://drupal.org/project/diff)
+
 
 REQUIREMENTS
 ============

@@ -30,6 +30,14 @@
  */
 define('FORMATTED_NUMBER_BIGINT_SUPPORT_ENABLED', 0);
 
+/**
+ * Implementation of hook_init().
+ */
+function formatted_number_init() {
+  if (module_exists('diff')) {
+    module_load_include('inc', 'formatted_number', 'includes/formatted_number.diff');
+  }
+}
 
 /**
  * Implementation of hook_theme().
@@ -46,92 +54,99 @@ function formatted_number_theme() {
 /**
  * Helper function for field info/settings.
  */
-function formatted_number_get_fields_info() {
-  $fields = array(
-    'formatted_tinyint' => array(
-      'label' => t('Formatted tiny integer'),
-      'description' => t('Store a number in the database as a tiny integer (-128 to 127).'),
-      'maxlength' => 4,
-      'db_column' => array('type' => 'int', 'size' => 'tiny'),
-      'min' => -128, 'max' => 127,
-    ),
-    'formatted_tinyint_unsigned' => array(
-      'label' => t('Formatted tiny integer (unsigned)'),
-      'description' => t('Store a number in the database as a tiny unsigned integer (0 to 255).'),
-      'maxlength' => 4,
-      'db_column' => array('type' => 'int', 'size' => 'tiny', 'unsigned' => TRUE),
-      'min' => 0, 'max' => 255,
-    ),
-    'formatted_smallint' => array(
-      'label' => t('Formatted small integer'),
-      'description' => t('Store a number in the database as a small integer (-32768 to 32767).'),
-      'maxlength' => 7,
-      'db_column' => array('type' => 'int', 'size' => 'small'),
-      'min' => -32768, 'max' => 32767,
-    ),
-    'formatted_smallint_unsigned' => array(
-      'label' => t('Formatted small integer (unsigned)'),
-      'description' => t('Store a number in the database as a small unsigned integer (0 to 65535).'),
-      'maxlength' => 7,
-      'db_column' => array('type' => 'int', 'size' => 'small', 'unsigned' => TRUE),
-      'min' => 0, 'max' => 65535,
-    ),
-    'formatted_mediumint' => array(
-      'label' => t('Formatted medium integer'),
-      'description' => t('Store a number in the database as a medium integer (-8388608 to 8388607).'),
-      'maxlength' => 10,
-      'db_column' => array('type' => 'int', 'size' => 'medium'),
-      'min' => -8388608, 'max' => 8388607,
-    ),
-    'formatted_mediumint_unsigned' => array(
-      'label' => t('Formatted medium integer (unsigned)'),
-      'description' => t('Store a number in the database as a medium unsigned integer (0 to 16777215).'),
-      'maxlength' => 10,
-      'db_column' => array('type' => 'int', 'size' => 'medium', 'unsigned' => TRUE),
-      'min' => 0, 'max' => 16777215,
-    ),
-    'formatted_integer' => array(
-      'label' => t('Formatted integer'),
-      'description' => t('Store a number in the database as an integer (-2147483648 to 2147483647).'),
-      'maxlength' => 15,
-      'db_column' => array('type' => 'int'),
-      'min' => -2147483648, 'max' => 2147483647,
-    ),
-    'formatted_integer_unsigned' => array(
-      'label' => t('Formatted integer (unsigned)'),
-      'description' => t('Store a number in the database as an unsigned integer (0 to 4294967295).'),
-      'maxlength' => 15,
-      'db_column' => array('type' => 'int', 'unsigned' => TRUE),
-      'min' => 0, 'max' => 4294967295,
-    ),
-    'formatted_decimal' => array(
-      'label' => t('Formatted decimal'),
-      'description' => t('Store a number in the database in a fixed decimal format.'),
-      'maxlength' => 30,
-      'db_column' => array('type' => 'numeric'),
-    ),
-    'formatted_float' => array(
-      'label' => t('Formatted float'),
-      'description' => t('Store a number in the database in a floating point format.'),
-      'maxlength' => 30,
-      'db_column' => array('type' => 'float'),
-    ),
-  );
-  if (FORMATTED_NUMBER_BIGINT_SUPPORT_ENABLED) {
+function formatted_number_get_fields_info($types = 'all') {
+  $fields = array();
+  if ($types == 'all' || $types == 'int') {
     $fields += array(
-      'formatted_bigint' => array(
-        'label' => t('Formatted big integer'),
-        'description' => t('Store a number in the database as a big integer (-9223372036854775808 to 9223372036854775807).'),
-        'maxlength' => 30,
-        'db_column' => array('type' => 'int', 'size' => 'big'),
-        'min' => -9223372036854775808, 'max' => 9223372036854775807,
+      'formatted_tinyint' => array(
+        'label' => t('Formatted tiny integer'),
+        'description' => t('Store a number in the database as a tiny integer (-128 to 127).'),
+        'maxlength' => 4,
+        'db_column' => array('type' => 'int', 'size' => 'tiny'),
+        'min' => -128, 'max' => 127,
       ),
-      'formatted_bigint_unsigned' => array(
-        'label' => t('Formatted big integer (unsigned)'),
-        'description' => t('Store a number in the database as a big unsigned integer (0 to 18446744073709551615).'),
+      'formatted_tinyint_unsigned' => array(
+        'label' => t('Formatted tiny integer (unsigned)'),
+        'description' => t('Store a number in the database as a tiny unsigned integer (0 to 255).'),
+        'maxlength' => 4,
+        'db_column' => array('type' => 'int', 'size' => 'tiny', 'unsigned' => TRUE),
+        'min' => 0, 'max' => 255,
+      ),
+      'formatted_smallint' => array(
+        'label' => t('Formatted small integer'),
+        'description' => t('Store a number in the database as a small integer (-32768 to 32767).'),
+        'maxlength' => 7,
+        'db_column' => array('type' => 'int', 'size' => 'small'),
+        'min' => -32768, 'max' => 32767,
+      ),
+      'formatted_smallint_unsigned' => array(
+        'label' => t('Formatted small integer (unsigned)'),
+        'description' => t('Store a number in the database as a small unsigned integer (0 to 65535).'),
+        'maxlength' => 7,
+        'db_column' => array('type' => 'int', 'size' => 'small', 'unsigned' => TRUE),
+        'min' => 0, 'max' => 65535,
+      ),
+      'formatted_mediumint' => array(
+        'label' => t('Formatted medium integer'),
+        'description' => t('Store a number in the database as a medium integer (-8388608 to 8388607).'),
+        'maxlength' => 10,
+        'db_column' => array('type' => 'int', 'size' => 'medium'),
+        'min' => -8388608, 'max' => 8388607,
+      ),
+      'formatted_mediumint_unsigned' => array(
+        'label' => t('Formatted medium integer (unsigned)'),
+        'description' => t('Store a number in the database as a medium unsigned integer (0 to 16777215).'),
+        'maxlength' => 10,
+        'db_column' => array('type' => 'int', 'size' => 'medium', 'unsigned' => TRUE),
+        'min' => 0, 'max' => 16777215,
+      ),
+      'formatted_integer' => array(
+        'label' => t('Formatted integer'),
+        'description' => t('Store a number in the database as an integer (-2147483648 to 2147483647).'),
+        'maxlength' => 15,
+        'db_column' => array('type' => 'int'),
+        'min' => -2147483648, 'max' => 2147483647,
+      ),
+      'formatted_integer_unsigned' => array(
+        'label' => t('Formatted integer (unsigned)'),
+        'description' => t('Store a number in the database as an unsigned integer (0 to 4294967295).'),
+        'maxlength' => 15,
+        'db_column' => array('type' => 'int', 'unsigned' => TRUE),
+        'min' => 0, 'max' => 4294967295,
+      ),
+    );
+    if (FORMATTED_NUMBER_BIGINT_SUPPORT_ENABLED) {
+      $fields += array(
+        'formatted_bigint' => array(
+          'label' => t('Formatted big integer'),
+          'description' => t('Store a number in the database as a big integer (-9223372036854775808 to 9223372036854775807).'),
+          'maxlength' => 30,
+          'db_column' => array('type' => 'int', 'size' => 'big'),
+          'min' => -9223372036854775808, 'max' => 9223372036854775807,
+        ),
+        'formatted_bigint_unsigned' => array(
+          'label' => t('Formatted big integer (unsigned)'),
+          'description' => t('Store a number in the database as a big unsigned integer (0 to 18446744073709551615).'),
+          'maxlength' => 30,
+          'db_column' => array('type' => 'int', 'size' => 'big', 'unsigned' => TRUE),
+          'min' => 0, 'max' => 18446744073709551615,
+        ),
+      );
+    }
+  }
+  if ($types == 'all' || $types == 'real') {
+    $fields += array(
+      'formatted_decimal' => array(
+        'label' => t('Formatted decimal'),
+        'description' => t('Store a number in the database in a fixed decimal format.'),
         'maxlength' => 30,
-        'db_column' => array('type' => 'int', 'size' => 'big', 'unsigned' => TRUE),
-        'min' => 0, 'max' => 18446744073709551615,
+        'db_column' => array('type' => 'numeric'),
+      ),
+      'formatted_float' => array(
+        'label' => t('Formatted float'),
+        'description' => t('Store a number in the database in a floating point format.'),
+        'maxlength' => 30,
+        'db_column' => array('type' => 'float'),
       ),
     );
   }
@@ -144,10 +159,7 @@ function formatted_number_get_fields_info() {
 function formatted_number_field_info() {
   $fields = array();
   foreach (formatted_number_get_fields_info() as $key => $info) {
-    $fields[$key] = array(
-      'label' => $info['label'],
-      'description' => $info['description'],
-    );
+    $fields[$key] = array('label' => $info['label'], 'description' => $info['description']);
   }
   return $fields;
 }
@@ -174,6 +186,8 @@ function formatted_number_field_settings($op, $field) {
         '#description' => t('Define a string that should suffixed to the value, like m², m/s², kb/s. Leave blank for none. Separate singular and plural values with a pipe (pound|pounds).'),
       );
 
+      $fields_info = formatted_number_get_fields_info();
+      $real_field_types = array_keys(formatted_number_get_fields_info('real'));
       $minmax_fields = array(
         'min' => array(
           '#title' => t('Minimum'),
@@ -191,17 +205,16 @@ function formatted_number_field_settings($op, $field) {
           $default_value = '';
         }
         else {
-          if (in_array($field['type'], array('formatted_tinyint', 'formatted_tinyint_unsigned', 'formatted_smallint', 'formatted_smallint_unsigned', 'formatted_mediumint', 'formatted_mediumint_unsigned', 'formatted_integer', 'formatted_integer_unsigned', 'formatted_bigint', 'formatted_bigint_unsigned'))) {
-            $default_attributes['decimals'] = 0;
-            $default_value = format_number($default_value, 0);
-          }
-          else {
+          if (in_array($field['type'], $real_field_types)) {
             // Initialize default value with as many decimal digits as necessary.
             $decimals = (strpos($default_value, '.') !== FALSE ? drupal_strlen(preg_replace('#^.*\.(.*)$#', '\1', $default_value)) : 0);
             $default_value = format_number($default_value, $decimals);
           }
+          else {
+            $default_attributes['decimals'] = 0;
+            $default_value = format_number($default_value, 0);
+          }
         }
-        $fields_info = formatted_number_get_fields_info();
         $field_maxlength = $fields_info[$field['type']]['maxlength'];
         $form[$name] = array(
           '#type' => 'textfield',
@@ -214,7 +227,7 @@ function formatted_number_field_settings($op, $field) {
         );
       }
 
-      if ($field['type'] == 'formatted_decimal' || $field['type'] == 'formatted_float') {
+      if (in_array($field['type'], $real_field_types)) {
         if ($field['type'] == 'formatted_decimal') {
           $form['precision'] = array(
             '#type' => 'select',
@@ -265,7 +278,8 @@ function formatted_number_field_settings($op, $field) {
 
     case 'save':
       $field_option_names = array('prefix', 'suffix', 'min', 'max');
-      if ($field['type'] == 'formatted_decimal' || $field['type'] == 'formatted_float') {
+      $real_field_types = array_keys(formatted_number_get_fields_info('real'));
+      if (in_array($field['type'], $real_field_types)) {
         if ($field['type'] == 'formatted_decimal') {
           $field_option_names[] = 'precision';
         }
@@ -320,19 +334,12 @@ function formatted_number_field($op, &$node, $field, &$items, $teaser, $page) {
  * Implementation of hook_field_formatter_info().
  */
 function formatted_number_field_formatter_info() {
+  $all_field_types = array_keys(formatted_number_get_fields_info());
+  $real_field_types = array_keys(formatted_number_get_fields_info('real'));
   return array(
-    'default' => array(
-      'label' => t('Default'),
-      'field types' => array('formatted_tinyint', 'formatted_tinyint_unsigned', 'formatted_smallint', 'formatted_smallint_unsigned', 'formatted_mediumint', 'formatted_mediumint_unsigned', 'formatted_integer', 'formatted_integer_unsigned', 'formatted_bigint', 'formatted_bigint_unsigned', 'formatted_decimal', 'formatted_float'),
-    ),
-    'nozeros' => array(
-      'label' => t('Remove redundant zeros'),
-      'field types' => array('formatted_decimal', 'formatted_float'),
-    ),
-    'unformatted' => array(
-      'label' => t('Unformatted'),
-      'field types' => array('formatted_tinyint', 'formatted_tinyint_unsigned', 'formatted_smallint', 'formatted_smallint_unsigned', 'formatted_mediumint', 'formatted_mediumint_unsigned', 'formatted_integer', 'formatted_integer_unsigned', 'formatted_bigint', 'formatted_bigint_unsigned', 'formatted_decimal', 'formatted_float'),
-    ),
+    'default' => array('label' => t('Default'), 'field types' => $all_field_types),
+    'nozeros' => array('label' => t('Remove redundant zeros'), 'field types' => $real_field_types),
+    'unformatted' => array('label' => t('Unformatted'), 'field types' => $all_field_types),
   );
 }
 
@@ -341,10 +348,7 @@ function formatted_number_field_formatter_info() {
  */
 function formatted_number_widget_info() {
   return array(
-    'formatted_number' => array(
-      'label' => t('Numeric text field'),
-      'field types' => array('formatted_tinyint', 'formatted_tinyint_unsigned', 'formatted_smallint', 'formatted_smallint_unsigned', 'formatted_mediumint', 'formatted_mediumint_unsigned', 'formatted_integer', 'formatted_integer_unsigned', 'formatted_bigint', 'formatted_bigint_unsigned', 'formatted_decimal', 'formatted_float'),
-    ),
+    'formatted_number' => array('label' => t('Numeric text field'), 'field types' => array_keys(formatted_number_get_fields_info())),
   );
 }
 
@@ -574,7 +578,7 @@ function theme_formatted_number($element) {
  * @ingroup themeable
  */
 function theme_formatted_number_formatter_unformatted($element) {
-  return $element['#item']['value'];
+  return isset($element['#item']['value']) ? $element['#item']['value'] : '';
 }
 
 /**
@@ -583,7 +587,7 @@ function theme_formatted_number_formatter_unformatted($element) {
  * @ingroup themeable
  */
 function theme_formatted_number_formatter_generic($element) {
-  $value = $element['#item']['value'];
+  $value = isset($element['#item']['value']) ? $element['#item']['value'] : NULL;
   if (!is_numeric($value)) {
     return '';
   }
