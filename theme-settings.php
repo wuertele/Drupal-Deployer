@@ -18,6 +18,7 @@ function phptemplate_settings($saved_settings) {
   $defaults = array(
     'pixture_width' => '85%',
     'pixture_superfish' => 0,
+				'pixture_searchlabel' => 0,
   );
 
   // Reset to default value if the user specified setting is invalid
@@ -42,6 +43,13 @@ function phptemplate_settings($saved_settings) {
     '#title' => t('Enable Superfish Drop Menus'),
     '#default_value' => $settings['pixture_superfish'],
     '#description' => t('Check this setting to enable support for Superfish drop menus. NOTE: In order for the drop menu to show you MUST uncheck Primary links in the "Toggle display" settings. See the README for full instructions.'),
+  );
+		
+  $form['pixture_searchlabel'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Search label in search box'),
+    '#default_value' => $settings['pixture_searchlabel'],
+    '#description' => t('Check this setting to display the search label inside the search box. You can modify the text in the label using <em>function pixture_reloaded_preprocess_search_theme_form</em> in template.php.'),
   );
 
   // Return the additional form widgets
