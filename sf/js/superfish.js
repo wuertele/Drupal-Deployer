@@ -9,8 +9,10 @@
  *
  * CHANGELOG: http://users.tpg.com.au/j_birch/plugins/superfish/changelog.txt
  */
-
-;(function($){
+$(document).ready(function() {
+  $('#superfish-inner ul').superfish();
+});
+ (function($){
 	$.fn.superfish = function(op){
 
 		var sf = $.fn.superfish,
@@ -82,19 +84,19 @@
 		shadowClass : 'sf-shadow'
 	};
 	sf.defaults = {
-		hoverClass	: 'sfHover',
-		pathClass	: 'overideThisToUse',
-		pathLevels	: 1,
-		delay		: 700,
-		animation	: {opacity:'show'},
-		speed		: 'slow', 
-		autoArrows	: true,
-		dropShadows : false,
-		disableHI	: true,		// true disables hoverIntent detection
-		onInit		: function(){}, // callback functions
-		onBeforeShow: function(){},
-		onShow		: function(){},
-		onHide		: function(){}
+		hoverClass	  : 'sfHover',
+		pathClass	   : 'overideThisToUse',
+		pathLevels	  : 1,
+		delay		      : 700,
+		animation	   : {opacity:'show'},
+		speed		      : 'slow', 
+		autoArrows	  : true,
+		dropShadows  : false,
+		disableHI	   : true,		// true disables hoverIntent detection
+		onInit		     : function(){}, // callback functions
+		onBeforeShow : function(){},
+		onShow		     : function(){},
+		onHide		     : function(){}
 	};
 	$.fn.extend({
 		hideSuperfishUl : function(){
