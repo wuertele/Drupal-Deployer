@@ -83,18 +83,17 @@ function xmlsitemap_file_xmlsitemap_links($type = NULL, $excludes = array()) {
       $excludes = array('');
     }
     $query_args = array_merge(array(strlen(file_directory_path()) + 2), $excludes, array(_xmlsitemap_file_frontpage()));
-    $result = db_query(db_rewrite_sql("SELECT n.nid, n.type, n.promote, f.fid, f.filepath, s.comment_count, xn.priority_override, xf.changed, xf.previously_changed, ua.dst AS alias
+    $result = db_query(db_rewrite_sql("SELECT n.nid, n.type, n.promote, f.fid, f.filepath, s.comment_count, xn.priority_override, xf.changed, xf.previously_changed
       FROM {node} n
       INNER JOIN {xmlsitemap_files} xf ON n.nid = xf.nid
       LEFT JOIN {node_comment_statistics} s ON n.nid = s.nid
       LEFT JOIN {xmlsitemap_node} xn ON n.nid = xn.nid
       LEFT JOIN {file} f ON f.fid = xf.fid
-      LEFT JOIN {url_alias} ua ON ua.src = CONCAT('system/files/', SUBSTRING(f.filepath FROM %d))
       WHERE n.status > 0
       AND (n.type NOT IN (". db_placeholders($excludes, 'varchar') .") AND xn.priority_override IS NULL OR xn.priority_override >= 0)
       AND f.filepath <> '%s'
       AND r.list = 1
-      GROUP BY n.nid, n.type, n.promote, f.fid, f.filepath, s.comment_count, xn.priority_override, xf.changed, xf.previously_changed, ua.dst"),
+      GROUP BY n.nid, n.type, n.promote, f.fid, f.filepath, s.comment_count, xn.priority_override, xf.changed, xf.previously_changed"),
       $query_args
     );
     while ($file = db_fetch_object($result)) {
@@ -103,7 +102,8 @@ function xmlsitemap_file_xmlsitemap_links($type = NULL, $excludes = array()) {
         $access = module_invoke_all('file_download', $file->filepath);
       }
       if (!in_array(-1, $access)) {
-        db_query("INSERT INTO {xmlsitemap} (loc, lastmod, changefreq, priority) VALUES ('%s', %d, %d, %f)", xmlsitemap_file_create_url($file->filepath, $file->alias), filemtime($file->filepath), xmlsitemap_file_frequency($file), xmlsitemap_node_priority($file));
+        $alias = drupal_lookup_path('alias', $file->filepath);
+        db_query("INSERT INTO {xmlsitemap} (loc, lastmod, changefreq, priority) VALUES ('%s', %d, %d, %f)", xmlsitemap_file_create_url($file->filepath, $alias !== FALSE ? $alias : NULL), filemtime($file->filepath), xmlsitemap_file_frequency($file), xmlsitemap_node_priority($file));
       }
     }
   }
