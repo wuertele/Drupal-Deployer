@@ -339,26 +339,32 @@ function mollom_form_alter(&$form, $form_state, $form_id) {
     // Retrieve the mode of protection that is required for this form:
     $mode = _mollom_get_mode($form_id);
 
-    // Some special code that enables to /hack/ the session ID and
-    // the CAPTCHA into the form:
-    if (isset($form_state['mollom'])) {
-      if (isset($form_state['mollom']['captcha']) && $form_state['mollom']['captcha'] == TRUE) {
-        $mode = MOLLOM_MODE_CAPTCHA;
+    if ($mode) {
+      // Compute the weight of the CAPTCHA so we can position it in the form.
+      $weight = 99999;
+      foreach (element_children($form) as $key) {
+        // Iterate over the form elements looking for buttons:
+        if (isset($form[$key]['#type']) && ($form[$key]['#type'] == 'submit' || $form[$key]['#type'] == 'button')) {
+          // For each button, slightly increase their weight to allocate
+          // room for the CAPTCHA:
+          if (isset($form[$key]['#weight'])) {
+            $form[$key]['#weight'] = $form[$key]['#weight'] + 0.0002;
+          }
+          else {
+            $form[$key]['#weight'] = 1.0002;
+          }
+
+          // We want to position the CAPTCHA just before the first button so
+          // we make the CAPTCHA's weight slightly lighter than the lightest
+          // button's weight.
+          $weight = min($weight, $form[$key]['#weight'] - 0.0001);
+        }
       }
 
-      $form['#input'] = TRUE;
-      $form['#process'][] = 'mollom_form_process';
-    }
-
-    if ($mode == MOLLOM_MODE_ANALYSIS) {
-      _mollom_debug('mollom_form_alter registered mollom_validate_analysis handler');
-      $form['#validate'][] = 'mollom_validate_analysis';
-      _mollom_insert_session_id($form, $form_state);
-    }
-    elseif ($mode == MOLLOM_MODE_CAPTCHA) {
-      _mollom_debug('mollom_form_alter registered mollom_validate_captcha handler');
-      $form['#validate'][] = 'mollom_validate_captcha';
-      _mollom_insert_captcha($form, $form_state);
+      $form['mollom'] = array(
+        '#type' => 'mollom',
+        '#mode' => $mode,
+      );
     }
   }
 
@@ -744,9 +750,84 @@ function _mollom_fallback() {
 }
 
 /**
+ * Implementation of hook_elements().
+ */
+function mollom_elements() {
+  return array(
+    'mollom' => array(
+      '#input' => TRUE,
+      '#process' => array(
+        'mollom_expand_element',
+      ),
+    ),
+  );
+}
+
+/**
+ * Expand the mollom element. This is the #process 
+ *
+ * @param $element
+ *   An associative array containing the properties of the element.
+ * @param $edit
+ *   An associative array of values posted specifically to that element.
+ * @param $form_state
+ *   The state of the parent form.
+ * @return
+ *   The mollom element expanded with a captcha if necessary.
+ */
+function mollom_expand_element($element, $edit, $form_state) {
+  $element['#tree'] = TRUE;
+
+  $mode = $element['#mode'];
+
+  if (!empty($form_state['submitted'])) {
+    _mollom_debug("mollom_expand_element: submitted handler");
+    if ($mode == MOLLOM_MODE_ANALYSIS) {
+      $mode = mollom_validate_analysis($form_state, $edit);
+    }
+    else {
+      $mode = mollom_validate_captcha($edit);
+    }
+  }
+
+  if ($mode == MOLLOM_MODE_ANALYSIS) {
+    // Nothing to do here, we are waiting for the content to be submitted.
+  }
+  elseif ($mode == MOLLOM_MODE_CAPTCHA) {
+    _mollom_debug('mollom_form_alter registered mollom_validate_captcha handler');
+    _mollom_insert_captcha($element, $edit);
+  }
+
+  // Store the session ID that Mollom returned to make sure that it persists across page requests:
+  $element['session_id'] = array(
+    '#type' => 'hidden',
+    '#value' => !empty($edit['session_id']) ? $edit['session_id'] : '',
+  );
+  return $element;
+}
+
+/**
+ * Implementation of hook_theme.
+ */
+function mollom_theme() {
+  return array(
+    'mollom' => array(
+      'arguments' => array('element' => NULL),
+    ),
+  );
+}
+
+/**
+ * Theme function of the mollom form element.
+ */
+function theme_mollom($element) {
+  return isset($element['#children']) ? $element['#children'] : '';
+}
+
+/**
  * This the a form API validator function that will be called to perform text analysis on a form.
  */
-function mollom_validate_analysis($form, &$form_state) {
+function mollom_validate_analysis($form_state, &$edit) {
 
   _mollom_debug("mollom_validate_analysis for '". $form_state['values']['form_id'] ."'");
 
@@ -768,7 +849,7 @@ function mollom_validate_analysis($form, &$form_state) {
   }
 
   if (isset($form_state['values']['op'])) {
-    $mollom = isset($form_state['values']['session_id']) ? array('session_id' => $form_state['values']['session_id']) : array();
+    $mollom = !empty($edit['session_id']) ? array('session_id' => $edit['session_id']) : array();
 
     $result = mollom('mollom.checkContent', $data + $mollom);
 
@@ -776,7 +857,7 @@ function mollom_validate_analysis($form, &$form_state) {
       _mollom_debug('mollom_validate_analysis retrieved spam status '. $result['spam'] ." and session ID '". $result['session_id'] ."'");
 
       // Store the session ID that Mollom returned and make sure that it persists across page requests:
-      _mollom_register_session_id($form_state, $result['session_id']);
+      $edit['session_id'] = $result['session_id'];
 
       // Check the spam results and act accordingly:
       if ($result['spam'] == MOLLOM_ANALYSIS_HAM) {
@@ -784,19 +865,28 @@ function mollom_validate_analysis($form, &$form_state) {
         $GLOBALS['mollom_response'] = $result;
 
         watchdog('mollom', 'Ham: %message', array('%message' => $data['post_body']));
+        return MOLLOM_MODE_DISABLED;
       }
       elseif ($result['spam'] == MOLLOM_ANALYSIS_SPAM) {
         form_set_error('mollom', t('Your submission has triggered the installed spam filter and will not be accepted.'));
         watchdog('mollom', 'Spam: %message', array('%message' => $data['post_body']));
+        return MOLLOM_MODE_DISABLED;
       }
       else {
-        form_set_error('mollom', t('We are sorry, but the spam filter on this site decided that your submission could be spam. Please fill in the CAPTCHA first.'));
-        watchdog('mollom', 'Unsure: %message', array('%message' => $data['post_body']));
-        _mollom_register_captcha($form_state);
+        if (isset($edit['captcha'])) {
+          // Already got a captcha answer, try to validate it.
+          return mollom_validate_captcha($edit);
+        }
+        else {
+          // A captcha will be generated.
+          form_set_error('mollom', t('We are sorry, but the spam filter on this site decided that your submission could be spam. Please fill in the CAPTCHA first.'));
+          watchdog('mollom', 'Unsure: %message', array('%message' => $data['post_body']));
+          return MOLLOM_MODE_CAPTCHA;
+        }
       }
     }
     else {
-      _mollom_fallback();
+      return _mollom_fallback();
     }
   }
 }
@@ -804,16 +894,16 @@ function mollom_validate_analysis($form, &$form_state) {
 /**
  * This the a form API validator function that will be called to check a CAPTCHA on a form.
  */
-function mollom_validate_captcha(&$form, &$form_state) {
+function mollom_validate_captcha($edit) {
 
-  _mollom_debug("mollom_validate_captcha for '". $form_state['values']['form_id'] ."'");
+  _mollom_debug("mollom_validate_captcha");
 
-  if (isset($form_state['values']['session_id'])) {
-    if (isset($form_state['values']['captcha'])) {
+  if (!empty($edit['session_id'])) {
+    if (!empty($edit['captcha'])) {
       // Check the CAPTCHA result:
       $result = mollom('mollom.checkCaptcha', array(
-        'session_id' => $form_state['values']['session_id'],
-        'captcha_result' => $form_state['values']['captcha'],
+        'session_id' => $edit['session_id'],
+        'captcha_result' => $edit['captcha'],
         'author_ip' => ip_address(),
       ));
 
@@ -821,107 +911,18 @@ function mollom_validate_captcha(&$form, &$form_state) {
 
       if ($result == FALSE) {
         watchdog('mollom', 'Incorrect CAPTCHA');
-        form_set_error('captcha', t('The entered CAPTCHA solution is not correct. We generated a new CAPTCHA so please try again.'));
-        _mollom_register_captcha($form_state);
+        form_set_error('mollom][captcha', t('The entered CAPTCHA solution is not correct. We generated a new CAPTCHA so please try again.'));
+        return MOLLOM_MODE_CAPTCHA;
       }
       else {
-        // Keep track of the response so we can use it later on to save the data in the database:
-        $GLOBALS['mollom_response']['session_id'] = $form_state['values']['session_id'];
-
-        // Pass FALSE so we actually remove the CAPTCHA from the form:
-        _mollom_register_captcha($form_state, FALSE);  // TODO: this break the 'request password form' -- it shouldn't rebuild the form.  Removing this breaks the comment form.
-
         watchdog('mollom', 'Correct CAPTCHA');
+        return MOLLOM_MODE_DISABLED;
       }
     }
     else {
-      form_set_error('captcha', t('The CAPTCHA field is required.'));
-      _mollom_register_captcha($form_state);
+      form_set_error('mollom][captcha', t('The CAPTCHA field is required.'));
+      return MOLLOM_MODE_CAPTCHA;
     }
-  }
-  else {
-    // Mark the form so that we generate a new CAPTCHA.
-    _mollom_register_captcha($form_state);
-  }
-}
-
-/**
- * This is a helper function to insert the CAPTCHA into the form.  We restore
- * the context at the right time (which happens to be when hook_form_process
- * is called).
- */
-function mollom_form_process($form, $edit, &$form_state, $complete_form) {
-  if (isset($form_state['mollom'])) {
-    if (isset($form_state['mollom']['post'])) {
-      _mollom_debug("_mollom_form_process found CAPTCHA request");
-      $form['#post'] = $form_state['mollom']['post'];
-    }
-  }
-  return $form;
-}
-
-/**
- * This is a help function that registers a Mollom session ID so that
- * on the next page, we can insert the session ID in the form.
- */
-// TODO: is this function required?
-function _mollom_register_session_id(&$form_state, $session_id) {
-  _mollom_debug("_mollom_register_session_id with session ID '$session_id'");
-  $form_state['values']['session_id'] = $session_id;  // Required to make things flow ...
-}
-
-/**
- * This function inserts a Mollom session ID into the form. It is
- * called during the construction of the form, just before the form
- * is rendered.
- */
-function _mollom_insert_session_id(&$form, $form_state) {
-  // The function '_mollom_insert_session_id' can be called as the
-  // result of a POST operation or as the result of an internal form
-  // API operation.  Depending on the caller, the session ID can be
-  // found in a different location.
-  // TODO: is this something we can make more consistent in Drupal 7?
-
-  if (isset($form_state['values']) && isset($form_state['values']['session_id'])) {
-    _mollom_debug("_mollom_insert_session_id with session ID '". $form_state['values']['session_id'] ."'");
-
-    $form['session_id'] = array(
-      '#type' => 'hidden',
-      '#value' => $form_state['values']['session_id'],
-    );
-  }
-
-  if (isset($form_state['post']) && isset($form_state['post']['session_id'])) {
-    _mollom_debug("_mollom_insert_session_id with session ID '". $form_state['post']['session_id'] ."'");
-
-    $form['session_id'] = array(
-      '#type' => 'hidden',
-      '#value' => $form_state['post']['session_id'],
-    );
-  }
-}
-
-/**
- * This is a helper function that registers the form data so that on
- * the next page, we can insert the CAPTCHA on the form.  We store
- * the form's context in $form_state['mollom'] and ask the form to
- * rebuild itself.  The rebuilding code will take the saved context
- * and use it in the rebuild form: see mollom_form_process().  This
- * is a bit of a hack but the form API code is a little braindead
- * when it comes to dynamic forms.  Let's try to make this better in
- * Drupal 7 and beyond.
- */
-function _mollom_register_captcha(&$form_state, $captcha = TRUE) {
-  $form_id = $form_state['values']['form_id'];
-
-  _mollom_debug("_mollom_register_captcha for $form_id with captcha ". (int)$captcha);
-
-  $form_state['mollom']['post'] = $_POST;       // This is quite a hack ...
-  $form_state['mollom']['captcha'] = $captcha;  // Whether to add or remove the CAPTCHA ...
-
-  $mode = _mollom_get_mode($form_id);
-  if ($mode == MOLLOM_MODE_ANALYSIS) {
-    $form_state['rebuild'] = TRUE;
   }
 }
 
@@ -930,22 +931,14 @@ function _mollom_register_captcha(&$form_state, $captcha = TRUE) {
  * during the construction of the form, just before the form
  * is rendered.
  */
-function _mollom_insert_captcha(&$form, $form_state) {
+function _mollom_insert_captcha(&$element, &$edit) {
   _mollom_debug('_mollom_insert_captcha');
 
   // Prepare the author's IP:
   $data['author_ip'] = ip_address();
 
-  // The function '_mollom_insert_captcha' can be called as the result
-  // of a POST operation or as the result of an internal form API
-  // operation.  Depending on the caller, the session ID can be found
-  // in a different location.
-  // TODO: is this something we can make more consistent in Drupal 7?
-  if (isset($form_state['values']) && isset($form_state['values']['session_id'])) {
-    $data['session_id'] = $form_state['values']['session_id'];
-  }
-  if (isset($form_state['post']) && isset($form_state['post']['session_id'])) {
-    $data['session_id'] = $form_state['post']['session_id'];
+  if (!empty($edit['session_id'])) {
+    $data['session_id'] = $edit['session_id'];
   }
 
   // Request a CAPTCHA -- we always default to an image CAPTCHA:
@@ -958,50 +951,21 @@ function _mollom_insert_captcha(&$form, $form_state) {
     // AUDIO captcha instead:
     drupal_add_js(drupal_get_path('module', 'mollom') .'/mollom.js');
 
-    // Compute the weight of the CAPTCHA so we can position it in the form.
-    $weight = 99999;
-    foreach (element_children($form) as $key) {
-      // Iterate over the form elements looking for buttons:
-      if (isset($form[$key]['#type']) && ($form[$key]['#type'] == 'submit' || $form[$key]['#type'] == 'button')) {
-        // For each button, slightly increase their weight to allocate
-        // room for the CAPTCHA:
-        if (isset($form[$key]['#weight'])) {
-          $form[$key]['#weight'] = $form[$key]['#weight'] + 0.0002;
-        }
-        else {
-          $form[$key]['#weight'] = 1.0002;
-        }
-
-        // We want to position the CAPTCHA just before the first button so
-        // we make the CAPTCHA's weight slightly lighter than the lightest
-        // button's weight.
-        $weight = min($weight, $form[$key]['#weight'] - 0.0001);
-      }
-    }
-
-    // Add the session ID to the form:
-    $form['session_id'] = array(
-      '#type' => 'hidden',
-      '#name' => 'session_id',
-      '#id' => 'edit-session-id',
-      '#value' => $response['session_id'],
-    );
-
     // Add the CAPTCHA to the form:
-    $form['captcha'] = array(
+    $element['captcha'] = array(
       '#type' => 'textfield',
-      '#name' => 'captcha',
-      '#id' => 'edit-captcha',
+      '#processed' => TRUE,
       '#title' => t('Word verification'),
       '#field_prefix' => '<div id="captcha"><a href="http://mollom.com"><img src="'. url($response['url']) .'" alt="Mollom CAPTCHA" /></a> (<a href="#" id="audio-captcha">'. t('play audio CAPTCHA') .'</a>)</div>',
       '#required' => TRUE,
       '#size' => 10,
+      // The previously entered value is useless because the captcha is regenerated at each form rebuild.
+      '#value' => '',
       '#description' => t("Type the characters you see in the picture above; if you can't read them, submit the form and a new image will be generated."),
-      '#weight' => $weight,
     );
 
-    // Sort the form before rendering:
-    unset($form['#sorted']);
+    // Store the session ID that Mollom returned to make sure that it persists across page requests:
+    $edit['session_id'] = $response['session_id'];
   }
 }
 
@@ -1192,4 +1156,5 @@ function _mollom_authentication() {
 function _mollom_debug($message) {
   // print $message .'<br />';
   // watchdog('mollom', $message);
+  error_log($message);
 }
