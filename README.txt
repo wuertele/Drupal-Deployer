@@ -12,8 +12,16 @@ in the theme settings page - admin/build/themes/settings/pixture_reloaded
 Width:
 
 You can also set the overall width of your site (scroll to the 
-bottom of the theme settins page). Instructions are included on the theme 
-settings page.
+bottom of the theme settings page). 
+
+Specify the page width in percent ratio (50-100%) for liquid layout, 
+or in px (800-1600px) for fixed width layout. If an invalid value is specified, 
+the default value (85%) is used instead. You can leave this field blank to use 
+the default value. You need to add either % or px after the number.
+
+If you use percentages be aware that the layout could break if the user re-sizes the 
+browser window down to less than 450px or so, depending on how many sidebars you have
+active and your actual content.
 
 
 Superfish Drop Menu:
