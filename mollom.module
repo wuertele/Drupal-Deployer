@@ -954,29 +954,27 @@ function mollom_validate_captcha(&$mollom_state, $edit) {
 
   _mollom_debug("mollom_validate_captcha");
 
-  if (!empty($edit['mollom_id'])) {
-    if (!empty($edit['captcha'])) {
-      // Check the CAPTCHA result:
-      $result = mollom('mollom.checkCaptcha', array(
-        'session_id' => $mollom_state['#session_id'],
-        'captcha_result' => $edit['captcha'],
-        'author_ip' => ip_address(),
-      ));
+  if (!empty($edit['captcha'])) {
+    // Check the CAPTCHA result:
+    $result = mollom('mollom.checkCaptcha', array(
+      'session_id' => $mollom_state['#session_id'],
+      'captcha_result' => $edit['captcha'],
+      'author_ip' => ip_address(),
+    ));
 
-      _mollom_debug('mollom_validate_captcha the captcha result was '. (int)$result);
+    _mollom_debug('mollom_validate_captcha the captcha result was '. (int)$result);
 
-      if ($result == FALSE) {
-        watchdog('mollom', 'Incorrect CAPTCHA');
-        form_set_error('mollom][captcha', t('The entered CAPTCHA solution is not correct. We generated a new CAPTCHA so please try again.'));
-      }
-      else {
-        watchdog('mollom', 'Correct CAPTCHA');
-        $mollom_state['#passed_captcha'] = TRUE;
-      }
+    if ($result == FALSE) {
+      watchdog('mollom', 'Incorrect CAPTCHA');
+      form_set_error('mollom][captcha', t('The entered CAPTCHA solution is not correct. We generated a new CAPTCHA so please try again.'));
     }
     else {
-      form_set_error('mollom][captcha', t('The CAPTCHA field is required.'));
+      watchdog('mollom', 'Correct CAPTCHA');
+      $mollom_state['#passed_captcha'] = TRUE;
     }
+  }
+  else {
+    form_set_error('mollom][captcha', t('The CAPTCHA field is required.'));
   }
 }
 
