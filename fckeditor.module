@@ -839,13 +839,18 @@ function fckeditor_sorted_roles() {
  */
 function fckeditor_is_compatible_client() {
   $editor_local_path    = fckeditor_path(TRUE);
-  $fckeditor_main_file  = $editor_local_path .'/fckeditor.php';
+  
+  if (!function_exists('version_compare') || version_compare(phpversion(), '5', '<'))
+    $fckeditor_main_file  = $editor_local_path .'/fckeditor_php4.php';
+  else
+    $fckeditor_main_file  = $editor_local_path .'/fckeditor_php5.php';
+  
   if (file_exists($fckeditor_main_file)) {
     include_once $fckeditor_main_file;
     if (function_exists('FCKeditor_IsCompatibleBrowser')) {
       return FCKeditor_IsCompatibleBrowser();
     }
-    else {
+    else if (class_exists('FCKeditor')) {
       $fck = new FCKeditor('fake');
       return $fck->IsCompatible();
     }
