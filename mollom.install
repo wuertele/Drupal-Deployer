@@ -158,3 +158,18 @@ function mollom_update_2() {
   db_create_table($ret, 'cache_mollom', $schema['cache_mollom']);
   return $ret;
 }
+
+/**
+ * Upgrade form protection storage.
+ */
+function mollom_update_3() {
+  foreach (_mollom_protectable_forms() as $form_id => $details) {
+    $name = 'mollom_'. $form_id;
+    $mode = variable_get($name, NULL);
+    if ($mode && $details['mode'] == MOLLOM_MODE_ANALYSIS) {
+      // $mode was stored as 1, default to MOLLOM_MODE_ANALYSIS if the form supports it.
+      variable_set($name, MOLLOM_MODE_ANALYSIS);
+    }
+  }
+  return array(array('success' => TRUE, 'query' => 'Update Mollom form protection settings'));
+}

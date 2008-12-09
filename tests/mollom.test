@@ -133,7 +133,7 @@ class MollomFallbackTestCase extends MollomWebTestCase {
     parent::setUp('mollom');
     $this->mollomKeySetup();
     // Enable Mollom for the request password form.
-    $this->mollomSetAdminOptions(array('mollom_user_pass' => TRUE));
+    $this->mollomSetAdminOptions(array('mollom_user_pass' => MOLLOM_MODE_CAPTCHA));
   }
 
   /**
@@ -233,7 +233,7 @@ class MollomUserFormsTestCase extends MollomWebTestCase {
    */
   function testProtectRequestPassword() {
     // We first enable Mollom for the request password form.
-    $this->mollomSetAdminOptions(array('mollom_user_pass' => TRUE));
+    $this->mollomSetAdminOptions(array('mollom_user_pass' => MOLLOM_MODE_CAPTCHA));
 
     // Validate that the request password form has a CAPTCHA text field.
     $this->drupalGet('user/password');
@@ -264,7 +264,7 @@ class MollomUserFormsTestCase extends MollomWebTestCase {
    */
   function testProtectRegisterUser() {
     // We first enable Mollom for the user registration form.
-    $this->mollomSetAdminOptions(array('mollom_user_register' => TRUE));
+    $this->mollomSetAdminOptions(array('mollom_user_register' => MOLLOM_MODE_CAPTCHA));
 
     // Validate that the user registration form has a CAPTCHA text field.
     $this->drupalGet('user/register');
@@ -304,18 +304,72 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
   function setUp() {
     parent::setUp('mollom', 'comment');
     $this->mollomKeySetup();
-    // Enable Mollom for comments.
-    $this->mollomSetAdminOptions(array('mollom_comment_form' => TRUE));
+
     // Create a user that can post stories and comment on them.
     $this->comment_user = $this->drupalCreateUser(array('access comments', 'post comments', 'create story content'));
-    // Set comment previews to be optional.
-    variable_set('comment_preview_story', COMMENT_PREVIEW_OPTIONAL);
   }
 
   /**
-   * Make sure that the comment submission form is protected correctly.
+   * Make sure that the comment submission form can be unprotected.
+   */
+  function testUnprotectedCommentForm() {
+    // Disable Mollom for comments.
+    $this->mollomSetAdminOptions(array('mollom_comment_form' => MOLLOM_MODE_DISABLED));
+
+    // Login and create a new story.
+    $this->drupalLogin($this->comment_user);
+    $node = $this->drupalCreateNode(array('type' => 'story'));
+
+    // Request the comment reply form. There should be no CAPTCHA.
+    $this->drupalGet('comment/reply/'. $node->nid);
+    $this->assertNoFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is initially absent on the comment form.'));
+
+    // Preview a comment that is 'spam' and make sure there is still no CAPTCHA.
+    $this->drupalPost(NULL, array('comment' => 'spam'), t('Preview'));
+    $this->assertNoFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is still absent on the comment form.'));
+
+    // Save the comment and make sure there it appears.
+    $this->drupalPost(NULL, array(), t('Save'));
+    $this->assertRaw('<p>spam</p>', t('A comment that is known to be ham appears on the screen after it is submitted.'));
+  }
+
+  /**
+   * Make sure that the comment submission form can be protected by captcha only.
+   */
+  function testCaptchaProtectedCommentForm() {
+    // Enable Mollom CAPTCHA protection for comments.
+    $this->mollomSetAdminOptions(array('mollom_comment_form' => MOLLOM_MODE_CAPTCHA));
+
+    // Login and create a new story.
+    $this->drupalLogin($this->comment_user);
+    $node = $this->drupalCreateNode(array('type' => 'story'));
+
+    // Request the comment reply form. There should be a CAPTCHA form.
+    $this->drupalGet('comment/reply/'. $node->nid);
+    $this->assertFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is present on the comment form before submission.'));
+
+    // Try to submit an incorrect answer for the CAPTCHA.
+    $this->drupalPost(NULL, array('mollom[captcha]' => 'incorrect'), t('Preview'));
+    $this->assertText(t('The entered CAPTCHA solution is not correct. We generated a new CAPTCHA so please try again.'), t('The comment cannot be submitted when the CAPTCHA is incorrect.'));
+    $this->assertFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is present on the comment form after an incorrect CAPTCHA is submitted.'));
+
+    // Try to submit a correct answer for the CAPTCHA, but without one of the required field.
+    $this->drupalPost(NULL, array('comment' => '', 'mollom[captcha]' => 'correct'), t('Preview'));
+    $this->assertText(t('Comment field is required.'), t('An empty comment field triggers a rebuild of the form.'));
+    $this->assertNoFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is absent on the comment form after a correct CAPTCHA is submitted.'));
+
+    // Finally, we should be able to submit a comment.
+    $this->drupalPost(NULL, array('comment' => 'spam'), t('Save'));
+    $this->assertRaw('<p>spam</p>', t('The comment is finally posted and appears on the screen after it is submitted.'));
+  }
+
+  /**
+   * Make sure that the comment submission form can be fully protected.
    */
   function testProtectCommentForm() {
+    // Enable Mollom text-classification for comments.
+    $this->mollomSetAdminOptions(array('mollom_comment_form' => MOLLOM_MODE_ANALYSIS));
+
     // Login and create a new story.
     $this->drupalLogin($this->comment_user);
     $node = $this->drupalCreateNode(array('type' => 'story'));
@@ -425,7 +479,7 @@ class MollomContactFormTestCase extends MollomWebTestCase {
    */
   function testProtectContactUserForm() {
     // Enable Mollom for the contact form.
-    $this->mollomSetAdminOptions(array('mollom_contact_mail_user' => TRUE));
+    $this->mollomSetAdminOptions(array('mollom_contact_mail_user' => MOLLOM_MODE_ANALYSIS));
     // Create two users, one of whom can view the other's contact form.
     $contacting_user = $this->drupalCreateUser(array('access user profiles'));
     $contacted_user = $this->drupalCreateUser();
@@ -442,7 +496,7 @@ class MollomContactFormTestCase extends MollomWebTestCase {
    */
   function testProtectContactSiteForm() {
     // Enable Mollom for the contact form.
-    $this->mollomSetAdminOptions(array('mollom_contact_mail_page' => TRUE));
+    $this->mollomSetAdminOptions(array('mollom_contact_mail_page' => MOLLOM_MODE_ANALYSIS));
     // Create a user who can view the contact form.
     $user = $this->drupalCreateUser(array('access site-wide contact form'));
     // Add some fields to the contact form so that it is active.

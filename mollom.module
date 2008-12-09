@@ -555,12 +555,13 @@ function mollom_data_node_form($form_state) {
  * analysis with smart CAPTCHA support).
  */
 function _mollom_get_mode($form_id) {
-  if (variable_get('mollom_'. $form_id, MOLLOM_MODE_DISABLED)) {
+  $mode = variable_get('mollom_'. $form_id, NULL);
+  if (!isset($mode)) {
     $forms = _mollom_protectable_forms();
-    return $forms[$form_id]['mode'];
+    return isset($forms[$form_id]['mode']) ? $forms[$form_id]['mode'] : MOLLOM_MODE_DISABLED;
   }
 
-  return MOLLOM_MODE_DISABLED;
+  return $mode;
 }
 
 /**
@@ -676,13 +677,18 @@ If Mollom made a mistake and some spam slipped through, you can report it to Mol
       $mode = _mollom_get_mode($form_id);
       $name = 'mollom_'. $form_id;
 
-        $form['spam'][$name] = array(
-          '#type' => 'checkbox',
-          '#title' => ($mode == MOLLOM_MODE_ANALYSIS) ? 
-             t('Protect @name using text analyis and CAPTCHA backup', array('@name' => $details['name'])) :
-             t('Protect @name using CAPTCHAs only', array('@name' => $details['name'])),
-          '#default_value' => variable_get($name, MOLLOM_MODE_DISABLED),
-        );
+      $options = array_slice(array(
+        MOLLOM_MODE_DISABLED => t('No protection'),
+        MOLLOM_MODE_CAPTCHA => t('CAPTCHA only'),
+        MOLLOM_MODE_ANALYSIS => t('Text analysis and CAPTCHA backup'),
+      ), 0, $details['mode'] + 1);
+
+      $form['spam'][$name] = array(
+        '#type' => 'select',
+        '#title' => t('Protect @name', array('@name' => $details['name'])),
+        '#options' => $options,
+        '#default_value' => $mode,
+      );
     }
 
     $form['server'] = array(
@@ -699,7 +705,8 @@ If Mollom made a mistake and some spam slipped through, you can report it to Mol
         MOLLOM_FALLBACK_BLOCK => t('Block all submissions on the protected forms until the server problems are resolved'),
         MOLLOM_FALLBACK_ACCEPT => t('Leave all forms unprotected and accept all submissions'),
       ),
-      '#description' => t('In the very unlikely event that the Mollom servers are down or otherwise unreachable, no text analysis can be performed and no CAPTCHAs can be generated. At that point, your Drupal site will use the configured fallback strategy. You can choose to blindly accept all submissions without spam checking, or you can choose to block all submissions until the server or connection problems are resolved.  You can also <a href="@pricing">upgrade to Mollom Plus</a>: paying customers automatically get access to <a href="@sla">Mollom\'s high-availability backend infrastructure</a> not available to free users.', array('@pricing' => 'http://mollom.com/pricing', '@sla' => 'http://mollom.com/standard-service-level-agreement')));
+      '#description' => t('In the very unlikely event that the Mollom servers are down or otherwise unreachable, no text analysis can be performed and no CAPTCHAs can be generated. At that point, your Drupal site will use the configured fallback strategy. You can choose to blindly accept all submissions without spam checking, or you can choose to block all submissions until the server or connection problems are resolved.  You can also <a href="@pricing">upgrade to Mollom Plus</a>: paying customers automatically get access to <a href="@sla">Mollom\'s high-availability backend infrastructure</a> not available to free users.', array('@pricing' => 'http://mollom.com/pricing', '@sla' => 'http://mollom.com/standard-service-level-agreement'))
+    );
   }
 
   $form['access-keys'] = array(
