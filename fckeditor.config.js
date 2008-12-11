@@ -14,11 +14,11 @@
 
 //uncomment these three lines to enable teaser break and page break plugins
 //remember to add 'DrupalBreak' and 'DrupalPageBreak' buttons to the toolbar
-FCKConfig.Plugins.Add( 'drupalbreak', 'en,pl' ) ;
+FCKConfig.Plugins.Add( 'drupalbreak', 'en,pl,ru' ) ;
 FCKConfig.Plugins.Add( 'imgassist' ) ;
 //To enable plugins below you should install additional Drupal modules.
 //Please refer to the README.txt for more instructions.
-//FCKConfig.Plugins.Add( 'drupalpagebreak', 'en,pl' ) ;
+//FCKConfig.Plugins.Add( 'drupalpagebreak', 'en,pl,ru' ) ;
 //FCKConfig.Plugins.Add( 'linktonode', 'en,pl' ) ;
 //FCKConfig.Plugins.Add( 'linktomenu', 'en,pl' ) ;
 /*
