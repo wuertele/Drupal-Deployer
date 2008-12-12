@@ -93,6 +93,7 @@ function fckeditor_help_delegate($path, $arg) {
       $output .= '<ol>';
       $output .= '<li>'. t('Open "!fckeditor.config.js" and uncomment these three lines: <pre>!code</pre>', array('!fckeditor.config.js' => base_path() . drupal_get_path('module', 'fckeditor') .'/fckeditor.config.js', '!code' => "\nFCKConfig.PluginsPath = '../../plugins/';\nFCKConfig.Plugins.Add('drupalbreak');\nFCKConfig.Plugins.Add('drupalpagebreak');\n")) .'</li>';
       $output .= '<li>'. t('The second step is to add buttons to the toolbar (in the same file). The button names are: "DrupalBreak", "DrupalPageBreak". For example if you have a toolbar with an array of buttons defined as follows: <pre>!buttons1</pre> simply add those two buttons at the end of array (remember about single quotes): <pre>!buttons2</pre>', array('!buttons1' => "['Image','Flash','Table','Rule','SpecialChar']", '!buttons2' => "['Image','Flash','Table','Rule','SpecialChar', 'DrupalBreak', 'DrupalPageBreak']")) .'</li>';
+      $output .= '<li>'. t('Note that the &lt;--pagebreak--&gt; tag is not supported by default in Drupal. You should install the <a href="!paging" target="_blank">Paging</a> module to enable the &lt;!--pagebreak--&gt; tag support. Please refer to the Paging module documentation for detailed installation instructions.', array("!paging" => "http://drupal.org/project/paging")).'</li>';
       $output .= '</ol>';
 
       $output .= '<h3>'. t('Uploading images and files') .'</h3>';

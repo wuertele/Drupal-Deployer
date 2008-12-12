@@ -137,6 +137,11 @@ You can enable any (or even both) of them.
       ['Image','Flash','Table','Rule','SpecialChar', 'DrupalBreak', 'DrupalPageBreak']
 
       (remember about single quotes).
+      
+    3. Note that the <!--pagebreak--> tag is not supported by default in Drupal.
+       You should install the Paging module: http://drupal.org/project/paging
+       to enable the <!--pagebreak--> tag support. Please refer to the Paging
+       module documentation for detailed installation instructions.
 
 Uploading images and files
 --------------------------

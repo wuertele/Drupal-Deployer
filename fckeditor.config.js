@@ -42,8 +42,8 @@ FCKConfig.ToolbarSets['DrupalFull'] = [
 //['Link','Unlink','LinkToNode','LinkToMenu','Anchor'],
 ['Link','Unlink','Anchor'],
 ['Image','Flash','Table','Rule','SpecialChar','DrupalBreak'],
-//uncomment this line to enable teaser break and page break buttons
-//remember to load appropriate plugins with FCKConfig.Plugins.Add command a couple of lines below
+//uncomment this line to enable the page break button
+//remember to load appropriate plugin with FCKConfig.Plugins.Add
 //['Image','Flash','Table','Rule','SpecialChar','DrupalBreak','DrupalPageBreak'],
 '/',
 ['FontFormat','FontName','FontSize'],
@@ -72,6 +72,9 @@ FCKConfig.ToolbarSets['DrupalFiltered'] = [
 ['FontFormat'],
 ['Bold','Italic','Underline','StrikeThrough','-','Subscript','Superscript'],
 ['OrderedList','UnorderedList','-','Outdent','Indent','Blockquote'],
+//uncomment this line to the enable page break button
+//remember to load appropriate plugin with FCKConfig.Plugins.Add
+//['JustifyLeft','JustifyCenter','JustifyRight','DrupalBreak','DrupalPageBreak','ShowBlocks'],
 ['JustifyLeft','JustifyCenter','JustifyRight','DrupalBreak','ShowBlocks'],
 ] ;
 
