@@ -328,7 +328,7 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
     $this->drupalPost(NULL, array('comment' => 'spam'), t('Preview'));
     $this->assertNoFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is still absent on the comment form.'));
 
-    // Save the comment and make sure there it appears.
+    // Save the comment and make sure it appears.
     $this->drupalPost(NULL, array(), t('Save'));
     $this->assertRaw('<p>spam</p>', t('A comment that is known to be ham appears on the screen after it is submitted.'));
   }
@@ -348,16 +348,21 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
     $this->drupalGet('comment/reply/'. $node->nid);
     $this->assertFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is present on the comment form before submission.'));
 
+    // Retrieve the Mollom ID. After each attempted submission below,
+    // we will verify that this remains the same.
+    $mollom_id = $this->_testGetMollomID();
+        
     // Try to submit an incorrect answer for the CAPTCHA.
     $this->drupalPost(NULL, array('mollom[captcha]' => 'incorrect'), t('Preview'));
     $this->assertText(t('The CAPTCHA was not completed correctly. Please complete this new CAPTCHA and try again.'), t('The comment cannot be submitted when the CAPTCHA is incorrect.'));
     $this->assertFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is present on the comment form after an incorrect CAPTCHA is submitted.'));
-
+    $this->assertFieldByID('edit-mollom-mollom-id', $mollom_id, 'The Mollom ID remains unchanged.');
+    
     // Try to submit a correct answer for the CAPTCHA, but without one of the required field.
     $this->drupalPost(NULL, array('comment' => '', 'mollom[captcha]' => 'correct'), t('Preview'));
     $this->assertText(t('Comment field is required.'), t('An empty comment field triggers a rebuild of the form.'));
     $this->assertNoFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is absent on the comment form after a correct CAPTCHA is submitted.'));
-
+    
     // Finally, we should be able to submit a comment.
     $this->drupalPost(NULL, array('comment' => 'spam'), t('Save'));
     $this->assertRaw('<p>spam</p>', t('The comment is finally posted and appears on the screen after it is submitted.'));
@@ -366,7 +371,7 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
   /**
    * Make sure that the comment submission form can be fully protected.
    */
-  function testProtectCommentForm() {
+  function testTextAnalysisProtectedCommentForm() {  
     // Enable Mollom text-classification for comments.
     $this->mollomSetAdminOptions(array('mollom_comment_form' => MOLLOM_MODE_ANALYSIS));
 
@@ -419,10 +424,11 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
     $this->assertNoFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is absent on the comment form when a comment that is known to be spam is submitted.'));
     $this->assertFieldByID('edit-mollom-mollom-id', $mollom_id, 'The Mollom ID remains unchanged.');
 
-    // Try to save again the above 'spam' comment.  It should also be rejected
-    // with no CAPTCHA.
+    // Try to save again the above 'spam' comment. It should also be
+    // rejected with no CAPTCHA.
     $this->drupalPost(NULL, array('comment' => 'spam'), t('Save'));
     $this->assertText(t('Your submission has triggered the spam filter and will not be accepted.'), t('When a comment that is known to be spam is previewed, the user is warned that it will be blocked.'));
+    $this->assertEqual($this->_testCommentNumAll($node->nid), $original_number_of_comments, t('A comment that is known to be spam does not appear in the database.'));
     $this->assertNoFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is absent on the comment form when a comment that is known to be spam is previewed.'));
     $this->assertFieldByID('edit-mollom-mollom-id', $mollom_id, 'The Mollom ID remains unchanged.');
 
@@ -516,17 +522,21 @@ class MollomContactFormTestCase extends MollomWebTestCase {
   function _testProtectContactForm($url, $button, $form_name) {
     // Drupal's message here is slightly different for the two forms.
     $success_message = $url == 'contact' ? t('Your message has been sent.') : t('The message has been sent.');
+
     // Check the initial contact form.
     $this->drupalGet($url);
     $this->assertNoFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is initially absent on the @form.', array('@form' => $form_name)));
+
     // Submit a 'spam' message.  This should be blocked.
     $this->drupalPost($url, array('subject' => 'spam', 'message' => 'spam'), $button);
     $this->assertNoFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is absent when a message that is known to be spam is submitted on the @form.', array('@form' => $form_name)));
     $this->assertText(t('Your submission has triggered the spam filter and will not be accepted.'), t('The @form cannot be submitted when the message is known to be spam.', array('@form' => $form_name)));
+
     // Submit a 'ham' message.  This should be accepted.
     $this->drupalPost($url, array('subject' => 'ham', 'message' => 'ham'), $button);
     $this->assertNoFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is absent when a message that is known to be ham is submitted on the @form.', array('@form' => $form_name)));
     $this->assertRaw($success_message, t('The @form can be submitted when the message is known to be ham.', array('@form' => $form_name)));
+
     // Submit an 'unsure' message.  This should be accepted only after the
     // CAPTCHA has been solved.
     $this->drupalPost($url, array('subject' => 'unsure', 'message' => 'unsure'), $button);
