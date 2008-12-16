@@ -16,6 +16,7 @@ define('GLOBALREDIRECT_NONCLEAN2CLEAN_ENABLED', 1);
 
 define('GLOBALREDIRECT_DESLASH_ENABLED', 1);
 
+define('GLOBALREDIRECT_MENU_CHECK_ENABLED', 1);
 
 /**
  * Implementation of hook_help().
@@ -47,6 +48,12 @@ function globalredirect_init() {
   if (variable_get('site_offline', 0) == 1) return FALSE;
 
   /**
+   * Use of menu_get_item should be optional as it appears in some situations it causes WSOD's...
+   */
+  $menu_check = variable_get('globalredirect_menu_check', GLOBALREDIRECT_FEATURE_DISABLED);
+
+
+  /**
    * We need to make sure this hook only fires in certain conditions:
    *   1) If the 'drupal_get_path' function exists. Sometimes hook_init gets called twice, the first call hasn't included path.inc.
    *   2) If there is a request. There is no point checking the REAL frontpage for an alias.
@@ -54,14 +61,17 @@ function globalredirect_init() {
    */
 
   if (function_exists('drupal_get_path_alias') &&
-      function_exists('menu_get_item') &&
+      ($menu_check == GLOBALREDIRECT_MENU_CHECK_ENABLED && function_exists('menu_get_item')) &&
       isset($_REQUEST['q']) &&
       empty($_POST)) {
 
-    // Check the access on the current path, return FALSE if access not allowed. This stops redirection for paths without access permission.
-    $item = menu_get_item();
-    _menu_check_access($item, $item['map']);
-    if (!$item['access']) return FALSE;
+    // If menu checking is enabled, do the check. Feature disabled by default.
+    if ($menu_check == GLOBALREDIRECT_MENU_CHECK_ENABLED) {
+      // Check the access on the current path, return FALSE if access not allowed. This stops redirection for paths without access permission.
+      $item = menu_get_item();
+      _menu_check_access($item, $item['map']);
+      if (!$item['access']) return FALSE;
+    }
 
     // Store the destination from the $_REQUEST as it breaks things if we leave it in - restore it at the end...
     if (isset($_REQUEST['destination'])) {
@@ -80,7 +90,7 @@ function globalredirect_init() {
     if (function_exists('language_url_rewrite')) {
       // Note that language_url_rewrite() takes path (by reference) as the first argument but does not use it at all
       $path = $_REQUEST['q'];
-      language_url_rewrite($path, $options); 
+      language_url_rewrite($path, $options);
     }
     $prefix = rtrim($options['prefix'], '/');
 
