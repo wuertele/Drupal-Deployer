@@ -200,9 +200,17 @@ function page_title_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
  */
 function page_title_get_title() {
   $display_options = variable_get('page_title_display', array());
-  $node = ((arg(0) == 'node') && (is_numeric(arg(1)))) ? menu_get_object() : NULL;
+  if ((arg(0) == 'node') && (is_numeric(arg(1)))) {
+    $node = menu_get_object();
+  }
+  elseif ((arg(0) == 'comment') && (arg(1) == 'reply') && (is_numeric(arg(2)))) {
+    $node = menu_get_object();
+  }
+  else {
+    $node = NULL;
+  }
 
-  if ($display_options[$node->type] && !empty($node->page_title)) {
+  if ($node && $display_options[$node->type] && !empty($node->page_title)) {
     return check_plain(strip_tags($node->page_title));
   }
   else {
@@ -257,11 +265,11 @@ function page_title_page_get_title() {
       $node = ((arg(0) == 'node') && (is_numeric(arg(1)))) ? menu_get_object() : NULL;
 
       //Get the pattern for the node type. If no node type available, assume blank
-      $page_title_pattern = variable_get('page_title_type_'. (isset($node->type) ? $node->type : ''), '');
+      $title = variable_get('page_title_type_'. (isset($node->type) ? $node->type : ''), '');
 
       //If pattern is emtpy (either if the type is not overridable or simply not set) fallback to the default pattern
-      if (empty($page_title_pattern)) {
-        $page_title_pattern = variable_get('page_title_default', '[page-title] | [site-name]');
+      if (empty($title)) {
+        $title = variable_get('page_title_default', '[page-title] | [site-name]');
       }
 
       //Define Token Types array
