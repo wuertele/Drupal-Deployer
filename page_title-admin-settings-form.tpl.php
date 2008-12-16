@@ -11,3 +11,5 @@ foreach (element_children($form['title']) as $key) {
 print theme('table', array('Page Type', 'Pattern'), $rows);
 
 print drupal_render($form);
+
+print '<h2>'. t('Available Tokens') .'</h2>'. theme('token_help');
