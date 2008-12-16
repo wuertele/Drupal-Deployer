@@ -173,10 +173,12 @@ function page_title_form_alter(&$form, $form_state, $form_id) {
 function page_title_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
   switch ($op) {
     case 'update':
-      db_query("DELETE FROM {page_title} WHERE nid = %d", $node->nid);
+      if (user_access('set page title')) {
+        db_query("DELETE FROM {page_title} WHERE nid = %d", $node->nid);
+      }
       // fallthrough to insert intentional!
     case 'insert':
-      if (isset($node->page_title) && drupal_strlen(trim($node->page_title)) > 0) {
+      if (isset($node->page_title) && drupal_strlen(trim($node->page_title)) > 0 && user_access('set page title')) {
         db_query("INSERT INTO {page_title} VALUES (%d, '%s')", $node->nid, $node->page_title);
       }
       break;

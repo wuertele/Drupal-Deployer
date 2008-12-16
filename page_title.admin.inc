@@ -1,5 +1,10 @@
 <?php
+// $Id$
 
+/**
+ * @file
+ * Admin include file.
+ */
 
 /**
  * Displays the form for the standard settings tab.
