@@ -241,8 +241,15 @@ function page_title_page_get_title() {
   if (is_null($title)) {
     // If frontpage, then use the frontpage pattern and set the title.
     if (drupal_is_front_page()) {
+      //Get the frontpage pattern
       $page_title_pattern = variable_get('page_title_front', '[site-name] | [site-slogan]');
-      $title = token_replace($page_title_pattern);
+
+      //If the frontpage pattern is empty, fallback to the default.
+      if (empty($page_title_pattern)) {
+        $page_title_pattern = variable_get('page_title_default', '[page-title] | [site-slogan]');
+      }
+
+      $title = token_replace($page_title_pattern, 'page_title');
     }
     //Otherwise this is a non-frontpage page title.
     else {
@@ -257,13 +264,19 @@ function page_title_page_get_title() {
         $page_title_pattern = variable_get('page_title_default', '[page-title] | [site-name]');
       }
 
-      // Return the title using the node scope if node is set, otherwise default to global scope.
+      //Define Token Types array
+      $types = array();
+
+      //Return the title using the node scope if node is set, and then add our scope replacements
       if (isset($node)) {
-        $title = token_replace($page_title_pattern, 'node', $node);
+        $types['node'] = $node;
       }
-      else {
-        $title = token_replace($page_title_pattern);
-      }
+
+      //Finally, the page_title fallback
+      $types['page_title'] = NULL;
+
+      //Apply token patterns using token_replace_multiple
+      $title = token_replace_multiple($title, $types);
     }
   }
 
