@@ -38,7 +38,7 @@ function user_register_notify_menu() {
   return $items;
 }
 
-function user_register_notify_setup_email(&$edit, &$account) {
+function user_register_notify_setup_email(&$edit, &$account, $action = 'insert') {
   // Notify administrator of new user only if this is not first user and
   // if visitors can create accounts without administrator's approval.
   // In case when accounts must be created with administrator's approval
@@ -46,7 +46,10 @@ function user_register_notify_setup_email(&$edit, &$account) {
   if ($account->uid != 1 && (variable_get('user_register', 1) == 1 ? $account->status : !$account->status)) {
     $notify_type = variable_get('user_register_notify_type', 'Custom');
     $from = variable_get('site_mail', ini_get('sendmail_from'));
-    $params = array('account' => $account);
+    $params = array(
+      'account' => $account,
+      'action' => $action,
+    );
 
     switch ($notify_type) {
       case 'Custom':
@@ -93,7 +96,7 @@ function user_register_notify_user($op, &$edit, &$account, $category = NULL) {
       break;
     case 'update':
       if (variable_get('user_register_notify_alert', 'create') == 'update')
-        user_register_notify_setup_email($edit, $account);
+        user_register_notify_setup_email($edit, $account, 'update');
       break;
   }
 }
@@ -106,6 +109,7 @@ function user_register_notify_mail($key, &$message, $params) {
     $language = $message['language'];
     $langcode = $language->language;
     $uaccount = $params['account'];
+    $action   = $params['action'];
     $account_data = "";
     if (module_exists('profile')) {
       $result = db_query('SELECT f.title, f.type, v.value FROM {profile_fields} f INNER JOIN {profile_values} v ON f.fid = v.fid WHERE uid = %d', $uaccount->uid);
@@ -144,6 +148,7 @@ function user_register_notify_mail($key, &$message, $params) {
       '!uri_brief' => drupal_substr($base_url, drupal_strlen('http://')),
       '!date' => format_date(time()),
       '!profile' => check_plain($account_data),
+      '!action' => $action == 'insert'? 'create' : 'update',
     );
     $message['subject'] = t(variable_get('user_register_notify_subject', USER_REGISTER_NOTIFY_SUBJECT), $variables);
     $message['body'] = t(variable_get('user_register_notify_body', USER_REGISTER_NOTIFY_BODY), $variables);

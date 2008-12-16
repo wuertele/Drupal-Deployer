@@ -60,7 +60,7 @@ function user_register_notify_settings() {
     '#default_value' => variable_get('user_register_notify_body', USER_REGISTER_NOTIFY_BODY),
     '#rows' => 10,
     '#required' => TRUE,
-    '#description' => t('Customize the body of the user registration notification email.') .' '. t('Available variables are:') .' !user_name, !user_mail, !user_view, !user_edit, !user_delete, !site, !uri, !uri_brief, !date, !profile.'
+    '#description' => t('Customize the body of the user registration notification email.') .' '. t('Available variables are:') .' !user_name, !user_mail, !user_view, !user_edit, !user_delete, !site, !uri, !uri_brief, !date, !action, !profile.'
   );
   $alert_options = array(
     'create' => 'Receive Email upon user creation.',
