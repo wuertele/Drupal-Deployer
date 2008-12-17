@@ -103,16 +103,15 @@ function xmlsitemap_term_update_1() {
  */
 function xmlsitemap_term_update_6000() {
   $ret = array();
-  $result = array();
-  @db_drop_field($result, 'xmlsitemap_term', 'pid');
-  if ($result[0]['success']) {
-    $ret = $result;
+  if (db_column_exists('xmlsitemap_term', 'pid')) {
+    $result = array();
+    @db_drop_index($result, 'xmlsitemap_term', 'pid');
+    if ($result[0]['success']) {
+      $ret[] = $result[0];
+    }
+    db_drop_field($ret, 'xmlsitemap_term', 'pid');
   }
-  $result = array();
-  @db_drop_index($result, 'xmlsitemap_term', 'pid');
-  if ($result[0]['success']) {
-    $ret = array_merge($ret, $result);
-  }
+  $ret[] = update_sql("UPDATE {system} SET weight = 7 WHERE name = 'xmlsitemap_term'");
   return $ret;
 }
 
@@ -120,6 +119,13 @@ function xmlsitemap_term_update_6000() {
  * Implementation of hook_update_N().
  */
 function xmlsitemap_term_update_6100() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_term_update_6101() {
   return xmlsitemap_term_update_6000();
 }
 

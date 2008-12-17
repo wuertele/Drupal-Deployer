@@ -65,13 +65,23 @@ function xmlsitemap_file_update_6000() {
   if ($result[0]['success']) {
     $ret[] = $result[0];
   }
-  db_change_field($ret, 'xmlsitemap_file', 'fid', 'fid', $schema['xmlsitemap_file']['fields']['nid'], array('primary keys' => array('fid')));
+  db_change_field($ret, 'xmlsitemap_file', 'fid', 'fid',
+    $schema['xmlsitemap_file']['fields']['nid'],
+    array('primary keys' => array('fid'))
+  );
   if (!db_column_exists('xmlsitemap_file', 'nid')) {
-    db_add_field($ret, 'xmlsitemap_file', 'nid', $schema['xmlsitemap_file']['fields']['nid'], array('unique keys' => array('fid_nid' => array('fid', 'nid'))));
+    db_add_field($ret, 'xmlsitemap_file', 'nid',
+      $schema['xmlsitemap_file']['fields']['nid'],
+      array('unique keys' => array('fid_nid' => array('fid', 'nid')))
+    );
   }
   else {
-    db_change_field($ret, 'xmlsitemap_file', 'nid', 'nid', $schema['xmlsitemap_file']['fields']['nid'], array('unique keys' => array('fid_nid' => array('fid', 'nid'))));
+    db_change_field($ret, 'xmlsitemap_file', 'nid', 'nid',
+      $schema['xmlsitemap_file']['fields']['nid'],
+      array('unique keys' => array('fid_nid' => array('fid', 'nid')))
+    );
   }
+  $ret[] = update_sql("UPDATE {system} SET weight = 10 WHERE name = 'xmlsitemap_file'");
   return $ret;
 }
 
@@ -100,6 +110,13 @@ function xmlsitemap_file_update_6102() {
  * Implementation of hook_update_N().
  */
 function xmlsitemap_file_update_6103() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_file_update_6104() {
   $ret = xmlsitemap_file_update_6000();
   $result = update_sql("DELETE FROM {xmlsitemap_file} WHERE nid = 0");
   if ($result['success']) {

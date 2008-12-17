@@ -117,21 +117,23 @@ function xmlsitemap_user_update_1() {
  */
 function xmlsitemap_user_update_6000() {
   $ret = array();
-  $result = array();
-  @db_drop_index($result, 'xmlsitemap_user', 'pid');
-  if ($result[0]['success']) {
-    $ret = $result;
+  if (db_columhn_exists('xmlsitemap_user', 'pid')) {
+    $result = array();
+    @db_drop_index($result, 'xmlsitemap_user', 'pid');
+    if ($result[0]['success']) {
+      $ret = $result;
+    }
+    db_drop_field($ret, 'xmlsitemap_user', 'pid');
   }
-  $result = array();
-  @db_drop_field($result, 'xmlsitemap_user', 'pid');
-  if ($result[0]['success']) {
-    $ret[] = $result;
+  if (db_columhn_exists('xmlsitemap_user_role', 'pid')) {
+    $result = array();
+    @db_drop_index($result, 'xmlsitemap_user_role', 'pid');
+    if ($result[0]['success']) {
+      $ret = $result;
+    }
+    db_drop_field($ret, 'xmlsitemap_user_role', 'pid');
   }
-  $result = array();
-  @db_drop_index($result, 'xmlsitemap_user_role', 'pid');
-  if ($result[0]['success']) {
-    $ret[] = $result;
-  }
+  $ret[] = update_sql("UPDATE {system} SET weight = 7 WHERE name = 'xmlsitemap_user'");
   return $ret;
 }
 
@@ -146,6 +148,13 @@ function xmlsitemap_user_update_6100() {
  * Implementation of hook_update_N().
  */
 function xmlsitemap_user_update_6101() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_user_update_6102() {
   return xmlsitemap_user_update_6000();
 }
 

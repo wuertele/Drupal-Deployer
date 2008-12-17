@@ -152,16 +152,15 @@ function xmlsitemap_node_update_3() {
  */
 function xmlsitemap_node_update_6000() {
   $ret = array();
-  $result = array();
-  @db_drop_field($result, 'xmlsitemap_node', 'pid');
-  if ($result[0]['success']) {
-    $ret = array_merge($ret, $result);
+  if (db_column_exists('xmlsitemap_node', 'pid')) {
+    $result = array();
+    @db_drop_index($result, 'xmlsitemap_node', 'pid');
+    if ($result[0]['success']) {
+      $ret[] = $result[0];
+    }
+    db_drop_field($ret, 'xmlsitemap_node', 'pid');
   }
-  $result = array();
-  @db_drop_index($result, 'xmlsitemap_node', 'pid');
-  if ($result[0]['success']) {
-    $ret = array_merge($ret, $result);
-  }
+  $ret[] = update_sql("UPDATE {system} SET weight = 7 WHERE name = 'xmlsitemap_node'");
   return $ret;
 }
 
@@ -170,6 +169,14 @@ function xmlsitemap_node_update_6000() {
  *
  */
 function xmlsitemap_node_update_6100() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function xmlsitemap_node_update_6101() {
   return xmlsitemap_node_update_6000();
 }
 
