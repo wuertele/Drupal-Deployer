@@ -839,18 +839,27 @@ function fckeditor_sorted_roles() {
  */
 function fckeditor_is_compatible_client() {
   $editor_local_path    = fckeditor_path(TRUE);
-  
-  if (!function_exists('version_compare') || version_compare(phpversion(), '5', '<'))
-    $fckeditor_main_file  = $editor_local_path .'/fckeditor_php4.php';
-  else
-    $fckeditor_main_file  = $editor_local_path .'/fckeditor_php5.php';
-  
-  if (file_exists($fckeditor_main_file)) {
-    include_once $fckeditor_main_file;
+
+  $fckeditor_main_file = $editor_local_path .'/fckeditor.php';
+  if (!function_exists('version_compare') || version_compare(phpversion(), '5', '<')) {
+    $fckeditor_target_file = $editor_local_path .'/fckeditor_php4.php';
+  }
+  else {
+    $fckeditor_target_file = $editor_local_path .'/fckeditor_php5.php';
+  }
+
+  if (file_exists($fckeditor_target_file)) {
+    include_once $fckeditor_target_file;
+    //FCKeditor 2.6.1+
     if (function_exists('FCKeditor_IsCompatibleBrowser')) {
       return FCKeditor_IsCompatibleBrowser();
     }
     else if (class_exists('FCKeditor')) {
+      //FCKeditor 2.5.1 up to 2.6 with definition of FCKeditor_IsCompatibleBrowser() in fckeditor.php
+      if (filesize($fckeditor_main_file) > 1500) {
+        include_once $fckeditor_main_file;
+      }
+      //FCKeditor 2.5.0 and earlier
       $fck = new FCKeditor('fake');
       return $fck->IsCompatible();
     }
