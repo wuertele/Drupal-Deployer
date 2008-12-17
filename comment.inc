@@ -273,6 +273,8 @@ function theme_project_issue_comment_table($comment_changes) {
 function theme_project_issue_comment_table_row($field, $change) {
   // Allow anchor, emphasis, and strong tags in metadata tables.
   $allowed_tags = array('a', 'em', 'strong');
+  // Fields that should be rendered as plain text, not filtered HTML.
+  $plain_fields = array('title', 'pid', 'rid');
 
   if (is_array($change['old']) || is_array($change['new'])) {
     $removed = array();
@@ -295,20 +297,25 @@ function theme_project_issue_comment_table_row($field, $change) {
       $added[] = '+'. $change['new'];
     }
 
-    $row = array(
+    return array(
       filter_xss($change['label'], $allowed_tags) .':',
       filter_xss(implode(', ', $removed), $allowed_tags),
       filter_xss(implode(', ', $added), $allowed_tags),
     );
-    return $row;
+  }
+  elseif (in_array($field, $plain_fields)) {
+    return array(
+      filter_xss($change['label'], $allowed_tags) .':',
+      check_plain(project_issue_change_summary($field, $change['old'])),
+      '&raquo; '. check_plain(project_issue_change_summary($field, $change['new'])),
+    );
   }
   else {
-    $row = array(
+    return array(
       filter_xss($change['label'], $allowed_tags) .':',
       filter_xss(project_issue_change_summary($field, $change['old']), $allowed_tags),
       '&raquo; '. filter_xss(project_issue_change_summary($field, $change['new']), $allowed_tags),
     );
-    return $row;
   }
 }
 
