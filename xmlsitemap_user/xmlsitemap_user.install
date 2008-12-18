@@ -90,30 +90,6 @@ function xmlsitemap_user_install() {
 
 /**
  * Implementation of hook_update_N().
- * Add missing URL aliases.
- */
-function xmlsitemap_user_update_1() {
-  $ret = array(update_sql("UPDATE {xmlsitemap_user} SET pid = NULL WHERE pid = 0"));
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      $ret[] = @update_sql("
-        UPDATE {xmlsitemap_user} xu, {url_alias} ua SET xu.pid = ua.pid
-        WHERE xu.pid IS NULL AND ua.src = CONCAT('user/', CAST(xu.uid AS CHAR))
-      ");
-      break;
-    case 'pgsql':
-      $ret[] = @update_sql("
-        UPDATE {xmlsitemap_user} SET pid = {url_alias}.pid FROM {url_alias}
-        WHERE {xmlsitemap_user}.pid IS NULL AND {url_alias}.src = CONCAT('user/', CAST(uid AS VARCHAR))
-      ");
-      break;
-  }
-  return $ret;
-}
-
-/**
- * Implementation of hook_update_N().
  */
 function xmlsitemap_user_update_6000() {
   $ret = array();

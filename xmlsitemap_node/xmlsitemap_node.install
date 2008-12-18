@@ -89,65 +89,6 @@ function xmlsitemap_node_install() {
 
 /**
  * Implementation of hook_update_N().
- * Fix scrambled values.
- */
-function xmlsitemap_node_update_1() {
-  $ret = array();
-  $result = db_query("SELECT xn.nid FROM {xmlsitemap_node} xn LEFT JOIN {node} n ON n.nid = xn.nid WHERE n.nid IS NULL");
-  $bad_nids = array();
-  while ($node = db_fetch_object($result)) {
-    $bad_nids[] = $node->nid;
-  }
-  if (!empty($bad_nids)) {
-    $ret[] = update_sql("DELETE FROM {xmlsitemap_node} WHERE nid IN (". implode(', ', $bad_nids) .")");
-    $ret[] = update_sql(_xmlsitemap_node_insert_query());
-    xmlsitemap_update_sitemap();
-  }
-  return $ret;
-}
-
-/**
- * Implementation of hook_update_N().
- * Add missing nodes.
- */
-function xmlsitemap_node_update_2() {
-  $ret = array(update_sql(_xmlsitemap_node_insert_query()));
-  xmlsitemap_update_sitemap();
-  return $ret;
-}
-
-/**
- * Implementation of hook_update_N().
- * Add missing URL aliases.
- * Update last-changed times.
- */
-function xmlsitemap_node_update_3() {
-  $ret = array(update_sql("UPDATE {xmlsitemap_node} SET pid = NULL WHERE pid = 0"));
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      $ret[] = update_sql("
-        UPDATE {xmlsitemap_node} xn
-        INNER JOIN {node} n ON n.nid = xn.nid
-        LEFT JOIN {url_alias} ua ON ua.src = CONCAT('node/', CAST(xn.nid AS CHAR)) AND xn.pid IS NULL
-        SET xn.last_changed = n.changed, xn.pid = ua.pid
-      ");
-      break;
-    case 'pgsql':
-      $ret[] = update_sql("
-        UPDATE {xmlsitemap_node}
-        SET pid = {url_alias}.pid, last_changed = {node}.changed
-        FROM {node} LEFT JOIN {url_alias} ON {url_alias}.src = CONCAT('node/', CAST({xmlsitemap_node}.nid AS VARCHAR)) AND {xmlsitemap_node}.pid IS NULL
-        WHERE {xmlsitemap_node}.nid = {node}.nid
-      ");
-      break;
-  }
-  $ret = array_merge($ret, xmlsitemap_node_update_2());
-  return $ret;
-}
-
-/**
- * Implementation of hook_update_N().
  *
  */
 function xmlsitemap_node_update_6000() {

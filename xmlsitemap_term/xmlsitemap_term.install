@@ -69,36 +69,6 @@ function xmlsitemap_term_install() {
 
 /**
  * Implementation of hook_update_N().
- * Add missing URL aliases.
- */
-function xmlsitemap_term_update_1() {
-  $ret = array(update_sql("UPDATE {xmlsitemap_term} SET pid = NULL WHERE pid = 0"));
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      $ret[] = update_sql("
-        UPDATE {xmlsitemap_term} xt, {url_alias} ua SET xt.pid = ua.pid
-        WHERE xt.pid IS NULL AND (
-          ua.src = CONCAT('taxonomy/term/', CAST(xt.tid AS CHAR))
-          OR ua.src = CONCAT('forum/', CAST(xt.tid AS CHAR))
-        )
-      ");
-      break;
-    case 'pgsql':
-      $ret[] = update_sql("
-        UPDATE {xmlsitemap_term} SET pid = {url_alias}.pid FROM {url_alias}
-        WHERE {xmlsitemap_term}.pid IS NULL AND (
-          {url_alias}.src = CONCAT('taxonomy/term/', CAST(tid AS VARCHAR))
-          OR {url_alias}.src = CONCAT('forum/', CAST(tid AS VARCHAR))
-        )
-      ");
-      break;
-  }
-  return $ret;
-}
-
-/**
- * Implementation of hook_update_N().
  * Updates the SQL tables.
  */
 function xmlsitemap_term_update_6000() {
