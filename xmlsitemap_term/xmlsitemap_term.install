@@ -9,16 +9,12 @@
  * Implementation of hook_enable().
  */
 function xmlsitemap_term_enable() {
-  $weight = db_result(db_query("SELECT weight FROM {system} WHERE type = 'module' AND name = 'pathauto'"));
-  if ($weight !== FALSE) {
-    db_query("UPDATE {system} SET weight = %d WHERE type = 'module' AND name = 'xmlsitemap_term'", ++$weight);
-  }
-  db_query("
-    INSERT INTO {xmlsitemap_term} (tid, last_changed)
+  db_query("INSERT INTO {xmlsitemap_term} (tid, last_changed)
     SELECT td.tid, %d FROM {term_data} td
     LEFT JOIN {xmlsitemap_term} xt ON xt.tid = td.tid
-    WHERE xt.tid IS NULL
-  ", time());
+    WHERE xt.tid IS NUL",
+    time()
+  );
   xmlsitemap_update_sitemap();
 }
 
