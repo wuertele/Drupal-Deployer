@@ -29,11 +29,12 @@ function xmlsitemap_output($chunk = NULL) {
   $chunk_size = variable_get('xmlsitemap_chunk_size', 50000);
   $xml = _xmlsitemap_xml();
   if (isset($chunk)) {
-    if ($chunk < _xmlsitemap_link_count() / $chunk_size) {
+    $links_count = _xmlsitemap_link_count();
+    if ($chunk < $links_count / $chunk_size) {
       _xmlsitemap_output_chunk($chunk);
     }
-    elseif ($chunk < _xmlsitemap_link_count() / $chunk_size + count($xml)) {
-      $previous = (integer) _xmlsitemap_link_count() / $chunk_size + 1;
+    elseif ($chunk < $links_count / $chunk_size + count($xml)) {
+      $previous = (integer) ($links_count / $chunk_size + 1);
       print $xml[$chunk - $previous];
     }
     else {
@@ -41,7 +42,7 @@ function xmlsitemap_output($chunk = NULL) {
     }
   }
   else {
-    if (_xmlsitemap_link_count() > $chunk_size || count($xml) > 0) {
+    if ($links_count > $chunk_size || count($xml) > 0) {
       _xmlsitemap_output_index();
     }
     else {
