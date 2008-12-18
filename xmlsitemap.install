@@ -48,8 +48,6 @@ function xmlsitemap_schema() {
  * Implementation of hook_install().
  */
 function xmlsitemap_install() {
-  // Create my tables.
-  db_query("DELETE FROM {url_alias} WHERE dst LIKE 'sitemap%.xml'");
   drupal_install_schema('xmlsitemap');
   if ($GLOBALS['db_type'] == 'pgsql') {
     db_query('CREATE OR REPLACE FUNCTION first(anyelement, anyelement) RETURNS anyelement AS \'SELECT COALESCE($1, $2);\' LANGUAGE \'sql\';');
@@ -67,24 +65,7 @@ function xmlsitemap_install() {
  */
 function xmlsitemap_update_6000() {
   $ret = array();
-  // Drop  unused tables.
-  if (db_table_exists('xmlsitemap_additional')) {
-    db_drop_table($ret, 'xmlsitemap_additional');
-  }
-  // Remove unused variables.
-  if (db_result(db_query("SELECT COUNT(*) FROM {variable} WHERE name = 'xmlsitemap\_%'"))) {
-    $ret[] = update_sql("DELETE FROM {variable} WHERE name = 'xmlsitemap\_%'");
-  }
-  if (_xmlsitemap_delete_tmp_files(file_directory_path() .'/xmlsitemap')) {
-    $ret[] = array(
-      'success' => TRUE,
-      'query' => 'DELETE TEMPORARY FILES',
-    );
-  }
-  if (!db_table_exists('xmlsitemap')) {
-    $schema = xmlsitemap_schema();
-    db_create_table($ret, 'xmlsitemap', $schema['xmlsitemap']);
-  }
+  $schema = xmlsitemap_schema();
   if ($GLOBALS['db_type'] == 'pgsql') {
     $ret[] = update_sql('CREATE OR REPLACE FUNCTION first(anyelement, anyelement) RETURNS anyelement AS \'SELECT COALESCE($1, $2);\' LANGUAGE \'sql\';');
     $result = @update_sql("DROP AGGREGATE first(anyelement)");
@@ -97,11 +78,48 @@ function xmlsitemap_update_6000() {
       stype = anyelement
     );");
   }
-  cache_clear_all(xmlsitemap_url('sitemap.xml', NULL, NULL, NULL, TRUE), 'cache_page', TRUE);
+  if (db_table_exists('xmlsitemap_additional')) {
+    db_drop_table($ret, 'xmlsitemap_additional');
+  }
+  if (!db_table_exists('xmlsitemap')) {
+    db_create_table($ret, 'xmlsitemap', $schema['xmlsitemap']);
+  }
+  $result = array();
+  @db_drop_primary_key($result, 'xmlsitemap');
+  if ($result[0]['success']) {
+    $ret[] = $result[0];
+  }
+  $result = array();
+  @db_change_field($result, 'xmlsitemap', 'loc', 'loc',
+    $schema['xmlsitemap']['fields']['loc']
+  );
+  if ($result[0]['success']) {
+    $ret[] = $result[0];
+  }
+  $result = array();
+  @db_change_field($result, 'xmlsitemap', 'changefreq', 'changefreq', $schema['xmlsitemap']['fields']['changefreq']);
+  if ($result[0]['success']) {
+    $ret[] = $result[0];
+  }
+  if (_xmlsitemap_delete_tmp_files(file_directory_path() .'/xmlsitemap')) {
+    $ret[] = array(
+      'success' => TRUE,
+      'query' => 'DELETE TEMPORARY FILES',
+    );
+  }
+  $ret[] = update_sql("DELETE FROM {cache_page} WHERE cid LIKE '%%sitemap%%.xml'");
+  menu_rebuild();
   $ret[] = array(
     'success' => TRUE,
-    'query' => 'CLEAR MODULE CACHE',
+    'query' => 'UPDATE DRUPAL MENUS',
   );
+  if (!variable_get('xmlsitemap_update', FALSE)) {
+    variable_set('xmlsitemap_update', TRUE);
+    $ret[] = array(
+      'success' => TRUE,
+      'query' => 'FORCE SITEMAP UPDATE',
+    );
+  }
   return $ret;
 }
 
@@ -137,26 +155,7 @@ function xmlsitemap_update_6103() {
  * Implementation of hook_update_N().
  */
 function xmlsitemap_update_6104() {
-  $ret = array();
-  $schema = xmlsitemap_schema();
-  $result = array();
-  @db_drop_primary_key($result, 'xmlsitemap');
-  if ($result[0]['success']) {
-    $ret[] = $result[0];
-  }
-  $result = array();
-  @db_change_field($result, 'xmlsitemap', 'loc', 'loc', $schema['xmlsitemap']['fields']['loc']);
-  if ($result[0]['success']) {
-    $ret[] = $result[0];
-  }
-  if (!variable_get('xmlsitemap_update', FALSE)) {
-    variable_set('xmlsitemap_update', TRUE);
-    $ret[] = array(
-      'success' => TRUE,
-      'query' => 'FORCE SITEMAP UPDATE',
-    );
-  }
-  return $ret;
+  return array();
 }
 
 /**
@@ -168,17 +167,9 @@ function xmlsitemap_update_6105() {
 
 /**
  * Implementation of hook_update_N().
- * Try to remove any temporary files left.
  */
 function xmlsitemap_update_6106() {
-  $ret = array();
-  if (_xmlsitemap_delete_tmp_files(file_directory_path() .'/xmlsitemap')) {
-    $ret[] = array(
-      'success' => TRUE,
-      'query' => 'DELETE TEMPORARY FILES',
-    );
-  }
-  return $ret;
+  return array();
 }
 
 /**
@@ -186,39 +177,21 @@ function xmlsitemap_update_6106() {
  * Try to remove any temporary files left.
  */
 function xmlsitemap_update_6107() {
-  $ret = array();
-  $schema = xmlsitemap_schema();
-  $result = array();
-  @db_change_field($result, 'xmlsitemap', 'lastmod', 'lastmod', $schema['xmlsitemap']['fields']['lastmod']);
-  if ($result[0]['success']) {
-    $ret[] = $result[0];
-  }
-  $result = array();
-  @db_change_field($result, 'xmlsitemap', 'changefreq', 'changefreq', $schema['xmlsitemap']['fields']['lastmod']);
-  if ($result[0]['success']) {
-    $ret[] = $result[0];
-  }
-  if (!variable_get('xmlsitemap_update', FALSE)) {
-    variable_set('xmlsitemap_update', TRUE);
-    $ret[] = array(
-      'success' => TRUE,
-      'query' => 'FORCE SITEMAP UPDATE',
-    );
-  }
-  return $ret;
+  return array();
 }
 
 /**
  * Implementation of hook_update_N().
  */
 function xmlsitemap_update_6108() {
-  menu_rebuild();
-  return array(
-    0 => array(
-      'success' => TRUE,
-      'query' => 'UPDATE DRUPAL MENUS',
-    )
-  );
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_update_6109() {
+  return xmlsitemap_update_6000();
 }
 
 /**
