@@ -303,11 +303,16 @@ function project_usage_project_page($node) {
 
   $release_rows = array();
   while ($line = db_fetch_array($result)) {
+    $sum = 0;
     $row = array(array('data' => l($releases[$line['nid']], 'project/usage/'. $line['nid'])));
     foreach ($weeks as $i => $week) {
+      $sum += $line["week{$i}"];
       $row[] = array('data' => number_format($line["week{$i}"]), 'class' => 'project-usage-numbers');
     }
-    $release_rows[] = $row;
+    // Skip any release with no usage.
+    if ($sum) {
+      $release_rows[] = $row;
+    }
   }
 
   // Build a table of the weekly usage data with a column for each API version.
