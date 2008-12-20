@@ -139,7 +139,6 @@ function xmlsitemap_menu() {
       );
     }
   }
-
   return $items;
 }
 
@@ -174,7 +173,8 @@ function xmlsitemap_file_create_url($path, $alias = NULL) {
 /**
  * Determine the frequency of updates to a link.
  * @param $interval
- *  The number of seconds since last change.
+ *  The number of seconds since the last change, or the number of seconds
+ *  between the last change, and the previous change.
  * @return
  *  A string representing the update frequency according to the sitemaps.org
  *  protocol.
@@ -188,10 +188,7 @@ function xmlsitemap_frequency($interval) {
     'monthly' => 29030400,
     'yearly' => 100000000,
   );
-  if (array_key_exists($interval, $frequencies)) {
-    return $interval;
-  }
-  if ($interval <= 0) {
+  if ($interval < 0 || !is_numeric($interval)) {
     return 'never';
   }
   foreach ($frequencies as $frequency => $value) {
