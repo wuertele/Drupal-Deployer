@@ -410,13 +410,13 @@ function faq_weight_settings_form($form_state) {
     $form['weight']['move_up'] = array(
       '#type' => 'markup',
       '#value' => '<input type="button" onclick="faq_move_selected_item_up();"
-      value="&uarr;" class="faq_arrow"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;',
+      value="&uarr;" class="faq-arrow"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;',
     );
 
     $form['weight']['move_down'] = array(
       '#type' => 'markup',
       '#value' => '<input type="button" onclick="faq_move_selected_item_down();"
-      value="&darr;" class="faq_arrow"/><br />',
+      value="&darr;" class="faq-arrow"/><br />',
     );
 
     $form['update']['attach'] = array(
