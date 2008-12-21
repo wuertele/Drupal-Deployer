@@ -29,14 +29,14 @@
   <?php foreach ($nodes as $node): ?>
     <?php // Cycle through the $nodes array so that we now have a $node variable to work with. ?>
     <br />
-    <div class="faq_question">
+    <div class="faq-question">
     <strong>
     <?php print $question_label; ?>
     </strong>
     <?php print $node['question']; ?>
-    </div> <!-- Close div: faq_question -->
+    </div> <!-- Close div: faq-question -->
 
-    <div class="faq_answer">
+    <div class="faq-answer">
     <strong>
     <?php print $answer_label; ?>
     </strong>
@@ -44,7 +44,7 @@
     <?php if (isset($node['links'])): ?>
       <?php print $node['links']; ?>
     <?php endif; ?>
-    </div> <!-- Close div: faq_answer -->
+    </div> <!-- Close div: faq-answer -->
   <?php endforeach; ?>
 <?php endif; ?>
 </div> <!-- Close div -->

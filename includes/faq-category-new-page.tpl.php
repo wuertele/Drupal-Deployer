@@ -32,7 +32,7 @@
  *   The style of the question list, either ol or ul (ordered or unordered).
  * $container_class
  *   The class attribute of the element containing the sub-categories, either
- *   'faq_qa' or 'faq_qa_hide'. This is used by javascript to open/hide
+ *   'faq-qa' or 'faq-qa-hide'. This is used by javascript to open/hide
  *   a category's faqs.
  * $subcat_list
  *   An array of sub-categories.  Each sub-category stored in the $subcat_list
@@ -54,12 +54,12 @@ else {
   $hdr = 'h5';
 }
 
-?><div class="faq_category_group">
+?><div class="faq-category-group">
   <!-- category header with title, link, image, description, and count of
   questions inside -->
-  <div class="faq_qa_header">
+  <div class="faq-qa-header">
   <?php if ($display_header): ?>
-    <<?php print $hdr; ?> class="faq_header">
+    <<?php print $hdr; ?> class="faq-header">
     <?php print $term_image; ?>
     <?php print $header_title; ?>
     <?php if ($display_faq_count): ?>
@@ -72,17 +72,17 @@ else {
   <?php endif; ?>
 
   <?php if (!empty($description)): ?>
-    <div class="faq_qa_description"><p><?php print $description ?></p></div>
+    <div class="faq-qa-description"><p><?php print $description ?></p></div>
   <?php endif; ?>
   <?php if (!empty($term_image)): ?>
     <div class="clear-block"></div>
   <?php endif; ?>
-  </div> <!-- Close div: faq_qa_header -->
+  </div> <!-- Close div: faq-qa-header -->
 
   <!-- list subcategories, with title, link, description, count -->
   <?php if (!empty($subcat_list)): ?>
     <div class="item-list">
-    <<?php print $subcat_list_style; ?> class="faq_category_list">
+    <<?php print $subcat_list_style; ?> class="faq-category-list">
     <?php foreach ($subcat_list as $i => $subcat): ?>
       <li>
       <?php print $subcat['link']; ?>
@@ -90,7 +90,7 @@ else {
         (<?php print $subcat['count']; ?>)
       <?php endif; ?>
       <?php if (!empty($subcat['description'])): ?>
-      <div class="faq_qa_description"><p><?php print $subcat['description']; ?></p></div>
+      <div class="faq-qa-description"><p><?php print $subcat['description']; ?></p></div>
       <?php endif; ?>
       <div class="clear-block"></div>
       </li>
@@ -104,14 +104,14 @@ else {
   <!-- include subcategories -->
   <?php if (count($subcat_body_list)): ?>
     <?php foreach ($subcat_body_list as $i => $subcat_html): ?>
-      <div class="faq_category_indent"><?php print $subcat_html; ?></div>
+      <div class="faq-category-indent"><?php print $subcat_html; ?></div>
     <?php endforeach; ?>
   <?php endif; ?>
 
   <!-- list questions (in title link) and answers (in body) -->
   <?php if (!empty($question_list)): ?>
     <div class="item-list">
-    <<?php print $question_list_style; ?> class="faq_category_list">
+    <<?php print $question_list_style; ?> class="faq-category-list">
     <?php foreach ($question_list as $i => $question_link): ?>
       <li>
       <?php print $question_link; ?>
@@ -122,6 +122,6 @@ else {
   <?php endif; ?>
 
 
-  </div> <!-- Close div: faq_qa / faq_qa_hide -->
+  </div> <!-- Close div: faq-qa / faq-qa-hide -->
 
-</div> <!-- Close div: faq_category_group -->
+</div> <!-- Close div: faq-category-group -->

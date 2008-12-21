@@ -44,7 +44,7 @@
  *   Whether $node['body'] contains the full body or just the teaser text.
  * $container_class
  *   The class attribute of the element containing the sub-categories, either
- *   'faq_qa' or 'faq_qa_hide'. This is used by javascript to open/hide
+ *   'faq-qa' or 'faq-qa-hide'. This is used by javascript to open/hide
  *   a category's faqs.
  * $subcat_body_list
  *   The sub-categories faqs, recursively themed (by this template).
@@ -63,19 +63,19 @@ $depth = 0;
 ?><?php if ($display_answers): ?>
   <?php if ($answer_category_name): ?>
     <?php while ($depth < $category_depth): ?>
-      <div class="faq_category_indent">
+      <div class="faq-category-indent">
     <?php $depth++; endwhile; ?>
   <?php endif; ?>
 
-  <div class="faq_category_menu">
+  <div class="faq-category-menu">
 
   <?php if ($display_header): ?>
-    <<?php print $hdr; ?> class="faq_header">
+    <<?php print $hdr; ?> class="faq-header">
     <?php print $term_image; ?>
     <?php print $category_name; ?>
     </<?php print $hdr; ?>>
     <div class="clear-block"></div>
-    <div class="faq_category_group">
+    <div class="faq-category-group">
     <div>
   <?php endif; ?>
 
@@ -89,7 +89,7 @@ $depth = 0;
     <?php endif; ?>
 
     <?php if (!$display_header): ?>
-      <div class="faq_category_group">
+      <div class="faq-category-group">
       <div>
     <?php endif; ?>
 
@@ -97,17 +97,17 @@ $depth = 0;
     <?php if (count($nodes)): ?>
       <?php foreach ($nodes as $i => $node): ?>
 
-        <div class="faq_question"><?php // Strong question label here? ?>
+        <div class="faq-question"><?php // Strong question label here? ?>
         <?php print $node['question']; ?>
-        </div> <!-- Close div: faq_question -->
+        </div> <!-- Close div: faq-question -->
 
-        <div class="faq_answer">
+        <div class="faq-answer">
         <strong><?php print $answer_label; ?></strong>
         <?php print $node['body']; ?>
         <?php if (isset($node['links'])): ?>
           <?php print $node['links']; ?>
         <?php endif; ?>
-        </div> <!-- Close div: faq_answer -->
+        </div> <!-- Close div: faq-answer -->
 
       <?php endforeach; ?>
     <?php endif; ?>
@@ -115,12 +115,12 @@ $depth = 0;
   <?php endif; ?>
 
   </div> <!-- Close div -->
-  </div> <!-- Close div: faq_category_group -->
+  </div> <!-- Close div: faq-category-group -->
   </div>
 
   <?php if ($answer_category_name): ?>
     <?php while ($depth > 0): ?>
-      </div> <!-- Close div: faq_category_indent -->
+      </div> <!-- Close div: faq-category-indent -->
     <?php $depth--; endwhile; ?>
   <?php endif; ?>
 <?php

@@ -23,16 +23,16 @@
 <?php if (count($nodes)): ?>
   <?php foreach ($nodes as $node): ?>
     <?php // Cycle through each of the nodes. We now have the variable $node to work with. ?>
-    <div class="faq_question faq_dt_hide_answer">
+    <div class="faq-question faq-dt-hide-answer">
     <?php print $node['question']; ?>
-    </div> <!-- Close div: faq_question faq_dt_hide_answer -->
+    </div> <!-- Close div: faq-question faq-dt-hide-answer -->
 
-    <div class="faq_answer faq_dd_hide_answer">
+    <div class="faq-answer faq-dd-hide-answer">
     <?php print $node['body']; ?>
     <?php if (isset($node['links'])): ?>
       <?php print $node['links']; ?>
     <?php endif; ?>
-    </div> <!-- Close div: faq_answer faq_dd_hide_answer -->
+    </div> <!-- Close div: faq-answer faq-dd-hide-answer -->
   <?php endforeach; ?>
 <?php endif; ?>
 </div> <!-- Close div -->

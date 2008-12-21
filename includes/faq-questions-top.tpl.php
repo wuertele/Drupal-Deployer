@@ -33,14 +33,14 @@
 <?php $key = 0; ?>
 <?php while ($key < $limit): ?>
   <?php // Cycle through all the answers and "more" links. $key will represent the applicable position in the arrays. ?>
-  <div class="faq_question">
+  <div class="faq-question">
   <?php print $answers[$key]['question']; ?>
-  </div> <!-- Close div: faq_question -->
+  </div> <!-- Close div: faq-question -->
 
-  <div class="faq_answer">
+  <div class="faq-answer">
   <?php print $answers[$key]['body']; ?>
   <?php print $answers[$key]['links']; ?>
-  </div> <!-- Close div: faq_answer -->
+  </div> <!-- Close div: faq-answer -->
   <?php // Increment $key to move on to the next position. ?>
   <?php $key++; ?>
 <?php

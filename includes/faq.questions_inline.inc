@@ -96,7 +96,7 @@ function template_preprocess_faq_category_questions_inline(&$variables) {
   // Get taxonomy image.
   $variables['term_image'] = '';
   if (module_exists('taxonomy_image')) {
-    $variables['term_image'] = taxonomy_image_display($term->tid, array('class' => 'faq_tax_image'));
+    $variables['term_image'] = taxonomy_image_display($term->tid, array('class' => 'faq-tax-image'));
   }
 
   // Configure header.
@@ -119,9 +119,9 @@ function template_preprocess_faq_category_questions_inline(&$variables) {
   $variables['subcat_list'] = $child_categories;
   $variables['subcat_list_style'] = variable_get('faq_category_listing', 'ul');
 
-  // Configure class (faq_qa or faq_qa_hide).
+  // Configure class (faq-qa or faq-qa-hide).
   if ($get_child_terms == $term->tid) {
-    $variables['container_class'] = 'faq_qa';
+    $variables['container_class'] = 'faq-qa';
   }
   else {
     $variables['container_class'] = $class;

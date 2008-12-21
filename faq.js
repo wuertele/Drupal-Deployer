@@ -218,17 +218,17 @@ function faq_order_by_date(order) {
 if (Drupal.jsEnabled) {
   $(document).ready(function () {
     // hide/show answer to question
-    $('div.faq_dd_hide_answer').hide();
-    $('div.faq_dt_hide_answer').click(function() {
-      $(this).next('div.faq_dd_hide_answer').slideToggle();
+    $('div.faq-dd-hide-answer').hide();
+    $('div.faq-dt-hide-answer').click(function() {
+      $(this).next('div.faq-dd-hide-answer').slideToggle();
       return false;
     });
 
 
     // hide/show q/a for a category
-    $('div.faq_qa_hide').hide();
-    $('div.faq_qa_header .faq_header').click(function() {
-      $(this).parent().next('div.faq_qa_hide').slideToggle();
+    $('div.faq-qa-hide').hide();
+    $('div.faq-qa-header .faq-header').click(function() {
+      $(this).parent().next('div.faq-qa-hide').slideToggle();
       return false;
     });
 
