@@ -28,7 +28,8 @@ function faq_schema() {
     'fields' => array(
       'nid' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0, 'description' => t('The primary identifier for a node.')),
       'vid' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0, 'description' => t('The primary identifier for a node revision.')),
-      'question' => array('type' => 'text', 'size' => 'normal', 'not null' => TRUE, 'description' => t('The faq long question text.')),
+      'question' => array('type' => 'text', 'size' => 'normal', 'not null' => TRUE, 'description' => t('The faq short question text.')),
+      'detailed_question' => array('type' => 'text', 'size' => 'normal', 'not null' => TRUE, 'description' => t('The faq long question text.')),
     ),
     'primary key' => array('nid', 'vid'),
   );
@@ -127,7 +128,7 @@ function faq_update_1() {
  * late now.
  *
  * @return
- *   An array containing the structure of the SQL schema.
+ *   An array containing the results of the update.
  */
 function faq_update_2() {
   $schema['faq_questions'] = array(
@@ -145,5 +146,18 @@ function faq_update_2() {
 
   $ret[] = update_sql("INSERT INTO {faq_questions} (nid, vid, question) SELECT r.nid, r.vid, r.title FROM {node_revisions} r, {node} n WHERE n.nid = r.nid AND n.type = 'faq'");
 
+  return $ret;
+}
+
+/**
+ * Add the 'detailed_question' column to the 'faq_questions' table.
+ *
+ * @return
+ *   An array containing the results of the update.
+ */
+function faq_update_6003() {
+  $ret = array();
+  db_add_field($ret, 'faq_questions', 'detailed_question', array('type' => 'text', 'size' => 'normal', 'not null' => TRUE));
+  $ret[] = update_sql("UPDATE {faq_questions} SET detailed_question = question");
   return $ret;
 }

@@ -181,15 +181,25 @@ function faq_node_name($node) {
 function faq_form(&$node, &$param) {
   $type = node_get_types('type', $node);
 
-  // Question.
+  // Short question.
   $form['title'] = array(
-    '#type' => 'textarea',
+    '#type' => 'textfield',
     '#title' => check_plain($type->title_label),
     '#default_value' => $node->title,
     '#required' => TRUE,
     '#weight' => 0,
+    '#description' => t('Question to be answered.  This will appear in all question listings, such as the FAQ blocks.'),
+  );
+
+  // Detailed question.
+  $form['detailed_question'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Question details (optional)'),
+    '#default_value' => $node->detailed_question,
+    '#required' => TRUE,
+    '#weight' => -1,
     '#rows' => 3,
-    '#description' => t('Question to be answered'),
+    '#description' => t('Longer question text.  This will be displayed in all layouts where the answer appears, in addition to the shorter question text.'),
   );
 
   // Answer.
@@ -207,7 +217,7 @@ function faq_form(&$node, &$param) {
  *   The node object.
  */
 function faq_insert($node) {
-  $ret = db_query("INSERT INTO {faq_questions} (nid, vid, question) VALUES(%d, %d, '%s')", $node->nid, $node->vid, $node->title);
+  $ret = db_query("INSERT INTO {faq_questions} (nid, vid, question, detailed_question) VALUES(%d, %d, '%s', '%s')", $node->nid, $node->vid, $node->title, $node->detailed_question);
 }
 
 /**
@@ -221,7 +231,7 @@ function faq_update($node) {
     faq_insert($node);
   }
   else {
-    db_query("UPDATE {faq_questions} SET question = '%s' WHERE nid = %d AND vid = %d", $node->title, $node->nid, $node->vid);
+    db_query("UPDATE {faq_questions} SET question = '%s', detailed_question = '%s' WHERE nid = %d AND vid = %d", $node->title, $node->detailed_question, $node->nid, $node->vid);
     if (!db_affected_rows()) {
       faq_insert($node);
     }
@@ -248,9 +258,15 @@ function faq_delete(&$node) {
  *   The node object.
  */
 function faq_load($node) {
-  $result = db_fetch_object(db_query('SELECT question FROM {faq_questions} WHERE nid = %d AND vid = %d', $node->nid, $node->vid));
+  $result = db_fetch_object(db_query('SELECT question, detailed_question FROM {faq_questions} WHERE nid = %d AND vid = %d', $node->nid, $node->vid));
   if ($result) {
-    $result->title = $result->question;
+    $question_length = variable_get('faq_question_length', 'long');
+    if ($question_length == 'long' && !empty($result->detailed_question)) {
+      $result->title = $result->detailed_question;
+    }
+    else {
+      $result->title = $result->question;
+    }
   }
   return $result;
 }
@@ -281,7 +297,15 @@ function faq_nodeapi(&$node, $op, $teaser, $page) {
  *   The node object.
  */
 function faq_view($node, $teaser = FALSE, $page = FALSE) {
+  drupal_add_css(drupal_get_path('module', 'faq') .'/faq.css');
   $node = node_prepare($node, $teaser);
+  $node->detailed_question = check_markup($node->detailed_question, $node->format, FALSE);
+  $content = $node->content['body']['#value'];
+
+  $question_length = variable_get('faq_question_length', 'long');
+  if (!empty($node->detailed_question) && $question_length == 'both') {
+    $node->content['body']['#value'] = '<div class="faq-detailed-question">'. $node->detailed_question .'</div>'. $content;
+  }
   return $node;
 }
 
@@ -1005,23 +1029,23 @@ function faq_view_question(&$data, $node, $path = NULL, $anchor = NULL) {
   // Don't link to faq node, instead provide no link, or link to current page.
   if ($disable_node_links) {
     if (empty($path) && empty($anchor)) {
-      $question = $node->question;
+      $question = $node->title;
     }
     elseif (empty($path)) {
-      $question = l("", "", array("attributes" => array("name" => "$anchor", "id" => "$anchor"))) . $node->question;
+      $question = l("", "", array("attributes" => array("name" => "$anchor", "id" => "$anchor"))) . $node->title;
     }
     else {
-      $question = l($node->question, $path);
+      $question = l($node->title, $path);
     }
   }
 
   // Link to faq node.
   else {
     if (empty($anchor)) {
-      $question = l($node->question, "node/$node->nid");
+      $question = l($node->title, "node/$node->nid");
     }
     else {
-      $question = l($node->question, "node/$node->nid", array("attributes" => array("name" => "$anchor", "id" => "$anchor")));
+      $question = l($node->title, "node/$node->nid", array("attributes" => array("name" => "$anchor", "id" => "$anchor")));
     }
   }
   $data['question'] = $question;
