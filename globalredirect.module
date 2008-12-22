@@ -131,6 +131,15 @@ function globalredirect_init() {
       $prefix .= '/';
     }
 
+    // Alias case sensitivity check. If there is an alias from the previous lookup, do a query to test for case.
+    if ($alias) {
+      $alias_sensitive = db_result(db_query("SELECT dst FROM {url_alias} WHERE dst = '%s'", $alias));
+      if ($alias_sensitive && $alias != $alias_sensitive) {
+        // There is a match and there is a difference in case.
+        $alias = $alias_sensitive;
+      }
+    }
+
     // Compare the request to the alias. This also works as a 'deslashing' agent. If we have a language prefix then prefix the alias
     if ($_REQUEST['q'] != $prefix . $alias) {
       // If it's not just a slash or user has deslash on, redirect
