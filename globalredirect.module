@@ -106,7 +106,8 @@ function globalredirect_init() {
     }
 
     // Trim any trailing slash off the end (eg, 'node/1/' to 'node/1')
-    $request = (bool)variable_get('globalredirect_deslash', GLOBALREDIRECT_DESLASH_ENABLED) ? trim($_GET['q'], '/') : $_GET['q'];
+    $redirect_slash = variable_get('globalredirect_deslash', GLOBALREDIRECT_DESLASH_ENABLED) == GLOBALREDIRECT_DESLASH_ENABLED;
+    $request = $redirect_slash ? trim($_GET['q'], '/') : $_GET['q'];
 
     // Optional stripping of "/0". Defaultly disabled
     switch (variable_get('globalredirect_trailingzero', GLOBALREDIRECT_FEATURE_DISABLED)) {
@@ -132,7 +133,10 @@ function globalredirect_init() {
 
     // Compare the request to the alias. This also works as a 'deslashing' agent. If we have a language prefix then prefix the alias
     if ($_REQUEST['q'] != $prefix . $alias) {
-      drupal_goto($alias, $query_string, NULL, 301);
+      // If it's not just a slash or user has deslash on, redirect
+      if (str_replace($prefix . $alias, '', $_REQUEST['q']) != '/' || $redirect_slash) {
+        drupal_goto($alias, $query_string, NULL, 301);
+      }
     }
 
     // If no alias was returned, the final check is to direct non-clean to clean - if clean is enabled

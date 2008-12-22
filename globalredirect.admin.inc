@@ -12,7 +12,7 @@
 function globalredirect_settings() {
   $form = array();
 
-  $form['globalredirect_deslah'] = array(
+  $form['globalredirect_deslash'] = array(
     '#type' => 'radios',
     '#title' => t('Deslash'),
     '#description' => t('If enabled, this option will remove the trailing slash from requests. This stops requests such as <code>example.com/node/1/</code> failing to match the corresponding alias and can cause duplicate content. On the other hand, if you require certain requests to have a trailing slash, this feature can cause problems so may need to be disabled.'),
@@ -20,7 +20,7 @@ function globalredirect_settings() {
       GLOBALREDIRECT_FEATURE_DISABLED => t('Off'),
       GLOBALREDIRECT_DESLASH_ENABLED  => t('On'),
     ),
-    '#default_value' => variable_get('globalredirect_deslah', 1),
+    '#default_value' => variable_get('globalredirect_deslash', GLOBALREDIRECT_DESLASH_ENABLED),
   );
 
 
@@ -32,7 +32,7 @@ function globalredirect_settings() {
       GLOBALREDIRECT_FEATURE_DISABLED => t('Off'),
       GLOBALREDIRECT_NONCLEAN2CLEAN_ENABLED  => t('On'),
     ),
-    '#default_value' => variable_get('globalredirect_nonclean2clean', 1),
+    '#default_value' => variable_get('globalredirect_nonclean2clean', GLOBALREDIRECT_NONCLEAN2CLEAN_ENABLED),
   );
 
   $form['globalredirect_trailingzero'] = array(
