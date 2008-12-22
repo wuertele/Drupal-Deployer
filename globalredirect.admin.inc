@@ -49,7 +49,7 @@ function globalredirect_settings() {
 
   $form['globalredirect_menu_check'] = array(
     '#type' => 'radios',
-    '#title' => t('Enable Menu Access Checking'),
+    '#title' => t('Menu Access Checking'),
     '#description' => t('If enabled, the module will check the user has access to the page before redirecting. This helps to stop redirection on protected pages and avoids giving away <em>secret</em> URL\'s. <strong>By default this feature is disabled to avoid any unexpected behaviour</strong>'),
     '#options' => array(
       GLOBALREDIRECT_FEATURE_DISABLED => t('Disabled'),
