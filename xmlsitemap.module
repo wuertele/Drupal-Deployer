@@ -118,9 +118,9 @@ function xmlsitemap_menu() {
     'file' => 'includes/xmlsitemap.pages.inc',
   );
   $chunk_size = variable_get('xmlsitemap_chunk_size', 50000);
-  $links_count = _xmlsitemap_link_count();
-  if ($links_count / $chunk_size > 1) {
-    for ($chunk = 0; $chunk < $links_count / $chunk_size; ++$chunk) {
+  $link_count = _xmlsitemap_link_count();
+  if ($link_count / $chunk_size > 1) {
+    for ($chunk = 0; $chunk < $link_count / $chunk_size; ++$chunk) {
       $items["sitemap$chunk.xml"] = array(
         'title' => 'Site map !number',
         'title arguments' => array('!number' => $chunk),
@@ -379,11 +379,11 @@ function _xmlsitemap_output_index() {
   print '              xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9'."\n";
   print '                                  http://www.sitemaps.org/schemas/sitemap/0.9/siteindex.xsd">'."\n";
   $chunk_size = variable_get('xmlsitemap_chunk_size', 50000);
-  $links_count = _xmlsitemap_link_count();
-  for ($chunk = 0; $chunk < $links_count / $chunk_size; ++$chunk) {
+  $link_count = _xmlsitemap_link_count();
+  for ($chunk = 0; $chunk < $link_count / $chunk_size; ++$chunk) {
     print '  <sitemap>'."\n";
     print '    <loc>'. xmlsitemap_url("sitemap$chunk.xml", NULL, NULL, NULL, TRUE) .'</loc>'."\n";
-    if ($chunk < $links_count / $chunk_size) {
+    if ($chunk < $link_count / $chunk_size) {
       $from = $chunk * $chunk_size;
       if (!empty($chunk_size)) {
         $lastmod = db_result(db_query_range("SELECT lastmod FROM {xmlsitemap} ORDER BY lastmod DESC, loc", $from, $chunk_size));

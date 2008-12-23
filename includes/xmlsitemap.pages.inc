@@ -28,8 +28,8 @@ function xmlsitemap_output($chunk = NULL) {
   drupal_set_header('Content-type: text/xml; charset=utf-8');
   $chunk_size = variable_get('xmlsitemap_chunk_size', 50000);
   if (isset($chunk)) {
-    $links_count = _xmlsitemap_link_count();
-    if ($chunk < $links_count / $chunk_size) {
+    $link_count = _xmlsitemap_link_count();
+    if ($chunk < $link_count / $chunk_size) {
       _xmlsitemap_output_chunk($chunk);
     }
     else {
@@ -37,7 +37,7 @@ function xmlsitemap_output($chunk = NULL) {
     }
   }
   else {
-    if ($links_count > $chunk_size) {
+    if ($link_count > $chunk_size) {
       _xmlsitemap_output_index();
     }
     else {
