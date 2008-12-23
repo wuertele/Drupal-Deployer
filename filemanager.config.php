@@ -31,6 +31,8 @@
  * - redefine the $Config['UserFilesPath'] and $Config['UserFilesAbsolutePath'] according to the values set in FCKeditor profile
  */
 
+$GLOBALS['devel_shutdown'] = FALSE;
+
 $fck_user_files_path = '';
 $fck_user_files_absolute_path = '';
 
