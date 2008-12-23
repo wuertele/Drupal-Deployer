@@ -101,12 +101,6 @@ function xmlsitemap_update_6000() {
   if ($result[0]['success']) {
     $ret[] = $result[0];
   }
-  if (_xmlsitemap_delete_tmp_files(file_directory_path() .'/xmlsitemap')) {
-    $ret[] = array(
-      'success' => TRUE,
-      'query' => 'DELETE TEMPORARY FILES',
-    );
-  }
   $ret[] = update_sql("DELETE FROM {cache_page} WHERE cid LIKE '%%sitemap%%.xml'");
   menu_rebuild();
   $ret[] = array(
@@ -191,6 +185,14 @@ function xmlsitemap_update_6108() {
  * Implementation of hook_update_N().
  */
 function xmlsitemap_update_6109() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_update_6110() {
+  menu_rebuild();
   return xmlsitemap_update_6000();
 }
 
@@ -202,40 +204,4 @@ function xmlsitemap_uninstall() {
   drupal_uninstall_schema('xmlsitemap');
   // Remove the used variables.
   db_query("DELETE FROM {variable} WHERE name LIKE 'xmlsitemap\_%'");
-}
-
-/*****************************************************************************
- * Private functions.
- ****************************************************************************/
-
-/**
- * Remove temporary files, and folders up to four levels.
- *
- * @param $path
- *  The path of the folder to remove.
- * @return
- *  Boolean value; TRUE on success.
- */
-function _xmlsitemap_delete_tmp_files($path) {
-  static $count = 0;
-  $error = FALSE;
-  $count++;
-  if ($dir = @opendir($path)) {
-    while (($file = readdir($dir)) !== FALSE) {
-      if ($file != '.' && $file != '..') {
-        $fpath = "$path/$file";
-        if (is_dir($fpath)) {
-          if ($count < 5) {
-            $error |= _xmmsitemap_delete_temp_files($fpath);
-          }
-        }
-        else {
-          $error |= @unlink($fpath);
-        }
-      }
-    }
-    closedir($dir);
-    $error |= @rmdir($path);
-  }
-  return $error;
 }
