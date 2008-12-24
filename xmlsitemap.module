@@ -318,22 +318,6 @@ function xmlsitemap_url($path = NULL, $alias = NULL, $query = NULL, $fragment = 
  ****************************************************************************/
 
 /**
- * Compare link modification time to modification time of previous link.
- * @param $time
- *   Modification time of previous link.
- * @param $value
- *   Link array
- * @return
- *  Most recent time.
- */
-function _xmlsitemap_chunk_last_change($time, $value) {
-  if ($time < $value['#lastmod']) {
-    $time = $value['#lastmod'];
-  }
-  return $time;
-}
-
-/**
  * Modified version of drupal_get_path_alias() for xmlsitemap_url().
  * @param $path
  *  An internal Drupal path.
@@ -381,13 +365,13 @@ function _xmlsitemap_output_chunk($chunk = 0) {
   while ($link = db_fetch_object($links)) {
     print '  <url>'."\n";
     print '    <loc>'. check_url($link->loc) .'</loc>'."\n";
-    if (isset($link->lastmod)) {
+    if ($link->lastmod != 0) {
       print '    <lastmod>'. gmdate('Y-m-d\TH:i:s+00:00', $link->lastmod) .'</lastmod>'."\n";
     }
-    if (isset($link->changefreq)) {
+    if ($link->changefreq != 0) {
       print '    <changefreq>'. xmlsitemap_frequency($link->changefreq) .'</changefreq>'."\n";
     }
-    if (isset($link->priority) && $link->priority >= 0 && $link->priority <= 1) {
+    if ($link->priority >= 0 && $link->priority <= 1) {
       print '    <priority>'. number_format($link->priority, 1) .'</priority>'."\n";
     }
     print '  </url>'."\n";

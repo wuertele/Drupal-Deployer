@@ -116,10 +116,7 @@ function xmlsitemap_update_6000() {
   if (db_table_exists('xmlsitemap_additional')) {
     db_drop_table($ret, 'xmlsitemap_additional');
   }
-  if (!db_table_exists('xmlsitemap')) {
-    db_create_table($ret, 'xmlsitemap', $schema['xmlsitemap']);
-  }
-  else {
+  if (db_table_exists('xmlsitemap')) {
     $result = array();
     @db_drop_primary_key($result, 'xmlsitemap');
     if ($result['success']) {
@@ -162,6 +159,9 @@ function xmlsitemap_update_6000() {
       $schema['xmlsitemap']['fields']['priority'],
       array('indexes' => array('link_priority' => array('priority')))
     );
+  }
+  else {
+    db_create_table($ret, 'xmlsitemap', $schema['xmlsitemap']);
   }
   $ret[] = update_sql("DELETE FROM {cache_page}
     WHERE cid LIKE '%%gss.xsl' OR cid LIKE '%%sitemap%.xml'"
