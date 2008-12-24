@@ -89,21 +89,32 @@ function xmlsitemap_user_install() {
  */
 function xmlsitemap_user_update_6000() {
   $ret = array();
-  if (db_column_exists('xmlsitemap_user', 'pid')) {
-    $result = array();
-    @db_drop_index($result, 'xmlsitemap_user', 'pid');
-    if ($result[0]['success']) {
-      $ret = $result;
+  $schema = xmlsitemap_user_schema();
+  if (db_table_exists('xmlsitemap_user')) {
+    if (db_column_exists('xmlsitemap_user', 'pid')) {
+      $result = array();
+      @db_drop_index($result, 'xmlsitemap_user', 'pid');
+      if ($result[0]['success']) {
+        $ret = $result;
+      }
+      db_drop_field($ret, 'xmlsitemap_user', 'pid');
     }
-    db_drop_field($ret, 'xmlsitemap_user', 'pid');
   }
-  if (db_column_exists('xmlsitemap_user_role', 'pid')) {
-    $result = array();
-    @db_drop_index($result, 'xmlsitemap_user_role', 'pid');
-    if ($result[0]['success']) {
-      $ret = $result;
+  else {
+    db_create_table($ret, 'xmlsitemap_user', $schema['xmlsitemap_user'])
+  }
+  if (db_table_exists('xmlsitemap_user_role')) {
+    if (db_column_exists('xmlsitemap_user_role', 'pid')) {
+      $result = array();
+      @db_drop_index($result, 'xmlsitemap_user_role', 'pid');
+      if ($result[0]['success']) {
+        $ret = $result;
+      }
+      db_drop_field($ret, 'xmlsitemap_user_role', 'pid');
     }
-    db_drop_field($ret, 'xmlsitemap_user_role', 'pid');
+  }
+  else {
+    db_create_table($ret, 'xmlsitemap_user_role', $schema['xmlsitemap_user_role']);
   }
   $ret[] = update_sql("UPDATE {system} SET weight = 7 WHERE name = 'xmlsitemap_user'");
   return $ret;
@@ -134,6 +145,13 @@ function xmlsitemap_user_update_6102() {
  * Implementation of hook_update_N().
  */
 function xmlsitemap_user_update_6103() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_user_update_6104() {
   return xmlsitemap_user_update_6000();
 }
 
