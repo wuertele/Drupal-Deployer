@@ -368,9 +368,9 @@ function _xmlsitemap_output_chunk($chunk = 0) {
 function _xmlsitemap_output_index() {
   print '<?xml version="1.0" encoding="UTF-8"?>'."\n";
   print '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'."\n";
-  print '              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'."\n";
-  print '              xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9'."\n";
-  print '                                  http://www.sitemaps.org/schemas/sitemap/0.9/siteindex.xsd">'."\n";
+  print '  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'."\n";
+  print '  xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9'."\n";
+  print '  http://www.sitemaps.org/schemas/sitemap/0.9/siteindex.xsd">'."\n";
   $chunk_size = variable_get('xmlsitemap_chunk_size', 50000);
   $link_count = _xmlsitemap_link_count();
   for ($chunk = 0; $chunk < $link_count / $chunk_size; ++$chunk) {
@@ -394,7 +394,6 @@ function _xmlsitemap_output_index() {
  * Submit the site map to search engines.
  */
 function _xmlsitemap_ping() {
-  module_load_all_includes('inc', 'includes/xmlsitemap');
   module_invoke_all('xmlsitemap_engines', 'ping');
   variable_set('xmlsitemap_changed', FALSE);
 }
@@ -417,7 +416,6 @@ function _xmlsitemap_submit_on_exit() {
 function _xmlsitemap_update() {
   db_query("DELETE FROM {xmlsitemap}");
   db_query("INSERT INTO {xmlsitemap} (loc, lastmod, changefreq, priority) VALUES ('%s', %d, %d, %f)", xmlsitemap_url(NULL, NULL, NULL, NULL, TRUE),time() - 1, 1, variable_get('xmlsitemap_front_page_priority', 1));
-  module_load_all_includes('inc', 'includes/xmlsitemap');
   module_invoke_all('xmlsitemap_links');
   menu_rebuild();
   db_query("DELETE FROM {cache_page} WHERE cid LIKE '%%sitemap%%.xml'");
