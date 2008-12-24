@@ -59,6 +59,7 @@ function xmlsitemap_engines_menu() {
  * Implementation of hook_xmlsitemap_engine_settings_alter().
  */
 function xmlsitemap_engines_xmlsitemap_engine_settings_alter(&$form) {
+  $sitemap = url('sitemap.xml', array('absolute' => TRUE));
   // Google fields.
   $form['google'] = array(
     '#type' => 'fieldset',
@@ -74,8 +75,8 @@ function xmlsitemap_engines_xmlsitemap_engine_settings_alter(&$form) {
   $form['google']['xmlsitemap_engines_google_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Submission URL'),
-    '#default_value' => variable_get('xmlsitemap_engines_google_url', 'http://www.google.com/webmasters/tools/ping?sitemap='. xmlsitemap_url('sitemap.xml', drupal_lookup_path('alias', 'sitemap.xml') ? drupal_lookup_path('alias', 'sitemap.xml') : NULL, NULL, NULL, TRUE)),
-    '#description' => t('The URL to submit the site map to.'),
+    '#default_value' => variable_get('xmlsitemap_engines_google_url', 'http://www.google.com/webmasters/tools/ping?sitemap=[sitemap]'),
+    '#description' => t('The URL to submit the site map to. Use %placeholder like placeholder for the site map URL.', array('%placeholder' => '[sitemap]')),
   );
   $form['google']['xmlsitemap_engines_google_verify'] = array(
     '#type' => 'textfield',
@@ -98,8 +99,8 @@ function xmlsitemap_engines_xmlsitemap_engine_settings_alter(&$form) {
   $form['yahoo']['xmlsitemap_engines_yahoo_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Submission URL'),
-    '#default_value' => variable_get('xmlsitemap_engines_yahoo_url', 'http://search.yahooapis.com/SiteExplorerService/V1/ping?sitemap='. xmlsitemap_url('sitemap.xml', drupal_lookup_path('alias', 'sitemap.xml') ? drupal_lookup_path('alias', 'sitemap.xml') : NULL, NULL, NULL, TRUE)),
-    '#description' => t('The URL to submit the site map to.'),
+    '#default_value' => variable_get('xmlsitemap_engines_yahoo_url', 'http://search.yahooapis.com/SiteExplorerService/V1/ping?sitemap=[sitemap]'),
+    '#description' => t('The URL to submit the site map to. Use %placeholder like placeholder for the site map URL.', array('%placeholder' => '[sitemap]')),
   );
   $form['yahoo']['xmlsitemap_engines_yahoo_verify'] = array(
     '#type' => 'textfield',
@@ -128,8 +129,8 @@ function xmlsitemap_engines_xmlsitemap_engine_settings_alter(&$form) {
   $form['ask']['xmlsitemap_engines_ask_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Submission URL'),
-    '#default_value' => variable_get('xmlsitemap_engines_ask_url', 'http://submissions.ask.com/ping?sitemap='. xmlsitemap_url('sitemap.xml', drupal_lookup_path('alias', 'sitemap.xml') ? drupal_lookup_path('alias', 'sitemap.xml') : NULL, NULL, NULL, TRUE)),
-    '#description' => t('The URL to submit the site map to.'),
+    '#default_value' => variable_get('xmlsitemap_engines_ask_url', 'http://submissions.ask.com/ping?sitemap=[sitemap]'),
+    '#description' => t('The URL to submit the site map to. Use %placeholder like placeholder for the site map URL.', array('%placeholder' => '[sitemap]')),
   );
   // Windows Live fields.
   $form['live'] = array(
@@ -146,8 +147,8 @@ function xmlsitemap_engines_xmlsitemap_engine_settings_alter(&$form) {
   $form['live']['xmlsitemap_engines_live_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Submission URL'),
-    '#default_value' => variable_get('xmlsitemap_engines_live_url', 'http://webmaster.live.com/ping.aspx?siteMap='. xmlsitemap_url('sitemap.xml', drupal_lookup_path('alias', 'sitemap.xml') ? drupal_lookup_path('alias', 'sitemap.xml') : NULL, NULL, NULL, TRUE)),
-    '#description' => t('The URL to submit the site map to.'),
+    '#default_value' => variable_get('xmlsitemap_engines_live_url', 'http://webmaster.live.com/ping.aspx?siteMap=[sitemap]'),
+    '#description' => t('The URL to submit the site map to. Use %placeholder like placeholder for the site map URL.', array('%placeholder' => '[sitemap]')),
   );
   $form['live']['xmlsitemap_engines_live_verify'] = array(
     '#type' => 'textfield',
@@ -169,32 +170,27 @@ function xmlsitemap_engines_xmlsitemap_engine_settings_alter(&$form) {
 function xmlsitemap_engines_xmlsitemap_engines($op) {
   switch ($op) {
     case 'ping':
-      $sitemap_alias = NULL;
-      if ($alias = drupal_lookup_path('alias', 'sitemap.xml')) {
-        $sitemap_alias = $alias;
-      }
-      $sitemap_url = xmlsitemap_url('sitemap.xml', $sitemap_alias, NULL, NULL, TRUE);
       // Submit the site map to Google.
       if (variable_get('xmlsitemap_engines_google_submit', FALSE)) {
-        xmlsitemap_engines_submit_sitemap('Google', 'xmlsitemap_engines_google_url', 'http://www.google.com/webmasters/tools/ping?sitemap='. $sitemap_url);
+        xmlsitemap_engines_submit_sitemap('Google', 'xmlsitemap_engines_google_url', 'http://www.google.com/webmasters/tools/ping?sitemap=[sitemap]');
       }
       // Submit the site map to Yahoo!.
       if (variable_get('xmlsitemap_engines_yahoo_submit', FALSE)) {
-        xmlsitemap_engines_submit_sitemap('Yahoo!', 'xmlsitemap_engines_yahoo_url', 'http://search.yahooapis.com/SiteExplorerService/V1/ping?sitemap='. $sitemap_url);
+        xmlsitemap_engines_submit_sitemap('Yahoo!', 'xmlsitemap_engines_yahoo_url', 'http://search.yahooapis.com/SiteExplorerService/V1/ping?sitemap=[sitemap]');
       }
       // Submit the site map to Ask.com.
       if (variable_get('xmlsitemap_engines_ask_submit', FALSE)) {
-        xmlsitemap_engines_submit_sitemap('Ask.com', 'xmlsitemap_engines_ask_url', 'http://submissions.ask.com/ping?sitemap='. $sitemap_url);
+        xmlsitemap_engines_submit_sitemap('Ask.com', 'xmlsitemap_engines_ask_url', 'http://submissions.ask.com/ping?sitemap=[sitemap]');
       }
       // Submit the site map to Windows Live.
       if (variable_get('xmlsitemap_engines_live_submit', FALSE)) {
-        xmlsitemap_engines_submit_sitemap('Windows Live', 'xmlsitemap_engines_live_url', 'http://webmaster.live.com/ping.aspx?siteMap='. $sitemap_url);
+        xmlsitemap_engines_submit_sitemap('Windows Live', 'xmlsitemap_engines_live_url', 'http://webmaster.live.com/ping.aspx?siteMap=[sitemap]');
       }
       break;
-    case 'access':
-      if (strpos($_SERVER['HTTP_USER_AGENT'], 'Googlebot') !== FALSE) {
-        return '!sitemap downloaded by Google.';
-      }
+     case 'access':
+       if (strpos($_SERVER['HTTP_USER_AGENT'], 'Googlebot') !== FALSE) {
+         return 'Sitemap downloaded by Google.';
+       }
       break;
   }
 }
@@ -214,12 +210,20 @@ function xmlsitemap_engines_xmlsitemap_engines($op) {
  *  The default submission URL.
  */
 function xmlsitemap_engines_submit_sitemap($engine, $url_var, $default_url) {
-  $result = drupal_http_request(variable_get($url_var, $default_url));
+  $url = strtr(
+    variable_get($url_var, $default_url),
+    array('[sitemap]' => url('sitemap.xml', array('absolute' => TRUE)))
+  );
+  $result = drupal_http_request($url);
   if ($result->code == 200) {
-    watchdog('xmlsitemap', 'Sitemap successfully submitted to !engine.', array('!engine' => $engine));
+    watchdog('xmlsitemap', 'Sitemap successfully submitted to !engine.',
+      array('!engine' => $engine)
+    );
   }
   else {
-    watchdog('xmlsitemap', 'Error occurred submitting sitemap to !engine: @code', array('!engine' => $engine, '@code' => $result->code), WATCHDOG_ERROR);
+    watchdog('xmlsitemap', 'Error occurred submitting sitemap to !engine: !code',
+      array('!engine' => $engine, '!code' => 0 + $result->code), WATCHDOG_ERROR
+    );
   }
 }
 
