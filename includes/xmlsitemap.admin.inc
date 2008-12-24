@@ -42,7 +42,6 @@ function xmlsitemap_settings_engines() {
     '#default_value' => variable_get('xmlsitemap_log_access', FALSE),
     '#description' => t('If enabled, a watchdog entry will be made each time the site map is accessed, containing information about the requestor.'),
   );
-  module_load_all_includes('inc', 'includes/xmlsitemap');
   $form = array_merge($form, module_invoke_all('xmlsitemap_engines', 'form'));
   $form = system_settings_form($form);
   array_unshift($form['#submit'], 'xmlsitemap_settings_engines_submit');

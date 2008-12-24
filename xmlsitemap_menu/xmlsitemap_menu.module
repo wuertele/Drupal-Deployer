@@ -50,25 +50,28 @@ function xmlsitemap_menu_form_alter(&$form, $form_state, $form_id) {
  * Implementation of hook_xmlsitmap_links().
  */
 function xmlsitemap_menu_xmlsitemap_links($type = NULL) {
-  if (!$GLOBALS['user']->uid) {
-    // Add the links only when the code is being executed from the anonymous user.
-    if (!isset($type)) {
-      $menus = variable_get('xmlsitemap_menu_menus', array());
-      foreach ($menus as $menu) {
-        $result = db_query("SELECT ml.*, m.* FROM {menu_links} ml LEFT JOIN {menu_router} m ON m.path = ml.router_path WHERE  ml.menu_name = '%s' ORDER BY ml.plid, ml.mlid ASC", $menu);
-        while ($link = db_fetch_array($result)) {
-          // Avoid external links, or links to the front page;
-          // both have $link['external'] set to 1.
-          if (!$link['external'] && !$link['hidden']) {
-            xmlsitemap_menu_link_translate($link);
-            if ($link['access'] == 1) {
-              if (($alias = drupal_lookup_path('alias', $link['href']) === FALSE)) {
-                $alias = NULL;
-              }
-              $url = xmlsitemap_url($link['href'], $alias, NULL, NULL, TRUE);
-              if (db_result(db_query("SELECT loc FROM {xmlsitemap} WHERE loc = '%s'", $url)) != $url) {
-                db_query("INSERT INTO {xmlsitemap} (loc, priority) VALUES ('%s', %f)", $url, min(max(round($link['weight'] / 20 + 0.5, 1), 0), 1));
-              }
+  if (!isset($type)) {
+    $menus = variable_get('xmlsitemap_menu_menus', array());
+    foreach ($menus as $menu) {
+      $result = db_query("SELECT ml.*, m.*
+        FROM {menu_links} ml
+        LEFT JOIN {menu_router} m ON m.path = ml.router_path
+        WHERE  ml.menu_name = '%s'
+        ORDER BY ml.plid, ml.mlid ASC",
+        $menu
+      );
+      while ($link = db_fetch_array($result)) {
+        // Avoid external links, or links to the front page;
+        // both have $link['external'] set to 1.
+        if (!$link['external'] && !$link['hidden']) {
+          _xmlsitemap_menu_link_translate($link);
+          if ($link['access'] == 1) {
+            if (($alias = drupal_lookup_path('alias', $link['href']) === FALSE)) {
+              $alias = NULL;
+            }
+            $url = xmlsitemap_url($link['href'], $alias, NULL, NULL, TRUE);
+            if (db_result(db_query("SELECT loc FROM {xmlsitemap} WHERE loc = '%s'", $url)) != $url) {
+              db_query("INSERT INTO {xmlsitemap} (loc, priority) VALUES ('%s', %f)", $url, min(max(round($link['weight'] / 20 + 0.5, 1), 0), 1));
             }
           }
         }
@@ -76,7 +79,7 @@ function xmlsitemap_menu_xmlsitemap_links($type = NULL) {
     }
   }
 }
-
+  
 /*****************************************************************************
  * Private functions.
  ****************************************************************************/

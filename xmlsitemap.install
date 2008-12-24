@@ -84,22 +84,12 @@ function xmlsitemap_update_6000() {
   if (!db_table_exists('xmlsitemap')) {
     db_create_table($ret, 'xmlsitemap', $schema['xmlsitemap']);
   }
-  $result = array();
-  @db_drop_primary_key($result, 'xmlsitemap');
-  if ($result[0]['success']) {
-    $ret[] = $result[0];
-  }
-  $result = array();
-  @db_change_field($result, 'xmlsitemap', 'loc', 'loc',
-    $schema['xmlsitemap']['fields']['loc']
-  );
-  if ($result[0]['success']) {
-    $ret[] = $result[0];
-  }
-  $result = array();
-  @db_change_field($result, 'xmlsitemap', 'changefreq', 'changefreq', $schema['xmlsitemap']['fields']['changefreq']);
-  if ($result[0]['success']) {
-    $ret[] = $result[0];
+  else {
+    db_drop_primary_key($ret, 'xmlsitemap');
+    db_change_field($ret, 'xmlsitemap', 'loc', 'loc',
+      $schema['xmlsitemap']['fields']['loc']
+    );
+    db_change_field($ret, 'xmlsitemap', 'changefreq', 'changefreq', $schema['xmlsitemap']['fields']['changefreq']);
   }
   $ret[] = update_sql("DELETE FROM {cache_page} WHERE cid LIKE '%%sitemap%%.xml'");
   menu_rebuild();
@@ -200,8 +190,6 @@ function xmlsitemap_update_6110() {
  * Implementation of hook_uninstall().
  */
 function xmlsitemap_uninstall() {
-  // Drop the tables.
   drupal_uninstall_schema('xmlsitemap');
-  // Remove the used variables.
   db_query("DELETE FROM {variable} WHERE name LIKE 'xmlsitemap\_%'");
 }
