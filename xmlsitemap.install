@@ -13,26 +13,68 @@ function xmlsitemap_schema() {
     'description' => 'The base table for xmlsitemap.',
     'fields' => array(
       'loc' => array(
-        'description' => 'The path of this link.',
+        'description' => 'The relative URL.',
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
         'default' => '',
       ),
-      'lastmod' => array(
-        'description' => 'Last change timestamp.',
+      'module' => array(
+        'description' => 'The module handling this link.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'type' => array(
+        'description' => 'The type of link.',
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'id' => array(
+        'description' => 'The ID associated with the link.',
         'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'sid' => array(
+        'description' => 'The sub ID associated with the link.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'lastmod' => array(
+        'description' => 'The Unix timestamp of the last change.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
       ),
       'changefreq' => array(
         'description' => 'The frequency of the changes.',
         'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
       ),
       'priority' => array(
-        'description' => 'The priority of this link in the sitemap.',
+        'description' => 'The priority of this node in the site map.',
         'type' => 'float',
+        'not null' => TRUE,
+        'default' => 0.5,
       ),
     ),
-    'primary key' => array('loc')
+    'indexes' => array(
+      'link_module' => array('module'),
+      'link_type' => array('type'),
+      'link_changed' => array('lastmod'),
+      'link_priority' => array('priority'),
+    ),
+    'primary key' => array('loc'),
   );
   return $schema;
 }
@@ -87,7 +129,39 @@ function xmlsitemap_update_6000() {
       $schema['xmlsitemap']['fields']['loc'],
       array('primary key' => array('loc'))
     );
-    db_change_field($ret, 'xmlsitemap', 'changefreq', 'changefreq', $schema['xmlsitemap']['fields']['changefreq']);
+    if (!db_column_exists('xmlsitemap', 'module')) {
+      db_add_field('xmlsitemap', 'module',
+        $schema['xmlsitemap']['fields']['module'],
+        array('indexes' => array('link_module' => array('module')))
+      );
+    }
+    if (!db_column_exists('xmlsitemap', 'type')) {
+      db_add_field('xmlsitemap', 'type',
+        $schema['xmlsitemap']['fields']['type'],
+        array('indexes' => array('link_type' => array('type')))
+      );
+    }
+    if (!db_column_exists('xmlsitemap', 'id')) {
+      db_add_field('xmlsitemap', 'id',
+        $schema['xmlsitemap']['fields']['id']
+      );
+    }
+    if (!db_column_exists('xmlsitemap', 'sid')) {
+      db_add_field('xmlsitemap', 'sid',
+        $schema['xmlsitemap']['fields']['sid']
+      );
+    }
+    db_change_field($ret, 'xmlsitemap', 'lastmod', 'lastmod',
+      $schema['xmlsitemap']['fields']['lastmod'],
+      array('indexes' => array('link_changed' => array('lastmod')))
+    );
+    db_change_field($ret, 'xmlsitemap', 'changefreq', 'changefreq',
+      $schema['xmlsitemap']['fields']['changefreq']
+    );
+    db_change_field($ret, 'xmlsitemap', 'priority', 'priority',
+      $schema['xmlsitemap']['fields']['priority'],
+      array('indexes' => array('link_priority' => array('priority')))
+    );
   }
   $ret[] = update_sql("DELETE FROM {cache_page}
     WHERE cid LIKE '%%gss.xsl' OR cid LIKE '%%sitemap%.xml'"
