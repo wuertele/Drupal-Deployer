@@ -31,6 +31,39 @@ function xmlsitemap_exit() {
   if (_xmlsitemap_submit_on_exit()) {
     _xmlsitemap_ping();
   }
+  if (variable_get('xmlsitemap_log_access', FALSE)) {
+    $items = array();
+    $chunk_size = variable_get('xmlsitemap_chunk_size', 50000);
+    $link_count = _xmlsitemap_link_count();
+    if ($link_count / $chunk_size > 1) {
+      for ($chunk = 0; $chunk < $link_count / $chunk_size; ++$chunk) {
+        $items["sitemap$chunk.xml"] = $chunk;
+      }
+    }
+    drupal_bootstrap(DRUPAL_BOOTSTRAP_PATH);
+    if (isset($items[arg(0)]), $items) && is_null(arg(1))) {
+      $chunk = $items[arg(0)];
+      if ($chunk < $link_count / $chunk_size) {
+        $write_log = TRUE;
+      }
+    }
+    elseif (arg(0) == 'sitemap.xml' && is_null(arg(1))) {
+      $write_log = TRUE;
+    }
+    if (isset($write_log)) {
+      drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+      $message = array_shift(module_invoke_all('xmlsitemap_engines', 'access'));
+      if (!isset($message)) {
+        $message = 'Sitemap downloaded by @user-agent at @address.';
+      }
+      watchdog('xmlsitemap', $message,
+        array(
+          '@user-agent' => $_SERVER['HTTP_USER_AGENT'],
+          '@address' => $_SERVER['REMOTE_ADDR'],
+        )
+      );
+    }
+  }
 }
 
 /**
