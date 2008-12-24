@@ -13,14 +13,14 @@ function xmlsitemap_schema() {
     'description' => 'The base table for xmlsitemap.',
     'fields' => array(
       'loc' => array(
-        'description' => 'The path of this node.',
+        'description' => 'The path of this link.',
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
         'default' => '',
       ),
       'lastmod' => array(
-        'description' => 'Last change time.',
+        'description' => 'Last change timestamp.',
         'type' => 'int',
       ),
       'changefreq' => array(
@@ -28,10 +28,11 @@ function xmlsitemap_schema() {
         'type' => 'int',
       ),
       'priority' => array(
-        'description' => 'The priority of this node in the sitemap.',
+        'description' => 'The priority of this link in the sitemap.',
         'type' => 'float',
       ),
     ),
+    'primary key' => array('loc')
   );
   return $schema;
 }
@@ -77,9 +78,14 @@ function xmlsitemap_update_6000() {
     db_create_table($ret, 'xmlsitemap', $schema['xmlsitemap']);
   }
   else {
-    db_drop_primary_key($ret, 'xmlsitemap');
+    $result = array();
+    @db_drop_primary_key($result, 'xmlsitemap');
+    if ($result['success']) {
+      $ret[] = $result;
+    }
     db_change_field($ret, 'xmlsitemap', 'loc', 'loc',
-      $schema['xmlsitemap']['fields']['loc']
+      $schema['xmlsitemap']['fields']['loc'],
+      array('primary key' => array('loc'))
     );
     db_change_field($ret, 'xmlsitemap', 'changefreq', 'changefreq', $schema['xmlsitemap']['fields']['changefreq']);
   }
@@ -173,6 +179,13 @@ function xmlsitemap_update_6109() {
  * Implementation of hook_update_N().
  */
 function xmlsitemap_update_6110() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_update_6111() {
   menu_rebuild();
   return xmlsitemap_update_6000();
 }
