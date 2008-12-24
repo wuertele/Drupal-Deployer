@@ -80,8 +80,9 @@ function xmlsitemap_settings_sitemap() {
     '#description' => t('This is the absolute priority for the front page.'),
     '#weight' => -1,
   );
+  drupal_alter('xmlsitemap_sitemap_settings', $form);
   $form = system_settings_form($form);
-  $form['#submit'][] = 'xmlsitemap_update_sitemap';
+  $form['#submit'][] = 'xmlsitemap_settings_sitemap_submit';
   return $form;
 }
 

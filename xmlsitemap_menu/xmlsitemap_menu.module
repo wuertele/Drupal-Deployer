@@ -16,37 +16,6 @@
  ****************************************************************************/
 
 /**
- * Implementation of hook_form_alter().
- */
-function xmlsitemap_menu_form_alter(&$form, $form_state, $form_id) {
-  switch ($form_id) {
-    case 'xmlsitemap_settings_sitemap':
-      $opts = array();
-      $result = db_query("SELECT menu_name, title FROM {menu_custom}");
-      while ($menu = db_fetch_array($result)) {
-        $opts[$menu['menu_name']] = empty($menu['title']) ? $menu['menu_name'] : $menu['title'];
-      }
-      $default_values = variable_get('xmlsitemap_menu_menus', array());
-      // If a menu is not present, remove it from the default settings.
-      foreach ($default_values as $opt) {
-        if (!isset($opts[$opt])) {
-          unset($default_values[$opt]);
-        }
-      }
-      if (!empty($opts)) {
-        $form['xmlsitemap_menu_menus'] = array(
-          '#type' => 'checkboxes',
-          '#title' => t('Menus to include in site map'),
-          '#default_value' => $default_values,
-          '#options' => $opts,
-        );
-        $form['buttons']['#weight'] = 1;
-      }
-      break;
-  }
-}
-
-/**
  * Implementation of hook_xmlsitmap_links().
  */
 function xmlsitemap_menu_xmlsitemap_links($type = NULL) {
@@ -80,6 +49,32 @@ function xmlsitemap_menu_xmlsitemap_links($type = NULL) {
   }
 }
   
+/**
+ * Implementation of hook_xmlsitemap_sitemap_settings_alter().
+ */
+function xmlsitemap_menu_xmlsitemap_sitemap_settings_alter(&$form) {
+  $opts = array();
+  $result = db_query("SELECT menu_name, title FROM {menu_custom}");
+  while ($menu = db_fetch_array($result)) {
+    $opts[$menu['menu_name']] = empty($menu['title']) ? $menu['menu_name'] : $menu['title'];
+  }
+  $default_values = variable_get('xmlsitemap_menu_menus', array());
+  // If a menu is not present, remove it from the default settings.
+  foreach ($default_values as $opt) {
+    if (!isset($opts[$opt])) {
+      unset($default_values[$opt]);
+    }
+  }
+  if (!empty($opts)) {
+    $form['xmlsitemap_menu_menus'] = array(
+      '#type' => 'checkboxes',
+      '#title' => t('Menus to include in site map'),
+      '#default_value' => $default_values,
+      '#options' => $opts,
+    );
+  }
+}
+
 /*****************************************************************************
  * Private functions.
  ****************************************************************************/
