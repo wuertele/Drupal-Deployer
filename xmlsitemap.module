@@ -363,8 +363,15 @@ function _xmlsitemap_output_chunk($chunk = 0) {
   $start = $chunk * $chunk_size;
   $links = db_query_range("SELECT * FROM {xmlsitemap} ORDER BY lastmod DESC, changefreq, priority DESC, loc", $start , $chunk_size);
   while ($link = db_fetch_object($links)) {
+    if ($link->module && function_exists($link->module .'_url')) {
+      $function = $link->module .'_url';
+      $url = $function($link->loc, $link->type);
+    }
+    else {
+      $url = url($link->loc, array('absolute' => TRUE));
+    }
     print '  <url>'."\n";
-    print '    <loc>'. check_url($link->loc) .'</loc>'."\n";
+    print '    <loc>'. check_url($url) .'</loc>'."\n";
     if ($link->lastmod != 0) {
       print '    <lastmod>'. gmdate('Y-m-d\TH:i:s+00:00', $link->lastmod) .'</lastmod>'."\n";
     }
