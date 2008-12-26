@@ -48,7 +48,7 @@ function xmlsitemap_node_form_alter(&$form, &$form_state, $form_id) {
         '#weight' => 30,
       );
       $options = xmlsitemap_priority_options('both');
-      $default = variable_get("xmlsitemap_node_type_priority_$node->type", '0.5');
+      $default = variable_get('xmlsitemap_node_type_priority_'. $node->type, '0.5');
       $form['xmlsitemap_node']['priority_override'] = array(
         '#type' => 'select',
         '#title' => t('Site map priority'),
@@ -75,11 +75,14 @@ function xmlsitemap_node_form_alter(&$form, &$form_state, $form_id) {
           $form['xmlsitemap_node']['xmlsitemap_node_type_priority'] = array(
             '#type' => 'select',
             '#title' => t('Priority adjustment'),
-            '#default_value' => variable_get("xmlsitemap_node_type_priority_{$form['#node_type']->type}", 0.5),
+            '#default_value' => variable_get('xmlsitemap_node_type_priority_'. $form['#node_type']->type, 0.5),
             '#options' => xmlsitemap_priority_options('exclude'),
             '#description' => t('This number will be added to the priority of this content type.'),
           );
-          $form['xmlsitemap_old_priority'] = array('#type' => 'value', '#value' => variable_get("xmlsitemap_node_type_priority_{$form['#node_type']->type}", 0.5));
+          $form['xmlsitemap_old_priority'] = array(
+            '#type' => 'value',
+            '#value' => variable_get('xmlsitemap_node_type_priority_'. $form['#node_type']->type, 0.5)
+          );
           $form['#submit'][] = 'xmlsitemap_node_type_submit';
         }
         break;
@@ -156,10 +159,50 @@ function xmlsitemap_node_perm() {
 /**
  * Implementation of hook_xmlsitemap_links().
  */
-function xmlsitemap_node_xmlsitemap_links($type = NULL, $excludes = array()) {
-  if (!isset($type)) {
-    _xmlsitemap_node_links(_xmlsitemap_node_excludes());
-    module_invoke_all('xmlsitemap_links', 'node', _xmlsitemap_node_excludes());
+function xmlsitemap_node_xmlsitemap_links() {
+  $excludes = xmlsitemap_node_excludes();
+  switch ($GLOBALS['db_type']) {
+    case 'mysql':
+    case 'mysqli':
+      $coalesce = 'COALESCE';
+      $cast = 'CHAR';
+      break;
+    case 'pgsql':
+      $coalesce = 'FIRST';
+      $cast = 'VARCHAR';
+      break;
+  }
+  if (module_exists('comment')) {
+    $columns = 'n.nid, n.type, n.promote, n.changed, xn.previously_changed, xn.priority_override, s.comment_count, s.last_comment_timestamp, xn.previous_comment';
+    $left_join = "LEFT JOIN {node_comment_statistics} s ON n.nid = s.nid";
+  }
+  else {
+    $columns = 'n.nid, n.type, n.promote, n.changed, xn.previously_changed, xn.priority_override';
+    $left_join = '';
+  }
+  $query = "SELECT $columns, $coalesce(ua.dst) AS alias FROM {node} n
+    LEFT JOIN {xmlsitemap_node} xn ON n.nid = xn.nid
+    $left_join
+    LEFT JOIN {url_alias} ua ON ua.src = CONCAT('node/', CAST(n.nid AS $cast))
+    WHERE n.status > 0
+      AND (n.type NOT IN (". db_placeholders($excludes, 'varchar') .")
+        AND xn.priority_override IS NULL
+        OR xn.priority_override >= 0)
+      AND n.nid <> %d
+    GROUP BY $columns";
+  $nid = 0;
+  $frontpage = explode('/', drupal_get_normal_path(variable_get('site_frontpage', 'node')));
+  if (count($frontpage) == 2 && $frontpage[0] == 'node' && is_numeric($frontpage[1])) {
+    $nid = $frontpage[1];
+  }
+  $query_args = array_merge($excludes, array($nid));
+  $result = db_query(db_rewrite_sql($query), $query_args);
+  while ($node = db_fetch_object($result)) {
+    db_query("INSERT INTO {xmlsitemap} (loc, lastmod, changefreq, priority) VALUES ('%s', %d, %d, %f)",
+      xmlsitemap_url('node/'. $node->nid, $node->alias, NULL, NULL, TRUE),
+      variable_get('xmlsitemap_node_count_comments', TRUE) ? max($node->changed, $node->last_comment_timestamp) : $node->changed,
+      xmlsitemap_node_frequency($node), xmlsitemap_node_priority($node)
+    );
   }
 }
 
@@ -216,6 +259,27 @@ function xmlsitemap_node_type_submit($form, &$form_state) {
  ****************************************************************************/
 
 /**
+ * Get array of excluded types.
+ * @return
+ *  An array of node types to exclude.
+ */
+function xmlsitemap_node_excludes() {
+  static $excludes;
+  if (!isset($excludes)) {
+    $excludes = array();
+    foreach (node_get_types() as $type => $name) {
+      if (variable_get("xmlsitemap_node_type_priority_$type", 0.5) < 0) {
+        $excludes[] = $type;
+      }
+    }
+    if (empty($excludes)) {
+      $excludes = array('');
+    }
+  }
+  return $excludes;
+}
+
+/**
  * Calculate the change frequency of a node.
  * @param $node
  *  Data for a node retrieved by _xmlsitemap_node_links().
@@ -261,7 +325,7 @@ function xmlsitemap_node_priority($node) {
   $priority = $node->priority_override;
   if (!isset($node->priority_override)) {
     $priority = 0;
-    $priority += variable_get("xmlsitemap_node_type_priority_$node->type", 0.5);
+    $priority += variable_get('xmlsitemap_node_type_priority_'. $node->type, 0.5);
     if ($node->promote) {
       $priority += variable_get('xmlsitemap_node_promote_priority', 0.3);
     }
@@ -272,78 +336,6 @@ function xmlsitemap_node_priority($node) {
     $priority = min($priority, 1);
   }
   return $priority;
-}
-
-/*****************************************************************************
- * Private functions.
- ****************************************************************************/
-
-/**
- * Get array of excluded types.
- * @return
- *  An array of node types to exclude.
- */
-function _xmlsitemap_node_excludes() {
-  static $excludes;
-  if (!isset($excludes)) {
-    $excludes = array();
-    foreach (node_get_types() as $type => $name) {
-      if (variable_get("xmlsitemap_node_type_priority_$type", 0.5) < 0) {
-        $excludes[] = $type;
-      }
-    }
-  }
-  return $excludes;
-}
-
-/**
- * Get the nid of the front page node.
- * @return
- *  The front page node ID, or 0 if front page is not a node.
- */
-function _xmlsitemap_node_frontpage() {
-  $nid = 0;
-  $frontpage = explode('/', drupal_get_normal_path(variable_get('site_frontpage', 'node')));
-  if (count($frontpage) == 2 && $frontpage[0] == 'node' && is_numeric($frontpage[1])) {
-    $nid = $frontpage[1];
-  }
-  return $nid;
-}
-
-/**
- * Get node links.
- * @param $excludes
- *  An array of node types to exclude.
- * @return
- *  An array of links. Each link is an array containing the XML values for a
- *  site map URL.
- */
-function _xmlsitemap_node_links($excludes = array()) {
-  if (empty($excludes)) {
-    $excludes = array('');
-  }
-  switch ($GLOBALS['db_type']) {
-    case 'mysql':
-    case 'mysqli':
-      $coalesce = 'COALESCE';
-      $cast = 'CHAR';
-      break;
-    case 'pgsql':
-      $coalesce = 'FIRST';
-      $cast = 'VARCHAR';
-      break;
-  }
-  $columns = 'n.nid, n.type, n.promote, n.changed, xn.previously_changed, xn.priority_override';
-  $query = "SELECT $columns, $coalesce(ua.dst) AS alias FROM {node} n";
-  if (module_exists('comment')) {
-    $columns .= ', s.comment_count, s.last_comment_timestamp, xn.previous_comment';
-    $query .= " LEFT JOIN {node_comment_statistics} s ON n.nid = s.nid";
-  }
-  $query .= " LEFT JOIN {url_alias} ua ON ua.src = CONCAT('node/', CAST(n.nid AS $cast)) LEFT JOIN {xmlsitemap_node} xn ON n.nid = xn.nid WHERE n.status > 0 AND (n.type NOT IN (". db_placeholders($excludes, 'varchar') .") AND xn.priority_override IS NULL OR xn.priority_override >= 0) AND n.nid <> %d GROUP BY $columns";
-  $result = db_query(db_rewrite_sql($query), array_merge($excludes, array(_xmlsitemap_node_frontpage())));
-  while ($node = db_fetch_object($result)) {
-    db_query("INSERT INTO {xmlsitemap} (loc, lastmod, changefreq, priority) VALUES ('%s', %d, %d, %f)", xmlsitemap_url('node/'. $node->nid, $node->alias, NULL, NULL, TRUE), variable_get('xmlsitemap_node_count_comments', TRUE) ? max($node->changed, $node->last_comment_timestamp) : $node->changed, xmlsitemap_node_frequency($node), xmlsitemap_node_priority($node));
-  }
 }
 
 /**

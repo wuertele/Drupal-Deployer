@@ -70,7 +70,7 @@ function hook_xmlsitemap_links($type = NULL, $excludes = array()) {
         $interval = empty($user->previously_changed) ? 0 : $user->last_changed - $user->previously_changed;
         $links[] = array(
           'uid' => $user->uid,
-          '#loc' => xmlsitemap_url("user/$user->uid", $user->alias, NULL, NULL, TRUE),
+          '#loc' => xmlsitemap_url('user/'. $user->uid, $user->alias, NULL, NULL, TRUE),
           '#lastmod' => $user->last_changed,
           '#changefreq' => max($age, $interval),
           '#priority' => _xmlsitemap_user_priority($user),

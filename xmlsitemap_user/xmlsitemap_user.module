@@ -156,8 +156,8 @@ function xmlsitemap_user_user($op, &$edit, &$account, $category = NULL) {
 /**
  * Implementation of hook_xmlsitemap_links().
  */
-function xmlsitemap_user_xmlsitemap_links($type = NULL, $excludes = array()) {
-  if (!isset($type) && user_access('access user profiles')) {
+function xmlsitemap_user_xmlsitemap_links() {
+  if (user_access('access user profiles')) {
     switch ($GLOBALS['db_type']) {
       case 'mysql':
       case 'mysqli':
@@ -169,6 +169,11 @@ function xmlsitemap_user_xmlsitemap_links($type = NULL, $excludes = array()) {
         $cast = 'VARCHAR';
         break;
     }
+    $uid = 0;
+    $frontpage = explode('/', drupal_get_normal_path(variable_get('site_frontpage', 'node')));
+    if (count($frontpage) == 2 && $frontpage[0] == 'user' && is_numeric($frontpage[1])) {
+      $uid = $frontpage[1];
+    }
     $result = db_query("SELECT u.uid, xu.last_changed, xu.previously_changed, xu.priority_override, SUM(xur.priority) as priority, $coalesce(ua.dst) AS alias
       FROM {users} u
       LEFT JOIN {users_roles} ur ON u.uid = ur.uid
@@ -178,14 +183,21 @@ function xmlsitemap_user_xmlsitemap_links($type = NULL, $excludes = array()) {
       WHERE (xu.priority_override IS NULL OR xu.priority_override >= 0) AND u.uid <> %d AND u.uid > 0 AND u.status <> 0
       GROUP BY u.uid, xu.last_changed, xu.previously_changed, xu.priority_override
       HAVING COUNT(xu.priority_override) > 0 OR (SUM(xur.priority) IS NULL AND %f <> -1 OR MIN(xur.priority) <> -1)",
-      _xmlsitemap_user_frontpage(), variable_get('xmlsitemap_user_default_priority', 0.5)
+      $uid, variable_get('xmlsitemap_user_default_priority', 0.5)
     );
     while ($user = db_fetch_object($result)) {
       $age = time() - $user->last_changed;
       $interval = empty($user->previously_changed) ? 0 : $user->last_changed - $user->previously_changed;
-      db_query("INSERT INTO {xmlsitemap} (loc, lastmod, changefreq, priority) VALUES ('%s', %d, %d, %f)", xmlsitemap_url("user/$user->uid", $user->alias, NULL, NULL, TRUE), $user->last_changed, max($age, $interval), _xmlsitemap_user_priority($user));
+      if (isset($user->priority_override)) {
+        $priority = $user->priority_override;
+      }
+      else {
+        $priority = min(isset($user->priority) ? $user->priority : variable_get('xmlsitemap_user_default_priority', 0.5), 1);
+      }
+      db_query("INSERT INTO {xmlsitemap} (loc, lastmod, changefreq, priority) VALUES ('%s', %d, %d, %f)",
+        xmlsitemap_url('user/'. $user->uid, $user->alias, NULL, NULL, TRUE),
+        $user->last_changed, max($age, $interval), $priority);
     }
-    module_invoke_all('xmlsitemap_links', 'user');
   }
 }
 
@@ -218,38 +230,6 @@ function xmlsitemap_user_form_submit($form, &$form_state) {
       xmlsitemap_update_sitemap();
     }
   }
-}
-
-/*****************************************************************************
- *  Private functions.
- ****************************************************************************/
-
-/**
- * Get the uid of the front page profile.
- */
-function _xmlsitemap_user_frontpage() {
-  $uid = 0;
-  $frontpage = explode('/', drupal_get_normal_path(variable_get('site_frontpage', 'node')));
-  if (count($frontpage) == 2 && $frontpage[0] == 'user' && is_numeric($frontpage[1])) {
-    $uid = $frontpage[1];
-  }
-  return $uid;
-}
-
-/**
- * Calculate the priority of a user profile.
- * @param $user
- *  An user object.
- * @return
- *  A number between 0 and 1, or -1.
- */
-function _xmlsitemap_user_priority($user) {
-  $priority = $user->priority_override;
-  if (!isset($user->priority_override)) {
-    $user->priority = isset($user->priority) ? $user->priority : variable_get('xmlsitemap_user_default_priority', 0.5);
-    $priority = min($user->priority, 1);
-  }
-  return $priority;
 }
 
 /**
