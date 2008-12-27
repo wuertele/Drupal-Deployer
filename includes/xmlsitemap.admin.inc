@@ -26,15 +26,15 @@ function xmlsitemap_settings_engines() {
   );
   $form['submission']['xmlsitemap_submit'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Submit site map when updated.'),
+    '#title' => t('Submit the site map when updated.'),
     '#default_value' => variable_get('xmlsitemap_submit', FALSE),
-    '#description' => t('If enabled, search engines will be notified of changes to the site map each time it is updated.'),
+    '#description' => t('If enabled, the search engines will be notified of changes to the site map each time it is updated.'),
   );
   $form['submission']['xmlsitemap_cron_submit'] = array(
     '#type' => 'checkbox',
     '#title' => t('Submit the site map on cron run.'),
     '#default_value' => variable_get('xmlsitemap_cron_submit', FALSE),
-    '#description' => t('If enabled, search engines will be notified of changes to the site map each time cron is run.'),
+    '#description' => t('If enabled, the search engines will be notified of changes to the site map each time cron is run.'),
   );
   $form['submission']['xmlsitemap_log_access'] = array(
     '#type' => 'checkbox',
