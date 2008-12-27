@@ -32,7 +32,7 @@ function xmlsitemap_settings_engines() {
   );
   $form['submission']['xmlsitemap_cron_submit'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Submit site map on cron run.'),
+    '#title' => t('Submit the site map on cron run.'),
     '#default_value' => variable_get('xmlsitemap_cron_submit', FALSE),
     '#description' => t('If enabled, search engines will be notified of changes to the site map each time cron is run.'),
   );

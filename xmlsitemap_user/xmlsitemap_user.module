@@ -21,16 +21,17 @@
 function xmlsitemap_user_form_alter($form_id, &$form) {
   switch ($form_id) {
     case 'user_admin_settings':
-      $form['xmlsitemap'] = array(
+      $form['xmlsitemap_user'] = array(
         '#type' => 'fieldset',
-        '#title' => t('Site map'),
+        '#title' => t('XML site map'),
+        '#collapsible' => TRUE,
       );
       $default = variable_get('xmlsitemap_user_default_priority', 0.5);
-      $form['xmlsitemap']['xmlsitemap_user_old_default_priority'] = array(
+      $form['xmlsitemap_user']['xmlsitemap_user_old_default_priority'] = array(
         '#type' => 'value',
         '#value' => $default
       );
-      $form['xmlsitemap']['xmlsitemap_user_default_priority'] = array(
+      $form['xmlsitemap_user']['xmlsitemap_user_default_priority'] = array(
         '#type' => 'select',
         '#title' => t('Default user priority'),
         '#default_value' => $default,
@@ -49,9 +50,14 @@ function xmlsitemap_user_form_alter($form_id, &$form) {
       if ($priority === FALSE) {
         $priority = 0.5;
       }
-      $form['xmlsitemap_user_role_priority'] = array(
+      $form['xmlsitemap_user'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('XML site map'),
+        '#collapsible' => TRUE,
+      );
+      $form['xmlsitemap_user']['xmlsitemap_user_role_priority'] = array(
         '#type' => 'select',
-        '#title' => t('Default site map priority'),
+        '#title' => t('Default priority'),
         '#default_value' => $priority,
         '#options' => $options,
         '#description' => t("The priority of all a user's roles will be added together to set the user's default priority. If all role priorities are left at default, the user's default priority will be %priority.", array('%priority' => $options[variable_get('xmlsitemap_user_default_priority', '0.5')])),
@@ -87,7 +93,7 @@ function xmlsitemap_user_user($op, &$edit, &$account, $category = NULL) {
       if (user_access('override profile priority')) {
         $form['xmlsitemap_user'] = array(
           '#type' => 'fieldset',
-          '#title' => t('Site map settings'),
+          '#title' => t('XML site map'),
           '#collapsible' => TRUE,
           '#weight' => 7,
         );
@@ -110,7 +116,7 @@ function xmlsitemap_user_user($op, &$edit, &$account, $category = NULL) {
         }
         $form['xmlsitemap_user']['xmlsitemap_user_priority'] = array(
           '#type' => 'select',
-          '#title' => t('Site map priority'),
+          '#title' => t('Priority'),
           '#default_value' => $priority !== FALSE ? $priority : -2.0,
           '#options' => $options,
           '#description' => t('The default priority is %priority.', array('%priority' => $options[(string)$default_priority])),
