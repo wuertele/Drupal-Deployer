@@ -79,7 +79,7 @@ function xmlsitemap_file_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
  */
 function xmlsitemap_file_xmlsitemap_links() {
   $excludes = xmlsitemap_node_excludes();
-  $query_args = array_merge(array(strlen(file_directory_path()) + 2), $excludes, array(_xmlsitemap_file_frontpage()));
+  $query_args = array_merge(array(strlen(file_directory_path()) + 2), $excludes);
   $result = db_query(db_rewrite_sql("SELECT n.nid, n.type, n.promote, f.fid, f.filepath, s.comment_count, xn.priority_override, xf.changed, xf.previously_changed
     FROM {node} n
     INNER JOIN {xmlsitemap_file} xf ON n.nid = xf.nid
@@ -88,7 +88,6 @@ function xmlsitemap_file_xmlsitemap_links() {
     LEFT JOIN {file} f ON f.fid = xf.fid
     WHERE n.status > 0
     AND (n.type NOT IN (". db_placeholders($excludes, 'varchar') .") AND xn.priority_override IS NULL OR xn.priority_override >= 0)
-    AND f.filepath <> '%s'
     AND r.list = 1
     GROUP BY n.nid, n.type, n.promote, f.fid, f.filepath, s.comment_count, xn.priority_override, xf.changed, xf.previously_changed"),
     $query_args
