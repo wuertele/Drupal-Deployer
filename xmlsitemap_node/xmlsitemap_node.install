@@ -13,29 +13,31 @@ function xmlsitemap_node_schema() {
     'description' => 'The base table for xmlsitemap_node.',
     'fields' => array(
       'nid' => array(
-        'description' => 'The path of this node.',
+        'description' => 'The node ID.',
         'type' => 'int',
         'unsigned' => TRUE,
       ),
       'last_changed' => array(
-        'description' => 'Keeps track of new changes.',
+        'description' => 'The Unix timestamp of the last change.',
         'type' => 'int',
       ),
       'previously_changed' => array(
-        'description' => 'Keeps track of old changes.',
+        'description' => 'The Unix timestamp of the previous change.',
         'type' => 'int',
       ),
       'last_comment' => array(
-        'description' => 'Link to last comment.',
+        'description' => 'The Unix timestamp of the last added comment.',
         'type' => 'int',
       ),
       'previous_comment' => array(
-        'description' => 'Link to previous comment.',
+        'description' => 'The Unix timestamp of the previously added comment.',
         'type' => 'int',
       ),
       'priority_override' => array(
-        'description' => 'Stores the index value.',
+        'description' => 'The priority of the node in the site map.',
         'type' => 'float',
+        'not null' => TRUE,
+        'default' => -2.0,
       ),
     ),
     'primary key' => array('nid'),
@@ -57,15 +59,35 @@ function xmlsitemap_node_install() {
  */
 function xmlsitemap_node_update_6000() {
   $ret = array();
-  if (db_column_exists('xmlsitemap_node', 'pid')) {
-    $result = array();
-    @db_drop_index($result, 'xmlsitemap_node', 'pid');
-    if ($result[0]['success']) {
-      $ret[] = $result[0];
+  $schema = xmlsitemap_node_schema();
+  if (db_table_exists('xmlsitemap_node')) {
+    if (db_column_exists('xmlsitemap_node', 'pid')) {
+      $result = array();
+      @db_drop_index($result, 'xmlsitemap_node', 'pid');
+      if ($result[0]['success']) {
+        $ret[] = $result[0];
+      }
+      db_drop_field($ret, 'xmlsitemap_node', 'pid');
     }
-    db_drop_field($ret, 'xmlsitemap_node', 'pid');
+    $ret[] = update_sql("UPDATE {xmlsitemap_node}
+      SET priority_override = -2
+      WHERE priority_override IS NULL"
+    );
+    db_change_field($ret, 'xmlsitemap_node', 'priority_override', 'priority_override',
+      $schema['xmlsitemap_node']['fields']['priority_override']
+    );
+  }
+  else {
+    db_create_table($ret, 'xmlsitemap_node', $schema['xmlsitemap_node']);
   }
   $ret[] = update_sql("UPDATE {system} SET weight = 7 WHERE name = 'xmlsitemap_node'");
+  if (variable_get('xmlsitemap_node_comment_priority', 0.5) == 0.5) {
+    variable_set('xmlsitemap_node_comment_priority', 0.2);
+    $ret[] = array(
+      'success' => TRUE,
+      'query' => 'UPDATE MODULE SETTINGS',
+    );
+  }
   return $ret;
 }
 
@@ -82,6 +104,14 @@ function xmlsitemap_node_update_6100() {
  *
  */
 function xmlsitemap_node_update_6101() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function xmlsitemap_node_update_6102() {
   return xmlsitemap_node_update_6000();
 }
 
