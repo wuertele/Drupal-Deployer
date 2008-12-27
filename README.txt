@@ -26,14 +26,13 @@ Bug reports, feature suggestions and latest developments:
 
 -- CONFIGURATION --
 
-* Configure user permissions in administer >> User management >> Access control
+* Configure user permissions in Administer >> User management >> Permissions
   >> Feedback.
 
 
 -- USAGE --
 
-* To view all feedback messages, go to
-  Administer -> Logs -> Feedback messages
+* To view all feedback messages, go to Administer >> Logs >> Feedback messages
 
 
 -- CONTACT --
