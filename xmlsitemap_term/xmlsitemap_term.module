@@ -37,8 +37,13 @@ function xmlsitemap_term_form_alter(&$form, $form_state, $form_id) {
   else {
     switch ($form_id) {
       case 'taxonomy_form_term':
-        $priority = db_result(db_query("SELECT priority_override FROM {xmlsitemap_term} WHERE tid = %d", $form['tid']['#value']));
-        $priority = isset($priority) ? $priority : 'NULL';
+        $priority = db_result(db_query("SELECT priority_override
+          FROM {xmlsitemap_term}
+          WHERE tid = %d", $form['tid']['#value'])
+        );
+        if ($priority === FALSE) {
+          $priority = -2;
+        }
         if (user_access('override term priority')) {
           $options = xmlsitemap_priority_options('both');
           $default = variable_get('xmlsitemap_term_vocabulary_priority_'. $form['vid']['#value'], '0.5');
@@ -53,7 +58,10 @@ function xmlsitemap_term_form_alter(&$form, $form_state, $form_id) {
           $form['delete']['#weight'] = 1;
         }
         else {
-          $form['xmlsitemap_term_priority'] = array('#type' => 'value', '#value' => $priority);
+          $form['xmlsitemap_term_priority'] = array(
+            '#type' => 'value',
+            '#value' => $priority
+          );
         }
         break;
       case 'taxonomy_form_vocabulary':
@@ -145,7 +153,7 @@ function xmlsitemap_term_taxonomy($op, $type, $array = NULL) {
         break;
       case 'insert':
         db_query("INSERT INTO {xmlsitemap_term} (tid, last_changed, priority_override) VALUES (%d, %d, %s)",
-          $array['tid'], time(), isset($array['xmlsitemap_term_priority']) ? $array['xmlsitemap_term_priority'] : 'NULL'
+          $array['tid'], time(), $array['xmlsitemap_term_priority']
         );
         break;
       case 'update':
@@ -155,8 +163,11 @@ function xmlsitemap_term_taxonomy($op, $type, $array = NULL) {
           );
         }
         else {
-          $priority = db_result(db_query("SELECT priority_override FROM {xmlsitemap_term} WHERE tid = %d", $array['tid']));
-          $array['xmlsitemap_term_priority'] = isset($priority) && $priority !== FALSE ? $priority : 'NULL';
+          $priority = db_result(db_query("SELECT priority_override
+            FROM {xmlsitemap_term}
+            WHERE tid = %d", $array['tid'])
+          );
+          $array['xmlsitemap_term_priority'] = $priority !== FALSE ? $priority : -2.0;
         }
         break;
     }
@@ -171,7 +182,7 @@ function xmlsitemap_term_xmlsitemap_links() {
   $excludes = array();
   $result = db_query("SELECT vid FROM {vocabulary}");
   while ($vocabulary = db_fetch_object($result)) {
-    if (variable_get('xmlsitemap_term_vocabulary_priority_'. $vocabulary->vid, 0.5) < 0) {
+    if (variable_get('xmlsitemap_term_vocabulary_priority_'. $vocabulary->vid, 0.5) == -1) {
         $excludes[] = $vocabulary->vid;
     }
   }
@@ -192,7 +203,7 @@ function xmlsitemap_term_xmlsitemap_links() {
     LEFT JOIN {vocabulary} v ON t.vid = v.vid
     LEFT JOIN {xmlsitemap_term} xt ON t.tid = xt.tid
     WHERE (t.vid NOT IN (". db_placeholders($excludes, 'int') .")
-      AND xt.priority_override IS NULL OR xt.priority_override >= 0)
+      AND xt.priority_override <> -1
       AND t.tid <> %d
     GROUP BY t.tid, t.vid, v.module, xt.last_changed, xt.previously_changed, xt.priority_override", 't', 'tid'),
     $query_args
@@ -211,11 +222,11 @@ function xmlsitemap_term_xmlsitemap_links() {
     $url = xmlsitemap_url($path, $alias, NULL, NULL, TRUE);
     $age = time() - $term->last_changed;
     $interval = empty($term->previously_changed) ? 0 : $term->last_changed - $term->previously_changed;
-    if (isset($term->priority_override)) {
+    if ($term->priority_override != -2.0) {
       $priority = $term->priority_override;
     }
     else {
-      $priority = min(variable_get('xmlsitemap_term_vocabulary_priority_'. $term->vid, 0.5), 1);
+      $priority = variable_get('xmlsitemap_term_vocabulary_priority_'. $term->vid, 0.5);
     }
     db_query("INSERT INTO {xmlsitemap} (loc, lastmod, changefreq, priority) VALUES ('%s', %d, %d, %f)",
       $url, $term->last_changed, max($age, $interval), $priority
