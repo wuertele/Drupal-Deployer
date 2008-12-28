@@ -105,23 +105,23 @@ function admin_menu_link_save($item) {
  *   If one of these links is added back, it should be removed from the array.
  */
 function admin_menu_admin_menu(&$deleted) {
-  global $base_url;
-
   $links = array();
   $icon_path = '<front>';
 
-  // Add system update links.
+  // Add link to manually run cron.
   $links[] = array(
     'title' => 'Run cron',
     'path' => 'admin/reports/status/run-cron',
     'weight' => 50,
     'parent_path' => $icon_path,
   );
+  // Add link to run update.php.
   $links[] = array(
     'title' => 'Run updates',
-    'path' => $base_url .'/update.php',
+    'path' => 'update.php',
     'weight' => 50,
     'parent_path' => $icon_path,
+    'options' => array('external' => TRUE),
   );
 
   // Move 'By module' item into Site configuration.
@@ -281,7 +281,7 @@ function admin_menu_admin_menu(&$deleted) {
  *   An array of links that were removed from $menu_links.
  */
 function admin_menu_adjust_items(&$menu_links, &$sort) {
-  global $user, $base_url;
+  global $user;
   $links = array();
   $deleted = array();
 

@@ -266,12 +266,16 @@ function admin_menu_translated_menu_link_alter(&$item, $map) {
       _menu_item_localize($item, $map, TRUE);
     }
   }
-  // Don't waste cycles altering items that are not visible
-  if (!$item['access']) {
+  // We defined 'Run updates' as external link; apply proper base path now.
+  if ($item['link_path'] == 'update.php') {
+    $item['title'] = $item['link_title'];
+    $item['access'] = ($user->uid == 1 || !empty($GLOBALS['update_free_access']));
+    $item['href'] = base_path() . $item['href'];
+    _menu_item_localize($item, $map, TRUE);
     return;
   }
-  if ($item['link_path'] == $base_url . '/update.php' && $user->uid != 1) {
-    $item['access'] = FALSE;
+  // Don't waste cycles altering items that are not visible
+  if (!$item['access']) {
     return;
   }
   if ($item['link_path'] == 'http://drupal.org' && !user_access('display drupal links')) {
@@ -289,7 +293,7 @@ function admin_menu_translated_menu_link_alter(&$item, $map) {
   }
   // Handle items that need dynamic localization/replacement.
   if (isset($item['options']['t'])) {
-    $item['title'] = t($item['title'], $item['options']['t'] + array('@username' => $GLOBALS['user']->name));
+    $item['title'] = t($item['title'], $item['options']['t'] + array('@username' => $user->name));
   }
   if ($item['title'] == 'icon_users') {
     // Add count of active anonymous/authenticated users.
