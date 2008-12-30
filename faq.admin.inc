@@ -117,7 +117,7 @@ function faq_questions_settings_form() {
   $form['faq_questions_misc']['faq_question_length'] = array(
     '#type' => 'radios',
     '#title' => t('Question length'),
-    '#options' => array('long' => t('Display longer text'), 'both' => t('Display both short and long questions')),
+    '#options' => array('long' => t('Display longer text'), 'short' => t('Display short text'), 'both' => t('Display both short and long questions')),
     '#description' => t("The length of question text to display on the FAQ page.  The short question will always be displayed in the FAQ blocks."),
     '#default_value' => variable_get('faq_question_length', 'long'),
   );
