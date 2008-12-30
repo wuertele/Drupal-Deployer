@@ -315,11 +315,15 @@ function faq_view($node, $teaser = FALSE, $page = FALSE) {
  * @param $tid
  *   Default is 0, determines if the questions and answers on the page
  *   will be shown according to a category or non-categorized.
+ * @param $faq_display
+ *   Optional parameter to override default question layout setting.
+ * @param $category_display
+ *   Optional parameter to override default category layout setting.
  * @return
  *   The output variable which contains an HTML formatted page with FAQ
  *   questions and answers.
  */
-function faq_page($tid = 0) {
+function faq_page($tid = 0, $faq_display = '', $category_display = '') {
   if (module_exists('pathauto')) {
     _pathauto_include();
   }
@@ -336,7 +340,7 @@ function faq_page($tid = 0) {
     $tid = 0;
   }
 
-  // configure the breadcrumb trail.
+  // Configure the breadcrumb trail.
   if (!empty($tid) && $current_term = taxonomy_get_term($tid)) {
     if (!drupal_lookup_path('alias', arg(0) .'/'. arg(1)) && module_exists('pathauto')) {
       $placeholders = pathauto_get_placeholders('taxonomy', taxonomy_get_term($tid));
@@ -348,9 +352,16 @@ function faq_page($tid = 0) {
   }
 
 
-  $faq_display = variable_get('faq_display', 'questions_top');
+  if (empty($faq_display)) {
+    $faq_display = variable_get('faq_display', 'questions_top');
+  }
   $use_categories = variable_get('faq_use_categories', FALSE);
-  if (!module_exists("taxonomy")) $use_categories = FALSE;
+  if (!empty($category_display)) {
+    $use_categories = TRUE;
+  }
+  if (!module_exists("taxonomy")) {
+    $use_categories = FALSE;
+  }
 
   $faq_path = drupal_get_path('module', 'faq') .'/includes';
 
@@ -400,7 +411,9 @@ function faq_page($tid = 0) {
 
   // Categorize questions.
   else {
-    $category_display = variable_get('faq_category_display', 'categories_inline');
+    if (empty($category_display)) {
+      $category_display = variable_get('faq_category_display', 'categories_inline');
+    }
     $hide_child_terms = variable_get('faq_hide_child_terms', FALSE);
     $output .= "<br />";
 
@@ -543,26 +556,26 @@ function _display_faq_by_category($faq_display, $category_display, $term, $displ
     case 'questions_top':
       include_once($faq_path .'/faq.questions_top.inc');
       // @todo fix workaround: have to share result.
-      $output .= theme('faq_category_questions_top', $data, $display_header, $category_display, $term, $faq_class);
-      $output_answers .= theme('faq_category_questions_top_answers', $data, $display_header, $category_display, $term, $faq_class);
+      $output .= theme('faq_category_questions_top', $data, $display_header, $category_display, $term, $faq_class, $term);
+      $output_answers .= theme('faq_category_questions_top_answers', $data, $display_header, $category_display, $term, $faq_class, $term);
       break;
 
 
     case 'hide_answer':
       include_once($faq_path .'/faq.hide_answer.inc');
-      $output .= theme('faq_category_hide_answer', $data, $display_header, $category_display, $term, $faq_class);
+      $output .= theme('faq_category_hide_answer', $data, $display_header, $category_display, $term, $faq_class, $term);
       break;
 
 
     case 'questions_inline':
       include_once($faq_path .'/faq.questions_inline.inc');
-      $output .= theme('faq_category_questions_inline', $data, $display_header, $category_display, $term, $faq_class);
+      $output .= theme('faq_category_questions_inline', $data, $display_header, $category_display, $term, $faq_class, $term);
       break;
 
 
     case 'new_page':
       include_once($faq_path .'/faq.new_page.inc');
-      $output .= theme('faq_category_new_page', $data, $display_header, $category_display, $term, $faq_class);
+      $output .= theme('faq_category_new_page', $data, $display_header, $category_display, $term, $faq_class, $term);
       break;
 
   } // End of switch (faq_display).
@@ -592,13 +605,13 @@ function faq_theme() {
       'path' => $path,
       'file' => 'faq.questions_top.inc',
       'template' => 'faq-category-questions-top',
-      'arguments' => array('data' => NULL, 'display_header' => 0, 'category_display' => NULL, 'term' => NULL, 'class' => NULL),
+      'arguments' => array('data' => NULL, 'display_header' => 0, 'category_display' => NULL, 'term' => NULL, 'class' => NULL, 'parent_term' => NULL),
       ),
     'faq_category_questions_top_answers' => array(
       'path' => $path,
       'file' => 'faq.questions_top.inc',
       'template' => 'faq-category-questions-top-answers',
-      'arguments' => array('data' => NULL, 'display_header' => 0, 'category_display' => NULL, 'term' => NULL, 'class' => NULL),
+      'arguments' => array('data' => NULL, 'display_header' => 0, 'category_display' => NULL, 'term' => NULL, 'class' => NULL, 'parent_term' => NULL),
       ),
     'faq_hide_answer' => array(
       'path' => $path,
@@ -610,7 +623,7 @@ function faq_theme() {
       'path' => $path,
       'file' => 'faq.hide_answer.inc',
       'template' => 'faq-category-hide-answer',
-      'arguments' => array('data' => NULL, 'display_header' => 0, 'category_display' => NULL, 'term' => NULL, 'class' => NULL),
+      'arguments' => array('data' => NULL, 'display_header' => 0, 'category_display' => NULL, 'term' => NULL, 'class' => NULL, 'parent_term' => NULL),
       ),
     'faq_questions_inline' => array(
       'path' => $path,
@@ -622,7 +635,7 @@ function faq_theme() {
       'path' => $path,
       'file' => 'faq.questions_inline.inc',
       'template' => 'faq-category-questions-inline',
-      'arguments' => array('data' => NULL, 'display_header' => 0, 'category_display' => NULL, 'term' => NULL, 'class' => NULL),
+      'arguments' => array('data' => NULL, 'display_header' => 0, 'category_display' => NULL, 'term' => NULL, 'class' => NULL, 'parent_term' => NULL),
       ),
     'faq_new_page' => array(
       'path' => $path,
@@ -634,7 +647,7 @@ function faq_theme() {
       'path' => $path,
       'file' => 'faq.new_page.inc',
       'template' => 'faq-category-new-page',
-      'arguments' => array('data' => NULL, 'display_header' => 0, 'category_display' => NULL, 'term' => NULL, 'class' => NULL),
+      'arguments' => array('data' => NULL, 'display_header' => 0, 'category_display' => NULL, 'term' => NULL, 'class' => NULL, 'parent_term' => NULL),
       ),
   );
 }
@@ -1146,8 +1159,10 @@ function faq_init_back_to_top($path) {
  * @param $class
  *   CSS class which the HTML div will be using. A special class name is
  *   required in order to hide and questions / answers.
+ * @param $parent_term
+ *   The original, top-level, term we're displaying FAQs for.
  */
-function faq_get_child_categories_faqs($term, $theme_function, $default_weight, $default_sorting, $category_display, $class) {
+function faq_get_child_categories_faqs($term, $theme_function, $default_weight, $default_sorting, $category_display, $class, $parent_term = NULL) {
   $output = array();
 
   $list = taxonomy_get_children($term->tid);
@@ -1170,7 +1185,7 @@ function faq_get_child_categories_faqs($term, $theme_function, $default_weight, 
           $data[] = $node;
         }
       }
-      $output[] = theme($theme_function, $data, 1, $category_display, $child_term, $class);
+      $output[] = theme($theme_function, $data, 1, $category_display, $child_term, $class, $parent_term);
     }
   }
 

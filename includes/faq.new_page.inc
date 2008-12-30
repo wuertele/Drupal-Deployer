@@ -38,6 +38,7 @@ function template_preprocess_faq_category_new_page(&$variables) {
   $data = $variables['data'];
   $category_display = $variables['category_display'];
   $term = $variables['term'];
+  $parent_term = $variables['parent_term'];
   $class = $variables['class'];
 
   // Fetch configuration.
@@ -47,9 +48,20 @@ function template_preprocess_faq_category_new_page(&$variables) {
 
   // Initialise some variables.
   $get_child_terms = 0;
-  if (arg(0) == 'faq' && is_numeric(arg(1))) {
-    $get_child_terms = arg(1);
+  // Check if we're on a faq page.
+  if (arg(0) == 'faq') {
+    // Check if we're on a categorized faq page.
+    if (is_numeric(arg(1))) {
+      $get_child_terms = arg(1);
+    }
   }
+  // Force some settings in case we're processing a special faq question list
+  // created by a custom call to faq_page().
+  elseif (!empty($parent_term)) {
+    $get_child_terms = $parent_term->tid;
+    $show_term_page_children = TRUE;
+  }
+
   $default_sorting = variable_get('faq_default_sorting', 'DESC');
   $default_weight = 0;
   if ($default_sorting != 'DESC') {
@@ -100,7 +112,7 @@ function template_preprocess_faq_category_new_page(&$variables) {
   // Configure sub-category bodies (theme recursively).
   $variables['subcat_body_list'] = array();
   if (($get_child_terms && $category_display == 'categories_inline') || ((($show_term_page_children && $this_page != 'faq') || $hide_child_terms) && $category_display == 'hide_qa')) {
-    $variables['subcat_body_list'] = faq_get_child_categories_faqs($term, 'faq_category_new_page', $default_weight, $default_sorting, $category_display, $variables['class']);
+    $variables['subcat_body_list'] = faq_get_child_categories_faqs($term, 'faq_category_new_page', $default_weight, $default_sorting, $category_display, $variables['class'], $parent_term);
   }
 
   if (!count($data)) {
