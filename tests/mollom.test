@@ -348,15 +348,15 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
     $this->drupalGet('comment/reply/'. $node->nid);
     $this->assertFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is present on the comment form before submission.'));
 
-    // Retrieve the Mollom ID. After each attempted submission below,
+    // Retrieve the Mollom Session ID. After each attempted submission below,
     // we will verify that this remains the same.
-    $mollom_id = $this->_testGetMollomID();
-        
+    $mollom_session_id = $this->getFieldValue("edit-mollom-session-id");
+
     // Try to submit an incorrect answer for the CAPTCHA.
     $this->drupalPost(NULL, array('mollom[captcha]' => 'incorrect'), t('Preview'));
     $this->assertText(t('The CAPTCHA was not completed correctly. Please complete this new CAPTCHA and try again.'), t('The comment cannot be submitted when the CAPTCHA is incorrect.'));
     $this->assertFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is present on the comment form after an incorrect CAPTCHA is submitted.'));
-    $this->assertFieldByID('edit-mollom-mollom-id', $mollom_id, 'The Mollom ID remains unchanged.');
+    $this->assertFieldByID('edit-mollom-session-id', $mollom_session_id, t('The Mollom Session ID is present on the comment form after a possible spam comment is previewed.'));
     
     // Try to submit a correct answer for the CAPTCHA, but without one of the required field.
     $this->drupalPost(NULL, array('comment' => '', 'mollom[captcha]' => 'correct'), t('Preview'));
@@ -387,12 +387,12 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
     // and a Mollom ID.
     $this->drupalPost(NULL, array('comment' => 'unsure'), t('Preview'));
     $this->drupalPost(NULL, array(), t('Save'));
-    $this->assertFieldByID('edit-mollom-mollom-id', '', t('The Mollom ID is present on the comment form after a possible spam comment is previewed.'));
+    $this->assertFieldByID('edit-mollom-session-id', '', t('The Mollom Session ID is present on the comment form after a possible spam comment is previewed.'));
     $this->assertFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is present on the comment form after a possible spam comment is previewed.'));
 
-    // Retrieve the Mollom ID. After each attempted submission below,
+    // Retrieve the Mollom Session ID. After each attempted submission below,
     // we will verify that this remains the same.
-    $mollom_id = $this->_testGetMollomID();
+    $mollom_session_id = $this->getFieldValue("edit-mollom-session-id");
 
     // Try to submit the form by using an invalid CAPTCHA. At this point,
     // the submission should be rejected and a new CAPTCHA generated (even
@@ -404,7 +404,7 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
     $this->drupalPost(NULL, $edit, t('Save'));
     $this->assertText(t('The CAPTCHA was not completed correctly. Please complete this new CAPTCHA and try again.'), t('The comment cannot be submitted when the CAPTCHA is incorrect.'));
     $this->assertFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is present on the comment form after an incorrect CAPTCHA is submitted.'));
-    $this->assertFieldByID('edit-mollom-mollom-id', $mollom_id, 'The Mollom ID remains unchanged.');
+    $this->assertFieldByID('edit-mollom-session-id', $mollom_session_id, 'The Mollom Session ID remains unchanged.');
 
     // Now try using a valid CAPTCHA. The CAPTCHA form should no longer
     // be present.
@@ -422,7 +422,7 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
     $this->assertText(t('Your submission has triggered the spam filter and will not be accepted.'), t('When a comment that is known to be spam is submitted, the user is warned that it will be blocked.'));
     $this->assertEqual($this->_testCommentNumAll($node->nid), $original_number_of_comments, t('A comment that is known to be spam does not appear in the database.'));
     $this->assertNoFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is absent on the comment form when a comment that is known to be spam is submitted.'));
-    $this->assertFieldByID('edit-mollom-mollom-id', $mollom_id, 'The Mollom ID remains unchanged.');
+    $this->assertFieldByID('edit-mollom-session-id', $mollom_session_id, 'The Mollom Session ID remains unchanged.');
 
     // Try to save again the above 'spam' comment. It should also be
     // rejected with no CAPTCHA.
@@ -430,7 +430,7 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
     $this->assertText(t('Your submission has triggered the spam filter and will not be accepted.'), t('When a comment that is known to be spam is previewed, the user is warned that it will be blocked.'));
     $this->assertEqual($this->_testCommentNumAll($node->nid), $original_number_of_comments, t('A comment that is known to be spam does not appear in the database.'));
     $this->assertNoFieldByID('edit-mollom-captcha', '', t('The CAPTCHA is absent on the comment form when a comment that is known to be spam is previewed.'));
-    $this->assertFieldByID('edit-mollom-mollom-id', $mollom_id, 'The Mollom ID remains unchanged.');
+    $this->assertFieldByID('edit-mollom-session-id', $mollom_session_id, 'The Mollom Session ID remains unchanged.');
 
     // Preview and save a comment that is 'ham'. Make sure that the submitted
     // comment appears on the screen and in the database.
@@ -443,17 +443,17 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
   }
 
   /**
-   * Retrieve the Mollom ID. There has got to be a better way to
-   * do this, but getFieldById() simply doesn't work here.
+   * Retrieve a field value by ID.
    */
-  function _testGetMollomID() {
-    $mollom_id = '';
+  function getFieldValue($field_id) {
+    $value = '';
     if ($this->parse()) {
-      $fields = $this->elements->xpath($this->_constructFieldXpath('id', 'edit-mollom-mollom-id'));
-      foreach ($fields as $field) {
-        $mollom_id = $field['value'];
+      $fields = $this->elements->xpath($this->_constructFieldXpath('id', $field_id));
+      if (isset($fields[0])) {
+        $value = $fields[0]->value;
       }
     }
+    return $value;
   }
 
   /**

@@ -798,20 +798,17 @@ function mollom_expand_element($element, $edit, &$form_state) {
   // The current state can come either from the $form_state, if the form
   // was just rebuilt in the same request...
   if (!empty($form_state['mollom'])) {
-    $mollom_id = $form_state['mollom']['mollom_id'];
-    $mollom_state = $form_state['mollom']['state'];
+    $mollom_state = $form_state['mollom'];
   }
   // ... or from data posted by the user. In that case we validate that the correct
   // form_id and token is used...
-  else if (!empty($edit['mollom_id']) && ($cache = cache_get($edit['mollom_id'], 'cache_mollom'))
+  else if (!empty($edit['session_id']) && ($cache = cache_get($edit['session_id'], 'cache_mollom'))
     && $cache->data['#form_id'] === $form_state['values']['form_id'] && $cache->data['#user_session_id'] === session_id()) {
-    $mollom_id = $edit['mollom_id'];
     $mollom_state = $cache->data;
   }
 
   // ... finally, if no valid state has been found, we generate an empty one.
-  if (empty($mollom_id)) {
-    $mollom_id = 'mollom-'. md5(uniqid(mt_rand(), TRUE));
+  if (empty($mollom_state)) {
     $mollom_state = array(
       '#session_id' => NULL,
       '#form_id' => $form_state['values']['form_id'],
@@ -841,19 +838,18 @@ function mollom_expand_element($element, $edit, &$form_state) {
     _mollom_insert_captcha($mollom_state, $element);
   }
   
-  if (!empty($edit) || !empty($form_state['submitted']) || !empty($mollom_state['#require_captcha'])) {
+  if (!empty($mollom_state['#session_id'])) {
     // We store the Mollom session only if something useful was done.
     // We save it in two places: as an hidden form field and in the cache
     // so that it persists form submission, and in $form_state so that it
     // persists form rebuilds.
-    $element['mollom_id'] = array(
+    $element['session_id'] = array(
       '#type' => 'hidden',
-      '#value' => $mollom_id,
+      '#value' => $mollom_state['#session_id'],
     );
-    cache_set($mollom_id, $mollom_state, 'cache_mollom', 60*30);
+    cache_set($mollom_state['#session_id'], $mollom_state, 'cache_mollom', 60*30);
 
-    $form_state['mollom']['mollom_id'] = $mollom_id;
-    $form_state['mollom']['state'] = $mollom_state;
+    $form_state['mollom'] = $mollom_state;
 
     // This prevents the Drupal page cache from storing the page when we generated a captcha
     // or when the user already passed the captcha. This is not required for
@@ -870,8 +866,8 @@ function mollom_expand_element($element, $edit, &$form_state) {
  * Clean the Mollom state as soon as the form has been submitted.
  */
 function mollom_clean_state($form_id, $form_state) {
-  if (!empty($form_state['values']['mollom']['mollom_id'])) {
-    cache_clear_all($form_state['values']['mollom']['mollom_id'], 'cache_mollom');
+  if (!empty($form_state['values']['mollom']['session_id'])) {
+    cache_clear_all($form_state['values']['mollom']['session_id'], 'cache_mollom');
   }
 }
 
