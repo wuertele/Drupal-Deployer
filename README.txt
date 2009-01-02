@@ -7,8 +7,8 @@ DESCRIPTION
 -----------
 The XML Sitemap module creates an XML site map at
 http://www.example.com/?q=sitemap.xml that conforms to the sitemaps.org
-specification. It provides many options for customizing the data reported in the
-site map.
+specification. It provides many options for customizing the data reported in
+the site map.
 
 INSTALLATION
 ------------
@@ -20,8 +20,8 @@ Users who have not enabled clean URLs have reported receiving an
 "Unsupported file format" error from Google. The solution is to replace
 "?q=sitemap.xml" at the end of the submission URL with
 "index.php?q=sitemap.xml", or to enable the clean URLs.
-Submission URLs for each search engine can be
-configured at http://www.example.com/?q=admin/settings/xmlsitemap/engines.
+Submission URLs for each search engine can be configured at
+http://www.example.com/?q=admin/settings/xmlsitemap/engines.
 
 MORE INFORMATION
 ----------------

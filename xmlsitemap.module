@@ -82,29 +82,21 @@ function xmlsitemap_help($path, $arg) {
     case 'admin/settings/xmlsitemap/tools/update':
       $output = t('Update the XML Sitemap database tables.');
       break;
+    case 'admin/settings/xmlsitemap/tools/debug':
+      $output = t('Show some data useful in the debugging, or in the issue reports.');
+      $output .= '<br />'. t('At the moment the page is empty, but it will be populated with data helpful to understand the possible cause of an issue');
+      break;
     case 'admin/help#xmlsitemap':
       $output = '<p>'. t('XML Sitemap automatically creates a site map that conforms to the <a href="@sitemaps.org">sitemaps.org specification</a>. This helps search engines keep their search results up to date.', array('@sitemaps.org' => 'http://www.sitemaps.org')) .'</p>';
       $output .= '<h3>'. t('Supporting modules') .'</h3>';
       $output .= '<p>'. t('By itself, the XML Sitemap module adds only the front page of your site to the site map. Other types of links are handled by supporting modules.') .'</p>';
       $optional = '';
-      if (module_exists('xmlsitemap_menu')) {
-        $optional .= '<dt>'. t('XML Sitemap: Menu') .'</dt>';
-        $optional .= '<dd>'. t('<em>XML Sitemap: Menu</em> allows menu items to be added to the site map. You can choose the menus to include on the XML Sitemap administration page and can add and remove menu items on the <a href="@menu">menu administration</a> page. The priority of a menu item is determined by its weight.', array('@menu' => url('admin/build/menu'))) .'</dd>';
-      }
-      if (module_exists('xmlsitemap_node')) {
-        $optional .= '<dt>'. t('XML Sitemap: Node') .'</dt>';
-        $optional .= '<dd>'. t('<em>XML Sitemap: Node</em> adds nodes (content) to the site map. The default priority of a node is determined by a combination of its <a href="@content">content type</a> priority, whether it appears on the front page of your site, and the number of comments it has received. You can override the default priority for individual nodes when you add or edit a node.', array('@content' => url('admin/content/types'))) .'</dd>';
-      }
-      if (module_exists('xmlsitemap_term')) {
-        $optional .= '<dt>'. t('XML Sitemap: Term') .'</dt>';
-        $optional .= '<dd>'. t('<em>XML Sitemap: Term</em> adds <a href="@terms">taxonomy terms</a> (categories) to the site map. You can change the default priority when you add or edit a vocabulary, and you can override the default priority when you add or edit individual terms.', array('@terms' => url('admin/content/taxonomy'))) .'</dd>';
-      }
-      if (module_exists('xmlsitemap_user')) {
-        $optional .= '<dt>'. t('XML Sitemap: User') .'</dt>';
-        $optional .= '<dd>'. t('<em>XML Sitemap: User</em> adds user profiles to the site map. The <em>anonymous user</em> role must be given permission to access user profiles on the <a href="@access">access control page</a>. You can change the default user priority on the <a href="@user_settings">user settings</a> page. The <a href="@user">user role priority</a> will override the default user priority. You can override both the default priority and the role priority when you add or edit a user.', array('@access' => url('admin/user/access'), '@user_settings' => url('admin/user/settings'), '@user_role' => url('admin/user/roles'))) .'</dd>';
+      foreach (module_implements('xmlsitemap_description', TRUE) as $module) {
+        $function = $module .'_xmlsitemap_description'; 
+        $optional .= $function();
       }
       if (!empty($optional)) {
-        $output .= "<dl>\n$optional</dl>";
+        $output .= "<dl>$optional</dl>";
       }
       $output .= '<p>'. t('Links may be assigned a priority between 0.0 and 1.0. The default priority is 0.5. A priority of <em>Not in site map</em> excludes a link from the site map.') .'</p>';
       $output .= '<p>'. t('More information is available in the <a href="@module_docs">XML Sitemap documentation</a>.', array('@module_docs' => 'http://drupal.org/handbook/modules/gsitemap')) .'</p>';
@@ -121,7 +113,7 @@ function xmlsitemap_help($path, $arg) {
  */
 function xmlsitemap_menu() {
   $items = array();
-  $access_config = array('administer site configuration');
+  $access_config = array('administer xml site map');
   $access_content = array('access content');
   $items['admin/settings/xmlsitemap'] = array(
     'title' => 'XML Sitemap',
@@ -157,8 +149,17 @@ function xmlsitemap_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('xmlsitemap_tools_update_database'),
     'access arguments' => $access_config,
-    'weight' => -1,
+    'weight' => -2,
     'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  $items['admin/settings/xmlsitemap/tools/debug'] = array(
+    'title' => 'Debug',
+    'description' => 'Show some data useful in the debugging, or in the issue reports.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('xmlsitemap_tools_debug'),
+    'access arguments' => $access_config,
+    'weight' => -1,
+    'type' => MENU_LOCAL_TASK,
   );
   $items['sitemap.xml'] = array(
     'title' => 'Site map index',
@@ -181,6 +182,13 @@ function xmlsitemap_menu() {
     }
   }
   return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function xmlsitemap_perm() {
+  return array('administer xml site map');
 }
 
 /*****************************************************************************
@@ -264,7 +272,12 @@ function xmlsitemap_settings_engines_submit($form, &$form_state) {
  * Menu callback; return the site map settings form.
  */
 function xmlsitemap_settings_sitemap() {
-  $form['xmlsitemap_chunk_size'] = array(
+  $form['general'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('General settings'),
+    '#collapsible' => TRUE,
+  );
+  $form['general']['xmlsitemap_chunk_size'] = array(
     '#type' => 'textfield',
     '#title' => t('Chunk size'),
     '#default_value' => variable_get('xmlsitemap_chunk_size', 50000),
@@ -273,7 +286,7 @@ function xmlsitemap_settings_sitemap() {
     '#description' => t('This is the number of links to include in one site map. Values can range between 1 and 50,000. If the total number of links exceeds the chunk size, multiple site maps will be generated.'),
     '#weight' => -1,
   );
-  $form['xmlsitemap_front_page_priority'] = array(
+  $form['general']['xmlsitemap_front_page_priority'] = array(
     '#type' => 'select',
     '#title' => t('Front page priority'),
     '#default_value' => variable_get('xmlsitemap_front_page_priority', 1),
@@ -294,6 +307,13 @@ function xmlsitemap_settings_sitemap_validate($form, &$form_state) {
   if ($form_state['values']['xmlsitemap_chunk_size'] > 50000) {
     form_set_error('xmlsitemap_chunk_size', t('The number of links in a site map cannot be higher than 50,000.'));
   }
+}
+
+/**
+ * Menu callback; return the debug form.
+ */
+function xmlsitemap_tools_debug() {
+  return array();
 }
 
 /**
