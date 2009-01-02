@@ -170,7 +170,6 @@ function xmlsitemap_user_user($op, &$edit, &$account, $category = NULL) {
  */
 function xmlsitemap_user_xmlsitemap_database_batch_operation() {
   return array(
-    'file' => 'xmlsitemap_user.batch.inc',
     'add function' => 'xmlsitemap_user_update_database',
   );
 }
@@ -251,6 +250,51 @@ function xmlsitemap_user_form_submit($form, &$form_state) {
       $row->priority = $form_values['xmlsitemap_user_role_priority'];
       drupal_write_record('xmlsitemap_user_role', $row, $priority !== FALSE ? 'rid' : NULL);
       xmlsitemap_update_sitemap();
+    }
+  }
+}
+
+/*****************************************************************************
+ * Public functions.
+ ****************************************************************************/
+
+/**
+ * Batch function used to update the module tables.
+ * @param $op
+ *  The type of update operation. It can be 'update' to update the existing
+ *  data, or 'add' to add the data present in the core table but not in the
+ * module table.
+ * @param $context
+ *  The context parameter passed from batch_process().
+ */
+function xmlsitemap_user_update_database(&$context) {
+  if (!isset($context['sandbox']['progress'])) {
+    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['current_user'] = 0;
+    $context['sandbox']['max'] = (integer) db_result(db_query('SELECT COUNT(u.uid)
+      FROM {users} u
+      LEFT JOIN {xmlsitemap_user} xu ON xu.uid = u.uid
+      WHERE u.uid <> 0 
+        AND xu.uid IS NULL')
+    );
+  }
+  if ($context['sandbox']['max']) {
+    $result = db_query_range('SELECT u.uid, u.created AS last_changed
+      FROM {users} u
+      LEFT JOIN {xmlsitemap_user} xu ON xu.uid = u.uid
+      WHERE xu.uid IS NULL
+        AND u.uid > %d
+      ORDER BY u.uid ASC',
+      $context['sandbox']['current_user'], 0, 1
+    );
+    if ($row = db_fetch_object($result)) {
+      drupal_write_record('xmlsitemap_user', $row);
+      $context['sandbox']['progress']++;
+      $context['sandbox']['current_user'] = $row->uid;
+      $context['results']['add'] = $context['sandbox']['progress'];
+    }
+    if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
+      $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
     }
   }
 }

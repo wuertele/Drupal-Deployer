@@ -159,7 +159,6 @@ function xmlsitemap_node_perm() {
  */
 function xmlsitemap_node_xmlsitemap_database_batch_operation() {
   return array(
-    'file' => 'xmlsitemap_node.batch.inc',
     'add function' => 'xmlsitemap_node_update_database_01',
     'update function' => 'xmlsitemap_node_update_database_02',
   );
@@ -344,6 +343,99 @@ function xmlsitemap_node_priority($node) {
   }
   $priority = min(round($priority, 1), 1);
   return $priority;
+}
+
+/**
+ * Batch function used to update the module database tables.
+ * @param $context
+ *  The context parameter passed from batch_process().
+ */
+function xmlsitemap_node_update_database_01(&$context) {
+  if (!isset($context['sandbox']['progress'])) {
+    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['current_node'] = 0;
+    $context['sandbox']['max'] = (integer) db_result(db_query('SELECT COUNT(n.nid)
+      FROM {node} n
+      LEFT JOIN {xmlsitemap_node} xn ON xn.nid = n.nid
+      WHERE xn.nid IS NULL')
+    );
+  }
+  if ($context['sandbox']['max']) {
+    $result = db_query_range('SELECT n.nid, n.created AS previously_changed, n.changed AS last_changed
+      FROM {node} n
+      LEFT JOIN {xmlsitemap_node} xn ON xn.nid = n.nid
+      WHERE xn.nid IS NULL
+        AND n.nid > %d
+      ORDER BY n.nid ASC',
+      $context['sandbox']['current_node'], 0, 1
+    );
+    if ($row = db_fetch_object($result)) {
+      if (db_table_exists('node_comment_statistics')) {
+        $query = db_query("SELECT comment_count, last_comment_timestamp
+          FROM {node_comment_statistics}
+          WHERE nid = %d", $row->nid
+        );
+        if (($comment_row = db_fetch_object($query)) !== FALSE && $comment_row->comment_count) {
+          $row->last_comment = $comment_row->last_comment_timestamp;
+        }
+      }
+      drupal_write_record('xmlsitemap_node', $row);
+      $context['sandbox']['progress']++;
+      $context['sandbox']['current_node'] = $row->nid;
+      $context['results']['add'] = $context['sandbox']['progress'];
+    }
+    if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
+      $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
+    }
+  }
+}
+
+/**
+ * Batch function used to update the module database tables.
+ * @param $context
+ *  The context parameter passed from batch_process().
+ */
+function xmlsitemap_node_update_database_02(&$context) {
+  if (!isset($context['sandbox']['progress'])) {
+    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['current_node'] = 0;
+    $context['sandbox']['max'] = (integer) db_result(db_query('SELECT COUNT(n.nid)
+      FROM {node} n
+      INNER JOIN {xmlsitemap_node} xn ON xn.nid = n.nid
+      WHERE n.changed > xn.last_changed')
+    );
+  }
+  if ($context['sandbox']['max']) {
+    $result = db_query_range('SELECT n.nid, xn.last_changed AS previously_changed, n.changed AS last_changed
+      FROM {node} n
+      INNER JOIN {xmlsitemap_node} xn ON xn.nid = n.nid
+      WHERE n.nid > %d
+        AND n.changed > xn.last_changed
+      ORDER BY n.nid ASC',
+      $context['sandbox']['current_node'], 0, 1
+    );
+    if ($row = db_fetch_object($result)) {
+      if (db_table_exists('node_comment_statistics')) {
+        $query = db_query("SELECT comment_count, last_comment_timestamp
+          FROM {node_comment_statistics}
+          WHERE nid = %d", $row->nid
+        );
+        if (($comment_row = db_fetch_object($query)) !== FALSE) {
+          if ($comment_row->comment_count && $comment_row->last_comment_timestamp > $row->last_comment) {
+            $row->previous_comment = $row->last_comment;
+            $row->last_comment = $comment_row->last_comment_timestamp;
+          }
+        }
+      }
+      drupal_write_record('xmlsitemap_node', $row, 'nid');
+      $context['sandbox']['progress']++;
+      $context['sandbox']['current_node'] = $row->nid;
+      $context['results']['update'] = $context['sandbox']['progress'];
+    }
+    if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
+      $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
+    }
+  }
 }
 
 /**
