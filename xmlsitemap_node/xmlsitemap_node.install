@@ -15,7 +15,9 @@ function xmlsitemap_node_schema() {
       'nid' => array(
         'description' => 'The node ID.',
         'type' => 'int',
+        'not null' => TRUE,
         'unsigned' => TRUE,
+        'default' => 0,
       ),
       'last_changed' => array(
         'description' => 'The Unix timestamp of the last change.',
@@ -69,9 +71,18 @@ function xmlsitemap_node_update_6000() {
       }
       db_drop_field($ret, 'xmlsitemap_node', 'pid');
     }
+    $result = array();
+    @db_drop_primary_key($result, 'xmlsitemap_node');
+    if ($result[0]['success']) {
+      $ret[] = $result[0];
+    }
     $ret[] = update_sql("UPDATE {xmlsitemap_node}
       SET priority_override = -2
       WHERE priority_override IS NULL"
+    );
+    db_change_field($ret, 'xmlsitemap_node', 'nid', 'nid',
+      $schema['xmlsitemap_node']['fields']['nid'],
+      array('primary key' => array('nid'))
     );
     db_change_field($ret, 'xmlsitemap_node', 'priority_override', 'priority_override',
       $schema['xmlsitemap_node']['fields']['priority_override']
@@ -112,6 +123,14 @@ function xmlsitemap_node_update_6101() {
  *
  */
 function xmlsitemap_node_update_6102() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ *
+ */
+function xmlsitemap_node_update_6103() {
   return xmlsitemap_node_update_6000();
 }
 
