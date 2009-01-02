@@ -59,10 +59,7 @@ function xmlsitemap_file_install() {
 function xmlsitemap_file_update_6000() {
   $ret = array();
   $schema = xmlsitemap_file_schema();
-  if (!db_table_exists('xmlsitemap_file')) {
-    db_create_table($ret, 'xmlsitemap_file', $schema['xmlsitemap_file']);
-  }
-  else {
+  if (db_table_exists('xmlsitemap_file')) {
     $result = array();
     @db_drop_primary_key($result, 'xmlsitemap_file');
     if ($result[0]['success']) {
@@ -93,6 +90,9 @@ function xmlsitemap_file_update_6000() {
     if ($result['success']) {
       $ret[] = $result;
     }
+  }
+  else {
+    db_create_table($ret, 'xmlsitemap_file', $schema['xmlsitemap_file']);
   }
   $ret[] = update_sql("UPDATE {system} SET weight = 10 WHERE name = 'xmlsitemap_file'");
   return $ret;
@@ -130,6 +130,13 @@ function xmlsitemap_file_update_6103() {
  * Implementation of hook_update_N().
  */
 function xmlsitemap_file_update_6104() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_file_update_6105() {
   return xmlsitemap_file_update_6000();
 }
 
