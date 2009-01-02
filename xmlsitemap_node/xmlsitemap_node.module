@@ -324,7 +324,7 @@ function xmlsitemap_node_frequency($node) {
 function xmlsitemap_node_priority($node) {
   static $maxcomments;
   if (!isset($maxcomments)) {
-    $maxcomments = 1;
+    $maxcomments = 0;
     if (module_exists('comment')) {
       $maxcomments = db_result(db_query("SELECT MAX(comment_count) FROM {node_comment_statistics}"));
     }
@@ -338,7 +338,7 @@ function xmlsitemap_node_priority($node) {
   if ($node->promote) {
     $priority += variable_get('xmlsitemap_node_promote_priority', 0.3);
   }
-  if ($maxcomments != 1) {
+  if ($maxcomments > 1) {
     $priority += $node->comment_count / $maxcomments * variable_get('xmlsitemap_node_comment_priority', 0.2);
   }
   $priority = min(round($priority, 1), 1);
