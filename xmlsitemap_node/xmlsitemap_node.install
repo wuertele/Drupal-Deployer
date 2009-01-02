@@ -19,21 +19,33 @@ function xmlsitemap_node_schema() {
         'unsigned' => TRUE,
         'default' => 0,
       ),
-      'last_changed' => array(
+      'changed' => array(
         'description' => 'The Unix timestamp of the last change.',
         'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
       ),
       'previously_changed' => array(
         'description' => 'The Unix timestamp of the previous change.',
         'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
       ),
       'last_comment' => array(
         'description' => 'The Unix timestamp of the last added comment.',
         'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
       ),
       'previous_comment' => array(
         'description' => 'The Unix timestamp of the previously added comment.',
         'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
       ),
       'priority_override' => array(
         'description' => 'The priority of the node in the site map.',
@@ -63,6 +75,11 @@ function xmlsitemap_node_update_6000() {
   $ret = array();
   $schema = xmlsitemap_node_schema();
   if (db_table_exists('xmlsitemap_node')) {
+    $ret[] = update_sql("UPDATE {xmlsitemap_node} SET last_changed = 0 WHERE last_changed IS NULL");
+    $ret[] = update_sql("UPDATE {xmlsitemap_node} SET previously_changed = 0 WHERE previously_changed IS NULL");
+    $ret[] = update_sql("UPDATE {xmlsitemap_node} SET last_comment = 0 WHERE last_comment IS NULL");
+    $ret[] = update_sql("UPDATE {xmlsitemap_node} SET previous_comment = 0 WHERE previous_comment IS NULL");
+    $ret[] = update_sql("UPDATE {xmlsitemap_node} SET priority_override = -2.0 WHERE priority_override IS NULL");
     if (db_column_exists('xmlsitemap_node', 'pid')) {
       $result = array();
       @db_drop_index($result, 'xmlsitemap_node', 'pid');
@@ -76,13 +93,21 @@ function xmlsitemap_node_update_6000() {
     if ($result[0]['success']) {
       $ret[] = $result[0];
     }
-    $ret[] = update_sql("UPDATE {xmlsitemap_node}
-      SET priority_override = -2
-      WHERE priority_override IS NULL"
-    );
     db_change_field($ret, 'xmlsitemap_node', 'nid', 'nid',
       $schema['xmlsitemap_node']['fields']['nid'],
       array('primary key' => array('nid'))
+    );
+    db_change_field($ret, 'xmlsitemap_node', 'last_changed', 'changed',
+      $schema['xmlsitemap_node']['fields']['changed']
+    );
+    db_change_field($ret, 'xmlsitemap_node', 'previously_changed', 'previously_changed',
+      $schema['xmlsitemap_node']['fields']['previously_changed']
+    );
+    db_change_field($ret, 'xmlsitemap_node', 'last_comment', 'last_comment',
+      $schema['xmlsitemap_node']['fields']['last_comment']
+    );
+    db_change_field($ret, 'xmlsitemap_node', 'previous_comment', 'previous_comment',
+      $schema['xmlsitemap_node']['fields']['previous_comment']
     );
     db_change_field($ret, 'xmlsitemap_node', 'priority_override', 'priority_override',
       $schema['xmlsitemap_node']['fields']['priority_override']

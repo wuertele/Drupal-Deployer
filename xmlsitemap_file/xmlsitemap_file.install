@@ -34,10 +34,16 @@ function xmlsitemap_file_schema() {
       'changed' => array(
         'description' => 'The change time of the file.',
         'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
       ),
       'previously_changed' => array(
         'description' => 'The previous change time of the file.',
         'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
       ),
     ),
     'unique keys' => array('fid_nid' => array('fid', 'nid')),
@@ -60,6 +66,10 @@ function xmlsitemap_file_update_6000() {
   $ret = array();
   $schema = xmlsitemap_file_schema();
   if (db_table_exists('xmlsitemap_file')) {
+    $ret[] = update_sql("DELETE FROM {xmlsitemap_file} WHERE nid = 0");
+    $ret[] = update_sql("UPDATE {xmlsitemap_file} SET changed = 0 WHERE changed IS NULL");
+    $ret[] = update_sql("UPDATE {xmlsitemap_file} SET previously_changed = 0 WHERE previously_changed IS NULL");
+    $ret[] = update_sql("UPDATE {xmlsitemap_file} SET priority_override = -2.0 WHERE priority_override IS NULL");
     $result = array();
     @db_drop_primary_key($result, 'xmlsitemap_file');
     if ($result[0]['success']) {
@@ -70,10 +80,6 @@ function xmlsitemap_file_update_6000() {
     if ($result[0]['success']) {
       $ret[] = $result[0];
     }
-    db_change_field($ret, 'xmlsitemap_file', 'fid', 'fid',
-      $schema['xmlsitemap_file']['fields']['nid'],
-      array('primary keys' => array('fid'))
-    );
     if (!db_column_exists('xmlsitemap_file', 'nid')) {
       db_add_field($ret, 'xmlsitemap_file', 'nid',
         $schema['xmlsitemap_file']['fields']['nid'],
@@ -86,10 +92,16 @@ function xmlsitemap_file_update_6000() {
         array('unique keys' => array('fid_nid' => array('fid', 'nid')))
       );
     }
-    $result = update_sql("DELETE FROM {xmlsitemap_file} WHERE nid = 0");
-    if ($result['success']) {
-      $ret[] = $result;
-    }
+    db_change_field($ret, 'xmlsitemap_file', 'fid', 'fid',
+      $schema['xmlsitemap_file']['fields']['nid'],
+      array('primary keys' => array('fid'))
+    );
+    db_change_field($ret, 'xmlsitemap_file', 'changed', 'changed',
+      $schema['xmlsitemap_file']['fields']['changed']
+    );
+    db_change_field($ret, 'xmlsitemap_file', 'previously_changed', 'previously_changed',
+      $schema['xmlsitemap_file']['fields']['previously_changed']
+    );
   }
   else {
     db_create_table($ret, 'xmlsitemap_file', $schema['xmlsitemap_file']);
@@ -137,6 +149,13 @@ function xmlsitemap_file_update_6104() {
  * Implementation of hook_update_N().
  */
 function xmlsitemap_file_update_6105() {
+  return array();
+}
+
+/**
+ * Implementation of hook_update_N().
+ */
+function xmlsitemap_file_update_6106() {
   return xmlsitemap_file_update_6000();
 }
 

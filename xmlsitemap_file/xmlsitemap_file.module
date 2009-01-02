@@ -80,16 +80,16 @@ function xmlsitemap_file_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 function xmlsitemap_file_xmlsitemap_links() {
   $excludes = xmlsitemap_node_excludes();
   $query_args = array_merge(array(strlen(file_directory_path()) + 2), $excludes);
-  $result = db_query(db_rewrite_sql("SELECT n.nid, n.type, n.promote, f.fid, f.filepath, s.comment_count, xn.priority_override, xf.changed, xf.previously_changed
+  $columns = 'n.nid, n.type, n.promote, xf.changed, xf.previously_changed, f.fid, f.filepath, xn.priority_override'
+  $result = db_query(db_rewrite_sql("SELECT $columns
     FROM {node} n
     INNER JOIN {xmlsitemap_file} xf ON n.nid = xf.nid
-    LEFT JOIN {node_comment_statistics} s ON n.nid = s.nid
     LEFT JOIN {xmlsitemap_node} xn ON n.nid = xn.nid
     LEFT JOIN {file} f ON f.fid = xf.fid
     WHERE n.status > 0
-    AND (n.type NOT IN (". db_placeholders($excludes, 'varchar') .") AND xn.priority_override IS NULL OR xn.priority_override >= 0)
+    AND n.type NOT IN (". db_placeholders($excludes, 'varchar') .") AND (xn.priority_override = -2.0 OR xn.priority_override >= 0.0)
     AND r.list = 1
-    GROUP BY n.nid, n.type, n.promote, f.fid, f.filepath, s.comment_count, xn.priority_override, xf.changed, xf.previously_changed"),
+    GROUP BY $columns"),
     $query_args
   );
   while ($file = db_fetch_object($result)) {
@@ -98,32 +98,20 @@ function xmlsitemap_file_xmlsitemap_links() {
       $access = module_invoke_all('file_download', $file->filepath);
     }
     if (!in_array(-1, $access)) {
+      $age = time() - $file->changed;
+      if ($file->previously_changed) {
+        $frequency = max($age, $file->changed - $file->previously_changed);
+      }
+      else {
+        $frequency = $age;
+      }
       db_query("INSERT INTO {xmlsitemap} (loc, lastmod, changefreq, priority) VALUES ('%s', %d, %d, %f)",
         file_create_url($file->filepath),
         filemtime($file->filepath),
-        xmlsitemap_file_frequency($file), xmlsitemap_node_priority($file)
+        $frequency, xmlsitemap_node_priority($file)
       );
     }
   }
-}
-
-/*****************************************************************************
- * Public functions.
- ****************************************************************************/
-
-/**
- * Calculate the change frequency of a file.
- * @param $file
- *  Data for a file retrieved by xmlsitemap_file_xmlsitemap_links().
- * @return
- *  The number of seconds between updates.
- */
-function xmlsitemap_file_frequency($file) {
-  $age = time() - $file->changed;
-  if (empty($file->previously_changed)) {
-    return $age;
-  }
-  return max($age, $file->changed - $file->previously_changed);
 }
 
 /**
