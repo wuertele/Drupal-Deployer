@@ -794,10 +794,11 @@ function mollom_elements() {
 function mollom_expand_element($element, $edit, &$form_state) {
   $element['#tree'] = TRUE;
 
-  // The mollom form is stateful. The "Mollom ID", exchanged between Drupal
-  // and the user, allow us to keep track of the state of validation of a form.
-  // It is valid for a specific user session and for a given form_id only.
-  // We expire it as soon as the form is submitted, to avoid it being replayed.
+  // The mollom form is stateful. The Mollom Session ID, exchanged between
+  // Drupal, the mollom back-end and the user, allow us to keep track of the
+  // state of validation of a form. That ID is valid for a specific user session
+  // and for a given form_id only. We expire it as soon as the form is
+  // submitted, to avoid it being replayed.
   
   // The current state can come either from the $form_state, if the form
   // was just rebuilt in the same request...
@@ -805,7 +806,7 @@ function mollom_expand_element($element, $edit, &$form_state) {
     $mollom_state = $form_state['mollom'];
   }
   // ... or from data posted by the user. In that case we validate that the correct
-  // form_id and token is used...
+  // form_id and user session ID is used...
   else if (!empty($edit['session_id']) && ($cache = cache_get($edit['session_id'], 'cache_mollom'))
     && $cache->data['#form_id'] === $form_state['values']['form_id'] && $cache->data['#user_session_id'] === session_id()) {
     $mollom_state = $cache->data;
@@ -840,6 +841,13 @@ function mollom_expand_element($element, $edit, &$form_state) {
   if (!empty($mollom_state['#require_captcha']) && empty($mollom_state['#passed_captcha'])) {
     _mollom_debug('mollom_form_alter registered mollom_validate_captcha handler');
     _mollom_insert_captcha($mollom_state, $element);
+
+    // This prevents the Drupal page cache from storing the page when we
+    // generated a captcha or when the user already passed the captcha.
+    // This is not required for text analysis, because the above code will
+    // simply generate a new session if the cached one doesn't match the user.
+    // TODO: find a better way to do this in D7.
+    $_SERVER['REQUEST_METHOD'] = 'POST';
   }
   
   if (!empty($mollom_state['#session_id'])) {
@@ -854,13 +862,6 @@ function mollom_expand_element($element, $edit, &$form_state) {
     cache_set($mollom_state['#session_id'], $mollom_state, 'cache_mollom', 60*30);
 
     $form_state['mollom'] = $mollom_state;
-
-    // This prevents the Drupal page cache from storing the page when we generated a captcha
-    // or when the user already passed the captcha. This is not required for
-    // text analysis, because the above code will simply generate a new session
-    // if the cached one doesn't match the user.
-    // TODO: find a better way to do this in D7.
-    $_SERVER['REQUEST_METHOD'] = 'POST';
   }
 
   return $element;
