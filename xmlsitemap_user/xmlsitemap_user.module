@@ -132,7 +132,7 @@ function xmlsitemap_user_user($op, &$edit, &$account, $category = NULL) {
     case 'insert':
       $row = new stdClass();
       $row->uid = $account->uid;
-      $row->last_changed = time();
+      $row->changed = time();
       if ($edit['xmlsitemap_user_priority'] != -2.0) {
         $row->priority_override = $edit['xmlsitemap_user_priority'];
       }
@@ -144,12 +144,12 @@ function xmlsitemap_user_user($op, &$edit, &$account, $category = NULL) {
       if (($result = db_fetch_object(db_query("SELECT * FROM {xmlsitemap_user} WHERE uid = %d", $account->uid))) === FALSE) {
         $row = new stdClass();
         $row->uid = $account->uid;
-        $row->last_changed = time();
+        $row->changed = time();
       }
       else {
         $row = $result;
-        $row->previously_changed = $row->last_changed;
-        $row->last_changed = time();
+        $row->previously_changed = $row->changed;
+        $row->changed = time();
       }
       if ($edit['xmlsitemap_user_priority'] != -2.0) {
         $row->priority_override = $edit['xmlsitemap_user_priority'];
@@ -203,7 +203,8 @@ function xmlsitemap_user_xmlsitemap_links() {
     if (count($frontpage) == 2 && $frontpage[0] == 'user' && is_numeric($frontpage[1])) {
       $uid = $frontpage[1];
     }
-    $result = db_query("SELECT u.uid, xu.last_changed, xu.previously_changed, xu.priority_override, SUM(xur.priority) as priority, $coalesce(ua.dst) AS alias
+    $columns = 'u.uid, xu.changed, xu.previously_changed, xu.priority_override, SUM(xur.priority) as priority';
+    $result = db_query("SELECT $columns, $coalesce(ua.dst) AS alias
       FROM {xmlsitemap_user} xu
       INNER JOIN {users} u ON xu.uid = u.uid
       LEFT JOIN {users_roles} ur ON xu.uid = ur.uid
@@ -211,13 +212,13 @@ function xmlsitemap_user_xmlsitemap_links() {
       LEFT JOIN {url_alias} ua ON ua.src = CONCAT('user/', CAST(u.uid AS $cast))
       WHERE u.status <> 0
         AND u.uid <> %d
-      GROUP BY u.uid, xu.last_changed, xu.previously_changed, xu.priority_override
+      GROUP BY $columns
       HAVING MIN(xur.priority) <> -1 OR SUM(xur.priority) IS NULL",
       $uid
     );
     while ($user = db_fetch_object($result)) {
-      $age = time() - $user->last_changed;
-      $interval = empty($user->previously_changed) ? 0 : $user->last_changed - $user->previously_changed;
+      $age = time() - $user->changed;
+      $interval = $user->previously_changed ? $user->changed - $user->previously_changed : 0;
       if ($user->priority_override != -2.0) {
         $priority = $user->priority_override;
       }
@@ -226,7 +227,7 @@ function xmlsitemap_user_xmlsitemap_links() {
       }
       db_query("INSERT INTO {xmlsitemap} (loc, lastmod, changefreq, priority) VALUES ('%s', %d, %d, %f)",
         xmlsitemap_url('user/'. $user->uid, $user->alias, NULL, NULL, TRUE),
-        $user->last_changed, max($age, $interval), $priority);
+        $user->changed, max($age, $interval), $priority);
     }
   }
 }
@@ -287,7 +288,7 @@ function xmlsitemap_user_update_database(&$context) {
     );
   }
   if ($context['sandbox']['max']) {
-    $result = db_query_range('SELECT u.uid, u.created AS last_changed
+    $result = db_query_range('SELECT u.uid, u.created AS changed
       FROM {users} u
       LEFT JOIN {xmlsitemap_user} xu ON xu.uid = u.uid
       WHERE xu.uid IS NULL
