@@ -37,18 +37,18 @@ function xmlsitemap_menu_xmlsitemap_links($type = NULL) {
         ORDER BY ml.plid, ml.mlid ASC",
         $menu
       );
+      $row = new stdClass();
+      $row->module = 'xmlsitemap_menu';
       while ($link = db_fetch_array($result)) {
         // Avoid external links, or links to the front page;
         // both have $link['external'] set to 1.
         if (!$link['external'] && !$link['hidden']) {
           _xmlsitemap_menu_link_translate($link);
           if ($link['access'] == 1) {
-            if (($alias = drupal_lookup_path('alias', $link['href']) === FALSE)) {
-              $alias = NULL;
-            }
-            $url = xmlsitemap_url($link['href'], $alias, NULL, NULL, TRUE);
+            $row->loc = $link['href'];
+            $row->priority = min(max(round($link['weight'] / 20 + 0.5, 1), 0), 1);
             if (db_result(db_query("SELECT loc FROM {xmlsitemap} WHERE loc = '%s'", $url)) != $url) {
-              db_query("INSERT INTO {xmlsitemap} (loc, priority) VALUES ('%s', %f)", $url, min(max(round($link['weight'] / 20 + 0.5, 1), 0), 1));
+              drupal_write_record('xmlsitemap', $row);
             }
           }
         }
@@ -74,7 +74,13 @@ function xmlsitemap_menu_xmlsitemap_sitemap_settings_alter(&$form) {
     }
   }
   if (!empty($opts)) {
-    $form['xmlsitemap_menu_menus'] = array(
+    $form['xmlsitemap_menu'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Menu settings'),
+      '#description' => t('The settings for the menus to include in the site map.'),
+      '#collapsible' => TRUE,
+    );
+    $form['xmlsitemap_menu']['xmlsitemap_menu_menus'] = array(
       '#type' => 'checkboxes',
       '#title' => t('Menus to include in the site map'),
       '#default_value' => $default_values,
