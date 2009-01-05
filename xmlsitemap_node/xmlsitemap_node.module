@@ -39,7 +39,7 @@ function xmlsitemap_node_comment($comment, $op) {
 function xmlsitemap_node_form_alter(&$form, &$form_state, $form_id) {
   if (isset($form['type']) && $form_id == $form['type']['#value'] .'_node_form') {
     $node = $form['#node'];
-    if (user_access('override node priority')) {
+    if (user_access('override node settings')) {
       $form['xmlsitemap_node'] = array(
         '#type' => 'fieldset',
         '#title' => t('XML site map'),
@@ -59,7 +59,7 @@ function xmlsitemap_node_form_alter(&$form, &$form_state, $form_id) {
     else {
       $form['priority_override'] = array(
         '#type' => 'value',
-        '#value' => $node->priority_override
+        '#value' => $node->priority_override,
       );
     }
   }
@@ -67,6 +67,7 @@ function xmlsitemap_node_form_alter(&$form, &$form_state, $form_id) {
     switch ($form_id) {
       case 'node_type_form':
         if (isset($form['identity']['type'])) {
+          $options = xmlsitemap_priority_options('exclude');
           $form['xmlsitemap_node'] = array(
             '#type' => 'fieldset',
             '#title' => t('XML site map'),
@@ -76,12 +77,19 @@ function xmlsitemap_node_form_alter(&$form, &$form_state, $form_id) {
             '#type' => 'select',
             '#title' => t('Priority adjustment'),
             '#default_value' => variable_get('xmlsitemap_node_type_priority_'. $form['#node_type']->type, 0.5),
-            '#options' => xmlsitemap_priority_options('exclude'),
+            '#options' => $options,
             '#description' => t('This number will be added to the priority of this content type.'),
           );
           $form['xmlsitemap_node']['xmlsitemap_old_priority'] = array(
             '#type' => 'value',
             '#value' => variable_get('xmlsitemap_node_type_priority_'. $form['#node_type']->type, 0.5)
+          );
+          $form['xmlsitemap_node']['xmlsitemap_node_type_include_attachments'] = array(
+            '#type' => 'select',
+            '#title' => t('Include node attachments in the site map'),
+            '#default_value' => variable_get('xmlsitemap_node_type_include_attachments_'. $form['#node_type']->type, variable_get('xmlsitemap_node_include_attachments', FALSE)),
+            '#return_value' => 1,
+            '#description' => t('This option will be used for content types that are included in the site map; this means it will be not used for content types which have the priority set to @exclude_option', array('@exclude_option' => $options['-1'])),
           );
           $form['#submit'][] = 'xmlsitemap_node_type_submit';
         }
@@ -96,10 +104,13 @@ function xmlsitemap_node_form_alter(&$form, &$form_state, $form_id) {
 function xmlsitemap_node_node_type($op, $info) {
   if ($op == 'delete') {
     variable_del('xmlsitemap_node_type_priority_'. $info->type);
+    variable_del('xmlsitemap_node_type_include_attachments_'. $info->type);
   }
   elseif ($op == 'update' && !empty($info->old_type) && $info->type != $info->old_type) {
     variable_set('xmlsitemap_node_type_priority_'. $info->type, variable_get('xmlsitemap_node_type_priority_'. $info->old_type, 0.5));
     variable_del('xmlsitemap_node_type_priority_'. $info->old_type);
+    variable_set('xmlsitemap_node_type_include_attachments_'. $info->type, variable_get('xmlsitemap_node_type_include_attachments_'. $info->old_type, FALSE));
+    variable_del('xmlsitemap_node_type_include_attachments_'. $info->old_type);
   }
   xmlsitemap_update_sitemap();
 }
@@ -145,7 +156,7 @@ function xmlsitemap_node_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
  * Implementation of hook_perm().
  */
 function xmlsitemap_node_perm() {
-  return array('override node priority');
+  return array('override node settings');
 }
 
 /**
@@ -242,7 +253,7 @@ function xmlsitemap_node_xmlsitemap_links() {
       $row->priority = $priority;
       if (db_result(db_query("SELECT loc FROM {xmlsitemap} WHERE loc = '%s'", $row->loc)) != $row->loc) {
         drupal_write_record('xmlsitemap', $row);
-        if (module_exists('upload') && variable_get('xmlsitemap_node_include_attachments_'. $node->type, variable_get('xmlsitemap_node_include_attachments', FALSE))) {
+        if (module_exists('upload') && variable_get('xmlsitemap_node_type_include_attachments_'. $node->type, variable_get('xmlsitemap_node_include_attachments', FALSE))) {
           $now = time();
           $attachments_query = db_query("SELECT filepath, timestamp
             FROM {files}
@@ -271,6 +282,13 @@ function xmlsitemap_node_xmlsitemap_sitemap_settings_alter(&$form) {
     '#title' => t('Content settings'),
     '#description' => t('The settings for the content to include in the site map.'),
     '#collapsible' => TRUE,
+  );
+  $form['xmlsitemap_node']['xmlsitemap_node_include_attachments'] = array(
+    '#type' => 'select',
+    '#title' => t('Include node attachments in the site map'),
+    '#default_value' => variable_get('xmlsitemap_node_include_attachments', FALSE),
+    '#return_value' => 1,
+    '#description' => t('This is the default value used for all the content types for which a value has not been assigned. See the <a href="@content-type-page">content type page</a> to set a value for a specific content type', array("@content-type-page" => url('admin/content/types'))),
   );
   $form['xmlsitemap_node']['xmlsitemap_node_promote_priority'] = array(
     '#type' => 'select',
