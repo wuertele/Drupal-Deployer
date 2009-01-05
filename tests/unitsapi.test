@@ -1,0 +1,130 @@
+<?php // $Id$
+
+/**
+ * @file
+ * Tests for Units API module.
+ */
+
+/**
+ * Functional tests for the Units API module.
+ */
+class UnitsAPIUnitTest extends DrupalWebTestCase {
+
+  function getInfo() {
+    return array(
+      'name' => t('Units API functionality'),
+      'description' => t('Validate various unit conversions.'),
+      'group' => t('Units API'),
+    );
+  }
+
+  function setUp() {
+    parent::setUp('unitsapi');
+    unitsapi_xml_cache();
+  }
+
+  /**
+   * Check to see if an unit conversion equals an expected value.
+   *
+   * @param $value
+   *   A number containing the value of the measurement.
+   * @param $from
+   *   A string containing the name of the measurement to convert from.
+   * @param $to
+   *   A string containing the name of the measurement to convert to.
+   * @param $expected
+   *   A number containing the expected result of the conversion.
+   * @param $group
+   *   A string with the SimpleTest group label.
+   * @return
+   *   The status passed in.
+   */
+  protected function assertUnitConversion($value, $from, $to, $expected, $group = 'Other') {
+    $test = unitsapi_convert($value, $from, $to, TRUE);
+
+    $message = t('@value @from to @to = %expected @to (returned %result @to)', array(
+      '@value' => $value,
+      '@from' => $test['from'],
+      '@to' => $test['to'],
+      '%expected' => $expected,
+      '%result' => $test['result'],
+    ));
+
+    return $this->_assert($expected == $test['result'], $message, $group);
+  }
+
+  /**
+   * Tests load and cache of units.xml
+   */
+  function testUnitsAPICache() {
+    $result = unitsapi_xml_cache();
+    $this->assertTrue($result, t('Set XML cache.'));
+  }
+
+  /**
+   * Tests error returned by mixing unit kinds.
+   */
+  function testUnitsAPIKinds() {
+    $this->assertFalse(unitsapi_convert(1, 'mile', 'liter'), t('Mismatched unit kinds return false.'));
+  }
+
+  /**
+   * Tests various length unit conversions.
+   */
+  function testUnitsAPILength() {
+    $group = t('Length');
+    $this->assertUnitConversion(4000, 'millimeter', 'inch', 157.480315, $group);
+    $this->assertUnitConversion(120, 'centimeter', 'foot', 3.937008, $group);
+    $this->assertUnitConversion(92, 'decimeter', 'yard', 10.061242, $group);
+    $this->assertUnitConversion(5, 'meter', 'mile', 0.003107, $group);
+    $this->assertUnitConversion(1.5, 'kilometer', 'foot', 4921.259843, $group);
+    $this->assertUnitConversion(30, 'foot', 'yard', 10, $group);
+    $this->assertUnitConversion(87, 'inch', 'decimeter', 22.098, $group);
+    $this->assertUnitConversion(135, 'yard', 'meter', 123.444, $group);
+    $this->assertUnitConversion(10, 'mile', 'yard', 17600, $group);
+    $this->assertUnitConversion(22, 'mile', 'kilometer', 35.405568, $group);
+  }
+
+  /**
+   * Tests various volume unit conversions.
+   */
+  function testUnitsAPIVolume() {
+    $group = t('Volume');
+    $this->assertUnitConversion(90, 'cubic inch', 'us liquid quart', 1.558442, $group);
+    $this->assertUnitConversion(1, 'cubic mile', 'cubic yard', 5451776000, $group);
+    $this->assertUnitConversion(4, 'cubic yard', 'cubic foot', 108, $group);
+    $this->assertUnitConversion(16, 'cup', 'imperial pint', 6.661393, $group);
+    $this->assertUnitConversion(40, 'us ounce', 'cubic inch', 72.1875, $group);
+    $this->assertUnitConversion(25, 'imperial pint', 'tablespoon', 960.760338, $group);
+    $this->assertUnitConversion(70, 'us dry quart', 'imperial gallon', 16.956432, $group);
+    $this->assertUnitConversion(55, 'tablespoon', 'cubic inch', 49.628906, $group);
+    $this->assertUnitConversion(120, 'teaspoon', 'cup', 2.5, $group);
+    $this->assertUnitConversion(2, 'liter', 'imperial ounce', 70.390159, $group);
+    $this->assertUnitConversion(12, 'us gallon', 'liter', 45.424941, $group);
+    $this->assertUnitConversion(2, 'cubic foot', 'cup', 239.376623, $group);
+  }
+
+  /**
+   * Tests various temperature unit conversions.
+   */
+  function testUnitsAPITemperature() {
+    $group = t('Temperature');
+    $this->assertUnitConversion(25, 'celsius', 'fahrenheit', 77, $group);
+    $this->assertUnitConversion(45, 'celsius', 'kelvin', 318.15, $group);
+    $this->assertUnitConversion(90, 'fahrenheit', 'celsius', 32.222222, $group);
+    $this->assertUnitConversion(55, 'fahrenheit', 'kelvin', 285.927778, $group);
+    $this->assertUnitConversion(295, 'kelvin', 'celsius', 21.85, $group);
+    $this->assertUnitConversion(300, 'kelvin', 'fahrenheit', 80.33, $group);
+  }
+
+  /**
+   * Tests various time unit conversions.
+   */
+  function testUnitsAPITime() {
+    $group = t('Time');
+    $this->assertUnitConversion(50000, 'minute', 'year', 0.095129, $group);
+    $this->assertUnitConversion(82, 'hour', 'day', 3.416667, $group);
+    $this->assertUnitConversion(3.5, 'day', 'minute', 5040, $group);
+    $this->assertUnitConversion(20, 'year', 'hour', 175200, $group);
+  }
+}
