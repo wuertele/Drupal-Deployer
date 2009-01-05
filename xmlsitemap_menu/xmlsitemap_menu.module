@@ -26,30 +26,28 @@ function xmlsitemap_menu_xmlsitemap_description() {
 /**
  * Implementation of hook_xmlsitmap_links().
  */
-function xmlsitemap_menu_xmlsitemap_links($type = NULL) {
-  if (!isset($type)) {
-    $menus = variable_get('xmlsitemap_menu_menus', array());
-    foreach ($menus as $menu) {
-      $result = db_query("SELECT ml.*, m.*
-        FROM {menu_links} ml
-        LEFT JOIN {menu_router} m ON m.path = ml.router_path
-        WHERE  ml.menu_name = '%s'
-        ORDER BY ml.plid, ml.mlid ASC",
-        $menu
-      );
-      $row = new stdClass();
-      $row->module = 'xmlsitemap_menu';
-      while ($link = db_fetch_array($result)) {
-        // Avoid external links, or links to the front page;
-        // both have $link['external'] set to 1.
-        if (!$link['external'] && !$link['hidden']) {
-          _xmlsitemap_menu_link_translate($link);
-          if ($link['access'] == 1) {
-            $row->loc = $link['href'];
-            $row->priority = min(max(round($link['weight'] / 20 + 0.5, 1), 0), 1);
-            if (db_result(db_query("SELECT loc FROM {xmlsitemap} WHERE loc = '%s'", $url)) != $url) {
-              drupal_write_record('xmlsitemap', $row);
-            }
+function xmlsitemap_menu_xmlsitemap_links() {
+  $menus = variable_get('xmlsitemap_menu_menus', array());
+  foreach ($menus as $menu) {
+    $result = db_query("SELECT ml.*, m.*
+      FROM {menu_links} ml
+      LEFT JOIN {menu_router} m ON m.path = ml.router_path
+      WHERE  ml.menu_name = '%s'
+      ORDER BY ml.plid, ml.mlid ASC",
+      $menu
+    );
+    $row = new stdClass();
+    $row->module = 'xmlsitemap_menu';
+    while ($link = db_fetch_array($result)) {
+      // Avoid external links, or links to the front page;
+      // both have $link['external'] set to 1.
+      if (!$link['external'] && !$link['hidden']) {
+        _xmlsitemap_menu_link_translate($link);
+        if ($link['access'] == 1) {
+          $row->loc = $link['href'];
+          $row->priority = min(max(round($link['weight'] / 20 + 0.5, 1), 0), 1);
+          if (db_result(db_query("SELECT loc FROM {xmlsitemap} WHERE loc = '%s'", $row->loc)) != $row->loc) {
+            drupal_write_record('xmlsitemap', $row);
           }
         }
       }
