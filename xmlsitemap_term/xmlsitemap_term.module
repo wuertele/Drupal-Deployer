@@ -105,14 +105,19 @@ function xmlsitemap_term_taxonomy($op, $type, $array = NULL) {
         db_query("DELETE FROM {xmlsitemap_term} WHERE tid = %d", $array['tid']);
         break;
       case 'insert':
-        db_query("INSERT INTO {xmlsitemap_term} (tid, vid, priority_override) VALUES (%d, %d, %f)",
-          $array['tid'], $array['tid'], $array['xmlsitemap_term_priority']
-        );
+        $row = new stdClass();
+        $row->tid = $array['tid'];
+        $row->vid = $array['vid'];
+        $row->priority_override = $array['xmlsitemap_term_priority'];
+        drupal_write_record('xmlsitemap_term', $row);
         break;
       case 'update':
-        db_query("UPDATE {xmlsitemap_term} SET priority_override = %f WHERE tid = %d",
-          $array['xmlsitemap_term_priority'], $array['tid']
-        );
+        $update = (db_result(db_query("SELECT tid FROM {xmlsitemap_term} WHERE tid = %d", $array['tid'])) == $array['tid']);
+        $row = new stdClass();
+        $row->tid = $array['tid'];
+        $row->vid = $array['vid'];
+        $row->priority_override = $array['xmlsitemap_term_priority'];
+        drupal_write_record('xmlsitemap_term', $row, $update ? 'tid' : NULL);
         break;
     }
     xmlsitemap_update_sitemap();
@@ -161,6 +166,8 @@ function xmlsitemap_term_xmlsitemap_links() {
     GROUP BY $columns", 't', 'tid'),
     $query_args
   );
+  $row = new stdClass();
+  $row->module = 'xmlsitemap_term';
   while ($term = db_fetch_object($result)) {
     $stat = db_fetch_object(db_query("SELECT MAX(n.changed) AS changed, MIN(n.changed) AS previously_changed, COUNT(n.nid) AS count
       FROM {node} n
@@ -175,25 +182,22 @@ function xmlsitemap_term_xmlsitemap_links() {
         $frequency = (time() - $stat->changed) / $stat->count;
       }
       if ($term->module == 'forum') {
-        $path = 'forum/'. $term->tid;
+        $row->loc = 'forum/'. $term->tid;
       }
       else {
-        $path = taxonomy_term_path($term);
+        $row->loc = taxonomy_term_path($term);
       }
-      $alias = drupal_lookup_path('alias', $path);
-      if ($alias === FALSE) {
-        $alias = NULL;
-      }
-      $url = xmlsitemap_url($path, $alias, NULL, NULL, TRUE);
       if ($term->priority_override != -2.0) {
         $priority = $term->priority_override;
       }
       else {
         $priority = variable_get('xmlsitemap_term_vocabulary_priority_'. $term->vid, 0.5);
       }
-      db_query("INSERT INTO {xmlsitemap} (loc, lastmod, changefreq, priority) VALUES ('%s', %d, %d, %f)",
-        $url, $stat->changed, $frequency, $priority
-      );
+      $row->lastmod = $stat->changed;
+      $row->priority = $priority;
+      if (db_result(db_query("SELECT loc FROM {xmlsitemap} WHERE loc = '%s'", $row->loc)) != $row->loc) {
+        drupal_write_record('xmlsitemap', $row);
+      }
     }
   }
 }
