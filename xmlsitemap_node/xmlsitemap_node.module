@@ -128,19 +128,28 @@ function xmlsitemap_node_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
       $node->priority_override = $priority !== FALSE ? $priority : -2.0;
       break;
     case 'insert':
-      db_query("INSERT INTO {xmlsitemap_node} (nid, changed, priority_override) VALUES (%d, %d, %f)",
-        $node->nid, $node->changed, $node->priority_override
-      );
+      $row = new stdClass();
+      $row->nid = $node->nid;
+      $row->changed = $node->changed;
+      $row->priority_override = $node->priority_override;
+      drupal_write_record('xmlsitemap_node', $row);
       if ($node->status) {
         xmlsitemap_update_sitemap();
       }
       break;
     case 'update':
-      db_query("UPDATE {xmlsitemap_node}
-        SET previously_changed = changed, changed = %d, priority_override = %f
-        WHERE nid = %d",
-        array($node->changed, $node->priority_override, $node->nid)
-      );
+      if (($result = db_fetch_object(db_query("SELECT * FROM {xmlsitemap_node} WHERE nid = %d", $node->nid))) !== FALSE) {
+        $row = $result;
+        $row->previously_changed = $row->changed;
+        $row->changed = $node->changed;
+      }
+      else {
+        $row = new stdClass();
+        $row->nid = $node->nid;
+        $row->changed = $node->changed;
+      }
+      $row->priority_override = $node->priority_override;
+      drupal_write_record('xmlsitemap_node', $row, $result !== FALSE ? 'nid' : NULL);
       xmlsitemap_update_sitemap();
       break;
     case 'delete':
