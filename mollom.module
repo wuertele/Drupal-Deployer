@@ -1055,14 +1055,11 @@ function _mollom_retrieve_server_list() {
   // Use the list of servers to retrieve a list of servers from mollom.com:
   foreach ($servers as $server) {
     $result = xmlrpc($server .'/'. MOLLOM_API_VERSION, 'mollom.getServerList', _mollom_authentication());
-    if (!xmlrpc_errno()) {
+    if (!xmlrpc_error()) {
       return $result;
     }
     else {
       watchdog('mollom', 'Error @errno: %server - %message - mollom.getServerList', array('@errno' => xmlrpc_errno(), '%server' => $server, '%message' => xmlrpc_error_msg()), WATCHDOG_ERROR);
-      
-      // Reset the XMLRPC error:
-      xmlrpc_error(0);  // FIXME: this is crazy.
     }
   }
 
@@ -1105,8 +1102,9 @@ function mollom($method, $data = array()) {
         _mollom_debug("called $method at server $server with no session ID");
       }
 
-      if ($errno = xmlrpc_errno()) {
-        if ($errno == MOLLOM_REFRESH) {
+      if ($result === FALSE && ($error = xmlrpc_error())) {
+
+        if ($error->code == MOLLOM_REFRESH) {
           if (!$refresh) { // Safety pal to avoid endless loops.
             // Retrieve a list of valid Mollom servers from mollom.com:
             $servers = _mollom_retrieve_server_list();
@@ -1124,7 +1122,7 @@ function mollom($method, $data = array()) {
             $refresh = TRUE;
           }
         }
-        elseif ($errno == MOLLOM_REDIRECT) {
+        elseif ($error->code == MOLLOM_REDIRECT) {
           // If this is a network error, we go to the next server in the list.
           $next = next($servers); 
           
@@ -1132,20 +1130,17 @@ function mollom($method, $data = array()) {
           watchdog('mollom', 'The Mollom server %server asked to use the next Mollom server in the list: %next.', array('%server' => $server, '%next' => $next));
         }
         else {
-          watchdog('mollom', 'Error @errno from %server: %message - %method - <pre>@data</pre>', array('@errno' => xmlrpc_errno(), '%server' => $server, '%message' => xmlrpc_error_msg(), '%method' => $method, '@data' => print_r($data, TRUE)), WATCHDOG_ERROR);
+          watchdog('mollom', 'Error @errno from %server: %message - %method - <pre>@data</pre>', array('@errno' => $error->code, '%server' => $server, '%message' => $error->message, '%method' => $method, '@data' => print_r($data, TRUE)), WATCHDOG_ERROR);
        
           // If it is a 'clean' Mollom error we return instantly.
 
-          if ($errno == MOLLOM_ERROR) {
+          if ($error->code == MOLLOM_ERROR) {
             return $result;
           }
 
           // If this is a network error, we go to the next server in the list.
           next($servers); 
         }
-
-        // Reset the XMLRPC error:
-        xmlrpc_error(0);  // FIXME: this is crazy.
       }
       else {
         return $result;
