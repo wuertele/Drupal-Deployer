@@ -16,24 +16,6 @@
  ****************************************************************************/
 
 /**
- * Implementation of hook_comment().
- */
-function xmlsitemap_node_comment($comment, $op) {
-  $comment = (object) $comment;
-  switch ($op) {
-    case 'insert':
-    case 'update':
-    case 'moderate':
-    case 'delete':
-      db_query("UPDATE {xmlsitemap_node} SET previous_comment = last_comment, last_comment = %d WHERE nid = %d", $comment->timestamp, $comment->nid);
-      if (variable_get('xmlsitemap_node_count_comments', TRUE)) {
-        xmlsitemap_update_sitemap();
-      }
-      break;
-  }
-}
-
-/**
  * Implementation of hook_form_alter().
  */
 function xmlsitemap_node_form_alter(&$form, &$form_state, $form_id) {
@@ -191,6 +173,7 @@ function xmlsitemap_node_xmlsitemap_description() {
  */
 function xmlsitemap_node_xmlsitemap_links() {
   static $excludes;
+  static $maxcomments;
   $anonymous = user_load(array('uid => 0'));
   if (!isset($excludes)) {
     $excludes = array();
@@ -223,23 +206,19 @@ function xmlsitemap_node_xmlsitemap_links() {
   $row->module = 'xmlsitemap_node';
   while ($node = db_fetch_object($result)) {
     if (node_access('view', $node, $anonymous)) {
-      $age = time() - $node->changed;
-      if (variable_get('xmlsitemap_node_count_comments', TRUE)) {
-        $age = time() - max($node->changed, $node->last_comment);
-        $interval = ($node->last_comment ?
-          min($node->changed, $node->last_comment) - max($node->previously_changed, $node->previous_comment) :
-          ($node->previously_changed ? $node->changed - $node->previously_changed : 0)
-        );
-      }
-      else {
-        $interval = $node->previously_changed ? $node->changed - $node->previously_changed : 0;
-      }
-      static $maxcomments;
-      if (!isset($maxcomments)) {
-        $maxcomments = 0;
-        if (module_exists('comment')) {
-          $maxcomments = db_result(db_query("SELECT MAX(comment_count) FROM {node_comment_statistics}"));
+      if (module_exists('comment') && variable_get('xmlsitemap_node_count_comments', TRUE)) {
+        if (!isset($maxcomments)) {
+          $maxcomments = (integer) db_result(db_query("SELECT MAX(comment_count) FROM {node_comment_statistics}"));
         }
+        $stat = db_fetch_object(db_query("SELECT MIN(timestamp) AS first_comment, MAX(timestamp) AS last_comment"));
+        if (!empty($stat->first_comment) && !empty($stat->last_comment)) {
+          $age = time() - max($node->changed, $stat->last_comment);
+          $interval = min($node->changed, $stat->last_comment) - max($node->previously_changed, $stat->first_comment);
+        }
+      }
+      if (empty($age)) {
+        $age = time() - $node->changed;
+        $interval = $node->changed - $node->previously_changed;
       }
       if ($node->priority_override != -2.0) {
         $priority = $node->priority_override;
@@ -250,7 +229,7 @@ function xmlsitemap_node_xmlsitemap_links() {
       if ($node->promote) {
         $priority += variable_get('xmlsitemap_node_promote_priority', 0.3);
       }
-      if ($maxcomments > 1) {
+      if (isset($maxcomments) && $maxcomments > 1) {
         $priority += $node->comment_count / $maxcomments * variable_get('xmlsitemap_node_comment_priority', 0.2);
       }
       $priority = min(round($priority, 1), 1.0);
@@ -366,15 +345,6 @@ function xmlsitemap_node_update_database_01(&$context) {
       $context['sandbox']['current_node'], 0, 1
     );
     if ($row = db_fetch_object($result)) {
-      if (db_table_exists('node_comment_statistics')) {
-        $query = db_query("SELECT comment_count, last_comment_timestamp
-          FROM {node_comment_statistics}
-          WHERE nid = %d", $row->nid
-        );
-        if (($comment_row = db_fetch_object($query)) !== FALSE && $comment_row->comment_count) {
-          $row->last_comment = $comment_row->last_comment_timestamp;
-        }
-      }
       drupal_write_record('xmlsitemap_node', $row);
       $context['sandbox']['progress']++;
       $context['sandbox']['current_node'] = $row->nid;
@@ -411,18 +381,6 @@ function xmlsitemap_node_update_database_02(&$context) {
       $context['sandbox']['current_node'], 0, 1
     );
     if ($row = db_fetch_object($result)) {
-      if (db_table_exists('node_comment_statistics')) {
-        $query = db_query("SELECT comment_count, last_comment_timestamp
-          FROM {node_comment_statistics}
-          WHERE nid = %d", $row->nid
-        );
-        if (($comment_row = db_fetch_object($query)) !== FALSE) {
-          if ($comment_row->comment_count && $comment_row->last_comment_timestamp > $row->last_comment) {
-            $row->previous_comment = $row->last_comment;
-            $row->last_comment = $comment_row->last_comment_timestamp;
-          }
-        }
-      }
       drupal_write_record('xmlsitemap_node', $row, 'nid');
       $context['sandbox']['progress']++;
       $context['sandbox']['current_node'] = $row->nid;
