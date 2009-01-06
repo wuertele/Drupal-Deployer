@@ -137,6 +137,13 @@ A: Yes, this is the intended behavior. the administration menu module only loads
    users).
 
 
+Q: Why are sub-menus not visible in Opera?
+
+A: In the Opera browser preferences under "web pages" there is an option to fit
+   to width. By disabling this option, sub-menus in the administration menu
+   should appear.
+
+
 -- CONTACT --
 
 Current maintainers:
