@@ -22,13 +22,7 @@
  */
 function unitsapi_convert($value, $from, $to, $details = FALSE) {
 
-  $cache = cache_get('unitsapi_data');
-  if (empty($cache->data)) {
-    unitsapi_xml_cache();
-    $cache = cache_get('unitsapi_data');
-  }
-
-  $units = $cache->data;
+  $units = module_invoke_all('unitsapi');
 
   // Only accept numeric values.
   if (!is_numeric($value)) {
@@ -74,6 +68,20 @@ function unitsapi_convert($value, $from, $to, $details = FALSE) {
   }
 
   return $return;
+}
+
+/**
+ * Implementation of hook_unitsapi().
+ */
+function unitsapi_unitsapi() {
+  $cache = cache_get('unitsapi_data');
+  if (empty($cache->data)) {
+    unitsapi_xml_cache();
+    $cache = cache_get('unitsapi_data');
+  }
+
+  $units = $cache->data;
+  return $units;
 }
 
 /**
