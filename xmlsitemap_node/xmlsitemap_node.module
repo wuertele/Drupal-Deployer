@@ -21,28 +21,25 @@
 function xmlsitemap_node_form_alter(&$form, &$form_state, $form_id) {
   if (isset($form['type']) && $form_id == $form['type']['#value'] .'_node_form') {
     $node = $form['#node'];
-    if (user_access('override node settings')) {
-      $form['xmlsitemap_node'] = array(
-        '#type' => 'fieldset',
-        '#title' => t('XML site map'),
-        '#collapsible' => TRUE,
-        '#weight' => 30,
-      );
-      $options = xmlsitemap_priority_options('both');
-      $default = variable_get('xmlsitemap_node_type_priority_'. $node->type, '0.5');
-      $form['xmlsitemap_node']['priority_override'] = array(
-        '#type' => 'select',
-        '#title' => t('Priority'),
-        '#default_value' => $node->priority_override,
-        '#options' => $options,
-        '#description' => t('The default priority is %priority.', array('%priority' => $options[$default])),
-      );
-    }
-    else {
-      $form['priority_override'] = array(
-        '#type' => 'value',
-        '#value' => $node->priority_override,
-      );
+    $form['xmlsitemap_node'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('XML site map'),
+      '#collapsible' => TRUE,
+      '#weight' => 30,
+    );
+    $options = xmlsitemap_priority_options('both');
+    $default = variable_get('xmlsitemap_node_type_priority_'. $node->type, '0.5');
+    $disabled = !user_access('override node settings');
+    $form['xmlsitemap_node']['priority_override'] = array(
+      '#type' => 'select',
+      '#title' => t('Priority'),
+      '#default_value' => $node->priority_override,
+      '#options' => $options,
+      '#disabled' => $disabled,
+      '#description' => t('The default priority is %priority.', array('%priority' => $options[$default])),
+    );
+    if ($disabled) {
+      $form['xmlsitemap_node']['priority_override']['#description'] .= ' '. t('This option is only modifiable from users with the right permission.');
     }
   }
   else {
@@ -62,18 +59,13 @@ function xmlsitemap_node_form_alter(&$form, &$form_state, $form_id) {
             '#options' => $options,
             '#description' => t('This number will be added to the priority of this content type.'),
           );
-          $form['xmlsitemap_node']['xmlsitemap_old_priority'] = array(
-            '#type' => 'value',
-            '#value' => variable_get('xmlsitemap_node_type_priority_'. $form['#node_type']->type, 0.5)
-          );
           $form['xmlsitemap_node']['xmlsitemap_node_type_include_attachments'] = array(
-            '#type' => 'select',
+            '#type' => 'checkbox',
             '#title' => t('Include node attachments in the site map'),
             '#default_value' => variable_get('xmlsitemap_node_type_include_attachments_'. $form['#node_type']->type, variable_get('xmlsitemap_node_include_attachments', FALSE)),
             '#return_value' => 1,
-            '#description' => t('This option will be used for content types that are included in the site map; this means it will be not used for content types which have the priority set to @exclude_option', array('@exclude_option' => $options['-1'])),
+            '#description' => t('This option will be used for content types that are included in the site map; this means it will be not used for content types which have the priority set to @exclude_option.', array('@exclude_option' => $options['-1'])),
           );
-          $form['#submit'][] = 'xmlsitemap_node_type_submit';
         }
         break;
     }
@@ -250,6 +242,7 @@ function xmlsitemap_node_xmlsitemap_links() {
           while ($attachment = db_fetch_object($attachments_query)) {
             $row->loc = $attachment->filepath;
             $row->type = 'attachment';
+            $row->sid = $attachment->fid;
             $row->changefreq = $now - $attachment->timestamp;
             if (db_result(db_query("SELECT loc FROM {xmlsitemap} WHERE loc = '%s'", $row->loc)) != $row->loc) {
               drupal_write_record('xmlsitemap', $row);
@@ -272,11 +265,11 @@ function xmlsitemap_node_xmlsitemap_sitemap_settings_alter(&$form) {
     '#collapsible' => TRUE,
   );
   $form['xmlsitemap_node']['xmlsitemap_node_include_attachments'] = array(
-    '#type' => 'select',
+    '#type' => 'checkbox',
     '#title' => t('Include node attachments in the site map'),
     '#default_value' => variable_get('xmlsitemap_node_include_attachments', FALSE),
     '#return_value' => 1,
-    '#description' => t('This is the default value used for all the content types for which a value has not been assigned. See the <a href="@content-type-page">content type page</a> to set a value for a specific content type', array("@content-type-page" => url('admin/content/types'))),
+    '#description' => t('This is the default value used for all the content types for which a value has not been assigned. See the <a href="@content-type-page">content type page</a> to set a value for a specific content type.', array("@content-type-page" => url('admin/content/types'))),
   );
   $form['xmlsitemap_node']['xmlsitemap_node_promote_priority'] = array(
     '#type' => 'select',
@@ -298,22 +291,6 @@ function xmlsitemap_node_xmlsitemap_sitemap_settings_alter(&$form) {
     '#default_value' => variable_get('xmlsitemap_node_count_comments', TRUE),
     '#description' => t('If enabled, the frequency of comments on a post will affect its change frequency and last modification date.'),
   );
-}
-/*****************************************************************************
- * Menu callbacks / form builders, submit/validate functions.
- ****************************************************************************/
-
-/**
- * Add submit actions to forms.
- */
-function xmlsitemap_node_type_submit($form, &$form_state) {
-  $values = $form_state['values'];
-  $op = isset($values['op']) ? $values['op'] : '';
-  $priority = $values['xmlsitemap_node_type_priority'];
-  $old_priority = $values['xmlsitemap_old_priority'];
-  if ($op == t('Save content type') && $priority != $old_priority || $op == t('Reset to defaults') && $old_priority != 0.1) {
-    xmlsitemap_update_sitemap();
-  }
 }
 
 /*****************************************************************************
