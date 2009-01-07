@@ -506,92 +506,9 @@ function xmlsitemap_update_sitemap() {
   }
 }
 
-/**
- * Modified version of url(). We don't want to do a separate database query
- * for each url, so we pass the alias as an extra parameter.
- * @param $alias
- *  The URL alias; default is NULL.
- * @return
- *  The fully formatted URL.
- */
-function xmlsitemap_url($path = NULL, $alias = NULL, $query = NULL, $fragment = NULL, $absolute = FALSE) {
-  if (isset($fragment)) {
-    $fragment = "#$fragment";
-  }
-  $colonpos = strpos($path, ':');
-  if ($colonpos !== FALSE && !preg_match('![/?#]!', substr($path, 0, $colonpos)) && filter_xss_bad_protocol($path, FALSE) == check_plain($path)) {
-    if (strpos($path, '#') !== FALSE) {
-      list($path, $old_fragment) = explode('#', $path, 2);
-      if (isset($old_fragment) && !isset($fragment)) {
-        $fragment = "#$old_fragment";
-      }
-    }
-    if (isset($query)) {
-      $path .= (strpos($path, '?') !== FALSE ? '&' : '?') . $query;
-    }
-    return $path . $fragment;
-  }
-  global $base_url;
-  static $script;
-  static $clean_url;
-  $script = isset($script) ? $script : strpos($_SERVER['SERVER_SOFTWARE'], 'Apache') === FALSE ? 'index.php' : '';
-  $clean_url = isset($clean_url) ? $clean_url : variable_get('clean_url', FALSE);
-  $base = ($absolute ? $base_url .'/' : base_path());
-
-  if (!empty($path) && $path != '<front>') {
-    $path = _xmlsitemap_get_path_alias($path, $alias);
-    $path = drupal_urlencode($path);
-
-    if (!$clean_url) {
-      if (isset($query)) {
-        return $base . $script .'?q='. $path .'&'. $query . $fragment;
-      }
-      else {
-        return $base . $script .'?q='. $path . $fragment;
-      }
-    }
-    else {
-      if (isset($query)) {
-        return $base . $path .'?'. $query . $fragment;
-      }
-      else {
-        return $base . $path . $fragment;
-      }
-    }
-  }
-  else {
-    if (isset($query)) {
-      return $base . $script .'?'. $query . $fragment;
-    }
-    else {
-      return $base . $fragment;
-    }
-  }
-}
-
 /*****************************************************************************
  * Private functions.
  ****************************************************************************/
-
-/**
- * Modified version of drupal_get_path_alias() for xmlsitemap_url().
- * @param $path
- *  An internal Drupal path.
- * @param $alias
- *  The URL alias; default is NULL.
- * @return
- *  A processed path.
- */
-function _xmlsitemap_get_path_alias($path, $alias = NULL) {
-  $result = $path;
-  if (!empty($alias)) {
-    $result = $alias;
-  }
-  if (function_exists('custom_url_rewrite_outbound')) {
-    custom_url_rewrite_outbound($result, $customarray = array('alias' => $alias), $path);
-  }
-  return $result;
-}
 
 /**
  * Return the number of links present in xmlsitemap table.
@@ -655,7 +572,7 @@ function _xmlsitemap_output_index() {
   $link_count = _xmlsitemap_link_count();
   for ($chunk = 0; $chunk < $link_count / $chunk_size; ++$chunk) {
     print '  <sitemap>'."\n";
-    print '    <loc>'. xmlsitemap_url("sitemap$chunk.xml", NULL, NULL, NULL, TRUE) .'</loc>'."\n";
+    print '    <loc>'. url("sitemap$chunk.xml", array('absolute' => TRUE)) .'</loc>'."\n";
     if ($chunk < $link_count / $chunk_size) {
       $from = $chunk * $chunk_size;
       if (!empty($chunk_size)) {
