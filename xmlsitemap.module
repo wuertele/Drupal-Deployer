@@ -373,6 +373,42 @@ function xmlsitemap_tools_update_database_submit($form, &$form_state) {
  ****************************************************************************/
 
 /**
+ * Add the XML site map settings fieldset to the form.
+ * @param $form
+ *  The form to change.
+ * @param settings
+ *  An array of optional settings.
+ *   - disabled: TRUE if some of the fields added to the fieldsets are disabled;
+ *   - weight: the weight of the fieldset;
+ *   - buttons: an array of strings which identify the form items that will have
+ *     their weight increased of of 1. 
+ */
+function xmlsitemap_add_settings_fieldset(&$form, $settings = array()) {
+  if (!isset($form['xmlsitemap'])) {
+    $form['xmlsitemap'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('XML site map'),
+      '#collapsible' => TRUE,
+    );
+  }
+  if (!empty($settings['disabled']) && !isset($form['xmlsitemap']['#description'])) {
+    $form['xmlsitemap']['#description'] = t('The disabled options are only modifiable from users with the right permission');
+  }
+  if (isset($settings['weight'])) {
+    if ((isset($form['xmlsitemap']['#weight']) && $settings['weight'] > $form['xmlsitemap']['#weight']) || !isset($form['xmlsitemap']['#weight'])) {
+      $form['xmlsitemap']['#weight'] = $settings['weight'];
+    }
+  }
+  if (!empty($settings['buttons'])) {
+    foreach ($settings['buttons'] as $button) {
+      if (isset($form[$button])) {
+        $form[$button]['#weight'] = isset($form[$button]['#weight']) ? $form[$button]['#weight'] + 1 : 1;
+      }
+    }
+  }
+}
+
+/**
  * Function called when the database batch is finished.
  * @param $success
  *  TRUE if the batch operation has been concluded sucessfully, FALSE otherwise.

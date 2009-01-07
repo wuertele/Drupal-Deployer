@@ -21,21 +21,22 @@
 function xmlsitemap_term_form_alter(&$form, $form_state, $form_id) {
   switch ($form_id) {
     case 'taxonomy_form_term':
+      $default = isset($form['vid']['#value']) ? variable_get('xmlsitemap_term_vocabulary_priority_'. $form['vid']['#value'], 0.5) : 0.5;
+      $disabled = !user_access('override term settings');
+      $options = xmlsitemap_priority_options('both');
       $priority = isset($form['tid']['#value']) ? db_result(db_query("SELECT priority_override
         FROM {xmlsitemap_term}
         WHERE tid = %d", $form['tid']['#value'])) : -2.0;
       if ($priority === FALSE) {
         $priority = -2.0;
       }
-      $disabled = !user_access('override term settings');
-      $options = xmlsitemap_priority_options('both');
-      $default = isset($form['vid']['#value']) ? variable_get('xmlsitemap_term_vocabulary_priority_'. $form['vid']['#value'], 0.5) : 0.5;
-      $form['xmlsitemap_term'] = array(
-        '#type' => 'fieldset',
-        '#title' => t('XML site map'),
-        '#collapsible' => TRUE,
+      xmlsitemap_add_settings_fieldset($form,
+        array(
+          'buttons' => array('submit', 'delete'),
+          'disabled' => $disabled,
+        )
       );
-      $form['xmlsitemap_term']['xmlsitemap_term_priority'] = array(
+      $form['xmlsitemap']['xmlsitemap_term_priority'] = array(
         '#type' => 'select',
         '#title' => t('Priority'),
         '#default_value' => $priority,
@@ -43,27 +44,19 @@ function xmlsitemap_term_form_alter(&$form, $form_state, $form_id) {
         '#disabled' => $disabled,
         '#description' => t('The default priority is %priority.', array('%priority' => $options[$default])),
       );
-      if ($disabled) {
-        $form['xmlsitemap_term']['xmlsitemap_term_priority']['#description'] .= ' '. t('This option is only modifiable from users with the right permission.');
-      }
-      $form['submit']['#weight'] = 1;
-      $form['delete']['#weight'] = 1;
       break;
     case 'taxonomy_form_vocabulary':
-      $form['xmlsitemap_term'] = array(
-        '#type' => 'fieldset',
-        '#title' => t('XML site map'),
-        '#collapsible' => TRUE,
+      xmlsitemap_add_settings_fieldset($form,
+        array('buttons' => array('submit', 'delete'))
       );
-      $form['xmlsitemap_term']['xmlsitemap_term_vocabulary_priority'] = array(
+      $form['xmlsitemap']['xmlsitemap_term_vocabulary_priority'] = array(
         '#type' => 'select',
         '#title' => t('Priority'),
         '#default_value' => isset($form['vid']['#value']) ? variable_get('xmlsitemap_term_vocabulary_priority_'. $form['vid']['#value'], 0.5) : 0.5,
         '#options' => xmlsitemap_priority_options('exclude'),
+        '#disabled' => $disabled,
         '#description' => t('This will be the default priority of terms in this vocabulary.'),
       );
-      $form['submit']['#weight'] = 1;
-      $form['delete']['#weight'] = 1;
       break;
   }
 }
