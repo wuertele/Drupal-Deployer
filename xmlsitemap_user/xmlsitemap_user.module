@@ -163,29 +163,17 @@ function xmlsitemap_user_xmlsitemap_description() {
 function xmlsitemap_user_xmlsitemap_links() {
   $anonymous = user_load(array('uid' => 0));
   if (user_access('access user profiles', $anynomous)) {
-    switch ($GLOBALS['db_type']) {
-      case 'mysql':
-      case 'mysqli':
-        $coalesce = 'COALESCE';
-        $cast = 'CHAR';
-        break;
-      case 'pgsql':
-        $coalesce = 'FIRST';
-        $cast = 'VARCHAR';
-        break;
-    }
     $uid = 0;
     $frontpage = explode('/', drupal_get_normal_path(variable_get('site_frontpage', 'node')));
     if (count($frontpage) == 2 && $frontpage[0] == 'user' && is_numeric($frontpage[1])) {
       $uid = $frontpage[1];
     }
     $columns = 'u.uid, xu.changed, xu.previously_changed, xu.priority_override, SUM(xur.priority) as priority';
-    $result = db_query("SELECT $columns, $coalesce(ua.dst) AS alias
+    $result = db_query("SELECT $columns
       FROM {xmlsitemap_user} xu
       INNER JOIN {users} u ON xu.uid = u.uid
       LEFT JOIN {users_roles} ur ON xu.uid = ur.uid
       LEFT JOIN {xmlsitemap_user_role} xur ON ur.rid = xur.rid
-      LEFT JOIN {url_alias} ua ON ua.src = CONCAT('user/', CAST(u.uid AS $cast))
       WHERE u.status <> 0
         AND u.uid <> %d
       GROUP BY $columns

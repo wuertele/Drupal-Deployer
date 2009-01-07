@@ -84,15 +84,6 @@ function xmlsitemap_schema() {
  */
 function xmlsitemap_install() {
   drupal_install_schema('xmlsitemap');
-  if ($GLOBALS['db_type'] == 'pgsql') {
-    db_query('CREATE OR REPLACE FUNCTION first(anyelement, anyelement) RETURNS anyelement AS \'SELECT COALESCE($1, $2);\' LANGUAGE \'sql\';');
-    @db_query("DROP AGGREGATE first(anyelement)");
-    db_query("CREATE AGGREGATE first(
-      sfunc = first,
-      basetype = anyelement,
-      stype = anyelement
-    );");
-  }
 }
 
 /**
@@ -102,16 +93,14 @@ function xmlsitemap_update_6000() {
   $ret = array();
   $schema = xmlsitemap_schema();
   if ($GLOBALS['db_type'] == 'pgsql') {
-    $ret[] = update_sql('CREATE OR REPLACE FUNCTION first(anyelement, anyelement) RETURNS anyelement AS \'SELECT COALESCE($1, $2);\' LANGUAGE \'sql\';');
+    $result = @update_sql("DROP FUNCTION first(anyelement, anyelement)");
+    if ($result['success']) {
+      $ret[] = $result;
+    }
     $result = @update_sql("DROP AGGREGATE first(anyelement)");
     if ($result['success']) {
       $ret[] = $result;
     }
-    $ret[] = update_sql("CREATE AGGREGATE first(
-      sfunc = first,
-      basetype = anyelement,
-      stype = anyelement
-    );");
   }
   if (db_table_exists('xmlsitemap_additional')) {
     db_drop_table($ret, 'xmlsitemap_additional');
