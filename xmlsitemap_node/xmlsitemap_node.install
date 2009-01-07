@@ -19,6 +19,20 @@ function xmlsitemap_node_schema() {
         'unsigned' => TRUE,
         'default' => 0,
       ),
+      'deleted' => array(
+        'description' => 'A flag set when the node is deleted.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'anonym_access' => array(
+        'description' => 'A flag set when the anonymous user can view this node.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
       'changed' => array(
         'description' => 'The Unix timestamp of the last change.',
         'type' => 'int',
@@ -99,6 +113,16 @@ function xmlsitemap_node_update_6000() {
       $schema['xmlsitemap_node']['fields']['nid'],
       array('primary key' => array('nid'))
     );
+    if (!db_column_exists('xmlsitemap_node', 'deleted')) {
+      db_add_field($ret, 'xmlsitemap_node', 'deleted',
+        $schema['xmlsitemap_node']['fields']['deleted']
+      );
+    }
+    if (!db_column_exists('xmlsitemap_node', 'anonym_access')) {
+      db_add_field($ret, 'xmlsitemap_node', 'anonym_access',
+        $schema['xmlsitemap_node']['fields']['anonym_access']
+      );
+    }
     db_change_field($ret, 'xmlsitemap_node', 'last_changed', 'changed',
       $schema['xmlsitemap_node']['fields']['changed']
     );
