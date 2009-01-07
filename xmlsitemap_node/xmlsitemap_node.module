@@ -88,6 +88,7 @@ function xmlsitemap_node_node_type($op, $info) {
  * Implementation of hook_nodeapi().
  */
 function xmlsitemap_node_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
+  $anonymous = user_load(array('uid' => 0));
   switch ($op) {
     case 'prepare':
       $priority = db_result(db_query("SELECT priority_override
@@ -100,6 +101,7 @@ function xmlsitemap_node_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
       $row = new stdClass();
       $row->nid = $node->nid;
       $row->changed = $node->changed;
+      $row->anonym_access = node_access('view', $node, $anonymous);
       $row->priority_override = $node->priority_override;
       drupal_write_record('xmlsitemap_node', $row);
       if ($node->status) {
@@ -117,12 +119,13 @@ function xmlsitemap_node_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
         $row->nid = $node->nid;
         $row->changed = $node->changed;
       }
+      $row->anonym_access = node_access('view', $node, $anonymous);
       $row->priority_override = $node->priority_override;
       drupal_write_record('xmlsitemap_node', $row, $result !== FALSE ? 'nid' : NULL);
       xmlsitemap_update_sitemap();
       break;
     case 'delete':
-      db_query("DELETE FROM {xmlsitemap_node} WHERE nid = %d", $node->nid);
+      db_query("UPDATE {xmlsitemap_node} SET deleted = 1 WHERE nid = %d", $node->nid);
       if ($node->status) {
         xmlsitemap_update_sitemap();
       }
@@ -310,6 +313,9 @@ function xmlsitemap_node_update_database_01(&$context) {
       $context['sandbox']['current_node'], 0, 1
     );
     if ($row = db_fetch_object($result)) {
+      $anonymous = user_load(array('uid' => 0));
+      $node = node_load($row->nid);
+      $row->anonym_access = node_access('view', $node, $anonymous);
       drupal_write_record('xmlsitemap_node', $row);
       $context['sandbox']['progress']++;
       $context['sandbox']['current_node'] = $row->nid;
@@ -346,6 +352,9 @@ function xmlsitemap_node_update_database_02(&$context) {
       $context['sandbox']['current_node'], 0, 1
     );
     if ($row = db_fetch_object($result)) {
+      $anonymous = user_load(array('uid' => 0));
+      $node = node_load($row->nid);
+      $row->anonym_access = node_access('view', $node, $anonymous);
       drupal_write_record('xmlsitemap_node', $row, 'nid');
       $context['sandbox']['progress']++;
       $context['sandbox']['current_node'] = $row->nid;
