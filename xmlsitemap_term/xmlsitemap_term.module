@@ -22,7 +22,6 @@ function xmlsitemap_term_form_alter(&$form, $form_state, $form_id) {
   switch ($form_id) {
     case 'taxonomy_form_term':
       $default = isset($form['vid']['#value']) ? variable_get('xmlsitemap_term_vocabulary_priority_'. $form['vid']['#value'], 0.5) : 0.5;
-      $disabled = !user_access('override term settings');
       $options = xmlsitemap_priority_options('both');
       $priority = isset($form['tid']['#value']) ? db_result(db_query("SELECT priority_override
         FROM {xmlsitemap_term}
@@ -33,7 +32,6 @@ function xmlsitemap_term_form_alter(&$form, $form_state, $form_id) {
       xmlsitemap_add_settings_fieldset($form,
         array(
           'buttons' => array('submit', 'delete'),
-          'disabled' => $disabled,
         )
       );
       $form['xmlsitemap']['xmlsitemap_term_priority'] = array(
@@ -41,7 +39,6 @@ function xmlsitemap_term_form_alter(&$form, $form_state, $form_id) {
         '#title' => t('Priority'),
         '#default_value' => $priority,
         '#options' => $options,
-        '#disabled' => $disabled,
         '#description' => t('The default priority is %priority.', array('%priority' => $options[$default])),
       );
       break;
@@ -58,13 +55,6 @@ function xmlsitemap_term_form_alter(&$form, $form_state, $form_id) {
       );
       break;
   }
-}
-
-/**
- * Implementation of hook_perm().
- */
-function xmlsitemap_term_perm() {
-  return array('override term settings');
 }
 
 /**
