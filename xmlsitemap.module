@@ -33,7 +33,7 @@ function xmlsitemap_exit() {
   }
   if (variable_get('xmlsitemap_log_access', FALSE)) {
     $items = array();
-    $chunk_size = variable_get('xmlsitemap_chunk_size', 50000);
+    $chunk_size = variable_get('xmlsitemap_chunk_size', 200);
     $link_count = _xmlsitemap_link_count();
     if ($link_count / $chunk_size > 1) {
       for ($chunk = 0; $chunk < $link_count / $chunk_size; ++$chunk) {
@@ -165,7 +165,7 @@ function xmlsitemap_menu() {
     'access arguments' => $access_content,
     'type' => MENU_CALLBACK,
   );
-  $chunk_size = variable_get('xmlsitemap_chunk_size', 50000);
+  $chunk_size = variable_get('xmlsitemap_chunk_size', 200);
   $link_count = _xmlsitemap_link_count();
   if ($link_count / $chunk_size > 1) {
     for ($chunk = 0; $chunk < $link_count / $chunk_size; ++$chunk) {
@@ -197,7 +197,7 @@ function xmlsitemap_output($chunk = NULL) {
     _xmlsitemap_update();
   }
   drupal_set_header('Content-type: text/xml; charset=utf-8');
-  $chunk_size = variable_get('xmlsitemap_chunk_size', 50000);
+  $chunk_size = variable_get('xmlsitemap_chunk_size', 200);
   $link_count = _xmlsitemap_link_count();
   if (isset($chunk)) {
     if ($chunk < $link_count / $chunk_size) {
@@ -271,7 +271,7 @@ function xmlsitemap_settings_sitemap() {
   $form['general']['xmlsitemap_chunk_size'] = array(
     '#type' => 'textfield',
     '#title' => t('Chunk size'),
-    '#default_value' => variable_get('xmlsitemap_chunk_size', 50000),
+    '#default_value' => variable_get('xmlsitemap_chunk_size', 200),
     '#size' => 10,
     '#maxlength' => 5,
     '#description' => t('This is the number of links to include in one site map. Values can range between 1 and 50,000. If the total number of links exceeds the chunk size, multiple site maps will be generated.'),
@@ -295,8 +295,8 @@ function xmlsitemap_settings_sitemap() {
  * Validate the site map settings form.
  */
 function xmlsitemap_settings_sitemap_validate($form, &$form_state) {
-  if ($form_state['values']['xmlsitemap_chunk_size'] > 50000) {
-    form_set_error('xmlsitemap_chunk_size', t('The number of links in a site map cannot be higher than 50,000.'));
+  if ($form_state['values']['xmlsitemap_chunk_size'] <= 0 || $form_state['values']['xmlsitemap_chunk_size'] > 50000) {
+    form_set_error('xmlsitemap_chunk_size', t('The number of links in a site map must be a number between 1, and 50,000.'));
   }
 }
 
@@ -532,7 +532,7 @@ function _xmlsitemap_output_chunk($chunk = 0) {
   print '  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'."\n";
   print '  xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9'."\n";
   print '  http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">'."\n";
-  $chunk_size = variable_get('xmlsitemap_chunk_size', 50000);
+  $chunk_size = variable_get('xmlsitemap_chunk_size', 200);
   $start = $chunk * $chunk_size;
   $links = db_query_range("SELECT * FROM {xmlsitemap} ORDER BY lastmod DESC, changefreq, priority DESC, loc", $start , $chunk_size);
   while ($link = db_fetch_object($links)) {
@@ -568,7 +568,7 @@ function _xmlsitemap_output_index() {
   print '  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'."\n";
   print '  xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9'."\n";
   print '  http://www.sitemaps.org/schemas/sitemap/0.9/siteindex.xsd">'."\n";
-  $chunk_size = variable_get('xmlsitemap_chunk_size', 50000);
+  $chunk_size = variable_get('xmlsitemap_chunk_size', 200);
   $link_count = _xmlsitemap_link_count();
   for ($chunk = 0; $chunk < $link_count / $chunk_size; ++$chunk) {
     print '  <sitemap>'."\n";
