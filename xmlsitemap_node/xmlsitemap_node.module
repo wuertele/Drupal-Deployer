@@ -134,6 +134,25 @@ function xmlsitemap_node_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
 }
 
 /**
+ * Implementation of hook_xmlsitemap_check_database_tables().
+ */
+function xmlsitemap_node_xmlsitemap_check_database_tables() {
+  return (boolean) db_result(db_query('SELECT COUNT(n.nid)
+    FROM {node} n
+    LEFT JOIN {xmlsitemap_node} xn ON xn.nid = n.nid
+    WHERE xn.nid IS NULL')
+  ) || (boolean) db_result(db_query('SELECT COUNT(xn.nid)
+    FROM {xmlsitemap_node} xn
+    LEFT JOIN {node} n ON n.nid = xn.nid
+    WHERE n.nid IS NULL')
+  ) || (boolean) db_result(db_query('SELECT COUNT(n.nid)
+    FROM {node} n
+    INNER JOIN {xmlsitemap_node} xn ON xn.nid = n.nid
+    WHERE n.changed > xn.changed')
+  );
+}
+
+/**
  * Implementation of hook_xmlsitemap_database_batch_operation().
  */
 function xmlsitemap_node_xmlsitemap_database_batch_operation() {

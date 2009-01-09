@@ -141,6 +141,22 @@ function xmlsitemap_user_user($op, &$edit, &$account, $category = NULL) {
 }
 
 /**
+ * Implementation of hook_xmlsitemap_check_database_tables().
+ */
+function xmlsitemap_user_xmlsitemap_check_database_tables() {
+  return (boolean) db_result(db_query('SELECT COUNT(u.uid)
+    FROM {users} u
+    LEFT JOIN {xmlsitemap_user} xu ON xu.uid = u.uid
+    WHERE u.uid <> 0 
+      AND xu.uid IS NULL')
+  ) || (boolean) db_result(db_query('SELECT COUNT(xu.uid)
+    FROM {xmlsitemap_user} xu
+    LEFT JOIN {users} u ON u.uid = xu.uid
+    WHERE u.uid IS NULL')
+  );
+}
+
+/**
  * Implementation of hook_xmlsitemap_database_batch_operation().
  */
 function xmlsitemap_user_xmlsitemap_database_batch_operation() {
@@ -281,7 +297,7 @@ function xmlsitemap_user_add_database_rows(&$context) {
  *  The context parameter passed from batch_process().
  */
 function xmlsitemap_user_delete_database_rows(&$context) {
-  $context['results']['add'] = (integer) db_result(db_query('SELECT COUNT(xu.uid)
+  $context['results']['delete'] = (integer) db_result(db_query('SELECT COUNT(xu.uid)
     FROM {xmlsitemap_user} xu
     LEFT JOIN {users} u ON u.uid = xu.uid
     WHERE u.uid IS NULL')
