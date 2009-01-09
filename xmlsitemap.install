@@ -13,7 +13,7 @@ function xmlsitemap_schema() {
     'description' => 'The base table for xmlsitemap.',
     'fields' => array(
       'loc' => array(
-        'description' => 'The relative URL.',
+        'description' => 'The relative URL of the link.',
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
@@ -33,14 +33,14 @@ function xmlsitemap_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
-      'id' => array(
+      'lid' => array(
         'description' => 'The ID associated with the link.',
         'type' => 'int',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
       ),
-      'sid' => array(
+      'lsid' => array(
         'description' => 'The sub ID associated with the link.',
         'type' => 'int',
         'unsigned' => TRUE,
@@ -147,14 +147,24 @@ function xmlsitemap_update_6000() {
         array('indexes' => array('link_type' => array('type')))
       );
     }
-    if (!db_column_exists('xmlsitemap', 'id')) {
-      db_add_field($ret, 'xmlsitemap', 'id',
-        $schema['xmlsitemap']['fields']['id']
+    if (db_column_exists('xmlsitemap', 'id')) {
+      db_change_field($ret, 'xmlsitemap', 'id', 'lid',
+        $schema['xmlsitemap']['fields']['lid']
       );
     }
-    if (!db_column_exists('xmlsitemap', 'sid')) {
-      db_add_field($ret, 'xmlsitemap', 'sid',
-        $schema['xmlsitemap']['fields']['sid']
+    else {
+      db_add_field($ret, 'xmlsitemap', 'lid',
+        $schema['xmlsitemap']['fields']['lid']
+      );
+    }
+    if (db_column_exists('xmlsitemap', 'sid')) {
+      db_change_field($ret, 'xmlsitemap', 'sid', 'lsid',
+        $schema['xmlsitemap']['fields']['lsid']
+      );
+    }
+    else {
+      db_add_field($ret, 'xmlsitemap', 'lsid',
+        $schema['xmlsitemap']['fields']['lsid']
       );
     }
     db_change_field($ret, 'xmlsitemap', 'lastmod', 'lastmod',
