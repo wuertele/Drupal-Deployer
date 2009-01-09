@@ -145,7 +145,8 @@ function xmlsitemap_user_user($op, &$edit, &$account, $category = NULL) {
  */
 function xmlsitemap_user_xmlsitemap_database_batch_operation() {
   return array(
-    'add function' => 'xmlsitemap_user_update_database',
+    'delete function' => 'xmlsitemap_user_delete_database_rows',
+    'add function' => 'xmlsitemap_user_add_database_rows',
   );
 }
 
@@ -239,14 +240,10 @@ function xmlsitemap_user_form_submit($form, &$form_state) {
 
 /**
  * Batch function used to update the module tables.
- * @param $op
- *  The type of update operation. It can be 'update' to update the existing
- *  data, or 'add' to add the data present in the core table but not in the
- * module table.
  * @param $context
  *  The context parameter passed from batch_process().
  */
-function xmlsitemap_user_update_database(&$context) {
+function xmlsitemap_user_add_database_rows(&$context) {
   if (!isset($context['sandbox']['progress'])) {
     $context['sandbox']['progress'] = 0;
     $context['sandbox']['current_user'] = 0;
@@ -278,6 +275,27 @@ function xmlsitemap_user_update_database(&$context) {
   }
 }
 
+/**
+ * Batch function used to update the module tables.
+ * @param $context
+ *  The context parameter passed from batch_process().
+ */
+function xmlsitemap_user_delete_database_rows(&$context) {
+  $context['results']['add'] = (integer) db_result(db_query('SELECT COUNT(xu.uid)
+    FROM {xmlsitemap_user} xu
+    LEFT JOIN {users} u ON u.uid = xu.uid
+    WHERE u.uid IS NULL')
+  );
+  db_query('DELETE FROM {xmlsitemap_user} xu
+    WHERE xu.uid IN (
+      SELECT xu.uid
+        FROM {xmlsitemap_user} xu
+        LEFT JOIN {users} u ON u.uid = xu.uid
+        WHERE u.uid IS NULL
+      )'
+  );
+  $context['finished'] = 1;
+}
 /**
  * @} End of "addtogroup xmlsitemap".
  */

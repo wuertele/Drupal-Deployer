@@ -144,8 +144,7 @@ function xmlsitemap_menu() {
   $items['admin/settings/xmlsitemap/tools/update'] = array(
     'title' => 'Database update',
     'description' => 'Update the XML Sitemap database tables.',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('xmlsitemap_tools_update_database'),
+    'page callback' => 'xmlsitemap_tools_check_database',
     'access arguments' => $access_config,
     'weight' => -2,
     'type' => MENU_DEFAULT_LOCAL_TASK,
@@ -230,19 +229,19 @@ function xmlsitemap_settings_engines() {
   );
   $form['submission']['xmlsitemap_submit'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Submit the site map when updated.'),
+    '#title' => t('Submit the site map when updated'),
     '#default_value' => variable_get('xmlsitemap_submit', FALSE),
     '#description' => t('If enabled, the search engines will be notified of changes to the site map each time it is updated.'),
   );
   $form['submission']['xmlsitemap_cron_submit'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Submit the site map on cron run.'),
+    '#title' => t('Submit the site map on cron run'),
     '#default_value' => variable_get('xmlsitemap_cron_submit', FALSE),
     '#description' => t('If enabled, the search engines will be notified of changes to the site map each time cron is run.'),
   );
   $form['submission']['xmlsitemap_log_access'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Log access.'),
+    '#title' => t('Log access'),
     '#default_value' => variable_get('xmlsitemap_log_access', FALSE),
     '#description' => t('If enabled, a watchdog entry will be made each time the site map is accessed, containing information about the requestor.'),
   );
@@ -301,6 +300,27 @@ function xmlsitemap_settings_sitemap_validate($form, &$form_state) {
 }
 
 /**
+ * Menu callback; check if the modules database tables need to be updated, and
+ * return the database update form.
+ */
+function xmlsitemap_tools_check_database() {
+  $modules = array();
+  foreach (module_implements('xmlsitemap_check_database_tables') as $module) {
+    $function = $module . '_xmlsitemap_check_database_tables';
+    $result = $function();
+    if (isset($result) && $result) {
+      $modules[] = $module;
+    }
+  }
+  if (empty($modules)) {
+    return t('');
+  }
+  else {
+    return drupal_get_form('xmlsitemap_tools_update_database', $modules);
+  }
+}
+
+/**
  * Menu callback; return the debug form.
  */
 function xmlsitemap_tools_debug() {
@@ -308,32 +328,26 @@ function xmlsitemap_tools_debug() {
 }
 
 /**
- * Menu callback; return the update database form.
+ * Form builder; return the database update form.
  */
-function xmlsitemap_tools_update_database() {
-  $options = array();
-  foreach (module_implements('xmlsitemap_database_batch_operation') as $module) {
+function xmlsitemap_tools_update_database($form_state, $modules) {
+  foreach ($modules as $module) {
     $options[$module] = $module .'.module';
   }
-  if (empty($options)) {
-    $form['xmlsitemap_description'] = array(
-      '#prefix' => '<div>',
-      '#suffix' => '</div>',
-      '#value' => t('There is no module which implements the required code to update its own internal database tables.'),
-    );
-  }
-  else {
-    $form['xmlsitemap_database_modules'] = array(
-      '#type' => 'select', 
-      '#title' => t('XML Sitemap modules'),
-      '#options' => $options,
-      '#description' => t('The drop-down menu lists all the modules which save links in the site map, and which implement the required code to update their own database tables; select the module that needs to update its database tables.'),
-    );
-    $form['submit'] = array(
-      '#type' => 'submit',
-      '#value' => t('Continue'),
-    );
-  }
+  $form['xmlsitemap'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('XML Sitemap modules'),
+    '#description' => t('The modules listed are only the modules which add links in the site map, and which save data in their own database tables.'),
+    '#collapsible' => TRUE,
+  );
+  $form['xmlsitemap'] = array(
+    '#type' => 'select', 
+    '#options' => $options,
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Continue'),
+  );
   return $form;
 }
 
@@ -342,6 +356,9 @@ function xmlsitemap_tools_update_database_submit($form, &$form_state) {
   $function = $module .'_xmlsitemap_database_batch_operation';
   if (function_exists($function)) {
     $database_batch = $function();
+    if (isset($database_batch['delete function'])) {
+      $batch['operations'][] = array($database_batch['delete function'], array());
+    }
     if (isset($database_batch['update function'])) {
       $batch['operations'][] = array($database_batch['update function'], array());
     }
@@ -415,6 +432,11 @@ function xmlsitemap_database_update_finished($success, $results, $operations) {
     if (!empty($results['add'])) {
       drupal_set_message(
         format_plural($results['add'], 'Added 1 row.', 'Added @count rows.')
+      );
+    }
+    if (!empty($results['delete'])) {
+      drupal_set_message(
+        format_plural($results['delete'], 'Deleted 1 row.', 'Deleted @count rows.')
       );
     }
     if (!empty($results['update'])) {

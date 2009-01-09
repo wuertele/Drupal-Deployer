@@ -138,8 +138,9 @@ function xmlsitemap_node_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
  */
 function xmlsitemap_node_xmlsitemap_database_batch_operation() {
   return array(
-    'add function' => 'xmlsitemap_node_update_database_01',
-    'update function' => 'xmlsitemap_node_update_database_02',
+    'delete function' => 'xmlsitemap_node_delete_database_rows',
+    'update function' => 'xmlsitemap_node_update_database_rows',
+    'add function' => 'xmlsitemap_node_add_database_rows',
   );
 }
 
@@ -293,7 +294,7 @@ function xmlsitemap_node_xmlsitemap_sitemap_settings_alter(&$form) {
  * @param $context
  *  The context parameter passed from batch_process().
  */
-function xmlsitemap_node_update_database_01(&$context) {
+function xmlsitemap_node_add_database_rows(&$context) {
   if (!isset($context['sandbox']['progress'])) {
     $context['sandbox']['progress'] = 0;
     $context['sandbox']['current_node'] = 0;
@@ -332,7 +333,29 @@ function xmlsitemap_node_update_database_01(&$context) {
  * @param $context
  *  The context parameter passed from batch_process().
  */
-function xmlsitemap_node_update_database_02(&$context) {
+function xmlsitemap_node_delete_database_rows(&$context) {
+  $context['results']['delete'] = (integer) db_result(db_query('SELECT COUNT(xn.nid)
+    FROM {xmlsitemap_node} xn
+    LEFT JOIN {node} n ON n.nid = xn.nid
+    WHERE n.nid IS NULL')
+  );
+  db_query('DELETE FROM {xmlsitemap_node} xn
+    WHERE xn.nid IN (
+      SELECT xn.nid
+        FROM {xmlsitemap_node} xn
+        LEFT JOIN {node} n ON n.nid = xn.nid
+        WHERE n.nid IS NULL
+      )'
+  );
+  $context['finished'] = 1;
+}
+
+/**
+ * Batch function used to update the module database tables.
+ * @param $context
+ *  The context parameter passed from batch_process().
+ */
+function xmlsitemap_node_update_database_rows(&$context) {
   if (!isset($context['sandbox']['progress'])) {
     $context['sandbox']['progress'] = 0;
     $context['sandbox']['current_node'] = 0;
