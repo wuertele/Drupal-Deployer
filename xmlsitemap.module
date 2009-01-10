@@ -208,7 +208,35 @@ function xmlsitemap_output($chunk = NULL) {
   }
   else {
     if ($link_count > $chunk_size) {
-      _xmlsitemap_output_index();
+      print '<?xml version="1.0" encoding="UTF-8"?>'."\n";
+      print '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'."\n";
+      print '  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'."\n";
+      print '  xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9'."\n";
+      print '  http://www.sitemaps.org/schemas/sitemap/0.9/siteindex.xsd">'."\n";
+      $chunk_size = variable_get('xmlsitemap_chunk_size', 200);
+      $link_count = _xmlsitemap_link_count();
+      for ($chunk = 0; $chunk < $link_count / $chunk_size; ++$chunk) {
+        print '  <sitemap>'."\n";
+        print '    <loc>'. url("sitemap$chunk.xml", array('absolute' => TRUE)) .'</loc>'."\n";
+        if ($chunk < $link_count / $chunk_size) {
+          $from = $chunk * $chunk_size;
+          if (!empty($chunk_size)) {
+            // Select only the links added by enabled modules. 
+            $lastmod = db_result(db_query_range("SELECT lastmod FROM {xmlsitemap} xsm
+              INNER JOIN {system} sm ON sm.name = xsm.module
+              WHERE sm.type = 'module'
+                AND sm.status = 1
+              ORDER BY lastmod DESC, loc",
+              $from, $chunk_size)
+            );
+            if ($lastmod !== FALSE) {
+              print '    <lastmod>'. gmdate('Y-m-d\TH:i:s+00:00', $lastmod) .'</lastmod>'."\n";
+            }
+          }
+        }
+        print '  </sitemap>'."\n";
+      }
+      print '</sitemapindex>';
     }
     else {
       _xmlsitemap_output_chunk();
@@ -536,11 +564,13 @@ function xmlsitemap_update_sitemap() {
  * Return the number of links present in xmlsitemap table.
  */
 function _xmlsitemap_link_count() {
-  static $link_count;
-  if (!isset($link_count)) {
-    $link_count = db_result(db_query("SELECT COUNT(*) FROM {xmlsitemap}"));
-  }
-  return $link_count;
+  // Count only the links added by enabled modules.
+  return db_result(db_query("SELECT COUNT(*)
+    FROM {xmlsitemap} xsm
+    INNER JOIN {system} sm ON sm.name = xsm.module
+    WHERE sm.type = 'module'
+      AND sm.status = 1")
+  );
 }
 
 /**
@@ -556,7 +586,14 @@ function _xmlsitemap_output_chunk($chunk = 0) {
   print '  http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">'."\n";
   $chunk_size = variable_get('xmlsitemap_chunk_size', 200);
   $start = $chunk * $chunk_size;
-  $links = db_query_range("SELECT * FROM {xmlsitemap} ORDER BY lastmod DESC, changefreq, priority DESC, loc", $start , $chunk_size);
+  // Select only the links added by enabled modules.
+  $links = db_query_range("SELECT * FROM {xmlsitemap} xsm
+    INNER JOIN {system} sm ON sm.name = xsm.module
+    WHERE sm.type = 'module'
+      AND sm.status = 1
+    ORDER BY lastmod DESC, changefreq, priority DESC, loc",
+    $start , $chunk_size
+  );
   while ($link = db_fetch_object($links)) {
     if ($link->module && function_exists($link->module .'_url')) {
       $function = $link->module .'_url';
@@ -579,36 +616,6 @@ function _xmlsitemap_output_chunk($chunk = 0) {
     print '  </url>'."\n";
   }
   print '</urlset>';
-}
-
-/**
- * Generate the site map index.
- */
-function _xmlsitemap_output_index() {
-  print '<?xml version="1.0" encoding="UTF-8"?>'."\n";
-  print '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'."\n";
-  print '  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"'."\n";
-  print '  xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9'."\n";
-  print '  http://www.sitemaps.org/schemas/sitemap/0.9/siteindex.xsd">'."\n";
-  $chunk_size = variable_get('xmlsitemap_chunk_size', 200);
-  $link_count = _xmlsitemap_link_count();
-  for ($chunk = 0; $chunk < $link_count / $chunk_size; ++$chunk) {
-    print '  <sitemap>'."\n";
-    print '    <loc>'. url("sitemap$chunk.xml", array('absolute' => TRUE)) .'</loc>'."\n";
-    if ($chunk < $link_count / $chunk_size) {
-      $from = $chunk * $chunk_size;
-      if (!empty($chunk_size)) {
-        $lastmod = db_result(db_query_range("SELECT lastmod FROM {xmlsitemap}
-          ORDER BY lastmod DESC, loc",$from, $chunk_size)
-        );
-        if ($lastmod !== FALSE) {
-          print '    <lastmod>'. gmdate('Y-m-d\TH:i:s+00:00', $lastmod) .'</lastmod>'."\n";
-        }
-      }
-    }
-    print '  </sitemap>'."\n";
-  }
-  print '</sitemapindex>';
 }
 
 /**
