@@ -275,15 +275,7 @@ function xmlsitemap_settings_engines() {
   );
   drupal_alter('xmlsitemap_engine_settings', $form);
   $form = system_settings_form($form);
-  array_unshift($form['#submit'], 'xmlsitemap_settings_engines_submit');
   return $form;
-}
-
-/**
- * Submit the search engine settings form.
- */
-function xmlsitemap_settings_engines_submit($form, &$form_state) {
-  menu_rebuild();
 }
 
 /**
@@ -324,6 +316,16 @@ function xmlsitemap_settings_sitemap() {
 function xmlsitemap_settings_sitemap_validate($form, &$form_state) {
   if ($form_state['values']['xmlsitemap_chunk_size'] <= 0 || $form_state['values']['xmlsitemap_chunk_size'] > 50000) {
     form_set_error('xmlsitemap_chunk_size', t('The number of links in a site map must be a number between 1, and 50,000.'));
+  }
+}
+
+/**
+ * Submission function for the site map settings form.
+ */
+function xmlsitemap_settings_sitemap_submit($form, &$form_state) {
+  if (($chunk_size = $form_state['values']['xmlsitemap_chunk_size']) != variable_get('xmlsitemap_previous_chunk_size', -1)) {
+    menu_rebuild();
+    variable_set('xmlsitemap_previous_chunk_size', $chunk_size);
   }
 }
 
@@ -379,6 +381,9 @@ function xmlsitemap_tools_update_database($form_state, $modules) {
   return $form;
 }
 
+/**
+ * Submission function for the database update form.
+ */
 function xmlsitemap_tools_update_database_submit($form, &$form_state) {
   $module = $form_state['values']['xmlsitemap_database_modules'];
   $function = $module .'_xmlsitemap_database_batch_operation';
