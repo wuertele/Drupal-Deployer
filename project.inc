@@ -136,7 +136,7 @@ function project_project_form($node) {
     '#type' => 'textfield',
     '#title' => t('Changelog'),
     '#default_value' => isset($node->changelog) ? $node->changelog : NULL,
-     '#size' => 40,
+    '#size' => 40,
     '#maxlength' => 255,
     '#description' => t('Link to changelog.'),
   );
