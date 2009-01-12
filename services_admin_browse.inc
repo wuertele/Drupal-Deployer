@@ -101,7 +101,7 @@ function services_admin_browse_test() {
   $timestamp = time();
   $nonce = user_password();
   
-  foreach ($method['#args'] as $key => $arg) {      
+  foreach ($method['#args'] as $key => $arg) {
     $form['name'][$key]         = array(
       '#value' => $arg['#name']
     );

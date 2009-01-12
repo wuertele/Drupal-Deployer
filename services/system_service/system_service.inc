@@ -74,8 +74,8 @@ function system_service_module_exists($module) {
 }
 
 /**
-* Returns all the available services
-*/
+ * Returns all the available services
+ */
 function system_service_getservices() {
   return services_get_all();
 }

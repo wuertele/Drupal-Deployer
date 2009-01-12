@@ -27,7 +27,8 @@ function search_service_nodes($keys, $simple = FALSE, $fields = array()) {
           }
         }
       }
-    } else {
+    }
+    else {
       foreach ($results as $key => $result) {
         $result['node'] = services_node_load($result['node'], $fields);
         $results[$key] = $result;
