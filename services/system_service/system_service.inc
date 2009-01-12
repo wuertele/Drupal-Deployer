@@ -72,3 +72,10 @@ function system_service_module_exists($module) {
 
   return "";
 }
+
+/**
+* Returns all the available services
+*/
+function system_service_getservices() {
+  return services_get_all();
+}
