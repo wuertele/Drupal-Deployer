@@ -46,35 +46,37 @@ function services_admin_keys_form() {
 
   $key = db_fetch_object(db_query("SELECT * FROM {services_keys} WHERE kid = '%s'", $kid));
 
+  $key_kid = isset($key->kid) ? $key->kid : '';
+  $key_title = isset($key->title) ? $key->title : '';
   $form['kid'] = array(
     '#type'           => 'hidden',
-    '#default_value'  => $key->kid,
+    '#default_value'  => $key_kid,
   );
 
-  if ($key->kid) {
+  if ($key_kid != '') {
     $form['key'] = array(
       '#type'           => 'markup',
       '#title'          => t('Key'),
-      '#value'          => '<strong>'. t('API Key') .':</strong> '. $key->kid,
+      '#value'          => '<strong>'. t('API Key') .':</strong> '. $key_kid,
     );
   }
 
   $form['title'] = array(
     '#title'          => t('Application title'),
     '#type'           => 'textfield',
-    '#default_value'  => $key->title,
+    '#default_value'  => $key_title,
     '#description'    => t('The title of the application or website using the service.'),
   );
   $form['domain'] = array(
     '#title'          => t('Allowed domain'),
     '#type'           => 'textfield',
-    '#default_value'  => $key->domain,
+    '#default_value'  => isset($key->domain) ? $key->domain : '',
     '#description'    => t('External domain allowed to use this key.'),
   );
 
   $form['submit'] = array(
     '#type'           => 'submit',
-    '#value'          => $key->title ? t('Save key') : t('Create key'),
+    '#value'          => $key_title != '' ? t('Save key') : t('Create key'),
   );
 
   return $form;
