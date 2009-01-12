@@ -28,7 +28,6 @@ function services_admin_keys_list() {
     $operations[] = array('data' => l(t('delete'), 'admin/build/services/keys/'. $kid .'/delete'));
 
     foreach ($operations as $operation) {
-      $operation['class'] = $class;
       $row[] = $operation;
     }
     $rows[] = $row;
