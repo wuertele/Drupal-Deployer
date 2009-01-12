@@ -7,16 +7,16 @@
  */
 
 /**
- * Get all elements fomr a given file
+ * Get all elements from a given file
  *
  * @param $fid
  *   Number. File ID
  * @return
- *   Array. All elements fomr a given file
+ *   Array. All elements from a given file
  */
 function file_service_get($fid) {
   if ($file = db_fetch_array(db_query('SELECT * FROM {files} WHERE fid = %d', $fid))) {
-    $filepath = file_create_path($file->filepath);
+    $filepath = file_create_path($file['filepath']);
     $binaryfile = fopen($filepath, 'rb');
     $file['file'] = base64_encode(fread($binaryfile, filesize($filepath)));
     fclose($binaryfile);
