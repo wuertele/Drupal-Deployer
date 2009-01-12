@@ -250,7 +250,7 @@ function theme_services_admin_browse_test($form) {
 
   $output .= drupal_render($form);
 
-  return $output;
+  return $output .'xxxx';
 }
 
 /*
