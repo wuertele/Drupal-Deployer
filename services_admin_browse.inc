@@ -151,7 +151,7 @@ function services_admin_browse_test() {
         break;
 
       default:
-        if ($arg['#size'] == 'big') {
+        if (isset($arg['#size']) && $arg['#size'] == 'big') {
           $form['arg'][$key] = array(
             '#type'           => 'textarea'
           );
