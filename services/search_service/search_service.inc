@@ -9,7 +9,7 @@
 /**
  * Callback for search.nodes service.
  */
-function search_service_nodes($keys, $simple = FALSE) {
+function search_service_nodes($keys, $simple = FALSE, $fields = array()) {
   // define standard keys for simple set
   $stdkeys = array('link', 'type', 'title', 'user', 'date', 'snippet');
 
@@ -26,6 +26,11 @@ function search_service_nodes($keys, $simple = FALSE) {
             unset($results[$i][$key]);
           }
         }
+      }
+    } else {
+      foreach ($results as $key => $result) {
+        $result['node'] = services_node_load($result['node'], $fields);
+        $results[$key] = $result;
       }
     }
     return $results;
