@@ -182,18 +182,15 @@ function xmlsitemap_update_6000() {
   else {
     db_create_table($ret, 'xmlsitemap', $schema['xmlsitemap']);
   }
+  $ret[] = update_sql('DELETE FROM {xmlsitemap}');
+  $ret[] = update_sql("INSERT INTO {xmlsitemap} (loc, module, type, lid, lsid, lastmod, changefreq, priority)
+  VALUES ('<front>', '', '', 0, 0, ". time() - 1 ."1, ". variable_get('xmlsitemap_front_page_priority', 1) .")"
+  );
   menu_rebuild();
   $ret[] = array(
     'success' => TRUE,
     'query' => 'UPDATE DRUPAL MENUS',
   );
-  if (!variable_get('xmlsitemap_update', FALSE)) {
-    variable_set('xmlsitemap_update', TRUE);
-    $ret[] = array(
-      'success' => TRUE,
-      'query' => 'FORCE SITEMAP UPDATE',
-    );
-  }
   if (variable_get('xmlsitemap_chunk_size', 0) != 200) {
     variable_get('xmlsitemap_chunk_size', 200);
     $ret[] = array(

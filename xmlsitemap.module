@@ -137,14 +137,15 @@ function xmlsitemap_menu() {
   $items['admin/settings/xmlsitemap/tools'] = array(
     'title' => 'Tools',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('xmlsitemap_tools_update_database'),
+    'page arguments' => 'xmlsitemap_tools_update_database',
     'access arguments' => $access_config,
     'type' => MENU_LOCAL_TASK,
   );
   $items['admin/settings/xmlsitemap/tools/update'] = array(
     'title' => 'Database update',
     'description' => 'Update the XML Sitemap database tables.',
-    'page callback' => 'xmlsitemap_tools_check_database',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => 'xmlsitemap_tools_update_database',
     'access arguments' => $access_config,
     'weight' => -2,
     'type' => MENU_DEFAULT_LOCAL_TASK,
@@ -192,9 +193,6 @@ function xmlsitemap_menu() {
  *  If not set and there is more than one chunk, display the site map index.
  */
 function xmlsitemap_output($chunk = NULL) {
-  if (variable_get('xmlsitemap_update', FALSE)) {
-    _xmlsitemap_update();
-  }
   drupal_set_header('Content-type: text/xml; charset=utf-8');
   $chunk_size = variable_get('xmlsitemap_chunk_size', 200);
   $link_count = _xmlsitemap_link_count();
@@ -307,6 +305,7 @@ function xmlsitemap_settings_sitemap() {
   drupal_alter('xmlsitemap_sitemap_settings', $form);
   $form = system_settings_form($form);
   $form['#submit'][] = 'xmlsitemap_settings_sitemap_submit';
+  $form['#validate'][] = 'xmlsitemap_settings_sitemap_validate';
   return $form;
 }
 
@@ -330,54 +329,49 @@ function xmlsitemap_settings_sitemap_submit($form, &$form_state) {
 }
 
 /**
- * Menu callback; check if the modules database tables need to be updated, and
- * return the database update form.
- */
-function xmlsitemap_tools_check_database() {
-  $modules = array();
-  foreach (module_implements('xmlsitemap_check_database_tables') as $module) {
-    $function = $module . '_xmlsitemap_check_database_tables';
-    $result = $function();
-    if (isset($result) && $result) {
-      $modules[] = $module;
-    }
-  }
-  if (empty($modules)) {
-    return t('');
-  }
-  else {
-    return drupal_get_form('xmlsitemap_tools_update_database', $modules);
-  }
-}
-
-/**
- * Menu callback; return the debug form.
- */
-function xmlsitemap_tools_debug() {
-  return array();
-}
-
-/**
  * Form builder; return the database update form.
  */
-function xmlsitemap_tools_update_database($form_state, $modules) {
-  foreach ($modules as $module) {
-    $options[$module] = $module .'.module';
+function xmlsitemap_tools_update_database($form_state = NULL) {
+  $form = array();
+  $step = isset($form_state['storage']['step']) ? $form_state['storage']['step'] : 1;
+  switch ($step) {
+    case 1:
+      $title = t('First step');
+      $hook = 'xmlsitemap_update_module_tables_batch_operations';
+      break;
+    case 2:
+      $title = t('Second step');
+      $hook = 'xmlsitemap_update_main_table_batch_operations';
+      break;
   }
-  $form['xmlsitemap'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('XML Sitemap modules'),
-    '#description' => t('The modules listed are only the modules which add links in the site map, and which save data in their own database tables.'),
-    '#collapsible' => TRUE,
-  );
-  $form['xmlsitemap'] = array(
-    '#type' => 'select', 
-    '#options' => $options,
-  );
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Continue'),
-  );
+  if (isset($hook)) {
+    foreach (module_implements($hook) as $module) {
+      $modules[] = $module;
+      $modules_list[] = $module .'.module';
+    }
+    if (!empty($modules)) {
+      $form['#modules'] = $modules;
+    }
+    $form['title'] = array(
+      '#prefix' => '<h3>',
+      '#suffix' => '</h3>',
+      '#value' => $title,
+    );
+    if (empty($modules)) {
+      $modules_list[] = t('No modules implement the required code for this database update step');
+    }
+    $form['list'] = array(
+      '#prefix' => '<div>',
+      '#suffix' => '</div>',
+      '#value' => theme('item_list', $modules_list),
+    );
+  }
+  if ($step < 3) {
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Continue'),
+    );
+  }
   return $form;
 }
 
@@ -385,30 +379,46 @@ function xmlsitemap_tools_update_database($form_state, $modules) {
  * Submission function for the database update form.
  */
 function xmlsitemap_tools_update_database_submit($form, &$form_state) {
-  $module = $form_state['values']['xmlsitemap_database_modules'];
-  $function = $module .'_xmlsitemap_database_batch_operation';
-  if (function_exists($function)) {
-    $database_batch = $function();
-    if (isset($database_batch['delete function'])) {
-      $batch['operations'][] = array($database_batch['delete function'], array());
-    }
-    if (isset($database_batch['update function'])) {
-      $batch['operations'][] = array($database_batch['update function'], array());
-    }
-    $batch['operations'][] = array($database_batch['add function'], array());
-    if (isset($database_batch['file'])) {
-      $batch['file'] = drupal_get_path('module', $module) .'/'. $database_batch['file'];
-    }
-    if (isset($database_batch['final callback'])) {
-       $final_callback = $database_batch['final callback'];
-    }
-    else {
-      $final_callback = 'xmlsitemap_database_update_finished';
-    }
-    $batch['finished'] = $final_callback;
-    batch_set($batch);
-
+  $step = isset($form_state['storage']['step']) ? $form_state['storage']['step'] : 1;
+  switch ($step) {
+    case 1:
+      $hook = '_xmlsitemap_update_module_tables_batch_operations';
+      break;
+    case 2:
+      $hook = '_xmlsitemap_update_main_table_batch_operations';
+      break;
   }
+  if (isset($form['#modules']) && isset($hook)) {
+    foreach ($form['#modules']) as $module) {
+      $function = $module . $hook;
+      if (function_exists($function)) {
+        $result = $function();
+        if (isset($result)) {
+          if (is_array($result)) {
+            foreach ($result as $operation) {
+              $batch['operations'][] = array($operation, array());
+            }
+          }
+          elseif (is_string($result)) {
+            $batch['operations'][] = array($result, array());
+          }
+        }
+      }
+    }
+  }
+  if (isset($batch)) {
+    $batch['title'] = t('Updating database');
+    $batch['finished'] = 'xmlsitemap_database_update_finished';
+    batch_set($batch);
+  }
+  $form_state['storage']['step'] = $step + 1;
+}
+
+/**
+ * Menu callback; return the debug form.
+ */
+function xmlsitemap_tools_debug() {
+  return array();
 }
 
 /*****************************************************************************
@@ -462,19 +472,19 @@ function xmlsitemap_add_settings_fieldset(&$form, $settings = array()) {
  */
 function xmlsitemap_database_update_finished($success, $results, $operations) {
   if ($success) {
-    if (!empty($results['add'])) {
+    if (!empty($results['added'])) {
       drupal_set_message(
-        format_plural($results['add'], 'Added 1 row.', 'Added @count rows.')
+        format_plural($results['added'], 'Added 1 row.', 'Added @count rows.')
       );
     }
-    if (!empty($results['delete'])) {
+    if (!empty($results['deleted'])) {
       drupal_set_message(
-        format_plural($results['delete'], 'Deleted 1 row.', 'Deleted @count rows.')
+        format_plural($results['deleted'], 'Deleted 1 row.', 'Deleted @count rows.')
       );
     }
-    if (!empty($results['update'])) {
+    if (!empty($results['updated'])) {
       drupal_set_message(
-        format_plural($results['update'], 'Updated 1 row.', 'Updated @count rows.')
+        format_plural($results['updated'], 'Updated 1 row.', 'Updated @count rows.')
       );
     }
   }
@@ -544,21 +554,6 @@ function xmlsitemap_priority_options($option = '') {
     $options['-2'] = t('Default');
   }
   return $options;
-}
-
-/**
- * Mark the site map as changed and the cache as needing update.
- */
-function xmlsitemap_update_sitemap() {
-  if (!variable_get('xmlsitemap_changed', FALSE)) {
-    variable_set('xmlsitemap_changed', TRUE);
-  }
-  if (!variable_get('xmlsitemap_update', FALSE)) {
-    variable_set('xmlsitemap_update', TRUE);
-  }
-  if (variable_get('xmlsitemap_submit', FALSE)) {
-    _xmlsitemap_submit_on_exit();
-  }
 }
 
 /*****************************************************************************
@@ -641,22 +636,6 @@ function _xmlsitemap_ping() {
 function _xmlsitemap_submit_on_exit() {
   static $count = 0;
   return ($count++ <> 0);
-}
-
-/**
- * Update the site map if content has changed.
- */
-function _xmlsitemap_update() {
-  db_query("DELETE FROM {xmlsitemap}");
-  $row = new stdClass();
-  $row->loc = '<front>';
-  $row->lastmod = time() - 1;
-  $row->changefreq = 1;
-  $row->priority = variable_get('xmlsitemap_front_page_priority', 1.0);
-  drupal_write_record('xmlsitemap', $row);
-  module_invoke_all('xmlsitemap_links');
-  menu_rebuild();
-  variable_set('xmlsitemap_update', FALSE);
 }
 
 /**

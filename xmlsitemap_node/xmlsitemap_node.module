@@ -150,36 +150,6 @@ function xmlsitemap_node_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
 }
 
 /**
- * Implementation of hook_xmlsitemap_check_database_tables().
- */
-function xmlsitemap_node_xmlsitemap_check_database_tables() {
-  return (boolean) db_result(db_query('SELECT COUNT(n.nid)
-    FROM {node} n
-    LEFT JOIN {xmlsitemap_node} xn ON xn.nid = n.nid
-    WHERE xn.nid IS NULL')
-  ) || (boolean) db_result(db_query('SELECT COUNT(xn.nid)
-    FROM {xmlsitemap_node} xn
-    LEFT JOIN {node} n ON n.nid = xn.nid
-    WHERE n.nid IS NULL')
-  ) || (boolean) db_result(db_query('SELECT COUNT(n.nid)
-    FROM {node} n
-    INNER JOIN {xmlsitemap_node} xn ON xn.nid = n.nid
-    WHERE n.changed > xn.changed')
-  );
-}
-
-/**
- * Implementation of hook_xmlsitemap_database_batch_operation().
- */
-function xmlsitemap_node_xmlsitemap_database_batch_operation() {
-  return array(
-    'delete function' => 'xmlsitemap_node_delete_database_rows',
-    'update function' => 'xmlsitemap_node_update_database_rows',
-    'add function' => 'xmlsitemap_node_add_database_rows',
-  );
-}
-
-/**
  * Implementation of hook_xmlsitemap_description().
  */
 function xmlsitemap_node_xmlsitemap_description() {
@@ -320,6 +290,17 @@ function xmlsitemap_node_xmlsitemap_sitemap_settings_alter(&$form) {
   );
 }
 
+/**
+ * Implementation of hook_xmlsitemap_update_module_tables_batch_operations().
+ */
+function xmlsitemap_node_xmlsitemap_update_module_tables_batch_operations() {
+  return array(
+    'xmlsitemap_node_delete_database_rows',
+    'xmlsitemap_node_update_database_rows',
+    'xmlsitemap_node_add_database_rows',
+  );
+}
+
 /*****************************************************************************
  * Public functions.
  ****************************************************************************/
@@ -355,7 +336,7 @@ function xmlsitemap_node_add_database_rows(&$context) {
       drupal_write_record('xmlsitemap_node', $row);
       $context['sandbox']['progress']++;
       $context['sandbox']['current_node'] = $row->nid;
-      $context['results']['add'] = $context['sandbox']['progress'];
+      $context['results']['added'] = $context['sandbox']['progress'];
     }
     if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
       $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
@@ -369,7 +350,7 @@ function xmlsitemap_node_add_database_rows(&$context) {
  *  The context parameter passed from batch_process().
  */
 function xmlsitemap_node_delete_database_rows(&$context) {
-  $context['results']['delete'] = (integer) db_result(db_query('SELECT COUNT(xn.nid)
+  $context['results']['deleted'] = (integer) db_result(db_query('SELECT COUNT(xn.nid)
     FROM {xmlsitemap_node} xn
     LEFT JOIN {node} n ON n.nid = xn.nid
     WHERE n.nid IS NULL')
