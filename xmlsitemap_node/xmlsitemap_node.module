@@ -188,6 +188,7 @@ function xmlsitemap_node_xmlsitemap_description() {
 /**
  * Implementation of hook_xmlsitemap_links().
  */
+
 function xmlsitemap_node_xmlsitemap_links() {
   static $excludes;
   if (!isset($excludes)) {
@@ -201,7 +202,7 @@ function xmlsitemap_node_xmlsitemap_links() {
       $excludes = array('');
     }
   }
-  $columns = 'n.*, xn.previously_changed, xn.anonym_access, xn.priority_override';
+  $columns = 'n.*, xn.previously_changed, xn.anonym_access, xn.comment_ratio, xn.priority_override';
   $query = "SELECT $columns
     FROM {node} n
     INNER JOIN {xmlsitemap_node} xn ON n.nid = xn.nid
@@ -233,7 +234,6 @@ function xmlsitemap_node_xmlsitemap_links() {
         $priority += variable_get('xmlsitemap_node_promote_priority', 0.3);
       }
       $priority += round($node->comment_ratio * variable_get('xmlsitemap_node_comment_priority', 0.2), 1);
-      }
       $priority = min($priority, 1.0);
       $row->loc = 'node/'. $node->nid;
       $row->type = 'node';
@@ -345,13 +345,16 @@ function xmlsitemap_node_url($type, $path) {
  */
 function _xmlsitemap_node_module_table_add_rows(&$context) {
   if (!isset($context['sandbox']['progress'])) {
-    $context['sandbox']['progress'] = 0;
     $context['sandbox']['current_node'] = 0;
     $context['sandbox']['max'] = (integer) db_result(db_query('SELECT COUNT(n.nid)
       FROM {node} n
       LEFT JOIN {xmlsitemap_node} xn ON xn.nid = n.nid
       WHERE xn.nid IS NULL')
     );
+    if (module_exists('comment')) {
+      $context['sandbox']['maxcomments'] = (integer) db_result(db_query('SELECT MAX(comment_count) FROM {node_comment_statistics}'));
+    }
+    $context['sandbox']['progress'] = 0;
   }
   if ($context['sandbox']['max']) {
     $result = db_query_range('SELECT n.nid, n.created AS previously_changed, n.changed
@@ -366,6 +369,14 @@ function _xmlsitemap_node_module_table_add_rows(&$context) {
       $anonymous = user_load(array('uid' => 0));
       $node = node_load($row->nid);
       $row->anonym_access = node_access('view', $node, $anonymous);
+      if (isset($context['sandbox']['maxcomments']) && $context['sandbox']['maxcomments'] > 1) {
+        $comments = (integer) db_result(db_query('SELECT comment_count
+          FROM {node_comment_statistics}
+          WHERE nid = %d',
+          $row->nid)
+        );
+        $row->comment_ratio = $comments / $context['sandbox']['maxcomments'];
+      }
       drupal_write_record('xmlsitemap_node', $row);
       $context['sandbox']['progress']++;
       $context['sandbox']['current_node'] = $row->nid;
@@ -406,13 +417,16 @@ function _xmlsitemap_node_module_table_delete_rows(&$context) {
  */
 function _xmlsitemap_node_module_table_update_rows(&$context) {
   if (!isset($context['sandbox']['progress'])) {
-    $context['sandbox']['progress'] = 0;
     $context['sandbox']['current_node'] = 0;
     $context['sandbox']['max'] = (integer) db_result(db_query('SELECT COUNT(n.nid)
       FROM {node} n
       INNER JOIN {xmlsitemap_node} xn ON xn.nid = n.nid
       WHERE n.changed > xn.changed')
     );
+    if (module_exists('comment')) {
+      $context['sandbox']['maxcomments'] = (integer) db_result(db_query('SELECT MAX(comment_count) FROM {node_comment_statistics}'));
+    }
+    $context['sandbox']['progress'] = 0;
   }
   if ($context['sandbox']['max']) {
     $result = db_query_range('SELECT n.nid, xn.changed AS previously_changed, n.changed
@@ -427,6 +441,14 @@ function _xmlsitemap_node_module_table_update_rows(&$context) {
       $anonymous = user_load(array('uid' => 0));
       $node = node_load($row->nid);
       $row->anonym_access = node_access('view', $node, $anonymous);
+      if (isset($context['sandbox']['maxcomments']) && $context['sandbox']['maxcomments'] > 1) {
+        $comments = (integer) db_result(db_query('SELECT comment_count
+          FROM {node_comment_statistics}
+          WHERE nid = %d',
+          $row->nid)
+        );
+        $row->comment_ratio = $comments / $context['sandbox']['maxcomments'];
+      }
       drupal_write_record('xmlsitemap_node', $row, 'nid');
       $context['sandbox']['progress']++;
       $context['sandbox']['current_node'] = $row->nid;
