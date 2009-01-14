@@ -1,6 +1,6 @@
 /* $Id$ */
 
-Drupal.projectReleaseAutoAttach = function () {
+Drupal.behaviors.projectReleaseAutoAttach = function () {
   // Set handler for clicking a radio to change the recommended version.
   $('form#project-release-project-edit-form input.form-radio.recommended').click(function () {
     Drupal.projectReleaseSetRecommended( this );
@@ -71,8 +71,3 @@ Drupal.projectReleaseUnsetRecommended = function (table) {
       .html('n/a')
       .css('background-color', '#FFFFAA');
 };
-
-// Global killswitch.
-if (Drupal.jsEnabled) {
-  $(document).ready( Drupal.projectReleaseAutoAttach);
-}
