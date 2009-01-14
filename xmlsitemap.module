@@ -248,6 +248,7 @@ function xmlsitemap_output($chunk = NULL) {
  * Menu callback; return the search engine settings form.
  */
 function xmlsitemap_settings_engines() {
+  xmlsitemap_show_admin_messages();
   $form['submission'] = array(
     '#type' => 'fieldset',
     '#title' => t('Submission settings'),
@@ -280,6 +281,7 @@ function xmlsitemap_settings_engines() {
  * Menu callback; return the site map settings form.
  */
 function xmlsitemap_settings_sitemap() {
+  xmlsitemap_show_admin_messages();
   $form['general'] = array(
     '#type' => 'fieldset',
     '#title' => t('General settings'),
@@ -332,6 +334,7 @@ function xmlsitemap_settings_sitemap_submit($form, &$form_state) {
  * Form builder; return the database update form.
  */
 function xmlsitemap_tools_update_database($form_state = NULL) {
+  xmlsitemap_show_admin_messages();
   $form = array();
   $step = isset($form_state['storage']['step']) ? $form_state['storage']['step'] : 1;
   switch ($step) {
@@ -351,6 +354,7 @@ function xmlsitemap_tools_update_database($form_state = NULL) {
     }
     if (!empty($modules)) {
       $form['#modules'] = $modules;
+      asort($modules_list);
     }
     $form['title'] = array(
       '#prefix' => '<h3>',
@@ -418,12 +422,42 @@ function xmlsitemap_tools_update_database_submit($form, &$form_state) {
  * Menu callback; return the debug form.
  */
 function xmlsitemap_tools_debug() {
+  xmlsitemap_show_admin_messages();
   return array();
 }
 
 /*****************************************************************************
  * Public functions.
  ****************************************************************************/
+
+/**
+ * Add a message to the list of the messages shown in the module administration
+ * pages.
+ * @param $message
+ *  The text of the message to be shown.
+ * @param $type
+ *  The type of the message, chosen between 'status', 'warning', and 'error';
+ *  the default type is 'status'.
+ */
+function xmlsitemap_add_admin_message($message, $type = 'status') {
+  if ($message) {
+    switch ($type) {
+      case 'error':
+        $var = 'xmlsitemap_admin_error_messages';
+        break;
+      case 'warning':
+        $var = 'xmlsitemap_admin_warning_messages';
+        break;
+      case 'status':
+        $var = 'xmlsitemap_admin_status_messages';
+        break;
+    }
+    if (isset($var)) {
+      $messages = variable_get($var, array());
+      array_unshift($messages, $message);
+    }
+  }
+}
 
 /**
  * Add the XML site map settings fieldset to the form.
@@ -554,6 +588,28 @@ function xmlsitemap_priority_options($option = '') {
     $options['-2'] = t('Default');
   }
   return $options;
+}
+
+/**
+ * Show all the messages set with xmlsitemap_add_admin_message().
+ * The function must be called at the beginning of every menu callback function
+ * that creates an XML Sitemap administration page.
+ */
+function xmlsitemap_show_admin_messages() {
+  $types = array(
+    'error' => 'xmlsitemap_admin_error_messages',
+    'warning' => 'xmlsitemap_admin_warning_messages',
+    'status' => 'xmlsitemap_admin_status_messages',
+  );
+  foreach ($types as $type => $var) {
+    $messages = variable_get($var, array());
+    if (count($messages)) {
+      foreach ($messages as $message) {
+        drupal_set_message($message, $type);
+      }
+      variable_set($var, array());
+    }
+  }
 }
 
 /*****************************************************************************

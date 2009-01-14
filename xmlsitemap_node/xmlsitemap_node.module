@@ -71,14 +71,14 @@ function xmlsitemap_node_form_alter(&$form, &$form_state, $form_id) {
  * Implementation of hook_init().
  */
 function xmlsitemap_node_init() {
-  if (module_exists('xmlsitemap_file') && user_access('')) {
-    drupal_set_message(t('The functionallity of %xmlsitemap-file has been incorporated in %xmlsitemap-node, which can be <a href="@modules-page">disabled</a>.',
-      array(
-        '%xmlsitemap-file' => t('XML Sitemap: File'),
-        '%xmlsitemap-node' => t('XML Sitemap: Node'),
-        '@modules-page' => url('admin/build/modules'),
-      )),
-      'warning'
+  if (module_exists('xmlsitemap_file')) {
+    xmlsitemap_add_admin_message(
+      t('The functionallity of %xmlsitemap-file has been incorporated in %xmlsitemap-node, which can be <a href="@modules-page">disabled</a>.',
+        array(
+          '%xmlsitemap-file' => t('XML Sitemap: File'),
+          '%xmlsitemap-node' => t('XML Sitemap: Node'),
+          '@modules-page' => url('admin/build/modules'),
+        )), 'warning'
     );
   }
 }
@@ -295,9 +295,9 @@ function xmlsitemap_node_xmlsitemap_sitemap_settings_alter(&$form) {
  */
 function xmlsitemap_node_xmlsitemap_update_module_tables_batch_operations() {
   return array(
-    'xmlsitemap_node_delete_database_rows',
-    'xmlsitemap_node_update_database_rows',
-    'xmlsitemap_node_add_database_rows',
+    '_xmlsitemap_node_module_table_delete_rows',
+    '_xmlsitemap_node_module_table_update_rows',
+    '_xmlsitemap_node_module_table_add_rows',
   );
 }
 
@@ -306,11 +306,37 @@ function xmlsitemap_node_xmlsitemap_update_module_tables_batch_operations() {
  ****************************************************************************/
 
 /**
+ * Return the absolute URL of the links added in the site map by
+ * xmlsitemap_node.module.
+ * @param $type
+ *  The type of link associated with the path.
+ * @param $path
+ *  The relative path of the link being added to the site map.
+ * @return
+ *   The absolute URL of the path. If there is an alias, it will be used.
+ */
+function xmlsitemap_node_url($type, $path) {
+  switch ($type) {
+    case 'attachment':
+      $url = file_create_url($path);
+      break;
+    default:
+      $url = url($path, array('absolute' => TRUE));
+      break;
+  }
+  return $url;
+}
+
+/*****************************************************************************
+ * Private functions - database batch operations.
+ ****************************************************************************/
+
+/**
  * Batch function used to update the module database tables.
  * @param $context
  *  The context parameter passed from batch_process().
  */
-function xmlsitemap_node_add_database_rows(&$context) {
+function _xmlsitemap_node_module_table_add_rows(&$context) {
   if (!isset($context['sandbox']['progress'])) {
     $context['sandbox']['progress'] = 0;
     $context['sandbox']['current_node'] = 0;
@@ -349,7 +375,7 @@ function xmlsitemap_node_add_database_rows(&$context) {
  * @param $context
  *  The context parameter passed from batch_process().
  */
-function xmlsitemap_node_delete_database_rows(&$context) {
+function _xmlsitemap_node_module_table_delete_rows(&$context) {
   $context['results']['deleted'] = (integer) db_result(db_query('SELECT COUNT(xn.nid)
     FROM {xmlsitemap_node} xn
     LEFT JOIN {node} n ON n.nid = xn.nid
@@ -371,7 +397,7 @@ function xmlsitemap_node_delete_database_rows(&$context) {
  * @param $context
  *  The context parameter passed from batch_process().
  */
-function xmlsitemap_node_update_database_rows(&$context) {
+function _xmlsitemap_node_module_table_update_rows(&$context) {
   if (!isset($context['sandbox']['progress'])) {
     $context['sandbox']['progress'] = 0;
     $context['sandbox']['current_node'] = 0;
@@ -403,28 +429,6 @@ function xmlsitemap_node_update_database_rows(&$context) {
       $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
     }
   }
-}
-
-/**
- * Return the absolute URL of the links added in the site map by
- * xmlsitemap_node.module.
- * @param $type
- *  The type of link associated with the path.
- * @param $path
- *  The relative path of the link being added to the site map.
- * @return
- *   The absolute URL of the path. If there is an alias, it will be used.
- */
-function xmlsitemap_node_url($type, $path) {
-  switch ($type) {
-    case 'attachment':
-      $url = file_create_url($path);
-      break;
-    default:
-      $url = url($path, array('absolute' => TRUE));
-      break;
-  }
-  return $url;
 }
 
 /**
