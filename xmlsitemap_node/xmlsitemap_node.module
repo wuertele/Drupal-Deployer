@@ -16,6 +16,34 @@
  ****************************************************************************/
 
 /**
+ * Implementation of hook_comment().
+ */
+function xmlsitemap_node_comment($a1, $op) {
+  $maxcomments = (integer) db_result(db_query('SELECT MAX(comment_count) FROM {node_comment_statistics}'));
+  switch ($op) {
+    case 'insert':
+    case 'update':
+    case 'delete':
+    case 'publish':
+    case 'unpublish':
+      $nid = is_array($a1) ? $a1['nid'] : $a1->nid;
+      if ($nid && $maxcomments > 1) {
+        $comments = (integer) db_result(db_query('SELECT comment_count
+          FROM {node_comment_statistics}
+          WHERE nid = %d',
+          $nid)
+        );
+        db_query('UPDATE {xmlsitemap_node}
+          SET comment_ratio = %f
+          WHERE nid = %d', $comments / $maxcomments,
+          $nid
+        );
+      }
+      break;
+  }
+}
+
+/**
  * Implementation of hook_form_alter().
  */
 function xmlsitemap_node_form_alter(&$form, &$form_state, $form_id) {
@@ -73,7 +101,7 @@ function xmlsitemap_node_form_alter(&$form, &$form_state, $form_id) {
 function xmlsitemap_node_init() {
   if (module_exists('xmlsitemap_file')) {
     xmlsitemap_add_admin_message(
-      t('The functionallity of %xmlsitemap-file has been incorporated in %xmlsitemap-node, which can be <a href="@modules-page">disabled</a>.',
+      t('The functionallity of %xmlsitemap-file has been incorporated in %xmlsitemap-node. %xmlsitemap-file can be now <a href="@modules-page">disabled</a>.',
         array(
           '%xmlsitemap-file' => t('XML Sitemap: File'),
           '%xmlsitemap-node' => t('XML Sitemap: Node'),
@@ -162,8 +190,6 @@ function xmlsitemap_node_xmlsitemap_description() {
  */
 function xmlsitemap_node_xmlsitemap_links() {
   static $excludes;
-  static $maxcomments;
-  $anonymous = user_load(array('uid => 0'));
   if (!isset($excludes)) {
     $excludes = array();
     foreach (node_get_types() as $type => $name) {
@@ -175,7 +201,7 @@ function xmlsitemap_node_xmlsitemap_links() {
       $excludes = array('');
     }
   }
-  $columns = 'n.*, xn.previously_changed, xn.last_comment, xn.previous_comment, xn.priority_override';
+  $columns = 'n.*, xn.previously_changed, xn.anonym_access, xn.priority_override';
   $query = "SELECT $columns
     FROM {node} n
     INNER JOIN {xmlsitemap_node} xn ON n.nid = xn.nid
@@ -194,21 +220,9 @@ function xmlsitemap_node_xmlsitemap_links() {
   $row = new stdClass();
   $row->module = 'xmlsitemap_node';
   while ($node = db_fetch_object($result)) {
-    if (node_access('view', $node, $anonymous)) {
-      if (module_exists('comment') && variable_get('xmlsitemap_node_count_comments', TRUE)) {
-        if (!isset($maxcomments)) {
-          $maxcomments = (integer) db_result(db_query("SELECT MAX(comment_count) FROM {node_comment_statistics}"));
-        }
-        $stat = db_fetch_object(db_query("SELECT MIN(timestamp) AS first_comment, MAX(timestamp) AS last_comment"));
-        if (!empty($stat->first_comment) && !empty($stat->last_comment)) {
-          $age = time() - max($node->changed, $stat->last_comment);
-          $interval = min($node->changed, $stat->last_comment) - max($node->previously_changed, $stat->first_comment);
-        }
-      }
-      if (empty($age)) {
-        $age = time() - $node->changed;
-        $interval = $node->changed - $node->previously_changed;
-      }
+    if ($node->anonym_access) {
+      $age = time() - $node->changed;
+      $interval = $node->changed - $node->previously_changed;
       if ($node->priority_override != -2.0) {
         $priority = $node->priority_override;
       }
@@ -218,14 +232,13 @@ function xmlsitemap_node_xmlsitemap_links() {
       if ($node->promote) {
         $priority += variable_get('xmlsitemap_node_promote_priority', 0.3);
       }
-      if (isset($maxcomments) && $maxcomments > 1) {
-        $priority += $node->comment_count / $maxcomments * variable_get('xmlsitemap_node_comment_priority', 0.2);
+      $priority += round($node->comment_ratio * variable_get('xmlsitemap_node_comment_priority', 0.2), 1);
       }
-      $priority = min(round($priority, 1), 1.0);
+      $priority = min($priority, 1.0);
       $row->loc = 'node/'. $node->nid;
       $row->type = 'node';
       $row->lid = $node->nid;
-      $row->lastmod = variable_get('xmlsitemap_node_count_comments', TRUE) ? max($node->changed, $node->last_comment) : $node->changed;
+      $row->lastmod = $node->changed;
       $row->changefreq = max($age,$interval);
       $row->priority = $priority;
       if (db_result(db_query("SELECT loc FROM {xmlsitemap} WHERE loc = '%s'", $row->loc)) != $row->loc) {
@@ -281,12 +294,6 @@ function xmlsitemap_node_xmlsitemap_sitemap_settings_alter(&$form) {
     '#default_value' => variable_get('xmlsitemap_node_comment_priority', 0.2),
     '#options' => xmlsitemap_priority_options(),
     '#description' => t("This number will be multiplied by the ratio of the number of comments on a post to the highest number of comments. This doesn't apply if the maximum number of comments is 1."),
-  );
-  $form['xmlsitemap_node']['xmlsitemap_node_count_comments'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Count comments in change date and frequency'),
-    '#default_value' => variable_get('xmlsitemap_node_count_comments', TRUE),
-    '#description' => t('If enabled, the frequency of comments on a post will affect its change frequency and last modification date.'),
   );
 }
 
