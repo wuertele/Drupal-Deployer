@@ -353,6 +353,11 @@ function project_views_plugins() {
         'handler' => 'project_plugin_argument_validate_project_type_term',
         'path' => drupal_get_path('module', 'project') .'/views/plugins',
       ),
+      'project_nid' => array(
+        'title' => t('Project node'),
+        'handler' => 'project_plugin_argument_validate_project_nid',
+        'path' => drupal_get_path('module', 'project') .'/views/plugins',
+      ),
     ),
   );
 }
