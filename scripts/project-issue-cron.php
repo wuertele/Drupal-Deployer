@@ -74,13 +74,8 @@ umask(022);
 require_once 'includes/bootstrap.inc';
 drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
 
-if (!module_exists('project_issue')) {
-  wd_err(t("ERROR: Project issue module does not exist, aborting.\n"));
-  exit(1);
-}
-
 // Real work begins.
-if (variable_get('project_issue_hook_cron', TRUE) == FALSE) {
+if (module_exists('project_issue') && variable_get('project_issue_hook_cron', TRUE) == FALSE) {
   require_once drupal_get_path('module', 'project_issue') .'/includes/cron.inc';
   _project_issue_cron();
 }
