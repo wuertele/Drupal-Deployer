@@ -269,9 +269,17 @@ function xmlsitemap_settings_engines() {
     '#default_value' => variable_get('xmlsitemap_log_access', FALSE),
     '#description' => t('If enabled, a watchdog entry will be made each time the site map is accessed, containing information about the requestor.'),
   );
-  drupal_alter('xmlsitemap_engine_settings', $form);
   $form = system_settings_form($form);
+  $form['#submit'][] = 'xmlsitemap_settings_engines_submit';
+  drupal_alter('xmlsitemap_engine_settings', $form);
   return $form;
+}
+
+/**
+ * Submission function for the engines settings form.
+ */
+function xmlsitemap_settings_engine_submit($form, &$form_state) {
+  menu_rebuild();
 }
 
 /**
@@ -301,10 +309,10 @@ function xmlsitemap_settings_sitemap() {
     '#description' => t('This is the absolute priority for the front page.'),
     '#weight' => -1,
   );
-  drupal_alter('xmlsitemap_sitemap_settings', $form);
   $form = system_settings_form($form);
   $form['#submit'][] = 'xmlsitemap_settings_sitemap_submit';
   $form['#validate'][] = 'xmlsitemap_settings_sitemap_validate';
+  drupal_alter('xmlsitemap_sitemap_settings', $form);
   return $form;
 }
 
