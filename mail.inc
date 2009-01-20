@@ -241,9 +241,9 @@ function project_mail_notify($nid) {
     'Date' => date('r'),
     'X-Mailer' => 'Drupal Project module (http://drupal.org/project/project)',
     'List-Id' => "$project->title <". $project->project['uri'] ."-issues-$domain>",
-    'List-Archive' => '<'. url("project/issues/". $project->project['uri'], array('absolute' => TRUE)) .'>',
-    'List-Subscribe' => '<'. url("node/". $project->project['uri'], array('absolute' => TRUE)) .'>',
-    'List-Unsubscribe' => '<'. url("node/". $project->project['uri'], array('absolute' => TRUE)) .'>'
+    'List-Archive' => '<'. url('project/issues/'. $project->project['uri'], array('absolute' => TRUE)) .'>',
+    'List-Subscribe' => '<'. url('project/issues/subscribe-mail/'. $project->project['uri'], array('absolute' => TRUE)) .'>',
+    'List-Unsubscribe' => '<'. url('project/issues/subscribe-mail/'. $project->project['uri'], array('absolute' => TRUE)) .'>'
   );
 
   // Comments exist, set headers accordingly.
