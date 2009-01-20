@@ -667,9 +667,9 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   );
 
   if (variable_get('file_downloads', '') == FILE_DOWNLOADS_PRIVATE) {
-    $form['fckeditor_upload_settings']['UserFilesPath']['#description'] = t('Setting relative path to uploaded files has been disabled because private downloads are enabled and this path is calculated automatically.');
+    $form['fckeditor_upload_settings']['UserFilesPath']['#description'] = t('Setting relative path to uploaded files has been disabled because private downloads are enabled and this path is calculated automatically. To change the location of uploaded files in the private file system, edit the <a href="!url">FCKeditor Global Profile</a>.', array('!url' => url('admin/settings/fckeditor/editg')));
     $form['fckeditor_upload_settings']['UserFilesPath']['#disabled'] = TRUE;
-    $form['fckeditor_upload_settings']['UserFilesAbsolutePath']['#description'] = t('Setting path to uploaded files has been disabled because private downloads are enabled and this path is calculated automatically.');
+    $form['fckeditor_upload_settings']['UserFilesAbsolutePath']['#description'] = t('Setting path to uploaded files has been disabled because private downloads are enabled and this path is calculated automatically.To change the location of uploaded files in the private file system, edit the <a href="!url">FCKeditor Global Profile</a>.', array('!global' => url('admin/settings/fckeditor/editg')));
     $form['fckeditor_upload_settings']['UserFilesAbsolutePath']['#disabled'] = TRUE;
   }
 
@@ -774,10 +774,10 @@ function fckeditor_admin_profile_form_validate($form, &$form_state) {
   }
 
   if (variable_get('file_downloads', '') !== FILE_DOWNLOADS_PRIVATE) {
-    if ($edit['UserFilesAbsolutePath'] && !$edit['UserFilesPath']) {
+    if (!empty($edit['UserFilesAbsolutePath']) && empty($edit['UserFilesPath'])) {
       form_set_error('UserFilesPath', t('Path to uploaded files is required.'));
     }
-    if ($edit['UserFilesPath'] && !$edit['UserFilesAbsolutePath']) {
+    if (!empty($edit['UserFilesPath']) && empty($edit['UserFilesAbsolutePath'])) {
       form_set_error('UserFilesPath', t('Absolute path to uploaded files is required.'));
     }
   }
@@ -918,7 +918,7 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
   $form['fckeditor_advanced_settings']['fckeditor_path'] = array(
     '#type' => 'textfield',
     '#title' => t('Path to FCKeditor'),
-    '#default_value' =>  isset($profile->settings['fckeditor_path']) ? $profile->settings['fckeditor_path'] : '%m/fckeditor',
+    '#default_value' =>  !empty($profile->settings['fckeditor_path']) ? $profile->settings['fckeditor_path'] : '%m/fckeditor',
     '#size' => 40,
     '#maxlength' => 128,
     '#description' => t('Path to FCKeditor (the HTML editor, downloaded from <a href="!fckeditornet">www.fckeditor.net</a>) relative to the document root.<br />Available placeholders:<br /><strong>%b</strong> - base URL path of the Drupal installation (!base).<br /><strong>%m</strong> - base URL path where FCKeditor module is stored (!files).<br />Current path: !path', array('!path' => fckeditor_path(FALSE), '!base' => base_path(), '!files' => base_path() . $module_drupal_path , '!fckeditornet' => 'http://www.fckeditor.net/download')),
@@ -945,6 +945,18 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
     '#description' => t('This only applies for users with "administer fckeditor" permissions.'),
   );
 
+  if (variable_get('file_downloads', '') == FILE_DOWNLOADS_PRIVATE) {
+    $current_private_dir = !isset($edit->settings['private_dir']) ? "" : $edit->settings['private_dir'];
+    $form['fckeditor_advanced_settings']['private_dir'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Location of files uploaded with FCKeditor in the private folder'),
+      '#default_value' => $current_private_dir,
+      '#size' => 40,
+      '#maxlength' => 255,
+      '#description' => t('The path relative to the location of the private directory where FCKeditor should store uploaded files.') .'<br />'. t('<strong>Warning:</strong> FCKeditor does not implement any kind of access protection on files available in this location. All files stored in the directory defined above might be accessible by unathenticated users if there is no information about the file in the Drupal\'s database.') .'<br />'. t('System path to the private folder is: !system_path.', array('!system_path' => realpath(file_directory_path()) . DIRECTORY_SEPARATOR)). '<br />'. t('Available wildcard characters:<br/><strong>%u</strong> - User ID.') .'<br />'. t('Current path: !path', array('!path' => $current_private_dir .' ('. file_create_path($current_private_dir) .')')),
+    );
+  }
+  
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => $btn
@@ -982,12 +994,17 @@ function fckeditor_admin_global_profile_form_submit($form, &$form_state) {
   }
 
   //strip whitespaces
-  $edit['fckeditor_local_path'] = trim($edit['fckeditor_local_path']);
   if (empty($edit['fckeditor_local_path'])) {
     $edit['fckeditor_local_path'] = '';
   }
+  else {
+    $edit['fckeditor_local_path'] = trim($edit['fckeditor_local_path']);
+  }
 
   //strip slash from the end
+  if (empty($edit['fckeditor_path'])) {
+    $edit['fckeditor_path'] = '';
+  }
   $edit['fckeditor_path'] = trim(rtrim($edit['fckeditor_path'], "/"));
   if ($edit['fckeditor_path'] && 0 !== strpos($edit['fckeditor_path'], "/") && 0 !== strpos($edit['fckeditor_path'], "%")) {
     //ensure that slash is at the beginning
