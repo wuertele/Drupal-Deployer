@@ -73,6 +73,8 @@ function user_register_notify_setup_email(&$edit, &$account, $action = 'insert')
         break;
     }
 
+    watchdog('user_register_notify', check_plain($to));
+
     drupal_mail(
       'user_register_notify',
       'user-register-notify-admin',
@@ -111,6 +113,8 @@ function user_register_notify_mail($key, &$message, $params) {
     $uaccount = $params['account'];
     $action   = $params['action'];
     $account_data = "";
+    $og_data = "";
+
     if (module_exists('profile')) {
       $result = db_query('SELECT f.title, f.type, v.value FROM {profile_fields} f INNER JOIN {profile_values} v ON f.fid = v.fid WHERE uid = %d', $uaccount->uid);
       while ($field = db_fetch_object($result)) {
@@ -119,22 +123,34 @@ function user_register_notify_mail($key, &$message, $params) {
             $date_field = unserialize($field->value);
             if (is_array($date_field)) {
               $date_timestamp = mktime(0, 0, 0, $date_field['month'], $date_field['day'], $date_field['year']);
-              $account_data .= sprintf("%s: %s\n", $field->title, format_date($date_timestamp));
+              $profile_data .= sprintf("%s: %s\n", $field->title, format_date($date_timestamp));
             }
             break;
           case 'checkbox':
             if ($field->value)
-              $account_data .= sprintf("%s: Checked\n", $field->title);
+              $profile_data .= sprintf("%s: Checked\n", $field->title);
             else
-              $account_data .= sprintf("%s: Not Checked\n", $field->title);
+              $profile_data .= sprintf("%s: Not Checked\n", $field->title);
             break;
           default:
-            $account_data .= sprintf("%s: %s\n", $field->title, $field->value);
+            $profile_data .= sprintf("%s: %s\n", $field->title, $field->value);
         }
       }
     }
     else {
       $profile_data = t("Profile Module Not Installed.\n");
+    }
+
+    if (module_exists('og')) {
+      $result = db_query('SELECT o.description FROM {og_uid} u INNER JOIN {og} o ON o.nid = u.nid WHERE uid = %d', $uaccount->uid);
+      $og_data = t("Organic groups belonged to:\n");
+
+      while ($og = db_fetch_object($result)) {
+        $og_data .= sprintf("%s\n", $og->description);
+      }
+    }
+    else {
+      $og_data = t("Organic Groups Module Not Installed.\n");
     }
 
     $variables = array(
@@ -148,8 +164,10 @@ function user_register_notify_mail($key, &$message, $params) {
       '!uri_brief' => drupal_substr($base_url, drupal_strlen('http://')),
       '!date' => format_date(time()),
       '!profile' => check_plain($account_data),
+      '!og' => check_plain($og_data),
       '!action' => $action == 'insert'? 'create' : 'update',
     );
+    watchdog('user_register_notify', check_plain($account_data));
     $message['subject'] = t(variable_get('user_register_notify_subject', USER_REGISTER_NOTIFY_SUBJECT), $variables);
     $message['body'] = t(variable_get('user_register_notify_body', USER_REGISTER_NOTIFY_BODY), $variables);
   }
