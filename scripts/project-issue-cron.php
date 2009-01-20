@@ -76,7 +76,7 @@ drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
 
 // Real work begins.
 if (module_exists('project_issue') && variable_get('project_issue_hook_cron', TRUE) == FALSE) {
-  require_once drupal_get_path('module', 'project_issue') .'/includes/cron.inc';
+  module_load_include('inc', 'project_issue', 'includes/cron');
   _project_issue_cron();
 }
 
