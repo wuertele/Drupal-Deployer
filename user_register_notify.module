@@ -113,6 +113,7 @@ function user_register_notify_mail($key, &$message, $params) {
     $uaccount = $params['account'];
     $action   = $params['action'];
     $account_data = "";
+    $profile_data = "";
     $og_data = "";
 
     if (module_exists('profile')) {
@@ -142,11 +143,11 @@ function user_register_notify_mail($key, &$message, $params) {
     }
 
     if (module_exists('og')) {
-      $result = db_query('SELECT o.og_description FROM {og_uid} u INNER JOIN {og} o ON o.nid = u.nid WHERE uid = %d', $uaccount->uid);
+     $result = db_query('SELECT o.og_description, n.title FROM {og_uid} u INNER JOIN {og} o ON o.nid = u.nid INNER JOIN {node} n on n.nid = u.nid WHERE u.uid = %d', $uaccount->uid);
       $og_data = t("Organic groups belonged to:\n");
 
       while ($og = db_fetch_object($result)) {
-        $og_data .= sprintf("%s\n", $og->og_description);
+        $og_data .= sprintf("%s - %s\n", $og->title, $og->og_description);
       }
     }
     else {
@@ -163,7 +164,7 @@ function user_register_notify_mail($key, &$message, $params) {
       '!uri' => $base_url,
       '!uri_brief' => drupal_substr($base_url, drupal_strlen('http://')),
       '!date' => format_date(time()),
-      '!profile' => check_plain($account_data),
+      '!profile' => check_plain($profile_data),
       '!og' => check_plain($og_data),
       '!action' => $action == 'insert'? 'create' : 'update',
     );
