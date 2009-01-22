@@ -458,7 +458,7 @@ function project_issue_pick_project_form_submit($form, &$form_state) {
  *   Otherwise, metadata fields will only be included in the form
  *   if $node->nid is empty.
  */
-function project_issue_form($node, $include_metadata_fields = FALSE) {
+function project_issue_form($node, $form_state, $include_metadata_fields = FALSE) {
   global $user;
 
   // If this function is being called as a result of CCK building the form
