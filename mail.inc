@@ -175,6 +175,9 @@ function project_mail_output(&$body, $html = 1, $format = FILTER_FORMAT_DEFAULT)
 function project_mail_notify($nid) {
   global $base_url, $user;
 
+  /// @TODO: re-enable this once http://drupal.org/node/361651 is done.
+  return;
+
   if (defined('PROJECT_NOMAIL')) {
     return;
   }
