@@ -216,7 +216,7 @@ function project_mail_notify($nid) {
 
   while ($comment = db_fetch_object($result)) {
     $comment->comment = db_decode_blob($comment->comment);
-    $comment->files = _comment_upload_load_files($comment->cid);
+    $comment->files = comment_upload_load_files($comment->cid);
     $history[] = $comment;
     // Record users that are connected to this issue.
     if ($comment->uid) {
