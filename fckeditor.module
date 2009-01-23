@@ -760,23 +760,58 @@ function fckeditor_process_textarea($element) {
     $cssfiles = array($module_full_path .'/fckeditor.css');
     switch ($conf['css_mode']) {
       case 'theme':
-        global $theme, $theme_info;
+        global $language, $theme, $theme_info, $base_theme_info;
 
-        $default_theme_css = array($themepath .'style.css');
-        $css = array_shift(variable_get('color_'. $theme .'_stylesheets', $default_theme_css));
-
-        if (file_exists($css)) {
-          $cssfiles[] =  $host . $css;
-        }
-        elseif (file_exists($themepath . $theme .'.css')) {
-          $cssfiles[] =  $host . $themepath . $theme .'.css';
-        }
-        elseif (!empty($theme_info->info['stylesheets']['all'])) {
-          foreach ($theme_info->info['stylesheets']['all'] as $value) {
-            $cssfiles[] = $host . $value;
+        $style_css = $themepath .'style.css';
+        if (!empty($theme_info->stylesheets)) {
+          $editorcss = "\"";
+          // Grab stylesheets from base theme
+          if (!empty($theme_info->base_theme)) {
+            foreach ($base_theme_info as $base) {
+              if (!empty($base->stylesheets['all'])) {
+                foreach ($base->stylesheets['all'] as $stylesheet) {
+                  $editorcss .= $host . $stylesheet .",";
+                }
+              }
+              if (!empty($base->stylesheets['screen'])) {
+                foreach ($base->stylesheets['screen'] as $stylesheet) {
+                  $editorcss .= $host . $stylesheet .",";
+                }
+              }
+            }
           }
+          // Grab stylesheets from current theme
+          if (!empty($theme_info->stylesheets['all'])) {
+            foreach ($theme_info->stylesheets['all'] as $stylesheet) {
+              $editorcss .= $host . $stylesheet .",";
+            }
+          }
+          if (!empty($theme_info->stylesheets['screen'])) {
+            foreach ($theme_info->stylesheets['screen'] as $stylesheet) {
+              $editorcss .= $host . $stylesheet .",";
+            }
+          }
+          // Grab stylesheets from color module
+          $color_paths = variable_get('color_'. $theme .'_stylesheets', array());
+          if (defined('LANGUAGE_RTL') && $language->direction == LANGUAGE_RTL) {
+            if (!empty($color_paths[1])) {
+              $editorcss .= $host . $color_paths[1] .",";
+            }
+          }
+          else { 
+            if (!empty($color_paths[0])) {
+              $editorcss .= $host . $color_paths[0] .",";
+            }
+          }
+          $editorcss .= $module_full_path ."/fckeditor.css\";\n";
+          $js .=  $js_id .".Config['EditorAreaCSS'] = ". $editorcss;
         }
-        $js .=  $js_id .".Config['EditorAreaCSS'] = '". implode(',', $cssfiles) ."';\n";
+        else if (file_exists($style_css)) {
+          $js .=  $js_id .".Config['EditorAreaCSS'] = \"". $host . $style_css .",". $module_full_path ."/fckeditor.css\";";
+        }
+        else {
+          $js .=  $js_id .".Config['EditorAreaCSS'] = \"". $module_full_path ."/fckeditor.css\";";
+        }
         break;
 
       case 'self':
