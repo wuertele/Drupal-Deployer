@@ -36,11 +36,11 @@
  */
 define('FCKEDITOR_FORCE_SIMPLE_TOOLBAR_NAME', 'DrupalBasic') ;
 
-global $fckeditor_configuration;
-global $fckeditor_js_ids;
+global $_fckeditor_configuration;
+global $_fckeditor_js_ids;
 
-$fckeditor_configuration = array();
-$fckeditor_js_ids = array();
+$_fckeditor_configuration = array();
+$_fckeditor_js_ids = array();
 
 /**
  * Implementation of hook_help().
@@ -147,14 +147,14 @@ function fckeditor_filter_xss() {
 }
 
 function fckeditor_process_form(&$form) {
-  global $fckeditor_configuration, $fckeditor_js_ids;
+  global $_fckeditor_configuration, $_fckeditor_js_ids;
   static $processed_textareas = array();
   static $found_textareas = array();
   
   //Skip if:
   // - we're not editing an element
   // - fckeditor is not enabled (configuration is empty)
-  if (arg(1) == "add" || arg(1) == "reply" || !count($fckeditor_configuration)) {
+  if (arg(1) == "add" || arg(1) == "reply" || !count($_fckeditor_configuration)) {
     return $form;
   }  
   
@@ -165,7 +165,7 @@ function fckeditor_process_form(&$form) {
     foreach ($children as $index => $item) {
       $element = &$form[$item];
 
-      if (isset($element['#id']) && in_array($element['#id'], array_keys($fckeditor_js_ids))) {
+      if (isset($element['#id']) && in_array($element['#id'], array_keys($_fckeditor_js_ids))) {
         $found_textareas[$element['#id']] = &$element;
       }
       
@@ -180,12 +180,12 @@ function fckeditor_process_form(&$form) {
           // The element before this element is the target form field.
           $field = &$form[$children[$index - 1]];
           $textarea_id = $field['#id'];
-          $js_id = $fckeditor_js_ids[$textarea_id];
+          $js_id = $_fckeditor_js_ids[$textarea_id];
           
           array_push($processed_textareas, $js_id);
           
           //search for checkxss1/2 class
-          if (empty($field['#attributes']['class']) || strpos($field['#attributes']['class'], "checkxss") === false) {
+          if (empty($field['#attributes']['class']) || strpos($field['#attributes']['class'], "checkxss") === FALSE) {
             continue;
           }
 
@@ -206,11 +206,11 @@ function fckeditor_process_form(&$form) {
           //loop through all enabled filters
           foreach ($enabled as $id => $filter) {
             //but use only that one selected in FCKeditor profile
-            if (in_array($id, array_keys($fckeditor_configuration[$textarea_id]['filters']))) {
+            if (in_array($id, array_keys($_fckeditor_configuration[$textarea_id]['filters']))) {
               if (!isset($fckeditor_filters[$js_id])) {
                 $fckeditor_filters[$js_id] = array();
               }
-              $fckeditor_filters[$js_id][] = $id ."/".$format;
+              $fckeditor_filters[$js_id][] = $id ."/". $format;
             }
           }
           
@@ -236,14 +236,14 @@ function fckeditor_process_form(&$form) {
   //We're in a form
   if (isset($form['#action'])) {
     //some textareas associated with FCKeditor has not been processed
-    if (count($processed_textareas) < count($fckeditor_js_ids)) {
+    if (count($processed_textareas) < count($_fckeditor_js_ids)) {
       //loop through all found textfields
       foreach (array_keys($found_textareas) as $id) {
-      	$element = &$found_textareas[$id];
+        $element = &$found_textareas[$id];
         //if not processed yet (checkxss class is before final processing)
-        if (strpos($element['#attributes']['class'], "checkxss") !== false && !in_array($fckeditor_js_ids[$element['#id']], $processed_textareas)) {
+        if (strpos($element['#attributes']['class'], "checkxss") !== FALSE && !in_array($_fckeditor_js_ids[$element['#id']], $processed_textareas)) {
           //assign default Filtered HTML to be safe on fields that do not have input format assigned
-          $js_id = $fckeditor_js_ids[$element['#id']];
+          $js_id = $_fckeditor_js_ids[$element['#id']];
           $fckeditor_filters[$js_id][] = "filter/0/1";
           $element['#attributes']['class'] = strtr($element['#attributes']['class'], array("checkxss1" => "filterxss1", "checkxss2" => "filterxss2"));
         }
@@ -375,7 +375,6 @@ function fckeditor_file_download($file) {
     
     //No info in DB? Probably a file uploaded with FCKeditor
     $global_profile = fckeditor_profile_load("FCKeditor Global Profile");
-    $global_conf = $global_profile->settings;
 
     //Assume that files inside of fckeditor directory belong to the FCKeditor. If private directory is set, let the decision about protection to the user.
     $private_dir = isset($global_profile->settings['private_dir']) ? $global_profile->settings['private_dir'] : "/";
@@ -444,7 +443,7 @@ function fckeditor_is_enabled($excl_mode, $excl_regex, $element_id, $get_q) {
 function fckeditor_process_textarea($element) {
   static $is_running = FALSE;
   static $num = 1;
-  global $user, $language, $fckeditor_configuration, $fckeditor_js_ids;
+  global $user, $language, $_fckeditor_configuration, $_fckeditor_js_ids;
   $enabled = TRUE;
 
   //hack for module developers that want to disable FCKeditor on their textareas
@@ -523,13 +522,13 @@ function fckeditor_process_textarea($element) {
     }
     
     $js_id = 'oFCK_'. $num++;
-    $fckeditor_js_ids[$element['#id']] = $js_id;
+    $_fckeditor_js_ids[$element['#id']] = $js_id;
     $fckeditor_on = ($conf['default']=='t') ? 1 : 0 ;
 
     $xss_check = 0;
     //it's not a problem when adding new content/comment
     if (arg(1) != "add" && arg(1) != "reply") {
-      $fckeditor_configuration[$element['#id']] = $conf;
+      $_fckeditor_configuration[$element['#id']] = $conf;
       
       //let FCKeditor know when perform XSS checks auto/manual
       if ($conf['ss'] == 1) {
