@@ -495,9 +495,6 @@ function project_issue_form($node, $form_state, $include_metadata_fields = FALSE
 
   $default_state = variable_get('project_issue_default_state', 1);
 
-  $form['#prefix'] = '<div class="project-issue">';
-  $form['#suffix'] = '</div>';
-
   // Fetch a list of all projects to test for access.
   $uris = NULL;
   $projects = array(t('<none>')) + project_projects_select_options($uris);
