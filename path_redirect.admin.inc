@@ -14,31 +14,26 @@ function path_redirect_admin($rid = FALSE) {
     array('data' => t('From'), 'field' => 'path', 'sort' => 'asc'),
     array('data' => t('To'), 'field' => 'redirect'),
     array('data' => t('Type'), 'field' => 'type'),
-    array('data' => t('Operations'), 'colspan' => '3')
+    array('data' => t('Operations'), 'colspan' => '2')
   );
 
   $result = pager_query('SELECT rid, path, redirect, query, fragment, type FROM {path_redirect}'. tablesort_sql($header), 50);
-  $count = 0;
-  $types = path_redirect_status_codes();
-  $destination = drupal_get_destination();
+
+  $rows = array();
   while ($r = db_fetch_object($result)) {
-    $path = $r->path;
-    $redirect = $r->redirect;
-    $query = $r->query ? "?$r->query" : '';
-    $fragment = $r->fragment ? "#$r->fragment" : '';
+    $redirect = url($r->redirect, array('query' => $r->query, 'fragment' => $r->fragment, 'absolute' => TRUE));
     $rows[] = array(
-      $path,
-      check_url($redirect . $query . $fragment),
-      $types[$r->type]['title'],
-      array('data' => l(t('test'), preg_replace('/\?.*/', '', $r->path), array('query' => strstr($r->path, '?') ? preg_replace('/.*\?/', '', $r->path) : NULL))),
-      array('data' => l(t('edit'), 'admin/build/path-redirect/edit/'. $r->rid, array('query' => $destination))),
-      array('data' => l(t('delete'), 'admin/build/path-redirect/delete/'. $r->rid, array('query' => $destination))),
+      // @todo: Revise the following messy, confusing line.
+      l($r->path, preg_replace('/\?.*/', '', $r->path), array('query' => strstr($r->path, '?') ? preg_replace('/.*\?/', '', $r->path) : NULL)),
+      l($redirect, $redirect, array('external' => TRUE)),
+      $r->type,
+      l(t('edit'), 'admin/build/path-redirect/edit/'. $r->rid, array('query' => drupal_get_destination())),
+      l(t('delete'), 'admin/build/path-redirect/delete/'. $r->rid, array('query' => drupal_get_destination())),
     );
-    $count++;
   }
 
-  if (!$count) {
-    $rows[] = array(array('data' => t('No redirects have been defined.'), 'colspan' => '6'));
+  if (empty($rows)) {
+    $rows[] = array(array('data' => t('No redirects have been added.'), 'colspan' => '5'));
   }
 
   $output = theme('table', $header, $rows, array('class' => 'path-redirects'));
