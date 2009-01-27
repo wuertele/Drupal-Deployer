@@ -12,7 +12,12 @@ function path_redirect_install() {
  * Implementation of hook_uninstall().
  */
 function path_redirect_uninstall() {
+  // Remove tables.
   drupal_uninstall_schema('path_redirect');
+
+  // Remove variables.
+  variable_del('path_redirect_redirect_warning');
+  variable_del('path_redirect_allow_bypass');
 }
 
 /**
@@ -20,42 +25,42 @@ function path_redirect_uninstall() {
  */
 function path_redirect_schema() {
   $schema['path_redirect'] = array(
-    'description' => t('Stores information on redirects.'),
+    'description' => 'Stores information on redirects.',
     'fields' => array(
       'rid'  => array(
         'type' => 'serial',
         'not null' => TRUE,
-        'description' => t('Primary Key: Unique path redirect ID.'),
+        'description' => 'Primary Key: Unique path redirect ID.',
       ),
       'path' => array(
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
-        'description' => t('The source path to redirect from.'),
+        'description' => 'The source path to redirect from.',
       ),
       'redirect' => array(
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
-        'description' => t('The destination path to redirect to.'),
+        'description' => 'The destination path to redirect to.',
       ),
       'query' => array(
         'type' => 'varchar',
         'length' => 255,
         'not null' => FALSE,
-        'description' => t('The query string to send to the destination.'),
+        'description' => 'The query string to send to the destination.',
       ),
       'fragment' => array(
         'type' => 'varchar',
         'length' => 50,
         'not null' => FALSE,
-        'description' => t('An internal page anchor append to the destination.'),
+        'description' => 'An internal page anchor append to the destination.',
       ),
       'type' => array(
         'type' => 'int',
         'size' => 'small',
         'not null' => TRUE,
-        'description' => t('The HTTP status code to use for the redirect.'),
+        'description' => 'The HTTP status code to use for the redirect.',
       ),
     ),
     'primary key' => array('rid'),
@@ -64,8 +69,12 @@ function path_redirect_schema() {
   return $schema;
 }
 
+/**
+ * Allow longer values for path and redirect.
+ */
 function path_redirect_update_1() {
   $ret = array();
+
   db_change_field($ret, 'path_redirect', 'path', 'path',
     array(
       'type' => 'varchar',
@@ -83,11 +92,17 @@ function path_redirect_update_1() {
     ),
     array('unique keys' => array('rid'))
   );
+
   return $ret;
 }
 
+/**
+ * Convert the type column to an integer to only store the status code.
+ */
 function path_redirect_update_2() {
-  // Drupal 5 has a different drupal_goto() syntax that takes just the error code
+  $ret = array();
+
+  // Convert string status messages to integer status codes.
   update_sql("UPDATE {path_redirect} SET type = '300' WHERE type = 'HTTP/1.0 300 Multiple Choices'");
   update_sql("UPDATE {path_redirect} SET type = '301' WHERE type = 'HTTP/1.0 301 Moved Permanently'");
   update_sql("UPDATE {path_redirect} SET type = '302' WHERE type = 'HTTP/1.0 302 Found'");
@@ -95,8 +110,8 @@ function path_redirect_update_2() {
   update_sql("UPDATE {path_redirect} SET type = '304' WHERE type = 'HTTP/1.0 304 Not Modified'");
   update_sql("UPDATE {path_redirect} SET type = '305' WHERE type = 'HTTP/1.0 305 Use Proxy'");
   update_sql("UPDATE {path_redirect} SET type = '307' WHERE type = 'HTTP/1.0 307 Temporary Redirect'");
-  // Now that we've got integers in the column, we change the column type - MySQL will convert values 
-  $ret = array();
+
+  // Convert the type column to store integers now that all values are converted.
   db_change_field($ret, 'path_redirect', 'type', 'type',
     array(
       'type' => 'int',
@@ -105,35 +120,41 @@ function path_redirect_update_2() {
       'description' => t('The HTTP status code to use for the redirect.'),
     )
   );
+
   return $ret;
 }
 
+/**
+ * Fix a type that could have caused the code 306 to be used mistakenly.
+ */
 function path_redirect_update_3() {
-  // Admin code had a typo that could have caused 306 to be used mistakenly
+  $ret = array();
   $ret[] = update_sql("UPDATE {path_redirect} SET type = 307 WHERE type = 306");
   return $ret;
 }
 
 /**
- * Clear the menu cache since paths have changed.
- * Use rid as primary key; recreate unique key on path.
+ * Allow longer values for query strings fix the primary and unique keys.
  */
 function path_redirect_update_4() {
-  cache_clear_all(NULL, 'cache_menu');
-  drupal_set_message(t('Menu paths for the Path Redirect module have been updated.'));
   $ret = array();
+
+  // Allow longer query strings.
   db_change_field($ret, 'path_redirect', 'query', 'query',
     array(
       'type' => 'varchar',
       'length' => 255,
-      'not null' => TRUE,
+      'not null' => FALSE,
       'description' => t('The query string to send to the destination.'),
     )
   );
+
+  // Change the primary key from path to rid and add a unique key on path.
   db_drop_primary_key($ret, 'path_redirect');
   db_drop_unique_key($ret, 'path_redirect', 'rid');
   db_add_primary_key($ret, 'path_redirect', array('rid'));
   db_add_unique_key($ret, 'path_redirect', 'path', array('path'));
+
   return $ret;
 }
 
