@@ -101,6 +101,12 @@ function project_issue_comment(&$arg, $op) {
 function project_issue_form_comment_form_alter(&$form, &$form_state) {
   $nid = $form['nid']['#value'];
   $node = node_load($nid);
+
+  // Allows only project_issue
+  if ($node->type != 'project_issue') {
+    return;
+  }
+  
   $project = node_load(array('nid' => $node->project_issue['pid'], 'type' => 'project_project'));
 
   $form['#validate'][] = 'project_issue_form_comment_validate';

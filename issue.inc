@@ -507,6 +507,7 @@ function project_issue_form($node, $form_state, $include_metadata_fields = FALSE
         $node->project_issue['pid'] = db_result(db_query(db_rewrite_sql("SELECT p.nid FROM {project_projects} p WHERE p.uri = '%s'", 'p'), $pid));
       }
     }
+    $pid = $node->project_issue['pid'];
   }
 
   if (empty($pid)) {
