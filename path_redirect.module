@@ -202,8 +202,11 @@ function path_redirect_goto($path = '', $query = NULL, $fragment = NULL, $http_r
   // Remove newlines from the URL to avoid header injection attacks.
   $url = str_replace(array("\n", "\r"), '', $url);
 
-  // Before the redirect, allow modules to react to the end of the page request.
-  bootstrap_invoke_all('exit');
+  // Allow modules to react to the end of the page request before redirecting.
+  // We do not want this while running update.php.
+  if (!defined('MAINTENANCE_MODE') || MAINTENANCE_MODE != 'update') {
+    module_invoke_all('exit', $url);
+  }
 
   // Even though session_write_close() is registered as a shutdown function, we
   // need all session data written to the database before redirecting.
@@ -211,8 +214,9 @@ function path_redirect_goto($path = '', $query = NULL, $fragment = NULL, $http_r
 
   header('Location: '. $url, TRUE, $http_response_code);
 
-  // The "Location" header sends a REDIRECT status code to the http
-  // daemon. In some cases this can go wrong, so we make sure none
-  // of the code below the drupal_goto() call gets executed when we redirect.
+  // The "Location" header sends a redirect status code to the HTTP daemon. In
+  // some cases this can be wrong, so we make sure none of the code below the
+  // drupal_goto() call gets executed upon redirection.
   exit();
+
 }
