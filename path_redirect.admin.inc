@@ -9,7 +9,7 @@
 /**
  * Render a list of redirects for the main admin page.
  */
-function path_redirect_admin($rid = FALSE) {
+function path_redirect_admin() {
   $header = array(
     array('data' => t('From'), 'field' => 'path', 'sort' => 'asc'),
     array('data' => t('To'), 'field' => 'redirect'),

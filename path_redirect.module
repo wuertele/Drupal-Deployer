@@ -26,6 +26,10 @@ function path_redirect_init() {
   if (preg_match('/^\?q=/', $path)) {
     $path = preg_replace(array('/^\?q=/', '/&/'), array('', '?'), $path, 1);
   }
+
+  // Remove trailing slash from path.
+  $path = preg_replace('/\/$/', '', $path);
+
   $r = db_fetch_object(db_query("SELECT rid, redirect, query, fragment, type FROM {path_redirect} WHERE path = '%s' OR path = '%s'", $path, utf8_encode($path)));
   if (!$r) {
     $path = preg_replace('/\?.*/', '', $path);
@@ -52,7 +56,7 @@ function path_redirect_init() {
     watchdog('path_redirect', 'Redirect to <code>%redirect</code> is causing an infinite loop; redirect cancelled.', array('%redirect' => $r->redirect), WATCHDOG_WARNING, l(t('edit'), 'admin/build/path-redirect/edit/'. $r->rid));
   }
   elseif ($r && variable_get('path_redirect_allow_bypass', 0) && !empty($_GET['redirect']) && $_GET['redirect'] === 'no') {
-    drupal_set_message(t('This page is redirected to:') .' <code>'. l($r->redirect, $r->redirect, array('query' => ($r->query ? $r->query: NULL), 'fragment' => ($r->fragment ? $r->fragment : NULL))) .'</code>');
+    drupal_set_message(t('This page is redirected to <a href="@redirect">@redirect</a>.', array('@redirect' => url($r->redirect, array('query' => $r->query, 'fragment' => $r->fragment)))));
   }
 }
 
