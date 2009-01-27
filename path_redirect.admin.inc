@@ -37,7 +37,7 @@ function path_redirect_admin() {
   }
 
   $output = theme('table', $header, $rows, array('class' => 'path-redirects'));
-  $output .= '<p>'. l(t('Add new redirect'), 'admin/build/path-redirect/add') .'</p>';
+  $output .= '<p>'. l(t('Add redirect'), 'admin/build/path-redirect/add') .'</p>';
   $output .= theme('pager');
 
   return $output;
@@ -142,7 +142,7 @@ function path_redirect_edit_form(&$form_state, $edit = array()) {
   }
   $form['type']['link'] = array(
     '#type' => 'markup',
-    '#value' => '<p>'. t('Find more information about http redirect codes at <a href="@link">@link</a>.', array('@link' => 'http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3')) .'</p>',
+    '#value' => '<p>'. t('You can find more information about HTTP redirect status codes at <a href="@link">@link</a>.', array('@link' => 'http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3')) .'</p>',
   );
 
   $form['rid'] = array(
@@ -241,6 +241,7 @@ function path_redirect_settings() {
   $form['path_redirect_default_status'] = array(
     '#type' => 'select',
     '#title' => t('Default redirect status'),
+    '#description' => t('You can find more information about HTTP redirect status codes at <a href="@link">@link</a>.', array('@link' => 'http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3')),
     '#default_value' => variable_get('path_redirect_default_status', 301),
     '#options' => array(),
   );
