@@ -172,7 +172,7 @@ function project_issue_views_default_views() {
       'expose' => array(
         'use_operator' => 0,
         'operator' => 'category_op',
-        'identifier' => 'category',
+        'identifier' => 'categories',
         'label' => 'Category',
         'optional' => 1,
         'single' => 1,
@@ -192,7 +192,7 @@ function project_issue_views_default_views() {
       'expose' => array(
         'use_operator' => 0,
         'operator' => 'priority_op',
-        'identifier' => 'priority',
+        'identifier' => 'priorities',
         'label' => 'Priority',
         'optional' => 1,
         'single' => 1,
@@ -488,7 +488,7 @@ function project_issue_views_default_views() {
       'expose' => array(
         'use_operator' => 0,
         'operator' => 'category_op',
-        'identifier' => 'category',
+        'identifier' => 'categories',
         'label' => 'Category',
         'optional' => 1,
         'single' => 1,
@@ -508,7 +508,7 @@ function project_issue_views_default_views() {
       'expose' => array(
         'use_operator' => 0,
         'operator' => 'priority_op',
-        'identifier' => 'priority',
+        'identifier' => 'priorities',
         'label' => 'Priority',
         'optional' => 1,
         'single' => 1,
@@ -875,7 +875,7 @@ function project_issue_views_default_views() {
       'expose' => array(
         'use_operator' => 0,
         'operator' => 'category_op',
-        'identifier' => 'category',
+        'identifier' => 'categories',
         'label' => 'Category',
         'optional' => 1,
         'single' => 1,
@@ -895,7 +895,7 @@ function project_issue_views_default_views() {
       'expose' => array(
         'use_operator' => 0,
         'operator' => 'priority_op',
-        'identifier' => 'priority',
+        'identifier' => 'priorities',
         'label' => 'Priority',
         'optional' => 1,
         'single' => 1,
