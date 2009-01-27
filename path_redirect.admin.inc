@@ -2,6 +2,11 @@
 // $Id$
 
 /**
+ * @file
+ * Administrative page callbacks for the path_redirect module.
+ */
+
+/**
  * Render a list of redirects for the main admin page.
  */
 function path_redirect_admin($rid = FALSE) {
@@ -127,7 +132,7 @@ function path_redirect_edit_form(&$form_state, $edit = array()) {
   $form['type'] = array(
     '#type' => 'fieldset',
     '#title' => t('Redirect Type'),
-    '#collapsible' => true,
+    '#collapsible' => TRUE,
     '#collapsed' => ($edit['type'] == variable_get('path_redirect_default_status', 301)),
   );
 
@@ -218,7 +223,7 @@ function path_redirect_delete_confirm($form_state, $rid) {
     isset($_GET['destination']) ? $_GET['destination'] : 'admin/build/path-redirect');
 }
 
-function path_redirect_delete_confirm_submit($form, $form_state) {
+function path_redirect_delete_confirm_submit($form, &$form_state) {
   if ($form_state['values']['confirm']) {
     path_redirect_delete(NULL, NULL, $form_state['values']['rid']);
     drupal_set_message(t('The redirect has been deleted.'));
@@ -234,7 +239,7 @@ function path_redirect_settings() {
 
   $form['path_redirect_allow_bypass'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Allow users to bypass redirects by appending the query %code to the URL.', array('%code' => '<code>?redirect=no</code>')),
+    '#title' => t('Allow users to bypass redirects by adding %code to the URL.', array('%code' => variable_get('clean_url', 0) ? '?redirect=no' : '&redirect=no')),
     '#default_value' => variable_get('path_redirect_allow_bypass', 0),
   );
 
