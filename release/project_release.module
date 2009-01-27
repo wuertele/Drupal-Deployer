@@ -527,9 +527,12 @@ function project_release_node_form_validate(&$form, $form_state) {
 
   // With cvs.module installed, this validation is already handled.
   // We only want to do it here if we're *not* doing the N-page form...
-  if (!project_use_cvs($form_state['values']['pid']) && !isset($form_state['values']['nid']) && project_release_exists($form_state['values'])) {
-    // TODO: is there a better form element to mark with this error?
-    form_set_error('version_patch', t('This version already exists for this project.'));
+  if (!project_use_cvs($form_state['values']['pid']) && !isset($form_state['values']['nid'])) {
+    $version = (object)$form_state['values'];
+    if (project_release_exists($version)) {
+      // TODO: is there a better form element to mark with this error?
+      form_set_error('version_patch', t('This version already exists for this project.'));
+    }
   }
 
   // TODO: it'd be nice to automagically reset the version string and
