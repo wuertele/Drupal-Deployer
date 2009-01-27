@@ -62,7 +62,17 @@ function path_redirect_edit($form_state, $rid = FALSE) {
   return $output;
 }
 
-function path_redirect_edit_form(&$form_state, $edit = array('path' => '', 'redirect' => '', 'query' => '', 'fragment' => '', 'type' => PATH_REDIRECT_DEFAULT_TYPE, 'rid' => NULL)) {
+function path_redirect_edit_form(&$form_state, $edit = array()) {
+  // Merge default values.
+  $edit += array(
+    'path' => '',
+    'redirect' => '',
+    'query' => '',
+    'fragment' => '',
+    'type' => variable_get('path_redirect_default_status', 301),
+    'rid' => NULL,
+  );
+
   $form['path'] = array(
     '#type' => 'textfield',
     '#title' => t('From'),
@@ -118,21 +128,21 @@ function path_redirect_edit_form(&$form_state, $edit = array('path' => '', 'redi
     '#type' => 'fieldset',
     '#title' => t('Redirect Type'),
     '#collapsible' => true,
-    '#collapsed' => ($edit['type'] == PATH_REDIRECT_DEFAULT_TYPE),
+    '#collapsed' => ($edit['type'] == variable_get('path_redirect_default_status', 301)),
   );
 
-  foreach (path_redirect_status_codes() as $key => $info) {
+  foreach (path_redirect_status_codes() as $code => $info) {
     $form['type'][]['type'] = array(
       '#type' => 'radio',
       '#title' => $info['title'],
       '#description' => $info['description'],
-      '#return_value' => $key,
+      '#return_value' => $code,
       '#default_value' => $edit['type'],
     );
   }
   $form['type']['link'] = array(
     '#type' => 'markup',
-    '#value' => '<p>'. t('Find more information about http redirect codes <a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3">here</a>.') .'</p>',
+    '#value' => '<p>'. t('Find more information about http redirect codes at <a href="@link">@link</a>.', array('@link' => 'http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3')) .'</p>',
   );
 
   $form['rid'] = array(
@@ -217,38 +227,62 @@ function path_redirect_delete_confirm_submit($form, $form_state) {
 
 function path_redirect_settings() {
   $form['path_redirect_redirect_warning'] = array(
-    '#type' => 'radios',
-    '#title' => t('Warn on redirect'),
+    '#type' => 'checkbox',
+    '#title' => t('Display a warning message to users when they are redirected.'),
     '#default_value' => variable_get('path_redirect_redirect_warning', 0),
-    '#options' => array(t('Disabled'), t('Enabled')),
-    '#description' => t('Display a warning message to users when a redirect takes place.'),
   );
 
   $form['path_redirect_allow_bypass'] = array(
-    '#type' => 'radios',
-    '#title' => t('Allow bypassing'),
+    '#type' => 'checkbox',
+    '#title' => t('Allow users to bypass redirects by appending the query %code to the URL.', array('%code' => '<code>?redirect=no</code>')),
     '#default_value' => variable_get('path_redirect_allow_bypass', 0),
-    '#options' => array(t('Disabled'), t('Enabled')),
-    '#description' => t('Allow users to bypass redirects by appending <code>?redirect=no</code> to the URL.'),
   );
+
+  $form['path_redirect_default_status'] = array(
+    '#type' => 'select',
+    '#title' => t('Default redirect status'),
+    '#default_value' => variable_get('path_redirect_default_status', 301),
+    '#options' => array(),
+  );
+  foreach (path_redirect_status_codes() as $code => $details) {
+    $form['path_redirect_default_status']['#options'][$code] = $details['title'];
+  }
 
   return system_settings_form($form);
 }
 
 /**
- * Return an array of 300-range status codes
- * placed here for clarity
+ * Return an array of 300-range status codes.
  */
 function path_redirect_status_codes() {
-  $codes = array(
-    300 => array('title' => t('300 Multiple Choices'), 'description' => t('The request is ambiguous and needs clarification as to which resource was requested.')),
-    301 => array('title' => t('301 Moved Permanently'), 'description' => t('Moved Permanently. The resource has permanently moved elsewhere, the response indicates where it has gone to. <strong>Recommended.</strong>')),
-    302 => array('title' => t('302 Found'), 'description' => t('The resource has temporarily moved elsewhere, the response indicates where it is at present. <strong>This is Drupal\'s default redirect type.</strong>')),
-    303 => array('title' => t('303 See Other'), 'description' => t('See Other/Redirect. A preferred alternative source should be used at present.')),
-    304 => array('title' => t('304 Not Modified'), 'description' => t('The server has identified from the request information that the client\'s copy of the information is up-to-date and the requested information does not need to be sent again.')),
-    305 => array('title' => t('305 Use Proxy'), 'description' => t('The request must be sent through the indicated proxy server.')),
-    307 => array('title' => t('307 Temporary Redirect'), 'description' => t('The resource has temporarily moved elsewhere, the response indicates where it is at present. Client should still use this URL.')),
+  return array(
+    300 => array(
+      'title' => t('300 Multiple Choices'),
+      'description' => t('The request is ambiguous and needs clarification as to which resource was requested.'),
+    ),
+    301 => array(
+      'title' => t('301 Moved Permanently'),
+      'description' => t('Moved Permanently. The resource has permanently moved elsewhere, the response indicates where it has gone to. <strong>Recommended.</strong>'),
+    ),
+    302 => array(
+      'title' => t('302 Found'),
+      'description' => t("The resource has temporarily moved elsewhere, the response indicates where it is at present. <strong>This is Drupal's default redirect type.</strong>"),
+    ),
+    303 => array(
+      'title' => t('303 See Other'),
+      'description' => t('See Other/Redirect. A preferred alternative source should be used at present.'),
+    ),
+    304 => array(
+      'title' => t('304 Not Modified'),
+      'description' => t("The server has identified from the request information that the client's copy of the information is up-to-date and the requested information does not need to be sent again."),
+    ),
+    305 => array(
+      'title' => t('305 Use Proxy'),
+      'description' => t('The request must be sent through the indicated proxy server.'),
+    ),
+    307 => array(
+      'title' => t('307 Temporary Redirect'),
+      'description' => t('The resource has temporarily moved elsewhere, the response indicates where it is at present. Client should still use this URL.'),
+    ),
   );
-
-  return $codes;
 }
