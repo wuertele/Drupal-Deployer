@@ -24,7 +24,7 @@ function path_redirect_help($path, $arg) {
  */
 function path_redirect_init() {
   // see if this page has a redirect path
-  $path = substr(request_uri(), strlen($GLOBALS['base_path']));
+  $path = substr(request_uri(), strlen(base_path()));
   if (preg_match('/^\?q=/', $path)) {
     $path = preg_replace(array('/^\?q=/', '/&/'), array('', '?'), $path, 1);
   }
@@ -38,27 +38,32 @@ function path_redirect_init() {
     $r = db_fetch_object(db_query("SELECT rid, redirect, query, fragment, type FROM {path_redirect} WHERE path = '%s' OR path = '%s'", $path, utf8_encode($path)));
   }
 
-  // only redirect if allow_bypass is off or bypass is not requested
-  if ($r && !(variable_get('path_redirect_allow_bypass', 0) && !empty($_GET['redirect']) && $_GET['redirect'] == 'no') && url($r->redirect) != url($path)) {
-    if (variable_get('path_redirect_redirect_warning', 0)) {
-      drupal_set_message(t('This page has been moved. You may want to update your bookmarks.'));
+  if ($r) {
+    $redirect = url($r->redirect, array('query' => $r->query, 'fragment' => $r->fragment, 'absolute' => TRUE));
+    if (url($r->redirect) == url($path)) {
+      // Prevent infinite loop redirection.
+      watchdog('path_redirect', 'Redirect to <code>%redirect</code> is causing an infinite loop; redirect cancelled.', array('%redirect' => $r->redirect), WATCHDOG_WARNING, l(t('edit'), 'admin/build/path-redirect/edit/'. $r->rid));
     }
-    // @todo Clean the redirection code up. Do we need to duplicate code?
-    if (function_exists('drupal_goto')) {
-      // if there's a result found, do the redirect
-      unset($_REQUEST['destination']);
-      drupal_goto($r->redirect, ($r->query ? $r->query: NULL), ($r->fragment ? $r->fragment : NULL), $r->type);
+    elseif (variable_get('path_redirect_allow_bypass', 0) && isset($_GET['redirect']) && $_GET['redirect'] === 'no') {
+      // If the user has requested not to be redirected, show a message.
+      drupal_set_message(t('This page has been redirected to <a href="@redirect">@redirect</a>.', array('@redirect' => $redirect)));
+    }
+    elseif (variable_get('path_redirect_redirect_warning', 0)) {
+      drupal_set_message(t('This page has been moved to <a href="@redirect">@redirect</a> and will redirect in 5 seconds. You may want to update your bookmarks.', array('@redirect' => $redirect)), 'error');
+      drupal_set_html_head("<meta http-equiv=\"refresh\" content=\"5;url=$redirect\" />");
     }
     else {
-      // page caching is turned on so drupal_goto() (common.inc) hasn't been loaded
-      path_redirect_goto($r->redirect, ($r->query ? $r->query: NULL), ($r->fragment ? $r->fragment : NULL), $r->type);
+      // @todo Clean the redirection code up. Do we need to duplicate code?
+      if (function_exists('drupal_goto')) {
+        // if there's a result found, do the redirect
+        unset($_REQUEST['destination']);
+        drupal_goto($r->redirect, $r->query, $r->fragment, $r->type);
+      }
+      else {
+        // page caching is turned on so drupal_goto() (common.inc) hasn't been loaded
+        path_redirect_goto($r->redirect, $r->query, $r->fragment, $r->type);
+      }
     }
-  }
-  elseif ($r && url($r->redirect) == url($path)) {
-    watchdog('path_redirect', 'Redirect to <code>%redirect</code> is causing an infinite loop; redirect cancelled.', array('%redirect' => $r->redirect), WATCHDOG_WARNING, l(t('edit'), 'admin/build/path-redirect/edit/'. $r->rid));
-  }
-  elseif ($r && variable_get('path_redirect_allow_bypass', 0) && !empty($_GET['redirect']) && $_GET['redirect'] === 'no') {
-    drupal_set_message(t('This page is redirected to <a href="@redirect">@redirect</a>.', array('@redirect' => url($r->redirect, array('query' => $r->query, 'fragment' => $r->fragment)))));
   }
 }
 
