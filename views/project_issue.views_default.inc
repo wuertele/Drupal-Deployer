@@ -186,7 +186,9 @@ function project_issue_views_default_views() {
     ),
     'sid' => array(
       'operator' => 'in',
-      'value' => array(),
+      'value' => array(
+        'open' => 'open',
+      ),
       'group' => '0',
       'exposed' => TRUE,
       'expose' => array(
@@ -550,7 +552,9 @@ function project_issue_views_default_views() {
     ),
     'sid' => array(
       'operator' => 'in',
-      'value' => array(),
+      'value' => array(
+        'open' => 'open',
+      ),
       'group' => '0',
       'exposed' => TRUE,
       'expose' => array(
@@ -991,7 +995,9 @@ function project_issue_views_default_views() {
     ),
     'sid' => array(
       'operator' => 'in',
-      'value' => array(),
+      'value' => array(
+        'open' => 'open',
+      ),
       'group' => '0',
       'exposed' => TRUE,
       'expose' => array(
@@ -1358,7 +1364,9 @@ function project_issue_views_default_views() {
     ),
     'sid' => array(
       'operator' => 'in',
-      'value' => array(),
+      'value' => array(
+        'open' => 'open',
+      ),
       'group' => '0',
       'exposed' => TRUE,
       'expose' => array(
