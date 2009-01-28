@@ -25,6 +25,7 @@ function path_redirect_uninstall() {
   variable_del('path_redirect_allow_bypass');
   variable_del('path_redirect_default_status');
   variable_del('path_redirect_nodeapi_enabled');
+  variable_del('path_redirect_purge_inactive');
 }
 
 /**
@@ -68,6 +69,13 @@ function path_redirect_schema() {
         'size' => 'small',
         'not null' => TRUE,
         'description' => 'The HTTP status code to use for the redirect.',
+      ),
+      'last_used' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The timestamp of when the redirect was last used.',
       ),
     ),
     'primary key' => array('rid'),
@@ -147,6 +155,18 @@ function path_redirect_update_5100() {
   db_change_field($ret, 'path_redirect', 'query', 'query', array('type' => 'varchar', 'length' => 255, 'not null' => FALSE));
   db_change_field($ret, 'path_redirect', 'fragment', 'fragment', array('type' => 'varchar', 'length' => 50, 'not null' => FALSE));
   db_change_field($ret, 'path_redirect', 'type', 'type', array('type' => 'int', 'size' => 'small', 'not null' => TRUE));
+
+  return $ret;
+}
+
+/**
+ * Add a last used timestamp field.
+ */
+function path_redirect_update_6100() {
+  $ret = array();
+
+  db_add_field($ret, 'path_redirect', 'last_used', array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0));
+  $ret[] = update_sql("UPDATE {path_redirect} SET last_used = ". $_SERVER['REQUEST_TIME']);
 
   return $ret;
 }

@@ -16,56 +16,10 @@ function path_redirect_help($path, $arg) {
 }
 
 /**
- * Implementation of hook_init().
- *
+ * Implementation of hook_perm().
  */
-function path_redirect_init() {
-  path_redirect_check();
-}
-
-/**
- * If a redirect is found for the current path, perform the redirect.
- */
-function path_redirect_check() {
-  // see if this page has a redirect path
-  // @todo Rewrite the path-fetching code here.
-  $path = substr(request_uri(), strlen(base_path()));
-  if (preg_match('/^\?q=/', $path)) {
-    $path = preg_replace(array('/^\?q=/', '/&/'), array('', '?'), $path, 1);
-  }
-
-  // Remove trailing slash from path.
-  $path = preg_replace('/\/\?|\/$/', '', $path);
-
-  // @todo Rewrite the redirect lookup code here.
-  $r = db_fetch_object(db_query("SELECT rid, redirect, query, fragment, type FROM {path_redirect} WHERE path = '%s' OR path = '%s'", $path, utf8_encode($path)));
-  if (!$r) {
-    // If there is no match against path and query string, check just the path
-    $path = preg_replace('/\?.*/', '', $path);
-    $r = db_fetch_object(db_query("SELECT rid, redirect, query, fragment, type FROM {path_redirect} WHERE path = '%s' OR path = '%s'", $path, utf8_encode($path)));
-  }
-
-  if ($r) {
-    $redirect = url($r->redirect, array('query' => $r->query, 'fragment' => $r->fragment, 'absolute' => TRUE));
-    if (url($r->redirect) == url($path)) {
-      // Prevent infinite loop redirection.
-      watchdog('path_redirect', 'Redirect to <code>%redirect</code> is causing an infinite loop; redirect cancelled.', array('%redirect' => $r->redirect), WATCHDOG_WARNING, l(t('edit'), 'admin/build/path-redirect/edit/'. $r->rid));
-    }
-    elseif (variable_get('path_redirect_allow_bypass', 0) && isset($_GET['redirect']) && $_GET['redirect'] === 'no') {
-      // If the user has requested not to be redirected, show a message.
-      drupal_set_message(t('This page has been redirected to <a href="@redirect">@redirect</a>.', array('@redirect' => $redirect)));
-    }
-    elseif (variable_get('path_redirect_redirect_warning', 0)) {
-      // Show a message and automatically redirect after 5 seconds.
-      drupal_set_message(t('This page has been moved to <a href="@redirect">@redirect</a> and will redirect in 5 seconds. You may want to update your bookmarks.', array('@redirect' => $redirect)), 'error');
-      drupal_set_html_head("<meta http-equiv=\"refresh\" content=\"5;url=$redirect\" />");
-    }
-    else {
-      // Perform the redirect directly.
-      unset($_REQUEST['destination']);
-      drupal_goto($r->redirect, $r->query, $r->fragment, $r->type);
-    }
-  }
+function path_redirect_perm() {
+  return array('administer redirects');
 }
 
 /**
@@ -126,26 +80,81 @@ function path_redirect_menu() {
 }
 
 /**
- * Implementation of hook_perm().
+ * Implementation of hook_init().
  */
-function path_redirect_perm() {
-  return array('administer redirects');
+function path_redirect_init() {
+  path_redirect_check();
+}
+
+/**
+ * Implementation of hook_cron().
+ */
+function path_redirect_cron() {
+  // Purge inactive redirects from the database.
+  if ($purge = variable_get('path_redirect_purge_inactive', 0)) {
+    db_query("DELETE FROM {path_redirect} WHERE last_used < %d", array(':timestamp' => $_SERVER['REQUEST_TIME'] - $purge));
+    if ($count = db_affected_rows()) {
+      watchdog('path_redirect', 'Removed @count from the database.', array('@count' => format_plural($count, '1 inactive redirect', '@count inactive redirects')));
+    }
+  }
+}
+
+/**
+ * If a redirect is found for the current path, perform the redirect.
+ */
+function path_redirect_check() {
+  // see if this page has a redirect path
+  // @todo Rewrite the path-fetching code here.
+  $path = substr(request_uri(), strlen(base_path()));
+  if (preg_match('/^\?q=/', $path)) {
+    $path = preg_replace(array('/^\?q=/', '/&/'), array('', '?'), $path, 1);
+  }
+
+  // Remove trailing slash from path.
+  $path = preg_replace('/\/\?|\/$/', '', $path);
+
+  // @todo Rewrite the redirect lookup code here.
+  $r = db_fetch_object(db_query("SELECT * FROM {path_redirect} WHERE path = '%s' OR path = '%s'", $path, utf8_encode($path)));
+  if (!$r && strpos($path, '?') !== FALSE) {
+    // If there is no match against path and query string, check just the path
+    $path = preg_replace('/\?.*/', '', $path);
+    $r = db_fetch_object(db_query("SELECT * FROM {path_redirect} WHERE path = '%s' OR path = '%s'", $path, utf8_encode($path)));
+  }
+
+  if ($r) {
+    // Update the last used timestamp so that unused redirects can be purged.
+    db_query("UPDATE {path_redirect} SET last_used = %d WHERE path = '%s'", array(':timestamp' => $_SERVER['REQUEST_TIME'], ':path' => $r->path));
+
+    $redirect = url($r->redirect, array('query' => $r->query, 'fragment' => $r->fragment, 'absolute' => TRUE));
+
+    if (url($r->redirect) == url($path)) {
+      // Prevent infinite loop redirection.
+      watchdog('path_redirect', 'Redirect to <code>%redirect</code> is causing an infinite loop; redirect cancelled.', array('%redirect' => $r->redirect), WATCHDOG_WARNING, l(t('edit'), 'admin/build/path-redirect/edit/'. $r->rid));
+    }
+    elseif (variable_get('path_redirect_allow_bypass', 0) && isset($_GET['redirect']) && $_GET['redirect'] === 'no') {
+      // If the user has requested not to be redirected, show a message.
+      drupal_set_message(t('This page has been moved to <a href="@redirect">@redirect</a>.', array('@redirect' => $redirect)));
+    }
+    elseif (variable_get('path_redirect_redirect_warning', 0)) {
+      // Show a message and automatically redirect after 10 seconds.
+      drupal_set_message(t('This page has been moved to <a href="@redirect">@redirect</a>. You will be automatically redirected in 10 seconds.', array('@redirect' => $redirect)), 'error');
+      drupal_set_html_head("<meta http-equiv=\"refresh\" content=\"10;url=$redirect\" />");
+    }
+    else {
+      // Perform the redirect.
+      unset($_REQUEST['destination']);
+      drupal_goto($r->redirect, $r->query, $r->fragment, $r->type);
+    }
+  }
 }
 
 function path_redirect_save($edit) {
   $edit += array(
     'type' => variable_get('path_redirect_default_status', 301),
-    'query' => '',
-    'fragment' => '',
+    'last_used' => $_SERVER['REQUEST_TIME'],
   );
 
-  if (!empty($edit['rid'])) {
-    $return = db_query("UPDATE {path_redirect} SET path = '%s', redirect = '%s', query = '%s', fragment = '%s', type = %d WHERE rid = %d", $edit['path'], $edit['redirect'], $edit['query'], $edit['fragment'], $edit['type'], $edit['rid']);
-  }
-  else {
-    $return = db_query("INSERT INTO {path_redirect} (path, redirect, query, fragment, type) VALUES ('%s', '%s', '%s', '%s', '%s')", $edit['path'], $edit['redirect'], $edit['query'], $edit['fragment'], $edit['type']);
-  }
-  return $return;
+  return drupal_write_record('path_redirect', $edit, (!empty($edit['rid']) ? 'rid' : array()));
 }
 
 /**
@@ -196,40 +205,3 @@ function path_redirect_delete($from = NULL, $to = NULL, $rid = NULL) {
   return $result;
 }
 
-/**
- * This is a copy of drupal_goto() redesigned for use during the bootstrap
- */
-function path_redirect_goto($path = '', $query = NULL, $fragment = NULL, $http_response_code = 302) {
-
-  $url = $path;
-
-  // Make the given path or URL absolute
-  if (!preg_match('/^[a-z]+:\/\//', $url)) {
-    global $base_url;
-    $url = $base_url .'/'. $url;
-  }
-
-  $url .= (empty($query)    ? '' : '?'. $query);
-  $url .= (empty($fragment) ? '' : '#'. $fragment);
-
-  // Remove newlines from the URL to avoid header injection attacks.
-  $url = str_replace(array("\n", "\r"), '', $url);
-
-  // Allow modules to react to the end of the page request before redirecting.
-  // We do not want this while running update.php.
-  if (!defined('MAINTENANCE_MODE') || MAINTENANCE_MODE != 'update') {
-    module_invoke_all('exit', $url);
-  }
-
-  // Even though session_write_close() is registered as a shutdown function, we
-  // need all session data written to the database before redirecting.
-  session_write_close();
-
-  header('Location: '. $url, TRUE, $http_response_code);
-
-  // The "Location" header sends a redirect status code to the HTTP daemon. In
-  // some cases this can be wrong, so we make sure none of the code below the
-  // drupal_goto() call gets executed upon redirection.
-  exit();
-
-}

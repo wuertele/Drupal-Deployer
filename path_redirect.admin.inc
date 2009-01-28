@@ -14,14 +14,14 @@ function path_redirect_admin() {
     array('data' => t('From'), 'field' => 'path', 'sort' => 'asc'),
     array('data' => t('To'), 'field' => 'redirect'),
     array('data' => t('Type'), 'field' => 'type'),
-    array('data' => t('Operations'), 'colspan' => '2')
+    array('data' => t('Operations'), 'colspan' => '2'),
   );
-
-  $result = pager_query('SELECT rid, path, redirect, query, fragment, type FROM {path_redirect}'. tablesort_sql($header), 50);
-
   $rows = array();
+  $limit = 50;
+
+  $result = pager_query('SELECT rid, path, redirect, query, fragment, type FROM {path_redirect}'. tablesort_sql($header), $limit);
   while ($r = db_fetch_object($result)) {
-    $redirect = url($r->redirect, array('query' => $r->query, 'fragment' => $r->fragment, 'absolute' => TRUE));
+    $redirect = url($r->redirect, array('query' => $r->query, 'fragment' => $r->fragment, 'absolute' => TRUE, 'alias' => TRUE));
     $rows[] = array(
       // @todo: Revise the following messy, confusing line.
       l($r->path, preg_replace('/\?.*/', '', $r->path), array('query' => strstr($r->path, '?') ? preg_replace('/.*\?/', '', $r->path) : NULL)),
@@ -37,8 +37,7 @@ function path_redirect_admin() {
   }
 
   $output = theme('table', $header, $rows, array('class' => 'path-redirects'));
-  $output .= '<p>'. l(t('Add redirect'), 'admin/build/path-redirect/add') .'</p>';
-  $output .= theme('pager');
+  $output .= theme('pager', NULL, $limit);
 
   return $output;
 }
@@ -65,22 +64,22 @@ function path_redirect_edit($form_state, $rid = FALSE) {
 function path_redirect_edit_form(&$form_state, $edit = array()) {
   // Merge default values.
   $edit += array(
+    'rid' => NULL,
     'path' => '',
     'redirect' => '',
-    'query' => '',
-    'fragment' => '',
+    'query' => NULL,
+    'fragment' => NULL,
     'type' => variable_get('path_redirect_default_status', 301),
-    'rid' => NULL,
   );
 
   $form['path'] = array(
     '#type' => 'textfield',
     '#title' => t('From'),
-    '#description' => t('Enter a Drupal path or path alias to redirect. Fragment anchors <em>#foo</em> are <strong>not</strong> allowed.'),
+    '#description' => t("Enter an interal Drupal path or path alias to redirect (e.g. %example1 or %example2). Fragment anchors (e.g. %anchor) are <strong>not</strong> allowed.", array('%example1' => 'node/123', '%example2' => 'taxonomy/term/123', '%anchor' => '#anchor')),
     '#size' => 42,
     '#maxlength' => 255,
     '#default_value' => $edit['path'],
-    '#field_prefix' => url(NULL, array('absolute' => TRUE)) . (variable_get('clean_url', 0) ? '' : '?q='),
+    '#field_prefix' => url('', array('absolute' => TRUE)) . (variable_get('clean_url', 0) ? '' : '?q='),
   );
 
   $form['redirect'] = array(
@@ -88,7 +87,7 @@ function path_redirect_edit_form(&$form_state, $edit = array()) {
     '#prefix' => '<div class="container-inline">',
     '#suffix' => '</div>',
     '#title' => t('To'),
-    '#description' => '<div style="display:block">'. t('Enter a Drupal path, path alias, or external URL to redirect to. Use %front to redirect to the front page. Enter (optional) queries after "?" and (optional) anchor after "#". Most redirects will not contain queries or fragment anchors.', array('%front' => '<front>')) .'</div>',
+    '#description' => '<div style="display:block">'. t('Enter an interal Drupal path, path alias, or complete external URL (like http://example.com/) to redirect to. Use %front to redirect to the front page. Enter (optional) queries after "?" and (optional) anchor after "#". Most redirects will not contain queries or fragment anchors.', array('%front' => '<front>')) .'</div>',
   );
 
   $form['redirect']['redirect'] = array(
@@ -124,36 +123,31 @@ function path_redirect_edit_form(&$form_state, $edit = array()) {
     '#value' => "<p> </p>", // little bit of extra space
   );
 
-  $form['type'] = array(
+  $form['advanced'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Redirect Type'),
+    '#title' => t('Advanced options'),
     '#collapsible' => TRUE,
-    '#collapsed' => ($edit['type'] == variable_get('path_redirect_default_status', 301)),
+    '#collapsed' => TRUE,
   );
 
-  foreach (path_redirect_status_codes() as $code => $info) {
-    $form['type'][]['type'] = array(
-      '#type' => 'radio',
-      '#title' => $info['title'],
-      '#description' => $info['description'],
-      '#return_value' => $code,
-      '#default_value' => $edit['type'],
-    );
+  $status_options = array();
+  $status_descriptions = array();
+  foreach (path_redirect_status_codes() as $code => $details) {
+    $status_options[$code] = $details['title'];
+    $status_descriptions[] = $details['title'] .': '. $details['description'];
   }
-  $form['type']['link'] = array(
-    '#type' => 'markup',
-    '#value' => '<p>'. t('You can find more information about HTTP redirect status codes at <a href="@link">@link</a>.', array('@link' => 'http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3')) .'</p>',
+  $form['advanced']['type'] = array(
+    '#type' => 'select',
+    '#title' => t('Redirect status'),
+    '#description' => theme('item_list', $status_descriptions) . t('You can find more information about HTTP redirect status codes at <a href="@link">@link</a>.', array('@link' => 'http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3')),
+    '#default_value' => $edit['type'],
+    '#options' => $status_options,
   );
 
-  $form['rid'] = array(
-    '#type' => 'hidden',
-    '#value' => $edit['rid'],
-  );
-
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => $edit['rid'] ? t('Update redirect') : t('Create new redirect'),
-  );
+  $form['rid'] = array('#type' => 'value', '#value' => $edit['rid']);
+  $form['submit'] = array('#type' => 'submit', '#value' => t('Save'));
+  $form['cancel'] = array('#value' => l(t('Cancel'), 'admin/build/path-redirect'));
+  $form['#redirect'] = 'admin/build/path-redirect';
 
   return $form;
 }
@@ -171,7 +165,7 @@ function path_redirect_edit_validate($form, &$form_state) {
       $path_error .= ' '. t('The <strong>from</strong> path you entered is already redirected. You can <a href="@edit-page">edit this redirect</a> instead.', array('@edit-page' => url('admin/build/path-redirect/edit/'. $result['rid'])));
     }
     // Check that the "from" path is valid and contains no # fragment
-    if (strstr($form_state['values']['path'], '#')) {
+    if (strpos($form_state['values']['path'], '#') !== FALSE) {
       $path_error .= ' '. t('You cannot redirect from a fragment anchor.');
     }
     // Make sure "from" has the form of a local Drupal path
@@ -204,7 +198,6 @@ function path_redirect_edit_validate($form, &$form_state) {
 function path_redirect_edit_submit($form, &$form_state) {
   path_redirect_save($form_state['values']);
   drupal_set_message(t('Redirect has been saved.'));
-  drupal_goto('admin/build/path-redirect');
 }
 
 function path_redirect_delete_confirm($form_state, $rid) {
@@ -238,16 +231,26 @@ function path_redirect_settings() {
     '#default_value' => variable_get('path_redirect_allow_bypass', 0),
   );
 
+  $form['path_redirect_purge_inactive'] = array(
+    '#type' => 'select',
+    '#title' => t('Discard inactive redirects when they have not been used after'),
+    '#default_value' => variable_get('path_redirect_clean_unused', 0),
+    '#options' => array(0 => t('Never (do not discard)')) + drupal_map_assoc(array(/*86400, 172800, 259200,*/ 604800, 1209600, 2419200, 4838400, 7257600, 9676800, 31536000), 'format_interval'),
+  );
+
+  $status_options = array();
+  $status_descriptions = array();
+  foreach (path_redirect_status_codes() as $code => $details) {
+    $status_options[$code] = $details['title'];
+    $status_descriptions[] = $details['title'] .': '. $details['description'];
+  }
   $form['path_redirect_default_status'] = array(
     '#type' => 'select',
     '#title' => t('Default redirect status'),
-    '#description' => t('You can find more information about HTTP redirect status codes at <a href="@link">@link</a>.', array('@link' => 'http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3')),
+    '#description' => theme('item_list', $status_descriptions) . t('You can find more information about HTTP redirect status codes at <a href="@link">@link</a>.', array('@link' => 'http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3')),
     '#default_value' => variable_get('path_redirect_default_status', 301),
-    '#options' => array(),
+    '#options' => $status_options,
   );
-  foreach (path_redirect_status_codes() as $code => $details) {
-    $form['path_redirect_default_status']['#options'][$code] = $details['title'];
-  }
 
   return system_settings_form($form);
 }
@@ -287,3 +290,4 @@ function path_redirect_status_codes() {
     ),
   );
 }
+

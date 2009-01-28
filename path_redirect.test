@@ -1,0 +1,70 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Tests for the path_redirect module.
+ */
+
+class PathRedirectUnitTest extends DrupalWebTestCase {
+  function getInfo() {
+    return array(
+      'name' => t('Path redirect functionality'),
+      'description' => t('Test basic redirection.'),
+      'group' => t('Path redirect'),
+    );
+  }
+
+  function setUp() {
+    parent::setUp('path_redirect');
+  }
+
+  function testInactivePurging() {
+    // Set the purge variable and save two inactive redirects.
+    variable_set('path_redirect_purge_inactive', 50);
+    path_redirect_save(array('path' => 'test1', 'redirect' => 'node', 'last_used' => $_SERVER['REQUEST_TIME'] - 100));
+    path_redirect_save(array('path' => 'test2', 'redirect' => 'node', 'last_used' => $_SERVER['REQUEST_TIME'] - 100));
+
+    // Run one of the redirects and make it an active redirect.
+    $this->drupalGet('test1');
+
+    // Run cron and test that the inactive redirect was removed.
+    //drupal_cron_run();
+    path_redirect_cron();
+    $this->assertTrue(path_redirect_load(NULL, 'test1'), t('Active redirect not removed.'));
+    $this->assertFalse(path_redirect_load(NULL, 'test2'), t('Inactive redirect removed.'));
+  }
+}
+
+/*class PathRedirectPathautoUnitTest extends DrupalWebTestCase {
+  function getInfo() {
+    return array(
+      'name' => t('Pathauto integration'),
+      'description' => t('Test integration with the pathauto module.'),
+      'group' => t('Path redirect'),
+      'dependencies' => array('pathauto', 'token'),
+    );
+  }
+
+  function setUp() {
+    parent::setUp('path', 'token', 'pathauto', 'path_redirect');
+  }
+
+  function testPathautoIntegration() {
+  }
+}*/
+
+/*class PathRedirectFunctionalTest extends DrupalWebTestCase {
+  function getInfo() {
+    return array(
+      'name' => t('Path redirect administration'),
+      'description' => t('Test redirect administration interface.'),
+      'group' => t('Path redirect'),
+    );
+  }
+
+  function setUp() {
+    parent::setUp('path', 'path_redirect');
+  }
+}*/
+
