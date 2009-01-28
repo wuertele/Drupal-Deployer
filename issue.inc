@@ -1415,7 +1415,7 @@ function project_issue_change_summary($field, $value) {
   }
 }
 
-function theme_project_issue_create_forbidden($uri) {
+function theme_project_issue_create_forbidden($uri = '') {
   global $user;
   if ($user->uid) {
     return '';
