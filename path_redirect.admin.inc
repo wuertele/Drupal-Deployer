@@ -79,7 +79,7 @@ function path_redirect_edit_form(&$form_state, $edit = array()) {
     '#size' => 42,
     '#maxlength' => 255,
     '#default_value' => $edit['path'],
-    //'#required' => TRUE,
+    '#required' => TRUE,
     '#field_prefix' => url('', array('absolute' => TRUE)) . (variable_get('clean_url', 0) ? '' : '?q='),
     '#autocomplete_path' => db_table_exists('watchdog') ? 'admin/build/path-redirect/autocomplete' : '',
   );
@@ -156,29 +156,17 @@ function path_redirect_edit_form(&$form_state, $edit = array()) {
 }
 
 function path_redirect_edit_validate($form, &$form_state) {
-  if (trim($form_state['values']['path']) == '') {
-    form_set_error('path', t('You must enter a <strong>from</strong> path.'));
-  }
-  else {
-    $path_error = '';
-
-    // The "from" path should not conflict with another redirect
-    $result = path_redirect_load(array('path' => $form_state['values']['path']));
-    if ($result && (!$form_state['values']['rid'] || ($form_state['values']['rid'] !== $result->rid))) {
-      $path_error .= ' '. t('The <strong>from</strong> path you entered is already redirected. You can <a href="@edit-page">edit this redirect</a> instead.', array('@edit-page' => url('admin/build/path-redirect/edit/'. $result->rid)));
-    }
+  if (strpos($form_state['values']['path'], '#') !== FALSE) {
     // Check that the "from" path is valid and contains no # fragment
-    if (strpos($form_state['values']['path'], '#') !== FALSE) {
-      $path_error .= ' '. t('You cannot redirect from a fragment anchor.');
-    }
-    // Make sure "from" has the form of a local Drupal path
-    /*if (!valid_url($form_state['values']['path'])) {
-      $path_error .= ' '. t('The redirect <strong>from</strong> path does not appear valid. This must be a local Drupal path.');
-    }*/
-
-    if (!empty($path_error)) {
-      form_set_error('path', $path_error);
-    }
+    form_set_error('path', t('You cannot redirect from a fragment anchor.'));
+  }
+  //elseif (!valid_url($form_state['values']['path'])) {
+  //  //Make sure "from" has the form of a local Drupal path
+  //  form_set_error('path', t('The redirect <strong>from</strong> path does not appear valid. This must be a local Drupal path.'));
+  //}
+  elseif (($result = path_redirect_load(array('path' => $form_state['values']['path']))) && (!$form_state['values']['rid'] || ($form_state['values']['rid'] !== $result->rid))) {
+    // The "from" path should not conflict with another redirect
+    form_set_error('path', t('The <strong>from</strong> path you entered is already redirected. You can <a href="@edit-page">edit this redirect</a> instead.', array('@edit-page' => url('admin/build/path-redirect/edit/'. $result->rid))));
   }
 
   if (!valid_url($form_state['values']['redirect']) && !valid_url($form_state['values']['redirect'], TRUE) && $form_state['values']['redirect'] != '<front>') {
@@ -304,16 +292,16 @@ function path_redirect_autocomplete($filter = '') {
 
   if (is_string($filter)) {
     $args[] = $filter;
-    $filter = "AND message LIKE '%%%s%%'";
+    $filter = " AND message LIKE '%%%s%%'";
   }
 
   // Get a list of 404s, sorted by the number of times each 404 was processed.
-  $sql = "SELECT message, COUNT(message) AS count FROM {watchdog} WHERE type = 'page not found' $filter GROUP BY message ORDER BY count DESC";
+  $sql = "SELECT message, COUNT(message) AS count FROM {watchdog} WHERE type = 'page not found'". $filter ." GROUP BY message ORDER BY count DESC";
   $query = db_query($sql, $args);
 
   while ($path = db_result($query)) {
     // If the 404 is now a valid path or already has a redirect, discard it.
-    if (!menu_get_item($path) && !path_redirect_load(NULL, $path)) {
+    if (!menu_get_item($path) && !path_redirect_load(array('path' => $path))) {
       $results[$path] = $path;
     }
   }

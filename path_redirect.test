@@ -67,7 +67,7 @@ class PathRedirectUnitTest extends DrupalWebTestCase {
   }
 }
 
-/*class PathRedirectPathautoUnitTest extends DrupalWebTestCase {
+class PathRedirectPathautoUnitTest extends DrupalWebTestCase {
   function getInfo() {
     return array(
       'name' => t('Pathauto integration'),
@@ -80,12 +80,9 @@ class PathRedirectUnitTest extends DrupalWebTestCase {
   function setUp() {
     parent::setUp('path', 'token', 'pathauto', 'path_redirect');
   }
+}
 
-  function testPathautoIntegration() {
-  }
-}*/
-
-/*class PathRedirectFunctionalTest extends DrupalWebTestCase {
+class PathRedirectFunctionalTest extends DrupalWebTestCase {
   function getInfo() {
     return array(
       'name' => t('Path redirect administration'),
@@ -96,5 +93,33 @@ class PathRedirectUnitTest extends DrupalWebTestCase {
 
   function setUp() {
     parent::setUp('path', 'path_redirect');
+
+    $this->admin_user = $this->drupalCreateUser(array('administer redirects'));
+    $this->drupalLogin($this->admin_user);
   }
-}*/
+
+  function testAutocomplete() {
+    // Create 404 errors.
+    $this->drupalGet('test1');
+    $this->drupalGet('test2');
+    $this->drupalGet('test2');
+
+    // Create a 404 and then create a valid redirect for it.
+    $this->drupalGet('test3');
+    path_redirect_save(array('path' => 'test3', 'redirect' => 'node'));
+
+    // Create a 404 and then create a valid path for it.
+    $this->drupalGet('node/1');
+    $this->drupalCreateNode();
+
+    // Test that only the valid 404s are found in the autocomplete.
+    $this->drupalGet('admin/build/path-redirect/autocomplete');
+    $this->assertText('test1');
+    $this->assertText('test2');
+    $this->assertNoText('node/1');
+    $this->assertNoText('test3');
+
+    // Test that the 404 with the greater hits is listed first.
+    $this->assertTrue(strpos($this->drupalGetContent(), 'test1') > strpos($this->drupalGetContent(), 'test2'), t('Paths ordered correctly.'));
+  }
+}
