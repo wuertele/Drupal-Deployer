@@ -79,7 +79,9 @@ function path_redirect_edit_form(&$form_state, $edit = array()) {
     '#size' => 42,
     '#maxlength' => 255,
     '#default_value' => $edit['path'],
+    //'#required' => TRUE,
     '#field_prefix' => url('', array('absolute' => TRUE)) . (variable_get('clean_url', 0) ? '' : '?q='),
+    '#autocomplete_path' => db_table_exists('watchdog') ? 'admin/build/path-redirect/autocomplete' : '',
   );
 
   $form['redirect'] = array(
@@ -95,6 +97,7 @@ function path_redirect_edit_form(&$form_state, $edit = array()) {
     '#size' => 30,
     '#maxlength' => 255,
     '#default_value' => $edit['redirect'],
+    //'#required' => TRUE,
   );
 
   $form['redirect'][] = array(
@@ -289,4 +292,33 @@ function path_redirect_status_codes() {
       'description' => t('The resource has temporarily moved elsewhere, the response indicates where it is at present. Client should still use this URL.'),
     ),
   );
+}
+
+/**
+ * Autocompletion callback for the add/edit redirect form. Returns a list of
+ * current 404s on the site.
+ */
+function path_redirect_autocomplete($filter = '') {
+  $results = array();
+  $args = array();
+
+  if (is_string($filter)) {
+    $args[] = $filter;
+    $filter = "AND message LIKE '%%%s%%'";
+  }
+
+  // Get a list of 404s, sorted by the number of times each 404 was processed.
+  $sql = "SELECT message, COUNT(message) AS count FROM {watchdog} WHERE type = 'page not found' $filter GROUP BY message ORDER BY count DESC";
+  $query = db_query($sql, $args);
+
+  while ($path = db_result($query)) {
+    // If the 404 is now a valid path or already has a redirect, discard it.
+    if (!menu_get_item($path) && !path_redirect_load(NULL, $path)) {
+      $results[$path] = $path;
+    }
+  }
+
+  // Limit the output to 10 results and return the JSON.
+  $results = array_slice($results, 0, 10);
+  drupal_json($results);
 }

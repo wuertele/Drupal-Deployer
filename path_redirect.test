@@ -19,6 +19,27 @@ class PathRedirectUnitTest extends DrupalWebTestCase {
     parent::setUp('path_redirect');
   }
 
+  function testRedirects() {
+    path_redirect_save(array('path' => 'test', 'redirect' => 'node'));
+    path_redirect_save(array('path' => 'test?ferzle', 'redirect' => 'node', 'query' => 'ferzle'));
+    path_redirect_save(array('path' => 'FrançAIS', 'redirect' => 'node'));
+
+    // Test a basic redirect.
+    $this->assertRedirect('test', 'node');
+
+    // Test a redirect with a trailing slash.
+    $this->assertRedirect('test/', 'node');
+
+    // Test a unicode URL.
+    $this->assertRedirect('FrançAIS', 'node');
+  }
+
+  function testNoCleanURLs() {
+    variable_set('clean_url', 0);
+    $this->testRedirects();
+    variable_set('clean_url', 1);
+  }
+
   function testInactivePurging() {
     // Set the purge variable and save two inactive redirects.
     variable_set('path_redirect_purge_inactive', 50);
@@ -31,8 +52,18 @@ class PathRedirectUnitTest extends DrupalWebTestCase {
     // Run cron and test that the inactive redirect was removed.
     //drupal_cron_run();
     path_redirect_cron();
+    $message = db_fetch_object(db_query_range("SELECT * FROM {watchdog} WHERE type = 'path_redirect' ORDER BY timestamp DESC", 0, 1));
+    $this->assertEqual(t($message->message, unserialize($message->variables)), 'Removed 1 inactive redirect from the database.', t('Watchdog message found.'));
     $this->assertTrue(path_redirect_load(NULL, 'test1'), t('Active redirect not removed.'));
     $this->assertFalse(path_redirect_load(NULL, 'test2'), t('Inactive redirect removed.'));
+  }
+
+  private function assertRedirect($request, $redirect, $code = FALSE) {
+    $this->drupalGet($request);
+    if ($code) {
+      $this->assertResponse($code);
+    }
+    $this->assertEqual($this->getUrl(), url($redirect, array('absolute' => TRUE)), t('Redirected from %request to %redirect.', array('%request' => $request, '%redirect' => $redirect)));
   }
 }
 
@@ -67,4 +98,3 @@ class PathRedirectUnitTest extends DrupalWebTestCase {
     parent::setUp('path', 'path_redirect');
   }
 }*/
-
