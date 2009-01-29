@@ -169,9 +169,9 @@ function path_redirect_edit_validate($form, &$form_state) {
       $path_error .= ' '. t('You cannot redirect from a fragment anchor.');
     }
     // Make sure "from" has the form of a local Drupal path
-    if (!valid_url($form_state['values']['path'])) {
+    /*if (!valid_url($form_state['values']['path'])) {
       $path_error .= ' '. t('The redirect <strong>from</strong> path does not appear valid. This must be a local Drupal path.');
-    }
+    }*/
 
     if (!empty($path_error)) {
       form_set_error('path', $path_error);
@@ -233,9 +233,9 @@ function path_redirect_settings() {
 
   $form['path_redirect_purge_inactive'] = array(
     '#type' => 'select',
-    '#title' => t('Discard inactive redirects when they have not been used after'),
+    '#title' => t('Discard redirects that have not been accessed for'),
     '#default_value' => variable_get('path_redirect_clean_unused', 0),
-    '#options' => array(0 => t('Never (do not discard)')) + drupal_map_assoc(array(/*86400, 172800, 259200,*/ 604800, 1209600, 2419200, 4838400, 7257600, 9676800, 31536000), 'format_interval'),
+    '#options' => array(0 => t('Never (do not discard)')) + drupal_map_assoc(array(604800, 1209600, 2419200, 4838400, 7257600, 9676800, 31536000), 'format_interval'),
   );
 
   $status_options = array();
@@ -290,4 +290,3 @@ function path_redirect_status_codes() {
     ),
   );
 }
-
