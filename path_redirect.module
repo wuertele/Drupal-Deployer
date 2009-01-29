@@ -122,15 +122,16 @@ function path_redirect_check() {
   $path = preg_replace('/\/\?|\/$/', '', $path);
 
   // @todo Rewrite the redirect lookup code here.
-  $r = db_fetch_object(db_query("SELECT * FROM {path_redirect} WHERE path = '%s' OR path = '%s'", $path, utf8_encode($path)));
+  $r = path_redirect_load(array('path' => $path));
   if (!$r && strpos($path, '?') !== FALSE) {
     // If there is no match against path and query string, check just the path
     $path = preg_replace('/\?.*/', '', $path);
-    $r = db_fetch_object(db_query("SELECT * FROM {path_redirect} WHERE path = '%s' OR path = '%s'", $path, utf8_encode($path)));
+    $r = path_redirect_load(array('path' => $path));
   }
 
   if ($r) {
     // Update the last used timestamp so that unused redirects can be purged.
+    // @todo Use $r->last_used = $_SERVER['REQUEST_TIME']; path_redirect_save((array) $r); ?
     db_query("UPDATE {path_redirect} SET last_used = %d WHERE path = '%s'", array(':timestamp' => $_SERVER['REQUEST_TIME'], ':path' => $r->path));
 
     $redirect = url($r->redirect, array('query' => $r->query, 'fragment' => $r->fragment, 'absolute' => TRUE));
@@ -156,6 +157,9 @@ function path_redirect_check() {
   }
 }
 
+/**
+ * Save an URL redirect to the database.
+ */
 function path_redirect_save($edit) {
   $edit += array(
     'type' => variable_get('path_redirect_default_status', 301),
@@ -166,49 +170,35 @@ function path_redirect_save($edit) {
 }
 
 /**
- * Retrieve the specified URL redirect
+ * Retrieve a specific URL redirect from the database.
  */
-function path_redirect_load($rid = NULL, $from = NULL) {
-  if (!empty($rid)) {
-    $result = db_fetch_array(db_query("SELECT rid, path, redirect, query, fragment, type FROM {path_redirect} WHERE rid = %d", $rid));
+function path_redirect_load($array = array(), $join = 'AND') {
+  if (is_numeric($array)) {
+    $array = array('rid' => $array);
   }
-  elseif (!empty($from)) {
-    $result = db_fetch_array(db_query("SELECT rid, path, redirect, query, fragment, type FROM {path_redirect} WHERE path = '%s'", $from));
+
+  if (!empty($array) && is_array($array)) {
+    $query = array();
+    foreach ($array as $key => $value) {
+      $query[] = $key .' = '. (is_numeric($value) ? '%d' : "'%s'");
+    }
+    return db_fetch_object(db_query_range("SELECT * FROM {path_redirect} WHERE ". implode(" $join ", $query), $array, 0, 1));
   }
-  return $result;
 }
 
 /**
- * Delete the specified path redirect. This will delete as specifically as
- * possible, in order: by $rid, by ($from, $to), by $from, or by $to.
- * Multiple redirects may be deleted if the $to parameter matches more than
- * one entry.
- *
- * This function is part of an API available for external code to use.
- *
- * @param $from
- *   Source path of redirect to delete.
- * @param $to
- *   Destination path or URL of redirect to delete.
- * @param $rid
- *   Unique ID of redirect to delete.
- * @return
- *   The result of the deletion query.
+ * Delete a specific URL redirect from the database.
  */
-function path_redirect_delete($from = NULL, $to = NULL, $rid = NULL) {
-  if (!empty($rid)) {
-    $result = db_query("DELETE FROM {path_redirect} WHERE rid = %d", $rid);
+function path_redirect_delete($array = array(), $join = 'AND') {
+  if (is_numeric($array)) {
+    $array = array('rid' => $array);
   }
-  elseif (!empty($from)) {
-    if (!empty($to)) {
-      $result = db_query("DELETE FROM {path_redirect} WHERE path = '%s' AND redirect = '%s'", $from, $to);
+
+  if (!empty($array) && is_array($array)) {
+    $query = array();
+    foreach ($array as $key => $value) {
+      $query[] = $key .' = '. (is_numeric($value) ? '%d' : "'%s'");
     }
-    else {
-      $result = db_query("DELETE FROM {path_redirect} WHERE path = '%s'", $from);
-    }
+    return db_query("DELETE FROM {path_redirect} WHERE ". implode(" $join ", $query), $array);
   }
-  elseif (!empty($to)) {
-    $result = db_query("DELETE FROM {path_redirect} WHERE redirect = '%s'", $to);
-  }
-  return $result;
 }

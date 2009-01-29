@@ -50,7 +50,7 @@ function path_redirect_admin() {
  */
 function path_redirect_edit($form_state, $rid = FALSE) {
   if ($rid) {
-    $redirect = path_redirect_load($rid);
+    $redirect = (array) path_redirect_load($rid);
     drupal_set_title(check_plain($redirect['path']));
     $output = path_redirect_edit_form($form_state, $redirect);
   }
@@ -163,9 +163,9 @@ function path_redirect_edit_validate($form, &$form_state) {
     $path_error = '';
 
     // The "from" path should not conflict with another redirect
-    $result = path_redirect_load(NULL, $form_state['values']['path']);
-    if ($result && (!$form_state['values']['rid'] || ($form_state['values']['rid'] !== $result['rid']))) {
-      $path_error .= ' '. t('The <strong>from</strong> path you entered is already redirected. You can <a href="@edit-page">edit this redirect</a> instead.', array('@edit-page' => url('admin/build/path-redirect/edit/'. $result['rid'])));
+    $result = path_redirect_load(array('path' => $form_state['values']['path']));
+    if ($result && (!$form_state['values']['rid'] || ($form_state['values']['rid'] !== $result->rid))) {
+      $path_error .= ' '. t('The <strong>from</strong> path you entered is already redirected. You can <a href="@edit-page">edit this redirect</a> instead.', array('@edit-page' => url('admin/build/path-redirect/edit/'. $result->rid)));
     }
     // Check that the "from" path is valid and contains no # fragment
     if (strpos($form_state['values']['path'], '#') !== FALSE) {
@@ -210,13 +210,13 @@ function path_redirect_delete_confirm($form_state, $rid) {
   );
   $redirect = path_redirect_load($rid);
   return confirm_form($form,
-    t('Are you sure you want to delete the redirect from %path to %redirect?', array('%path' => $redirect['path'], '%redirect' => $redirect['redirect'])),
+    t('Are you sure you want to delete the redirect from %path to %redirect?', array('%path' => $redirect->path, '%redirect' => $redirect->redirect)),
     isset($_GET['destination']) ? $_GET['destination'] : 'admin/build/path-redirect');
 }
 
 function path_redirect_delete_confirm_submit($form, &$form_state) {
   if ($form_state['values']['confirm']) {
-    path_redirect_delete(NULL, NULL, $form_state['values']['rid']);
+    path_redirect_delete($form_state['values']['rid']);
     drupal_set_message(t('The redirect has been deleted.'));
   }
 }
