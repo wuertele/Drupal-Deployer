@@ -286,27 +286,19 @@ function path_redirect_status_codes() {
  * Autocompletion callback for the add/edit redirect form. Returns a list of
  * current 404s on the site.
  */
-function path_redirect_autocomplete($filter = '') {
-  $results = array();
-  $args = array();
-
-  if (is_string($filter)) {
-    $args[] = $filter;
-    $filter = " AND message LIKE '%%%s%%'";
-  }
+function path_redirect_autocomplete($string = '') {
+  $matches = array();
 
   // Get a list of 404s, sorted by the number of times each 404 was processed.
-  $sql = "SELECT message, COUNT(message) AS count FROM {watchdog} WHERE type = 'page not found'". $filter ." GROUP BY message ORDER BY count DESC";
-  $query = db_query($sql, $args);
-
+  $query = db_query("SELECT message, COUNT(message) AS count FROM {watchdog} WHERE type = 'page not found' AND LOWER(message) LIKE '%%%s%%' GROUP BY message ORDER BY count DESC", drupal_strtolower($string));
   while ($path = db_result($query)) {
     // If the 404 is now a valid path or already has a redirect, discard it.
     if (!menu_get_item($path) && !path_redirect_load(array('path' => $path))) {
-      $results[$path] = $path;
+      $matches[$path] = check_plain($path);
     }
   }
 
   // Limit the output to 10 results and return the JSON.
-  $results = array_slice($results, 0, 10);
-  drupal_json($results);
+  $matches = array_slice($matches, 0, 10);
+  drupal_json($matches);
 }
