@@ -781,7 +781,7 @@ function project_issue_view($node, $teaser = false, $page = false) {
       'label' => t('Project'),
       'current' => $project->title,
     );
-    if ($release->project_release['version']) {
+    if (!empty($release->project_release['version'])) {
       $current_data['rid'] = array(
         'label' => t('Version'),
         'current' => $release->project_release['version'],
