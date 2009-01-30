@@ -34,6 +34,25 @@ function project_solr_theme() {
 }
 
 //----------------------------------------
+// Solr-related hooks
+//----------------------------------------
+
+/**
+ * Implementation of hook_apachesolr_update_index().
+ *
+ * This adds information about releases for the project to the Solr document
+ * so we can facet on releases (API compatibility terms, etc).
+ */
+function project_solr_apachesolr_update_index(&$document, $node) {
+  if (module_exists('project_release')) {
+    $query = db_query("SELECT DISTINCT(tn.tid) FROM {node} n INNER JOIN {project_release_nodes} prn ON n.nid = prn.nid INNER JOIN {term_node} tn ON n.nid = tn.nid INNER JOIN {term_data} td ON tn.tid = td.tid WHERE prn.pid = %d AND td.vid = %d", $node->nid, _project_release_get_api_vid());
+    while ($term = db_fetch_object($query)) {
+      $document->setMultiValue('imfield_project_release_api_terms', $term->tid);
+    }
+  }
+}
+
+//----------------------------------------
 // Page callbacks
 //----------------------------------------
 
