@@ -20,22 +20,18 @@ class PathRedirectUnitTest extends DrupalWebTestCase {
   }
 
   function testRedirects() {
-    path_redirect_save(array('path' => 'test', 'redirect' => 'node'));
-    path_redirect_save(array('path' => 'test?ferzle', 'redirect' => 'node', 'query' => 'ferzle'));
-    path_redirect_save(array('path' => 'FrançAIS', 'redirect' => 'node'));
-    path_redirect_save(array('path' => 'foo/ferzle_foobar', 'redirect' => 'node'));
-
-    // Test a basic redirect.
+    // Test a basic redirect (with and without a trailing slash requested).
+    path_redirect_save(array('path' => '/test/', 'redirect' => 'node'));
     $this->assertRedirect('test', 'node');
-
-    // Test a redirect with a trailing slash.
     $this->assertRedirect('test/', 'node');
 
     // Test a unicode URL.
-    $this->assertRedirect('FrançAIS', 'node');
+    path_redirect_save(array('path' => 'FrançAIS', 'redirect' => 'http://example.com/'));
+    $this->assertRedirect('FrançAIS', 'http://example.com/');
 
     // Test an URL with special characters.
-    $this->assertRedirect('foo/ferzle_foobar', 'node');
+    path_redirect_save(array('path' => 'foo_/ferzle-foo.bar', 'redirect' => '<front>'));
+    $this->assertRedirect('foo_/ferzle-foo.bar', '<front>');
   }
 
   function testNoCleanURLs() {

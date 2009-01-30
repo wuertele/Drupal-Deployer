@@ -187,10 +187,14 @@ function path_redirect_path_admin_form_validate($form, $form_state) {
  * Save an URL redirect to the database.
  */
 function path_redirect_save($edit) {
+  // Merge default values.
   $edit += array(
     'type' => variable_get('path_redirect_default_status', 301),
     'last_used' => $_SERVER['REQUEST_TIME'],
   );
+
+  // Remove beginning and trailing slashes from path.
+  $edit['path'] = preg_replace('/^\/|\/\?|\/$/', '', $edit['path']);
 
   return drupal_write_record('path_redirect', $edit, (!empty($edit['rid']) ? 'rid' : array()));
 }
