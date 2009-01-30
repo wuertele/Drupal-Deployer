@@ -84,6 +84,6 @@ function flickr_admin_settings_submit($form, &$form_state) {
   }
 
   // ... and save the settings
-  system_settings_form_submit($form, &$form_state);
+  system_settings_form_submit($form, $form_state);
 }
 
