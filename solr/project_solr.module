@@ -49,6 +49,15 @@ function project_solr_apachesolr_update_index(&$document, $node) {
     while ($term = db_fetch_object($query)) {
       $document->setMultiValue('imfield_project_release_api_terms', $term->tid);
     }
+    if (module_exists('project_usage')) {
+      $weeks = variable_get('project_usage_active_weeks', array());
+      $week = reset($weeks);
+      $query = db_query_range("SELECT * FROM {project_usage_week_projects} WHERE nid = %d AND timestamp = %d", $node->nid, $week);
+      while ($usage = db_fetch_object($query)) {
+        $key = 'isfield_project_release_api_usage_'. $usage->tid;
+        $document->$key = $usage->count;
+      }
+    }
   }
 }
 
