@@ -222,6 +222,14 @@ function path_redirect_settings() {
     '#default_value' => variable_get('path_redirect_allow_bypass', 0),
   );
 
+  if (module_exists('path')) {
+    $form['path_redirect_auto_redirect'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Automatically create redirects when URL aliases are changed.'),
+      '#default_value' => variable_get('path_redirect_auto_redirect', 1),
+    );
+  }
+
   $form['path_redirect_purge_inactive'] = array(
     '#type' => 'select',
     '#title' => t('Discard redirects that have not been accessed for'),

@@ -158,6 +158,32 @@ function path_redirect_check() {
 }
 
 /**
+ * Implementation of hook_nodeapi().
+ *
+ * Creates automatic redirects when URL aliases are manually changed.
+ */
+function path_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  if ($op == 'presave' && variable_get('path_redirect_auto_redirect', 1) && empty($node->pathauto_perform_alias) && !empty($node->path)) {
+    $old_alias = drupal_get_path_alias("node/{$node->nid}", ($node->language ? $node->language : ''));
+    if ($node->path != $old_alias && $old_alias != "node/{$node->nid}") {
+      // If the user is manually changing the path alias, add a redirect from the old alias to the node.
+      path_redirect_save(array('path' => $old_alias, 'redirect' => "node/{$node->nid}"));
+    }
+  }
+  elseif ($op == 'delete') {
+    // When a node is deleted, also delete the redirects to it (they will result in a 404).
+    path_redirect_delete(array('redirect' => "node/{$node->nid}"));
+  }
+}
+
+/*function path_redirect_from_path_admin_form_alter(&$form, $form_state) {
+  $form['#validate'][] = 'path_redirect_path_admin_form_validate';
+}
+
+function path_redirect_path_admin_form_validate($form, $form_state) {
+}*/
+
+/**
  * Save an URL redirect to the database.
  */
 function path_redirect_save($edit) {
@@ -190,14 +216,14 @@ function path_redirect_load($array = array(), $join = 'AND') {
  * Delete a specific URL redirect from the database.
  */
 function path_redirect_delete($array = array(), $join = 'AND') {
+  if (is_numeric($array)) {
+    $array = array('rid' => $array);
+  }
+
   // @todo Remove legacy path_redirect_delete support for pathauto.
   if (is_string($array) && is_string($join)) {
     $array = array('path' => $array, 'redirect' => $join);
     $join = 'AND';
-  }
-
-  if (is_numeric($array)) {
-    $array = array('rid' => $array);
   }
 
   if (!empty($array) && is_array($array)) {
