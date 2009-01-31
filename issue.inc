@@ -91,6 +91,7 @@ function project_issue_update_project() {
   // Build the HTML output for the component select.
   $output = theme('status_messages') . drupal_render($project_info);
   drupal_json(array('status' => TRUE, 'data' => $output));
+  exit;
 }
 
 function project_issue_statistics($project = 0) {
