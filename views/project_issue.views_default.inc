@@ -184,7 +184,7 @@ function project_issue_views_default_views() {
       'expose' => array(
         'use_operator' => 0,
         'operator' => 'title_op',
-        'identifier' => 'title',
+        'identifier' => 'projects',
         'label' => 'Project',
         'optional' => 1,
         'remember' => 0,
@@ -1014,7 +1014,7 @@ function project_issue_views_default_views() {
       'expose' => array(
         'use_operator' => 0,
         'operator' => 'title_op',
-        'identifier' => 'title',
+        'identifier' => 'projects',
         'label' => 'Project',
         'optional' => 1,
         'remember' => 0,
@@ -1394,7 +1394,7 @@ function project_issue_views_default_views() {
       'expose' => array(
         'use_operator' => 0,
         'operator' => 'title_op',
-        'identifier' => 'title',
+        'identifier' => 'projects',
         'label' => 'Project',
         'optional' => 1,
         'remember' => 0,
