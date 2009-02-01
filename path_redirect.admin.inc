@@ -164,10 +164,14 @@ function path_redirect_edit_validate($form, &$form_state) {
   //  //Make sure "from" has the form of a local Drupal path
   //  form_set_error('path', t('The redirect <strong>from</strong> path does not appear valid. This must be a local Drupal path.'));
   //}
-  elseif (($result = path_redirect_load(array('path' => $form_state['values']['path']))) && (!$form_state['values']['rid'] || ($form_state['values']['rid'] !== $result->rid))) {
+  elseif (($result = path_redirect_load(array('path' => $form_state['values']['path']))) && $form_state['values']['rid'] !== $result->rid) {
     // The "from" path should not conflict with another redirect
     form_set_error('path', t('The <strong>from</strong> path you entered is already redirected. You can <a href="@edit-page">edit this redirect</a> instead.', array('@edit-page' => url('admin/build/path-redirect/edit/'. $result->rid))));
   }
+  //elseif (db_result(db_query("SELECT * FROM {url_alias} WHERE dst = '%s'", array(':dst' => $form_state['values']['path'])))) {
+  //  // A redirect's 'from' cannot match any values from url_alias, it will cause an infinite loop.
+  //  form_set_error('path', t('The path you entered will cause an infinite loop.'));
+  //}
 
   if (!valid_url($form_state['values']['redirect']) && !valid_url($form_state['values']['redirect'], TRUE) && $form_state['values']['redirect'] != '<front>') {
     form_set_error('redirect', t('The redirect <strong>to</strong> path does not appear valid.'));

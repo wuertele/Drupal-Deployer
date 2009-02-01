@@ -99,7 +99,7 @@ function path_redirect_init() {
 function path_redirect_cron() {
   // Purge inactive redirects from the database.
   if ($purge = variable_get('path_redirect_purge_inactive', 0)) {
-    db_query("DELETE FROM {path_redirect} WHERE last_used < %d", array(':timestamp' => $_SERVER['REQUEST_TIME'] - $purge));
+    db_query("DELETE FROM {path_redirect} WHERE last_used < %d", array(':timestamp' => time() - $purge));
     if ($count = db_affected_rows()) {
       watchdog('path_redirect', 'Removed @count from the database.', array('@count' => format_plural($count, '1 inactive redirect', '@count inactive redirects')));
     }
@@ -131,8 +131,8 @@ function path_redirect_check() {
 
   if ($r) {
     // Update the last used timestamp so that unused redirects can be purged.
-    // @todo Use $r->last_used = $_SERVER['REQUEST_TIME']; path_redirect_save((array) $r); ?
-    db_query("UPDATE {path_redirect} SET last_used = %d WHERE path = '%s'", array(':timestamp' => $_SERVER['REQUEST_TIME'], ':path' => $r->path));
+    // @todo Use $r->last_used = time(); path_redirect_save((array) $r); ?
+    db_query("UPDATE {path_redirect} SET last_used = %d WHERE path = '%s'", array(':timestamp' => time(), ':path' => $r->path));
 
     $redirect = url($r->redirect, array('query' => $r->query, 'fragment' => $r->fragment, 'absolute' => TRUE));
 
@@ -190,7 +190,7 @@ function path_redirect_save($edit) {
   // Merge default values.
   $edit += array(
     'type' => variable_get('path_redirect_default_status', 301),
-    'last_used' => $_SERVER['REQUEST_TIME'],
+    'last_used' => time(),
   );
 
   // Remove beginning and trailing slashes from path.
