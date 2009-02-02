@@ -352,7 +352,7 @@ function filefield_paths_get_fields($node, $op) {
     }
   }
 
-  if (isset($ffp['#types']) && !is_array($ffp['#types'])) {
+  if (count($ffp) == 0 || (isset($ffp['#types']) && !is_array($ffp['#types']))) {
     return FALSE;
   }
 
@@ -457,7 +457,7 @@ function filefield_paths_process_string($original, $type, $object, $settings) {
 
   // Process string tokens via Pathauto module
   if (module_exists('pathauto') && $settings['pathauto']) {
-    $placeholders = pathauto_get_placeholders($type, $object);
+    $placeholders = _filefield_paths_get_placeholders($type, $object);
     $value = str_replace($placeholders['tokens'], $placeholders['values'], $original);
   }
 
@@ -481,6 +481,29 @@ function filefield_paths_process_string($original, $type, $object, $settings) {
   }
 
   return $value;
+}
+
+/**
+ * Temporary workaround for http://drupal.org/node/324736
+ * @TODO: Implement non-hacky fix.
+ */
+function _filefield_paths_get_placeholders($type, $object) {
+  if (function_exists('token_get_values')) {
+    $full = token_get_values($type, $object, TRUE);
+
+    foreach ($full->values as &$value) {
+      if (is_array($value)) {
+        $value = $value[0];
+      }
+    }
+
+    $tokens = token_prepare_tokens($full->tokens);
+    $values = pathauto_clean_token_values($full);
+    return array('tokens' => $tokens, 'values' => $values);
+  }
+
+  watchdog('Pathauto', 'It appears that you have installed Pathauto, which depends on Token, but Token is either not installed or not installed properly.');
+  return array('tokens' => array(), 'values' => array());
 }
 
 /**
