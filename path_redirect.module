@@ -131,8 +131,7 @@ function path_redirect_check() {
 
   if ($r) {
     // Update the last used timestamp so that unused redirects can be purged.
-    // @todo Use $r->last_used = time(); path_redirect_save((array) $r); ?
-    db_query("UPDATE {path_redirect} SET last_used = %d WHERE path = '%s'", array(':timestamp' => time(), ':path' => $r->path));
+    db_query("UPDATE {path_redirect} SET last_used = %d WHERE rid = %d", array(':timestamp' => time(), ':rid' => $r->rid));
 
     $redirect = url($r->redirect, array('query' => $r->query, 'fragment' => $r->fragment, 'absolute' => TRUE));
 
@@ -194,6 +193,7 @@ function path_redirect_save($edit) {
   );
 
   // Remove beginning and trailing slashes from path.
+  // @todo Move to validation.
   $edit['path'] = preg_replace('/^\/|\/\?|\/$/', '', $edit['path']);
 
   return drupal_write_record('path_redirect', $edit, (!empty($edit['rid']) ? 'rid' : array()));
