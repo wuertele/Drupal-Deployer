@@ -197,7 +197,7 @@ function project_issue_form_comment_form_alter(&$form, &$form_state) {
     );
   }
   else {
-    $projects = array(t('<none>')) + project_projects_select_options($uris);
+    $projects = project_projects_select_options($uris);
     $form['project_info']['pid'] = array(
       '#type' => 'select',
       '#title' => t('Project'),
