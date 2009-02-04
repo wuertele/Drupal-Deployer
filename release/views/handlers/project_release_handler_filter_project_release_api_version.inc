@@ -78,13 +78,6 @@ class project_release_handler_filter_project_release_api_version extends views_h
     else {
       $options = array();
       $terms = project_release_compatibility_list();
-      // Remove the '<All>' term that's automatically added
-      // by project_release_compatibility_list() as views
-      // will handle that on its own.
-      if (isset($terms[-1])) {
-        unset($terms[-1]);
-      }
-
       foreach ($terms as $tid => $name) {
         $options[$tid] = $name;
       }
