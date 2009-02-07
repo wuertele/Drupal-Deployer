@@ -746,7 +746,7 @@ function wd_check($msg, $variables = array(), $link = NULL) {
  * how often we run this for tag-based releases).
  */
 function initialize_tmp_dir($task) {
-  global $tmp_dir, $tmp_root;
+  global $tmp_dir, $tmp_root, $rm;
 
   if (!is_dir($tmp_root)) {
     wd_err("ERROR: tmp_root: @dir is not a directory", array('@dir' => $tmp_root));
@@ -758,7 +758,7 @@ function initialize_tmp_dir($task) {
     // Make sure we start with a clean slate
     drupal_exec("$rm -rf $tmp_dir/*");
   }
-  else if (!@mkdir($tmp_dir)) {
+  else if (!@mkdir($tmp_dir, 0777, TRUE)) {
     wd_err("ERROR: mkdir(@dir) failed", array('@dir' => $tmp_dir));
     exit(1);
   }
