@@ -18,7 +18,7 @@ function export_help($path, $arg) {
  * Implementation of hook_perm().
  */
 function export_perm() {
-  return array('export node', 'export own nodes', 'import nodes');
+  return array('export node', 'export bulk nodes', 'export own nodes', 'import nodes');
 }
 
 /**
@@ -43,6 +43,14 @@ function export_menu() {
     'file' => 'export.pages.inc',
     'type' => MENU_LOCAL_TASK,
   );
+  /*
+  $items['admin/content/node-export-bulk'] = array(
+    'access arguments' => array('export bulk nodes'),
+    'page callback' => 'export_node_export_bulk_page',
+    'title' => t('Export'),
+    'file' => 'export.pages.inc',
+    'type' => MENU_CALLBACK,
+  );*/
   $items['admin/content/import'] = array(
     'access arguments' => array('import nodes'),
     'page callback' => 'export_node_import',
@@ -94,8 +102,8 @@ function export_node_type($op, $type_obj) {
 }
 
 /**
-* Implementation of hook_views_api.
-*/
+ * Implementation of hook_views_api.
+ */
 function export_views_api() {
   return array(
     'api' => 2,
@@ -103,3 +111,50 @@ function export_views_api() {
   );
 }
 
+/**
+ * Implementation of hook_form_FORM-ID_alter().
+
+function export_form_node_admin_content_alter(&$form, &$form_state) {
+
+  $form['admin']['options']['operation']['#options']['export'] = t('Export nodes');
+  $form['#submit'][] = 'export_form_node_admin_content_submit';
+  //drupal_set_message("Form<pre>".print_r($form,true));
+} */
+
+/**
+ * Submit function for node_admin_content form.
+
+function export_form_node_admin_content_submit($form, &$form_state) {
+  drupal_set_message("formstate<pre>".print_r($form_state,true));
+
+} */
+
+
+/**
+ * Implementation of hook_node_operations.
+ */
+function export_node_operations() {
+  $operations = array();
+  if (user_access('export node')) {
+    $operations = array(
+      'export' => array(
+        'label' => t('Export nodes'),
+        'callback' => 'export_node_bulk',
+      ),
+    );
+  }
+  return $operations;
+}
+
+/**
+ * Callback for 'export' node operation.
+ */
+function export_node_bulk($nodes) {
+  module_load_include('inc', 'export', 'export.pages');
+  $node_codes = array();
+  foreach ($nodes as $nid) {
+    $node_codes[] = export_node_export(node_load($nid), TRUE);
+  }
+  $node_code = "bulk(". implode(', ', $node_codes) .")";
+  drupal_set_message(drupal_get_form('export_form', $node_code));
+}

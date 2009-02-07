@@ -49,8 +49,9 @@ function export_settings() {
 
 /**
  *  exports a node - prepopulate a node editing form
+ *  set $return_code to TRUE to not return form but the code instead.
  */
-function export_node_export($original_node) {
+function export_node_export($original_node, $return_code = FALSE) {
   if (isset($original_node->nid)) {
     global $user;
 
@@ -83,7 +84,7 @@ function export_node_export($original_node) {
       drupal_alter("export_node", $node, $original_node, "export");
       $node_code = var_export($node, true);
       $node_code = str_replace('stdClass::__set_state(array(', 'node(code(', $node_code);
-      return drupal_get_form('export_form', $node_code);
+      return ($return_code ? $node_code : drupal_get_form('export_form', $node_code));
     }
   }
 }
@@ -110,11 +111,22 @@ function export_node_import() {
   global $user;
   $output;
   if ($_POST['import_code']) {
-    $node_code = str_replace('node(code(', 'array(array(', $_POST['import_code']);
-    $imported_nodes = eval("return ".$node_code.";");
-    //drupal_set_message("imp<pre>".print_r($imp,true));
-    return export_node_check((object)current($imported_nodes));
-    //return str_replace('/admin/content/import', '/node/add/'.$imp[0]['type'].'', drupal_get_form($imp[0]['type'] .'_node_form', $imp[0]));
+    $node_code = str_replace('node(code(', 'array(array(', trim($_POST['import_code']));
+    $imported_nodes = array();
+    if (substr($node_code, 0, 5) == 'bulk(') {
+      $node_code = str_replace('bulk(', 'array(', $node_code);
+      $bulk_import = eval("return ".$node_code.";");
+      foreach ($bulk_import as $imported_node) {
+        $new_node = (object)current($imported_node);
+        $new_nid = export_node_save($new_node);
+        drupal_set_message(t("Imported !node", array('!node' => l($new_node->title, 'node/'. $new_nid))));
+      }
+      drupal_goto('admin/content/node');
+    }
+    else {
+      $imported_nodes = eval("return ".$node_code.";");
+      return export_node_check((object)current($imported_nodes));
+    }
   } else {
     return drupal_get_form('export_import_form', $form);
   }
@@ -244,3 +256,13 @@ function export_node_save($node) {
   }
 
 }
+
+
+/**
+ * Output page for 'export' node operation.
+
+function export_node_export_bulk_page() {
+  $node_code = $_SESSION['export_bulk'];
+  unset($_SESSION['export_bulk']);
+  return drupal_get_form('export_form', $node_code);
+} */
