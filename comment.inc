@@ -183,7 +183,7 @@ function project_issue_form_comment_form_alter(&$form, &$form_state) {
       '#required' => TRUE,
       '#weight' => -1,
       '#size' => 35,
-      '#autocomplete_path' => 'project/autocomplete/issues/project',
+      '#autocomplete_path' => 'project/autocomplete/issue/project',
       '#attributes' => array(
         'onFocus' => 'project_issue_autocomplete_handler()',
       ),
