@@ -132,7 +132,7 @@ class project_issue_handler_filter_issue_project extends views_handler_filter_in
         '#autocomplete_path' => $autocomplete_path,
         '#default_value' => $default,
         '#size' => 30,
-        '#description' => t('Enter a comma separate list of projects.'),
+        '#description' => t('Enter a comma separated list of projects.'),
       );
 
     }
