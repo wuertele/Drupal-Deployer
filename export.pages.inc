@@ -202,7 +202,7 @@ function export_node_prepopulate($original_node) {
     // The function signature is: hook_export_node_alter(&$node, $original_node, $method)
     // Where $method is either 'prepopulate' or 'save-edit'.
     drupal_alter("export_node", $node, $original_node, "prepopulate");
-    return str_replace('/admin/content/import', '/node/add/' . $node->type, drupal_get_form($node->type . '_node_form', $node));
+    return str_replace('admin/content/import', 'node/add/' . $node->type, drupal_get_form($node->type . '_node_form', $node));
   }
 }
 
