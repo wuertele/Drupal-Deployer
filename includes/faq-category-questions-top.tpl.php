@@ -86,7 +86,7 @@ else {
     <?php print $term_image; ?>
   <?php endif; ?>
   <?php if (!empty($description)): ?>
-    <div class="faq-qa-description"><p><?php print $description ?></p></div>
+    <div class="faq-qa-description"><?php print $description ?></div>
   <?php endif; ?>
   <?php if (!empty($term_image)): ?>
     <div class="clear-block"></div>
@@ -105,7 +105,7 @@ else {
         (<?php print $subcat['count']; ?>)
       <?php endif; ?>
       <?php if (!empty($subcat['description'])): ?>
-      <div class="faq-qa-description"><p><?php print $subcat['description']; ?></p></div>
+      <div class="faq-qa-description"><?php print $subcat['description']; ?></div>
       <?php endif; ?>
       <div class="clear-block"></div>
       </li>
