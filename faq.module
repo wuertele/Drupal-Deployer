@@ -774,6 +774,7 @@ function faq_block($op = 'list', $delta = 0, $edit = array()) {
  *   The HTML-formatted code displaying the Recent FAQs.
  */
 function faq_highlights_block($num = 5) {
+  $disable_node_links = variable_get('faq_disable_node_links', FALSE);
 
   $result = db_query_range(db_rewrite_sql("SELECT n.nid, n.created FROM {node} n WHERE n.type='faq' AND n.status = 1 ORDER BY n.created DESC", "n", "nid"), 0, $num);
 
@@ -782,7 +783,12 @@ function faq_highlights_block($num = 5) {
     $node = node_load(array('nid' => $row->nid));
     $node = node_prepare($node);
     if (node_access("view", $node)) {
-      $items[] = l($node->question, 'node/'. $node->nid);
+      if ($disable_node_links) {
+        $items[] = $node->question;
+      }
+      else {
+        $items[] = l($node->question, 'node/'. $node->nid);
+      }
     }
   }
   $list_style = variable_get('faq_question_listing', 'ul');
@@ -801,6 +807,7 @@ function faq_highlights_block($num = 5) {
  *   The HTML-formatted code displaying the Random FAQs.
  */
 function faq_random_highlights_block($num = 5) {
+  $disable_node_links = variable_get('faq_disable_node_links', FALSE);
 
   $result = db_query_range(db_rewrite_sql("SELECT n.nid FROM {node} n WHERE n.type='faq' AND n.status = 1 ORDER BY RAND()", "n", "nid"), 0, $num);
 
@@ -809,7 +816,12 @@ function faq_random_highlights_block($num = 5) {
     $node = node_load(array('nid' => $row->nid));
     $node = node_prepare($node);
     if (node_access("view", $node)) {
-      $items[] = l($node->question, 'node/'. $node->nid);
+      if ($disable_node_links) {
+        $items[] = $node->question;
+      }
+      else {
+        $items[] = l($node->question, 'node/'. $node->nid);
+      }
     }
   }
   $list_style = variable_get('faq_question_listing', 'ul');
