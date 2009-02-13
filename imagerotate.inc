@@ -19,7 +19,7 @@ function imagerotate(&$im, $angle, $bgcolor) {
   $width  = imagesx($im);
   $height = imagesy($im);
   // background color.
-  list($r, $b, $g, $a) = imageapi_hex2rgba($bgcolor);
+  list($r, $g, $b, $a) = imageapi_hex2rgba($bgcolor);
 
   switch ($angle) {
     case 270:
