@@ -183,10 +183,10 @@ function admin_menu_admin_menu(&$deleted) {
     $type_url_str = str_replace('_', '-', $type->type);
     $type_path = 'admin/content/node-type/' . $type_url_str;
     $links[$type_path] = array(
-      'title' => 'Edit @content-type',
+      'title' => 'Edit !content-type',
       'path' => $type_path,
       'parent_path' => 'admin/content/types',
-      'options' => array('t' => array('@content-type' => $type->name)),
+      'options' => array('t' => array('!content-type' => $type->name)),
     );
     unset($deleted['admin/content/node-type/' . $type_url_str . '/edit']);
     // CCK and other modules adding to node types handled here.
