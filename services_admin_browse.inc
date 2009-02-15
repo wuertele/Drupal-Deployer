@@ -282,7 +282,7 @@ function services_admin_settings() {
     '#type'           => 'checkbox',
     '#title'          => t('Use sessid'),
     '#default_value'  => variable_get('services_use_sessid', TRUE),
-    '#description'    => t('When enabled, all method calls must include a valid sessid. Only disable this setting if the application will user browser-based cookies.')
+    '#description'    => t('When enabled, all method calls must include a valid sessid. Only disable this setting if the application will use browser-based cookies.')
   );
 
   services_admin_js($form);
