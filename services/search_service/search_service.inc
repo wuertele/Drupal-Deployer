@@ -15,7 +15,7 @@ function search_service_nodes($keys, $simple = FALSE, $fields = array()) {
 
   // invoke the search hook to generate results
   $results = module_invoke('node', 'search', 'search', $keys);
-  if ($results and is_array($results) and count($results)) {
+  if ($results && is_array($results) && count($results)) {
     // if simple results requested, remove extra data
     if ($simple) {
       $num = count($results);
@@ -45,7 +45,7 @@ function search_service_nodes($keys, $simple = FALSE, $fields = array()) {
 function search_service_users($keys) {
   // invoke the search hook to generate results
   $results = module_invoke('user', 'search', 'search', $keys);
-  if ($results and is_array($results) and count($results)) {
+  if ($results && is_array($results) && count($results)) {
     return $results;
   }
   return services_error(t('Search returned no results.'));

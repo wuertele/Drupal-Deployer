@@ -199,7 +199,7 @@ function services_admin_browse_test_unserialize_args($values) {
 
     // Remove empty values from end of array
     // Once we find a value, we can no longer skip
-    if (!is_numeric($value) and empty($value) and !$noskip) {
+    if (!is_numeric($value) && empty($value) && !$noskip) {
       continue;
     }
     $noskip = TRUE;

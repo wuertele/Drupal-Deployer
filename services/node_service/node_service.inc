@@ -37,7 +37,7 @@ function node_service_get($nid, $fields = array()) {
 function node_service_get_access($nid) {
   global $user;
   $node = node_load($nid);
-  return (node_access('view', $node) and user_access('load node data'));
+  return (node_access('view', $node) && user_access('load node data'));
 }
 
 /**
@@ -78,7 +78,7 @@ function node_service_view($nid, $fields = array(), $teaser = FALSE, $page = FAL
 function node_service_view_access($nid) {
   global $user;
   $node = node_load($nid);
-  return (node_access('view', $node) and user_access('load node data'));
+  return (node_access('view', $node) && user_access('load node data'));
 }
 
 /**

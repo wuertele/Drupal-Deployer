@@ -14,7 +14,7 @@
  *   Array. A list of all children menu items from a given menu item.
  */
 function menu_service_get($menu_id = NULL, $fields = array()) {
-  if ($menu_id === NULL or trim($menu_id) === '') {
+  if ($menu_id === NULL || trim($menu_id) === '') {
     $menu_id = 'primary-links';
   }
   if (sizeof($fields) === 0) {
@@ -45,7 +45,7 @@ function menu_service_process($data, $fields) {
       else {
         $tmp = (object) $item['link'];
       }
-      if (!$fields or in_array('path_alias', $fields, TRUE)) {
+      if (!$fields || in_array('path_alias', $fields, TRUE)) {
         $tmp->path_alias = drupal_get_path_alias($tmp->link_path);
       }
       $tmp->children = menu_service_process($item['below'], $fields);

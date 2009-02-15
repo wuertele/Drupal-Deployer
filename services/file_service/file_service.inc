@@ -36,7 +36,7 @@ function file_service_get_access($fid) {
     return TRUE;
   }
   elseif ($file = db_fetch_array(db_query('SELECT * FROM {files} WHERE fid = %d', $fid))) {
-    return $file['uid'] == $user->uid and user_access('get own binary files');
+    return $file['uid'] == $user->uid && user_access('get own binary files');
   }
 }
 
@@ -92,6 +92,6 @@ function file_service_get_node_files_access($nid) {
     return TRUE;
   }
   elseif ($node = node_load($nid)) {
-    return $node->uid == $user->uid and user_access('get own binary files');
+    return $node->uid == $user->uid && user_access('get own binary files');
   }
 }
