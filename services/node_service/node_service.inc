@@ -27,7 +27,7 @@ function node_service_get($nid, $fields = array()) {
 
 /**
  * Check if the user has the permission to get the
- * node's data thru services.
+ * node's formatted data thru services.
  *
  * @param $nid
  *   Number. The node ID.
@@ -36,6 +36,48 @@ function node_service_get($nid, $fields = array()) {
  *   node's data thru services.
  */
 function node_service_get_access($nid) {
+  global $user;
+  $node = node_load($nid);
+  return ($node->uid == $user->uid and user_access('load own node data')) or
+    ($node->uid != $user->uid and user_access('load any node data'));
+}
+
+/**
+ * Returns a specified node.
+ *
+ * @param $nid
+ *   Number. The node ID.
+ * @param $fields
+ *   Array (optional). The node fields needed. If its empty,
+ *   all fields will be returned
+ * @param $teaser
+ *   Boolean (optional). Format as teaser.
+ * @param $page
+  *   Boolean (optional). Format as page.
+ * @return
+ *   Object. The node object with all wanted fields.
+ */
+function node_service_view($nid, $fields = array(), $teaser = FALSE, $page = FALSE) {
+  $node = services_node_load(node_build_content(node_load($nid), $teaser, $page), $fields);
+  
+  if (!$node) {
+    return services_error(t("Could not find the node."));
+  }
+  
+  return $node;
+}
+
+/**
+ * Check if the user has the permission to get the
+ * node's data thru services.
+ *
+ * @param $nid
+ *   Number. The node ID.
+ * @return
+ *   Boolean. TRUE if the user has the permission to get the
+ *   node's data thru services.
+ */
+function node_service_view_access($nid) {
   global $user;
   $node = node_load($nid);
   return ($node->uid == $user->uid and user_access('load own node data')) or
