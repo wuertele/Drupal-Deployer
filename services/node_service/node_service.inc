@@ -27,19 +27,17 @@ function node_service_get($nid, $fields = array()) {
 
 /**
  * Check if the user has the permission to get the
- * node's formatted data thru services.
+ * node's data thru services.
  *
  * @param $nid
  *   Number. The node ID.
  * @return
- *   Boolean. TRUE if the user has the permission to get the
- *   node's data thru services.
+ *   Boolean. TRUE if the user has view access.
  */
 function node_service_get_access($nid) {
   global $user;
   $node = node_load($nid);
-  return ($node->uid == $user->uid and user_access('load own node data')) or
-    ($node->uid != $user->uid and user_access('load any node data'));
+  return (node_access('view', $node) and user_access('load node data'));
 }
 
 /**
@@ -69,7 +67,7 @@ function node_service_view($nid, $fields = array(), $teaser = FALSE, $page = FAL
 
 /**
  * Check if the user has the permission to get the
- * node's data thru services.
+ * node's formated data thru services.
  *
  * @param $nid
  *   Number. The node ID.
@@ -80,8 +78,7 @@ function node_service_view($nid, $fields = array(), $teaser = FALSE, $page = FAL
 function node_service_view_access($nid) {
   global $user;
   $node = node_load($nid);
-  return ($node->uid == $user->uid and user_access('load own node data')) or
-    ($node->uid != $user->uid and user_access('load any node data'));
+  return (node_access('view', $node) and user_access('load node data'));
 }
 
 /**
