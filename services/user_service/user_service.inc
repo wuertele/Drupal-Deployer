@@ -82,11 +82,14 @@ function user_service_login($username, $password) {
   $user = user_authenticate(array('name' => $username, 'pass' => $password));
 
   if ($user->uid) {
-		session_start();
+    // Regenerate the session ID to prevent against session fixation attacks.
+		sess_regenerate();
+		module_invoke_all('user', 'login', NULL, $user);
+		
     $return = new stdClass();
     $return->sessid = session_id();
     $return->user = $user;
-		module_invoke_all('user', 'login', NULL, $user);
+		
     return $return;
   }
   session_destroy();
