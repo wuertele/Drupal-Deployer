@@ -59,7 +59,7 @@ function user_service_get($uid) {
  */
 function user_service_get_access($uid) {
   global $user;
-  return (($user->uid == $uid and user_access('get own user data')) or
+	return (($user->uid == $uid and user_access('get own user data')) or
     ($user->uid != $uid and user_access('get any user data')));
 }
 
@@ -82,10 +82,11 @@ function user_service_login($username, $password) {
   $user = user_authenticate(array('name' => $username, 'pass' => $password));
 
   if ($user->uid) {
-    session_start();
+		session_start();
     $return = new stdClass();
     $return->sessid = session_id();
     $return->user = $user;
+		module_invoke_all('user', 'login', NULL, $user);
     return $return;
   }
   session_destroy();
@@ -122,7 +123,11 @@ function user_service_logout() {
  *   Object. The user object with all user data.
  */
 function user_service_save($account) {
-  if (!$account = user_save($account)) {
+  // if uid is present then update, otherwise insert
+	$update = user_load($account['uid']);	
+	$account = isset($update->uid) ? user_save($update,$account) : user_save('', $account);  
+  if (!$account) {
+
     return services_error(t('Error on saving the user.'));
   }
 
@@ -139,7 +144,7 @@ function user_service_save($account) {
  */
 function user_service_save_access($account) {
   global $user;
-  return ((empty($account->uid) and user_access('create new users')) or
-    ($user->uid == $account->uid and user_access('update own user data')) or
-    ($user->uid !=  $account->uid and user_access('update any user data')));
+  return ((empty($account['uid']) and user_access('create new users')) or
+    ($user->uid == $account['uid'] and user_access('update own user data')) or
+    ($user->uid !=  $account['uid'] and user_access('update any user data')));
 }
