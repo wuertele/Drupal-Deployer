@@ -43,9 +43,7 @@ function views_service_get_access($view_name) {
   if (empty($view)) {
     return FALSE;
   }
-
-  global $user;
-  return views_access($view);
+  return $view->access('default');
 }
 
 /**
