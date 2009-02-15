@@ -96,10 +96,6 @@ function node_service_save($edit) {
   if ($errors = form_get_errors()) {
     return services_error(implode("\n", $errors));
   }
-
-  watchdog('content', '@type: updated %title.',
-    array('@type' => t($node->type), '%title' => $node->title),
-    WATCHDOG_NOTICE, l(t('view'), 'node/'. $node->nid));
   return $nid;
 }
 
