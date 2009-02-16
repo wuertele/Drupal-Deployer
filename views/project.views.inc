@@ -23,6 +23,7 @@ function project_views_data() {
 
   $data['project_projects']['table']['join'] = array(
     'node' => array(
+      'type' => 'INNER',
       'left_field' => 'nid',
       'field' => 'nid',
     ),
