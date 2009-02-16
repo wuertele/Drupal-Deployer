@@ -1,6 +1,11 @@
 <?php
 // $Id$
 
+/**
+ * @file
+ * Install file for XML Sitemap: Node.
+ */
+
 /*****************************************************************************
  * Drupal hooks.
  ****************************************************************************/
@@ -21,72 +26,11 @@ function xmlsitemap_node_disable() {
 
 
 /**
- * Implementation of hook_schema().
- */
-function xmlsitemap_node_schema() {
-  $schema['xmlsitemap_node'] = array(
-    'description' => 'The base table for xmlsitemap_node.',
-    'fields' => array(
-      'nid' => array(
-        'description' => 'The node ID.',
-        'type' => 'int',
-        'not null' => TRUE,
-        'unsigned' => TRUE,
-        'default' => 0,
-      ),
-      'deleted' => array(
-        'description' => 'A flag set when the node is deleted.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'anonym_access' => array(
-        'description' => 'A flag set when the anonymous user can view this node.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'changed' => array(
-        'description' => 'The Unix timestamp of the last change.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'previously_changed' => array(
-        'description' => 'The Unix timestamp of the previous change.',
-        'type' => 'int',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'comment_ratio' => array(
-        'description' => 'The ratio of the number of the node comments to the maximum number of comments given to a node.',
-        'type' => 'float',
-        'unsigned' => TRUE,
-        'not null' => TRUE,
-        'default' => 0.0,
-      ),
-      'priority_override' => array(
-        'description' => 'The priority of the node in the site map.',
-        'type' => 'float',
-        'not null' => TRUE,
-        'default' => -2.0,
-      ),
-    ),
-    'primary key' => array('nid'),
-  );
-
-  return $schema;
-}
-
-/**
  * Implementation of hook_install().
  */
-function xmlsitemap_node_install() {           
-  drupal_install_schema('xmlsitemap_node');
+function xmlsitemap_node_install() {
+  module_load_include('inc', 'xmlsitemap', 'includes/install');
+  variable_set('xmlsitemap_node_id', xmlsitemap_register_module('xmlsitemap_node'));
   db_query("UPDATE {system} SET weight = 5 WHERE name = 'xmlsitemap_node'");
 }
 
@@ -94,6 +38,5 @@ function xmlsitemap_node_install() {
  * Implementation of hook_uninstall().
  */
 function xmlsitemap_node_uninstall() {
-  drupal_uninstall_schema('xmlsitemap_node');
   db_query("DELETE FROM {variable} WHERE name LIKE 'xmlsitemap\_node\_%'");
 }

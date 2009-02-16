@@ -28,9 +28,9 @@ function xmlsitemap_user_form_alter($form_id, &$form) {
       $form['xmlsitemap']['xmlsitemap_user_default_priority'] = array(
         '#type' => 'select',
         '#title' => t('Default user priority'),
+        '#description' => t('Choose the default priority for users who have only the authenticated user role.'),
         '#default_value' => $default,
         '#options' => xmlsitemap_priority_options('exclude'),
-        '#description' => t('Choose the default priority for users who have only the authenticated user role.'),
       );
       $form['#submit'][] = 'xmlsitemap_user_form_submit';
       break;
@@ -49,9 +49,9 @@ function xmlsitemap_user_form_alter($form_id, &$form) {
       $form['xmlsitemap']['xmlsitemap_user_role_priority'] = array(
         '#type' => 'select',
         '#title' => t('Default priority'),
+        '#description' => t("The priority of all a user's roles will be added together to set the user's default priority. If all role priorities are left at default, the user's default priority will be %priority.", array('%priority' => $options[variable_get('xmlsitemap_user_default_priority', '0.5')])),
         '#default_value' => $priority,
         '#options' => $options,
-        '#description' => t("The priority of all a user's roles will be added together to set the user's default priority. If all role priorities are left at default, the user's default priority will be %priority.", array('%priority' => $options[variable_get('xmlsitemap_user_default_priority', '0.5')])),
       );
       $form['#submit'][] = 'xmlsitemap_user_form_submit';
       break;
@@ -72,6 +72,15 @@ function xmlsitemap_user_user($op, &$edit, &$account, $category = NULL) {
         FROM {xmlsitemap_user}
         WHERE uid = %d", $account->uid)
       );
+      if (!isset($form['xmlsitemap'])) {
+        $form['xmlsitemap'] = array(
+          '#type' => 'fieldset',
+          '#title' => t('XML site map'),
+          '#collapsible' => TRUE,
+          '#access' => user_access('override profile priority') || user_access('administer users'),
+          '#weight' => 7,
+        );
+      }
       $options = xmlsitemap_priority_options('both');
       if (isset($account->roles)) {
         $roles = array_keys($account->roles);
@@ -89,21 +98,13 @@ function xmlsitemap_user_user($op, &$edit, &$account, $category = NULL) {
       else {
         $default_priority = variable_get('xmlsitemap_user_default_priority', 0.5);
       }
-      $form = array();
-      $disabled = !user_access('administer users');
-      xmlsitemap_add_settings_fieldset($form,
-        array(
-          'disabled' => $disabled,
-          'weight' => 7,
-        )
-      );
       $form['xmlsitemap']['xmlsitemap_user_priority'] = array(
         '#type' => 'select',
         '#title' => t('Priority'),
+        '#description' => t('The default priority is %priority.', array('%priority' => $options[(string)$default_priority])),
         '#default_value' => $priority !== FALSE ? $priority : -2.0,
         '#options' => $options,
-        '#disabled' => $disabled,
-        '#description' => t('The default priority is %priority.', array('%priority' => $options[(string)$default_priority])),
+        '#access' => user_access('override profile priority') || user_access('administer users'),
       );
       return $form;
     case 'insert':
@@ -145,62 +146,7 @@ function xmlsitemap_user_user($op, &$edit, &$account, $category = NULL) {
  */
 function xmlsitemap_user_xmlsitemap_description() {
   return '<dt>'. t('XML Sitemap: User') .'</dt>'.
-    '<dd>'. t('It adds user profiles to the site map. The <em>anonymous user</em> role must have permission to access user profiles on the <a href="@access">access control page</a>. You can change the default user priority on the <a href="@user_settings">user settings</a> page. The <a href="@user">user role priority</a> will override the default user priority. You can override both the default priority and the role priority when you add or edit a user.', array('@access' => url('admin/user/access'), '@user_settings' => url('admin/user/settings'), '@user_role' => url('admin/user/roles'))) .'</dd>';
-}
-
-/**
- * Implementation of hook_xmlsitemap_links().
- */
-function xmlsitemap_user_xmlsitemap_links() {
-  $anonymous = user_load(array('uid' => 0));
-  if (user_access('access user profiles', $anynomous)) {
-    $uid = 0;
-    $frontpage = explode('/', drupal_get_normal_path(variable_get('site_frontpage', 'node')));
-    if (count($frontpage) == 2 && $frontpage[0] == 'user' && is_numeric($frontpage[1])) {
-      $uid = $frontpage[1];
-    }
-    $columns = 'u.uid, xu.changed, xu.previously_changed, xu.priority_override, SUM(xur.priority) as priority';
-    $result = db_query("SELECT $columns
-      FROM {xmlsitemap_user} xu
-      INNER JOIN {users} u ON xu.uid = u.uid
-      LEFT JOIN {users_roles} ur ON xu.uid = ur.uid
-      LEFT JOIN {xmlsitemap_user_role} xur ON ur.rid = xur.rid
-      WHERE u.status <> 0
-        AND u.uid <> %d
-      GROUP BY $columns
-      HAVING MIN(xur.priority) <> -1 OR SUM(xur.priority) IS NULL",
-      $uid
-    );
-    $row = new stdClass();
-    $row->module = 'xmlsitemap_user';
-    while ($user = db_fetch_object($result)) {
-      $age = time() - $user->changed;
-      $interval = $user->previously_changed ? $user->changed - $user->previously_changed : 0;
-      if ($user->priority_override != -2.0) {
-        $priority = $user->priority_override;
-      }
-      else {
-        $priority = min(isset($user->priority) ? $user->priority : variable_get('xmlsitemap_user_default_priority', 0.5), 1);
-      }
-      $row->loc = 'user/'. $user->uid;
-      $row->lastmod = $user->changed;
-      $row->changefreq = max($age, $interval);
-      $row->priority = $priority;
-      if (db_result(db_query("SELECT loc FROM {xmlsitemap} WHERE loc = '%s'", $row->loc)) != $row->loc) {
-        drupal_write_record('xmlsitemap', $row);
-      }
-    }
-  }
-}
-
-/**
- * Implementation of hook_xmlsitemap_update_module_tables_batch_operations().
- */
-function xmlsitemap_user_xmlsitemap_update_module_tables_batch_operations() {
-  return array(
-    '_xmlsitemap_user_module_table_delete_rows',
-    '_xmlsitemap_user_module_table_add_rows',
-  );
+    '<dd>'. t('The module adds user profiles to the site map. The <em>anonymous user</em> role must have permission to access user profiles on the <a href="@access">access control page</a>. You can change the default user priority on the <a href="@user_settings">user settings</a> page. The <a href="@user">user role priority</a> will override the default user priority. You can override both the default priority and the role priority when you add or edit a user.', array('@access' => url('admin/user/access'), '@user_settings' => url('admin/user/settings'), '@user_role' => url('admin/user/roles'))) .'</dd>';
 }
 
 /*****************************************************************************
@@ -238,64 +184,6 @@ function xmlsitemap_user_form_submit($form, &$form_state) {
  * Private functions - database batch operation.
  ****************************************************************************/
 
-/**
- * Batch function used to update the module tables.
- * @param $context
- *  The context parameter passed from batch_process().
- */
-function _xmlsitemap_user_module_table_add_rows(&$context) {
-  if (!isset($context['sandbox']['progress'])) {
-    $context['sandbox']['progress'] = 0;
-    $context['sandbox']['current_user'] = 0;
-    $context['sandbox']['max'] = (integer) db_result(db_query('SELECT COUNT(u.uid)
-      FROM {users} u
-      LEFT JOIN {xmlsitemap_user} xu ON xu.uid = u.uid
-      WHERE u.uid <> 0 
-        AND xu.uid IS NULL')
-    );
-  }
-  if ($context['sandbox']['max']) {
-    $result = db_query_range('SELECT u.uid, u.created AS changed
-      FROM {users} u
-      LEFT JOIN {xmlsitemap_user} xu ON xu.uid = u.uid
-      WHERE xu.uid IS NULL
-        AND u.uid > %d
-      ORDER BY u.uid ASC',
-      $context['sandbox']['current_user'], 0, 1
-    );
-    if ($row = db_fetch_object($result)) {
-      drupal_write_record('xmlsitemap_user', $row);
-      $context['sandbox']['progress']++;
-      $context['sandbox']['current_user'] = $row->uid;
-      $context['results']['added'] = $context['sandbox']['progress'];
-    }
-    if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
-      $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
-    }
-  }
-}
-
-/**
- * Batch function used to update the module tables.
- * @param $context
- *  The context parameter passed from batch_process().
- */
-function _xmlsitemap_user_module_table_delete_rows(&$context) {
-  $context['results']['deleted'] = (integer) db_result(db_query('SELECT COUNT(xu.uid)
-    FROM {xmlsitemap_user} xu
-    LEFT JOIN {users} u ON u.uid = xu.uid
-    WHERE u.uid IS NULL')
-  );
-  db_query('DELETE FROM {xmlsitemap_user} xu
-    WHERE xu.uid IN (
-      SELECT xu.uid
-        FROM {xmlsitemap_user} xu
-        LEFT JOIN {users} u ON u.uid = xu.uid
-        WHERE u.uid IS NULL
-      )'
-  );
-  $context['finished'] = 1;
-}
 /**
  * @} End of "addtogroup xmlsitemap".
  */

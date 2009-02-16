@@ -1,6 +1,11 @@
 <?php
 // $Id$
 
+/**
+ * @file
+ * Installation file for XML Sitemap.
+ */
+
 /*****************************************************************************
  * Drupal hooks.
  ****************************************************************************/
@@ -18,14 +23,14 @@ function xmlsitemap_schema() {
         'unsigned' => TRUE,
         'not null' => TRUE,
       ),
-      'loc' => array(
+      'url' => array(
         'description' => 'The relative URL of the link.',
         'type' => 'varchar',
         'length' => 128,
         'not null' => TRUE,
         'default' => '',
       ),
-      'module' => array(
+      'mid' => array(
         'description' => 'The ID of the module handling this link.',
         'type' => 'int',
         'size' => 'small',
@@ -36,6 +41,7 @@ function xmlsitemap_schema() {
       'type' => array(
         'description' => 'The type of link.',
         'type' => 'int',
+        'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
@@ -84,35 +90,32 @@ function xmlsitemap_schema() {
       ),
       'p5' => array(
         'description' => 'Custom parameter.',
-        'type' => 'text',
-        'size' => 'medium',
+        'type' => 'int',
         'not null' => TRUE,
-        'default' => '',
+        'default' => 0,
       ),
       'p6' => array(
         'description' => 'Custom parameter.',
-        'type' => 'text',
-        'size' => 'medium',
+        'type' => 'int',
         'not null' => TRUE,
-        'default' => '',
+        'default' => 0,
       ),
       'p7' => array(
         'description' => 'Custom parameter.',
-        'type' => 'text',
-        'size' => 'medium',
+        'type' => 'int',
         'not null' => TRUE,
-        'default' => '',
+        'default' => 0,
       ),
       'p8' => array(
         'description' => 'Custom parameter.',
-        'type' => 'text',
-        'size' => 'medium',
+        'type' => 'int',
         'not null' => TRUE,
-        'default' => '',
+        'default' => 0,
       ),
       'enabled' => array(
         'description' => 'A flag set when the link can be inserted in the site map.',
         'type' => 'int',
+        'size' => 'tiny',
         'unsigned' => TRUE,
         'not null' => TRUE,
         'default' => 0,
@@ -124,7 +127,7 @@ function xmlsitemap_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
-      'lastmod' => array(
+      'changed' => array(
         'description' => 'The Unix timestamp of the last change.',
         'type' => 'int',
         'unsigned' => TRUE,
@@ -146,18 +149,18 @@ function xmlsitemap_schema() {
       ),
     ),
     'indexes' => array(
-      'link_type' => array('module', 'type'),
-      'type_id' => array('tid', 'tsid'),
-      'first_text_param' => array('p1'),
-      'first_integer_param' => array('p5'),
+      'link_module' => array('module'),
+      'link_type' => array('type'),
+      'link_tid' => array('tid'),
+      'link_tsid' => array('tsid'),
       'link_language' => array('language'),
-      'link_changed' => array('lastmod'),
+      'link_changed' => array('changed'),
       'link_priority' => array('priority'),
     ),
     'primary key' => array('lid'),
   );
   $schema['xmlsitemap_modules'] = array(
-    'description' => 'The list of modules putting links into the site map.',
+    'description' => 'The registry of modules adding links into the site map.',
     'fields' => array(
       'mid' => array(
         'description' => 'The module ID.',

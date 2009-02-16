@@ -1,4 +1,4 @@
-<?php 
+<?php
 // $Id$
 
 /**
@@ -19,8 +19,13 @@
  * Implementation of hook_cron().
  */
 function xmlsitemap_cron() {
-  if (variable_get('xmlsitemap_cron_submit', FALSE) && variable_get('xmlsitemap_changed', FALSE)) {
-    _xmlsitemap_ping();
+  if (!variable_get('site_offline', 0) && variable_get('xmlsitemap_cron_submit_frequency', -1) >= 0 && variable_get('xmlsitemap_changed', FALSE)) {
+    $count = variable_get('xmlsitemap_cron_submit_delay', -1);
+    if (--$count <= 0) {
+      _xmlsitemap_ping();
+      $count = variable_get('xmlsitemap_cron_submit_frequency', -1);
+    }
+    variable_set('xmlsitemap_cron_submit_delay', $count);
   }
 }
 
@@ -28,8 +33,9 @@ function xmlsitemap_cron() {
  * Implementation of hook_exit().
  */
 function xmlsitemap_exit() {
-  if (_xmlsitemap_submit_on_exit()) {
-    _xmlsitemap_ping();
+  drupal_bootstrap(DRUPAL_BOOTSTRAP_PATH);
+  if (variable_get('site_offline', 0) || arg(0) == 'batch') {
+    return;
   }
   if (variable_get('xmlsitemap_log_access', FALSE)) {
     $items = array();
@@ -40,7 +46,6 @@ function xmlsitemap_exit() {
         $items["sitemap$chunk.xml"] = $chunk;
       }
     }
-    drupal_bootstrap(DRUPAL_BOOTSTRAP_PATH);
     if (isset($items[arg(0)]) && is_null(arg(1))) {
       $chunk = $items[arg(0)];
       if ($chunk < $link_count / $chunk_size) {
@@ -77,20 +82,13 @@ function xmlsitemap_help($path, $arg) {
     case 'admin/settings/xmlsitemap/engines':
       $output = t('Configure the behavior for search engines.');
       break;
-    case 'admin/settings/xmlsitemap/tools':
-      $output = t('Update the XML Sitemap database tables.');
-      break;
-    case 'admin/settings/xmlsitemap/tools/debug':
-      $output = t('Show some data useful in the debugging, or in the issue reports.');
-      $output .= '<br />'. t('At the moment the page is empty, but it will be populated with data helpful to understand the possible cause of an issue.');
-      break;
     case 'admin/help#xmlsitemap':
       $output = '<p>'. t('XML Sitemap automatically creates a site map that conforms to the <a href="@sitemaps.org">sitemaps.org specification</a>. This helps search engines keep their search results up to date.', array('@sitemaps.org' => 'http://www.sitemaps.org')) .'</p>';
       $output .= '<h3>'. t('Supporting modules') .'</h3>';
       $output .= '<p>'. t('By itself, the XML Sitemap module adds only the front page of your site to the site map. Other types of links are handled by supporting modules.') .'</p>';
       $optional = '';
       foreach (module_implements('xmlsitemap_description', TRUE) as $module) {
-        $function = $module .'_xmlsitemap_description'; 
+        $function = $module .'_xmlsitemap_description';
         $optional .= $function();
       }
       if (!empty($optional)) {
@@ -129,31 +127,6 @@ function xmlsitemap_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('xmlsitemap_settings_engines'),
     'access arguments' => array('administer site configuration'),
-    'type' => MENU_LOCAL_TASK,
-  );
-  $items['admin/settings/xmlsitemap/tools'] = array(
-    'title' => 'Tools',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => 'xmlsitemap_tools_update_database',
-    'access arguments' => array('administer site configuration'),
-    'type' => MENU_LOCAL_TASK,
-  );
-  $items['admin/settings/xmlsitemap/tools/update'] = array(
-    'title' => 'Database update',
-    'description' => 'Update the XML Sitemap database tables.',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => 'xmlsitemap_tools_update_database',
-    'access arguments' => array('administer site configuration'),
-    'weight' => -2,
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-  );
-  $items['admin/settings/xmlsitemap/tools/debug'] = array(
-    'title' => 'Debug',
-    'description' => 'Show some data useful in the debugging, or in the issue reports.',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('xmlsitemap_tools_debug'),
-    'access arguments' => array('administer site configuration'),
-    'weight' => -1,
     'type' => MENU_LOCAL_TASK,
   );
   $items['sitemap.xml'] = array(
@@ -216,16 +189,17 @@ function xmlsitemap_output($chunk = NULL) {
         if ($chunk < $link_count / $chunk_size) {
           $from = $chunk * $chunk_size;
           if (!empty($chunk_size)) {
-            // Select only the links added by enabled modules. 
-            $lastmod = db_result(db_query_range("SELECT lastmod FROM {xmlsitemap} xsm
-              INNER JOIN {system} sm ON sm.name = xsm.module
+            // Select only the links added by enabled modules.
+            $changed = db_result(db_query_range("SELECT changed FROM {xmlsitemap} xsm
+              INNER JOIN {xmlsitemap_modules} xm ON xm.mid = xsm.mid
+              INNER JOIN {system} sm ON xm.name = xsm.module
               WHERE sm.type = 'module'
                 AND sm.status = 1
-              ORDER BY lastmod DESC, loc",
+              ORDER BY changed DESC, url",
               $from, $chunk_size)
             );
-            if ($lastmod !== FALSE) {
-              print '    <lastmod>'. gmdate('Y-m-d\TH:i:s+00:00', $lastmod) .'</lastmod>'."\n";
+            if ($changed !== FALSE) {
+              print '    <lastmod>'. gmdate('Y-m-d\TH:i:s+00:00', $changed) .'</lastmod>'."\n";
             }
           }
         }
@@ -251,23 +225,30 @@ function xmlsitemap_settings_engines() {
     '#title' => t('Submission settings'),
     '#collapsible' => TRUE,
   );
-  $form['submission']['xmlsitemap_submit'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Submit the site map when updated'),
-    '#default_value' => variable_get('xmlsitemap_submit', FALSE),
-    '#description' => t('If enabled, the search engines will be notified of changes to the site map each time it is updated.'),
-  );
-  $form['submission']['xmlsitemap_cron_submit'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Submit the site map on cron run'),
-    '#default_value' => variable_get('xmlsitemap_cron_submit', FALSE),
-    '#description' => t('If enabled, the search engines will be notified of changes to the site map each time cron is run.'),
-  );
   $form['submission']['xmlsitemap_log_access'] = array(
     '#type' => 'checkbox',
     '#title' => t('Log access'),
-    '#default_value' => variable_get('xmlsitemap_log_access', FALSE),
     '#description' => t('If enabled, a watchdog entry will be made each time the site map is accessed, containing information about the requestor.'),
+    '#default_value' => variable_get('xmlsitemap_log_access', FALSE),
+  );
+  $form['submission']['xmlsitemap_cron_submit_frequency'] = array(
+    '#type' => 'select',
+    '#title' => t('Frequency of cron site map submission'),
+    '#description' => t('The rate at which the site map is submitted to the search engines over the times the cron maintenance tasks are executed.'),
+    '#default_value' => variable_get('xmlsitemap_cron_submit_frequency', -1),
+    '#options' => array(
+      '10' => t('Once every ten times'),
+      '9' => t('Once every nine times'),
+      '8' => t('Once every eight times'),
+      '7' => t('Once every seven times'),
+      '6' => t('Once every six times'),
+      '5' => t('Once every five times'),
+      '4' => t('Once every four times'),
+      '3' => t('Once every three times'),
+      '2' => t('Once every two times'),
+      '1' => t('Always'),
+      '-1' => t('Never'),
+    ),
   );
   $form = system_settings_form($form);
   $form['#submit'][] = 'xmlsitemap_settings_engines_submit';
@@ -295,19 +276,22 @@ function xmlsitemap_settings_sitemap() {
   $form['general']['xmlsitemap_chunk_size'] = array(
     '#type' => 'textfield',
     '#title' => t('Chunk size'),
+    '#description' => t('This is the number of links to include in one site map. Values can range between 1 and 50,000. If the total number of links exceeds the chunk size, multiple site maps will be generated.'),
     '#default_value' => variable_get('xmlsitemap_chunk_size', 200),
     '#size' => 10,
     '#maxlength' => 5,
-    '#description' => t('This is the number of links to include in one site map. Values can range between 1 and 50,000. If the total number of links exceeds the chunk size, multiple site maps will be generated.'),
-    '#weight' => -1,
   );
-  $form['general']['xmlsitemap_front_page_priority'] = array(
+  $form['general']['priority'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Priority'),
+    '#collapsible' => TRUE,
+  );
+  $form['general']['priority']['xmlsitemap_front_page_priority'] = array(
     '#type' => 'select',
     '#title' => t('Front page priority'),
+    '#description' => t('This is the absolute priority for the front page.'),
     '#default_value' => variable_get('xmlsitemap_front_page_priority', 1),
     '#options' => xmlsitemap_priority_options(),
-    '#description' => t('This is the absolute priority for the front page.'),
-    '#weight' => -1,
   );
   $form = system_settings_form($form);
   $form['#submit'][] = 'xmlsitemap_settings_sitemap_submit';
@@ -320,8 +304,9 @@ function xmlsitemap_settings_sitemap() {
  * Validate the site map settings form.
  */
 function xmlsitemap_settings_sitemap_validate($form, &$form_state) {
-  if ($form_state['values']['xmlsitemap_chunk_size'] <= 0 || $form_state['values']['xmlsitemap_chunk_size'] > 50000) {
-    form_set_error('xmlsitemap_chunk_size', t('The number of links in a site map chunk must be a number between 1, and 50,000.'));
+  $chunk_size = $form_state['values']['xmlsitemap_chunk_size'];
+  if (!is_numeric($chunk_size) || $chunk_size <= 0 || $chunk_size > 50000) {
+    form_set_error('xmlsitemap_chunk_size', t('The number of links in a site map chunk must be a number between 1, and 50,000 (1 and 50,000 included).'));
   }
 }
 
@@ -335,104 +320,8 @@ function xmlsitemap_settings_sitemap_submit($form, &$form_state) {
   }
 }
 
-/**
- * Form builder; return the database update form.
- */
-function xmlsitemap_tools_update_database($form_state = NULL) {
-  xmlsitemap_show_admin_messages();
-  $form = array();
-  $step = isset($form_state['storage']['step']) ? $form_state['storage']['step'] : 1;
-  switch ($step) {
-    case 1:
-      $title = t('First step');
-      $hook = 'xmlsitemap_update_module_tables_batch_operations';
-      break;
-    case 2:
-      $title = t('Second step');
-      $hook = 'xmlsitemap_update_main_table_batch_operations';
-      break;
-  }
-  if (isset($hook)) {
-    foreach (module_implements($hook) as $module) {
-      $modules[] = $module;
-      $modules_list[] = $module .'.module';
-    }
-    if (!empty($modules)) {
-      $form['#modules'] = $modules;
-      asort($modules_list);
-    }
-    $form['title'] = array(
-      '#prefix' => '<h3>',
-      '#suffix' => '</h3>',
-      '#value' => $title,
-    );
-    if (empty($modules)) {
-      $modules_list[] = t('No modules implement the required code for this database update step');
-    }
-    $form['list'] = array(
-      '#prefix' => '<div>',
-      '#suffix' => '</div>',
-      '#value' => theme('item_list', $modules_list),
-    );
-  }
-  if ($step < 3) {
-    $form['submit'] = array(
-      '#type' => 'submit',
-      '#value' => t('Continue'),
-    );
-  }
-  return $form;
-}
-
-/**
- * Submission function for the database update form.
- */
-function xmlsitemap_tools_update_database_submit($form, &$form_state) {
-  $step = isset($form_state['storage']['step']) ? $form_state['storage']['step'] : 1;
-  switch ($step) {
-    case 1:
-      $hook = '_xmlsitemap_update_module_tables_batch_operations';
-      break;
-    case 2:
-      $hook = '_xmlsitemap_update_main_table_batch_operations';
-      break;
-  }
-  if (isset($form['#modules']) && isset($hook)) {
-    foreach ($form['#modules'] as $module) {
-      $function = $module . $hook;
-      if (function_exists($function)) {
-        $result = $function();
-        if (isset($result)) {
-          if (is_array($result)) {
-            foreach ($result as $operation) {
-              $batch['operations'][] = array($operation, array());
-            }
-          }
-          elseif (is_string($result)) {
-            $batch['operations'][] = array($result, array());
-          }
-        }
-      }
-    }
-  }
-  if (isset($batch)) {
-    $batch['title'] = t('Updating database');
-    $batch['finished'] = 'xmlsitemap_database_update_finished';
-    batch_set($batch);
-  }
-  $form_state['storage']['step'] = $step + 1;
-}
-
-/**
- * Menu callback; return the debug form.
- */
-function xmlsitemap_tools_debug() {
-  xmlsitemap_show_admin_messages();
-  return array();
-}
-
 /*****************************************************************************
- * Public functions.
+ * Public functions - messages shown in the administration page.
  ****************************************************************************/
 
 /**
@@ -460,77 +349,36 @@ function xmlsitemap_add_admin_message($message, $type = 'status') {
     if (isset($var)) {
       $messages = variable_get($var, array());
       array_unshift($messages, $message);
+      variable_set($var, $messages);
     }
   }
 }
 
 /**
- * Add the XML site map settings fieldset to the form.
- * @param $form
- *  The form to change.
- * @param settings
- *  An array of optional settings.
- *   - disabled: TRUE if some of the fields added to the fieldsets are disabled;
- *   - weight: the weight of the fieldset;
- *   - buttons: an array of strings which identify the form items that will have
- *     their weight increased of of 1. 
+ * Show all the messages set with xmlsitemap_add_admin_message().
+ * The function must be called at the beginning of every menu callback function
+ * that creates an XML Sitemap administration page.
  */
-function xmlsitemap_add_settings_fieldset(&$form, $settings = array()) {
-  if (!isset($form['xmlsitemap'])) {
-    $form['xmlsitemap'] = array(
-      '#type' => 'fieldset',
-      '#title' => t('XML site map'),
-      '#collapsible' => TRUE,
-    );
-  }
-  if (!empty($settings['disabled']) && !isset($form['xmlsitemap']['#description'])) {
-    $form['xmlsitemap']['#description'] = t('The disabled options are only modifiable from users with the right permission');
-  }
-  if (isset($settings['weight'])) {
-    if ((isset($form['xmlsitemap']['#weight']) && $settings['weight'] > $form['xmlsitemap']['#weight']) || !isset($form['xmlsitemap']['#weight'])) {
-      $form['xmlsitemap']['#weight'] = $settings['weight'];
-    }
-  }
-  if (!empty($settings['buttons'])) {
-    foreach ($settings['buttons'] as $button) {
-      if (isset($form[$button])) {
-        $form[$button]['#weight'] = isset($form[$button]['#weight']) ? $form[$button]['#weight'] + 1 : 1;
+function xmlsitemap_show_admin_messages() {
+  $types = array(
+    'error' => 'xmlsitemap_admin_error_messages',
+    'warning' => 'xmlsitemap_admin_warning_messages',
+    'status' => 'xmlsitemap_admin_status_messages',
+  );
+  foreach ($types as $type => $var) {
+    $messages = variable_get($var, array());
+    if (count($messages)) {
+      foreach ($messages as $message) {
+        drupal_set_message($message, $type);
       }
+      variable_set($var, array());
     }
   }
 }
 
-/**
- * Function called when the database batch is finished.
- * @param $success
- *  TRUE if the batch operation has been concluded sucessfully, FALSE otherwise.
- * @param $results
- *  The values returned from the batch function(s).
- * @param $operations
- *  The array of operations that remained unprocessed.
- */
-function xmlsitemap_database_update_finished($success, $results, $operations) {
-  if ($success) {
-    if (!empty($results['added'])) {
-      drupal_set_message(
-        format_plural($results['added'], 'Added 1 row.', 'Added @count rows.')
-      );
-    }
-    if (!empty($results['deleted'])) {
-      drupal_set_message(
-        format_plural($results['deleted'], 'Deleted 1 row.', 'Deleted @count rows.')
-      );
-    }
-    if (!empty($results['updated'])) {
-      drupal_set_message(
-        format_plural($results['updated'], 'Updated 1 row.', 'Updated @count rows.')
-      );
-    }
-  }
-  else {
-    drupal_set_message(t("An error occured, and the database update processing didn't complete."));
-  }
-}
+/*****************************************************************************
+ * Public functions.
+ ****************************************************************************/
 
 /**
  * Determine the frequency of updates to a link.
@@ -559,6 +407,28 @@ function xmlsitemap_frequency($interval) {
     }
   }
   return $frequency;
+}
+
+/**
+ * Return the ID associated with the module.
+ * If ID for the module doesn't exist, then it creates a new ID.
+ * @param $module
+ *  The name of a module handing the rows of the xmlsitemap table (without
+ *  the '.module' extension).
+ * @return
+ *  The ID for the module, or FALSE in case of error.
+ */
+function xmlsitemap_get_module_id($module) {
+  if (($mid = db_result(db_query("SELECT mid FROM {xmlsitemap_modules} WHERE name = '%s'", $module))) === FALSE) {
+    $info = new stdClass();
+    $info->mid = 0;
+    $info->name = $module;
+    if (drupal_write_record('xmlsitemap_modules', $info) === FALSE) {
+      return FALSE;
+    }
+    $mid = $info->mid;
+  }
+  return $mid;
 }
 
 /**
@@ -596,25 +466,14 @@ function xmlsitemap_priority_options($option = '') {
 }
 
 /**
- * Show all the messages set with xmlsitemap_add_admin_message().
- * The function must be called at the beginning of every menu callback function
- * that creates an XML Sitemap administration page.
+ * Save a link data into the xmlsitemap table.
+ * @param &$link
+ *   The object containing the data to be saved in the database.
+ *  @param $update
+ *    TRUE if the data is already present in the database.
  */
-function xmlsitemap_show_admin_messages() {
-  $types = array(
-    'error' => 'xmlsitemap_admin_error_messages',
-    'warning' => 'xmlsitemap_admin_warning_messages',
-    'status' => 'xmlsitemap_admin_status_messages',
-  );
-  foreach ($types as $type => $var) {
-    $messages = variable_get($var, array());
-    if (count($messages)) {
-      foreach ($messages as $message) {
-        drupal_set_message($message, $type);
-      }
-      variable_set($var, array());
-    }
-  }
+function xmlsitemap_save_link(&$link, $update = FALSE) {
+  drupal_write_record('xmlsitemap', $link, empty($update) ? NULL : 'lid');
 }
 
 /*****************************************************************************
@@ -624,14 +483,17 @@ function xmlsitemap_show_admin_messages() {
 /**
  * Return the number of links present in xmlsitemap table.
  */
+
 function _xmlsitemap_link_count() {
   // Count only the links added by enabled modules.
   return db_result(db_query("SELECT COUNT(*)
     FROM {xmlsitemap} xsm
-    INNER JOIN {system} sm ON sm.name = xsm.module
-    WHERE sm.type = 'module'
-      AND sm.status = 1")
-  );
+    INNER JOIN {xmlsitemap_modules} xm ON xm.mid = xsm.mid
+    INNER JOIN {system} sm ON sm.name = xm.name
+    WHERE xsm.enabled = 1
+      AND sm.type = 'module'
+      AND sm.status = 1"
+  ));
 }
 
 /**
@@ -648,11 +510,14 @@ function _xmlsitemap_output_chunk($chunk = 0) {
   $chunk_size = variable_get('xmlsitemap_chunk_size', 200);
   $start = $chunk * $chunk_size;
   // Select only the links added by enabled modules.
-  $links = db_query_range("SELECT * FROM {xmlsitemap} xsm
-    INNER JOIN {system} sm ON sm.name = xsm.module
-    WHERE sm.type = 'module'
+  $links = db_query_range("SELECT *, xm.name AS module
+    FROM {xmlsitemap} xsm
+    INNER JOIN {xmlsitemap_modules} xm ON xm.mid = xsm.mid
+    INNER JOIN {system} sm ON sm.name = xm.name
+    WHERE xsm.enabled = 1
+      AND sm.type = 'module'
       AND sm.status = 1
-    ORDER BY lastmod DESC, changefreq, priority DESC, loc",
+    ORDER BY changed DESC, changefreq, priority DESC, url",
     $start , $chunk_size
   );
   while ($link = db_fetch_object($links)) {
@@ -661,12 +526,12 @@ function _xmlsitemap_output_chunk($chunk = 0) {
       $url = $function($link->loc, $link->type);
     }
     else {
-      $url = url($link->loc, array('absolute' => TRUE));
+      $url = url($link->url, array('absolute' => TRUE));
     }
     print '  <url>'."\n";
     print '    <loc>'. check_url($url) .'</loc>'."\n";
-    if ($link->lastmod != 0) {
-      print '    <lastmod>'. gmdate('Y-m-d\TH:i:s+00:00', $link->lastmod) .'</lastmod>'."\n";
+    if ($link->changed != 0) {
+      print '    <lastmod>'. gmdate('Y-m-d\TH:i:s+00:00', $link->changed) .'</lastmod>'."\n";
     }
     if ($link->changefreq != 0) {
       print '    <changefreq>'. xmlsitemap_frequency($link->changefreq) .'</changefreq>'."\n";
@@ -677,26 +542,6 @@ function _xmlsitemap_output_chunk($chunk = 0) {
     print '  </url>'."\n";
   }
   print '</urlset>';
-}
-
-/**
- * Submit the site map to search engines.
- */
-function _xmlsitemap_ping() {
-  module_invoke_all('xmlsitemap_engines', 'ping');
-  variable_set('xmlsitemap_changed', FALSE);
-}
-
-/**
- * Schedule a call to _xmlsitemap_ping() to be run on exit. Use this
- * function instead of _xmlsitemap_ping() to avoid a delay in outputting
- * the page to the user.
- * @return
- *  TRUE if the function has been called previously, FALSE otherwise.
- */
-function _xmlsitemap_submit_on_exit() {
-  static $count = 0;
-  return ($count++ <> 0);
 }
 
 /**
