@@ -16,6 +16,7 @@ function project_issue_views_data() {
 
   $data['project_issues']['table']['join'] = array(
     'node' => array(
+      'type' => 'INNER',
       'left_field' => 'nid',
       'field' => 'nid',
     ),
