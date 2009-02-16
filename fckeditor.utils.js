@@ -108,8 +108,8 @@ function Toggle(textareaID, TextTextarea, TextRTE, xss_check)
     } else {
       text = textArea.val();
     }
-    // #372150
-    if (text == '<br />' || text == '<p></p>' || text == '<div></div>') {
+    // #372150 and #374386
+    if (text == '<br />' || text == '<p>&#160;</p>' || text == '<div>&#160;</div>') {
         text = '';
     }
     textArea.val(text);
