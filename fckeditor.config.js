@@ -33,7 +33,7 @@ FCKConfig.ToolbarSets['DrupalFull'] = [
 ['Bold','Italic','Underline','StrikeThrough','-','Subscript','Superscript'],
 ['OrderedList','UnorderedList','-','Outdent','Indent','Blockquote'],
 ['JustifyLeft','JustifyCenter','JustifyRight'],
-/* 
+/*
  * EXPERIMENTAL
  * Uncomment the line below to enable linktonode and linktomenu buttons
  * ATTENTION: Link to Content module must be installed first!
@@ -59,7 +59,7 @@ FCKConfig.ToolbarSets['DrupalFiltered'] = [
 ['Source'],
 ['Cut','Copy','Paste','PasteText','PasteWord'],
 ['Undo','Redo','-','Find','Replace','-','SelectAll','RemoveFormat'],
-/* 
+/*
  * EXPERIMENTAL
  * Uncomment the line below to enable linktonode and linktomenu buttons
  * ATTENTION: Link to Content module must be installed first!
@@ -108,3 +108,5 @@ FCKConfig.IndentClasses = ['rteindent1','rteindent2','rteindent3','rteindent4'] 
 FCKConfig.JustifyClasses = ['rteleft','rtecenter','rteright','rtejustify'] ;
 //Set to 'encode' if you want to obfuscate emails with javascript
 FCKConfig.EMailProtection = 'none' ;
+// #330286 remove "Red Title" from Styles list.
+FCKConfig.CustomStyles = {};
