@@ -20,7 +20,7 @@ Drupal.behaviors.fckeditor = function(context) {
           $.post(Drupal.settings.basePath + 'index.php?q=fckeditor/xss', {
             text: $('#' + taid).val(),
             'filters[]': Drupal.settings.fckeditor_filters[fckInstances[taid].DrupalId]
-            }, 
+            },
             function(text) {
               textarea.val(text);
               $('#img_assist-link-' + taid).hide();
@@ -33,7 +33,7 @@ Drupal.behaviors.fckeditor = function(context) {
           editorInstance.ReplaceTextarea();
           $('#img_assist-link-' + taid).hide();
           $(".img_assist-button").hide();
-        }        
+        }
       }
     }
   });
@@ -54,7 +54,7 @@ function Toggle(textareaID, TextTextarea, TextRTE, xss_check)
       $.post(Drupal.settings.basePath + 'index.php?q=fckeditor/xss', {
         text: $('#' + textareaID).val(),
         'filters[]': Drupal.settings.fckeditor_filters[fckInstances[textareaID].DrupalId]
-        }, 
+        },
         function(text) {
           $('#' + textareaID).val(text);
           fckInstances[textareaID].ReplaceTextarea();
@@ -108,7 +108,10 @@ function Toggle(textareaID, TextTextarea, TextRTE, xss_check)
     } else {
       text = textArea.val();
     }
-
+    // #372150
+    if (text == '<br />' || text == '<p></p>' || text == '<div></div>') {
+        text = '';
+    }
     textArea.val(text);
 
     textArea.show();
@@ -155,7 +158,7 @@ function Toggle(textareaID, TextTextarea, TextRTE, xss_check)
  * editor instance is completely loaded and available for API interactions.
  */
 function FCKeditor_OnComplete(editorInstance) {
-  
+
   // Enable the switch button. It is disabled at startup, waiting the editor to be loaded.
   $('#switch_' + editorInstance.Name).show();
   editorInstance.Events.AttachEvent('OnAfterLinkedFieldUpdate', FCKeditor_OnAfterLinkedFieldUpdate);
