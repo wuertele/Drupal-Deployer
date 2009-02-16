@@ -35,7 +35,7 @@ function project_issue_views_default_views() {
     ),
     'rid' => array(
       'label' => 'Version',
-      'required' => 1,
+      'required' => 0,
       'id' => 'rid',
       'table' => 'project_issues',
       'field' => 'rid',
@@ -410,7 +410,7 @@ function project_issue_views_default_views() {
     ),
     'rid' => array(
       'label' => 'Version',
-      'required' => 1,
+      'required' => 0,
       'id' => 'rid',
       'table' => 'project_issues',
       'field' => 'rid',
@@ -833,7 +833,7 @@ function project_issue_views_default_views() {
     ),
     'rid' => array(
       'label' => 'Version',
-      'required' => 1,
+      'required' => 0,
       'id' => 'rid',
       'table' => 'project_issues',
       'field' => 'rid',
@@ -1207,7 +1207,7 @@ function project_issue_views_default_views() {
     ),
     'rid' => array(
       'label' => 'Version',
-      'required' => 1,
+      'required' => 0,
       'id' => 'rid',
       'table' => 'project_issues',
       'field' => 'rid',
@@ -1568,7 +1568,7 @@ function project_issue_views_default_views() {
     ),
     'rid' => array(
       'label' => 'Version',
-      'required' => 1,
+      'required' => 0,
       'id' => 'rid',
       'table' => 'project_issues',
       'field' => 'rid',
@@ -1995,7 +1995,7 @@ function project_issue_views_default_views() {
     ),
     'rid' => array(
       'label' => 'Version',
-      'required' => 1,
+      'required' => 0,
       'id' => 'rid',
       'table' => 'project_issues',
       'field' => 'rid',
