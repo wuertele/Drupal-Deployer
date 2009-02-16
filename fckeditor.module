@@ -99,7 +99,7 @@ function fckeditor_elements() {
     if (fckeditor_is_compatible_client()) {
       // it would be useless to dig deeper if we're not able or allowed to
       $type['textarea'] = array('#process' => array('fckeditor_process_textarea'));
-      $type['form'] = array('#after_build' => array('fckeditor_process_form'));      
+      $type['form'] = array('#after_build' => array('fckeditor_process_form'));
     }
   }
   return $type;
@@ -114,10 +114,10 @@ function fckeditor_filter_xss() {
   if (!isset($_POST['text']) || !is_string($_POST['text']) || !is_array($_POST['filters'])) {
     exit;
   }
-  
+
   $text = $_POST['text'];
   $text = strtr($text, array('<!--' => '__COMMENT__START__', '-->' => '__COMMENT__END__'));
-  
+
   foreach ($_POST['filters'] as $module_delta) {
     $module = strtok($module_delta, "/");
     $delta = strtok("/");
@@ -139,7 +139,7 @@ function fckeditor_filter_xss() {
       $text = module_invoke($module, 'filter', 'process', $delta, $format, $text);
     }
   }
-  
+
   $text = strtr($text, array('__COMMENT__START__' => '<!--', '__COMMENT__END__' => '-->'));
 
   echo $text;
@@ -150,16 +150,16 @@ function fckeditor_process_form(&$form) {
   global $_fckeditor_configuration, $_fckeditor_js_ids;
   static $processed_textareas = array();
   static $found_textareas = array();
-  
+
   //Skip if:
   // - we're not editing an element
   // - fckeditor is not enabled (configuration is empty)
   if (arg(1) == "add" || arg(1) == "reply" || !count($_fckeditor_configuration)) {
     return $form;
-  }  
-  
+  }
+
   $fckeditor_filters = array();
-    
+
   // Iterate over element children; resetting array keys to access last index.
   if ($children = array_values(element_children($form))) {
     foreach ($children as $index => $item) {
@@ -168,12 +168,12 @@ function fckeditor_process_form(&$form) {
       if (isset($element['#id']) && in_array($element['#id'], array_keys($_fckeditor_js_ids))) {
         $found_textareas[$element['#id']] = &$element;
       }
-      
+
       // filter_form() always uses the key 'format'. We need a type-agnostic
       // match to prevent false positives. Also, there must have been at least
       // one element on this level.
       if ($item === 'format' && $index > 0) {
-        
+
         // Make sure we either match a input format selector or input format
         // guidelines (displayed if user has access to one input format only).
         if ((isset($element['#type']) && $element['#type'] == 'fieldset') || isset($element['format']['guidelines'])) {
@@ -181,9 +181,9 @@ function fckeditor_process_form(&$form) {
           $field = &$form[$children[$index - 1]];
           $textarea_id = $field['#id'];
           $js_id = $_fckeditor_js_ids[$textarea_id];
-          
+
           array_push($processed_textareas, $js_id);
-          
+
           //search for checkxss1/2 class
           if (empty($field['#attributes']['class']) || strpos($field['#attributes']['class'], "checkxss") === FALSE) {
             continue;
@@ -193,16 +193,16 @@ function fckeditor_process_form(&$form) {
           // link to "More information about formatting options". When only one
           // input format is displayed, we also have to remove formatting
           // guidelines, stored in the child 'format'.
-          $formats = element_children($element);          
-          
+          $formats = element_children($element);
+
           foreach ($formats as $format_id) {
             $format = !empty($element[$format_id]['#default_value']) ? $element[$format_id]['#default_value'] : $element[$format_id]['#value'];
             break;
           }
-          
+
           $enabled = filter_list_format($format);
           $fckeditor_filters = array();
-          
+
           //loop through all enabled filters
           foreach ($enabled as $id => $filter) {
             //but use only that one selected in FCKeditor profile
@@ -213,7 +213,7 @@ function fckeditor_process_form(&$form) {
               $fckeditor_filters[$js_id][] = $id ."/". $format;
             }
           }
-          
+
           //No filters assigned, remove xss class
           if (empty($fckeditor_filters[$js_id])) {
             $field['#attributes']['class'] = preg_replace("/checkxss(1|2)/", "", $field['#attributes']['class']);
@@ -221,7 +221,7 @@ function fckeditor_process_form(&$form) {
           else {
             $field['#attributes']['class'] = strtr($field['#attributes']['class'], array("checkxss1" => "filterxss1", "checkxss2" => "filterxss2"));
           }
-          
+
           array_pop($formats);
           unset($formats['format']);
         }
@@ -232,7 +232,7 @@ function fckeditor_process_form(&$form) {
       fckeditor_process_form($element);
     }
   }
-  
+
   //We're in a form
   if (isset($form['#action'])) {
     //some textareas associated with FCKeditor has not been processed
@@ -241,8 +241,8 @@ function fckeditor_process_form(&$form) {
       foreach (array_keys($found_textareas) as $id) {
         $element = &$found_textareas[$id];
         //if not processed yet (checkxss class is before final processing)
-        if (strpos($element['#attributes']['class'], "checkxss") !== FALSE && !in_array($_fckeditor_js_ids[$element['#id']], $processed_textareas)) {
-          //assign default Filtered HTML to be safe on fields that do not have input format assigned
+        if (strpos($element['#attributes']['class'], "checkxss") !== FALSE && !in_array($_fckeditor_js_ids[$element['#id']], $processed_textareas) && !empty($_fckeditor_configuration[$id]['filters'])) {
+          //assign default Filtered HTML to be safe on fields that do not have input format assigned, but only if at least one security filter is enabled in Security settings
           $js_id = $_fckeditor_js_ids[$element['#id']];
           $fckeditor_filters[$js_id][] = "filter/0/1";
           $element['#attributes']['class'] = strtr($element['#attributes']['class'], array("checkxss1" => "filterxss1", "checkxss2" => "filterxss2"));
@@ -250,11 +250,11 @@ function fckeditor_process_form(&$form) {
       }
     }
   }
-  
+
   if (!empty($fckeditor_filters)) {
     drupal_add_js(array('fckeditor_filters' => $fckeditor_filters), 'setting');
   }
-  
+
   return $form;
 }
 
@@ -281,7 +281,7 @@ function fckeditor_menu() {
     'access arguments' => array('access fckeditor'),
     'type' => MENU_CALLBACK,
   );
-    
+
   $items['admin/settings/fckeditor'] = array(
     'title' => 'FCKeditor settings',
     'description' => 'Configure the rich text editor.',
@@ -362,7 +362,7 @@ function fckeditor_init() {
 }
 
 /**
- * Implementation of hook_file_download(). 
+ * Implementation of hook_file_download().
  * Support for private downloads.
  * FCKeditor does not implement any kind of potection on private files.
  */
@@ -372,13 +372,13 @@ function fckeditor_file_download($file) {
     if (db_fetch_object($result)) {
         return NULL;
     }
-    
+
     //No info in DB? Probably a file uploaded with FCKeditor
     $global_profile = fckeditor_profile_load("FCKeditor Global Profile");
 
     //Assume that files inside of fckeditor directory belong to the FCKeditor. If private directory is set, let the decision about protection to the user.
     $private_dir = isset($global_profile->settings['private_dir']) ? $global_profile->settings['private_dir'] : "/";
-    
+
     //If path to the file points to the FCKeditor private directory, allow downloading
     if (strpos($path, file_directory_path() ."/". trim($private_dir, "/\\")) === 0) {
       $ctype = ($info = @getimagesize($path)) ? $info['mime'] : (function_exists('mime_content_type') ? mime_content_type($path) : 'application/x-download');
@@ -490,7 +490,7 @@ function fckeditor_process_textarea($element) {
       $enabled = FALSE;
     }
   }
-  
+
   //old profile info, assume Filtered HTML is enabled
   if (!isset($conf['ss'])) {
     $conf['ss'] = 2;
@@ -499,7 +499,7 @@ function fckeditor_process_textarea($element) {
   if (!isset($conf['filters'])) {
     $conf['filters'] = array();
   }
-    
+
   $themepath = path_to_theme() .'/';
   $host = base_path();
 
@@ -520,7 +520,7 @@ function fckeditor_process_textarea($element) {
     else {
       $element['#attributes']['class'] .= ' fckeditor';
     }
-    
+
     $js_id = 'oFCK_'. $num++;
     $_fckeditor_js_ids[$element['#id']] = $js_id;
     $fckeditor_on = ($conf['default']=='t') ? 1 : 0 ;
@@ -529,7 +529,7 @@ function fckeditor_process_textarea($element) {
     //it's not a problem when adding new content/comment
     if (arg(1) != "add" && arg(1) != "reply") {
       $_fckeditor_configuration[$element['#id']] = $conf;
-      
+
       //let FCKeditor know when perform XSS checks auto/manual
       if ($conf['ss'] == 1) {
         $xss_class = 'checkxss1';
@@ -541,7 +541,7 @@ function fckeditor_process_textarea($element) {
       $element['#attributes']['class'] .= ' '. $xss_class;
       $xss_check = 1;
     }
-        
+
     //settings are saved as strings, not booleans
     if ($conf['show_toggle'] == 't') {
       $content = '';
@@ -785,7 +785,7 @@ function fckeditor_process_textarea($element) {
               }
             }
           }
-        
+
           if (!empty($css_files)) {
             $editorcss .= implode(",", $css_files) .",";
           }
@@ -797,7 +797,7 @@ function fckeditor_process_textarea($element) {
               $editorcss .= $host . $color_paths[1] .",";
             }
           }
-          else { 
+          else {
             if (!empty($color_paths[0])) {
               $editorcss .= $host . $color_paths[0] .",";
             }
@@ -920,17 +920,17 @@ function fckeditor_is_compatible_client() {
  */
 function fckeditor_html_filter_formats() {
   static $return;
-  
+
   if (isset($return)) {
     return $return;
   }
-  
+
   $return = array();
   $r = db_query("SELECT format FROM {filters} WHERE module = 'filter' AND delta = 0");
   while ($row = db_fetch_object($r)) {
     $return[] = $row->format;
   }
-  
+
   return $return;
 }
 
