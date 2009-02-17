@@ -1,0 +1,410 @@
+<?php
+
+define('NODEREFERENCE_VIEWS_SELECT_MODAL_CONTENT_PATH', 'nvs/modal_content');
+define('NODEREFERENCE_VIEWS_SELECT_WIDGET_CONTENT_PATH', 'nvs/widget_content');
+
+require_once realpath(dirname(__FILE__) . '/nodereference_views_select.theme.inc');
+require_once realpath(dirname(__FILE__) . '/nodereference_views_select.views.inc');
+
+/**
+ * 
+ * implementation of hook_menu()
+ */
+function nodereference_views_select_menu($may_cache)
+{
+	$items = array();
+	
+	if ($may_cache)
+	{
+		$items[] = array
+		(
+			'path' => NODEREFERENCE_VIEWS_SELECT_MODAL_CONTENT_PATH,
+			'access' => user_access('access content'),
+			'callback' => 'nodereference_views_select_modal_content'
+		);
+		$items[] = array
+		(
+			'path' => NODEREFERENCE_VIEWS_SELECT_WIDGET_CONTENT_PATH,
+			'access' => user_access('access content'),
+			'callback' => 'nodereference_views_select_widget_content'		
+		);
+	}
+	
+	return $items;
+}
+
+/**
+ * implementation of hook_init()
+ */
+function nodereference_views_select_init()
+{
+	$settings = array
+	(
+	  	'NVS' => array
+	    (
+	       	'modalPath' => NODEREFERENCE_VIEWS_SELECT_MODAL_CONTENT_PATH,
+	    	'widgetPath' => NODEREFERENCE_VIEWS_SELECT_WIDGET_CONTENT_PATH,
+	    )
+	);
+	
+	drupal_add_js($settings, 'setting');
+	
+	drupal_add_css(drupal_get_path('module', 'nodereference_views_select') . '/nodereference_views_select.css');
+	
+}
+
+/**
+ * 
+ * @return processed, filtered field data from the http request
+ */
+function _nodereference_views_select_get_field_data()
+{
+	return array
+	(
+		'is_multi_select' => check_plain($_REQUEST['isMultiSelect']),
+		'nids' => explode(',', check_plain($_REQUEST['nids'])),
+		'field_name' => check_plain($_REQUEST['fieldName']),
+		'is_multiple' => check_plain($_REQUEST['isMultiSelect']),
+		'is_sortable' => check_plain($_REQUEST['isSortable']),
+		'default_filters' => explode(',', check_plain($_REQUEST['defaultFilters'])),
+	);	
+}
+
+/**
+ * Menu callback returning the modal content
+ * 
+ * @param $view_name
+ * @return html
+ */
+function nodereference_views_select_modal_content($view_name)
+{	
+	$view = views_get_view(check_plain($view_name));
+	
+	$view->field_data = _nodereference_views_select_get_field_data();
+
+	$view_html = views_build_view('page', $view, array(), $view->use_pager, $view->nodes_per_page);
+	
+	echo theme('nodereference_views_select_modal_content', $view_html, $view->page_title, $view->use_pager);
+}
+
+/**
+ * Menu callback for refreshing the widget's list
+ * 
+ * @return html
+ */
+function nodereference_views_select_widget_content()
+{
+	$field_data = _nodereference_views_select_get_field_data();
+	
+	echo nodereference_views_select_get_current_nodes($field_data['nids'], $field_data['field_name'], $field_data['is_multiple']);	
+}
+
+/**
+ * 
+ * @param $field
+ * @return the view for the specified field, or null if no view defined
+ */
+function nodereference_views_select_get_view($field)
+{
+	if (module_exists('views') && isset($field['advanced_view']) && $field['advanced_view'] != '--' && ($view = views_get_view($field['advanced_view'])))
+	{
+		return $view;
+	}
+	else
+	{
+		return null;
+	}
+}
+
+/**
+ * 
+ * @param $nids
+ * @param $field_name
+ * @param $is_multiple
+ * @param $is_sortable
+ * @return teaser list
+ */
+function nodereference_views_select_get_current_nodes($nids, $field_name, $is_multiple)
+{
+	$list_id = "nodereference-views-select-teaser-list-$field_name";
+	
+	$items = array();
+	
+	foreach ($nids as $nid)
+	{
+		$items[] = theme('nodereference_views_select_teaser', node_load($nid), $is_multiple);
+	}
+	
+	$output = theme
+	(
+		'item_list', 
+		$items, 
+		null, 
+		'ul', 
+		array('class' => 'nodereference_views_select_teaser_list', 'id' => $list_id)
+	);
+	
+	drupal_add_js("$(document).ready(function()
+	{ 
+		NVS.teaserListLoaded('$field_name');
+	});", 'inline');
+
+	return $output;
+	
+}
+
+/**
+ * implementation of hook_widget_settings
+ * @param $op
+ * @param $widget
+ */
+function nodereference_views_select_widget_settings($op, $widget)
+{
+	switch ($op)
+	{
+		case 'form':
+		 $form = array();
+		 
+		 $form['widget_settings'] = array (
+		 '#type' => 'fieldset',
+		 '#title' => t('Widget Settings')
+		 );
+		 
+		 $form['widget_settings']['sortable'] = array (
+		 	 '#type' => 'checkbox',
+			 '#title' => t('Sortable'),
+			 '#default_value' => isset($widget['sortable']) ? $widget['sortable'] : false,
+		 );
+		 
+		 $form['widget_settings']['current_pager_limit'] = array (
+			 '#type' => 'textfield',
+			 '#title' => t('Number of teasers shown per page'),
+		 	 '#description' => t('Not applicable if sortable is set'),
+			 '#size' => '3',
+		 	 '#disabled' => $widget['sortable'],
+		 	 '#maxlength' => '3',
+			 '#default_value' => isset($widget['current_pager_limit']) ? $widget['current_pager_limit'] : NODEREFERENCETEASERSMODAL_CURRENT_PAGER_LIMIT,
+			 '#required' => TRUE
+		 );
+
+		 return $form;
+
+		 case 'save':
+		 	return array('sortable', 'current_pager_limit');
+
+		case 'callbacks':
+			return array(
+        		'default value' => CONTENT_CALLBACK_NONE,
+			);
+	}
+}
+
+
+/**
+ * Implementation of hook_widget_info().
+ */
+function nodereference_views_select_widget_info() {
+  return array(
+    'nodereference_views_select' => array
+    (
+      'label' => t('Teaser List + Modal Panel using Views'),
+      'field types' => array('nodereference'),
+    )
+  );
+}
+
+/**
+ * Implementation of hook_widget().
+ */
+function nodereference_views_select_widget($op, &$node, $field, &$items) 
+{
+	$view = null;
+	$field_name = $field['field_name'];
+	
+    switch ($op) 
+    {
+      case 'prepare form values':
+        $items_transposed = content_transpose_array_rows_cols($items);
+        $items['default nids'] = $items_transposed['nid'];
+        
+        $view = nodereference_views_select_get_view($field);
+        
+        // verify that the assigned view is applicable for the specified field
+        if (!$view)
+        {
+        	drupal_set_message(sprintf("A View must be defined for field %s", $field_name), 'error');
+        }
+        else if (!$view->page)
+        {
+        	drupal_set_message(sprintf("View for field %s must provide a page display", $field_name), 'error');
+        }
+        else if ($view->page_type != NODEREFERENCE_VIEWS_SELECT_STYLE_PLUGIN_NAME)
+        {
+        	$plugins = _views_get_style_plugins();
+        	drupal_set_message(sprintf("Page type for field %s's View must provide be set to '%s'", $field_name, $plugins[NODEREFERENCE_VIEWS_SELECT_STYLE_PLUGIN_NAME]['name']), 'error');
+        }        
+        break;
+
+      case 'form':
+      	$view = nodereference_views_select_get_view($field);
+
+	    $form = array();
+	              	
+      	if ($view && !isset($node->cck_dummy_node_form))
+      	{
+	      	drupal_add_js(drupal_get_path('module', 'nodereference_views_select') . '/nodereference_views_select.js');      	
+
+	        $widget_id = "nodereference-views-select-$field_name";
+	                
+	        $form[$field_name] = array('#tree' => TRUE);
+	        
+	        // Hidden field to hold the actual node ids
+	        $form[$field_name]['nids'] = array(
+	          '#type' => 'hidden',
+	          '#default_value' => !empty($items['default nids']) ? implode(',', $items['default nids']) : '0',
+	          '#multiple' => $field['multiple'],
+	          '#required' => $field['required'],
+	          '#id' => "$field_name-nids"
+	        );
+	              
+			// these are used by the javascript
+	        $settings = array
+	        (
+	        	'NVS' => array
+		        (
+		        	'fields' => array
+		        	(
+			        	$field_name => array
+			        	(
+			        		'viewName' => $view->name,
+			        		'defaultFilters' => implode(',', _nodereference_views_select_get_default_filter_values($node, $view->exposed_filter)),
+			        		'isMultiSelect' => $field['multiple'],
+			        		'isSortable' => $field['widget']['sortable'],
+			        		'fieldName' => $field_name,
+			        		'widgetId' => $widget_id,
+			        		'nids' => !empty($items['default nids']) ? implode(',', $items['default nids']) : '0'
+			        	)
+			        ),
+		        )
+	        );
+	        
+	        drupal_add_js($settings, 'setting');
+			
+	        // UI wrapper
+			$form[$field_name]['ui'] = array
+			(
+	  			'#type' => 'fieldset',
+	  			'#title' => t($field['widget']['label']),
+				'#tree' => 'true',
+	          	'#prefix' => sprintf('<div class="nodereference-views-select nodereference-views-select-%s" id="%s">', $field_name, $widget_id),
+	          	'#suffix' => '</div>',
+			);
+			
+			// teaser list
+			$form[$field_name]['ui']['teasers'] = array
+			(
+				'#type' => 'markup',
+				'#value' => nodereference_views_select_get_current_nodes($items['default nids'], $field['field_name'], $field['multiple']),
+				'#prefix' => '<div class="nodereference_views_select_teaser_wrapper">',
+				'#suffix' => '</div>',
+			);
+			
+			// choose button
+			$form[$field_name]['ui']['button'] = array
+			(
+				'#type' => 'markup',
+				'#value' => theme('nodereference_views_select_widget_link', $field['multiple'] ? t('Add') : t('Choose'), array
+								(
+									'class' => "nodereference_views_select_modal_link",
+									'id' => "nodereference_views_select_modal_link-$field_name",
+									'nid' => $node->nid
+								)
+							)
+			);		
+
+			$js = "$(document).ready(function()
+			{
+				$('#nodereference_views_select_modal_link-$field_name').click(function()
+				{
+					return NVS.showModal('$field_name');
+				});
+			});";
+			
+			drupal_add_js($js, 'inline');
+	
+      	}
+      	
+	    return $form;
+
+      case 'process form values':
+    	$selected = explode(',', $items['nids']);
+    	
+		if (empty($selected))
+		{
+			$items = array(array('nid' => 0));
+		}
+		else
+		{
+			if ($field['multiple'])
+			{
+				 // if nothing selected, make it 'none'
+				if (empty($selected))
+				{
+					$selected = array(0);
+				}
+				// drop the 'none' options if other items were also selected
+				elseif (count($selected) > 1 && in_array(0, $selected))
+				{
+					$keys = array_keys($selected, 0);
+					unset($selected[$keys[0]]);
+				}
+
+				$items = array_values(content_transpose_array_rows_cols(array('nid' => $selected)));
+			}
+			else {
+				$items = array(array('nid' => $selected[0]));
+			}
+
+		}
+		break;
+    }
+}
+
+/**
+ * Attempts to automatically fill filters with suitable values from the node.
+ * Works only with Vocabulary filters for now
+ * 
+ * @param $node
+ * @param $filters
+ * @return array of filter values
+ */
+function _nodereference_views_select_get_default_filter_values($node, $filters)
+{
+	$filter_values = array();
+	
+	foreach ($filters as $key => $filter)
+	{
+		$val = '';
+		
+		// taxonomy filter
+		if (strpos($filter['field'], 'term_node') !== false)
+		{
+			$vid = substr($filter['field'], 10, strpos($filter['field'], '.') - 10); // format is term_node_{vid}.tid
+			
+			foreach ($node->taxonomy as $term)
+			{
+				if ($term->vid == $vid)
+				{
+					$val = $term->tid;
+				
+					break;
+				}
+			}
+		}
+		
+		$filter_values[$key] = $val;
+	}
+	
+	return $filter_values;
+}
+
