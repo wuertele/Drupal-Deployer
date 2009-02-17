@@ -16,11 +16,9 @@ function robotstxt_help($path, $arg) {
 }
 
 /**
- * Defines the robots.txt path as a callback.
+ * Implementation of hook_menu().
  */
 function robotstxt_menu() {
-  $access_config = array('administer site configuration');
-
   $items['robots.txt'] = array(
     'page callback' => 'robotstxt_robots',
     'access callback' => TRUE,
@@ -31,33 +29,11 @@ function robotstxt_menu() {
     'description' => 'Manage your robots.txt file.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('robotstxt_admin_settings'),
-    'access arguments' => $access_config,
+    'access arguments' => array('administer site configuration'),
+    'file' => 'robotstxt.admin.inc',
   );
 
   return $items;
-}
-
-/**
- * You can edit the robots.txt for your site under admin/settings/robotstxt
- */
-function robotstxt_admin_settings() {
-  $base = variable_get('robotstxt', FALSE);
-
-  if ($base === FALSE) {
-    $base = _robotstxt_get_file_contents();
-  }
-
-  $form['robotstxt'] = array(
-    '#type' => 'textarea',
-    '#title' => t('Contents of robots.txt'),
-    '#default_value' => $base,
-    '#cols' => 60,
-    '#rows' => 20,
-    '#required' => FALSE,
-    '#wysiwyg' => FALSE,
-  );
-
-  return system_settings_form($form);
 }
 
 /**
@@ -97,6 +73,6 @@ function _robotstxt_get_file_contents() {
   elseif (file_exists(drupal_get_path('module', 'robotstxt') .'/robots.txt')) {
     $file_contents = check_plain(file_get_contents(drupal_get_path('module', 'robotstxt') .'/robots.txt'));
   }
-  
+
   return $file_contents;
 }
