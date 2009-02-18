@@ -347,6 +347,33 @@ function project_issue_mail($key, &$message, $params) {
       $message['body'][] = project_mail_generate_followup_mail_body($node, $history, $params['display_files']);
 
       break;
+
+    case 'project_issue_critical_summary':
+      $project = $params['project'];
+      $message['headers'] += array(
+        'Date' => date('r'),
+        'X-Mailer' => 'Drupal Project Issues module (http://drupal.org/project/project_issue)',
+        'List-Id' => "$project->title <". preg_replace('|.+://([a-zA-Z0-9\._-]+).*|', '\1', $base_url) .'-project-issues-digest>',
+        'List-Archive' => '<'. url('project/issues', array('query' => array('priorities' => '1'), 'absolute' => TRUE)) .'>',
+      );
+      $message['subject'] = t('Release critical bugs for !date', array('!date' => date('F d, Y', time())));
+      $message['body'][] = $params['body'];
+      break;
+
+    case 'project_issue_reminder':
+      $sender->name = variable_get('site_name', '');
+      $sender->mail = variable_get('site_mail', '');
+      $message['headers'] += array(
+        'Return-Path' => "<$sender->mail;>",
+        'Date' => date('r'),
+        'From' => "$sender->name <$sender->mail>",
+        'X-Mailer' => 'Drupal Project Issues module (http://drupal.org/project/project_issue)',
+        'List-Id' => "$sender->name <project-reminder-". preg_replace('|.+://([a-zA-Z0-9\._-]+).*|', '\1', $base_url) .'>',
+        'List-Archive' => '<'. url('project', array('absolute' => TRUE)) .'>',
+      );
+      $message['subject'] = t('Your submitted bugs for !date', array('!date' => date('F d, Y', time())));
+      $message['body'][] = $params['body'];
+      break;
   }
 }
 
