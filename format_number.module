@@ -10,6 +10,11 @@
  */
 
 /**
+ * Maximum allowed decimal digits.
+ */
+define('FORMAT_NUMBER_MAX_PRECISION', 8);
+
+/**
  * Implementation of hook_help().
  */
 function format_number_help($path, $arg) {
@@ -67,7 +72,7 @@ function format_number_get_decimal_point_options() {
   return array(
     "\x2E" => t('full stop (.)'),
     "\x2C" => t('comma (,)'),
-    "\xD9\xAB" => t('arabic decimal separator (٫)'),
+    "\xD9\xAB" => t('arabic decimal separator (?)'),
   );
 }
 
@@ -83,9 +88,9 @@ function format_number_get_thousands_separator_options() {
     "\x2C" => t('comma (,)'),
     "\x27" => t("apostrophe (')"),
     "\xC2\xA0" => t('no-break space ( )'),
-    "\xEF\xBC\x8C" => t('full width comma (，)'),
-    "\xD9\xAC" => t('arabic thousands separator (٬)'),
-    "\xE1\x8B\x88" => t('ethiopic syllable wa (ወ)'),
+    "\xEF\xBC\x8C" => t('full width comma (,)'),
+    "\xD9\xAC" => t('arabic thousands separator (?)'),
+    "\xE1\x8B\x88" => t('ethiopic syllable wa (?)'),
   );
 }
 
@@ -152,14 +157,23 @@ function format_number($number, $decimals = 0) {
   if (!isset($format_options)) {
     $format_options = format_number_get_options();
   }
-  if (is_numeric($number)) {
-    $number = sprintf('%f', (float)$number);
+
+  // Perform an initial conversion using PHP's number_format() that
+  // seems to work better than sprintf().
+  $number = number_format((float)$number, FORMAT_NUMBER_MAX_PRECISION, '.', '');
+
+  if ($decimals < 0) {
+    // Count decimal places (ignoring trailing zeros to the right of the decimal point).
+    $decimals = (strpos($number, '.') === FALSE ? 0 : strlen(preg_replace('#^.*\.([0-9]*?)0*$#', '\1', $number)));
   }
-  if ($decimals < 0 && strpos($number, '.') !== FALSE) {
-    // Count relevant decimal places.
-    $decimals = strlen(preg_replace('#^.*\.([0-9]*?)0*$#', '\1', $number));
+  // Avoid issues caused by PHP rounding limitations.
+  if ($decimals > FORMAT_NUMBER_MAX_PRECISION) {
+    $decimals = FORMAT_NUMBER_MAX_PRECISION;
   }
-  return number_format($number, $decimals, $format_options['decimal_point'], $format_options['thousands_sep']);
+
+  // number_format() can only deal with one chararcter symbols, so that
+  // we tell him to use the placeholders X and Z that we replace later.
+  return str_replace(array('X', 'Z'), array($format_options['decimal_point'], $format_options['thousands_sep']), number_format($number, $decimals, 'X', 'Z'));
 }
 
 /**

@@ -82,7 +82,7 @@ function format_number_settings_user(&$edit) {
  * Validate the user settings form.
  */
 function format_number_settings_user_validate(&$edit) {
-  if ($edit['decimal_point'] == $edit['thousands_sep']) {
+  if (isset($edit['decimal_point']) && $edit['decimal_point'] == $edit['thousands_sep']) {
     form_set_error('thousands_sep', t('Decimal point and thousands separator cannot be defined to use the same symbol.'));
   }
 }
