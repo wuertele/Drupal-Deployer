@@ -51,6 +51,7 @@ function project_issue_auto_close() {
       'nid' => $issue->nid,
       'sid' => PROJECT_ISSUE_STATE_CLOSED,
       'comment' => $comment,
+      'followup_no_mail' => TRUE,  // Temporary hack to get around sending of auto-close emails.
     ));
   }
 }
