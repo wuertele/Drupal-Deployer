@@ -934,8 +934,9 @@ function project_issue_views_default_views() {
       'default_argument_user' => 0,
       'default_argument_fixed' => '',
       'default_argument_php' => '',
-      'user_argument_type' => 'either',
-      'restrict_user_roles' => 0,
+      'validate_user_argument_type' => 'either',
+      'validate_user_restrict_roles' => 0,
+      'validate_user_roles' => array(),
     ),
   ));
   $handler->override_option('sorts', array(
@@ -1294,9 +1295,9 @@ function project_issue_views_default_views() {
       'default_argument_user' => 0,
       'default_argument_fixed' => '',
       'default_argument_php' => '',
-      'user_argument_type' => 'either',
-      'restrict_user_roles' => 0,
-      'user_roles' => array(),
+      'validate_user_argument_type' => 'either',
+      'validate_user_restrict_roles' => 0,
+      'validate_user_roles' => array(),
     ),
   ));
   $handler->override_option('sorts', array(
