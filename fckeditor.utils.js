@@ -82,6 +82,10 @@ function Toggle(textareaID, TextTextarea, TextRTE, xss_check)
     swtch.text(TextRTE);
 
     text = editorInstance.GetData(true);
+    // #372150 and #374386
+    if (text == '<br />' || text == '<p>&#160;</p>' || text == '<div>&#160;</div>') {
+        text = '';
+    }
 
     // check if we have to take care of teasers
     var teaser = FCKeditor_TeaserInfo(textareaID);
@@ -107,10 +111,6 @@ function Toggle(textareaID, TextTextarea, TextRTE, xss_check)
       teaser.buttonContainer.show();
     } else {
       text = textArea.val();
-    }
-    // #372150 and #374386
-    if (text == '<br />' || text == '<p>&#160;</p>' || text == '<div>&#160;</div>') {
-        text = '';
     }
     textArea.val(text);
 
@@ -203,6 +203,10 @@ function FCKeditor_OnAfterLinkedFieldUpdate(editorInstance) {
 
   if ($(textArea).is(':hidden')) {
     var text = editorInstance.GetData(true);
+    // #372150 and #374386
+    if (text == '<br />' || text == '<p>&#160;</p>' || text == '<div>&#160;</div>') {
+        text = '';
+    }
     textArea.value = text;
     // only update the teaser field if this field is associated with a teaser field
     if (teaser) {
