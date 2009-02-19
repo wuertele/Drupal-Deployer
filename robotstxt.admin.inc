@@ -12,16 +12,10 @@
  * @see system_settings_form()
  */
 function robotstxt_admin_settings() {
-  $base = variable_get('robotstxt', FALSE);
-
-  if ($base === FALSE) {
-    $base = _robotstxt_get_file_contents();
-  }
-
   $form['robotstxt'] = array(
     '#type' => 'textarea',
     '#title' => t('Contents of robots.txt'),
-    '#default_value' => $base,
+    '#default_value' => _robotstxt_get_content(),
     '#cols' => 60,
     '#rows' => 20,
     '#wysiwyg' => FALSE,

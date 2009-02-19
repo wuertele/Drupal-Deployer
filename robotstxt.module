@@ -40,42 +40,45 @@ function robotstxt_menu() {
 }
 
 /**
- * Serve up the robots.txt file stored in the db.
+ * Show the robots.txt file.
  */
 function robotstxt_robots() {
-  $base = variable_get('robotstxt', FALSE);
+  $content = array();
+  $content[] = _robotstxt_get_content();
 
-  if ($base === FALSE) {
-    $base = _robotstxt_get_file_contents();
+  // Hook other modules for adding additional lines.
+  if ($additions = module_invoke_all('robotstxt')) {
+    $content = array_merge($content, $additions);
   }
+
+  // Trim any extra whitespace and filter out empty strings.
+  $content = array_map('trim', $content);
+  $content = array_filter($content);
 
   drupal_set_header("Content-type: text/plain");
-  echo trim(check_plain($base));
-
-  // Hook other modules for adding additional lines to robots.txt
-  $lines = module_invoke_all('robotstxt');
-  foreach ($lines as $line) {
-    $line = check_plain($line);
-    if ($line != '') {
-      echo "\n" . trim($line);
-    }
-  }
-
+  echo implode("\n", $content);
   exit;
 }
 
 /**
- * Retrieve contents of robots.txt from site root or module directory
+ * Retrieve contents of robots.txt from the database variable, site root, or
+ * module directory.
  */
-function _robotstxt_get_file_contents() {
-  $file_contents = '';
+function _robotstxt_get_content() {
+  $content = variable_get('robotstxt', FALSE);
 
-  if (file_exists('./robots.txt')) {
-    $file_contents = check_plain(file_get_contents('./robots.txt'));
-  }
-  elseif (file_exists(drupal_get_path('module', 'robotstxt') .'/robots.txt')) {
-    $file_contents = check_plain(file_get_contents(drupal_get_path('module', 'robotstxt') .'/robots.txt'));
+  if ($content === FALSE) {
+    $files = array(
+      './robots.txt',
+      drupal_get_path('module', 'robotstxt') .'/robots.txt',
+    );
+    foreach ($files as $file) {
+      if (file_exists($file) && is_readable($file)) {
+        $content = file_get_contents($file);
+        break;
+      }
+    }
   }
 
-  return $file_contents;
+  return $content;
 }
