@@ -262,7 +262,7 @@ function project_issue_form_comment_form_alter(&$form, &$form_state) {
  *   The current state of the form.
  */
 function project_issue_form_comment_validate($form, &$form_state) {
-  if (variable_get('project_issue_autocomplete', 0) == 1) {
+  if (empty($form['cid']['#value']) && variable_get('project_issue_autocomplete', 0) == 1) {
     if (empty($form_state['values']['project_info']['project_title'])) {
       form_set_error('project_title', t('You must enter a project to navigate to.'));
     }
