@@ -621,7 +621,7 @@ function project_issue_comment_pre_render($form) {
   // after the comment form on preview, in the case where the comment
   // parent is 0.  If we want our issue previews to be consistent, this
   // ugly hack is necessary.
-  if (isset($_POST['op']) && $_POST['op'] == t('Preview comment')) {
+  if (isset($form['#parameters'][1]['values']['op']) && $form['#parameters'][1]['values']['op'] == t('Preview')) {
     $preview = comment_render($node, 0);
   }
   else {
