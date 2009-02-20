@@ -980,8 +980,8 @@ function project_issue_views_default_views() {
       'default_argument_fixed' => '',
       'default_argument_php' => '',
       'validate_user_argument_type' => 'either',
-      'validate_user_restrict_roles' => 0,
-      'validate_user_roles' => array(),
+      'validate_user_restrict_roles' => 1,
+      'validate_user_roles' => array('2' => 2),
     ),
   ));
   $handler->override_option('sorts', array(
