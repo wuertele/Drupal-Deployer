@@ -11,6 +11,7 @@
  *
  * TODO:
  * - translation stats
+ * - correctly handle N files per release, package to .zip and .tgz, etc.
  *
  */
 
