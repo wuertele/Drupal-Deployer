@@ -274,6 +274,7 @@ function project_release_history_generate_project_xml($project_nid, $api_tid = N
   $query = "SELECT ". implode(', ', $fields) ." FROM {node} n ";
   $query .= implode(' ', $joins);
   $query .= " WHERE " . implode(' AND ', $where);
+  $query .= " GROUP BY prn.nid";
   $result = db_query($query, $parameters);
 
   $releases = array();
