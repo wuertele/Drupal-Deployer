@@ -337,6 +337,8 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 
       // Re-write node entry if required
       if ($update == TRUE) {
+        global $user;
+
         drupal_write_record('node', $node, 'nid');
         if (!empty($node->revision)) {
           _node_save_revision($node, $user->uid);
@@ -453,14 +455,19 @@ function filefield_paths_process_file(&$file, $settings, &$node, &$update) {
 
       // Fix reference to old paths in Body and Teaser
       // @TODO: allow for CCK fields
-      $body = str_replace($file['filepath']['old'],  $file['filepath']['new'], $node->body);
-      $teaser = str_replace($file['filepath']['old'],  $file['filepath']['new'], $node->teaser);
+      if (isset($node->body)) {
+        $body = str_replace($file['filepath']['old'],  $file['filepath']['new'], $node->body);
+        $body = str_replace(drupal_urlencode($file['filepath']['old']),  $file['filepath']['new'], $body);
 
-      if ($body != $node->body || $teaser != $node->teaser) {
-        $node->body = $body;
-        $node->teaser = $teaser;
+        $teaser = str_replace($file['filepath']['old'],  $file['filepath']['new'], $node->teaser);
+        $teaser = str_replace(drupal_urlencode($file['filepath']['old']),  $file['filepath']['new'], $teaser);
 
-        $update = TRUE;
+        if ($body != $node->body || $teaser != $node->teaser) {
+          $node->body = $body;
+          $node->teaser = $teaser;
+
+          $update = TRUE;
+        }
       }
 
       // Move ImageField thumbnail
