@@ -23,7 +23,22 @@ class project_issue_handler_filter_issue_version extends views_handler_filter_in
       // GET is empty, which gives an invalid choice when you load the form.
       unset($this->value);
     }
-    parent::value_form($form, $form_state);
+    $this->get_value_options();
+    if (!empty($this->value_options)) {
+      parent::value_form($form, $form_state);
+    }
+    else {
+      // This project has no versions at all, hide this filter.      
+      $this->view->filter['rid']->options['exposed'] = FALSE;
+      // And exclude the field itself. Instead of assuming the field key is
+      // 'version', search for a field using {project_release_nodes}.version
+      // from the same relationship as this filter.
+      foreach ($this->view->field as $field) {
+        if ($field->table == 'project_release_nodes' && $field->field == 'version' && $this->options['relationship'] == $field->options['relationship']) {
+          $field->options['exclude'] = TRUE;
+        }
+      }
+    }
     if (empty($form_state['exposed'])) {
       $form['warning'] = array(
         '#type' => 'markup',
