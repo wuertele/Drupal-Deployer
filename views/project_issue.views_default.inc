@@ -201,7 +201,7 @@ function project_issue_views_default_views() {
     'sid' => array(
       'operator' => 'in',
       'value' => array(
-        'open' => 'open',
+        'Open' => 'Open',
       ),
       'group' => '0',
       'exposed' => TRUE,
@@ -580,7 +580,7 @@ function project_issue_views_default_views() {
     'sid' => array(
       'operator' => 'in',
       'value' => array(
-        'open' => 'open',
+        'Open' => 'Open',
       ),
       'group' => '0',
       'exposed' => TRUE,
@@ -1035,7 +1035,7 @@ function project_issue_views_default_views() {
     'sid' => array(
       'operator' => 'in',
       'value' => array(
-        'open' => 'open',
+        'Open' => 'Open',
       ),
       'group' => '0',
       'exposed' => TRUE,
@@ -1439,7 +1439,7 @@ function project_issue_views_default_views() {
     'sid' => array(
       'operator' => 'in',
       'value' => array(
-        'open' => 'open',
+        'Open' => 'Open',
       ),
       'group' => '0',
       'exposed' => TRUE,
