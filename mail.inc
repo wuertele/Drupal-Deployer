@@ -257,7 +257,7 @@ function project_mail_notify($nid) {
   // to satisfy RFC2822 <http://www.faqs.org/rfcs/rfc2822.html>,
   // which requires double quotes when special characters (including
   // some punctuation) are used.  See example in Appendix A.1.2.
-  $from = "\"$sender->name\" <$sender->mail>";
+  $from = '"' . mime_header_encode($sender->name) . "\" <$sender->mail>";
 
   while ($recipient = db_fetch_object($result)) {
     // To save work, only go through a user_load if we need it.
