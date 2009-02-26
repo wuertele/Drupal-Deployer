@@ -188,10 +188,12 @@ function admin_menu_admin_menu(&$deleted) {
       'parent_path' => 'admin/content/types',
       'options' => array('t' => array('!content-type' => $type->name)),
     );
-    unset($deleted['admin/content/node-type/' . $type_url_str . '/edit']);
+    unset($deleted[$type_path . '/edit']);
     // CCK and other modules adding to node types handled here.
     foreach($deleted as $path => $item) {
-      if (strpos($path, $type_path) !== FALSE) {
+      // Precise test needed to account for multiple content-types having the
+      // same prefix in their name.
+      if ($path === $type_path || strpos($path, $type_path . '/') === 0) {
         // Logically, parent path can never go shorter than $type_path.
         $i = $item['_number_parts'] - 1;
         do {
