@@ -278,22 +278,6 @@ function project_release_form(&$release, &$form_state) {
 
   $modify = $admin || !$is_edit;
 
-  // If we're in preview, assign the submitted values as the node values.
-  if (isset($form_state['node'])) {
-    $node = (object) $form_state['node'];
-    // Since these items can be conditionally disabled, we need to
-    // check for that and repopulate them with saved node values.
-    if (!$modify) {
-      $release_values = array(
-        'version_major', 'version_minor', 'version_patch', 'version_extra', 'tag', 'version'
-      );
-      foreach ($release_values as $field) {
-       	$node->project_release[$field] = $release->project_release[$field];
-      }
-    }
-    $release->project_release = $node->project_release;
-  }
-
   $form['#attributes'] = array("enctype" => "multipart/form-data");
 
   if ($is_edit) {
@@ -461,6 +445,7 @@ function _project_release_form_add_version_element(&$form, $release, $modify, $f
     }
     if (!$modify) {
       $form['project_release'][$var_name]['#attributes'] = array('disabled' => 'disabled');
+      $form['project_release'][$var_name]['#value'] = $release->project_release[$var_name];
     }
   }
   else {
@@ -508,6 +493,7 @@ function _project_release_form_add_text_element(&$form, $title, $value, $is_edit
     );
     if(!$admin) {
       $form['#attributes']['disabled'] = 'disabled';
+      $form['#value'] = $value;
     }
   }
   else {
