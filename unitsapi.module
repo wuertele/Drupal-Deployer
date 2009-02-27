@@ -6,6 +6,18 @@
  */
 
 /**
+ * Implementation of hook_help().
+ */
+function unitsapi_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#unitsapi':
+      $output = '<p>'. t('To use the unitsapi_convert() function, you need the key of the to and from unit.  These keys are below.') .'</p>';
+      $output .= _unitsapi_key_table();
+      return $output;
+  }
+}
+
+/**
  * The API call for all unit conversions.
  *
  * @param $value
@@ -153,6 +165,7 @@ function unitsapi_xml_cache() {
         'symbol' => $unitarray['symbol'],
         'factor' => _unitsapi_factor_set($unitarray['factor']),
         'kind' => $kind,
+        'source' => $unitarray['source'],
       );
 
     }
@@ -204,4 +217,58 @@ function _unitsapi_convert_temperature($value, $factor) {
     eval("\$return=". $equation .";");
   }
   return $return;
+}
+
+/**
+ * Helper function to generate a table of unit keys, symbols, and conversion factors.  Used in hook_help()
+ *
+ * @return
+ *   A themed table of unit keys, symbols, and conversion factors.
+ */
+function _unitsapi_key_table() {
+
+  $units = module_invoke_all('unitsapi', $change);
+
+  $header = array(
+    t('KEY'),
+    t('UNIT NAME'),
+    t('CONVERSION FACTOR'),
+  );
+
+  if (!empty($units) && is_array($units)) {
+    foreach ($units as $key => $unit) {
+      if ($curr_kind != $unit['kind']) {
+        $curr_kind = $unit['kind'];
+        $row = array(
+          'data' => array(array('data' => '<strong>'. drupal_ucfirst(t($curr_kind)) .'</strong>', 'colspan' => 4)),
+        );
+        $rows[] = $row;
+      }
+
+      if ($curr_kind == 'temperature') {
+        $output_factor = '';
+
+        foreach ($unit['factor'] as $factor_key => $factor) {
+          $output_factor .= t('from @factor-key: <a href="@source-url">@factor</a>', array('@factor-key' => $factor_key, '@source-url' => url($unit['source']), '@factor' => $factor)) .'<br />';
+        }
+
+        $row = array(
+          check_plain($key),
+          t('@singular (@symbol)', array('@singular' => $unit['singular'], '@symbol' => $unit['symbol'])),
+          $output_factor,
+        );
+      }
+      else {
+        $row = array(
+          check_plain($key),
+          t('@singular (@symbol)', array('@singular' => $unit['singular'], '@symbol' => $unit['symbol'])),
+          t('<a href="@source-url">@factor</a>', array('@source-url' => url($unit['source']), '@factor' => $unit['factor'])),
+        );
+      }
+
+      $rows[] = $row;
+
+    }
+  }
+  return theme('table', $header, $rows);
 }
