@@ -72,8 +72,13 @@ function unitsapi_convert($value, $from, $to, $details = FALSE) {
 
 /**
  * Implementation of hook_unitsapi().
+ *
+ * @param $data
+ *   An optional array containing changes to the $units array, or new additional units.
+ * @return
+ *   An array of unit data, including conversion factors and labels.
  */
-function unitsapi_unitsapi() {
+function unitsapi_unitsapi($data = array()) {
   $cache = cache_get('unitsapi_data');
   if (empty($cache->data)) {
     unitsapi_xml_cache();
@@ -81,6 +86,18 @@ function unitsapi_unitsapi() {
   }
 
   $units = $cache->data;
+
+  // Loop through the $data array and make changes to the $units collection
+  if (!empty($data) && is_array($data)) {
+    foreach ($data as $key => $unit) {
+      if (!empty($unit) && is_array($unit)) {
+        foreach ($unit as $parameter => $value) {
+          $units[$key][$parameter] = $value;
+        }
+      }
+    }
+  }
+
   return $units;
 }
 
