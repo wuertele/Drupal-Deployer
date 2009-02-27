@@ -83,34 +83,20 @@ function unitsapi_convert($value, $from, $to, $details = FALSE) {
 }
 
 /**
- * Implementation of hook_unitsapi().
+ * Fetches the units array, and saved to cache if needed.
  *
- * @param $data
- *   An optional array containing changes to the $units array, or new additional units.
  * @return
  *   An array of unit data, including conversion factors and labels.
  */
-function unitsapi_unitsapi($data = array()) {
+function unitsapi_get_units() {
   $cache = cache_get('unitsapi_data');
-  if (empty($cache->data)) {
+  if (empty($cache->data) || !is_array($cache->data)) {
     unitsapi_xml_cache();
     $cache = cache_get('unitsapi_data');
   }
 
-  $units = $cache->data;
+  return $cache->data;
 
-  // Loop through the $data array and make changes to the $units collection
-  if (!empty($data) && is_array($data)) {
-    foreach ($data as $key => $unit) {
-      if (!empty($unit) && is_array($unit)) {
-        foreach ($unit as $parameter => $value) {
-          $units[$key][$parameter] = $value;
-        }
-      }
-    }
-  }
-
-  return $units;
 }
 
 /**
@@ -171,6 +157,21 @@ function unitsapi_xml_cache() {
     }
   }
 
+  $data = module_invoke_all('unitsapi');
+
+  // Loop through the $data array and make changes to the $units collection
+  if (!empty($data) && is_array($data)) {
+    foreach ($data as $key => $unit) {
+      if (!empty($unit) && is_array($unit) && isset($units_cache[$key])) {
+        foreach ($unit as $parameter => $value) {
+          if (isset($units_cache[$key][$parameter])) {
+            $units_cache[check_plain($key)][check_plain($parameter)] = check_plain($value);
+          }
+        }
+      }
+    }
+  }
+
   cache_set('unitsapi_data', $units_cache);
   return TRUE;
 }
@@ -227,7 +228,7 @@ function _unitsapi_convert_temperature($value, $factor) {
  */
 function _unitsapi_key_table() {
 
-  $units = module_invoke_all('unitsapi');
+  $units = unitsapi_get_units();
 
   $header = array(
     t('KEY'),
