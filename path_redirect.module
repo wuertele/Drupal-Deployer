@@ -92,7 +92,7 @@ function path_redirect_menu() {
  * Implementation of hook_init().
  */
 function path_redirect_init() {
-  path_redirect_check();
+  _path_redirect_check();
 }
 
 /**
@@ -109,10 +109,48 @@ function path_redirect_cron() {
 }
 
 /**
+ * Internal function to load the redirect based on the current requested page.
+ */
+function _path_redirect_load_init() {
+  global $language;
+
+  $sql = "SELECT rid, path, path_query, redirect, query, fragment, language, type FROM {path_redirect} WHERE path = '%s'";
+  $args = array(':path' => $_GET['q']);
+  $order = array();
+
+  // Add query arguments.
+  $query = $_GET;
+  unset($query['q']); // Use array_diff or array_diff_assoc?
+  if ($query) {
+    $path = urldecode(request_uri());
+    $path = drupal_substr($path, drupal_strlen(base_path()));
+    // Remove ($language->language .'/') via preg_replace?
+    $path = _path_redirect_split_path($path);
+    $sql .= " AND (path_query = '%s' OR path_query = '')";
+    $args[':path_query'] = $path['query'];
+    $order[] = 'path_query DESC';
+  }
+  else {
+    $sql .= " AND path_query = ''";
+  }
+
+  // Add language arguments.
+  $sql .= " AND (language = '%s' OR language = '')";
+  $args[':language'] = $language->language;
+  $order[] = 'language DESC';
+
+  $sql .= ' ORDER BY '. implode(', ', $order);
+
+  return db_fetch_object(db_query_range($sql, $args, 0, 1));
+}
+
+/**
  * If a redirect is found for the current path, perform the redirect.
  */
-function path_redirect_check() {
+function _path_redirect_check() {
   global $language;
+
+  //$r = _path_redirect_load_init();
 
   // @todo Rewrite the redirect lookup code here.
   $r = path_redirect_load(array('path' => $_GET['q']));
@@ -220,7 +258,7 @@ function path_redirect_load($array = array(), $join = 'AND') {
     $array = array('rid' => $array);
   }
 
-  if (!empty($array) && is_array($array)) {
+  if ($array && is_array($array)) {
     $query = array();
     foreach ($array as $key => $value) {
       $query[] = $key .' = '. (is_numeric($value) ? '%d' : "'%s'");
@@ -258,6 +296,24 @@ function path_redirect_delete($array = array(), $join = 'AND') {
     return db_query("DELETE FROM {path_redirect} WHERE ". implode(" $join ", $query), $array);
   }
 }
+
+/**
+ * Internal function to split a path string into path, query and fragment.
+ */
+function _path_redirect_split_path($path) {
+  //$path = strtr($path, array('<front>' => variable_get('site_frontpage', 'node')));
+  if (!variable_get('clean_url', 0) && preg_match('/^\?q=/', $path)) {
+    $path = preg_replace(array('/^\?q=/', '/&/'), array('', '?'), $path, 1);
+  }
+
+  $result = array(
+    'path' => preg_replace('/[\?\#].*$/', '', $path),
+    'query' => parse_url($path, PHP_URL_QUERY),
+    'fragment' => parse_url($path, PHP_URL_FRAGMENT),
+  );
+  return $result;
+}
+
 
 /**
  * Internal default variables for template_var().
