@@ -65,6 +65,13 @@ function path_redirect_schema() {
         'not null' => FALSE,
         'description' => 'An internal page anchor append to the destination.',
       ),
+      'language' => array(
+        'description' => 'The language this redirect is for; if blank, the alias will be used for unknown languages.',
+        'type' => 'varchar',
+        'length' => 12,
+        'not null' => TRUE,
+        'default' => '',
+      ),
       'type' => array(
         'type' => 'int',
         'size' => 'small',
@@ -80,7 +87,7 @@ function path_redirect_schema() {
       ),
     ),
     'primary key' => array('rid'),
-    'unique keys' => array('path' => array('path')),
+    'unique keys' => array('path_language' => array('path', 'language')),
   );
 
   return $schema;
@@ -91,10 +98,8 @@ function path_redirect_schema() {
  */
 function path_redirect_update_1() {
   $ret = array();
-
   db_change_field($ret, 'path_redirect', 'path', 'path', array('type' => 'varchar', 'length' => 255, 'not null' => TRUE));
   db_change_field($ret, 'path_redirect', 'redirect', 'redirect', array('type' => 'varchar', 'length' => 255, 'not null' => TRUE), array('unique keys' => array('rid')));
-
   return $ret;
 }
 
@@ -151,12 +156,10 @@ function path_redirect_update_4() {
  */
 function path_redirect_update_5100() {
   $ret = array();
-
   db_change_field($ret, 'path_redirect', 'rid', 'rid', array('type' => 'serial', 'not null' => TRUE));
   db_change_field($ret, 'path_redirect', 'query', 'query', array('type' => 'varchar', 'length' => 255, 'not null' => FALSE));
   db_change_field($ret, 'path_redirect', 'fragment', 'fragment', array('type' => 'varchar', 'length' => 50, 'not null' => FALSE));
   db_change_field($ret, 'path_redirect', 'type', 'type', array('type' => 'int', 'size' => 'small', 'not null' => TRUE));
-
   return $ret;
 }
 
@@ -165,10 +168,18 @@ function path_redirect_update_5100() {
  */
 function path_redirect_update_6100() {
   $ret = array();
-
   db_add_field($ret, 'path_redirect', 'last_used', array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0));
   $ret[] = update_sql("UPDATE {path_redirect} SET last_used = ". time());
-
   return $ret;
 }
 
+/**
+ * Add a language field.
+ */
+function path_redirect_update_6101() {
+  $ret = array();
+  db_drop_unique_key($ret, 'path_redirect', 'path');
+  db_add_field($ret, 'path_redirect', 'language', array('type' => 'varchar', 'length' => 12, 'not null' => TRUE, 'default' => ''));
+  db_add_unique_key($ret, 'path_redirect', 'path_language', array('path', 'language'));
+  return $ret;
+}

@@ -10,26 +10,38 @@
  * Render a list of redirects for the main admin page.
  */
 function path_redirect_admin() {
+  $multilanguage = (module_exists('locale') || db_result(db_query("SELECT rid FROM {path_redirect} WHERE language != ''")));
+  $languages = language_list();
+
   $header = array(
     array('data' => t('From'), 'field' => 'path', 'sort' => 'asc'),
     array('data' => t('To'), 'field' => 'redirect'),
     array('data' => t('Type'), 'field' => 'type'),
     array('data' => t('Operations'), 'colspan' => '2'),
   );
+  if ($multilanguage) {
+    array_splice($header, 3, 0, array(array('data' => t('Language'), 'field' => 'language')));
+  }
   $rows = array();
   $limit = 50;
 
-  $result = pager_query('SELECT rid, path, redirect, query, fragment, type FROM {path_redirect}'. tablesort_sql($header), $limit);
+  $result = pager_query('SELECT rid, path, redirect, query, fragment, language, type FROM {path_redirect}'. tablesort_sql($header), $limit);
   while ($r = db_fetch_object($result)) {
     $redirect = url($r->redirect, array('query' => $r->query, 'fragment' => $r->fragment, 'absolute' => TRUE, 'alias' => TRUE));
-    $rows[] = array(
-      // @todo: Revise the following messy, confusing line.
-      l($r->path, preg_replace('/\?.*/', '', $r->path), array('query' => strstr($r->path, '?') ? preg_replace('/.*\?/', '', $r->path) : NULL)),
-      l($redirect, $redirect, array('external' => TRUE)),
-      $r->type,
-      l(t('edit'), 'admin/build/path-redirect/edit/'. $r->rid, array('query' => drupal_get_destination())),
-      l(t('delete'), 'admin/build/path-redirect/delete/'. $r->rid, array('query' => drupal_get_destination())),
+    $row = array(
+      'data' => array(
+        // @todo: Revise the following messy, confusing line.
+        l($r->path, preg_replace('/[\?\&].*/', '', $r->path), array('query' => strstr($r->path, '?') ? preg_replace('/.*\?/', '', $r->path) : NULL, 'language' => $r->language ? $languages[$r->language] : NULL)),
+        l($redirect, $redirect, array('external' => TRUE)),
+        $r->type,
+        l(t('edit'), 'admin/build/path-redirect/edit/'. $r->rid, array('query' => drupal_get_destination())),
+        l(t('delete'), 'admin/build/path-redirect/delete/'. $r->rid, array('query' => drupal_get_destination())),
+      ),
     );
+    if ($multilanguage) {
+      array_splice($row['data'], 3, 0, module_invoke('locale', 'language_name', $r->language));
+    }
+    $rows[] = $row;
   }
 
   if (empty($rows)) {
@@ -69,6 +81,7 @@ function path_redirect_edit_form(&$form_state, $edit = array()) {
     'redirect' => '',
     'query' => NULL,
     'fragment' => NULL,
+    'language' => '',
     'type' => variable_get('path_redirect_default_status', 301),
   );
 
@@ -124,6 +137,14 @@ function path_redirect_edit_form(&$form_state, $edit = array()) {
 
   $form[] = array(
     '#value' => "<p> </p>", // little bit of extra space
+  );
+
+  $form['language'] = array(
+    '#type' => module_exists('locale') ? 'select' : 'value',
+    '#title' => t('Language'),
+    '#options' => array('' => t('All languages')) + locale_language_list('name'),
+    '#default_value' => $edit['language'],
+    '#description' => t('A redirect set for a specific language will always be used when requesting this page in that language, and takes precedence over redirects set for <em>All languages</em>.'),
   );
 
   $form['advanced'] = array(
@@ -226,13 +247,13 @@ function path_redirect_settings() {
     '#default_value' => variable_get('path_redirect_allow_bypass', 0),
   );
 
-  if (module_exists('path')) {
+  /*if (module_exists('path')) {
     $form['path_redirect_auto_redirect'] = array(
       '#type' => 'checkbox',
       '#title' => t('Automatically create redirects when URL aliases are changed.'),
       '#default_value' => variable_get('path_redirect_auto_redirect', 1),
     );
-  }
+  }*/
 
   $form['path_redirect_purge_inactive'] = array(
     '#type' => 'select',
@@ -294,11 +315,25 @@ function path_redirect_status_codes() {
   );
 }
 
+/*
+ * Extract part of the current Drupal path from a certain 'argument' onward.
+ * @todo Replace with drupal_get_path_segment in Drupal 7.
+ */
+function path_redirect_get_path_segment($index = 0, $path = NULL, $default = '') {
+  if (!isset($path)) {
+    $path = trim($_GET['q']);
+  }
+  $path = explode('/', $path, $index + 1);
+  $path = (count($path) > $index ? end($path) : $default);
+  return $path;
+}
+
 /**
  * Autocompletion callback for the add/edit redirect form. Returns a list of
  * current 404s on the site.
  */
-function path_redirect_autocomplete($string = '') {
+function path_redirect_autocomplete() {
+  $string = path_redirect_get_path_segment(4);
   $matches = array();
 
   // Get a list of 404s, sorted by the number of times each 404 was processed.

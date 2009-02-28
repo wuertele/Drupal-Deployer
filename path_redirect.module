@@ -19,7 +19,9 @@ function path_redirect_help($path, $arg) {
  * Implementation of hook_perm().
  */
 function path_redirect_perm() {
-  return array('administer redirects');
+  return array(
+    'administer redirects',
+  );
 }
 
 /**
@@ -110,23 +112,20 @@ function path_redirect_cron() {
  * If a redirect is found for the current path, perform the redirect.
  */
 function path_redirect_check() {
-  // see if this page has a redirect path
-  // @todo Rewrite the path-fetching code here.
-  // Possibilities: $_GET['q'], urldecode($path)
-  $path = drupal_substr(urldecode(request_uri()), drupal_strlen(base_path()));
-  if (preg_match('/^\?q=/', $path)) {
-    $path = preg_replace(array('/^\?q=/', '/&/'), array('', '?'), $path, 1);
-  }
-
-  // Remove trailing slash from path.
-  $path = preg_replace('/\/\?|\/$/', '', $path);
+  global $language;
 
   // @todo Rewrite the redirect lookup code here.
-  $r = path_redirect_load(array('path' => $path));
-  if (!$r && strpos($path, '?') !== FALSE) {
-    // If there is no match against path and query string, check just the path
-    $path = preg_replace('/\?.*/', '', $path);
-    $r = path_redirect_load(array('path' => $path));
+  $r = path_redirect_load(array('path' => $_GET['q']));
+  if (!$r) {
+    $path = drupal_substr(urldecode(request_uri()), drupal_strlen(base_path()));
+    if (preg_match('/^\?q=/', $path)) {
+      $path = preg_replace(array('/^\?q=/', '/&/'), array('', '?'), $path, 1);
+    }
+    if (strpos($path, '?') !== FALSE) {
+      // Remove trailing slash from path.
+      $path = preg_replace('/^'. $language->language . '|\/\?|\/$/', '', $path);
+      $r = path_redirect_load(array('path' => $path));
+    }
   }
 
   if ($r) {
@@ -135,7 +134,7 @@ function path_redirect_check() {
 
     $redirect = url($r->redirect, array('query' => $r->query, 'fragment' => $r->fragment, 'absolute' => TRUE));
 
-    if (url($r->redirect) == url($path)) {
+    if (url($r->redirect) == url($_GET['q'])) {
       // Prevent infinite loop redirection.
       watchdog('path_redirect', 'Redirect to <code>%redirect</code> is causing an infinite loop; redirect cancelled.', array('%redirect' => $r->redirect), WATCHDOG_WARNING, l(t('edit'), 'admin/build/path-redirect/edit/'. $r->rid));
     }
@@ -158,29 +157,40 @@ function path_redirect_check() {
 
 /**
  * Implementation of hook_nodeapi().
+ * @todo Remove in Drupal 7.
+ */
+function path_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  switch ($op) {
+    case 'presave':
+    case 'delete':
+      $func = 'path_redirect_nodeapi_'. $op;
+      return $func($node, $a3, $a4);
+  }
+}
+
+/**
+ * Implementation of hook_nodeapi_presave().
  *
  * Creates automatic redirects when URL aliases are manually changed.
  */
-function path_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
-  if ($op == 'presave' && variable_get('path_redirect_auto_redirect', 1) && empty($node->pathauto_perform_alias) && !empty($node->path)) {
-    $old_alias = drupal_get_path_alias("node/{$node->nid}", ($node->language ? $node->language : ''));
-    if ($node->path != $old_alias && $old_alias != "node/{$node->nid}") {
+function path_redirect_nodeapi_presave(&$node, $a3 = NULL, $a4 = NULL) {
+  /*if (variable_get('path_redirect_auto_redirect', 1) && empty($node->pathauto_perform_alias) && !empty($node->path)) {
+    $node_path = 'node/'. $node->nid;
+    $old_alias = drupal_get_path_alias($node_path, ($node->language ? $node->language : ''));
+    if ($node->path != $old_alias && $old_alias != $node_path) {
       // If the user is manually changing the path alias, add a redirect from the old alias to the node.
-      path_redirect_save(array('path' => $old_alias, 'redirect' => "node/{$node->nid}"));
+      path_redirect_save(array('path' => $old_alias, 'redirect' => $node_path));
     }
-  }
-  elseif ($op == 'delete') {
-    // When a node is deleted, also delete the redirects to it (they will result in a 404).
-    path_redirect_delete(array('redirect' => "node/{$node->nid}"));
-  }
+  }*/
 }
 
-/*function path_redirect_from_path_admin_form_alter(&$form, $form_state) {
-  $form['#validate'][] = 'path_redirect_path_admin_form_validate';
+/**
+ * Implementation of hook_nodeapi_presave().
+ */
+function path_redirect_nodeapi_delete(&$node, $a3 = NULL, $a4 = NULL) {
+  // When a node is deleted, also delete the redirects to it (they will result in a 404).
+  path_redirect_delete(array('redirect' => 'node/'. $node->nid));
 }
-
-function path_redirect_path_admin_form_validate($form, $form_state) {
-}*/
 
 /**
  * Save an URL redirect to the database.
@@ -188,6 +198,7 @@ function path_redirect_path_admin_form_validate($form, $form_state) {
 function path_redirect_save($edit) {
   // Merge default values.
   $edit += array(
+    'language' => '',
     'type' => variable_get('path_redirect_default_status', 301),
     'last_used' => time(),
   );
@@ -203,6 +214,8 @@ function path_redirect_save($edit) {
  * Retrieve a specific URL redirect from the database.
  */
 function path_redirect_load($array = array(), $join = 'AND') {
+  global $language;
+
   if (is_numeric($array)) {
     $array = array('rid' => $array);
   }
@@ -212,7 +225,14 @@ function path_redirect_load($array = array(), $join = 'AND') {
     foreach ($array as $key => $value) {
       $query[] = $key .' = '. (is_numeric($value) ? '%d' : "'%s'");
     }
-    return db_fetch_object(db_query_range("SELECT * FROM {path_redirect} WHERE ". implode(" $join ", $query), $array, 0, 1));
+
+    // Match based on language if the language or rid key are not specified.
+    if (!isset($array['language']) && !isset($array['rid'])) {
+      $query[] = "(language = '%s' OR language = '')";
+      $array['language'] = $language->language;
+    }
+
+    return db_fetch_object(db_query_range("SELECT * FROM {path_redirect} WHERE ". implode(" $join ", $query) . " ORDER BY language DESC", $array, 0, 1));
   }
 }
 
