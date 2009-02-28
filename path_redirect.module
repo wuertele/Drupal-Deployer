@@ -109,14 +109,16 @@ function path_redirect_cron() {
 }
 
 /**
- * Internal function to load the redirect based on the current requested page.
+ * If a redirect is found for the current path, perform the redirect.
  */
-function _path_redirect_load_init() {
+function _path_redirect_check() {
   global $language;
 
-  $sql = "SELECT rid, path, path_query, redirect, query, fragment, language, type FROM {path_redirect} WHERE path = '%s'";
-  $args = array(':path' => $_GET['q']);
-  $order = array();
+  $where = array();
+  $args = array();
+  //$where = array("path = '%s'");
+  //$args = array(':path' => $_GET['q']);
+  $sort = array();
 
   // Add query arguments.
   $query = $_GET;
@@ -126,45 +128,26 @@ function _path_redirect_load_init() {
     $path = drupal_substr($path, drupal_strlen(base_path()));
     // Remove ($language->language .'/') via preg_replace?
     $path = _path_redirect_split_path($path);
-    $sql .= " AND (path_query = '%s' OR path_query = '')";
-    $args[':path_query'] = $path['query'];
-    $order[] = 'path_query DESC';
+    $where[] = "(path = '%s' OR path = '%s')";
+    $args[':path'] = $_GET['q'];
+    $args[':path_query'] = $_GET['q'] .'?'. $path['query'];
+    $sort[] = 'path DESC';
+    //$where[] = "(path_query = '%s' OR path_query = '')";
+    //$args[':path_query'] = $path['query'];
+    //$sort[] = 'path_query DESC';
   }
   else {
-    $sql .= " AND path_query = ''";
+    $where[] = "path = '%s'";
+    $args[':path'] = $_GET['q'];
+    //$where[] = "path_query = ''";
   }
 
   // Add language arguments.
-  $sql .= " AND (language = '%s' OR language = '')";
+  $where[] = "(language = '%s' OR language = '')";
   $args[':language'] = $language->language;
-  $order[] = 'language DESC';
+  $sort[] = 'language DESC';
 
-  $sql .= ' ORDER BY '. implode(', ', $order);
-
-  return db_fetch_object(db_query_range($sql, $args, 0, 1));
-}
-
-/**
- * If a redirect is found for the current path, perform the redirect.
- */
-function _path_redirect_check() {
-  global $language;
-
-  //$r = _path_redirect_load_init();
-
-  // @todo Rewrite the redirect lookup code here.
-  $r = path_redirect_load(array('path' => $_GET['q']));
-  if (!$r) {
-    $path = drupal_substr(urldecode(request_uri()), drupal_strlen(base_path()));
-    if (preg_match('/^\?q=/', $path)) {
-      $path = preg_replace(array('/^\?q=/', '/&/'), array('', '?'), $path, 1);
-    }
-    if (strpos($path, '?') !== FALSE) {
-      // Remove trailing slash from path.
-      $path = preg_replace('/^'. $language->language . '|\/\?|\/$/', '', $path);
-      $r = path_redirect_load(array('path' => $path));
-    }
-  }
+  $r = path_redirect_load($where, $args, $sort);
 
   if ($r) {
     // Update the last used timestamp so that unused redirects can be purged.
@@ -251,48 +234,51 @@ function path_redirect_save($edit) {
 /**
  * Retrieve a specific URL redirect from the database.
  */
-function path_redirect_load($array = array()) {
-  global $language;
-
-  if (is_numeric($array)) {
-    $array = array('rid' => $array);
+function path_redirect_load($where = array(), $args = array(), $sort = array()) {
+  if (is_numeric($where)) {
+    $where = array('rid' => $where);
   }
 
-  if ($array && is_array($array)) {
-    $query = array();
-    foreach ($array as $key => $value) {
-      $query[] = $key .' = '. (is_numeric($value) ? '%d' : "'%s'");
+  foreach ($where as $key => &$value) {
+    if (is_string($key)) {
+      $args[] = $value;
+      $value = $key .' = '. (is_numeric($value) ? '%d' : "'%s'");
+    }
+  }
+
+  if ($where && $args) {
+    $sql = "SELECT * FROM {path_redirect} WHERE ". implode(' AND ', $where);
+
+    if ($sort) {
+      $sql .= ' ORDER BY '. implode(' ,', $sort);
     }
 
-    // Match based on language if the language or rid key are not specified.
-    if (!isset($array['language']) && !isset($array['rid'])) {
-      $query[] = "(language = '%s' OR language = '')";
-      $array['language'] = $language->language;
-    }
-
-    return db_fetch_object(db_query_range("SELECT * FROM {path_redirect} WHERE ". implode(' AND ', $query) . " ORDER BY language DESC", $array, 0, 1));
+    return db_fetch_object(db_query_range($sql, $args, 0, 1));
   }
 }
 
 /**
  * Delete a specific URL redirect from the database.
  */
-function path_redirect_delete($array = array(), $temp = NULL) {
-  if (is_numeric($array)) {
-    $array = array('rid' => $array);
+function path_redirect_delete($where = array(), $args = array()) {
+  if (is_numeric($where)) {
+    $where = array('rid' => $where);
   }
 
   // @todo Remove legacy path_redirect_delete support for pathauto.
-  if (is_string($array) && is_string($temp)) {
-    $array = array('path' => $array, 'redirect' => $temp);
+  if (is_string($where) && is_string($args)) {
+    $where = array('path' => $where, 'redirect' => $args);
   }
 
-  if (!empty($array) && is_array($array)) {
-    $query = array();
-    foreach ($array as $key => $value) {
-      $query[] = $key .' = '. (is_numeric($value) ? '%d' : "'%s'");
+  foreach ($where as $key => &$value) {
+    if (is_string($value)) {
+      $args[] = $value;
+      $value = $key .' = '. (is_numeric($value) ? '%d' : "'%s'");
     }
-    return db_query("DELETE FROM {path_redirect} WHERE ". implode(' AND ', $query), $array);
+  }
+
+  if ($where && $args) {
+    return db_query("DELETE FROM {path_redirect} WHERE ". implode(' AND ', $where), $args);
   }
 }
 
