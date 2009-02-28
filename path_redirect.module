@@ -251,7 +251,7 @@ function path_redirect_save($edit) {
 /**
  * Retrieve a specific URL redirect from the database.
  */
-function path_redirect_load($array = array(), $join = 'AND') {
+function path_redirect_load($array = array()) {
   global $language;
 
   if (is_numeric($array)) {
@@ -270,22 +270,21 @@ function path_redirect_load($array = array(), $join = 'AND') {
       $array['language'] = $language->language;
     }
 
-    return db_fetch_object(db_query_range("SELECT * FROM {path_redirect} WHERE ". implode(" $join ", $query) . " ORDER BY language DESC", $array, 0, 1));
+    return db_fetch_object(db_query_range("SELECT * FROM {path_redirect} WHERE ". implode(' AND ', $query) . " ORDER BY language DESC", $array, 0, 1));
   }
 }
 
 /**
  * Delete a specific URL redirect from the database.
  */
-function path_redirect_delete($array = array(), $join = 'AND') {
+function path_redirect_delete($array = array(), $temp = NULL) {
   if (is_numeric($array)) {
     $array = array('rid' => $array);
   }
 
   // @todo Remove legacy path_redirect_delete support for pathauto.
-  if (is_string($array) && is_string($join)) {
-    $array = array('path' => $array, 'redirect' => $join);
-    $join = 'AND';
+  if (is_string($array) && is_string($temp)) {
+    $array = array('path' => $array, 'redirect' => $temp);
   }
 
   if (!empty($array) && is_array($array)) {
@@ -293,7 +292,7 @@ function path_redirect_delete($array = array(), $join = 'AND') {
     foreach ($array as $key => $value) {
       $query[] = $key .' = '. (is_numeric($value) ? '%d' : "'%s'");
     }
-    return db_query("DELETE FROM {path_redirect} WHERE ". implode(" $join ", $query), $array);
+    return db_query("DELETE FROM {path_redirect} WHERE ". implode(' AND ', $query), $array);
   }
 }
 
