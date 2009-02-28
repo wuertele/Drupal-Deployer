@@ -39,12 +39,12 @@ function viewreference_disable() {
 /**
  * Implementation of hook_schema().
  *
- * Create a table of views we can easily query.  Views.module does not provide this, wtf!
+ * Create a table of views we can easily query.
  */
 function viewreference_schema() {
   $schema['viewreference'] = array(
     'fields' => array(
-      'view_id'     => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
+      'view_id'     => array('type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE, 'default' => 0),
       'name'        => array('type' => 'varchar','length' => '32','default' => '','not null' => TRUE),
       'position'    => array('type' => 'varchar','length' => '64','default' => '','not null' => TRUE),
       'title'       => array('type' => 'varchar', 'length' => '255', 'not null' => TRUE, 'default' => ''),
@@ -52,4 +52,23 @@ function viewreference_schema() {
     'primary key' => array('view_id'),
   );
   return $schema;
+}
+
+/**
+ * Implementation of hook_update_N().
+ *
+ * Change view_id field's 'not null' value to FALSE.
+ */
+function viewreference_update_6212() {
+  $ret = array();
+  db_drop_primary_key($ret, 'viewreference');
+  db_change_field(
+    $ret, 
+    'viewreference', 
+    'view_id', 
+    'view_id',
+    array('type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE, 'default' => 0),
+    array('primary key' => array('view_id'))
+  );
+  return $ret;
 }

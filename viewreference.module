@@ -85,6 +85,7 @@ function viewreference_field_settings($op, $field) {
       $form['referenceable_views'] = array(
         '#type' => 'checkboxes',
         '#title' => t('Views that can be referenced'),
+        '#description' => t('Select the views that can be referenced. If you select no views, all views will be available.'),
         '#multiple' => TRUE,
         '#default_value' => is_array($field['referenceable_views']) ? $field['referenceable_views'] : array(),
         '#options' => viewreference_get_list_of_views(),
@@ -135,7 +136,7 @@ function viewreference_field_settings($op, $field) {
 
     case 'database columns':
       $columns = array(
-        'view_id' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
+        'view_id' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE, 'default' => 0),
         'arguments' => array('type' => 'text', 'size' => 'big', 'default' => ''),
       );
       return $columns;
@@ -608,7 +609,11 @@ function _viewreference_potential_references($field, $return_full_views = FALSE,
   $args = array();
 
   if (is_array($field['referenceable_views'])) {
-    foreach ($field['referenceable_views'] as $related_key => $related_view) {
+    $view_list = $field['referenceable_views'];
+    if (!count(array_filter($view_list))) {
+      $view_list = array_keys(viewreference_get_list_of_views());
+    }
+    foreach ($view_list as $related_key => $related_view) {
       if ($related_view) {
         $related_views[] = "view_id = %d";
         $args[] = $related_view;
