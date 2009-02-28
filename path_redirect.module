@@ -100,7 +100,7 @@ function path_redirect_init() {
  */
 function path_redirect_cron() {
   // Purge inactive redirects from the database.
-  if ($purge = variable_get('path_redirect_purge_inactive', 0)) {
+  if ($purge = path_redirect_var('purge_inactive')) {
     db_query("DELETE FROM {path_redirect} WHERE last_used < %d", array(':timestamp' => time() - $purge));
     if ($count = db_affected_rows()) {
       watchdog('path_redirect', 'Removed @count from the database.', array('@count' => format_plural($count, '1 inactive redirect', '@count inactive redirects')));
@@ -138,11 +138,11 @@ function path_redirect_check() {
       // Prevent infinite loop redirection.
       watchdog('path_redirect', 'Redirect to <code>%redirect</code> is causing an infinite loop; redirect cancelled.', array('%redirect' => $r->redirect), WATCHDOG_WARNING, l(t('edit'), 'admin/build/path-redirect/edit/'. $r->rid));
     }
-    elseif (variable_get('path_redirect_allow_bypass', 0) && isset($_GET['redirect']) && $_GET['redirect'] === 'no') {
+    elseif (path_redirect_var('allow_bypass') && isset($_GET['redirect']) && $_GET['redirect'] === 'no') {
       // If the user has requested not to be redirected, show a message.
       drupal_set_message(t('This page has been moved to <a href="@redirect">@redirect</a>.', array('@redirect' => $redirect)));
     }
-    elseif (variable_get('path_redirect_redirect_warning', 0)) {
+    elseif (path_redirect_var('redirect_warning')) {
       // Show a message and automatically redirect after 10 seconds.
       drupal_set_message(t('This page has been moved to <a href="@redirect">@redirect</a>. You will be automatically redirected in 10 seconds.', array('@redirect' => $redirect)), 'error');
       drupal_set_html_head("<meta http-equiv=\"refresh\" content=\"10;url=$redirect\" />");
@@ -174,7 +174,7 @@ function path_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
  * Creates automatic redirects when URL aliases are manually changed.
  */
 function path_redirect_nodeapi_presave(&$node, $a3 = NULL, $a4 = NULL) {
-  /*if (variable_get('path_redirect_auto_redirect', 1) && empty($node->pathauto_perform_alias) && !empty($node->path)) {
+  /*if (path_redirect_var('auto_redirect') && empty($node->pathauto_perform_alias) && !empty($node->path)) {
     $node_path = 'node/'. $node->nid;
     $old_alias = drupal_get_path_alias($node_path, ($node->language ? $node->language : ''));
     if ($node->path != $old_alias && $old_alias != $node_path) {
@@ -199,7 +199,7 @@ function path_redirect_save($edit) {
   // Merge default values.
   $edit += array(
     'language' => '',
-    'type' => variable_get('path_redirect_default_status', 301),
+    'type' => path_redirect_var('default_status'),
     'last_used' => time(),
   );
 
@@ -257,4 +257,39 @@ function path_redirect_delete($array = array(), $join = 'AND') {
     }
     return db_query("DELETE FROM {path_redirect} WHERE ". implode(" $join ", $query), $array);
   }
+}
+
+/**
+ * Internal default variables for template_var().
+ */
+function path_redirect_variables() {
+  return array(
+    'path_redirect_redirect_warning' => 0,
+    'path_redirect_allow_bypass' => 0,
+    'path_redirect_auto_redirect' => 0,
+    'path_redirect_purge_inactive' => 0,
+    'path_redirect_default_status' => 301,
+    // Unused variables set to NULL so they will still be uninstalled.
+    'path_redirect_nodeapi_enabled' => NULL,
+  );
+}
+
+/**
+ * Internal implementation of variable_get().
+ */
+function path_redirect_var($name, $default = NULL) {
+  static $defaults = NULL;
+  if (!isset($defaults)) {
+    $defaults = path_redirect_variables();
+  }
+
+  $name = 'path_redirect_'. $name;
+
+  // @todo Remove when stable.
+  if (!isset($defaults[$name])) {
+    drupal_set_message(t('Default variable for %variable not found.', array('%variable' => $name)), 'error');
+    watchdog('path_redirect', 'Default variable for %variable not found.', array('%variable' => $name), WATCHDOG_WARNING);
+  }
+
+  return variable_get($name, isset($default) || !isset($defaults[$name]) ? $default : $defaults[$name]);
 }

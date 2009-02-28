@@ -82,7 +82,7 @@ function path_redirect_edit_form(&$form_state, $edit = array()) {
     'query' => NULL,
     'fragment' => NULL,
     'language' => '',
-    'type' => variable_get('path_redirect_default_status', 301),
+    'type' => path_redirect_var('default_status'),
   );
 
   $form['path'] = array(
@@ -238,27 +238,27 @@ function path_redirect_settings() {
   $form['path_redirect_redirect_warning'] = array(
     '#type' => 'checkbox',
     '#title' => t('Display a warning message to users when they are redirected.'),
-    '#default_value' => variable_get('path_redirect_redirect_warning', 0),
+    '#default_value' => path_redirect_var('redirect_warning'),
   );
 
   $form['path_redirect_allow_bypass'] = array(
     '#type' => 'checkbox',
     '#title' => t('Allow users to bypass redirects by adding %code to the URL.', array('%code' => variable_get('clean_url', 0) ? '?redirect=no' : '&redirect=no')),
-    '#default_value' => variable_get('path_redirect_allow_bypass', 0),
+    '#default_value' => path_redirect_var('allow_bypass'),
   );
 
   /*if (module_exists('path')) {
     $form['path_redirect_auto_redirect'] = array(
       '#type' => 'checkbox',
       '#title' => t('Automatically create redirects when URL aliases are changed.'),
-      '#default_value' => variable_get('path_redirect_auto_redirect', 1),
+      '#default_value' => path_redirect_var('auto_redirect'),
     );
   }*/
 
   $form['path_redirect_purge_inactive'] = array(
     '#type' => 'select',
     '#title' => t('Discard redirects that have not been accessed for'),
-    '#default_value' => variable_get('path_redirect_clean_unused', 0),
+    '#default_value' => path_redirect_var('purge_inactive'),
     '#options' => array(0 => t('Never (do not discard)')) + drupal_map_assoc(array(604800, 1209600, 2419200, 4838400, 7257600, 9676800, 31536000), 'format_interval'),
   );
 
@@ -272,7 +272,7 @@ function path_redirect_settings() {
     '#type' => 'select',
     '#title' => t('Default redirect status'),
     '#description' => theme('item_list', $status_descriptions) . t('You can find more information about HTTP redirect status codes at <a href="@link">@link</a>.', array('@link' => 'http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3')),
-    '#default_value' => variable_get('path_redirect_default_status', 301),
+    '#default_value' => path_redirect_var('default_status'),
     '#options' => $status_options,
   );
 
