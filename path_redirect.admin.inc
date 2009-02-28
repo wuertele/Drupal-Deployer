@@ -140,12 +140,16 @@ function path_redirect_edit_form(&$form_state, $edit = array()) {
   );
 
   $form['language'] = array(
-    '#type' => module_exists('locale') ? 'select' : 'value',
+    '#type' => 'value',
     '#title' => t('Language'),
-    '#options' => array('' => t('All languages')) + locale_language_list('name'),
+    '#options' => array('' => t('All languages')),
     '#default_value' => $edit['language'],
     '#description' => t('A redirect set for a specific language will always be used when requesting this page in that language, and takes precedence over redirects set for <em>All languages</em>.'),
   );
+  if (module_exists('locale')) {
+    $form['language']['#type'] = 'select';
+    $form['language']['#options'] += locale_language_list('name');
+  }
 
   $form['advanced'] = array(
     '#type' => 'fieldset',
