@@ -6,7 +6,7 @@
  */
 
 /**
- * Implementation of hook_file().
+ * Implementation of hook_file_references().
  */
 function imagefield_file_references($file) {
   $references = 0;
@@ -19,8 +19,12 @@ function imagefield_file_references($file) {
   return array('imagefield' => $references);
 }
 
+/**
+ * Implementation of hook_file_insert().
+ *
+ * Create an image thumbnail to be used as a preview when editing a node.
+ */
 function imagefield_file_insert($file) {
-  // create and admin thumbnail.
   if (imagefield_file_is_image($file)) {
     $info = image_get_info($file->filepath);
     if($info['width'] < 100 || $info['height'] < 100) {
@@ -28,30 +32,34 @@ function imagefield_file_insert($file) {
       file_copy($newfile->filepath, imagefield_file_admin_thumb_path($newfile));
     }
     else {
-      image_scale($file->filepath, imagefield_file_admin_thumb_path($file), 100, 100);
+      image_scale($file->filepath, imagefield_file_admin_thumb_path($file), 160, 160);
     }
   }
 }
 
+/**
+ * Implementation of hook_file_delete().
+ *
+ * Delete the admin thumbnail when the original is deleted.
+ */
 function imagefield_file_delete($file) {
-  // delete admin thumbnail.
-  if (imagefield_file_is_image($file))
+  if (imagefield_file_is_image($file)) {
     file_delete(imagefield_file_admin_thumb_path($file));
+  }
 }
 
-
-// test if a file is an image.
+/**
+ * Simple utility function to check if a file is an image.
+ */
 function imagefield_file_is_image($file) {
   $file = (object)$file;
-  //dsm($file);
   return in_array($file->filemime, array('image/jpg', 'image/pjpeg', 'image/jpeg', 'image/png', 'image/gif'));
 }
 
-// create the path to and admin thumbnail.
+/**
+ * Given a file, return the path the image thumbnail used while editing.
+ */
 function imagefield_file_admin_thumb_path($file) {
-  //dsm($file);
   $file = (object)$file;
   return $file->filepath .'.thumb.jpg';
 }
-
-
