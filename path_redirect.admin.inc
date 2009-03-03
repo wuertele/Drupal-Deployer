@@ -45,7 +45,7 @@ function path_redirect_admin() {
   }
 
   if (empty($rows)) {
-    $rows[] = array(array('data' => t('No redirects have been added.'), 'colspan' => '5'));
+    $rows[] = array(array('data' => t('No redirects available.'), 'colspan' => '5'));
   }
 
   $output = theme('table', $header, $rows, array('class' => 'path-redirects'));
