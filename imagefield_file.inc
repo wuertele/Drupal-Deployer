@@ -28,12 +28,12 @@ function imagefield_file_references($file) {
 function imagefield_file_insert($file) {
   if (imagefield_file_is_image($file)) {
     $info = image_get_info($file->filepath);
-    if($info['width'] < 100 || $info['height'] < 100) {
+    if ($info['width'] < 100 || $info['height'] < 100) {
       $newfile = drupal_clone($file);
       file_copy($newfile->filepath, imagefield_file_admin_thumb_path($newfile));
     }
     else {
-      image_scale($file->filepath, imagefield_file_admin_thumb_path($file), 160, 160);
+      image_scale($file->filepath, imagefield_file_admin_thumb_path($file), 100, 100);
     }
   }
 }
