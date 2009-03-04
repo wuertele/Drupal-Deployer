@@ -1,10 +1,10 @@
 <?php
+// $Id$
 
 /**
  * @file
  * Field Hooks and Callbacks for ImageField.
  */
-
 
 /**
  * Implementation of hook_field_settings().
