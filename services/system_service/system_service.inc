@@ -79,3 +79,11 @@ function system_service_module_exists($module) {
 function system_service_getservices() {
   return services_get_all();
 }
+
+/**
+ * Clear all caches
+ */
+function system_service_cache_clear_all() {
+  drupal_flush_all_caches();
+  watchdog('cache clear service', 'caches cleared');
+}
