@@ -160,10 +160,15 @@ function feedback_form_submit($form, &$form_state) {
  */
 function feedback_format_message($entry) {
   $message = check_plain($entry->message);
-  if (module_exists('browscap') && $entry->useragent) {
-    $browserinfo = browscap_get_browser($entry->useragent);
-    $browser = ($browserinfo['parent'] ? $browserinfo['parent'] .' / '. $browserinfo['platform'] : $browserinfo['useragent']);
-    $message .= '<div class="browserinfo">('. $browser .')</div>';
+  if (!empty($entry->useragent)) {
+    if (module_exists('browscap')) {
+      $browserinfo = browscap_get_browser($entry->useragent);
+      $browser = ($browserinfo['parent'] ? $browserinfo['parent'] .' / '. $browserinfo['platform'] : $browserinfo['useragent']);
+      $message .= '<div class="browserinfo">(' . $browser . ')</div>';
+    }
+    else {
+      $message .= '<div class="browserinfo">(' . $entry->useragent . ')</div>';
+    }
   }
   return $message;
 }
