@@ -40,7 +40,7 @@ function services_help($path, $arg) {
  * Implementation of hook_perm().
  */
 function services_perm() {
-  return array('access services', 'administer services');
+  return array('administer services');
 }
 
 /**
@@ -128,13 +128,13 @@ function services_menu() {
     'weight'            => -10,
   );
   $items['crossdomain.xml'] = array(
-    'access arguments'  => array('access services'),
+    'access callback'   => 'services_access_menu',
     'page callback'     => 'services_crossdomain_xml',
     'type'              => MENU_CALLBACK,
   );
   $items['services/%'] = array(
     'title'             => 'Services',
-    'access arguments'  => array('access services'),
+    'access callback'   => 'services_access_menu',
     'page callback'     => 'services_server',
     'page arguments'    => array(1),
     'type'              => MENU_CALLBACK,
@@ -401,10 +401,7 @@ function services_get_all() {
       }
 
       if (!isset($methods[$key]['#access callback'])) {
-        $methods[$key]['#access callback'] = 'user_access';
-        if (!isset($methods[$key]['#access arguments'])) {
-          $methods[$key]['#access arguments'] = array('access services');
-        }
+        $methods[$key]['#access callback'] = 'services_access_menu';
       }
 
       if (!isset($methods[$key]['#args'])) {
@@ -470,15 +467,6 @@ function services_validate_key($kid, $timestamp, $domain, $nonce, $method_name, 
   $hash_parameters = array_merge(array($timestamp, $domain, $nonce, $method_name), $hash_parameters);
   $rehash = hash_hmac("sha256", implode(';', $hash_parameters), $kid);
   return ($rehash == $hash) ? TRUE : FALSE;
-}
-
-function services_get_key($kid) {
-  $keys = services_get_keys();
-  foreach ($keys as $key) {
-    if ($key->kid == $kid) {
-      return $key;
-    }
-  }
 }
 
 function services_get_keys() {
@@ -578,3 +566,10 @@ function services_session_unload($backup) {
 
   session_save_session(TRUE);
 }
+
+/**
+ * Return true so as services menu callbacks work
+ */
+function services_access_menu() {
+  return TRUE;
+} 
