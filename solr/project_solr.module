@@ -49,6 +49,24 @@ function project_solr_theme() {
   );
 }
 
+/**
+ * Implementation of hook_nodeapi().
+ *
+ * Whenever a release node is edited or submitted, if the node is now
+ * published, reindex the project node associated with that release.
+ */
+function project_solr_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  switch ($op) {
+    case 'update':
+    case 'insert':
+      if ($node->type == 'project_release' && $node->status) {
+        apachesolr_mark_node($node->project_release['pid']);
+      }
+      break;
+  }
+}
+
+
 //----------------------------------------
 // Solr-related hooks
 //----------------------------------------
