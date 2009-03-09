@@ -283,21 +283,30 @@ function imagefield_field_formatter_info() {
  * @{
  * @see imagefield_theme().
  */
-function theme_imagefield_image($file, $alt = '', $title = '', $attributes = null, $getsize = true) {
+function theme_imagefield_image($file, $alt = '', $title = '', $attributes = NULL, $getsize = TRUE) {
   $file = (array)$file;
   if (!is_file($file['filepath'])) {
-    return '<!-- file not found: '. $file['filepath'] .' -->';
+    return '<!-- File not found: '. $file['filepath'] .' -->';
   }
-  $image_attributes = array();
-  if (!$getsize || (list($width, $height, $type, $image_attributes) = @getimagesize($file['filepath']))) {
-    $attributes = drupal_attributes($attributes);
-    $alt = empty($alt) ? $file['alt'] : $alt;
-    $title = empty($title) ? $file['title'] : $title;
-    $url = file_create_url($file['filepath']) . '?' . $file['timestamp'];
-    return '<img src="'. check_url($url) .'" alt="'.
-        check_plain($alt) .'" title="'. check_plain($title) .'" '. $image_attributes . $attributes .' />';
+
+  if ($getsize && (list($width, $height, $type, $image_attributes) = @getimagesize($file['filepath']))) {
+    $attributes['width'] = $width;
+    $attributes['height'] = $height;
   }
-  return '<!-- could not get imagesize, possibly corrupt or non image. '. $file['filepath'] .' -->';
+  else {
+    return '<!-- Could not get image size, possibly corrupt or non image. '. $file['filepath'] .' -->';
+  }
+
+  if (!empty($title)) {
+    $attributes['title'] = $title;
+  }
+  if (!empty($alt)) {
+    $attributes['alt'] = $alt;
+  }
+  $url = file_create_url($file['filepath']) . '?' . $file['timestamp'];
+  $attributes['src'] = $url;
+  $attributes = drupal_attributes($attributes);
+  return '<img '. $attributes .' />';
 }
 
 function theme_imagefield_item($item) {
