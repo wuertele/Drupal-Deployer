@@ -10,7 +10,6 @@
  * CCK hooks and callbacks to filefield in imagefield.module.
  */
 
-
 /**
  * @defgroup "FileField widget settings callbacks"
  * @{
@@ -27,8 +26,7 @@ function imagefield_widget_widget_settings_form($widget) {
     '#default_value' => !empty($widget['max_resolution']) ? $widget['max_resolution'] : 0,
     '#size' => 15,
     '#maxlength' => 10,
-    '#description' =>
-    t('The maximum allowed image size expressed as WIDTHxHEIGHT (e.g. 640x480). Set to 0 for no restriction. If a larger image is uploaded, it will be resized to reflect the given width and height.'),
+    '#description' => t('The maximum allowed image size expressed as WIDTHxHEIGHT (e.g. 640x480). Set to 0 for no restriction. If a larger image is uploaded, it will be resized to reflect the given width and height.'),
     '#weight' => 2,
   );
   $form['min_resolution'] = array(
@@ -87,8 +85,6 @@ function imagefield_widget_widget_settings_form($widget) {
     '#default_value' =>  !empty($widget['custom_title']) ? $widget['custom_title'] : 0,
     '#description' => t('Enable user input title text for images.'),
   );
-
-
   $form['title_settings']['title'] = array(
     '#type' => 'textfield',
     '#title' => t('Default Title text'),
