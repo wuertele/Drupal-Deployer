@@ -251,13 +251,12 @@ function path_redirect_settings() {
     '#default_value' => path_redirect_var('allow_bypass'),
   );
 
-  if (module_exists('path')) {
-    $form['path_redirect_auto_redirect'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Automatically create redirects when URL aliases are changed.'),
-      '#default_value' => path_redirect_var('auto_redirect'),
-    );
-  }
+  $form['path_redirect_auto_redirect'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Automatically create redirects when URL aliases are changed.'),
+    '#default_value' => path_redirect_var('auto_redirect'),
+    '#access' => module_exists('path'),
+  );
 
   $form['path_redirect_purge_inactive'] = array(
     '#type' => 'select',
