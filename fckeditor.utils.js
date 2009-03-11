@@ -304,3 +304,18 @@ function FCKeditor_OpenPopup(popupUrl, jsID, textareaID) {
 
   window.open(popupUrl, null, 'toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=no,resizable=1,dependent=yes');
 }
+
+// Probably JsMin was used to compress the code.
+// In such case, in IE FCKeditor_IsCompatibleBrowser() will always return false.
+if (typeof(FCKeditor_IsCompatibleBrowser) == 'function' && !FCKeditor_IsCompatibleBrowser()) {
+  var FCKeditor_IsCompatibleBrowser = function() {
+    var sAgent = navigator.userAgent.toLowerCase() ;
+    // Internet Explorer 5.5+
+    if ( sAgent.indexOf("mac") == -1 && sAgent.indexOf("opera") == -1 && navigator.appVersion.match( /MSIE (.\..)/ ) )
+    {
+      var sBrowserVersion = navigator.appVersion.match(/MSIE (.\..)/)[1] ;
+      return ( sBrowserVersion >= 5.5 ) ;
+    }
+    return false;
+  }
+}
