@@ -683,6 +683,16 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
   );
+  $form['advanced']['theme_config_js'] = array(
+    '#type' => 'radios',
+    '#title' => t('Load fckeditor.config.js from theme path'),
+    '#default_value' => !empty($profile->settings['theme_config_js']) ? $profile->settings['theme_config_js'] : 'f',
+    '#options' => array(
+      't' => t('Yes'),
+      'f' => t('No')
+    ),
+    '#description' => t('When set to "true" the editor will try to load the fckeditor.config.js file from theme directory.'),
+  );
   $form['advanced']['js_conf'] = array(
     '#type' => 'textarea',
     '#title' => t('Custom javascript configuration'),

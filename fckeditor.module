@@ -594,12 +594,19 @@ function fckeditor_process_textarea($element) {
       $toolbar = FCKEDITOR_FORCE_SIMPLE_TOOLBAR_NAME;
     }
 
+    if (!empty($conf['theme_config_js']) && $conf['theme_config_js'] == 't' && file_exists($themepath .'fckeditor.config.js')) {
+      $fckeditor_config_path = $host . $themepath .'fckeditor.config.js?'. @filemtime($themepath .'fckeditor.config.js');
+    }
+    else {
+      $fckeditor_config_path = $module_full_path ."/fckeditor.config.js?". @filemtime($module_drupal_path ."/fckeditor.config.js");
+    }
+
     $js = $js_id ." = new FCKeditor( '". $textarea_id ."' );
 ". $js_id .".defaultState = ". (($fckeditor_on && $conf['popup'] == 'f') ? 1 : 0) .";
 ". $js_id .".BasePath = '". $editor_path ."/';
 ". $js_id .".DrupalId = '". $js_id ."';
 ". $js_id .".Config['PluginsPath'] = '". $module_full_path ."/plugins/';
-". $js_id .".Config['CustomConfigurationsPath'] = \"". $module_full_path ."/fckeditor.config.js?". @filemtime($module_drupal_path ."/fckeditor.config.js") ."\";
+". $js_id .".Config['CustomConfigurationsPath'] = \"". $fckeditor_config_path ."\";
 ". $js_id .".Config['TextareaID'] = \"". $element['#id'] ."\";";
 
     //if ($conf['appearance_conf'] == 'f') {
