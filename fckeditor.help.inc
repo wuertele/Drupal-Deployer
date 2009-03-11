@@ -100,7 +100,7 @@ function fckeditor_help_delegate($path, $arg) {
       $output .= '<p>'. t('There are three ways for uploading files:') .'</p>';
       $output .= '<ol>';
       $output .= '<li>'. t('By using the built-in file browser.') .'</li>';
-      $output .= '<li>'. t('By using a module like <a href="!imce">IMCE</a> or <a href="!ib">Image Browser</a>.', array('!imce' => 'http://drupal.org/project/imce', '!ib' => 'http://drupal.org/project/imagebrowser')) .'</li>';
+      $output .= '<li>'. t('By using a module like <a href="!imce">IMCE</a>, <a href="!ib">Image Browser</a> or <a href="!webfm">Web File Manager</a>.', array('!imce' => 'http://drupal.org/project/imce', '!ib' => 'http://drupal.org/project/imagebrowser', '!webfm' => 'http://drupal.org/project/webfm')) .'</li>';
       $output .= '<li>'. t('By using the core upload module.') .'</li>';
       $output .= '</ol>';
 

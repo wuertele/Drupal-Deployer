@@ -258,7 +258,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#description' =>  t('Only roles with "access fckeditor" permission will be shown here. If no role is available, make sure that you have assigned the "access fckeditor" <a href="!permission">permission</a>.', array('!permission' => url('admin/user/permissions'))),
     '#required' => TRUE
   );
-  
+
   $form['basic']['allow_user_conf'] = array(
     '#type' => 'radios',
     '#title' => t('Allow users to customize FCKeditor appearance'),
@@ -277,7 +277,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#collapsible' => TRUE,
     '#collapsed' => TRUE
   );
-  
+
   $all = filter_list_all();
 
   $form['security']['filters'] = array(
@@ -286,7 +286,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#description' => t('Please choose carefully all filters that protect your content (probably not all filters listed below are security filters).'),
     '#tree' => TRUE,
   );
-  
+
   //don't bother administrator with filters that definitely are not security filters
   $modules_with_filters_to_skip = array('amazon_filter', 'asy', 'bbcode', 'biblio', 'blockquote', 'bookpost', 'chessboard', 'citation_filter', 'codefilter', 'collapse_text', 'contextlinks', 'coolfilter', 'dialectic', 'dript', 'dme', 'drutex', 'embedfilter', 'ext_link_page', 'extlink', 'elf', 'flickr', 'flickrstickr', 'footnotes', 'formdefaults', 'freelinking', 'gallery', 'geogebra', 'geshifilter', 'gotwo', 'googtube', 'gotcha', 'gtspam', 'hidden_content', 'img_assist', 'image_filter', 'inlinetags', 'insert_view', 'insertframe', 'insertnode', 'interwiki', 'jlightbox', 'jsmath', 'language_sections', 'link_node', 'lootz', 'markdown', 'marksmarty', 'mobile_codes', 'mykml', 'nofollowlist', 'oagwt', 'paging', 'pathfilter', 'pearwiki_filter', 'php', 'pirate', 'reptag', 'scrippet', 'scripturefilter', 'signwriter', 'slideshowpro', 'smartlinebreakconverter', 'smartypants', 'smileys', 'spamspan', 'spam_tokens', 'spoiler', 'table_altrow', 'tablemanager', 'tableofcontents', 'textile', 'tooltips', 'twikifilter', 'typogrify', 'unwrap', 'urlclass', 'urlicon', 'url_replace_filter', 'username_highlighter', 'video_filter', 'quote');
 
@@ -320,7 +320,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     ),
     '#description' => t('There are two ways of starting FCKeditor: automatically and manually (via toggle or in a popup). If you decide to apply security filters only when FCKeditor starts automatically, you\'ll not be protected when toggling manually from plain textarea to FCKeditor or when using FCKeditor in a popup mode. So choose this option only, if you can detect various attacks (mainly XSS) by yourself just by looking at the HTML code.'),
   );
-    
+
   $form['fckeditor_exclude_settings'] = array(
     '#type' => 'fieldset',
     '#title' => t('Visibility settings'),
@@ -610,7 +610,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#title' => t('File browser settings'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
-    '#description' => t('Set file browser settings. A file browser will allow you to explore the files contained on the server and embed them as links, images or flash movies. Besides the built-in FCKeditor file browser, you can also use a contributed module like <a href="!imce">IMCE</a> or <a href="!ib">Image Browser</a>. The quick upload setting controls whether images, flash movies and files can be uploaded using the upload tab of the respective dialogs. Please note that these options require manual configuration, check <a href="!readme">readme.txt</a> for more information.', array('!imce' => url('http://drupal.org/project/imce'), '!ib' => url('http://drupal.org/project/imagebrowser'), '!readme' => url('admin/help/fckeditor')))
+    '#description' => t('Set file browser settings. A file browser will allow you to explore the files contained on the server and embed them as links, images or flash movies. Besides the built-in FCKeditor file browser, you can also use a contributed module like <a href="!imce">IMCE</a>, <a href="!ib">Image Browser</a> or <a href="!webfm">Web File Manager</a>. The quick upload setting controls whether images, flash movies and files can be uploaded using the upload tab of the respective dialogs. Please note that these options require manual configuration, check <a href="!readme">readme.txt</a> for more information.', array('!imce' => url('http://drupal.org/project/imce'), '!ib' => url('http://drupal.org/project/imagebrowser'), '!webfm' => url('http://drupal.org/project/webfm'), '!readme' => url('admin/help/fckeditor')))
   );
 
   $filebrowsers = array(
@@ -624,6 +624,10 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
 
   if (module_exists('imagebrowser')) {
     $filebrowsers['ib'] = t('Image Browser');
+  }
+
+  if (module_exists('webfm_popup')) {
+    $filebrowsers['webfm'] = t('Web File Manager');
   }
 
   $form['fckeditor_upload_settings']['filebrowser'] = array(
@@ -956,7 +960,7 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
       '#description' => t('The path relative to the location of the private directory where FCKeditor should store uploaded files.') .'<br />'. t('<strong>Warning:</strong> FCKeditor does not implement any kind of access protection on files available in this location. All files stored in the directory defined above might be accessible by unathenticated users if there is no information about the file in the Drupal\'s database.') .'<br />'. t('System path to the private folder is: !system_path.', array('!system_path' => realpath(file_directory_path()) . DIRECTORY_SEPARATOR)) .'<br />'. t('Available wildcard characters:<br/><strong>%u</strong> - User ID.') .'<br />'. t('Current path: !path', array('!path' => $current_private_dir .' ('. file_create_path($current_private_dir) .')')),
     );
   }
-  
+
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => $btn
