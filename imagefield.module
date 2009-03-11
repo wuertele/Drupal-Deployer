@@ -107,13 +107,21 @@ function imagefield_elements() {
  */
 function imagefield_file_download($filepath) {
   // Return headers for admin thumbnails if private files are enabled.
-  $path = str_replace('.thumb.jpg', '', $filepath);
-  $path = file_create_path($path);
-  if (file_exists($path)) {
-    return array(
-      'Content-Type: image/jpeg',
-      'Content-Length: ' . filesize($path)
-    );
+  if (strpos($filepath, '.thumb.')) {
+    $original_path = str_replace('.thumb', '', $filepath);
+    $original_full_path = file_create_path($original_path);
+    $thumb_full_path = file_create_path($filepath);
+
+    // Allow access to temporary thumbnails, since they're not yet associated
+    // with a node. If not temporary, check access on the original file.
+    $temporary = db_result(db_query("SELECT status FROM {files} WHERE filepath = '%s'", $original_full_path));
+    $access = ($temporary == 0 || module_invoke_all('file_download', $original_path));
+    if ($access && $info = getimagesize($thumb_full_path)) {
+      return array(
+        'Content-Type: ' . $info['mime'],
+        'Content-Length: ' . filesize($thumb_full_path)
+      );
+    }
   }
 }
 
