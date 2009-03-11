@@ -151,13 +151,13 @@ function _path_redirect_check() {
 
   if ($r) {
     // Update the last used timestamp so that unused redirects can be purged.
-    db_query("UPDATE {path_redirect} SET last_used = %d WHERE rid = %d", array(':timestamp' => time(), ':rid' => $r->rid));
+    db_query("UPDATE {path_redirect} SET last_used = %d WHERE rid = %d", array(':last_used' => time(), ':rid' => $r->rid));
 
     $redirect = url($r->redirect, array('query' => $r->query, 'fragment' => $r->fragment, 'absolute' => TRUE));
 
     if (url($r->redirect) == url($_GET['q'])) {
       // Prevent infinite loop redirection.
-      watchdog('path_redirect', 'Redirect to <code>%redirect</code> is causing an infinite loop; redirect cancelled.', array('%redirect' => $r->redirect), WATCHDOG_WARNING, l(t('Edit'), 'admin/build/path-redirect/edit/'. $r->rid));
+      watchdog('path_redirect', 'Redirect to <code>%redirect</code> is causing an infinite loop; redirect cancelled.', array('%redirect' => $r->redirect), WATCHDOG_WARNING, l(t('edit'), 'admin/build/path-redirect/edit/'. $r->rid));
     }
     elseif (path_redirect_var('allow_bypass') && isset($_GET['redirect']) && $_GET['redirect'] === 'no') {
       // If the user has requested not to be redirected, show a message.
@@ -183,9 +183,11 @@ function _path_redirect_check() {
 function path_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
   switch ($op) {
     case 'presave':
+      path_redirect_node_presave($node);
+      break;
     case 'delete':
-      $func = 'path_redirect_nodeapi_'. $op;
-      return $func($node, $a3, $a4);
+      path_redirect_node_delete($node);
+      break;
   }
 }
 
@@ -194,21 +196,21 @@ function path_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
  *
  * Creates automatic redirects when URL aliases are manually changed.
  */
-function path_redirect_nodeapi_presave(&$node, $a3 = NULL, $a4 = NULL) {
-  /*if (path_redirect_var('auto_redirect') && empty($node->pathauto_perform_alias) && !empty($node->path)) {
+function path_redirect_node_presave($node) {
+  if (path_redirect_var('auto_redirect') && !empty($node->path)) {
     $node_path = 'node/'. $node->nid;
     $old_alias = drupal_get_path_alias($node_path, ($node->language ? $node->language : ''));
-    if ($node->path != $old_alias && $old_alias != $node_path) {
+    if ($old_alias != $node_path && $node->path != $old_alias) {
       // If the user is manually changing the path alias, add a redirect from the old alias to the node.
       path_redirect_save(array('path' => $old_alias, 'redirect' => $node_path));
     }
-  }*/
+  }
 }
 
 /**
  * Implementation of hook_nodeapi_presave().
  */
-function path_redirect_nodeapi_delete(&$node, $a3 = NULL, $a4 = NULL) {
+function path_redirect_node_delete($node) {
   // When a node is deleted, also delete the redirects to it (they will result in a 404).
   path_redirect_delete(array('redirect' => 'node/'. $node->nid));
 }
@@ -228,7 +230,12 @@ function path_redirect_save($edit) {
   // @todo Move to validation.
   $edit['path'] = preg_replace('/^\/|\/\?|\/$/', '', $edit['path']);
 
-  return drupal_write_record('path_redirect', $edit, (!empty($edit['rid']) ? 'rid' : array()));
+  if (empty($edit['rid'])) {
+    return drupal_write_record('path_redirect', $edit);
+  }
+  else {
+    return drupal_write_record('path_redirect', $edit, 'rid');
+  }
 }
 
 /**
@@ -288,8 +295,11 @@ function path_redirect_delete($where = array(), $args = array()) {
  */
 function _path_redirect_split_path($path) {
   //$path = strtr($path, array('<front>' => variable_get('site_frontpage', 'node')));
-  if (!variable_get('clean_url', 0) && preg_match('/^\?q=/', $path)) {
-    $path = preg_replace(array('/^\?q=/', '/&/'), array('', '?'), $path, 1);
+  if (variable_get('clean_url', 0) && strpos($path, '?q=') === 0) {
+    $path = preg_replace('/^\?q=/', '', $path, 1);
+  }
+  if (strpos($path, '?') === FALSE && strpos($path, '&') !== FALSE) {
+    $path = preg_replace('/&/', '?', $path, 1);
   }
 
   $result = array(
@@ -308,8 +318,8 @@ function path_redirect_variables() {
   return array(
     'path_redirect_redirect_warning' => 0,
     'path_redirect_allow_bypass' => 0,
-    'path_redirect_auto_redirect' => 0,
-    'path_redirect_purge_inactive' => 0,
+    'path_redirect_auto_redirect' => 1,
+    'path_redirect_purge_inactive' => 4838400,
     'path_redirect_default_status' => 301,
     // Unused variables set to NULL so they will still be uninstalled.
     'path_redirect_nodeapi_enabled' => NULL,

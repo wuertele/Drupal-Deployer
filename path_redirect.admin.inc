@@ -34,8 +34,8 @@ function path_redirect_admin() {
         l($r->path, preg_replace('/[\?\&].*/', '', $r->path), array('query' => strstr($r->path, '?') ? preg_replace('/.*\?/', '', $r->path) : NULL, 'language' => $r->language ? $languages[$r->language] : NULL)),
         l($redirect, $redirect, array('external' => TRUE)),
         $r->type,
-        l(t('Edit'), 'admin/build/path-redirect/edit/'. $r->rid, array('query' => drupal_get_destination())),
-        l(t('Delete'), 'admin/build/path-redirect/delete/'. $r->rid, array('query' => drupal_get_destination())),
+        l(t('edit'), 'admin/build/path-redirect/edit/'. $r->rid, array('query' => drupal_get_destination())),
+        l(t('delete'), 'admin/build/path-redirect/delete/'. $r->rid, array('query' => drupal_get_destination())),
       ),
     );
     if ($multilanguage) {
@@ -45,7 +45,7 @@ function path_redirect_admin() {
   }
 
   if (empty($rows)) {
-    $rows[] = array(array('data' => t('No redirects available.'), 'colspan' => '5'));
+    $rows[] = array(array('data' => t('No redirects available.'), 'colspan' => $multilanguage ? 5 : 4));
   }
 
   $output = theme('table', $header, $rows, array('class' => 'path-redirects'));
@@ -251,13 +251,13 @@ function path_redirect_settings() {
     '#default_value' => path_redirect_var('allow_bypass'),
   );
 
-  /*if (module_exists('path')) {
+  if (module_exists('path')) {
     $form['path_redirect_auto_redirect'] = array(
       '#type' => 'checkbox',
       '#title' => t('Automatically create redirects when URL aliases are changed.'),
       '#default_value' => path_redirect_var('auto_redirect'),
     );
-  }*/
+  }
 
   $form['path_redirect_purge_inactive'] = array(
     '#type' => 'select',
