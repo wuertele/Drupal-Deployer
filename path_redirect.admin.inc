@@ -10,7 +10,7 @@
  * Render a list of redirects for the main admin page.
  */
 function path_redirect_admin() {
-  $multilanguage = (module_exists('locale') || db_result(db_query("SELECT rid FROM {path_redirect} WHERE language != ''")));
+  $multilanguage = (module_exists('locale') || db_result(db_query("SELECT rid FROM {path_redirect} WHERE language <> ''")));
   $languages = language_list();
 
   $header = array(
