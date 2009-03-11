@@ -62,5 +62,8 @@ function imagefield_file_is_image($file) {
  */
 function imagefield_file_admin_thumb_path($file) {
   $file = (object)$file;
-  return $file->filepath .'.thumb.jpg';
+  $extension_dot = strrpos($file->filepath, '.');
+  $extension = substr($file->filepath, $extension_dot + 1);
+  $basepath = substr($file->filepath, 0, $extension_dot);
+  return $basepath .'.thumb.'. $extension;
 }

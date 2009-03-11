@@ -18,8 +18,9 @@
  * return values are merged with and will override filefields' widget
  * settings callback's return values.
  */
-function imagefield_widget_widget_settings_form($widget) {
-  $form = array();
+function imagefield_widget_settings_form($widget) {
+  $form = module_invoke('filefield', 'widget_settings', 'form', $widget);
+
   $form['max_resolution'] = array(
     '#type' => 'textfield',
     '#title' => t('Maximum resolution for Images'),
@@ -46,7 +47,7 @@ function imagefield_widget_widget_settings_form($widget) {
     '#default_value' => !empty($widget['file_extensions']) ? $widget['file_extensions'] : 'jpg jpeg png gif',
     '#size' => 64,
     '#maxlength' => 64,
-    '#description' => t('Extensions a user can upload to this field. Separate extensions with a space and do not include the leading dot.'),
+    '#description' => t('Extensions a user can upload to this field. Separate extensions with a space and do not include the leading dot. Only jpg, png, and gif images are supported with this widget.'),
     '#weight' => 2,
   );
 
@@ -63,7 +64,6 @@ function imagefield_widget_widget_settings_form($widget) {
     '#default_value' =>  !empty($widget['custom_alt']) ? $widget['custom_alt'] : 0,
     '#description' => t('Enable user input alternate text for images.'),
   );
-
   $form['alt_settings']['alt'] = array(
     '#type' => 'textfield',
     '#title' => t('Default ALT text'),
@@ -95,38 +95,51 @@ function imagefield_widget_widget_settings_form($widget) {
   return $form;
 }
 
-function imagefield_widget_widget_settings_save($widget) {
-  //@todo: rename custom_alt and custom_title to alt_custom and title_custom to be OCD.
-  return array('max_resolution', 'min_resolution', 'alt',  'custom_alt', 'title', 'custom_title');
-}
-
 /**
- * @} End defgroup "Filefield widget settings callbacks."
+ * Validate callback for the CCK widget form.
  */
-
-/**
- * @defgroup "FileField widget element callbacks.
- * @{
- *
- * The call backs are called by form elements that leverage the
- * filefield_widget_value and filefield_widget_process callbacks.
- * They will be called after the filefield callbacks and their
- * return values will be merged with the filefield callback's.
- */
-function imagefield_widget_widget_value($element, $edit = FALSE) {
-  // handle additional
-  if ($edit) {
-      return array(
-        'alt' => isset($edit['alt']) ? $edit['alt'] : '',
-        'title' => isset($edit['title']) ? $edit['title'] : '',
-      );
+function imagefield_widget_settings_validate($widget) {
+  // Check that only web images are specified in the callback.
+  $extensions = array_filter(explode(' ', $widget['file_extensions']));
+  $web_extensions = array('jpg', 'jpeg', 'gif', 'png');
+  if (count(array_diff($extensions, $web_extensions))) {
+    form_set_error('file_extensions', t('Only web-standard images (jpg, gif, and png) are supported through the image widget. If needing to upload other types of images, change the widget to use a standard file upload.'));
   }
-  return array('alt' => '', 'title' => '');
 }
 
-function imagefield_widget_widget_process($element, $edit, &$form_state, $form) {
+/**
+ * Save callback for the CCK widget form.
+ */
+function imagefield_widget_settings_save($widget) {
+  // TODO: Rename custom_alt and custom_title to alt_custom and title_custom.
+  $filefield_settings = module_invoke('filefield', 'widget_settings', 'save', $widget);
+  return $filefield_settings + array('max_resolution', 'min_resolution', 'alt',  'custom_alt', 'title', 'custom_title');
+}
+
+/**
+ * Element #value_callback function.
+ */
+function imagefield_widget_value($element, $edit = FALSE) {
+  $item = filefield_widget_value($element, $edit);
+  if ($edit) {
+    $item['alt'] = isset($edit['alt']) ? $edit['alt'] : '';
+    $item['title'] = isset($edit['title']) ? $edit['title'] : '';
+  }
+  else {
+    $item['alt'] = '';
+    $item['title'] = '';
+  }
+  return $item;
+}
+
+/**
+ * Element #process callback function.
+ */
+function imagefield_widget_process($element, $edit, &$form_state, $form) {
   $file = $element['#value'];
   $field = content_fields($element['#field_name'], $element['#type_name']);
+
+  $element['#theme'] = 'imagefield_widget_item';
 
   $element['data']['alt'] = array(
     '#title' => t('Alternate Text'),
@@ -149,13 +162,6 @@ function imagefield_widget_widget_process($element, $edit, &$form_state, $form) 
   }
   return $element;
 }
-
-function imagefield_widget_widget_validate($element) {
-}
-
-/**
- * @} End defgroup "FileField widget element callbacks."
- */
 
 /**
  * FormAPI theme function. Theme the output of an image field.
