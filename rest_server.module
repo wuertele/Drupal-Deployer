@@ -9,7 +9,7 @@ function rest_server_server_info() {
     '#name' => 'REST',
     '#path' => 'rest',
   );
-} 
+}
 
 /**
  * Implementation of hook_server()
@@ -22,6 +22,10 @@ function rest_server_server() {
   $method_name = $request['method'];
   foreach (services_get_all() as $method) {
     if ($method['#method'] == $request['method']) {
+      // Make sure that include files are indeed included
+      if (isset($method['#file']) && is_array($include = $method['#file'])) {
+        module_load_include($include['file'], $include['module']);
+      }
       // Special use cases for arguments of certain types
       foreach ($method['#args'] as $argument) {
         $argname = $argument['#name'];
@@ -96,7 +100,7 @@ function rest_server_server_error($message) {
  *   SimpleXML object, used in recursive calls.
  * @param $depth
  *   Node depth, used in recursive calls.
- * 
+ *
  * @return
  *   XML string.
  */
