@@ -113,7 +113,7 @@ function imagefield_widget_settings_validate($widget) {
 function imagefield_widget_settings_save($widget) {
   // TODO: Rename custom_alt and custom_title to alt_custom and title_custom.
   $filefield_settings = module_invoke('filefield', 'widget_settings', 'save', $widget);
-  return $filefield_settings + array('max_resolution', 'min_resolution', 'alt',  'custom_alt', 'title', 'custom_title');
+  return array_merge($filefield_settings, array('max_resolution', 'min_resolution', 'alt',  'custom_alt', 'title', 'custom_title'));
 }
 
 /**
