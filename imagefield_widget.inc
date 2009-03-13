@@ -141,25 +141,41 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
 
   $element['#theme'] = 'imagefield_widget_item';
 
+  // Check if using the default alt text and replace tokens.
+  $default_alt = (!$field['widget']['custom_alt'] || ($file['status'] == 0 && empty($file['data']['alt'])));
+  if ($default_alt && function_exists('token_replace')) {
+    $field['widget']['alt'] = token_replace($field['widget']['alt'], 'user', $GLOBALS['user']);
+  }
   $element['data']['alt'] = array(
     '#title' => t('Alternate Text'),
-    '#type' => 'value',
-    '#default_value' => $field['widget']['alt'],
+    '#type' => $field['widget']['custom_title'] ? 'textfield' : 'value',
+    '#default_value' => $default_alt ? $field['widget']['alt'] : $file['data']['alt'],
+    '#description' => t('This text will be used by screen readers, search engines, or when the image cannot be loaded.'),
+    '#maxlength' => 80, // See http://www.gawds.org/show.php?contentid=28.
+    '#attributes' => array('class' => 'imagefield-text'),
   );
-  if ($field['widget']['custom_alt']) {
-    $element['data']['alt']['#type'] = $file['fid'] ? 'textfield' : 'hidden';
-    if (!empty($file['data']['alt'])) $element['data']['alt']['#default_value'] =  $file['data']['alt'];
+  // #value must be hard-coded if #type = 'value'.
+  if ($default_alt) {
+    $element['data']['alt']['#value'] = $field['widget']['alt'];
   }
 
-  $element['data']['title'] = array(
-    '#type' => 'value',
-    '#title' => t('Title'),
-    '#default_value' => $field['widget']['title'],
-  );
-  if ($field['widget']['custom_title']) {
-    $element['data']['title']['#type'] = $file['fid'] ? 'textfield' : 'hidden';
-    if (!empty($file['data']['title'])) $element['data']['title']['#value'] =  $file['data']['title'];
+  // Check if using the default title and replace tokens.
+  $default_title = (!$field['widget']['custom_title'] || ($file['status'] == 0 && empty($file['data']['title'])));
+  if ($default_title && function_exists('token_replace')) {
+    $field['widget']['title'] = token_replace($field['widget']['title'], 'user', $GLOBALS['user']);
   }
+  $element['data']['title'] = array(
+    '#type' => $field['widget']['custom_title'] ? 'textfield' : 'value',
+    '#title' => t('Title'),
+    '#default_value' => $default_title ? $field['widget']['title'] : $file['data']['title'],
+    '#description' => t('The title is used as a tool tip when the user hovers the mouse over the image.'),
+    '#attributes' => array('class' => 'imagefield-text'),
+  );
+  // #value must be hard-coded if #type = 'value'.
+  if ($default_title) {
+    $element['data']['title']['#value'] = $field['widget']['title'];
+  }
+
   return $element;
 }
 
