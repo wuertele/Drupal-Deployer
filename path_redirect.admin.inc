@@ -466,7 +466,7 @@ function path_redirect_export_form() {
     '#type' => 'radios',
     '#title' => t('Export format'),
     '#options' => array(
-      'csv' => t('CSV (Tab delimited)'),
+      'csv' => t('CSV (Tab-delimited)'),
       'xml' => t('XML'),
     ),
     '#default_value' => 'csv',
