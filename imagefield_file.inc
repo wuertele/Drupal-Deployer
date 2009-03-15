@@ -98,4 +98,9 @@ function imagefield_create_admin_thumb($source, $destination) {
   else {
     image_scale($source, $destination, $size[0], $size[1]);
   }
+
+  // Set permissions on the thumbnail to ensure it's readable.
+  if (!@chmod($destination, 0664)) {
+    watchdog('imageapi', 'Could not set permissions on destination file: %file', array('%file' => $destination));
+  }
 }
