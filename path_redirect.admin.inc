@@ -474,7 +474,7 @@ function path_redirect_export_form() {
   );
   $form['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Submit'),
+    '#value' => t('Export'),
   );
 
   return $form;
