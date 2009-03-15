@@ -179,7 +179,7 @@ function imagefield_update_6004(&$context) {
   $col_data = $field['field_name'] .'_data';
   $col_list = $field['field_name'] .'_list';
 
-  $limit = 10;
+  $limit = 100;
   $result = db_query_range("SELECT * FROM {". $table ."} WHERE vid > %d ORDER BY vid ASC", $context['sandbox']['current_node'], 0, $limit);
   $has_processed = FALSE;
 
@@ -213,18 +213,6 @@ function imagefield_update_6004(&$context) {
     // Serialize it and store it back to the db.
     db_query($query, serialize($data), $list, $row['vid'], $row['delta']);
 
-    // Create the thumbnail for that image.
-    $file = db_fetch_object(db_query("SELECT * FROM {files} WHERE fid = %d", $row[$col_fid]));
-    if ($file && file_exists($file->filepath) && !file_exists(imagefield_file_admin_thumb_path($file))) {
-      imagefield_file_insert($file);
-    }
-
-    // Previous updates generated a thumbnail in the wrong location, delete
-    // these thumbnails if present.
-    if ($file && file_exists($file->filepath . '.thumb.jpg')) {
-      unlink($file->filepath . '.thumb.jpg');
-    }
-
     // Update our progress information.
     $context['sandbox']['current_node'] = $row['vid'];
     $has_processed = TRUE;
@@ -251,6 +239,34 @@ function imagefield_update_6004(&$context) {
   if (!empty($context['sandbox']['fields'])) {
     $ret['#finished'] = $context['sandbox']['progress'] / $context['sandbox']['total'];
   }
+
+  return $ret;
+}
+
+
+/**
+ * Delete thumbnails spread throughout the files directory.
+ */
+function imagefield_update_6005() {
+  $ret = array();
+
+  $result = db_query("SELECT * FROM {files} WHERE filemime LIKE 'image/%'");
+
+  while ($file = db_fetch_object($result)) {
+    // ImageField 6002 thumbnail path.
+    $thumb_path_a = $file->filepath . '.thumb.jpg';
+
+    // ImageField 6004 thumbnail path.
+    $extension_dot = strrpos($file->filepath, '.');
+    $extension = substr($file->filepath, $extension_dot + 1);
+    $basepath = substr($file->filepath, 0, $extension_dot);
+    $thumb_path_b = $basepath .'.thumb.'. $extension;
+
+    file_delete($thumb_path_a);
+    file_delete($thumb_path_b);
+  }
+
+  $ret[] = array('success' => TRUE, 'query' => t('Deleted admin thumbnails distributed throughout files directory. All thumbnails are now stored in the "imagefield_thumbs" directory.'));
 
   return $ret;
 }
