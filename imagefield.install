@@ -108,6 +108,9 @@ function imagefield_update_6004(&$context) {
       db_change_field($ret, $db_info['table'], $field['field_name'] . '_fid', $field['field_name'] . '_fid', array('type' => 'int'));
       $ret[] = update_sql("UPDATE {" . $db_info['table'] . "} SET " . $field['field_name'] . "_fid = NULL WHERE " . $field['field_name'] . "_fid = 0");
 
+      // Set any entries that were abandoned by poor housekeeping to NULL.
+      $ret[] = update_sql("UPDATE {" . $db_info['table'] . "} SET " . $field['field_name'] . "_fid = NULL WHERE " . $field['field_name'] . "_fid NOT IN (SELECT fid FROM {files})");
+
       // Add the "data" and "list" columns to the field if not there already.
       if (!db_column_exists($db_info['table'], $field['field_name'] . '_list')) {
         db_add_field($ret, $db_info['table'], $field['field_name'] . '_list', array('type' => 'int', 'size' => 'tiny'));
