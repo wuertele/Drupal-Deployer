@@ -392,7 +392,7 @@ function path_redirect_import_form() {
   );
   $form['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Submit'),
+    '#value' => t('Import'),
   );
   $form['#attributes']['enctype'] = 'multipart/form-data';
 
