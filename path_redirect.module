@@ -73,11 +73,43 @@ function path_redirect_menu() {
     'title' => 'Settings',
     'description' => 'Configure behavior for URL redirects.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('path_redirect_settings'),
+    'page arguments' => array('path_redirect_settings_form'),
     'access arguments' => array('administer redirects'),
     'type' => MENU_LOCAL_TASK,
     'file' => 'path_redirect.admin.inc',
   );
+  //$items['admin/build/path-redirect/import'] = array(
+  //  'title' => 'Import',
+  //  'description' => 'Import URL redirects.',
+  //  'page callback' => 'drupal_get_form',
+  //  'page arguments' => array('path_redirect_import_form'),
+  //  'access arguments' => array('administer redirects'),
+  //  'type' => MENU_LOCAL_TASK,
+  //  'weight' => 20,
+  //  'file' => 'path_redirect.admin.inc',
+  //);
+  $items['admin/build/path-redirect/export'] = array(
+    'title' => 'Export',
+    'description' => 'Export URL redirects.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('path_redirect_export_form'),
+    'access arguments' => array('administer redirects'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 30,
+    'file' => 'path_redirect.admin.inc',
+  );
+  //$items['admin/build/path-redirect/export/csv'] = array(
+  //  'page callback' => 'path_redirect_export_csv',
+  //  'access arguments' => array('administer redirects'),
+  //  'type' => MENU_CALLBACK,
+  //  'file' => 'path_redirect.admin.inc',
+  //);
+  //$items['admin/build/path-redirect/export/xml'] = array(
+  //  'page callback' => 'path_redirect_export_xml',
+  //  'access arguments' => array('administer redirects'),
+  //  'type' => MENU_CALLBACK,
+  //  'file' => 'path_redirect.admin.inc',
+  //);
   $items['admin/build/path-redirect/autocomplete'] = array(
     'page callback' => 'path_redirect_autocomplete',
     'access arguments' => array('administer redirects'),
@@ -157,7 +189,7 @@ function _path_redirect_check() {
 
     if (url($r->redirect) == url($_GET['q'])) {
       // Prevent infinite loop redirection.
-      watchdog('path_redirect', 'Redirect to <code>%redirect</code> is causing an infinite loop; redirect cancelled.', array('%redirect' => $r->redirect), WATCHDOG_WARNING, l(t('edit'), 'admin/build/path-redirect/edit/'. $r->rid));
+      watchdog('path_redirect', 'Redirect to <code>%redirect</code> is causing an infinite loop; redirect cancelled.', array('%redirect' => $r->redirect), WATCHDOG_WARNING, l(t('Edit'), 'admin/build/path-redirect/edit/'. $r->rid));
     }
     elseif (path_redirect_var('allow_bypass') && isset($_GET['redirect']) && $_GET['redirect'] === 'no') {
       // If the user has requested not to be redirected, show a message.
@@ -192,7 +224,7 @@ function path_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 }
 
 /**
- * Implementation of hook_nodeapi_presave().
+ * Implementation of hook_node_presave().
  *
  * Creates automatic redirects when URL aliases are manually changed.
  */
@@ -208,7 +240,7 @@ function path_redirect_node_presave($node) {
 }
 
 /**
- * Implementation of hook_nodeapi_presave().
+ * Implementation of hook_node_presave().
  */
 function path_redirect_node_delete($node) {
   // When a node is deleted, also delete the redirects to it (they will result in a 404).
@@ -221,7 +253,6 @@ function path_redirect_node_delete($node) {
 function path_redirect_save($edit) {
   // Merge default values.
   $edit += array(
-    'language' => '',
     'type' => path_redirect_var('default_status'),
     'last_used' => time(),
   );
@@ -307,7 +338,6 @@ function _path_redirect_split_path($path) {
   );
   return $result;
 }
-
 
 /**
  * Internal default variables for template_var().

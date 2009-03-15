@@ -158,6 +158,7 @@ class PathRedirectFunctionalTest extends DrupalWebTestCase {
     $this->drupalGet('test1');
     $this->drupalGet('test2');
     $this->drupalGet('test2');
+    $this->drupalGet('tst3');
 
     // Create a 404 and then create a valid redirect for it.
     $this->drupalGet('test3');
@@ -165,14 +166,16 @@ class PathRedirectFunctionalTest extends DrupalWebTestCase {
 
     // Create a 404 and then create a valid path for it.
     $this->drupalGet('node/1');
-    $this->drupalCreateNode();
+    $node = $this->drupalCreateNode();
+    $this->assertEqual($node->nid, 1, t('Node 1 created'));
 
     // Test that only the valid 404s are found in the autocomplete.
     $this->drupalGet('admin/build/path-redirect/autocomplete/e');
     $this->assertText('test1');
     $this->assertText('test2');
-    $this->assertNoText('node/1');
+    $this->assertNoText('node');
     $this->assertNoText('test3');
+    $this->assertNoText('tst3');
 
     // Test that the 404 with the greater hits is listed first.
     $this->assertTrue(strpos($this->drupalGetContent(), 'test1') > strpos($this->drupalGetContent(), 'test2'), t('Paths ordered correctly.'));
