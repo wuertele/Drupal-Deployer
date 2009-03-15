@@ -141,6 +141,10 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
 
   $element['#theme'] = 'imagefield_widget_item';
 
+  if (isset($element['preview']) && $element['#value']['fid'] != 0) {
+    $element['preview']['#value'] = theme('imagefield_widget_preview', $element['#value']);
+  }
+
   // Check if using the default alt text and replace tokens.
   $default_alt = (!$field['widget']['custom_alt'] || ($file['status'] == 0 && empty($file['data']['alt'])));
   if ($default_alt && function_exists('token_replace')) {
