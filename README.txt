@@ -30,5 +30,5 @@ Install
 3) Create a new image field in through CCK's interface. Visit Administer ->
    Content management -> Content types (admin/content/types), then click
    Manage fields on the type you want to add an image upload field. Select
-   "Image" as the field type and "Image" as the widget type to create a new
+   "File" as the field type and "Image" as the widget type to create a new
    field.
