@@ -152,7 +152,7 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
   }
   $element['data']['alt'] = array(
     '#title' => t('Alternate Text'),
-    '#type' => $field['widget']['custom_title'] ? 'textfield' : 'value',
+    '#type' => $field['widget']['custom_alt'] ? 'textfield' : 'value',
     '#default_value' => $default_alt ? $field['widget']['alt'] : $file['data']['alt'],
     '#description' => t('This text will be used by screen readers, search engines, or when the image cannot be loaded.'),
     '#maxlength' => 80, // See http://www.gawds.org/show.php?contentid=28.
