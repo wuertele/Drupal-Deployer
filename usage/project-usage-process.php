@@ -72,6 +72,8 @@ if (!module_exists('project_usage')) {
   exit(1);
 }
 
+// Load the API functions we need for manipulating dates and timestamps.
+module_load_include('inc', 'project_usage', 'includes/date_api');
 
 // ------------------------------------------------------------
 // Call the daily and weekly processing tasks as needed.
