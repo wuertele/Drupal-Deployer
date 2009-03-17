@@ -76,13 +76,18 @@ function path_redirect_edit($form_state, $rid = FALSE) {
 
 function path_redirect_edit_form(&$form_state, $edit = array()) {
   // Merge default values.
+  $_GET += array(
+    'src' => '',
+    'dst' => '',
+    'language' => '',
+  );
   $edit += array(
     'rid' => NULL,
-    'path' => '',
-    'redirect' => '',
+    'path' => urldecode($_GET['src']),
+    'redirect' => urldecode($_GET['dst']),
     'query' => NULL,
     'fragment' => NULL,
-    'language' => '',
+    'language' => urldecode($_GET['language']),
     'type' => path_redirect_var('default_status'),
   );
 
@@ -345,8 +350,8 @@ function path_redirect_autocomplete() {
   $matches = array();
 
   // Get a list of 404s, sorted by the number of times each 404 was processed.
-  $query = db_query("SELECT message, COUNT(message) AS count FROM {watchdog} WHERE type = 'page not found' AND LOWER(message) LIKE '%%%s%%' GROUP BY message ORDER BY count DESC", drupal_strtolower($string));
-  while ($path = db_result($query)) {
+  $paths = db_query("SELECT message, COUNT(message) AS count FROM {watchdog} WHERE type = 'page not found' AND LOWER(message) LIKE '%%%s%%' GROUP BY message ORDER BY count DESC", drupal_strtolower($string));
+  while ($path = db_result($paths)) {
     // If the 404 is now a valid path or already has a redirect, discard it.
     if (!menu_get_item($path) && !path_redirect_load(array('path' => $path))) {
       $matches[$path] = check_plain($path);
@@ -491,7 +496,7 @@ function path_redirect_export_form_submit($form, $form_state) {
   $type = $form_state['values']['type'];
   $function = 'path_redirect_export_'. $type;
 
-  $filename = variable_get('site_name', 'Drupal') .' redirects '. format_date(time(), 'custom', 'Y m d');
+  $filename = variable_get('site_name', 'Drupal') .' redirects '. format_date(REQUEST_TIME, 'custom', 'Y m d');
   $filename = preg_replace(array('/^\W+|\W+$/', '/\W+/'), array('', '-'), drupal_strtolower($filename));
   $filename .= '.'. $type;
   drupal_set_header('Content-Disposition: attachment; filename='. $filename);

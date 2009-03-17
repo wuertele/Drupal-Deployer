@@ -1,6 +1,10 @@
 <?php
 // $Id$
 
+if (!defined('REQUEST_TIME')) {
+  define('REQUEST_TIME', time());
+}
+
 /**
  * Implementation of hook_help().
  */
@@ -133,7 +137,7 @@ function path_redirect_init() {
 function path_redirect_cron() {
   // Purge inactive redirects from the database.
   if ($purge = path_redirect_var('purge_inactive')) {
-    db_query("DELETE FROM {path_redirect} WHERE last_used < %d", array(':timestamp' => time() - $purge));
+    db_query("DELETE FROM {path_redirect} WHERE last_used < %d", array(':timestamp' => REQUEST_TIME - $purge));
     if ($count = db_affected_rows()) {
       watchdog('path_redirect', format_plural($count, 'Removed 1 inactive redirect from the database.', 'Removed @count inactive redirects from the database.'));
     }
@@ -183,7 +187,7 @@ function _path_redirect_check() {
 
   if ($r) {
     // Update the last used timestamp so that unused redirects can be purged.
-    db_query("UPDATE {path_redirect} SET last_used = %d WHERE rid = %d", array(':last_used' => time(), ':rid' => $r->rid));
+    db_query("UPDATE {path_redirect} SET last_used = %d WHERE rid = %d", array(':last_used' => REQUEST_TIME, ':rid' => $r->rid));
 
     $redirect = url($r->redirect, array('query' => $r->query, 'fragment' => $r->fragment, 'absolute' => TRUE));
 
@@ -254,7 +258,7 @@ function path_redirect_save($edit) {
   // Merge default values.
   $edit += array(
     'type' => path_redirect_var('default_status'),
-    'last_used' => time(),
+    'last_used' => REQUEST_TIME,
   );
 
   // Remove beginning and trailing slashes from path.
@@ -277,10 +281,10 @@ function path_redirect_load($where = array(), $args = array(), $sort = array()) 
     $where = array('rid' => $where);
   }
 
-  foreach ($where as $key => &$value) {
+  foreach ($where as $key => $value) {
     if (is_string($key)) {
       $args[] = $value;
-      $value = $key .' = '. (is_numeric($value) ? '%d' : "'%s'");
+      $where[$key] = $key .' = '. (is_numeric($value) ? '%d' : "'%s'");
     }
   }
 
@@ -307,10 +311,10 @@ function path_redirect_delete($where = array(), $args = array()) {
     $args = array();
   }
 
-  foreach ($where as $key => &$value) {
+  foreach ($where as $key => $value) {
     if (is_string($value)) {
       $args[] = $value;
-      $value = $key .' = '. (is_numeric($value) ? '%d' : "'%s'");
+      $where[$key] = $key .' = '. (is_numeric($value) ? '%d' : "'%s'");
     }
   }
 
@@ -367,8 +371,7 @@ function path_redirect_var($name, $default = NULL) {
 
   // @todo Remove when stable.
   if (!isset($defaults[$name])) {
-    drupal_set_message(t('Default variable for %variable not found.', array('%variable' => $name)), 'error');
-    watchdog('path_redirect', 'Default variable for %variable not found.', array('%variable' => $name), WATCHDOG_WARNING);
+    trigger_error(t('Default variable for %variable not found.', array('%variable' => $name)));
   }
 
   return variable_get($name, isset($default) || !isset($defaults[$name]) ? $default : $defaults[$name]);

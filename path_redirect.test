@@ -128,10 +128,9 @@ class PathRedirectFunctionalTest extends DrupalWebTestCase {
   }
 
   function testInactivePurging() {
-    $time = time();
     // Add two inactive redirects to the database.
-    path_redirect_save(array('path' => 'test1', 'redirect' => 'node', 'last_used' => $time - 610000));
-    path_redirect_save(array('path' => 'test2', 'redirect' => 'node', 'last_used' => $time - 610000));
+    path_redirect_save(array('path' => 'test1', 'redirect' => 'node', 'last_used' => REQUEST_TIME - 610000));
+    path_redirect_save(array('path' => 'test2', 'redirect' => 'node', 'last_used' => REQUEST_TIME - 610000));
 
     // Purging is disabled by default, so after running cron both redirects should not be removed.
     $this->drupalGet('cron.php');
@@ -145,7 +144,7 @@ class PathRedirectFunctionalTest extends DrupalWebTestCase {
 
     // Run one of the redirects and test that the last used timestamp was updated.
     $this->drupalGet('test1');
-    $this->assertTrue(db_result(db_query("SELECT last_used FROM {path_redirect} WHERE path = 'test1'")) >= $time, t('Last used timestamp was updated.'));
+    $this->assertTrue(db_result(db_query("SELECT last_used FROM {path_redirect} WHERE path = 'test1'")) >= REQUEST_TIME, t('Last used timestamp was updated.'));
 
     // Run cron and test that the inactive redirect was removed.
     $this->drupalGet('cron.php');
