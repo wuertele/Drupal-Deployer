@@ -92,7 +92,7 @@ function imagefield_create_admin_thumb($source, $destination) {
   }
 
   // Create the thumbnail.
-  if ($info['width'] <= $size[0] || $info['height'] <= $size[1]) {
+  if ($info['width'] <= $size[0] && $info['height'] <= $size[1]) {
     file_copy($source, $destination);
   }
   else {
