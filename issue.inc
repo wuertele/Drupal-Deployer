@@ -1292,8 +1292,7 @@ function project_issue_admin_states_form_submit($form, &$form_state) {
   }
 }
 
-function project_issue_delete_state_confirm($sid) {
-  $sid = arg(4);
+function project_issue_delete_state_confirm(&$form_state, $sid) {
   $states = project_issue_state();
   $name = $states[$sid];
 
