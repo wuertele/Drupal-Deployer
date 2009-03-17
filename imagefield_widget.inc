@@ -105,6 +105,13 @@ function imagefield_widget_settings_validate($widget) {
   if (count(array_diff($extensions, $web_extensions))) {
     form_set_error('file_extensions', t('Only web-standard images (jpg, gif, and png) are supported through the image widget. If needing to upload other types of images, change the widget to use a standard file upload.'));
   }
+
+  // Check that set resolutions are valid.
+  foreach (array('min_resolution', 'max_resolution') as $resolution) {
+    if (!empty($widget[$resolution]) && !preg_match('/^[0-9]+x[0-9]+$/', $widget[$resolution])) {
+      form_set_error($resolution, t('Please specify a resolution in the format WIDTHxHEIGHT (e.g. 640x480).'));
+    }
+  }
 }
 
 /**
