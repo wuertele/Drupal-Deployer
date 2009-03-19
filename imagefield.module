@@ -229,6 +229,31 @@ function imagefield_field_formatter_info() {
   return $formatters;
 }
 
+/**
+ * Implementation of hook_form_[form_id]_alter().
+ *
+ * Modify the add new field form to make "Image" the default formatter.
+ */
+function imagefield_form_content_field_overview_form_alter(&$form, &$form_state) {
+  $form['#submit'][] = 'imagefield_form_content_field_overview_submit';
+}
+
+/**
+ * Submit handler to set a new field's formatter to "image_plain".
+ */
+function imagefield_form_content_field_overview_submit(&$form, &$form_state) {
+  if (isset($form_state['fields_added']['_add_new_field']) && isset($form['#type_name'])) {
+    $new_field = $form_state['fields_added']['_add_new_field'];
+    $node_type = $form['#type_name'];
+    $field = content_fields($new_field, $node_type);
+    foreach ($field['display_settings'] as $display_type => $display_settings) {
+      if ($field['display_settings'][$display_type]['format'] == 'default') {
+        $field['display_settings'][$display_type]['format'] = 'image_plain';
+      }
+    }
+    content_field_instance_update($field);
+  }
+}
 
 /**
  * @defgroup "Theme Callbacks"
