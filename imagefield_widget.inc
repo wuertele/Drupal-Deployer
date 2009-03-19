@@ -54,8 +54,8 @@ function imagefield_widget_settings_form($widget) {
   $form['alt_settings'] = array(
     '#type' => 'fieldset',
     '#title' => t('ALT text settings'),
-    '#collapsible' => true,
-    '#collapsed' => true,
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
     '#weight' => 8,
   );
   $form['alt_settings']['custom_alt'] = array(
@@ -75,8 +75,8 @@ function imagefield_widget_settings_form($widget) {
   $form['title_settings'] = array(
     '#type' => 'fieldset',
     '#title' => t('Title text settings'),
-    '#collapsible' => true,
-    '#collapsed' => true,
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
     '#weight' => 8,
   );
   $form['title_settings']['custom_title'] = array(

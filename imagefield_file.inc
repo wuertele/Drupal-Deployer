@@ -11,7 +11,7 @@
  */
 function imagefield_file_references($file) {
   $references = 0;
-  foreach(content_fields() as $field) {
+  foreach (content_fields() as $field) {
     if ($field['type'] != 'imagefield') {
       continue;
     }

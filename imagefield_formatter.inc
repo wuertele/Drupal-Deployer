@@ -6,7 +6,6 @@
  * ImageField formatter hooks and callbacks.
  */
 
-
 function theme_imagefield_formatter_image_plain($element) {
   // Inside a View this function may be called with null data. In that case,
   // just return.
@@ -41,7 +40,7 @@ function theme_imagefield_formatter_image_nodelink($element) {
   $node = $element['#node'];
   $imagetag = theme('imagefield_formatter_image_plain', $element);
   $class = 'imagefield imagefield-nodelink imagefield-'. $element['#field_name'];
-  return l($imagetag, 'node/'. $node->nid, array('attributes' => array('class' => $class), 'html' => true));
+  return l($imagetag, 'node/'. $node->nid, array('attributes' => array('class' => $class), 'html' => TRUE));
 }
 
 function theme_imagefield_formatter_image_imagelink($element) {
@@ -55,7 +54,7 @@ function theme_imagefield_formatter_image_imagelink($element) {
   $imagetag = theme('imagefield_formatter_image_plain', $element);
   $original_image_url = file_create_url($item['filepath']);
   $class = 'imagefield imagefield-imagelink imagefield-'. $element['#field_name'];
-  return l($imagetag, $original_image_url, array('attributes' => array('class' => $class), 'html' => true));
+  return l($imagetag, $original_image_url, array('attributes' => array('class' => $class), 'html' => TRUE));
 }
 
 function theme_imagefield_formatter_path_plain($element) {
