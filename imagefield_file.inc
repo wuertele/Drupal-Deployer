@@ -88,7 +88,7 @@ function imagefield_create_admin_thumb($source, $destination) {
   array_pop($directories); // Remove the file itself.
   foreach ($directories as $directory) {
     $full_path = isset($full_path) ? $full_path . '/' . $directory : $directory;
-    file_check_directory($full_path, FILE_CREATE_DIRECTORY);
+    field_file_check_directory($full_path, FILE_CREATE_DIRECTORY);
   }
 
   // Create the thumbnail.
