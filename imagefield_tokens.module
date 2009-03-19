@@ -1,0 +1,47 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ */
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function imagefield_tokens_form_alter(&$form, $form_state, $form_id) {
+  if (isset($form['widget_module']) && $form['widget_module']['#value'] == 'imagefield') {
+    $ifp = array(
+      'alt' => array(
+        'title' => 'ALT text',
+        'form_path' => &$form['widget']['alt_settings']
+      ),
+
+      'title' => array(
+        'title' => 'Title text',
+        'form_path' => &$form['widget']['title_settings']
+      ),
+    );
+
+    foreach ($ifp as $name => &$field) {
+      unset($field['form_path'][$name]['#suffix']);
+
+      $field['form_path'][$name .'_tokens'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('!title replacement patterns', array('!title' => $field['title'])),
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE,
+        '#description' => theme('token_help', 'field') . theme('token_help', 'node'),
+      );
+    }
+  }
+}
+
+function imagefield_tokens_filefield_paths_process_file(&$file, $settings, &$node) {
+  $file['field']['data']['alt'] = token_replace($file['field']['data']['alt'], 'node', $node);
+  $file['field']['data']['alt'] = token_replace($file['field']['data']['alt'], 'field', array(0 => $file['field']));
+
+  $file['field']['data']['title'] = token_replace($file['field']['data']['title'], 'node', $node);
+  $file['field']['data']['title'] = token_replace($file['field']['data']['title'], 'field', array(0 => $file['field']));
+
+  content_update(&$node);
+}
