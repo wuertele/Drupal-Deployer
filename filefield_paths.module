@@ -37,7 +37,7 @@ function filefield_paths_filefield_paths_field_settings() {
 function filefield_paths_form_alter(&$form, $form_state, $form_id) {
 
   // Set variables for FileField.module
-  if (isset($form['basic']) && preg_match('/\bfilefield\b|\bimage\b/', $form['basic']['type']['#value']) && isset($form['widget']['path_settings'])) {
+  if (isset($form['basic']) && $form['basic']['type']['#value'] == 'filefield' && isset($form['widget']['path_settings'])) {
     $ffp = array(
       'show' => TRUE,
       'type' => $form['type_name']['#value'],
@@ -306,7 +306,7 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         $content_type = content_types($node->type);
 
         foreach ($content_type['fields'] as $field) {
-          if (preg_match('/\bfilefield\b|\bimage\b/', $field['type']) && is_array($node->$field['field_name'])) {
+          if ($field['type'] == 'filefield' && is_array($node->$field['field_name'])) {
 
             foreach ($node->$field['field_name'] as $count => &$file) {
               if (empty($file['filepath'])) {
@@ -378,14 +378,15 @@ function filefield_paths_get_fields($node, $op = NULL) {
     $content_type = content_types($node->type);
 
     foreach ($content_type['fields'] as $field) {
-      if (preg_match('/\bfilefield\b|\bimage\b/', $field['type']) && isset($node->$field['field_name']) && is_array($node->$field['field_name'])) {
+      if ($field['type'] == 'filefield' && isset($node->$field['field_name']) && is_array($node->$field['field_name'])) {
 
         foreach ($node->$field['field_name'] as &$file) {
           if ((!empty($file['filepath']) && !empty($file['data']['process'])) || $op == 'load') {
             $ffp['#files'][] = array(
               'field' => &$file,
               'module' => $field['module'],
-              'name' => $field['field_name']
+              'name' => $field['field_name'],
+              'widget' => $field['widget']['module']
             );
 
             $ffp['#types'][$field['field_name']] = TRUE;
@@ -475,7 +476,7 @@ function filefield_paths_process_file(&$file, $settings, &$node, &$update) {
       }
 
       // Move ImageField thumbnail
-      if ($file['module'] == 'imagefield') {
+      if ($file['widget'] == 'imagefield') {
         file_move(
           imagefield_file_admin_thumb_path(
             array('filepath' => $file['filepath']['old'])
