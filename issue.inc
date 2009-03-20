@@ -1196,7 +1196,7 @@ function theme_project_issue_admin_states_form($form) {
   return $output;
 }
 
-function project_issue_admin_states_form() {
+function project_issue_admin_states_form(&$form_state) {
   $result = db_query('SELECT * FROM {project_issue_state} ORDER BY weight');
   $default_state = variable_get('project_issue_default_state', 1);
   $default_states = project_issue_default_states();
