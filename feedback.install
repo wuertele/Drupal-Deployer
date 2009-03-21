@@ -21,10 +21,13 @@ function feedback_schema() {
         'description' => t('The actual feedback message.'),
       ),
       'location' => array('type' => 'text', 'not null' => TRUE,
-        'description' => t('The internal Drupal path of the page feedback message was entered in.'),
+        'description' => t('The internal Drupal path of the page the feedback message was submitted on.'),
       ),
       'location_masked' => array('type' => 'text', 'not null' => TRUE,
-        'description' => t('The masked Drupal path of the page feedback message was entered in.'),
+        'description' => t('The masked Drupal path of the page the feedback message was submitted on.'),
+      ),
+      'url' => array('type' => 'text', 'not null' => TRUE,
+        'description' => t('The absolute URL of the page the feedback message was submitted on.'),
       ),
       'useragent' => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE,
         'description' => t('The user agent of the feedback message author.'),
@@ -64,6 +67,16 @@ function feedback_update_6100() {
   $ret = array();
   db_drop_primary_key($ret, 'feedback');
   db_change_field($ret, 'feedback', 'fid', 'fid', array('type' => 'serial', 'unsigned' => TRUE, 'not null' => TRUE), array('primary key' => array('fid')));
+  return $ret;
+}
+
+/**
+ * Add column for absolute URL.
+ */
+function feedback_update_6101() {
+  $ret = array();
+  db_add_field($ret, 'feedback', 'url', array('type' => 'text', 'not null' => TRUE));
+  $ret[] = update_sql("UPDATE {feedback} SET url = location");
   return $ret;
 }
 

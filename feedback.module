@@ -225,7 +225,7 @@ function feedback_mask_path($path) {
 function feedback_add_entry($message, $location) {
   global $user;
 
-  db_query("INSERT INTO {feedback} (uid, message, location, location_masked, timestamp, useragent) VALUES (%d, '%s', '%s', '%s', %d, '%s')", $user->uid, trim($message), $location, feedback_mask_path($location), time(), $_SERVER['HTTP_USER_AGENT']);
+  db_query("INSERT INTO {feedback} (uid, message, location, location_masked, url, timestamp, useragent) VALUES (%d, '%s', '%s', '%s', '%s', %d, '%s')", $user->uid, trim($message), $location, feedback_mask_path($location), url($location, array('absolute' => TRUE)), time(), $_SERVER['HTTP_USER_AGENT']);
 }
 
 /**
@@ -281,7 +281,7 @@ function feedback_admin_view_form() {
         '#return_value' => 1,
         '#default_value' => FALSE,
       );
-      $form['feedback-messages'][$status][$entry->fid]['location'] = array('#value' => l(truncate_utf8($entry->location, 32, FALSE, TRUE), $entry->location));
+      $form['feedback-messages'][$status][$entry->fid]['location'] = array('#value' => l(truncate_utf8($entry->location, 32, FALSE, TRUE), $entry->url));
       $form['feedback-messages'][$status][$entry->fid]['date'] = array('#value' => format_date($entry->timestamp, 'small'));
       $form['feedback-messages'][$status][$entry->fid]['user'] = array('#value' => theme('username', $entry));
       $form['feedback-messages'][$status][$entry->fid]['message'] = array('#value' => feedback_format_message($entry));
