@@ -84,13 +84,6 @@ function project_issue_generate_issues($number) {
  */
 function project_issue_generate_issue_comments($number) {
 
-  // To leverage the followup creation API, an auto-followup user must be
-  // configured, so toss a warning and exit if it's not.
-  if ((int) $number && !_project_issue_followup_get_user()) {
-    drupal_set_message(t('No comments created -- you must <a href="!project_issue_settings">configure an Auto-followup user</a> to generate issue comments', array('!project_issue_settings' => url('admin/project/project-issue-settings', array('query' => drupal_get_destination())))), 'error');
-    return;
-  }
-
   $empty_variables = array();
   // After retrieving the possible values for each of these variables, we
   // need to check and make sure that at least one value was returned. If
