@@ -7,23 +7,15 @@
  */
 
 function theme_imagefield_formatter_image_plain($element) {
-  // Inside a View this function may be called with null data. In that case,
-  // just return.
-  if (empty($element['#item'])) {
+  // Inside a view $element may contain null data. In that case, just return.
+  if (empty($element['#item']['fid'])) {
     return '';
   }
 
   $field = content_fields($element['#field_name']);
   $item = $element['#item'];
 
-  if (empty($item['fid']) && $field['use_default_image']) {
-    $item = $field['default_image'];
-  }
-  if (empty($item['filepath'])) {
-    $item = array_merge($item, field_file_load($item['fid']));
-  }
-
-  $item['data']['alt'] = isset($item['data']['alt']) ? $item['data']['alt'] : $item['filename'];
+  $item['data']['alt'] = isset($item['data']['alt']) ? $item['data']['alt'] : '';
   $item['data']['title'] = isset($item['data']['title']) ? $item['data']['title'] : NULL;
 
   $class = 'imagefield imagefield-'. $field['field_name'];
@@ -31,9 +23,8 @@ function theme_imagefield_formatter_image_plain($element) {
 }
 
 function theme_imagefield_formatter_image_nodelink($element) {
-  // Inside a View this function may be called with null data. In that case,
-  // just return.
-  if (empty($element['#item'])) {
+  // Inside a view $element may contain null data. In that case, just return.
+  if (empty($element['#item']['fid'])) {
     return '';
   }
 
@@ -44,9 +35,8 @@ function theme_imagefield_formatter_image_nodelink($element) {
 }
 
 function theme_imagefield_formatter_image_imagelink($element) {
-  // Inside a View this function may be called with null data. In that case,
-  // just return.
-  if (empty($element['#item'])) {
+  // Inside a view $element may contain null data. In that case, just return.
+  if (empty($element['#item']['fid'])) {
     return '';
   }
 
