@@ -162,6 +162,29 @@ function imagefield_update_6004(&$context) {
         }
       }
 
+      // Move the default_image options to the widget level.
+      $field['widget']['default_image'] = isset($field['default_image']) ? $field['default_image'] : NULL;
+      $field['widget']['use_default_image'] = isset($field['use_default_image']) ? $field['use_default_image'] : 0;
+
+      // The default image needs to be saved in the files table.
+      if (isset($field['widget']['default_image']['filepath'])) {
+        $file = (object) $field['widget']['default_image'];
+        // Check if it's already in the files table.
+        if ($fid = db_result(db_query("SELECT fid FROM {files} WHERE filepath = '%s'", $file->filepath))) {
+          $field['widget']['default_image']['fid'] = $fid;
+        }
+        // Otherwise add it.
+        else {
+          $file->uid = 1;
+          $file->status = 1;
+          drupal_write_record('files', $file);
+          $field['widget']['default_image']['fid'] = $file->fid;
+        }
+
+        // Unset the field-level definition, or it will take precedence.
+        unset($field['default_image']);
+      }
+
       content_field_instance_update($field);
     }
 

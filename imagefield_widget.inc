@@ -92,8 +92,83 @@ function imagefield_widget_settings_form($widget) {
     '#description' => t('This value will be used as the image title by default.'),
     '#suffix' =>  theme('token_help', 'file'),
   );
+
+  // Default image settings.
+  $form['default'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Default image'),
+    '#element_validate' => array('_imagefield_widget_settings_default_validate'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#weight' => 10
+  );
+
+  // Present a thumbnail of the current default image.
+  $form['default']['use_default_image'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use default image'),
+    '#default_value' =>  $widget['use_default_image'],
+    '#description' => t('When an image is not uploaded, show a default image on display.'),
+  );
+
+  if (!empty($widget['default_image'])) {
+    $form['default']['default_image_thumbnail'] = array(
+      '#type' => 'markup',
+      '#value' => theme('imagefield_image', $widget['default_image'], '', '', array('width' => '150'), FALSE),
+    );
+  }
+  $form['default']['default_image_upload'] = array(
+    '#type'  => 'file',
+    '#title' => t('Upload image'),
+    '#description' => t('Choose a image that will be used as default.'),
+  );
+
+  // We set this value on 'validate' so we can get CCK to add it
+  // as a standard field setting.
+  $form['default_image'] = array(
+    '#type' => 'value',
+    '#value' => $widget['default_image'],
+  );
+
   return $form;
 }
+
+/**
+ * Element specific validation for imagefield default value.
+ *
+ * Validated in a separate function from imagefield_field() to get access
+ * to the $form_state variable.
+ */
+function _imagefield_widget_settings_default_validate($element, &$form_state) {
+  // Verify the destination exists
+  $destination = file_directory_path() .'/imagefield_default_images';
+  if (!field_file_check_directory($destination, FILE_CREATE_DIRECTORY)) {
+    form_set_error('default_image', t('The default image could not be uploaded. The destination %destination does not exist or is not writable by the server.', array('%destination' => dirname($destination))));
+    return;
+  }
+
+  $validators = array(
+    'file_validate_is_image' => array(),
+  );
+
+  // We save the upload here because we can't know the correct path until the file is saved.
+  if (!$file = file_save_upload('default_image_upload', $validators, $destination)) {
+    // No upload to save we hope... or file_save_upload() reported an error on its own.
+    return;
+  }
+
+  // Remove old image (if any) & clean up database.
+  $old_default = $form_state['values']['default_image'];
+  if (!empty($old_default['fid'])) {
+    if (file_delete(file_create_path($old_default['filepath']))) {
+      db_query('DELETE FROM {files} WHERE fid=%d', $old_default['fid']);
+    }
+  }
+
+  // Make the file permanent and store it in the form.
+  file_set_status($file, FILE_STATUS_PERMANENT);
+  $form_state['values']['default_image'] = (array)$file;
+ }
 
 /**
  * Validate callback for the CCK widget form.
@@ -120,7 +195,7 @@ function imagefield_widget_settings_validate($widget) {
 function imagefield_widget_settings_save($widget) {
   // TODO: Rename custom_alt and custom_title to alt_custom and title_custom.
   $filefield_settings = module_invoke('filefield', 'widget_settings', 'save', $widget);
-  return array_merge($filefield_settings, array('max_resolution', 'min_resolution', 'alt',  'custom_alt', 'title', 'custom_title'));
+  return array_merge($filefield_settings, array('max_resolution', 'min_resolution', 'alt',  'custom_alt', 'title', 'custom_title', 'default_image', 'use_default_image'));
 }
 
 /**
