@@ -38,7 +38,7 @@ function fckeditor_admin_main() {
   $fckconfig_file = $editor_path .'/fckconfig.js';
   if (!file_exists($fckconfig_file)) {
     drupal_set_message(t('Checking for %filename.', array('%filename' => $fckconfig_file)));
-    drupal_set_message(t('The FCKeditor component is not installed correctly. Please go to the <a href="!fckeditorlink">FCKeditor homepage</a> to download the latest version. After that you must extract the files to %fckeditorpath and make sure that the directory %fckeditorsubdir and the file %fckeditorfile exist. Refer to the <a href="!readme">readme.txt</a> for more information.', array('!fckeditorlink' => url('http://www.fckeditor.net/download'), '!readme' => url('admin/help/fckeditor'), '%fckeditorpath' => $editor_path .'/fckeditor/', '%fckeditorsubdir' => $editor_path .'/editor', '%fckeditorfile' => $editor_path .'/fckeditor.js')), 'error');
+    drupal_set_message(t('The FCKeditor component is not installed correctly. Please go to the <a href="!fckeditorlink">FCKeditor homepage</a> to download the latest version. After that you must extract the files to %fckeditorpath and make sure that the directory %fckeditorsubdir and the file %fckeditorfile exist. Refer to the <a href="!readme">readme.txt</a> for more information.', array('!fckeditorlink' => url('http://www.fckeditor.net/download'), '!readme' => url('admin/help/fckeditor'), '%fckeditorpath' => $editor_path, '%fckeditorsubdir' => $editor_path .'/editor', '%fckeditorfile' => $editor_path .'/fckeditor.js')), 'error');
     drupal_set_message(t('If you have FCKeditor already installed please edit <a href="!editg">FCKeditor Global Profile</a> and update FCKeditor path.', array('!editg' => url('admin/settings/fckeditor/editg'))), 'warning');
     return FALSE;
   }
