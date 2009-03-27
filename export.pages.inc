@@ -78,6 +78,16 @@ function export_node_export($original_node, $return_code = FALSE) {
           $node->$key = in_array($key, $node_options);
         }
       }
+
+      // Fix taxonomy array
+      if (isset($node->taxonomy) && count($node->taxonomy)) {
+        $new_taxonomy = array();
+        foreach ($node->taxonomy as $term) {
+          $new_taxonomy[$term->vid][$term->tid] = $term->tid;
+        }
+        $node->taxonomy = $new_taxonomy;
+      }
+
       // Let other modules do special fixing up.
       // The function signature is: hook_export_node_alter(&$node, $original_node, $method)
       // Where $method is 'export'
