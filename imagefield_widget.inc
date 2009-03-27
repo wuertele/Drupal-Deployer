@@ -237,7 +237,7 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
     '#type' => $field['widget']['custom_alt'] ? 'textfield' : 'value',
     '#default_value' => $default_alt ? $field['widget']['alt'] : $file['data']['alt'],
     '#description' => t('This text will be used by screen readers, search engines, or when the image cannot be loaded.'),
-    '#maxlength' => 80, // See http://www.gawds.org/show.php?contentid=28.
+    '#maxlength' => variable_get('imagefield_alt_length', 80), // See http://www.gawds.org/show.php?contentid=28.
     '#attributes' => array('class' => 'imagefield-text'),
   );
   // #value must be hard-coded if #type = 'value'.
@@ -255,6 +255,7 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
     '#title' => t('Title'),
     '#default_value' => $default_title ? $field['widget']['title'] : $file['data']['title'],
     '#description' => t('The title is used as a tool tip when the user hovers the mouse over the image.'),
+    '#maxlength' => variable_get('imagefield_title_length', 500),
     '#attributes' => array('class' => 'imagefield-text'),
   );
   // #value must be hard-coded if #type = 'value'.
