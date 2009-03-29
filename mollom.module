@@ -44,8 +44,8 @@ function mollom_link($type, $object = NULL) {
   // We extend the comment links so people can send feedback:
   if ($type == 'comment' && user_access('administer comments') && _mollom_get_mode('comment_form')) {
     $links['comment_spam'] = array(
-        'title' => t('mark as abuse'),
-        'href' => "mollom/comment/$object->cid"
+      'title' => t('mark as abuse'),
+      'href' => "mollom/comment/$object->cid",
     );
 
     return $links;
@@ -53,8 +53,8 @@ function mollom_link($type, $object = NULL) {
 
   if ($type == 'node' && user_access('administer nodes') && _mollom_get_mode($object->type .'_node_form')) {
     $links['node_spam'] = array(
-        'title' => t('Delete post'),
-        'href' => "mollom/node/$object->nid"
+      'title' => t('Delete post'),
+      'href' => "mollom/node/$object->nid",
     );
 
     return $links;
@@ -283,10 +283,10 @@ function mollom_report_contact($form_state, $session) {
   $form['feedback'] = _mollom_feedback_options();
 
   return confirm_form($form,
-  t('Are you sure you want to report the e-mail message as inappropriate?'),
-  isset($_GET['destination']) ? $_GET['destination'] : '',
-  t('This action cannot be undone.'),
-  t('Report as inappropriate'), t('Cancel'));
+    t('Are you sure you want to report the e-mail message as inappropriate?'),
+    isset($_GET['destination']) ? $_GET['destination'] : '',
+    t('This action cannot be undone.'),
+    t('Report as inappropriate'), t('Cancel'));
 }
 
 /**
@@ -629,7 +629,7 @@ function _mollom_update_comments() {
   while ($comment = db_fetch_object($result)) {
     $data = array(
       'post_title' => $comment->subject,
-      'post_body'  => $comment->comment,
+      'post_body' => $comment->comment,
     );
 
     $response = mollom('mollom.checkContent', $data);
@@ -661,9 +661,9 @@ function mollom_admin_settings() {
     }
 
     $form['statistics'] = array(
-        '#type' => 'fieldset',
-        '#title' => t('Site usage statistics'),
-        '#collapsible' => TRUE,
+      '#type' => 'fieldset',
+      '#title' => t('Site usage statistics'),
+      '#collapsible' => TRUE,
     );
     $form['statistics']['message'] = array(
       '#value' => '<div><embed src="http://mollom.com/statistics.swf?key='. check_plain(variable_get('mollom_public_key', '')) .'" quality="high" width="100%" height="430" name="Mollom" align="middle" play="true" loop="false" allowScriptAccess="sameDomain" type="application/x-shockwave-flash" pluginspage="http://www.adobe.com/go/getflashplayer"></embed></div>',
@@ -714,7 +714,8 @@ function mollom_admin_settings() {
         MOLLOM_FALLBACK_BLOCK => t('Block all submissions of protected forms until the server problems are resolved'),
         MOLLOM_FALLBACK_ACCEPT => t('Leave all forms unprotected and accept all submissions'),
       ),
-      '#description' => t('When the Mollom servers are down or otherwise unreachable, no text analysis is performed and no CAPTCHAs are generated. If this occurs, your Drupal site will use the configured fallback strategy, and will either accept all submissions without spam checking, or block all submissions until the server or connection problems are resolved. Subscribers to <a href="@pricing">Mollom Plus</a> receive access to <a href="@sla">Mollom\'s high-availability backend infrastructure</a>, not available to free users, reducing potential downtime.', array('@pricing' => 'http://mollom.com/pricing', '@sla' => 'http://mollom.com/standard-service-level-agreement')));
+      '#description' => t('When the Mollom servers are down or otherwise unreachable, no text analysis is performed and no CAPTCHAs are generated. If this occurs, your Drupal site will use the configured fallback strategy, and will either accept all submissions without spam checking, or block all submissions until the server or connection problems are resolved. Subscribers to <a href="@pricing">Mollom Plus</a> receive access to <a href="@sla">Mollom\'s high-availability backend infrastructure</a>, not available to free users, reducing potential downtime.', array('@pricing' => 'http://mollom.com/pricing', '@sla' => 'http://mollom.com/standard-service-level-agreement')),
+    );
   }
 
   $form['access-keys'] = array(
@@ -784,7 +785,7 @@ function mollom_elements() {
 }
 
 /**
- * Expand the mollom element via #process. 
+ * Expand the mollom element via #process.
  *
  * @param $element
  *   An associative array containing the properties of the element.
@@ -803,7 +804,7 @@ function mollom_expand_element($element, $edit, &$form_state) {
   // state of validation of a form. That ID is valid for a specific user session
   // and for a given form_id only. We expire it as soon as the form is
   // submitted, to avoid it being replayed.
-  
+
   // The current state can come either from the $form_state, if the form
   // was just rebuilt in the same request...
   if (!empty($form_state['mollom'])) {
@@ -811,7 +812,7 @@ function mollom_expand_element($element, $edit, &$form_state) {
   }
   // ... or from data posted by the user. In that case we validate that the correct
   // form_id and user session ID is used...
-  else if (!empty($edit['session_id']) && ($cache = cache_get($edit['session_id'], 'cache_mollom'))
+  elseif (!empty($edit['session_id']) && ($cache = cache_get($edit['session_id'], 'cache_mollom'))
     && $cache->data['#form_id'] === $form_state['values']['form_id'] && $cache->data['#user_session_id'] === session_id()) {
     $mollom_state = $cache->data;
   }
@@ -853,7 +854,7 @@ function mollom_expand_element($element, $edit, &$form_state) {
     // TODO: find a better way to do this in D7.
     $_SERVER['REQUEST_METHOD'] = 'POST';
   }
-  
+
   if (!empty($mollom_state['#session_id'])) {
     // We store the Mollom session only if something useful was done.
     // We save it in two places: as an hidden form field and in the cache
@@ -881,7 +882,7 @@ function mollom_clean_state($form_id, $form_state) {
 }
 
 /**
- * Implementation of hook_theme.
+ * Implementation of hook_theme().
  */
 function mollom_theme() {
   return array(
@@ -1079,7 +1080,7 @@ function mollom($method, $data = array()) {
 
   // Initialize refresh variable:
   $refresh = FALSE;
- 
+
   // Retrieve the list of Mollom servers from the database:
   $servers = variable_get('mollom_servers', NULL);
 
@@ -1128,14 +1129,14 @@ function mollom($method, $data = array()) {
         }
         elseif ($error->code == MOLLOM_REDIRECT) {
           // If this is a network error, we go to the next server in the list.
-          $next = next($servers); 
-          
+          $next = next($servers);
+
           // Do nothing, we automatically select the next server.
           watchdog('mollom', 'The Mollom server %server asked to use the next Mollom server in the list: %next.', array('%server' => $server, '%next' => $next));
         }
         else {
           watchdog('mollom', 'Error @errno from %server: %message - %method - <pre>@data</pre>', array('@errno' => $error->code, '%server' => $server, '%message' => $error->message, '%method' => $method, '@data' => print_r($data, TRUE)), WATCHDOG_ERROR);
-       
+
           // If it is a 'clean' Mollom error we return instantly.
 
           if ($error->code == MOLLOM_ERROR) {
@@ -1143,7 +1144,7 @@ function mollom($method, $data = array()) {
           }
 
           // If this is a network error, we go to the next server in the list.
-          next($servers); 
+          next($servers);
         }
       }
       else {
