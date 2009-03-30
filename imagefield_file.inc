@@ -7,20 +7,6 @@
  */
 
 /**
- * Implementation of hook_file_references().
- */
-function imagefield_file_references($file) {
-  $references = 0;
-  foreach (content_fields() as $field) {
-    if ($field['type'] != 'imagefield') {
-      continue;
-    }
-    $references += field_file_references($file, $field);
-  }
-  return array('imagefield' => $references);
-}
-
-/**
  * Implementation of hook_file_insert().
  */
 function imagefield_file_insert($file) {
