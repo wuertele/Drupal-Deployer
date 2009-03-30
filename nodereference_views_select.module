@@ -1,4 +1,5 @@
 <?php
+// $Id$
 
 define('NODEREFERENCE_VIEWS_SELECT_MODAL_CONTENT_PATH', 'nvs/modal_content');
 define('NODEREFERENCE_VIEWS_SELECT_WIDGET_CONTENT_PATH', 'nvs/widget_content');
@@ -44,7 +45,7 @@ function nodereference_views_select_init()
 	    (
 	       	'modalPath' => NODEREFERENCE_VIEWS_SELECT_MODAL_CONTENT_PATH,
 	    	'widgetPath' => NODEREFERENCE_VIEWS_SELECT_WIDGET_CONTENT_PATH,
-	    )
+	      )
 	);
 	
 	drupal_add_js($settings, 'setting');
@@ -64,8 +65,10 @@ function _nodereference_views_select_get_field_data()
 		'is_multi_select' => check_plain($_REQUEST['isMultiSelect']),
 		'nids' => explode(',', check_plain($_REQUEST['nids'])),
 		'field_name' => check_plain($_REQUEST['fieldName']),
-		'is_multiple' => check_plain($_REQUEST['isMultiSelect']),
-		'is_sortable' => check_plain($_REQUEST['isSortable']),
+		'is_multiple' => (boolean)check_plain($_REQUEST['isMultiSelect']),
+		'is_multi_reference' => (boolean)check_plain($_REQUEST['isMultiReference']),
+		'is_sortable' => (boolean)check_plain($_REQUEST['isSortable']),
+		'page_size' => check_plain($_REQUEST['pageSize']),
 		'default_filters' => explode(',', check_plain($_REQUEST['defaultFilters'])),
 	);	
 }
@@ -96,7 +99,13 @@ function nodereference_views_select_widget_content()
 {
 	$field_data = _nodereference_views_select_get_field_data();
 	
-	echo nodereference_views_select_get_current_nodes($field_data['nids'], $field_data['field_name'], $field_data['is_multiple']);	
+	echo nodereference_views_select_get_current_nodes(
+		$field_data['nids'], 
+		$field_data['field_name'], 
+		$field_data['is_multiple'],
+		$field_data['is_sortable'],
+		$field_data['page_size']
+	);	
 }
 
 /**
@@ -118,23 +127,44 @@ function nodereference_views_select_get_view($field)
 
 /**
  * 
- * @param $nids
+ * @param $nids array of node ids
  * @param $field_name
  * @param $is_multiple
  * @param $is_sortable
+ * @param $page_size
  * @return teaser list
  */
-function nodereference_views_select_get_current_nodes($nids, $field_name, $is_multiple)
+function nodereference_views_select_get_current_nodes($nids, $field_name, $is_multiple, $is_sortable, $page_size)
 {
 	$list_id = "nodereference-views-select-teaser-list-$field_name";
+	$pager_id = _nodereference_views_select_get_pager_id($field_name);
 	
-	$items = array();
+	// pass through the pager, if needed
+	if (!$is_sortable && $page_size)
+	{
+		$result = pager_query(
+			'SELECT nid FROM {node} WHERE nid IN (' . (empty($nids) ? '0' : implode(',', $nids)) . ')', 
+			$page_size,
+			$pager_id
+		);
+
+		$nids = array();
+
+		while ($node = db_fetch_object($result)) 
+		{
+			$nids[] = $node->nid;
+		}		
+	}	
+	
+	// render list items
+	$items = array();	
 	
 	foreach ($nids as $nid)
 	{
 		$items[] = theme('nodereference_views_select_teaser', node_load($nid), $is_multiple);
 	}
 	
+	// generate the item list
 	$output = theme
 	(
 		'item_list', 
@@ -143,13 +173,21 @@ function nodereference_views_select_get_current_nodes($nids, $field_name, $is_mu
 		'ul', 
 		array('class' => 'nodereference_views_select_teaser_list', 'id' => $list_id)
 	);
+		
+	// add the pager, if needed
+	if (!$is_sortable && $page_size)
+	{
+		$pager = theme('pager', array(), $page_size, $pager_id);
+		
+		$output .= $pager;
+	}
 	
 	drupal_add_js("$(document).ready(function()
 	{ 
 		NVS.teaserListLoaded('$field_name');
 	});", 'inline');
 
-	return $output;
+	return $output . ' '; // fix so that even an empty list will be rendered
 	
 }
 
@@ -165,32 +203,34 @@ function nodereference_views_select_widget_settings($op, $widget)
 		case 'form':
 		 $form = array();
 		 
-		 $form['widget_settings'] = array (
-		 '#type' => 'fieldset',
-		 '#title' => t('Widget Settings')
-		 );
-		 
-		 $form['widget_settings']['sortable'] = array (
+		 $form['sortable'] = array (
 		 	 '#type' => 'checkbox',
 			 '#title' => t('Sortable'),
+		 	 '#description' => t('If set, the widget will allow sorting of the referenced nodes.'),
 			 '#default_value' => isset($widget['sortable']) ? $widget['sortable'] : false,
 		 );
 		 
-		 $form['widget_settings']['current_pager_limit'] = array (
+		 $form['multiple_references'] = array (
+		 	 '#type' => 'checkbox',
+			 '#title' => t('Allow Multiple References'),
+		 	 '#description' => t('If set, the widget will allow adding multiple references to the same node.'),
+			 '#default_value' => isset($widget['multiple_references']) ? $widget['multiple_references'] : false,
+		 );			 
+		 
+		 $form['current_pager_limit'] = array (
 			 '#type' => 'textfield',
-			 '#title' => t('Number of teasers shown per page'),
-		 	 '#description' => t('Not applicable if sortable is set'),
+			 '#title' => t('Teasers Per Page'),
+		 	 '#description' => t('Number of teasers to show per page in the widget. Set to 0 to disable paging. Not applicable if sortable is set.'),
 			 '#size' => '3',
 		 	 '#disabled' => $widget['sortable'],
 		 	 '#maxlength' => '3',
 			 '#default_value' => isset($widget['current_pager_limit']) ? $widget['current_pager_limit'] : NODEREFERENCETEASERSMODAL_CURRENT_PAGER_LIMIT,
-			 '#required' => TRUE
-		 );
+		 );	 
 
 		 return $form;
 
 		 case 'save':
-		 	return array('sortable', 'current_pager_limit');
+		 	return array('sortable', 'current_pager_limit', 'multiple_references');
 
 		case 'callbacks':
 			return array(
@@ -252,9 +292,17 @@ function nodereference_views_select_widget($op, &$node, $field, &$items)
 	              	
       	if ($view && !isset($node->cck_dummy_node_form))
       	{
-	      	drupal_add_js(drupal_get_path('module', 'nodereference_views_select') . '/nodereference_views_select.js');      	
+	      	drupal_add_js(drupal_get_path('module', 'nodereference_views_select') . '/nodereference_views_select.js');
 
-	        $widget_id = "nodereference-views-select-$field_name";
+	        $widget_id = "edit-$field_name";
+	        
+	        $is_sortable = $field['widget']['sortable'];
+	        $is_multi_reference = isset($field['widget']['multiple_references']) ? $field['widget']['multiple_references'] : 0;
+	        
+	        // add jquery ui sortables if needed
+	        jquery_ui_add(array('ui.sortable'));
+	        
+	        $page_size = $field['widget']['current_pager_limit'];
 	                
 	        $form[$field_name] = array('#tree' => TRUE);
 	        
@@ -279,8 +327,11 @@ function nodereference_views_select_widget($op, &$node, $field, &$items)
 			        		'viewName' => $view->name,
 			        		'defaultFilters' => implode(',', _nodereference_views_select_get_default_filter_values($node, $view->exposed_filter)),
 			        		'isMultiSelect' => $field['multiple'],
-			        		'isSortable' => $field['widget']['sortable'],
+			        		'isMultiReference' => $is_multi_reference,
+			        		'isSortable' => $is_sortable,
+			        		'pageSize' => $page_size,
 			        		'fieldName' => $field_name,
+			        		'addedMessage' => t('Added to @field', array('@field' => $field['widget']['label'])),
 			        		'widgetId' => $widget_id,
 			        		'nids' => !empty($items['default nids']) ? implode(',', $items['default nids']) : '0'
 			        	)
@@ -304,7 +355,7 @@ function nodereference_views_select_widget($op, &$node, $field, &$items)
 			$form[$field_name]['ui']['teasers'] = array
 			(
 				'#type' => 'markup',
-				'#value' => nodereference_views_select_get_current_nodes($items['default nids'], $field['field_name'], $field['multiple']),
+				'#value' => nodereference_views_select_get_current_nodes($items['default nids'], $field['field_name'], $field['multiple'], $is_sortable, $page_size),
 				'#prefix' => '<div class="nodereference_views_select_teaser_wrapper">',
 				'#suffix' => '</div>',
 			);
@@ -408,3 +459,30 @@ function _nodereference_views_select_get_default_filter_values($node, $filters)
 	return $filter_values;
 }
 
+/**
+ * Abstracts the handling of pager IDs for this module's widgets
+ * @param $fieldname
+ * @return unknown_type
+ */
+function _nodereference_views_select_get_pager_id($field_name)
+{
+	global $pager_page_array; // this holds all current pagers alive in the current request
+	static $fieldname_map;
+
+	if (!$fieldname_map)
+	{
+		$fieldname_map = array();
+	}
+	
+	if (isset($fieldname_map[$field_name]))
+	{
+		$pager_id = $fieldname_map[$field_name];
+	}
+	else
+	{
+		$pager_id = count($pager_page_array) + 1;
+		$fieldname_map[$field_name] = $pager_id;
+	}
+	
+	return $pager_id;
+}

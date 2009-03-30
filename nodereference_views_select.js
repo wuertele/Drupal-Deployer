@@ -1,3 +1,5 @@
+// $Id$
+
 var NVS = 
 {
 	modalId: 'nodereference_views_select_modal'
@@ -38,6 +40,7 @@ NVS.removeItem = function(elem, fieldName)
  */
 NVS.showModal = function(fieldName)
 {	
+	
 	var field = Drupal.settings.NVS.fields[fieldName];
 	
 	var url = 	Drupal.settings.jstools.basePath + 
@@ -62,11 +65,13 @@ NVS.showModal = function(fieldName)
 	url += '?' + params.join('&');
 				
 	var modal = $('<div id="' + this.modalId + '" class="nodereference_views_select_modal ' + fieldName + '_modal"></div>');
-	
+		
 	NVS.loadModal(modal, field, url);
 
 	$('body').append('<div id="nodereference_views_select_overlay"></div>');
 	$('body').append(modal);
+	
+	$('select').addClass('select_z_index_fix');
 	
 	return false;
 }
@@ -74,10 +79,12 @@ NVS.showModal = function(fieldName)
 /**
  * Removes the modal and the overlay
  */
-NVS.closeModal = function(modal)
+NVS.closeModal = function(modal, field)
 {
+	NVS.modalChooseNodes(field);
 	modal.remove();
 	$('#nodereference_views_select_overlay').remove();
+	$('select').removeClass('select_z_index_fix');
 }
 
 /**
@@ -99,19 +106,11 @@ NVS.modalOnLoad = function(modal, field)
 	// close button behavior
 	modal.find('a.nodereference_views_select_modal_close').click(function()
 	{
-		NVS.closeModal(modal);		
+		NVS.closeModal(modal, field);		
 		return false;
 	});	
 	
-	// choose button behavior
-	modal.find('a.nodereference_views_select_modal_choose').click(function()
-	{
-		NVS.modalChooseNodes(field);
-		NVS.closeModal(modal);
-		return false;
-	});
-	
-	// divert pager to ajax calls
+	// ajaxify pager
 	modal.find('div.pager a').click(function()
 	{
 		NVS.loadModal(modal, field, $(this).attr('href'));
@@ -135,32 +134,40 @@ NVS.modalOnLoad = function(modal, field)
 		NVS.loadModal(modal, field, url);	
 	});
 	
-	// turn on the appropriate selectors in the modal according to the
+	// turn off the appropriate selectors in the modal according to the
 	// nids selected in the widget
-	var nids = $('#' + field.fieldName + '-nids').val().split(',');
-	
-	$('.nodereference-teaser-checkbox input').each(function()
+	if (!field.isMultiReference || field.isMultiReference == 0)
 	{
-		for (i in nids)
+		var nids = $('#' + field.fieldName + '-nids').val().split(',');
+		
+		modal.find('a.add_item_link').each(function()
 		{
-			if (nids[i] == $(this).attr('nid'))
+			for (i in nids)
 			{
-				$(this).attr('checked', 'checked');
-			}
-		}		
-	});
+				if (nids[i] == $(this).attr('nid'))
+				{
+					$(this).addClass('disabled');
+				}
+			}		
+		});
+	}
 	
-	// set selector change action
-	$('.nodereference-teaser-checkbox input').change(function()
+	// set selector action
+	modal.find('a.add_item_link').click(function()
 	{
-		NVS.modalSelectorChange(modal, field, this);
+		if (!$(this).hasClass('disabled'))
+		{
+			NVS.modalItemChosen(modal, field, this);
+		}
+		
+		return false;
 	});
 }
 
 /**
- * Called when changing a checkbox / radio button
+ * Called when choosing an item
  */
-NVS.modalSelectorChange = function(modal, field, element)
+NVS.modalItemChosen = function(modal, field, element)
 {
 	// find the node this checkbox is rendered for
 	var nid = $(element).attr('nid');
@@ -171,33 +178,30 @@ NVS.modalSelectorChange = function(modal, field, element)
 		// add / remove the nid from the hidden input
 		var nids = $(inputId).val().split(',');
 		
-		// add
-		if ($(element).attr('checked'))
-		{
-			nids.push(nid);
+		nids.push(nid);
 			
-			$(inputId).val(nids.join(','));
+		$(inputId).val(nids.join(','));
+		
+		// remove any old notification
+		modal.find('div.nodereference-modal-item .messages').hide();
+		
+		// add notification
+		$(element).parents('div.nodereference-modal-item').find('.messages')
+			.hide().html(field.addedMessage).fadeIn();
+		
+		// disable link if field does not allow multiple references
+		if (!field.isMultiReference)
+		{
+			$(element).addClass('disabled');
 		}
-		else // remove
-		{
-			var newNids = [];
-			
-			var count = 0;
-			for (i in nids)
-			{
-				if (nids[i] != nid)
-				{
-					newNids[count++] = nids[i];
-				}
-			}
-			
-			$(inputId).val(newNids.join(','));
-		}	
 	}
 	else
 	{
 		// replace the hidden input content
 		$(inputId).val(nid);
+		
+		// close modal
+		NVS.closeModal(modal, field);		
 	}
 }
 
@@ -207,14 +211,24 @@ NVS.modalSelectorChange = function(modal, field, element)
 NVS.modalChooseNodes = function(field)
 {
 	field.nids = $('#' + field.fieldName + '-nids').val();
+
 	
+	NVS.loadTeaserList(field, []);
+}
+
+/**
+ * (re)loads the teaser list for the specified field 
+ */
+NVS.loadTeaserList = function(field, queryParams)
+{	
 	var url = 	Drupal.settings.jstools.basePath + 
-				Drupal.settings.NVS.widgetPath;
+				Drupal.settings.NVS.widgetPath + 
+				'?' + queryParams.join('&');
 	
 	$('#' + field.widgetId + ' div.nodereference_views_select_teaser_wrapper').load(url, field, function()
 	{
 		NVS.teaserListLoaded(field.fieldName);
-	});
+	});	
 }
 
 /**
@@ -224,11 +238,13 @@ NVS.teaserListLoaded = function(fieldName)
 {
 	var field = Drupal.settings.NVS.fields[fieldName];
 	
+	// add remove behavior
 	$('#' + field.widgetId + ' a.remove-button').click(function()
 	{
 		return NVS.removeItem(this, fieldName);
 	});
 	
+	// add sorting behavior
 	if (field.isSortable)
 	{
 		var teaserList = $('#' + field.widgetId + ' ul.nodereference_views_select_teaser_list');
@@ -249,4 +265,16 @@ NVS.teaserListLoaded = function(fieldName)
 			}
 		});
 	}
+	
+	// ajaxify pager
+	$('#' + field.widgetId + ' div.pager a').click(function()
+	{		
+		var url = $(this).attr('href');
+		
+		var params = url.substring(url.indexOf('?') + 1, url.length).split('&');		
+		
+		NVS.loadTeaserList(field, params);
+		
+		return false;
+	});	
 }

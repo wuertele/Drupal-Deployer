@@ -1,4 +1,5 @@
 <?php
+// $Id$
 
 /**
  * Renders a single node with or without the remove link
@@ -58,7 +59,7 @@ function theme_nodereference_views_select_modal_content($view_content, $title, $
 	$close_text = t('Close');
 	
 	$close_link = theme('nodereference_views_select_widget_link', $close_text, array('class' => 'nodereference_views_select_modal_close'));
-	$choose_link = theme('nodereference_views_select_widget_link', t('Choose'), array('class' => 'nodereference_views_select_modal_choose'));
+	//$choose_link = theme('nodereference_views_select_widget_link', t('Choose'), array('class' => 'nodereference_views_select_modal_choose'));
 	
 	$output = <<<EOD
 <div class="nodereference_views_select_modal_inner">
@@ -71,7 +72,6 @@ function theme_nodereference_views_select_modal_content($view_content, $title, $
 	</div>
 	<div class="nodereference_views_select_modal_controls">
 		$close_link
-		$choose_link
 	</div>
 </div>
 EOD;
@@ -182,20 +182,16 @@ function theme_nodereference_views_select_modal_item($node, $field_data)
 {
 	$teaser = node_view($node, true, false, false);
 	
-	$element = array
-	(
-		'#type' => $field_data['is_multi_select'] ? 'checkbox' : 'radio',
-		'#id' => "nvs-select-{$node->nid}",
-		'#attributes' => array('nid' => $node->nid),
-//		'#value' => in_array($node->nid, $field_data['nids'])
-	);
+	$title = $field_data['is_multiple'] ? t('Add') : t('Choose');	
 	
-	$selector = drupal_render($element);
+	$link = theme('nodereference_views_select_widget_link', $title, array('class' => 'add_item_link', 'nid' => $node->nid)); 
 	
 	$result = <<<EOD
-<div class="nodereference-teaser-checkbox" id="nvs-{$node->nid}">
-	{$selector}
+<div class="nodereference-modal-item" id="nvs-{$node->nid}">
 	{$teaser}
+	{$link}
+	<span class="messages">
+	</span>
 </div>
 EOD;
 
