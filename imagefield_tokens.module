@@ -36,12 +36,24 @@ function imagefield_tokens_form_alter(&$form, $form_state, $form_id) {
   }
 }
 
-function imagefield_tokens_filefield_paths_process_file(&$file, $settings, &$node) {
-  $file['field']['data']['alt'] = token_replace($file['field']['data']['alt'], 'node', $node);
-  $file['field']['data']['alt'] = token_replace($file['field']['data']['alt'], 'field', array(0 => $file['field']));
+/**
+ * Implementation of hook_filefield_paths_process_file().
+ */
+function imagefield_tokens_filefield_paths_process_file($new, &$file, $settings, $node, $update) {
+  if ($file['widget'] == 'imagefield') {
+    $orig = array(
+      'alt' => $file['field']['data']['alt'],
+      'title' => $file['field']['data']['title'],
+    );
 
-  $file['field']['data']['title'] = token_replace($file['field']['data']['title'], 'node', $node);
-  $file['field']['data']['title'] = token_replace($file['field']['data']['title'], 'field', array(0 => $file['field']));
+    $file['field']['data']['alt'] = token_replace($file['field']['data']['alt'], 'node', $node);
+    $file['field']['data']['alt'] = token_replace($file['field']['data']['alt'], 'field', array(0 => $file['field']));
 
-  content_update($node);
+    $file['field']['data']['title'] = token_replace($file['field']['data']['title'], 'node', $node);
+    $file['field']['data']['title'] = token_replace($file['field']['data']['title'], 'field', array(0 => $file['field']));
+
+    if ($file['field']['data']['alt'] !== $orig['alt'] || $file['field']['data']['title'] !== $orig['title']) {
+      $update->cck = TRUE;
+    }
+  }
 }
