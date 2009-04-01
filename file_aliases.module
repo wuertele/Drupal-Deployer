@@ -71,12 +71,15 @@ function file_aliases_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         if ($ffp['#settings'][$file['name']]['filealias']['display'] == TRUE) {
           $filefield_paths_alias = 'filefield_paths/alias/'. $file['field']['fid'];
           if (($alias = drupal_get_path_alias($filefield_paths_alias)) != $filefield_paths_alias) {
-            $relative_dir = '';
+            $path = (variable_get('file_downloads', FILE_DOWNLOADS_PUBLIC) == FILE_DOWNLOADS_PUBLIC)
+              ? ''
+              : base_path();
+
             foreach (explode('/', file_directory_path()) as $dir) {
-              $relative_dir .= '../';
+              $path .= '../';
             }
 
-            $file['field']['filepath'] = $relative_dir . $alias;
+            $file['field']['filepath'] = $path . $alias;
             $file['field']['filename'] = array_pop(explode('/', $alias));
           }
         }
@@ -94,6 +97,11 @@ function file_aliases_load_fid($fid) {
 
   $result = db_fetch_object(db_query("SELECT filemime, filepath FROM {files} WHERE fid = %d", $fid));
 
-  header('Content-Type: '. $result->filemime);
-  readfile($result->filepath);
+  if (variable_get('file_downloads', FILE_DOWNLOADS_PUBLIC) == FILE_DOWNLOADS_PRIVATE) {
+    file_download($result->filepath);
+  }
+  else {
+    header('Content-Type: '. $result->filemime);
+    readfile($result->filepath);
+  }
 }
