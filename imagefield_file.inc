@@ -72,9 +72,14 @@ function imagefield_create_admin_thumb($source, $destination) {
   // Ensure the destination directory exists and is writable.
   $directories = explode('/', $destination);
   array_pop($directories); // Remove the file itself.
+  // Get the file system directory.
+  $file_system = file_directory_path();
   foreach ($directories as $directory) {
     $full_path = isset($full_path) ? $full_path . '/' . $directory : $directory;
-    field_file_check_directory($full_path, FILE_CREATE_DIRECTORY);
+    // Don't check directories outside the file system path.
+    if (strpos($full_path, $file_system) === 0) {
+      field_file_check_directory($full_path, FILE_CREATE_DIRECTORY);
+    }
   }
 
   // Create the thumbnail.
