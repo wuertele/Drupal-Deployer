@@ -81,9 +81,24 @@ function export_node_export($original_node, $return_code = FALSE) {
 
       // Fix taxonomy array
       if (isset($node->taxonomy) && count($node->taxonomy)) {
+        $vocabularies = taxonomy_get_vocabularies();
         $new_taxonomy = array();
         foreach ($node->taxonomy as $term) {
-          $new_taxonomy[$term->vid][$term->tid] = $term->tid;
+          // Free-tagging vocabularies need a different format
+          if ($vocabularies[$term->vid]->tags) {
+            $new_taxonomy['tags'][$term->vid][] = $term->name;
+          }
+          else {
+            $new_taxonomy[$term->vid][$term->tid] = $term->tid;
+          }
+        }
+
+        if (isset($new_taxonomy['tags']) && count($new_taxonomy['tags'])) {
+          // Comma seperate the tags
+          foreach ($new_taxonomy['tags'] as $vid => $tags) {
+            $new_taxonomy['tags'][$vid] = implode(', ', $tags);
+          }
+
         }
         $node->taxonomy = $new_taxonomy;
       }
