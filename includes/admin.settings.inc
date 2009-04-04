@@ -133,15 +133,6 @@ function project_issue_validate_default_components($form, &$form_state) {
   }
 }
 
-function project_issue_validate_issues_per_page($form) {
-  if (!is_numeric($form['#value'])) {
-    form_error($form, t('%setting must be a number.', array('%setting' => t('Issues per page'))));
-  }
-  if ($form['#value'] <= 0) {
-    form_error($form, t('%setting must be greater than 0.', array('%setting' => t('Issues per page'))));
-  }
-}
-
 /**
  * Validates that the followup user exists, and has sufficient permissions
  * to follow up on issues.
