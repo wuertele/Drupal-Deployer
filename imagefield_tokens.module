@@ -6,10 +6,20 @@
  */
 
 /**
+ * Return a list of supported CCK widgets.
+ */
+function _imagefield_tokens_support_list() {
+  return array(
+    'imagefield',
+    'imagefield_crop'
+  );
+}
+
+/**
  * Implementation of hook_form_alter().
  */
 function imagefield_tokens_form_alter(&$form, $form_state, $form_id) {
-  if (isset($form['widget_module']) && $form['widget_module']['#value'] == 'imagefield') {
+  if (isset($form['widget_module']) && in_array($form['widget_module']['#value'], _imagefield_tokens_support_list())) {
     $ifp = array(
       'alt' => array(
         'title' => 'ALT text',
@@ -40,7 +50,7 @@ function imagefield_tokens_form_alter(&$form, $form_state, $form_id) {
  * Implementation of hook_filefield_paths_process_file().
  */
 function imagefield_tokens_filefield_paths_process_file($new, &$file, $settings, $node, $update) {
-  if ($file['widget'] == 'imagefield') {
+  if (in_array($file['widget'], _imagefield_tokens_support_list())) {
     $orig = array(
       'alt' => $file['field']['data']['alt'],
       'title' => $file['field']['data']['title'],
