@@ -7,7 +7,7 @@
  */
 
 define('USER_REGISTER_NOTIFY_SUBJECT', t('Account details for !user_name at !site'));
-define('USER_REGISTER_NOTIFY_BODY', t("!user_name (!user_view) has created account.\n\nEdit user: !user_edit\n\nDelete User: !user_delete\n\n!profile"));
+define('USER_REGISTER_NOTIFY_BODY', t("!user_name (!user_view) has !action account.\n\nEdit user: !user_edit\n\nDelete User: !user_delete\n\n!profile"));
 
 /**
  * Module settings page.
