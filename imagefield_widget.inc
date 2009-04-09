@@ -5,7 +5,7 @@
  * @file
  * ImageField widget hooks and callbacks.
  *
- * This file is loaded by fileifeld.module and the callbacks it contains are
+ * This file is loaded by filefield.module and the callbacks it contains are
  * invoked by filefield.module. This happens because imagefield delegates it's
  * CCK hooks and callbacks to filefield in imagefield.module.
  */
@@ -84,6 +84,15 @@ function imagefield_widget_settings_form($widget) {
     '#title' => t('Enable custom title text'),
     '#default_value' =>  !empty($widget['custom_title']) ? $widget['custom_title'] : 0,
     '#description' => t('Enable user input title text for images.'),
+  );
+  $form['title_settings']['title_type'] = array(
+    '#type' => 'select',
+    '#title' => t('Input type'),
+    '#options' => array(
+      'textfield' => 'textfield',
+      'textarea' => 'textarea'),
+    '#default_value' => !empty($widget['title_type']) ? $widget['title_type'] : 'textfield',
+    '#description' => t('Choose type of field to be displayed to the user.'),
   );
   $form['title_settings']['title'] = array(
     '#type' => 'textfield',
@@ -167,6 +176,7 @@ function _imagefield_widget_settings_default_validate($element, &$form_state) {
 
   // Make the file permanent and store it in the form.
   file_set_status($file, FILE_STATUS_PERMANENT);
+  $file->timestamp = time();
   $form_state['values']['default_image'] = (array)$file;
  }
 
@@ -195,7 +205,7 @@ function imagefield_widget_settings_validate($widget) {
 function imagefield_widget_settings_save($widget) {
   // TODO: Rename custom_alt and custom_title to alt_custom and title_custom.
   $filefield_settings = module_invoke('filefield', 'widget_settings', 'save', $widget);
-  return array_merge($filefield_settings, array('max_resolution', 'min_resolution', 'alt',  'custom_alt', 'title', 'custom_title', 'default_image', 'use_default_image'));
+  return array_merge($filefield_settings, array('max_resolution', 'min_resolution', 'alt',  'custom_alt', 'title', 'custom_title', 'title_type', 'default_image', 'use_default_image'));
 }
 
 /**
@@ -228,7 +238,7 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
   }
 
   // Check if using the default alt text and replace tokens.
-  $default_alt = (!$field['widget']['custom_alt'] || ($file['status'] == 0 && empty($file['data']['alt'])));
+  $default_alt = (!$field['widget']['custom_alt'] || (empty($file['status']) && empty($file['data']['alt'])));
   if ($default_alt && function_exists('token_replace')) {
     $field['widget']['alt'] = token_replace($field['widget']['alt'], 'user', $GLOBALS['user']);
   }
@@ -246,12 +256,21 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
   }
 
   // Check if using the default title and replace tokens.
-  $default_title = (!$field['widget']['custom_title'] || ($file['status'] == 0 && empty($file['data']['title'])));
+  $default_title = (!$field['widget']['custom_title'] || (empty($file['status']) && empty($file['data']['title'])));
   if ($default_title && function_exists('token_replace')) {
     $field['widget']['title'] = token_replace($field['widget']['title'], 'user', $GLOBALS['user']);
   }
+
+  // If the custom title is enabled, input type defaults to textfield.
+  if (!empty($field['widget']['custom_title'])) {
+    $title_type = !empty($field['widget']['title_type']) ? $field['widget']['title_type'] : 'textfield';
+  }
+  else {
+    $title_type = 'value';
+  }
+
   $element['data']['title'] = array(
-    '#type' => $field['widget']['custom_title'] ? 'textfield' : 'value',
+    '#type' => $title_type,
     '#title' => t('Title'),
     '#default_value' => $default_title ? $field['widget']['title'] : $file['data']['title'],
     '#description' => t('The title is used as a tool tip when the user hovers the mouse over the image.'),
