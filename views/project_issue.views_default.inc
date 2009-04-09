@@ -981,13 +981,23 @@ function project_issue_views_default_views() {
       'value' => '',
       'group' => '0',
       'exposed' => FALSE,
-      'expose' => array(
-        'operator' => FALSE,
-        'label' => '',
-      ),
+      'expose' => array(),
       'id' => 'status_extra',
       'table' => 'node',
       'field' => 'status_extra',
+      'relationship' => 'none',
+    ),
+    'sid' => array(
+      'operator' => 'in',
+      'value' => array(
+        'Open' => 'Open',
+      ),
+      'group' => '0',
+      'exposed' => FALSE,
+      'expose' => array(),
+      'id' => 'sid',
+      'table' => 'project_issues',
+      'field' => 'sid',
       'relationship' => 'none',
     ),
   ));
