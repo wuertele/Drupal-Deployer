@@ -74,7 +74,7 @@ function node_token_values($type, $object = NULL, $options = array()) {
       if (!empty($mlid) || !empty($node->menu['mlid']) || !empty($node->menu['plid'])) {
         $menu_link = menu_link_load($mlid);
         $menus = menu_get_menus();
-        $menu = $menus[$menu_link['menu_name']];
+        $menu = isset($menus[$menu_link['menu_name']]) ? $menus[$menu_link['menu_name']] : '';
         $trail_raw = _menu_titles($menu_link, $node->nid);
 
         $trail = array();
