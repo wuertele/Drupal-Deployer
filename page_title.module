@@ -199,7 +199,10 @@ function page_title_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
  * @return unknown
  */
 function page_title_get_title() {
+  // Get the page title display settings.
   $display_options = variable_get('page_title_display', array());
+
+  // If we're looking at a node or a comment on a node, get the node object from the menu system.
   if ((arg(0) == 'node') && (is_numeric(arg(1)))) {
     $node = menu_get_object();
   }
@@ -210,16 +213,22 @@ function page_title_get_title() {
     $node = NULL;
   }
 
+  // If we have a node and the node type is configured to have a custom page title and the node itself has a custom page title, use it.
   if ($node && $display_options[$node->type] && !empty($node->page_title)) {
-    return check_plain(strip_tags($node->page_title));
+    $title = $node->page_title;
   }
+  // Otherwise, use the drupal title.
   else {
-    return strip_tags(drupal_get_title());
+    $title = drupal_get_title();
   }
+
+  // Give other modules the oppertunity to use hook_page_title_alter().
+  drupal_alter('page_title', $title);
+
+  // Return the title
+  return $title;
 }
 
-
-// Public API (every module's gotta have one =)
 
 /**
  * Gets the page title for a node id.
@@ -336,5 +345,5 @@ function page_title_token_list($type = 'all') {
  * Implementation of hook_preprocess_page().
  */
 function page_title_preprocess_page(&$vars) {
-  $vars['head_title'] = page_title_page_get_title();
+  $vars['head_title'] = check_plain(page_title_page_get_title());
 }
