@@ -30,7 +30,7 @@ function project_issue_issue_cockpit_searchbox(&$form_state, $node) {
 }
 
 /**
- * Theme template preprocess
+ * Theme template preprocess to declare variables for the issue cockpit.
  */
 function template_preprocess_project_issue_issue_cockpit(&$vars) {
   $node = $vars['node'];
