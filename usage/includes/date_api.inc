@@ -109,6 +109,14 @@ function project_usage_get_active_weeks($reset = FALSE) {
   return $weeks;
 }
 
+function project_usage_get_current_active_week() {
+  static $current_week = 0;
+  if (empty($current_week)) {
+    $current_week = array_shift(project_usage_get_active_weeks());
+  }
+  return $current_week;
+}
+
 /**
  * Sets the expiry timestamp for cached project usage pages.
  *
