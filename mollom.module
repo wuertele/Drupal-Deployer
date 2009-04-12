@@ -128,8 +128,8 @@ function mollom_captcha_js($type, $session_id) {
     $response = mollom('mollom.getAudioCaptcha', array('author_ip' => ip_address(), 'session_id' => $session_id));
 
     if ($response) {
-      $output  = '<embed src="'. check_plain($response['url']) .'" autostart="true" width="120" height="30" />';
-      $output .= ' (<a href="#" id="image-captcha">'. t('use image CAPTCHA') .'</a>)';
+      $output  = '<a href="http://mollom.com" id="mollom-captcha"><embed src="'. check_plain($response['url']) .'" autostart="true" width="120" height="30" /></a>';
+      $output .= ' (<a href="#" id="mollom-image-captcha">'. t('use image CAPTCHA') .'</a>)';
     }
   }
 
@@ -137,8 +137,8 @@ function mollom_captcha_js($type, $session_id) {
     $response = mollom('mollom.getImageCaptcha', array('author_ip' => ip_address(), 'session_id' => $session_id));
 
     if ($response) {
-      $output = '<a href="http://mollom.com"><img src="'. check_plain(url($response['url'])) .'" alt="Mollom CAPTCHA" /></a>';
-      $output .= ' (<a href="#" id="audio-captcha">'. t('play audio CAPTCHA') .'</a>)';
+      $output = '<a href="http://mollom.com" id="mollom-captcha"><img src="'. check_plain(url($response['url'])) .'" alt="Mollom CAPTCHA" /></a>';
+      $output .= ' (<a href="#" id="mollom-audio-captcha">'. t('play audio CAPTCHA') .'</a>)';
     }
   }
 
@@ -1024,13 +1024,14 @@ function _mollom_insert_captcha(&$mollom_state, &$element) {
     // Include the JavaScript allowing the user to switch to an
     // AUDIO captcha instead:
     drupal_add_js(drupal_get_path('module', 'mollom') .'/mollom.js');
+    drupal_add_css(drupal_get_path('module', 'mollom') .'/mollom.css');
 
     // Add the CAPTCHA to the form:
     $element['captcha'] = array(
       '#type' => 'textfield',
       '#processed' => TRUE,
       '#title' => t('Word verification'),
-      '#field_prefix' => '<div id="captcha"><a href="http://mollom.com"><img src="'. url($response['url']) .'" alt="Mollom CAPTCHA" /></a> (<a href="#" id="audio-captcha">'. t('play audio CAPTCHA') .'</a>)</div>',
+      '#field_prefix' => '<a href="http://mollom.com" id="mollom-captcha"><img src="'. url($response['url']) .'" alt="Mollom CAPTCHA" /></a> (<a href="#" id="mollom-audio-captcha">'. t('play audio CAPTCHA') .'</a>)',
       '#required' => TRUE,
       '#size' => 10,
       // The previously entered value is useless because the captcha is regenerated at each form rebuild.
