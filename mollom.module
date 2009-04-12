@@ -271,7 +271,16 @@ function mollom_report_node_submit($form, &$form_state) {
  */
 function mollom_mail_alter(&$message) {
   if (isset($GLOBALS['mollom_response']) && isset($GLOBALS['mollom_response']['session_id'])) {
-    $message['body'][] = t('Report as inappropriate: @link', array('@link' => url('mollom/contact/'. $GLOBALS['mollom_response']['session_id'], array('absolute' => TRUE))));
+    $report_link = t('Report as inappropriate: @link', array('@link' => url('mollom/contact/'. $GLOBALS['mollom_response']['session_id'], array('absolute' => TRUE))));
+    // The _mail_alter hook seems to accept both arrays as strings so we 
+    // need to handle both. TODO: it seems like something we want to clean 
+    // up upstream.
+    if (is_array($message['body'])) {
+      $message['body'][] = $report_link;
+    }
+    else {
+      $message['body'] .= "\n\n". $report_link;
+    }
   }
 }
 
