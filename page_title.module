@@ -247,9 +247,6 @@ function page_title_user($op, &$edit, &$account) {
  *   string the title for the current page
  */
 function page_title_get_title() {
-  // Default to using the drupal internal title
-  $title = drupal_get_title();
-
   // If we're looking at a node or a comment on a node, get the node object from the menu system.
   if ((arg(0) == 'node' && is_numeric(arg(1)))  ||  (arg(0) == 'comment' && arg(1) == 'reply' && is_numeric(arg(2))) && module_exists('comment')) {
     $node = menu_get_object();
@@ -258,16 +255,28 @@ function page_title_get_title() {
       $title = $node->page_title;
     }
   }
+  // If we're looking at a user profile page, get the user title
   elseif (arg(0) == 'user' && is_numeric(arg(1))) {
     if (variable_get('page_title_user_showfield', 0) && ($user_title = page_title_load_title(arg(1), 'user'))) {
       $title = $user_title;
     }
   }
+  // If we're looking at a taxonomy term page, get the term title
   elseif (arg(0) == 'taxonomy' && arg(1) == 'term' && is_numeric(arg(2)) && module_exists('taxonomy')) {
     $term = taxonomy_get_term(arg(2));
     if (variable_get('page_title_vocab_'. $term->vid .'_showfield', 0) && ($term_title = page_title_load_title($term->tid, 'term'))) {
       $title = $term_title;
     }
+  }
+
+  // If nothing above set a title, give the legacy function a chance to act
+  if (empty($title)) {
+    $title = page_title_set_title();
+  }
+
+  // If we still have no title, fall back to the title provided by Drupal Core
+  if (empty($title)) {
+    $title = drupal_get_title();
   }
 
   // Give other modules the oppertunity to use hook_page_title_alter().
@@ -300,6 +309,20 @@ function page_title_load_title($id, $type) {
  */
 function page_title_node_get_title($nid) {
   return page_title_load_title($nid, 'node');
+}
+
+
+/**
+ * Legacy page title setting function...
+ * NOTE: This has been depreicated in favour of hook_page_title_alter().
+ */
+function page_title_set_title($title = NULL) {
+  static $stored_title;
+
+  if (isset($title)) {
+    $stored_title = $title;
+  }
+  return $stored_title;
 }
 
 
