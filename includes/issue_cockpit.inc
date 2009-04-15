@@ -35,9 +35,6 @@ function project_issue_issue_cockpit_searchbox(&$form_state, $node) {
 function template_preprocess_project_issue_issue_cockpit(&$vars) {
   $node = $vars['node'];
 
-  // Explicitly set the template file since it's not in the same directory.
-  $vars['template_files'][] = 'theme/project-issue-issue-cockpit';
-
   // Flags that indicate what kind of access to project issues to allow.
   $has_issues = !empty($node->project_issue['issues']);
   $vars['view_issues'] = $has_issues && (user_access('access project issues') || user_access('access own project issues') || user_access('administer projects'));
