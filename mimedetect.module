@@ -71,74 +71,19 @@ function mimedetect_settings_validate($form_id, &$form_state) {
 function mimedetect_mime($file) {
   $file = (object)$file;
 
-  // Lookup array, just in case we can't figure out the mime type.
-  static $extension_mimes = array(
-    // MS ASF derived multimedia filetypes
-    'asx' => 'video/x-ms-asf',
-    'wma' => 'audio/x-ms-wma',
-    'wax' => 'audio/x-ms-wax',
-    'wmv' => 'video/x-ms-wmv',
-    'wvx' => ' video/x-ms-wvx',
-    'wm'  => 'video/x-ms-wm',
-    'wmx' => 'video/x-ms-wmx',
-    'wmz' => 'application/x-ms-wmz',
-    'wmd' => 'application/x-ms-wmd',
-
-    // Standard audio types
-    'au' => 'audio/basic',
-    'snd' => 'audio/basic',
-    'mid' => 'audio/mid',
-    'rmi' => 'audio/mid',
-    'mp3' => 'audio/mpeg',
-    'aif' => 'audio/x-aiff',
-    'aifc' => 'audio/x-aiff',
+  // An additional array of mimetypes not included in file_get_mimetype().
+  static $additional_mimes = array(
+    // Audio types
+    'rmi' => 'audio/midi',
     'aidff' => 'audio/x-aiff',
-    'm3u' => 'audio/x-mpegurl',
-    'ra'  => 'audio/x-pn-realaudio',
-    'ram' => 'audio/x-pn-realaudio',
-    'wav' => 'audio/x-wav',
-
-    // Standard image types
-    'bmp' => 'image/bmp',
+    // Image types
     'cod' => 'image/cis-cod',
-    'gif' => 'image/gif',
-    'ief' => 'image/ief',
-    'jpe' => 'image/jpeg',
-    'jpg' => 'image/jpeg',
-    'jpeg' => 'image/jpeg',
     'jfif' => 'image/pipeg',
-    'png' => 'image/png',
-    'svg' => 'image/svg+xml',
-    'tif' => 'image/tiff',
-    'tiff' => 'image/tiff',
-    'ras' => 'image/x-cmu-raster',
     'cmx' => 'image/x-cmx',
-    'ico' => 'image/x-ico', // as in the freedesktop.org MIME info database - IANA prefers 'image/vnd.microsoft.icon'
-    'pnm' => 'image/x-portable-anymap',
-    'pbm' => 'image/x-portable-bitmap',
-    'pgm' => 'image/x-portable-graymap',
-    'ppm' => 'image/x-portable-pixmap',
-    'rgb' => 'image/x-rgb',
-    'xbm' => 'image/x-xbitmap',
-    'xpm' => 'image/x-xpixmap',
-    'xwd' => 'image/x-xwindowdump',
-
-    // Standard video types
-    'mp2' => 'video/mpeg',
+    // Video types
     'mpa' => 'video/mpeg',
-    'mpe' => 'video/mpeg',
-    'mpeg' => 'video/mpeg',
-    'mpg' => 'video/mpeg',
     'mpv2' => 'video/mpeg',
-    'mov' => 'video/quicktime',
-    'qt'  => 'video/quicktime',
-    'lsf' => 'video/x-la-asf',
-    'lsx' => 'video/x-la-asf',
-    'asf' => 'video/x-ms-asf',
     'asr' => 'video/x-ms-asf',
-    'asx' => 'video/x-ms-asf',
-    'avi' => 'video/x-msvideo',
-    'movie' => 'video/x-sgi-movie',
   );
 
   $mime = FALSE;
@@ -152,7 +97,10 @@ function mimedetect_mime($file) {
   }
 
   // Try the 'file' binary.
-  if (!$mime && ($filebin = variable_get('mimedetect_file_binary', '/usr/bin/file')) && is_executable($filebin)) {
+  if (!$mime && variable_get('mimedetect_enable_file_binary', FALSE)
+    && ($filebin = variable_get('mimedetect_file_binary', '/usr/bin/file'))
+    && is_executable($filebin))
+  {
     // On OSX the -i switch is -I, so if we use the long flags everyone is
     // happy. I checked back to version 3.41 and it still supports the long
     // names but if you run into problems you can use " -bi ".
@@ -163,25 +111,17 @@ function mimedetect_mime($file) {
     $mime = trim($mime[0]);
   }
 
-  // Trust the browser...  ack!
-  if (!$mime) {
-    $mime = $file->filemime;
-  }
-
-  // ASF derived media formats are hard to detect with magic. They're
-  // typically all reported as video/x-ms-asf or application/octet-stream
-  // These aren't really informative about the media type, so we attempt to
-  // figure it out by extension.
-  // I expect OGG to present similar difficulties in determining how it should be played...
-
+  // ASF derived media formats are hard to detect with magic. They're typically
+  // all reported as video/x-ms-asf or application/octet-stream. These aren't
+  // really informative about the media type, so we attempt to figure it out by
+  // extension. I expect OGG to present similar difficulties in determining how
+  // it should be played.
   if (!$mime || $mime == 'application/octet-stream') {
-    $parts = explode('.', $file->filename);
-    $extension = strtolower(array_pop($parts));
-    if (isset($extension_mimes[$extension])) {
-      $mime = $extension_mimes[$extension];
-    }
-    else {
-      $mime = 'application/octet-stream';
+    // Try core's mime mapping first...
+    $mime = file_get_mimetype($file->filename);
+    // ...and if that doesn't turn up anything try our additional mappings.
+    if ($mime == 'application/octet-stream') {
+      $mime = file_get_mimetype($file->filename, $additional_mimes);
     }
   }
 
