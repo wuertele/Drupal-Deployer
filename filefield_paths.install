@@ -29,8 +29,14 @@ function filefield_paths_schema() {
  */
 function filefield_paths_install() {
   drupal_install_schema('filefield_paths');
+  db_add_field($ret = array(), 'files', 'origname', array('description' => 'Original name of the file.', 'type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => ''));
 
-  variable_set('filefield_paths_schema_version', 6101);
+  $result = db_query("SELECT fid, filename FROM {files}");
+  while ($file = db_fetch_object($result)) {
+    db_query("UPDATE {files} SET origname = '%s' WHERE fid = %d", $file->filename, $file->fid);
+  }
+
+  variable_set('filefield_paths_schema_version', 6103);
 }
 
 /**
@@ -38,6 +44,7 @@ function filefield_paths_install() {
  */
 function filefield_paths_uninstall() {
   drupal_uninstall_schema('filefield_paths');
+  db_drop_field($ret = array(), 'files', 'origname');
 
   variable_del('filefield_paths_schema_version');
 }
@@ -152,6 +159,22 @@ function filefield_paths_update_6102() {
       "UPDATE {filefield_paths} SET ". implode(', ', $cols) ." WHERE type = '%s' AND field = '%s'",
       array_merge($vals, array($data->type, $data->field))
     );
+  }
+
+  return array();
+}
+
+function filefield_paths_update_6103() {
+  $schema_version = variable_get('filefield_paths_schema_version', '6102');
+  variable_set('filefield_paths_schema_version', 6103);
+
+  if ($schema_version < 5103 || ($schema_version > 6000 && $schema_version < 6103)) {
+    db_add_field($ret = array(), 'files', 'origname', array('description' => 'Original name of the file.', 'type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => ''));
+
+    $result = db_query("SELECT fid, filename FROM {files}");
+    while ($file = db_fetch_object($result)) {
+      db_query("UPDATE {files} SET origname = '%s' WHERE fid = %d", $file->filename, $file->fid);
+    }
   }
 
   return array();

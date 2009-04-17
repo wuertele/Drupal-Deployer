@@ -44,8 +44,12 @@ function filefield_paths_theme() {
 
 function theme_filefield_paths_token_help($prefix = '[', $suffix = ']') {
   token_include();
-  $full_list = array_merge(filefield_token_list(), token_get_list('node'));
-
+  $full_list = array_merge(filefield_paths_token_list(), token_get_list('node'));
+  if (function_exists('filefield_token_list')) {
+    $temp_tokens = filefield_token_list();
+    $full_list['file'] = array_merge($temp_tokens['file'], $full_list['file']);
+  }
+  
   $headers = array(t('Token'), t('Replacement value'));
   $rows = array();
   foreach ($full_list as $key => $category) {
@@ -347,9 +351,6 @@ function _filefield_paths_batch_update_process($nodes, $field_name, &$context) {
     $nid = array_shift($context['sandbox']['nodes']);
     $node = filefield_paths_update($nid, $field_name);
 
-    // Store result for post-processing in the finished callback.
-    $context['results'][] = l($node->title, 'node/'. $node->nid);
-
     // Update our progress information.
     $context['sandbox']['progress']++;
   }
@@ -594,29 +595,41 @@ function filefield_paths_filefield_paths_process_file($new, &$file, $settings, &
   }
 }
 
-if (!module_exists('filefield')) {
 /**
  * Implementation of hook_token_list().
  */
-  function filefield_token_list($type = 'all') {
-    if ($type == 'field' || $type == 'all') {
-      $tokens = array();
-      $tokens['file']['filefield-onlyname'] = t("File name");
+function filefield_paths_token_list($type = 'all') {
+  if ($type == 'field' || $type == 'all') {
+    $tokens = array();
+    if (!module_exists('filefield')) {
+      $tokens['file']['filefield-onlyname'] = t("File name without extension");
       $tokens['file']['filefield-extension'] = t("File extension");
-      return $tokens;
     }
+    $tokens['file']['filefield-onlyname-original'] = t("File name without extension - original");
+    $tokens['file']['filefield-extension-original'] = t("File extension - original");
+    return $tokens;
   }
+}
 
 /**
  * Implementation of hook_token_values().
  */
-  function filefield_token_values($type, $object = NULL) {
-    if ($type == 'field') {
-      $item = pathinfo($object[0]['filename']);
+function filefield_paths_token_values($type, $object = NULL) {
+  if ($type == 'field') {
+    $item = pathinfo($object[0]['filename']);
+    $tokens = array();
+    if (!module_exists('filefield')) {
       $tokens['filefield-onlyname'] = $item['filename'];
       $tokens['filefield-extension'] = $item['extension'];
-      return $tokens;
     }
+    // Original filename
+    $orig = $item;
+    if (isset($object[0]['origname'])) {
+      $orig = pathinfo($object[0]['origname']);
+    }
+    $tokens['filefield-onlyname-original'] = $orig['filename'];
+    $tokens['filefield-extension-original'] = $orig['extension'];
+    return $tokens;
   }
 }
 
@@ -658,7 +671,10 @@ function _filefield_paths_get_values($type, $object, $pathauto = FALSE) {
       break;
 
     case 'field':
-      $all = filefield_token_values($type, $object);
+      $all = filefield_paths_token_values($type, $object);
+      if (function_exists('filefield_token_values')) {
+        $all = array_merge(filefield_token_values($type, $object), $all);
+      }
 
       $full = new stdClass();
       $full->tokens = array_keys($all);
@@ -694,7 +710,23 @@ function filefield_paths_file_move(&$file, $replace = FILE_EXISTS_RENAME) {
     return FALSE;
   }
 
-  db_query("UPDATE {files} SET filename = '%s', filepath = '%s' WHERE fid = %d", $file['filename']['new'], $file['field']['filepath'], $file['field']['fid']);
+  $result = db_fetch_object(db_query("SELECT origname FROM {files} WHERE fid = %d", $file['field']['fid']));
+
+  // Set 'origname' and update 'filename'.
+  if (empty($result->origname)) {
+    db_query(
+      "UPDATE {files} SET filename = '%s', filepath = '%s', origname = '%s' WHERE fid = %d",
+      $file['filename']['new'], $file['field']['filepath'], $file['filename']['old'], $file['field']['fid']
+    );
+  }
+
+  // Update 'filename'.
+  else {
+    db_query(
+      "UPDATE {files} SET filename = '%s', filepath = '%s' WHERE fid = %d",
+      $file['filename']['new'], $file['field']['filepath'], $file['field']['fid']
+    );
+  }
 
   return TRUE;
 }
