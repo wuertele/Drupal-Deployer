@@ -252,7 +252,7 @@ function admin_menu_admin_menu(&$deleted) {
               'query' => $link['query'],
               'html' => !empty($link['html']),
             ),
-            'parent_path' => 'user/%',
+            'parent_path' => 'logout',
           );
         }
         // @todo Remove when Devel 6.x-1.16 has been released.
