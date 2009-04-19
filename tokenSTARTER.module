@@ -1,0 +1,52 @@
+<?php
+
+// $Id$
+
+/**
+ * @file
+ * The Token API module.
+ *
+ * The Token module provides an API for providing tokens to other modules.
+ * Tokens are small bits of text that can be placed into larger documents
+ * via simple placeholders, like %site-name or [user].
+ *
+ * @ingroup token
+ */
+
+/**
+ * Implementation of hook_token_list().
+ */
+function tokenSTARTER_token_list($type = 'all') {
+  if ($type == 'global' || $type == 'all') {
+    $tokens['global']['random-sha1']  = t("A randomly generated SHA1 hash.");
+    $tokens['global']['site-date-timestamp'] = t('The current timestamp in seconds past January 1, 1970.');
+
+  }
+  if ($type == 'node' || $type == 'all') {
+    // Node tokens here.
+  }
+
+  return $tokens;
+}
+
+/**
+ * Implementation of hook_token_values().
+ */
+function tokenSTARTER_token_values($type, $object = NULL) {
+  $values = array();
+  switch ($type) {
+    case 'global':
+      $values['random-sha1']  = sha1(rand());
+      // Create a UNIX timestamp token.
+      $time = time();
+      $tz = variable_get('date_default_timezone', 0);
+      $values['site-date-timestamp'] = format_date($time, 'custom', 'Y', $tz);
+
+      break;
+    case 'node':
+      // Node tokens here.
+      break;
+  }
+  return $values;
+}
+
