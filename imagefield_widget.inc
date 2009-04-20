@@ -4,19 +4,10 @@
 /**
  * @file
  * ImageField widget hooks and callbacks.
- *
- * This file is loaded by filefield.module and the callbacks it contains are
- * invoked by filefield.module. This happens because imagefield delegates it's
- * CCK hooks and callbacks to filefield in imagefield.module.
  */
 
 /**
- * @defgroup "FileField widget settings callbacks"
- * @{
- *
- * These callbacks are invoked by filefield_widget_settings. Their
- * return values are merged with and will override filefields' widget
- * settings callback's return values.
+ * Implementation of CCK's hook_widget_settings($op = 'form').
  */
 function imagefield_widget_settings_form($widget) {
   $form = module_invoke('filefield', 'widget_settings', 'form', $widget);
@@ -171,7 +162,7 @@ function _imagefield_widget_settings_default_validate($element, &$form_state) {
  }
 
 /**
- * Validate callback for the CCK widget form.
+ * Implementation of CCK's hook_widget_settings($op = 'validate').
  */
 function imagefield_widget_settings_validate($widget) {
   // Check that only web images are specified in the callback.
@@ -190,10 +181,9 @@ function imagefield_widget_settings_validate($widget) {
 }
 
 /**
- * Save callback for the CCK widget form.
+ * Implementation of CCK's hook_widget_settings($op = 'save').
  */
 function imagefield_widget_settings_save($widget) {
-  // TODO: Rename custom_alt and custom_title to alt_custom and title_custom.
   $filefield_settings = module_invoke('filefield', 'widget_settings', 'save', $widget);
   return array_merge($filefield_settings, array('max_resolution', 'min_resolution', 'alt',  'custom_alt', 'title', 'custom_title', 'title_type', 'default_image', 'use_default_image'));
 }
