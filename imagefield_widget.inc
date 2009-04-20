@@ -28,7 +28,7 @@ function imagefield_widget_settings_form($widget) {
     '#size' => 15,
     '#maxlength' => 10,
     '#description' => t('The maximum allowed image size expressed as WIDTHxHEIGHT (e.g. 640x480). Set to 0 for no restriction. If a larger image is uploaded, it will be resized to reflect the given width and height. Resizing images on upload will cause the loss of <a href="http://en.wikipedia.org/wiki/Exchangeable_image_file_format">EXIF data</a> in the image.'),
-    '#weight' => 2,
+    '#weight' => 2.1,
   );
   $form['min_resolution'] = array(
     '#type' => 'textfield',
@@ -38,17 +38,7 @@ function imagefield_widget_settings_form($widget) {
     '#maxlength' => 10,
     '#description' =>
     t('The minimum allowed image size expressed as WIDTHxHEIGHT (e.g. 640x480). Set to 0 for no restriction. If an image that is smaller than these dimensions is uploaded it will be rejected.'),
-    '#weight' => 2,
-  );
-
-  $form['file_extensions'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Permitted upload file extensions'),
-    '#default_value' => !empty($widget['file_extensions']) ? $widget['file_extensions'] : 'jpg jpeg png gif',
-    '#size' => 64,
-    '#maxlength' => 64,
-    '#description' => t('Extensions a user can upload to this field. Separate extensions with a space and do not include the leading dot. Only jpg, png, and gif images are supported with this widget.'),
-    '#weight' => 2,
+    '#weight' => 2.2,
   );
 
   $form['alt_settings'] = array(
