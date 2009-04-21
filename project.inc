@@ -295,8 +295,9 @@ function project_project_set_breadcrumb($node = NULL, $extra = NULL) {
     $path = array_slice($path, 0, count($path) - 1);
     $path = implode('/', $path);
     $menu_link = db_fetch_object(db_query("SELECT * FROM {menu_links} ml INNER JOIN {menu_router} m ON m.path = ml.router_path WHERE ml.hidden = %d AND ml.link_path = '%s' ORDER BY ml.weight", 0, $path));
-
-    $breadcrumb[] = l($menu_link->link_title, 'project', array('title' => t('Browse projects')));
+    if (!empty($menu_link)) {
+      $breadcrumb[] = l($menu_link->link_title, 'project', array('title' => t('Browse projects')));
+    }
   }
 
   if (!empty($node->nid) && project_use_taxonomy()) {
