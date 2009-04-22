@@ -50,7 +50,7 @@ class project_issue_handler_filter_issue_version extends views_handler_filter_in
   }
 
   function init_version_info()  {
-    if (empty($this->project_versions) && isset($this->view->argument['pid'])) {
+    if (empty($this->project_versions) && isset($this->view->argument['pid']) && module_exists('project_release')) {
       $arg = $this->view->argument['pid']->get_value();
       if (is_numeric($arg)) {
         $project_nid = $arg;
