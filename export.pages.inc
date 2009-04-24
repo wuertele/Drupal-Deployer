@@ -51,7 +51,7 @@ function export_settings() {
  *  exports a node - prepopulate a node editing form
  *  set $return_code to TRUE to not return form but the code instead.
  */
-function export_node_export($original_node, $return_code = FALSE) {
+function export_node_export($original_node, $return_code = FALSE, $iteration = 0) {
   if (isset($original_node->nid)) {
     global $user;
 
@@ -107,8 +107,7 @@ function export_node_export($original_node, $return_code = FALSE) {
       // The function signature is: hook_export_node_alter(&$node, $original_node, $method)
       // Where $method is 'export'
       drupal_alter("export_node", $node, $original_node, "export");
-      $node_code = var_export($node, true);
-      $node_code = str_replace('stdClass::__set_state(array(', 'node(code(', $node_code);
+      $node_code = export_node_encode($node, $iteration);
       return ($return_code ? $node_code : drupal_get_form('export_form', $node_code));
     }
   }
@@ -125,6 +124,9 @@ function export_form($form_state, $code) {
     '#default_value' => $code,
     '#rows' => 30,
     '#description' => t('Copy this code and then on the site you want to import to, go to the Import Node link under Content Management, and paste it in there.'),
+    '#attributes' => array(
+      'style' => 'width: 97%;',
+    ),
   );
   return $form;
 }
@@ -136,23 +138,20 @@ function export_node_import() {
   global $user;
   $output;
   if ($_POST['import_code']) {
-    $node_code = str_replace('node(code(', 'array(array(', trim($_POST['import_code']));
-    $imported_nodes = array();
-    if (substr($node_code, 0, 5) == 'bulk(') {
-      $node_code = str_replace('bulk(', 'array(', $node_code);
-      $bulk_import = eval("return ".$node_code.";");
-      foreach ($bulk_import as $imported_node) {
-        $new_node = (object)current($imported_node);
+    $node_code = trim($_POST['import_code']);
+    $import = export_node_decode($node_code);
+    if (is_array($import)) {
+      foreach ($import as $new_node) {
         $new_nid = export_node_save($new_node);
         drupal_set_message(t("Imported !node", array('!node' => l($new_node->title, 'node/'. $new_nid))));
       }
       drupal_goto('admin/content/node');
     }
     else {
-      $imported_nodes = eval("return ".$node_code.";");
-      return export_node_check((object)current($imported_nodes));
+      return export_node_check($import);
     }
-  } else {
+  } 
+  else {
     return drupal_get_form('export_import_form', $form);
   }
 }
@@ -284,10 +283,66 @@ function export_node_save($node) {
 
 
 /**
- * Output page for 'export' node operation.
+ *  build node code string recursively
+ */
+function export_node_encode($var, $iteration = 0){
+  $tab = '';
+  for ($i = 0; $i < $iteration; $i++) {
+    $tab = $tab ."  ";
+  }
+  $iteration++;
+  if (is_object($var)) {
+    $var = (array)$var;
+    $var['#_export_node_encode_object'] = '1';
+  }
+  if (is_array($var)) {
+    $empty = empty($var);
+    $code = "array(". ($empty ? '' : "\n");
+    foreach ($var as $key => $value) {
+      $code .= $tab ."  '". $key ."' => ".export_node_encode($value, $iteration).",\n";
+    }
+    $code .= ($empty ? '' : $tab) .")";
+    return $code;
+  } else {
+    if (is_string($var)) {
+      return "'".addslashes($var)."'";
+    } 
+    elseif (is_numeric($var)) {
+      return $var;
+    } 
+    elseif (is_bool($var)) {
+      return ($var ? 'TRUE' : 'FALSE');
+    } 
+    else {
+      return 'NULL';
+    }
+  }
+}
 
-function export_node_export_bulk_page() {
-  $node_code = $_SESSION['export_bulk'];
-  unset($_SESSION['export_bulk']);
-  return drupal_get_form('export_form', $node_code);
-} */
+/**
+ *  eval and return decoded string
+ */
+function export_node_decode($string) {
+  $array = eval('return '.$string.';');
+  $return = export_node_decode_objects($array);
+  return $return;
+}
+
+/**
+ *  recursively convert arrays back to objects
+ */
+function export_node_decode_objects($array) {
+  foreach ($array as $k => $v) {
+    if (is_array($v)) {
+      $array[$k] = export_node_decode_objects($v);
+    }
+    if (is_string($v)) {
+      $array[$k] = stripslashes($v);
+    }
+  }
+  if ($array['#_export_node_encode_object']) {
+    unset($array['#_export_node_encode_object']);
+    $array = (object)$array;
+  }
+  return $array;
+}
