@@ -57,7 +57,7 @@ function user_register_notify_setup_email(&$edit, &$account, $action = 'insert')
         break;
       case 'Both':
         $to = variable_get('user_register_notify_mailto', $from);
-        // There is no break there for a reson.
+        // There is no break there for a reason.
       case 'Role':
         $roles = implode(',', variable_get('user_register_notify_roles', array()));
         if (!empty($roles)) {
@@ -73,7 +73,7 @@ function user_register_notify_setup_email(&$edit, &$account, $action = 'insert')
         break;
     }
 
-    watchdog('user_register_notify', check_plain($to));
+//    watchdog('user_register_notify', check_plain($to));
 
     drupal_mail(
       'user_register_notify',
@@ -106,16 +106,22 @@ function user_register_notify_user($op, &$edit, &$account, $category = NULL) {
 
 
 function user_register_notify_mail($key, &$message, $params) {
+  global $base_url;
 
   if ($key == 'user-register-notify-admin') {
     $language = $message['language'];
     $langcode = $language->language;
     $uaccount = $params['account'];
-    $action   = $params['action'];
     $account_data = "";
     $profile_data = "";
     $og_data = "";
 
+    if($params['action'] == 'insert') {
+      $action = 'created';
+    }
+    else {
+      $action = 'updated';
+    }
     if (module_exists('profile')) {
       $result = db_query('SELECT f.title, f.type, v.value FROM {profile_fields} f INNER JOIN {profile_values} v ON f.fid = v.fid WHERE uid = %d', $uaccount->uid);
       while ($field = db_fetch_object($result)) {
@@ -166,7 +172,7 @@ function user_register_notify_mail($key, &$message, $params) {
       '!date' => format_date(time()),
       '!profile' => check_plain($profile_data),
       '!og' => check_plain($og_data),
-      '!action' => $action == 'insert'? 'create' : 'update',
+      '!action' => check_plain($action),
     );
     watchdog('user_register_notify', check_plain($account_data));
     $message['subject'] = t(variable_get('user_register_notify_subject', USER_REGISTER_NOTIFY_SUBJECT), $variables);
