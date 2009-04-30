@@ -1,6 +1,7 @@
 $Id$
 XML Sitemap Module
 Author: Matthew Loar <matthew at loar dot name>
+Maintainer: Dave Reid <http://drupal.org/user/53892>
 This module was originally written as part of Google Summer of Code 2005.
 
 DESCRIPTION
