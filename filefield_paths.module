@@ -457,20 +457,39 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 
       // Cleanup temporary paths
       if ($ffp['#settings']) {
-        foreach ($ffp['#settings'] as $field) {
+        foreach ($ffp['#settings'] as $name => $field) {
           $paths = explode('/', $field['filepath']['value']);
+          filefield_paths_cleanup_temp($paths);
 
-          while ($paths) {
-            if (@rmdir(file_directory_path() .'/'. implode('/', $paths)) === TRUE) {
-              array_pop($paths);
-              continue;
+          // Check for ImageFields
+          $imagefield = FALSE;
+          foreach ($ffp['#files'] as $file) {
+            if ($file['name'] == $name) {
+              if ($file['widget'] == 'imagefield') {
+                $imagefield = TRUE;
+              }
+              break;
             }
-            break;
+          }
+          // Cleanup ImageFields temporary thumbnail paths
+          if ($imagefield) {
+            array_unshift($paths, 'imagefield_thumbs');
+            filefield_paths_cleanup_temp($paths);
           }
         }
       }
 
       break;
+  }
+}
+
+function filefield_paths_cleanup_temp($paths) {
+  while ($paths) {
+    if (@rmdir(file_directory_path() .'/'. implode('/', $paths)) === TRUE) {
+      array_pop($paths);
+      continue;
+    }
+    break;
   }
 }
 
@@ -583,9 +602,8 @@ function filefield_paths_filefield_paths_process_file($new, &$file, $settings, &
         }
 
         // Move ImageField thumbnail
-        if ($file['widget'] == 'imagefield' &&
-            file_exists($thumnail_source = imagefield_file_admin_thumb_path(array('filepath' => $file['filepath']['old'])))) {
-          file_move($thumnail_source, imagefield_file_admin_thumb_path($file['field']), FILE_EXISTS_RENAME);
+        if ($file['widget'] == 'imagefield' && file_exists($thumbnail_source = imagefield_file_admin_thumb_path(array('filepath' => $file['filepath']['old'])))) {
+          file_delete($thumbnail_source);
         }
 
         // Store new filename in file Array
