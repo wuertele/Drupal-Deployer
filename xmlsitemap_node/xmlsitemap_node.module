@@ -11,9 +11,8 @@ function xmlsitemap_node_cron() {
   $query = db_query_range("SELECT DISTINCT(nid) FROM {node} n LEFT JOIN {xmlsitemap} x ON n.nid = x.id WHERE COALESCE(x.type, 'node') = 'node' AND x.id IS NULL ORDER BY n.changed DESC", NULL, 0, xmlsitemap_var('batch_limit'));
   while ($nid = db_result($query)) {
     $node = node_load($nid, NULL, TRUE);
-    $link = xmlsitemap_node_create_link($node);
-    xmlsitemap_node_save_link($link);
-    xmlsitemap_save_link($link);
+    xmlsitemap_node_create_link($node);
+    xmlsitemap_save_link($node->xmlsitemap);
   }
 }
 
@@ -37,48 +36,37 @@ function xmlsitemap_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
  * Implementation of hook_node_load().
  */
 function xmlsitemap_node_node_load($node) {
-  $info = db_fetch_array(db_query("SELECT status AS xmlsitemap_status, priority AS xmlsitemap_priority, changefreq AS xmlsitemap_changefreq, changecount AS xmlsitemap_changecount, lastmod AS xmlsitemap_lastmod FROM {xmlsitemap_node} WHERE nid = %d", $node->nid));
-  return ($info ? $info : array(
-    'xmlsitemap_status' => TRUE,
-    'xmlsitemap_priority' => XMLSITEMAP_PRIORITY_DEFAULT,
-    'xmlsitemap_changefreq' => 0,
-    'xmlsitemap_changecount' => 0,
-    'xmlsitemap_lastmod' => $node->changed,
-  ));
+  if ($data = xmlsitemap_load_link(array('type' => 'node', 'id' => $node->nid))) {
+    return array('xmlsitemap' => (array) $data);
+  }
 }
 
 /**
  * Implementation of hook_node_insert().
  */
 function xmlsitemap_node_node_insert($node) {
-  $link = xmlsitemap_node_create_link($node);
-  $link['lastmod'] = REQUEST_TIME;
-
-  xmlsitemap_node_save_link($link);
-  xmlsitemap_save_link($link);
+  xmlsitemap_node_create_link($node);
+  xmlsitemap_save_link($node->xmlsitemap);
 }
 
 /**
  * Implementation of hook_node_update().
  */
 function xmlsitemap_node_node_update($node) {
-  // Update the change frequency.
+  xmlsitemap_node_create_link($node);
+
   if ($node->revision) {
-    xmlsitemap_node_recalculate_changefreq($node);
+    // Update the change frequency.
+    xmlsitemap_recalculate_changefreq($node->xmlsitemap);
   }
 
-  $link = xmlsitemap_node_create_link($node);
-  $link['lastmod'] = REQUEST_TIME;
-
-  xmlsitemap_node_save_link($link);
-  xmlsitemap_save_link($link);
+  xmlsitemap_save_link($node->xmlsitemap);
 }
 
 /**
  * Implementation of hook_node_delete().
  */
 function xmlsitemap_node_node_delete($node) {
-  db_query("DELETE FROM {xmlsitemap_node} WHERE nid = %d", $node->nid);
   xmlsitemap_delete_link(array('type' => 'node', 'id' => $node->nid));
 }
 
@@ -102,14 +90,13 @@ function xmlsitemap_node_node_operations() {
 
 function _xmlsitemap_node_mass_update_helper($nid, $updates) {
   $node = node_load($nid, NULL, TRUE);
-  $link = xmlsitemap_node_create_link($node);
+  xmlsitemap_node_create_link($node);
 
   foreach ($updates as $key => $value) {
-    $link[$key] = $value;
+    $node->xmlsitemap[$key] = $value;
   }
 
-  xmlsitemap_node_save_link($link);
-  xmlsitemap_save_link($link);
+  xmlsitemap_save_link($node->xmlsitemap);
   return $node;
 }
 
@@ -184,7 +171,8 @@ function xmlsitemap_node_comment($a1, $op) {
       $nid = isset($comment->nid) ? $comment->nid : FALSE;
       $node = $nid ? node_load($nid, NULL, TRUE) : FALSE;
       if ($node) {
-        xmlsitemap_node_recalculate_changefreq($node);
+        // Setting revision to TRUE will recalculate the changefreq.
+        $node->revision = TRUE;
         xmlsitemap_node_node_update($node);
       }
       break;
@@ -197,36 +185,41 @@ function xmlsitemap_node_comment($a1, $op) {
 function xmlsitemap_node_form_alter(&$form, $form_state, $form_id) {
   if (isset($form['type']) && isset($form['#node']) && $form['type']['#value'] .'_node_form' == $form_id) {
     $node = $form['#node'];
+    xmlsitemap_node_create_link($node);
+    dpm($node);
+
     $form['xmlsitemap'] = array(
       '#type' => 'fieldset',
+      '#tree' => TRUE,
       '#title' => t('Sitemap'),
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
       '#weight' => 30,
+      '#access' => FALSE, // @todo Split these settings out?
       '#access' => user_access('administer xmlsitemap') || user_access('administer nodes'),
     );
-    $form['xmlsitemap']['xmlsitemap_status'] = array(
+    $form['xmlsitemap']['status'] = array(
       '#type' => 'checkbox',
       '#title' => t('Include this content in the sitemap.'),
-      '#default_value' => xmlsitemap_node_get_status($node),
+      '#default_value' => $node->xmlsitemap['status'],
     );
-    $form['xmlsitemap']['xmlsitemap_priority'] = array(
+    $form['xmlsitemap']['priority'] = array(
       '#type' => 'select',
       '#title' => t('Priority'),
       '#options' => xmlsitemap_get_priority_options(TRUE),
-      '#default_value' => isset($node->xmlsitemap_priority) ? $node->xmlsitemap_priority : XMLSITEMAP_PRIORITY_DEFAULT,
+      '#default_value' => $node->xmlsitemap['priority'],
     );
-    $form['xmlsitemap']['xmlsitemap_changefreq'] = array(
+    $form['xmlsitemap']['lastmod'] = array(
       '#type' => 'value',
-      '#value' => isset($node->xmlsitemap_changefreq) ? $node->xmlsitemap_changefreq : 0,
+      '#value' => $node->xmlsitemap['lastmod'],
     );
-    $form['xmlsitemap']['xmlsitemap_changecount'] = array(
+    $form['xmlsitemap']['changefreq'] = array(
       '#type' => 'value',
-      '#value' => isset($node->xmlsitemap_changecount) ? $node->xmlsitemap_changecount : 0,
+      '#value' => $node->xmlsitemap['changefreq'],
     );
-    $form['xmlsitemap']['xmlsitemap_lastmod'] = array(
+    $form['xmlsitemap']['changecount'] = array(
       '#type' => 'value',
-      '#value' => isset($node->xmlsitemap_lastmod) ? $node->xmlsitemap_lastmod : 0,
+      '#value' => $node->xmlsitemap['changecount'],
     );
     if (isset($node->nid) && !node_access('view', $node, drupal_anonymous_user())) {
       $form['xmlsitemap']['xmlsitemap_status']['#disabled'] = TRUE;
@@ -246,7 +239,8 @@ function xmlsitemap_node_xmlsitemap_links($offset = 0, $limit = 0) {
 
   while ($nid = db_result($query)) {
     $node = node_load($nid, NULL, TRUE);
-    $links[] = xmlsitemap_node_create_link($node);
+    xmlsitemap_node_create_link($node);
+    $links[] = $node->xmlsitemap;
   }
 
   return $links;
@@ -284,17 +278,6 @@ function xmlsitemap_node_xmlsitemap_links_clear() {
   db_query("DELETE FROM {xmlsitemap} WHERE type = 'node'");
 }
 
-/*function xmlsitemap_node_get_changefreq($node) {
-  $query = db_query("SELECT n.created AS changefreq FROM {node} n WHERE n.nid = %d UNION SELECT n.changed AS changefreq FROM {node} n WHERE n.nid = %d UNION SELECT c.timestamp AS changefreq FROM {comments} c WHERE c.nid = %d AND c.status = %d ORDER BY changefreq DESC", $node->nid, $node->nid, $node->nid, COMMENT_PUBLISHED);
-  $timestamps = array();
-
-  while ($timestamp = db_result($query)) {
-    $timestamps[] = (int) $timestamp;
-  }
-
-  return xmlsitemap_calculate_changefreq($timestamps);
-}*/
-
 /**
  * Get the sitemap link status of a node.
  *
@@ -308,26 +291,9 @@ function xmlsitemap_node_get_status($node) {
   $status = TRUE;
   if (isset($node->nid)) {
     $status &= node_access('view', $node, drupal_anonymous_user());
-    $status &= (isset($node->xmlsitemap_status) ? $node->xmlsitemap_status : TRUE);
+    $status &= (isset($node->xmlsitemap['status']) ? $node->xmlsitemap['status'] : TRUE);
   }
   return $status;
-}
-
-/**
- * Get the sitemap priority of a node.
- *
- * @param $node
- *   A node object.
- * @return
- *   The manually assigned priority value, otherwise the default priority.
- */
-function xmlsitemap_node_get_priority($node) {
-  if (isset($node->xmlsitemap_priority) && $node->xmlsitemap_priority != XMLSITEMAP_PRIORITY_DEFAULT) {
-    return $node->xmlsitemap_priority;
-  }
-  else {
-    return XMLSITEMAP_PRIORITY_DEFAULT;
-  }
 }
 
 /**
@@ -335,39 +301,25 @@ function xmlsitemap_node_get_priority($node) {
  *
  * @param $node
  *   A node object.
- * @return
- *   An array representing a sitemap link.
  */
-function xmlsitemap_node_create_link($node) {
-  $record = array(
+function xmlsitemap_node_create_link(&$node) {
+  if (!isset($node->nid)) {
+    // Handle new nodes that do not have a value for nid yet.
+    $node->nid = NULL;
+  }
+
+  if (!isset($node->xmlsitemap)) {
+    $node->xmlsitemap = array();
+  }
+
+  $node->xmlsitemap += array(
     'type' => 'node',
     'id' => $node->nid,
     'loc' => 'node/'. $node->nid,
     'status' => xmlsitemap_node_get_status($node),
-    'priority' => isset($node->xmlsitemap_priority) ? $node->xmlsitemap_priority : XMLSITEMAP_PRIORITY_DEFAULT,
-    'lastmod' => isset($node->xmlsitemap_lastmod) ? $node->xmlsitemap_lastmod : $node->changed,
-    'changefreq' => isset($node->xmlsitemap_changefreq) ? $node->xmlsitemap_changefreq : 0,
-    'changecount' => isset($node->xmlsitemap_changecount) ? $node->xmlsitemap_changecount : 0,
-    'nid' => $node->nid,
+    'priority' => XMLSITEMAP_PRIORITY_DEFAULT,
+    'lastmod' => isset($node->changed) ? $node->changed : REQUEST_TIME,
+    'changefreq' => 0,
+    'changecount' => 0,
   );
-  return $record;
-}
-
-function xmlsitemap_node_save_link($record) {
-  if (db_result(db_query("SELECT 1 FROM {xmlsitemap_node} WHERE nid = %d", $record['nid']))) {
-    xmlsitemap_write_record('xmlsitemap_node', $record, array('nid'));
-  }
-  else {
-    xmlsitemap_write_record('xmlsitemap_node', $record);
-  }
-}
-
-/*function xmlsitemap_node_recalculate_changefreq($changefreq, $changecount, $newchange) {
-  return $changefreq = (($changefreq * $changecount) + $newchange) / ($changecount + 1);
-}*/
-
-function xmlsitemap_node_recalculate_changefreq(&$node) {
-  $node->xmlsitemap_changefreq = (($node->xmlsitemap_changefreq * $node->xmlsitemap_changecount) + (REQUEST_TIME - $node->xmlsitemap_lastmod)) / ($node->xmlsitemap_changecount + 1);
-  $node->xmlsitemap_changecount++;
-  $node->xmlsitemap_lastmod = REQUEST_TIME;
 }
