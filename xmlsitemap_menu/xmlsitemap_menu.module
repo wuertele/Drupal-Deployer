@@ -1,0 +1,105 @@
+<?php
+// $Id$
+
+function xmlsitemap_menu_xmlsitemap_links() {
+  $links = array();
+
+  // Set the global user variable to the anonymous user.
+  xmlsitemap_switch_user(drupal_anonymous_user());
+
+  $menus = variable_get('xmlsitemap_menu_menus', array());
+  foreach ($menus as $menu) {
+    $menu_links = menu_tree_page_data($menu);
+    foreach ($menu_links as $menu_link) {
+      $menu_link = $menu_link['link'];
+      if (!$menu_link['external'] && !$menu_link['hidden'] && $menu_link['access']) {
+        $link = array(
+          'type' => 'menu',
+          'id' => $menu_link['mlid'],
+          'loc' => $menu_link['link_path'],
+          'priority' => xmlsitemap_menu_get_priority($menu_link),
+          // @todo lastmod
+        );
+        $links[] = $link;
+      }
+    }
+  }
+
+  // Set the global user variable back to the original user.
+  xmlsitemap_switch_user();
+
+  return $links;
+}
+
+//function xmlsitemap_menu_form_alter(&$form, $form_state, $form_id) {
+//}
+//
+//function xmlsitemap_menu_form_menu_edit_item_alter(&$form, $form_state) {
+//}
+
+/**
+ * Calculate the priority of a menu link.
+ */
+function xmlsitemap_menu_get_priority($menu_item) {
+  if (xmlsitemap_menu_var('calculate_priority')) {
+    $priority = (MENU_MAX_DEPTH - $menu_item['depth'] + 1) / MENU_MAX_DEPTH;
+    $priority -= (50 + $menu_item['weight']) / (100 * (MENU_MAX_DEPTH + 1));
+    return $priority;
+  }
+  else {
+    return XMLSITEMAP_PRIORITY_DEFAULT;
+  }
+}
+
+/**
+ * Implementation of hok_form_FORM_ID_alter().
+ */
+function xmlsitemap_menu_form_xmlsitemap_settings_form_alter(&$form, $form_state) {
+  $form['menu'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Menus'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $form['menu']['xmlsitemap_menu_menus'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Menus to include in the sitemap'),
+    '#options' => menu_get_menus(),
+    '#default_value' => xmlsitemap_menu_var('menus'),
+    '#suffix' => '<hr />',
+  );
+  $form['menu']['xmlsitemap_menu_calculate_priority'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Calculate priority based on menu item depth and weight.'),
+    '#default_value' => xmlsitemap_menu_var('calculate_priority'),
+  );
+}
+
+/**
+ * Internal default variables for template_var().
+ */
+function xmlsitemap_menu_variables() {
+  return array(
+    'xmlsitemap_menu_menus' => array(),
+    'xmlsitemap_menu_calculate_priority' => TRUE,
+  );
+}
+
+/**
+ * Internal implementation of variable_get().
+ */
+function xmlsitemap_menu_var($name, $default = NULL) {
+  static $defaults = NULL;
+  if (!isset($defaults)) {
+    $defaults = xmlsitemap_menu_variables();
+  }
+
+  $name = 'xmlsitemap_menu_'. $name;
+
+  // @todo Remove when stable.
+  if (!isset($defaults[$name])) {
+    trigger_error(t('Default variable for %variable not found.', array('%variable' => $name)));
+  }
+
+  return variable_get($name, isset($default) || !isset($defaults[$name]) ? $default : $defaults[$name]);
+}
