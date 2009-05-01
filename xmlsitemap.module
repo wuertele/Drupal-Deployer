@@ -293,6 +293,18 @@ function xmlsitemap_get_chunk_size($reset = FALSE) {
 }
 
 /**
+ * Recalculate the changefreq of a sitemap link.
+ *
+ * @param $link
+ *   A sitemap link array.
+ */
+function xmlsitemap_recalculate_changefreq(&$link) {
+  $link['changefreq'] = (($link['changefreq'] * $link['changecount']) + (REQUEST_TIME - $link['lastmod'])) / ($link['changecount'] + 1);
+  $link['changecount']++;
+  $link['lastmod'] = REQUEST_TIME;
+}
+
+/**
  * Load a specific sitemap link.
  *
  * @param $where
@@ -329,6 +341,7 @@ function xmlsitemap_save_link(array $link) {
     'status' => TRUE,
     'priority' => XMLSITEMAP_PRIORITY_DEFAULT,
     'changefreq' => 0,
+    'changecount' => 0,
   );
 
   // Allow other modules to alter the link (priority, status, etc.).
