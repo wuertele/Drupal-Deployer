@@ -1,0 +1,168 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Install and uninstall schema and functions for the xmlsitemap module.
+ */
+
+/**
+ * Implementation of hook_requirements().
+ */
+function xmlsitemap_requirements($phase) {
+  $requirements = array();
+  $t = get_t();
+
+  if ($phase == 'runtime') {
+    $cron_warning = (REQUEST_TIME - variable_get('cron_last', 0)) > variable_get('cron_threshold_warning', 172800);
+    if (!file_check_directory(file_create_path(xmlsitemap_var('path')), FILE_CREATE_DIRECTORY)) {
+      $requirements['xmlsitemap_directory'] = array(
+        'title' => $t('Sitemap directory'),
+        'value' => $t('Not found or writable'),
+        'severity' => REQUIREMENT_ERROR,
+      );
+    }
+    if (!user_access('access content', drupal_anonymous_user())) {
+      $requirements['xmlsitemap_access'] = array(
+        'title' => $t('Sitemap anonymous access'),
+        'value' => $t('Access denied'),
+        'description' => $t('Search engines (anonymous users) cannot currently access your sitemap. Please assign the "access content" permission the the anonymous user role.'),
+        'severity' => REQUIREMENT_ERROR,
+      );
+    }
+    if (xmlsitemap_get_chunk_count() > 1000) {
+      $requirements['xmlsitemap_chunk_count'] = array(
+        'title' => $t('Sitemap page count'),
+        'value' => xmlsitemap_get_chunk_count(),
+        'description' => $t('It is not recommended to have more than 1000 sitemap pages. Please increase the number of links per page.'),
+        'severity' => REQUIREMENT_ERROR,
+      );
+    }
+    if (xmlsitemap_var('rebuild_needed')) {
+      $requirements['xmlsitemap_rebuild'] = array(
+        'title' => $t('Sitemap'),
+        'value' => $t('<a href="@rebuild">Needs rebuilding</a>', array('@rebuild' => url('admin/settings/xmlsitemap/rebuild'))),
+        'description' => $t('The sitemap is out of sync and needs to be rebuilt.'),
+        'severity' => REQUIREMENT_ERROR,
+      );
+    }
+    elseif (xmlsitemap_var('regenerate_needed') && $cron_warning) {
+      $requirements['xmlsitemap_rebuild'] = array(
+        'title' => $t('Sitemap'),
+        'value' => $t('<a href="@regenerate">Needs regeneration</a>', array('@regenerate' => url('admin/reports/status/run-cron'))),
+        'description' => $t('The sitemap files need to be regenerated.'),
+        'severity' => REQUIREMENT_WARNING,
+      );
+    }
+  }
+  return $requirements;
+}
+
+/**
+ * Implementation of hook_install().
+ */
+function xmlsitemap_install() {
+  // Add tables.
+  drupal_install_schema('xmlsitemap');
+
+  // Set this module's weight to 1 so xmlsitemap_cron() runs after all other
+  // xmlsitemap_x_cron() runs.
+  db_query("UPDATE {system} SET weight = 1 WHERE type = 'module' AND name = 'xmlsitemap'");
+
+  // Load the module so we can use xmlsitemap_var().
+  drupal_load('module', 'xmlsitemap');
+
+  // Add files directory.
+  $path = file_create_path(xmlsitemap_var('path'));
+  file_check_directory($path, FILE_CREATE_DIRECTORY);
+
+  // Insert the homepage link into the {xmlsitemap} table so we do not show an
+  // empty sitemap after install.
+  db_query("INSERT INTO {xmlsitemap} (type, id, loc, priority) VALUES ('frontpage', 0, '', %f)", xmlsitemap_var('priority_frontpage'));
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function xmlsitemap_uninstall() {
+  // Remove tables.
+  drupal_uninstall_schema('xmlsitemap');
+
+  // Remove variables.
+  drupal_load('module', 'xmlsitemap');
+  $variables = array_keys(xmlsitemap_variables());
+  foreach ($variables as $variable) {
+    variable_del($variable);
+  }
+
+  // Remove files directory.
+  $path = file_create_path(xmlsitemap_var('path'));
+  xmlsitemap_clean_directory($path, TRUE);
+}
+
+/**
+ * Implementation of hook_schema().
+ */
+function xmlsitemap_schema() {
+  $schema['xmlsitemap'] = array(
+    'description' => 'The base table for xmlsitemap links.',
+    'fields' => array(
+      'type' => array(
+        'description' => 'Primary key with id; the type of item (e.g. node, user, etc.).',
+        'type' => 'varchar',
+        'length' => 12,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'id' => array(
+        'description' => 'Primary key with type; a unique id for the item.',
+        'type' => 'int',
+        'default' => 0,
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+      ),
+      'status' => array(
+        'description' => 'A boolean that represents if the item should be in the sitemap.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'default' => 1,
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'loc' => array(
+        'description' => 'The URL to the item relative to the Drupal path.',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'lastmod' => array(
+        'description' => 'The UNIX timestamp of last modification of the item.',
+        'type' => 'int',
+        'default' => 0,
+        'unsigned' => TRUE,
+      ),
+      'priority' => array(
+        'description' => 'The priority of this URL relative to other URLs on your site. Valid values range from 0.0 to 1.0.',
+        'type' => 'float',
+        'default' => NULL,
+      ),
+      'changefreq' => array(
+        'description' => 'The average time in seconds between changes of this item.',
+        'type' => 'int',
+        'default' => 0,
+        'unsigned' => TRUE,
+      ),
+      'changecount' => array(
+        'description' => 'The number of times this item has been changed. Used to help calculate the next changefreq value.',
+        'type' => 'int',
+        'default' => 0,
+        'unsigned' => TRUE,
+      ),
+    ),
+    'primary key' => array('type', 'id'),
+    'unique keys' => array('loc' => array('loc')),
+  );
+
+  return $schema;
+}

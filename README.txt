@@ -60,8 +60,6 @@ MORE INFORMATION
 
 - You can view the sitemap.org specification at http://sitemaps.org.
 
-- 
-
 
 HOW CAN YOU CONTRIBUTE?
 ---------------------
@@ -77,4 +75,3 @@ HOW CAN YOU CONTRIBUTE?
 
 - Report any bugs, feature requests, etc. in the issue tracker.
   http://drupal.org/project/issues/xmlsitemap
-

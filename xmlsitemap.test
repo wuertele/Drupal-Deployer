@@ -1,0 +1,138 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Unit tests for the xmlsitemap module.
+ */
+
+/**
+ * Helper test class with some added functions for testing.
+ */
+class XMLSitemapTestCase extends DrupalWebTestCase {
+
+  /**
+   * Assert that a link is found in the sitemap.
+   *
+   * @param $conditions
+   *   An array of values/conditions to match keyed by field name.
+   */
+  protected function assertInSitemap($conditions) {
+    $link = xmlsitemap_load_link($conditions);
+    $this->assertTrue($link && $link->status, t('Found in sitemap.'));
+    $this->assertTrue(TRUE, var_export($link, TRUE));
+    return $link;
+  }
+
+  /**
+   * Assert that a link is not found in the sitemap.
+   *
+   * @param $conditions
+   *   An array of values/conditions to match keyed by field name.
+   */
+  protected function assertNotInSitemap($conditions) {
+    $link = xmlsitemap_load_link($conditions);
+    $this->assertTrue(!$link || !$link->status, t('Not found in sitemap.'));
+    $this->assertTrue(TRUE, var_export($link, TRUE));
+    return $link;
+  }
+
+  protected function addSitemapLink($link = array()) {
+    static $last_id = 1;
+
+    $link += array(
+      'type' => 'custom',
+      'loc' => 'customlink/' . mt_rand(1, 10000),
+    );
+  }
+}
+
+class XMLSitemapUnitTest extends XMLSitemapTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => 'XML Sitemap unit tests',
+      'description' => 'Unit tests for the XML Sitemap module.',
+      'group' => 'XML Sitemap',
+    );
+  }
+
+  function setUp() {
+    parent::setUp('xmlsitemap');
+  }
+
+  /**
+   * Test the xmlsitemap_get_changefreq() function.
+   */
+  function testGetChangefreq() {
+    $values = array();
+    $values[0] = FALSE;
+    $values[mt_rand(1, XMLSITEMAP_FREQUENCY_ALWAYS)] = 'always';
+    $values[mt_rand(XMLSITEMAP_FREQUENCY_ALWAYS + 1, XMLSITEMAP_FREQUENCY_HOURLY)] = 'hourly';
+    $values[mt_rand(XMLSITEMAP_FREQUENCY_HOURLY + 1, XMLSITEMAP_FREQUENCY_DAILY)] = 'daily';
+    $values[mt_rand(XMLSITEMAP_FREQUENCY_DAILY + 1, XMLSITEMAP_FREQUENCY_WEEKLY)] = 'weekly';
+    $values[mt_rand(XMLSITEMAP_FREQUENCY_WEEKLY + 1, XMLSITEMAP_FREQUENCY_MONTHLY)] = 'monthly';
+    $values[mt_rand(XMLSITEMAP_FREQUENCY_MONTHLY + 1, XMLSITEMAP_FREQUENCY_YEARLY)] = 'yearly';
+    $values[mt_rand(XMLSITEMAP_FREQUENCY_YEARLY + 1, mt_getrandmax())] = 'never';
+
+    foreach ($values as $value => $expected) {
+      $actual = xmlsitemap_get_changefreq($value);
+      $this->assertIdentical($actual, $expected, t('Interval %interval was %actual, expected %expected.', array('%interval' => format_interval($value), '%actual' => $actual, '%expected' => $expected)));
+    }
+  }
+
+  function testGetChunkCount() {
+
+  }
+
+  function testGetChunkFile() {
+
+  }
+
+  function testGetChunkSize() {
+
+  }
+
+  function testGetLinkCount() {
+
+  }
+}
+
+class XMLSitemapFunctionalTest extends DrupalWebTestCase {
+  protected $admin;
+
+  public static function getInfo() {
+    return array(
+      'name' => 'XML Sitemap interface tests',
+      'description' => 'Funcitonal tests for the XML Sitemap module.',
+      'group' => 'XML Sitemap',
+    );
+  }
+
+  private function regenerateSitemap() {
+    variable_set('xmlsitemap_regenerate_needed', TRUE);
+    $this->drupalGet(url('cron.php', array('absolute' => TRUE)));
+  }
+
+  function setUp() {
+    parent::setUp('xmlsitemap');
+    $this->admin = $this->drupalCreateUser(array('access content', 'administer xmlsitemap'));
+    $this->drupalLogin($this->admin);
+    variable_set('xmlsitemap_minimum_lifetime', 0);
+    $this->drupalGet('sitemap.xml');
+  }
+
+  function testCustomLinks() {
+    $edit = array();
+    $edit['xmlsitemap_custom_links'] = 'sitemap.xml' . "\n" . 'admin';
+    $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
+    $this->assertText(t('The configuration options have been saved'));
+
+    $this->drupalGet('sitemap.xml');
+    $this->regenerateSitemap();
+    xmlsitemap_save_link(array('type' => 'custom', 'id' => 20, 'loc' => 'dave'));
+    $this->drupalGet('sitemap.xml');
+    $this->assertTrue(TRUE, htmlspecialchars($this->drupalGetContent()));
+    $this->assertRaw(url('sitemap.xml', array('absolute' => TRUE)));
+    $this->assertRaw(url('admin', array('absolute' => TRUE)));
+  }
+}

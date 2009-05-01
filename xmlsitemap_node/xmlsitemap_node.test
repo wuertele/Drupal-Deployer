@@ -1,0 +1,92 @@
+<?php
+// $Id$
+
+class XMLSitemapNodeTestCase extends DrupalWebTestCase {
+  protected $admin_user;
+  protected $normal_user;
+  protected $nodes = array();
+
+  function setUp() {
+    parent::setUp('xmlsitemap', 'xmlsitemap_node');
+    $this->admin_user = $this->drupalCreateUser(array('administer nodes'));
+    $this->normal_user = $this->drupalCreateUser(array('create page content'));
+    for ($i = 0; $i < 2; $i++) {
+      $this->nodes[$i] = $this->drupalCreateNode();
+    }
+  }
+}
+
+/**
+ * @file
+ * Unit tests for the xmlsitemap_node module.
+ */
+
+class XMLSitemapNodeUnitTest extends DrupalWebTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => 'XML Sitemap node unit tests',
+      'description' => 'Unit tests for the XML Sitemap node module.',
+      'group' => 'XML Sitemap',
+    );
+  }
+
+  function setUp() {
+    parent::setUp('xmlsitemap', 'xmlsitemap_node');
+  }
+}
+
+class XMLSitemapNodeFunctionalTest extends SitemapTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => 'XML Sitemap Node functional tests',
+      'description' => 'Interface tests for the XML Sitemap Node module.',
+      'group' => 'XML Sitemap',
+    );
+  }
+
+  function setUp() {
+    parent::setUp('xmlsitemap', 'xmlsitemap_node');
+  }
+
+  function testMassOperations() {
+    $account = $this->drupalCreateUser(array('administer nodes'));
+    $this->drupalLogin($account);
+
+    $nodes = array();
+    for ($i = 0; $i < 2; $i++) {
+      $nodes[$i] = $this->drupalCreateNode();
+      $this->assertNodeInSitemap($nodes[$i]->nid);
+      $this->assertTrue(TRUE, var_export($nodes[$i], TRUE));
+    }
+
+    $edit = array(
+      'operation' => 'xmlsitemap_exclude',
+      'nodes[1]' => 1,
+      'nodes[2]' => 2,
+    );
+    $this->drupalPost('admin/content/node', $edit, t('Update'));
+
+    for ($i = 0; $i < 2; $i++) {
+      $this->assertNodeNotInSitemap($nodes[$i]->nid);
+    }
+
+    $edit = array(
+      'operation' => 'xmlsitemap_include',
+      'nodes[1]' => 1,
+      'nodes[2]' => 2,
+    );
+    $this->drupalPost('admin/content/node', $edit, t('Update'));
+
+    for ($i = 0; $i < 2; $i++) {
+      $this->assertNodeInSitemap($nodes[$i]->nid);
+    }
+  }
+
+  function assertNodeInSitemap($nid) {
+    return $this->assertInSitemap(array('type' => 'node', 'id' => $nid));
+  }
+
+  function assertNodeNotInSitemap($nid) {
+    return $this->assertNotInSitemap(array('type' => 'node', 'id' => $nid));
+  }
+}
