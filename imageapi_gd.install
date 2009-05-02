@@ -57,9 +57,12 @@ function imageapi_gd_requirements($phase) {
       );
     }
 
+    // Test the 'memory_limit' PHP configuration directive
     $memory_limit = ini_get('memory_limit');
-    
-    if (parse_size($memory_limit) < parse_size('96M')) {
+
+    // If $memory_limit contains a value of -1, the PHP runtime
+    // doesn't impose a limit on memory used by PHP scripts
+    if ($memory_limit && $memory_limit != -1 && parse_size($memory_limit) < parse_size('96M')) {
       $requirements['imagecache_memory_limit'] = array(
         'title' => $t('ImageAPI GD Memory Limit'),
         'value' => $memory_limit,
