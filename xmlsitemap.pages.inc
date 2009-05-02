@@ -51,7 +51,8 @@ function xmlsitemap_output($chunk = 0) {
  */
 function xmlsitemap_xsl() {
   header('Content-type: application/xml; charset=utf-8');
-  $basepath = drupal_get_path('module', 'xmlsitemap');
+  $xml_css = url(drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap-xml.css');
+  $xml_js = url(drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap-xml-js');
 echo <<<END
 <?xml version="1.0" encoding="UTF-8"?>
 <xsl:stylesheet version="2.0"
@@ -64,8 +65,8 @@ echo <<<END
     <html>
       <head>
         <title>Site map file</title>
-        <link href="{$basepath}/xmlsitemap-xml.css" type="text/css" rel="stylesheet"/>
-        <script src="{$basepath}/xmlsitemap-xml.js"></script>
+        <link href="{$xml_css}" type="text/css" rel="stylesheet"/>
+        <script src="{$xml_js}"></script>
       </head>
 
       <!-- Store in \$fileType if we are in a sitemap or in a siteindex -->
