@@ -7,44 +7,44 @@
  * Process old menu links not found in the {xmlsitemap} table.
  */
 function xmlsitemap_menu_cron() {
-  $menus = xmlsitemap_menu_var('menus_cron');
-  if ($menus) {
-    // Process one menu at a time.
-    $menu = array_shift($menus);
-    $links = xmlsitemap_menu_xmlsitemap_links(array($menu));
-    foreach ($links as $link) {
-      xmlsitemap_save_link($link);
+  if ($menus = xmlsitemap_menu_var('menus')) {
+    // Set the global user variable to the anonymous user.
+    xmlsitemap_switch_user(drupal_anonymous_user());
+
+    $sql = "SELECT ml.mlid FROM {menu_links} LEFT JOIN {xmlsitemap} x ON ml.lid = x.id WHERE COALESCE(x.type, 'menu') = 'menu' AND x.id IS NULL AND ml.external = 0 AND ml.hidden = 0 AND ml.menu_name IN (" . db_placeholders($menus) . ")";
+    $query = db_query_range($sql, $menus, 0, xmlsitemap_var('batch_limit'));
+
+    while ($mlid = db_result($query)) {
+      $menu_item = menu_link_load($mlid);
+      if ($menu_item['access'] && !preg_match('%\Anode/\d+\Z%i', $menu_item['link_path'])) {
+        $link = xmlsitemap_menu_create_link($menu_item);
+        xmlsitemap_save_link($link);
+      }
     }
-    variable_set('xmlsitemap_menu_cron', $menus);
+
+    // Set the global user variable back to the original user.
+    xmlsitemap_switch_user();
   }
 }
 
 /**
  * Implementation of hook_xmlsitemap_links().
  */
-function xmlsitemap_menu_xmlsitemap_links($menus = array()) {
+function xmlsitemap_menu_xmlsitemap_links($offset = 0, $limit = 0) {
   $links = array();
 
   // Set the global user variable to the anonymous user.
   xmlsitemap_switch_user(drupal_anonymous_user());
 
-  if (!$menus) {
-    $menus = xmlsitemap_menu_var('menus');
-  }
+  if ($menus = xmlsitemap_menu_var('menus')) {
+    $sql = "SELECT mlid FROM {menu_links} WHERE mlid > %d AND external = 0 AND hidden = 0 AND menu_name IN (" . db_placeholders($menus) . ") ORDER BY mlid";
+    $args = array_merge(array($offset), $menus);
+    $query = ($limit ? db_query_range($sql, $args, 0, $limit) : db_query($sql, $args));
 
-  foreach ($menus as $menu) {
-    $menu_links = menu_tree_page_data($menu);
-    foreach ($menu_links as $menu_link) {
-      $menu_link = $menu_link['link'];
-      if (!$menu_link['external'] && !$menu_link['hidden'] && $menu_link['access'] && !preg_match('%\Anode/\d+\Z%i', $menu_link['link_path'])) {
-        $link = array(
-          'type' => 'menu',
-          'id' => $menu_link['mlid'],
-          'loc' => $menu_link['link_path'],
-          'priority' => xmlsitemap_menu_get_priority($menu_link),
-          // @todo lastmod
-        );
-        $links[] = $link;
+    while ($mlid = db_result($query)) {
+      $menu_item = menu_link_load($mlid);
+      if ($menu_item['access'] && !preg_match('%\Anode/\d+\Z%i', $menu_item['link_path'])) {
+        $links[] = xmlsitemap_menu_create_link($menu_item);
       }
     }
   }
@@ -61,18 +61,17 @@ function xmlsitemap_menu_xmlsitemap_links($menus = array()) {
 function xmlsitemap_menu_xmlsitemap_links_batch(&$context) {
   if (!isset($context['sandbox']['progress'])) {
     $context['sandbox']['progress'] = 0;
-    $context['sandbox']['menus'] = xmlsitemap_menu_var('menus');
-    $context['sandbox']['max'] = count($context['sandbox']['menus']);
+    $context['sandbox']['current_mlid'] = 0;
+    $menus = xmlsitemap_menu_var('menus');
+    $context['sandbox']['max'] = $menus ? db_result(db_query("SELECT COUNT(mlid) FROM {menu_links} WHERE external = 0 AND hidden = 0 AND menu_name IN (" . db_placeholders($menus) . ")")) : 0;
   }
 
-  if ($context['sandbox']['menus']) {
-    $menu = array_shift($context['sandbox']['menus']);
-    $links = xmlsitemap_menu_xmlsitemap_links(array($menu));
-    foreach ($links as $link) {
-      xmlsitemap_save_link($link);
-    }
+  $links = xmlsitemap_menu_xmlsitemap_links($context['sandbox']['current_mlid'], xmlsitemap_var('batch_limit'));
+  foreach ($links as $link) {
+    xmlsitemap_save_link($link);
     $context['sandbox']['progress']++;
-    $context['message'] = t('Processing menu @menu', array('@menu' => $menu));
+    $context['sandbox']['current_mlid'] = $link['id'];
+    $context['message'] = t('Processing menu link @mlid', array('@mlid' => $link['id']));
   }
 
   // Inform the batch engine that we are not finished,
@@ -92,8 +91,22 @@ function xmlsitemap_menu_xmlsitemap_links_clear() {
 /**
  * Implementation of hook_form_FORM_ID_alter().
  */
-//function xmlsitemap_menu_form_menu_edit_item_alter(&$form, $form_state) {
-//}
+function xmlsitemap_menu_form_menu_edit_item_alter(&$form, $form_state) {
+  $form['#submit'][] = 'xmlsitemap_menu_menu_edit_item_submit';
+}
+
+function xmlsitemap_menu_menu_edit_item_submit($form, $form_state) {
+
+}
+
+function xmlsitemap_menu_create_link($menu_item) {
+  return array(
+    'type' => 'menu',
+    'id' => $menu_item['mlid'],
+    'loc' => $menu_item['link_path'],
+    'priority' => xmlsitemap_menu_get_priority($menu_item),
+  );
+}
 
 /**
  * Calculate the priority of a menu link.
@@ -140,13 +153,7 @@ function xmlsitemap_menu_form_xmlsitemap_settings_form_alter(&$form, $form_state
  */
 function xmlsitemap_menu_settings_form_submit($form, $form_state) {
   $current_menus = xmlsitemap_menu_var('menus');
-  $new_menus = array_diff($form_state['values']['xmlsitemap_menu_menus'], $current_menus);
   $removed_menus = array_diff($current_menus, $form_state['values']['xmlsitemap_menu_menus']);
-
-  // Set the newly selected menus to be scanned on the next cron.
-  if ($new_menus) {
-    variable_set('xmlsitemap_menu_menus_cron', $new_menus);
-  }
 
   // Remove links from de-selected menus.
   foreach ($removed_menus as $removed_menu) {
@@ -160,8 +167,7 @@ function xmlsitemap_menu_settings_form_submit($form, $form_state) {
 function xmlsitemap_menu_variables() {
   return array(
     'xmlsitemap_menu_menus' => array(),
-    'xmlsitemap_menu_calculate_priority' => TRUE,
-    'xmlsitemap_menu_menus_cron' => array(),
+    'xmlsitemap_menu_calculate_priority' => FALSE,
   );
 }
 
