@@ -1,13 +1,37 @@
 <?php
 // $Id$
 
-function xmlsitemap_menu_xmlsitemap_links() {
+/**
+ * Implementation of hook_cron().
+ *
+ * Process old menu links not found in the {xmlsitemap} table.
+ */
+function xmlsitemap_menu_cron() {
+  $menus = xmlsitemap_menu_var('menus_cron');
+  if ($menus) {
+    // Process one menu at a time.
+    $menu = array_shift($menus);
+    $links = xmlsitemap_menu_xmlsitemap_links(array($menu));
+    foreach ($links as $link) {
+      xmlsitemap_save_link($link);
+    }
+    variable_set('xmlsitemap_menu_cron', $menus);
+  }
+}
+
+/**
+ * Implementation of hook_xmlsitemap_links().
+ */
+function xmlsitemap_menu_xmlsitemap_links($menus = array()) {
   $links = array();
 
   // Set the global user variable to the anonymous user.
   xmlsitemap_switch_user(drupal_anonymous_user());
 
-  $menus = variable_get('xmlsitemap_menu_menus', array());
+  if (!$menus) {
+    $menus = xmlsitemap_menu_var('menus');
+  }
+
   foreach ($menus as $menu) {
     $menu_links = menu_tree_page_data($menu);
     foreach ($menu_links as $menu_link) {
@@ -31,9 +55,43 @@ function xmlsitemap_menu_xmlsitemap_links() {
   return $links;
 }
 
-//function xmlsitemap_menu_form_alter(&$form, $form_state, $form_id) {
-//}
-//
+/**
+ * Implementation of hook_xmlsitemap_links_batch().
+ */
+function xmlsitemap_menu_xmlsitemap_links_batch(&$context) {
+  if (!isset($context['sandbox']['progress'])) {
+    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['menus'] = xmlsitemap_menu_var('menus');
+    $context['sandbox']['max'] = count($context['sandbox']['menus']);
+  }
+
+  if ($context['sandbox']['menus']) {
+    $menu = array_shift($context['sandbox']['menus']);
+    $links = xmlsitemap_menu_xmlsitemap_links(array($menu));
+    foreach ($links as $link) {
+      xmlsitemap_save_link($link);
+    }
+    $context['sandbox']['progress']++;
+    $context['message'] = t('Processing menu @menu', array('@menu' => $menu));
+  }
+
+  // Inform the batch engine that we are not finished,
+  // and provide an estimation of the completion level we reached.
+  if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
+    $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
+  }
+}
+
+/**
+ * Implementation of hook_xmlsitemap_links_clear().
+ */
+function xmlsitemap_menu_xmlsitemap_links_clear() {
+  db_query("DELETE FROM {xmlsitemap} WHERE type = 'menu'");
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter().
+ */
 //function xmlsitemap_menu_form_menu_edit_item_alter(&$form, $form_state) {
 //}
 
@@ -73,6 +131,27 @@ function xmlsitemap_menu_form_xmlsitemap_settings_form_alter(&$form, $form_state
     '#title' => t('Calculate priority based on menu item depth and weight.'),
     '#default_value' => xmlsitemap_menu_var('calculate_priority'),
   );
+
+  array_unshift($form['#submit'], 'xmlsitemap_menu_settings_form_submit');
+}
+
+/**
+ * Submit handler;
+ */
+function xmlsitemap_menu_settings_form_submit($form, $form_state) {
+  $current_menus = xmlsitemap_menu_var('menus');
+  $new_menus = array_diff($form_state['values']['xmlsitemap_menu_menus'], $current_menus);
+  $removed_menus = array_diff($current_menus, $form_state['values']['xmlsitemap_menu_menus']);
+
+  // Set the newly selected menus to be scanned on the next cron.
+  if ($new_menus) {
+    variable_set('xmlsitemap_menu_menus_cron', $new_menus);
+  }
+
+  // Remove links from de-selected menus.
+  foreach ($removed_menus as $removed_menu) {
+    db_query("DELETE FROM {xmlsitemap} WHERE type = 'menu' AND id IN (SELECT mlid FROM {menu_links} WHERE menu_name = '%s')", $removed_menu);
+  }
 }
 
 /**
@@ -82,6 +161,7 @@ function xmlsitemap_menu_variables() {
   return array(
     'xmlsitemap_menu_menus' => array(),
     'xmlsitemap_menu_calculate_priority' => TRUE,
+    'xmlsitemap_menu_menus_cron' => array(),
   );
 }
 
