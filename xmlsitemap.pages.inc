@@ -7,7 +7,7 @@
 function xmlsitemap_output($chunk = 0) {
   $file = xmlsitemap_get_chunk_file($chunk);
 
-  if (!file_exists($file) || !empty($_GET['refresh'])) {
+  if (!file_exists($file) || isset($_GET['refresh'])) {
     if (!xmlsitemap_generate($chunk)) {
       return drupal_not_found();
     }

@@ -131,6 +131,9 @@ function xmlsitemap_regenerate() {
     xmlsitemap_generate($i);
   }
 
+  // Show a watchdog message that the sitemap was regenerated.
+  watchdog('xmlsitemap', 'Sitemap regenerated.', array(), WATCHDOG_NOTICE, l(t('View'), 'sitemap.xml'));
+
   // Unset the regenerate flag.
   variable_set('xmlsitemap_regenerate_needed', FALSE);
 }
@@ -347,8 +350,10 @@ function xmlsitemap_save_link(array $link) {
   // Allow other modules to alter the link (priority, status, etc.).
   drupal_alter('xmlsitemap_link', $link);
 
-  //@todo Should we ensure that priority is a value between 0 and 1?
-  //$link['priority'] = min(max($link['priority'], 0), 1);
+  // Warn if the priority is an invalid value.
+  if ($link['priority'] < 0 || $link['priority'] > 1) {
+    watchdog('xmlsitemap', "Invalid sitemap link priority %priority.<br />@link", array('%priority' => $link['priority'], '@link' => var_export($link, TRUE)), WATCHDOG_NOTICE);
+  }
 
   $existing = xmlsitemap_load_link(array('type' => $link['type'], 'id' => $link['id']));
   if (!$existing || array_intersect_assoc((array) $link, (array) $existing)) {
