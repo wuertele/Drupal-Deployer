@@ -11,15 +11,13 @@ function xmlsitemap_menu_cron() {
     // Set the global user variable to the anonymous user.
     xmlsitemap_switch_user(drupal_anonymous_user());
 
-    $sql = "SELECT ml.mlid FROM {menu_links} ml LEFT JOIN {xmlsitemap} x ON ml.mlid = x.id WHERE COALESCE(x.type, 'menu') = 'menu' AND x.id IS NULL AND ml.external = 0 AND ml.hidden = 0 AND ml.menu_name IN (" . db_placeholders($menus) . ")";
+    $sql = "SELECT ml.mlid FROM {menu_links} ml LEFT JOIN {xmlsitemap} x ON ml.mlid = x.id WHERE COALESCE(x.type, 'menu') = 'menu' AND x.id IS NULL AND ml.external = 0 AND ml.hidden = 0 AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ")";
     $query = db_query_range($sql, $menus, 0, xmlsitemap_var('batch_limit'));
 
     while ($mlid = db_result($query)) {
       $menu_item = menu_link_load($mlid);
-      if ($menu_item['access'] && !preg_match('%\Anode/\d+\Z%i', $menu_item['link_path'])) {
-        $link = xmlsitemap_menu_create_link($menu_item);
-        xmlsitemap_save_link($link);
-      }
+      $link = xmlsitemap_menu_create_link($menu_item);
+      xmlsitemap_save_link($link);
     }
 
     // Set the global user variable back to the original user.
@@ -37,15 +35,13 @@ function xmlsitemap_menu_xmlsitemap_links($offset = 0, $limit = 0) {
     // Set the global user variable to the anonymous user.
     xmlsitemap_switch_user(drupal_anonymous_user());
 
-    $sql = "SELECT ml.mlid FROM {menu_links} ml WHERE ml.mlid > %d AND ml.external = 0 AND ml.hidden = 0 AND ml.menu_name IN (" . db_placeholders($menus) . ") ORDER BY ml.mlid";
+    $sql = "SELECT ml.mlid FROM {menu_links} ml WHERE ml.mlid > %d AND ml.external = 0 AND ml.hidden = 0 AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ") ORDER BY ml.mlid";
     $args = array_merge(array($offset), $menus);
     $query = ($limit ? db_query_range($sql, $args, 0, $limit) : db_query($sql, $args));
 
     while ($mlid = db_result($query)) {
       $menu_item = menu_link_load($mlid);
-      if ($menu_item['access'] && !preg_match('%\Anode/\d+\Z%i', $menu_item['link_path'])) {
-        $links[] = xmlsitemap_menu_create_link($menu_item);
-      }
+      $links[] = xmlsitemap_menu_create_link($menu_item);
     }
 
     // Set the global user variable back to the original user.
@@ -63,7 +59,7 @@ function xmlsitemap_menu_xmlsitemap_links_batch(&$context) {
     $context['sandbox']['progress'] = 0;
     $context['sandbox']['current_mlid'] = 0;
     $menus = array_filter(xmlsitemap_menu_var('menus'));
-    $context['sandbox']['max'] = $menus ? db_result(db_query("SELECT COUNT(mlid) FROM {menu_links} WHERE external = 0 AND hidden = 0 AND menu_name IN (" . db_placeholders($menus) . ")")) : 0;
+    $context['sandbox']['max'] = $menus ? db_result(db_query("SELECT COUNT(ml.mlid) FROM {menu_links} ml WHERE ml.external = 0 AND ml.hidden = 0 AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ")", $menus)) : 0;
   }
 
   $links = xmlsitemap_menu_xmlsitemap_links($context['sandbox']['current_mlid'], xmlsitemap_var('batch_limit'));
@@ -107,6 +103,7 @@ function xmlsitemap_menu_create_link($menu_item) {
     'id' => $menu_item['mlid'],
     'loc' => $menu_item['link_path'],
     'priority' => xmlsitemap_menu_get_priority($menu_item),
+    'status' => $menu_item['access'] && !preg_match('%\Anode/\d+\Z%i', $menu_item['link_path']),
   );
 }
 
