@@ -9,7 +9,7 @@
 /**
  * Helper test class with some added functions for testing.
  */
-class XMLSitemapTestCase extends DrupalWebTestCase {
+class XMLSitemapTestHelper extends DrupalWebTestCase {
 
   /**
    * Assert that a link is found in the sitemap.
@@ -37,17 +37,30 @@ class XMLSitemapTestCase extends DrupalWebTestCase {
     return $link;
   }
 
-  protected function addSitemapLink($link = array()) {
-    static $last_id = 1;
+  //protected function addSitemapLink($link = array()) {
+  //  static $last_id = 1;
+  //
+  //  $link += array(
+  //    'type' => 'custom',
+  //    'id' => $last_id++,
+  //    'loc' => 'customlink/' . mt_rand(1, 10000),
+  //  );
+  //
+  //  xmlsitemap_save_link($link);
+  //}
 
-    $link += array(
-      'type' => 'custom',
-      'loc' => 'customlink/' . mt_rand(1, 10000),
-    );
+  /**
+   * Regenerate the sitemap by setting the regenerate flag and running cron.
+   */
+  protected function regenerateSitemap() {
+    variable_set('xmlsitemap_regenerate_needed', TRUE);
+    variable_set('cron_last', REQUEST_TIME - xmlsitemap_var('minimum_lifetime') - 30);
+    drupal_cron_run();
+    //$this->drupalGet(url('cron.php', array('absolute' => TRUE)));
   }
 }
 
-class XMLSitemapUnitTest extends XMLSitemapTestCase {
+class XMLSitemapUnitTest extends XMLSitemapTestHelper {
   public static function getInfo() {
     return array(
       'name' => 'XML Sitemap unit tests',
@@ -97,7 +110,7 @@ class XMLSitemapUnitTest extends XMLSitemapTestCase {
   }
 }
 
-class XMLSitemapFunctionalTest extends DrupalWebTestCase {
+class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
   protected $admin;
 
   public static function getInfo() {
@@ -108,31 +121,50 @@ class XMLSitemapFunctionalTest extends DrupalWebTestCase {
     );
   }
 
-  private function regenerateSitemap() {
-    variable_set('xmlsitemap_regenerate_needed', TRUE);
-    $this->drupalGet(url('cron.php', array('absolute' => TRUE)));
-  }
-
   function setUp() {
     parent::setUp('xmlsitemap');
     $this->admin = $this->drupalCreateUser(array('access content', 'administer xmlsitemap'));
     $this->drupalLogin($this->admin);
-    variable_set('xmlsitemap_minimum_lifetime', 0);
-    $this->drupalGet('sitemap.xml');
+    //$this->regenerateSitemap();
+    $this->drupalPost('admin/settings/xmlsitemap', array(), t('Save configuration'));
   }
 
-  function testCustomLinks() {
-    $edit = array();
-    $edit['xmlsitemap_custom_links'] = 'sitemap.xml' . "\n" . 'admin';
-    $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
-    $this->assertText(t('The configuration options have been saved'));
+  //function testCustomLinks() {
+  //  $edit = array();
+  //  $edit['xmlsitemap_custom_links'] = "custom-test-1\ncustom-test-2";
+  //  $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
+  //  $this->assertText(t('The configuration options have been saved'));
+  //
+  //  $this->regenerateSitemap();
+  //  xmlsitemap_save_link(array('type' => 'custom', 'id' => 20, 'loc' => 'dave'));
+  //  $this->drupalGet('sitemap.xml');
+  //  $this->assertTrue(TRUE, htmlspecialchars($this->drupalGetContent()));
+  //  $this->assertRaw(url('sitemap.xml', array('absolute' => TRUE)));
+  //  $this->assertRaw(url('admin', array('absolute' => TRUE)));
+  //}
 
+  function testSitemapCaching() {
     $this->drupalGet('sitemap.xml');
+    $this->assertResponse(200);
+    $etag = $this->drupalGetHeader('etag');
+    $last_modified = $this->drupalGetHeader('last-modified');
+    $this->assertTrue($etag, t('Etag header found.'));
+    $this->assertTrue($last_modified, t('Last-modified header found.'));
+
+    $this->drupalGet('sitemap.xml', array(), array('If-Modified-Since: ' . $last_modified, 'If-None-Match: ' . $etag));
+    $this->assertResponse(304);
+  }
+
+  function testMinimumLifetime() {
+    $this->drupalGet('sitemap.xml');
+    $this->assertNoRaw('lifetime-test');
+
+    xmlsitemap_save_link(array('type' => 'test', 'id' => 0, 'loc' => 'lifetime-test'));
+    $this->drupalGet('sitemap.xml');
+    $this->assertNoRaw('lifetime-test');
+
     $this->regenerateSitemap();
-    xmlsitemap_save_link(array('type' => 'custom', 'id' => 20, 'loc' => 'dave'));
     $this->drupalGet('sitemap.xml');
-    $this->assertTrue(TRUE, htmlspecialchars($this->drupalGetContent()));
-    $this->assertRaw(url('sitemap.xml', array('absolute' => TRUE)));
-    $this->assertRaw(url('admin', array('absolute' => TRUE)));
+    $this->assertRaw('lifetime-test');
   }
 }

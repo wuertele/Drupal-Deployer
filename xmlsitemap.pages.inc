@@ -18,28 +18,26 @@ function xmlsitemap_output($chunk = 0) {
     }
   }
 
-  $last_modified = gmdate('D, d M Y H:i:s', filemtime($file)) .' GMT';
-  $etag = '"'. md5($last_modified) .'"';
+  $last_modified = gmdate('D, d M Y H:i:s', filemtime($file)) . ' GMT';
+  $etag = '"' . md5($last_modified) . '"';
 
-  // See if the client has provided the required HTTP headers:
-  //$if_modified_since = isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) ? stripslashes($_SERVER['HTTP_IF_MODIFIED_SINCE']) : FALSE;
-  //$if_none_match = isset($_SERVER['HTTP_IF_NONE_MATCH']) ? stripslashes($_SERVER['HTTP_IF_NONE_MATCH']) : FALSE;
-  //if ($if_modified_since && $if_none_match
-  //    && $if_none_match == $etag // etag must match
-  //    && $if_modified_since == $last_modified) {  // if-modified-since must match
-  //  header('HTTP/1.1 304 Not Modified');
-  //  // All 304 responses must send an etag if the 200 response for the same object contained an etag
-  //  header("Etag: $etag");
-  //  exit;
-  //}
+  // See if the client has provided the required HTTP headers.
+  $if_modified_since = isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) ? stripslashes($_SERVER['HTTP_IF_MODIFIED_SINCE']) : FALSE;
+  $if_none_match = isset($_SERVER['HTTP_IF_NONE_MATCH']) ? stripslashes($_SERVER['HTTP_IF_NONE_MATCH']) : FALSE;
+  if ($if_modified_since && $if_none_match && $if_none_match == $etag && $if_modified_since == $last_modified) {
+    header('HTTP/1.1 304 Not Modified');
+    // All 304 responses must send an etag if the 200 response for the same object contained an etag
+    header('Etag: ' . $etag);
+    exit;
+  }
 
   $headers = array(
     'Content-type: text/xml; charset=utf-8',
     //'Content-length: ' . filesize($file),
     'Last-modified: ' . $last_modified,
     'Etag: ' . $etag,
-    //'Expires: Sun, 20 May 1984 00:00:00 GMT',
-    //'Cache-Control: must-revalidate',
+    'Expires: Sun, 20 May 1984 00:00:00 GMT',
+    'Cache-Control: must-revalidate',
   );
 
   // Transfer the file as output.
@@ -50,9 +48,10 @@ function xmlsitemap_output($chunk = 0) {
  * Output an XML transformation file for the sitemap XML.
  */
 function xmlsitemap_xsl() {
-  header('Content-type: application/xml; charset=utf-8');
-  $xml_css = url(drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap-xml.css');
-  $xml_js = url(drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap-xml.js');
+  drupal_set_header('Content-type: text/xml; charset=utf-8');
+  $module_path = drupal_get_path('module', 'xmlsitemap');
+  $xml_css = url($module_path . '/xmlsitemap-xml.css');
+  $xml_js = url($module_path . '/xmlsitemap-xml.js');
 echo <<<END
 <?xml version="1.0" encoding="UTF-8"?>
 <xsl:stylesheet version="2.0"
@@ -147,5 +146,4 @@ echo <<<END
   </xsl:template>
 </xsl:stylesheet>
 END;
-  exit();
 }
