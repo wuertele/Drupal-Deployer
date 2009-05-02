@@ -52,7 +52,7 @@ function xmlsitemap_output($chunk = 0) {
 function xmlsitemap_xsl() {
   header('Content-type: application/xml; charset=utf-8');
   $xml_css = url(drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap-xml.css');
-  $xml_js = url(drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap-xml-js');
+  $xml_js = url(drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap-xml.js');
 echo <<<END
 <?xml version="1.0" encoding="UTF-8"?>
 <xsl:stylesheet version="2.0"
