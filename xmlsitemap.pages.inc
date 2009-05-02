@@ -2,6 +2,11 @@
 // $Id$
 
 /**
+ * @file
+ * Page callbacks for the xmlsitemap module.
+ */
+
+/**
  * Output a sitemap page.
  */
 function xmlsitemap_output($chunk = 0) {
