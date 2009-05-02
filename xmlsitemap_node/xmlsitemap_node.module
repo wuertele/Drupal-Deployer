@@ -46,6 +46,7 @@ function xmlsitemap_node_node_load($node) {
  */
 function xmlsitemap_node_node_insert($node) {
   xmlsitemap_node_create_link($node);
+  xmlsitemap_recalculate_changefreq($node->xmlsitemap);
   xmlsitemap_save_link($node->xmlsitemap);
 }
 
@@ -79,11 +80,11 @@ function xmlsitemap_node_comment($comment, $op) {
     case 'publish':
     case 'unpublish':
       if ($node = node_load($comment->nid, NULL, TRUE)) {
+        xmlsitemap_node_create_link($node);
         if ($op != 'delete') {
-          // Setting revision to TRUE will recalculate the changefreq.
-          $node->revision = TRUE;
+          xmlsitemap_recalculate_changefreq($node->xmlsitemap);
         }
-        xmlsitemap_node_node_update($node);
+        xmlsitemap_save_link($node->xmlsitemap);
       }
       break;
   }
