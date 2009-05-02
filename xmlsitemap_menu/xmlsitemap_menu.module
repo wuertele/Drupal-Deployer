@@ -7,11 +7,11 @@
  * Process old menu links not found in the {xmlsitemap} table.
  */
 function xmlsitemap_menu_cron() {
-  if ($menus = xmlsitemap_menu_var('menus')) {
+  if ($menus = array_filter(xmlsitemap_menu_var('menus'))) {
     // Set the global user variable to the anonymous user.
     xmlsitemap_switch_user(drupal_anonymous_user());
 
-    $sql = "SELECT ml.mlid FROM {menu_links} LEFT JOIN {xmlsitemap} x ON ml.lid = x.id WHERE COALESCE(x.type, 'menu') = 'menu' AND x.id IS NULL AND ml.external = 0 AND ml.hidden = 0 AND ml.menu_name IN (" . db_placeholders($menus) . ")";
+    $sql = "SELECT ml.mlid FROM {menu_links} ml LEFT JOIN {xmlsitemap} x ON ml.mlid = x.id WHERE COALESCE(x.type, 'menu') = 'menu' AND x.id IS NULL AND ml.external = 0 AND ml.hidden = 0 AND ml.menu_name IN (" . db_placeholders($menus) . ")";
     $query = db_query_range($sql, $menus, 0, xmlsitemap_var('batch_limit'));
 
     while ($mlid = db_result($query)) {
@@ -27,13 +27,15 @@ function xmlsitemap_menu_cron() {
   }
 }
 
+dpm(xmlsitemap_menu_var('menus'));
+
 /**
  * Implementation of hook_xmlsitemap_links().
  */
 function xmlsitemap_menu_xmlsitemap_links($offset = 0, $limit = 0) {
   $links = array();
 
-  if ($menus = xmlsitemap_menu_var('menus')) {
+  if ($menus = array_filter(xmlsitemap_menu_var('menus'))) {
     // Set the global user variable to the anonymous user.
     xmlsitemap_switch_user(drupal_anonymous_user());
 
@@ -62,7 +64,7 @@ function xmlsitemap_menu_xmlsitemap_links_batch(&$context) {
   if (!isset($context['sandbox']['progress'])) {
     $context['sandbox']['progress'] = 0;
     $context['sandbox']['current_mlid'] = 0;
-    $menus = xmlsitemap_menu_var('menus');
+    $menus = array_filter(xmlsitemap_menu_var('menus'));
     $context['sandbox']['max'] = $menus ? db_result(db_query("SELECT COUNT(mlid) FROM {menu_links} WHERE external = 0 AND hidden = 0 AND menu_name IN (" . db_placeholders($menus) . ")")) : 0;
   }
 
