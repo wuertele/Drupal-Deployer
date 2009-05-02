@@ -8,7 +8,7 @@
  */
 function xmlsitemap_node_cron() {
   // Start with the most recently changed nodes first.
-  $query = db_query_range("SELECT DISTINCT(nid) FROM {node} n LEFT JOIN {xmlsitemap} x ON n.nid = x.id WHERE COALESCE(x.type, 'node') = 'node' AND x.id IS NULL ORDER BY n.changed DESC", NULL, 0, xmlsitemap_var('batch_limit'));
+  $query = db_query_range("SELECT n.nid FROM {node} n LEFT JOIN {xmlsitemap} x ON n.nid = x.id WHERE COALESCE(x.type, 'node') = 'node' AND x.id IS NULL ORDER BY n.changed DESC", NULL, 0, xmlsitemap_var('batch_limit'));
   while ($nid = db_result($query)) {
     $node = node_load($nid, NULL, TRUE);
     xmlsitemap_node_create_link($node);
@@ -143,7 +143,7 @@ function xmlsitemap_node_form_alter(&$form, $form_state, $form_id) {
 function xmlsitemap_node_xmlsitemap_links($offset = 0, $limit = 0) {
   $links = array();
 
-  $sql = "SELECT nid FROM {node} WHERE nid > %d ORDER BY nid ASC";
+  $sql = "SELECT n.nid FROM {node} n WHERE n.nid > %d ORDER BY n.nid";
   $query = ($limit ? db_query_range($sql, $offset, 0, $limit) : db_query($sql, $offset));
 
   while ($nid = db_result($query)) {
@@ -162,7 +162,7 @@ function xmlsitemap_node_xmlsitemap_links_batch(&$context) {
   if (!isset($context['sandbox']['progress'])) {
     $context['sandbox']['progress'] = 0;
     $context['sandbox']['current_nid'] = 0;
-    $context['sandbox']['max'] = db_result(db_query("SELECT COUNT(DISTINCT nid) FROM {node}"));
+    $context['sandbox']['max'] = db_result(db_query("SELECT COUNT(n.nid) FROM {node} n"));
   }
 
   $links = xmlsitemap_node_xmlsitemap_links($context['sandbox']['current_nid'], xmlsitemap_var('batch_limit'));

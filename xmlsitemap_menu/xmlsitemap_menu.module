@@ -33,11 +33,11 @@ function xmlsitemap_menu_cron() {
 function xmlsitemap_menu_xmlsitemap_links($offset = 0, $limit = 0) {
   $links = array();
 
-  // Set the global user variable to the anonymous user.
-  xmlsitemap_switch_user(drupal_anonymous_user());
-
   if ($menus = xmlsitemap_menu_var('menus')) {
-    $sql = "SELECT mlid FROM {menu_links} WHERE mlid > %d AND external = 0 AND hidden = 0 AND menu_name IN (" . db_placeholders($menus) . ") ORDER BY mlid";
+    // Set the global user variable to the anonymous user.
+    xmlsitemap_switch_user(drupal_anonymous_user());
+
+    $sql = "SELECT ml.mlid FROM {menu_links} ml WHERE ml.mlid > %d AND ml.external = 0 AND ml.hidden = 0 AND ml.menu_name IN (" . db_placeholders($menus) . ") ORDER BY ml.mlid";
     $args = array_merge(array($offset), $menus);
     $query = ($limit ? db_query_range($sql, $args, 0, $limit) : db_query($sql, $args));
 
@@ -47,10 +47,10 @@ function xmlsitemap_menu_xmlsitemap_links($offset = 0, $limit = 0) {
         $links[] = xmlsitemap_menu_create_link($menu_item);
       }
     }
-  }
 
-  // Set the global user variable back to the original user.
-  xmlsitemap_switch_user();
+    // Set the global user variable back to the original user.
+    xmlsitemap_switch_user();
+  }
 
   return $links;
 }
@@ -92,13 +92,15 @@ function xmlsitemap_menu_xmlsitemap_links_clear() {
  * Implementation of hook_form_FORM_ID_alter().
  */
 function xmlsitemap_menu_form_menu_edit_item_alter(&$form, $form_state) {
-  $form['#submit'][] = 'xmlsitemap_menu_menu_edit_item_submit';
+  //$form['#submit'][] = 'xmlsitemap_menu_menu_edit_item_submit';
 }
 
-function xmlsitemap_menu_menu_edit_item_submit($form, $form_state) {
-
-}
-
+/**
+ * Create a sitemap link from a menu item.
+ *
+ * @param $menu_item
+ *   A loaded menu item.
+ */
 function xmlsitemap_menu_create_link($menu_item) {
   return array(
     'type' => 'menu',
@@ -149,13 +151,13 @@ function xmlsitemap_menu_form_xmlsitemap_settings_form_alter(&$form, $form_state
 }
 
 /**
- * Submit handler;
+ * Submit handler; Remove links from de-selected menus.
  */
 function xmlsitemap_menu_settings_form_submit($form, $form_state) {
   $current_menus = xmlsitemap_menu_var('menus');
-  $removed_menus = array_diff($current_menus, $form_state['values']['xmlsitemap_menu_menus']);
+  $selected_menus = $form_state['values']['xmlsitemap_menu_menus'];
+  $removed_menus = array_diff($current_menus, $selected_menus);
 
-  // Remove links from de-selected menus.
   foreach ($removed_menus as $removed_menu) {
     db_query("DELETE FROM {xmlsitemap} WHERE type = 'menu' AND id IN (SELECT mlid FROM {menu_links} WHERE menu_name = '%s')", $removed_menu);
   }
