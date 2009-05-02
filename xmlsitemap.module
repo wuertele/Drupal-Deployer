@@ -93,13 +93,18 @@ function xmlsitemap_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'xmlsitemap.pages.inc',
   );
-  $items['sitemap.xml/%'] = array(
-    'page callback' => 'xmlsitemap_output',
-    'page arguments' => array(1),
-    'access arguments' => array('access content'),
-    'type' => MENU_CALLBACK,
-    'file' => 'xmlsitemap.pages.inc',
-  );
+  $chunks = xmlsitemap_get_chunk_count();
+  if ($chunks > 1) {
+    for ($i = 1; $i <= $chunks; $i++) {
+      $items['sitemap-' . $i . '.xml'] = array(
+        'page callback' => 'xmlsitemap_output',
+        'page arguments' => array((string) $i),
+        'access arguments' => array('access content'),
+        'type' => MENU_CALLBACK,
+        'file' => 'xmlsitemap.pages.inc',
+      );
+    }
+  }
   $items['sitemap.xsl'] = array(
     'page callback' => 'xmlsitemap_xsl',
     'access callback' => TRUE,
@@ -136,6 +141,9 @@ function xmlsitemap_regenerate() {
 
   // Unset the regenerate flag.
   variable_set('xmlsitemap_regenerate_needed', FALSE);
+
+  // If the chunk count has changed, we will need to rebuild the menu.
+  variable_set('menu_rebuild_needed', TRUE);
 }
 
 /**
@@ -350,6 +358,12 @@ function xmlsitemap_save_link(array $link) {
   // Allow other modules to alter the link (priority, status, etc.).
   drupal_alter('xmlsitemap_link', $link);
 
+  // If the link is not going to be in the sitemap, delete its data.
+  if (!$link['status']) {
+    xmlsitemap_delete_link(array('type' => $link['type'], 'id' => $link['id']));
+    return FALSE;
+  }
+
   // Warn if the priority is an invalid value.
   if ($link['priority'] < 0 || $link['priority'] > 1) {
     watchdog('xmlsitemap', "Invalid sitemap link priority %priority.<br />@link", array('%priority' => $link['priority'], '@link' => var_export($link, TRUE)), WATCHDOG_NOTICE);
@@ -460,6 +474,9 @@ function _xmlsitemap_rebuild_after() {
   // Reset the needs rebuild and regenerate flags.
   variable_set('xmlsitemap_rebuild_needed', FALSE);
   variable_set('xmlsitemap_regenerate_needed', FALSE);
+
+  // If the chunk count has changed, we will need to rebuild the menu.
+  variable_set('menu_rebuild_needed', TRUE);
 }
 
 /**
@@ -577,6 +594,8 @@ function xmlsitemap_generate_chunk($chunk) {
  * Generate the index sitemap.
  */
 function xmlsitemap_generate_index() {
+  global $user;
+
   $output = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
   if ($user->uid) {
     $output .= '<?xml-stylesheet type="text/xsl" href="'. url('sitemap.xsl', array('absolute' => TRUE)) .'" ?>'."\n";
@@ -589,7 +608,7 @@ function xmlsitemap_generate_index() {
   $count = xmlsitemap_get_chunk_count(TRUE);
   for ($i = 1; $i <= $count; $i++) {
     $output .= '<sitemap>';
-    $output .= '<loc>'. url('sitemap.xml/'. $i, array('absolute' => TRUE)) .'</loc>';
+    $output .= '<loc>'. url('sitemap-' . $i . '.xml', array('absolute' => TRUE)) .'</loc>';
     $output .= '<lastmod>'. gmdate(DATE_W3C, REQUEST_TIME) .'</lastmod>';
     $output .= '</sitemap>' . "\n";
   }
