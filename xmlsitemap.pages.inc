@@ -59,8 +59,8 @@ echo <<<END
     <html>
       <head>
         <title>Site map file</title>
-        <link href="{$basepath}/gss/gss.css" type="text/css" rel="stylesheet"/>
-        <script src="{$basepath}/gss/gss.js"></script>
+        <link href="{$basepath}/xmlsitemap-xml.css" type="text/css" rel="stylesheet"/>
+        <script src="{$basepath}/xmlsitemap-xml.js"></script>
       </head>
 
       <!-- Store in \$fileType if we are in a sitemap or in a siteindex -->
