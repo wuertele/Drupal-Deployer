@@ -129,6 +129,36 @@ function xmlsitemap_rebuild_confirm_submit($form, &$form_state) {
 }
 
 /**
+ * Perform operations before rebuilding the sitemap.
+ */
+function _xmlsitemap_rebuild_before() {
+  // Increase the processing time since this might take a little bit.
+  if (!ini_get('safe_mode')) {
+    @set_time_limit(240);
+  }
+
+  // Delete all sitemap data from the sitemap files directory.
+  $path = file_create_path(xmlsitemap_var('path'));
+  xmlsitemap_clean_directory($path, FALSE);
+  //file_check_directory($path, FILE_CREATE_DIRECTORY);
+
+  // Set the the sitemap will have to be rebuilt.
+  variable_set('xmlsitemap_rebuild_needed', TRUE);
+}
+
+/**
+ * Perform operations after rebuilding the sitemap.
+ */
+function _xmlsitemap_rebuild_after() {
+  // Reset the needs rebuild and regenerate flags.
+  variable_set('xmlsitemap_rebuild_needed', FALSE);
+  variable_set('xmlsitemap_regenerate_needed', FALSE);
+
+  // If the chunk count has changed, we will need to rebuild the menu.
+  variable_set('menu_rebuild_needed', TRUE);
+}
+
+/**
  * Batch information callback.
  */
 function xmlsitemap_rebuild_batch($form_state) {

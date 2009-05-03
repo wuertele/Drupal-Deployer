@@ -40,9 +40,7 @@ function xmlsitemap_help($path, $arg) {
       break;
     case 'admin/settings/xmlsitemap':
       // Show if there are any errors or warnings from xmlsitemap_requirements().
-      module_load_install('xmlsitemap');
-      $requirements = xmlsitemap_requirements('runtime');
-      if (drupal_requirements_severity($requirements) == (REQUIREMENT_WARNING | REQUIREMENT_ERROR) && user_access('access site reports')) {
+      if (xmlsitemap_check_status() && user_access('administer site configuration')) {
         drupal_set_message(t('One or more problems were detected with your sitemap configuration. Please check the <a href="@status-report">status report</a> for more information.', array('@status-report' => url('admin/reports/status'))), 'warning', FALSE);
       }
       break;
@@ -125,27 +123,6 @@ function xmlsitemap_cron() {
   }
 }
 
-function xmlsitemap_regenerate() {
-  // Clear the sitemap files directory (but don't remove it!).
-  $path = file_create_path(xmlsitemap_var('path'));
-  xmlsitemap_clean_directory($path, FALSE);
-
-  // Generate the sitemap pages.
-  $chunk_count = xmlsitemap_get_chunk_count(TRUE);
-  for ($i = 0; $i <= $chunk_count; $i++) {
-    xmlsitemap_generate($i);
-  }
-
-  // Show a watchdog message that the sitemap was regenerated.
-  watchdog('xmlsitemap', 'Sitemap regenerated.', array(), WATCHDOG_NOTICE, l(t('View'), 'sitemap.xml'));
-
-  // Unset the regenerate flag.
-  variable_set('xmlsitemap_regenerate_needed', FALSE);
-
-  // If the chunk count has changed, we will need to rebuild the menu.
-  variable_set('menu_rebuild_needed', TRUE);
-}
-
 /**
  * Implementation of hook_xmlsitemap_links().
  */
@@ -198,6 +175,52 @@ function xmlsitemap_robotstxt() {
   return array(
     'Sitemap: '. url('sitemap.xml', array('absolute' => TRUE)),
   );
+}
+
+/**
+ * Check the status of all hook_requirements from xmlsitemap modules.
+ *
+ * @return
+ *   TRUE if there is a warning or error requirement, or FALSE otherwise.
+ */
+function xmlsitemap_check_status() {
+  // Load .install files
+  include_once './includes/install.inc';
+  drupal_load_updates();
+
+  $requirements += array();
+  $modules = module_list();
+  foreach ($modules as $module) {
+    if (strpos($module, 'xmlsitemap') !== FALSE) {
+      $requirements += module_invoke($module, 'requirements', 'runtime');
+    }
+  }
+
+  return drupal_requirements_severity($requirements) == (REQUIREMENT_WARNING | REQUIREMENT_ERROR);
+}
+
+/**
+ * Delete and regenerate the sitemap files.
+ */
+function xmlsitemap_regenerate() {
+  // Clear the sitemap files directory (but don't remove it!).
+  $path = file_create_path(xmlsitemap_var('path'));
+  xmlsitemap_clean_directory($path, FALSE);
+
+  // Generate the sitemap pages.
+  $chunk_count = xmlsitemap_get_chunk_count(TRUE);
+  for ($i = 0; $i <= $chunk_count; $i++) {
+    xmlsitemap_generate($i);
+  }
+
+  // Show a watchdog message that the sitemap was regenerated.
+  watchdog('xmlsitemap', 'Sitemap regenerated.', array(), WATCHDOG_NOTICE, l(t('View'), 'sitemap.xml'));
+
+  // Unset the regenerate flag.
+  variable_set('xmlsitemap_regenerate_needed', FALSE);
+
+  // If the chunk count has changed, we will need to rebuild the menu.
+  variable_set('menu_rebuild_needed', TRUE);
 }
 
 /**
@@ -333,9 +356,9 @@ function xmlsitemap_load_link(array $where, array $args = array()) {
     }
   }
 
-  $link = db_fetch_object(db_query_range("SELECT * FROM {xmlsitemap} WHERE ". implode(' AND ', $where), $args, 0, 1));
+  $link = db_fetch_array(db_query_range("SELECT * FROM {xmlsitemap} WHERE ". implode(' AND ', $where), $args, 0, 1));
 
-  // Allow other modules to attach data onto the link.
+  // Allow other modules to respond after loading the link.
   //module_invoke_all('xmlsitemap_load_link', $link);
 
   return $link;
@@ -370,7 +393,7 @@ function xmlsitemap_save_link(array $link) {
   }
 
   $existing = xmlsitemap_load_link(array('type' => $link['type'], 'id' => $link['id']));
-  if (!$existing || array_intersect_assoc((array) $link, (array) $existing)) {
+  if (!$existing || array_intersect_assoc($link, $existing)) {
     // This is a new or changed entry, set that we need a sitemap rebuild.
     variable_set('xmlsitemap_regenerate_needed', TRUE);
 
@@ -398,16 +421,16 @@ function xmlsitemap_save_link(array $link) {
  */
 function xmlsitemap_delete_link(array $where, array $args = array()) {
   if ($existing = xmlsitemap_load_link($where, $args)) {
-    db_query("DELETE FROM {xmlsitemap} WHERE type = '%s' AND id = %d", $existing->type, $existing->id);
+    db_query("DELETE FROM {xmlsitemap} WHERE type = '%s' AND id = %d", $existing['type'], $existing['id']);
 
-    if ($existing->status) {
-      // Need to rebuild the sitemap since a link was deleted.
+    if ($existing['status']) {
+      // Set the regenerate flag since a sitemap-visible link was deleted.
       variable_set('xmlsitemap_regenerate_needed', TRUE);
     }
-  }
 
-  // Allow other modules to delete the link.
-  //module_invoke_all('xmlsitemap_delete_link', $where);
+    // Allow other modules to respond after deleting the link.
+    //module_invoke_all('xmlsitemap_delete_link', $link);
+  }
 }
 
 /**
@@ -438,66 +461,6 @@ function xmlsitemap_clean_directory($path, $remove_dir = FALSE, $level = 0) {
   elseif (is_file($path)) {
     return unlink($path);
   }
-}
-
-/**
- * Clears all sitemap data and caches.
- */
-function _xmlsitemap_clear_data() {
-  //db_query("DELETE FROM {xmlsitemap}");
-
-  // Delete all sitemap data from the sitemap files directory.
-  $path = file_create_path(xmlsitemap_var('path'));
-  xmlsitemap_clean_directory($path, FALSE);
-  //file_check_directory($path, FILE_CREATE_DIRECTORY);
-
-  variable_set('xmlsitemap_rebuild_needed', TRUE);
-}
-
-/**
- * Perform operations before rebuilding the sitemap.
- */
-function _xmlsitemap_rebuild_before() {
-  // Increase the processing time since this might take a little bit.
-  if (!ini_get('safe_mode')) {
-    @set_time_limit(240);
-  }
-
-  // Clear data and caches.
-  _xmlsitemap_clear_data();
-}
-
-/**
- * Perform operations after rebuilding the sitemap.
- */
-function _xmlsitemap_rebuild_after() {
-  // Reset the needs rebuild and regenerate flags.
-  variable_set('xmlsitemap_rebuild_needed', FALSE);
-  variable_set('xmlsitemap_regenerate_needed', FALSE);
-
-  // If the chunk count has changed, we will need to rebuild the menu.
-  variable_set('menu_rebuild_needed', TRUE);
-}
-
-/**
- * Rebuilds the sitemap using data from hook_xmlsitemap_links().
- */
-function xmlsitemap_rebuild() {
-  _xmlsitemap_rebuild_before();
-
-  // Fetch all the sitemap links and save them to the {xmlsitemap} table.
-  foreach (module_implements('xmlsitemap_links') as $module) {
-    $function = $module .'_xmlsitemap_links';
-    $links = $function();
-    foreach ($links as $link) {
-      xmlsitemap_save_link($link);
-    }
-  }
-
-  // Generate the sitemap pages.
-  xmlsitemap_regenerate();
-
-  _xmlsitemap_rebuild_after();
 }
 
 /**
