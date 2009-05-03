@@ -1,41 +1,50 @@
 <?php
 // $Id$
 
-class XMLSitemapNodeTestCase extends DrupalWebTestCase {
+/**
+ * @file
+ * Unit tests for the xmlsitemap_node module.
+ */
+
+class XMLSitemapNodeTestHelper extends XMLSitemapTestHelper {
   protected $admin_user;
   protected $normal_user;
   protected $nodes = array();
 
   function setUp() {
     parent::setUp('xmlsitemap', 'xmlsitemap_node');
+
     $this->admin_user = $this->drupalCreateUser(array('administer nodes'));
-    $this->normal_user = $this->drupalCreateUser(array('create page content'));
+    $this->normal_user = $this->drupalCreateUser(array('create page content', 'access content'));
     for ($i = 0; $i < 2; $i++) {
       $this->nodes[$i] = $this->drupalCreateNode();
     }
   }
-}
 
-/**
- * @file
- * Unit tests for the xmlsitemap_node module.
- */
-
-class XMLSitemapNodeUnitTest extends DrupalWebTestCase {
-  public static function getInfo() {
-    return array(
-      'name' => 'XML Sitemap node unit tests',
-      'description' => 'Unit tests for the XML Sitemap node module.',
-      'group' => 'XML Sitemap',
-    );
+  function assertNodeInSitemap($nid) {
+    return $this->assertInSitemap(array('type' => 'node', 'id' => $nid));
   }
 
-  function setUp() {
-    parent::setUp('xmlsitemap', 'xmlsitemap_node');
+  function assertNodeNotInSitemap($nid) {
+    return $this->assertNotInSitemap(array('type' => 'node', 'id' => $nid));
   }
 }
 
-class XMLSitemapNodeFunctionalTest extends SitemapTestCase {
+//class XMLSitemapNodeUnitTest extends DrupalWebTestCase {
+//  public static function getInfo() {
+//    return array(
+//      'name' => 'XML Sitemap node unit tests',
+//      'description' => 'Unit tests for the XML Sitemap node module.',
+//      'group' => 'XML Sitemap',
+//    );
+//  }
+//
+//  function setUp() {
+//    parent::setUp('xmlsitemap', 'xmlsitemap_node');
+//  }
+//}
+
+class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
   public static function getInfo() {
     return array(
       'name' => 'XML Sitemap Node functional tests',
@@ -44,20 +53,8 @@ class XMLSitemapNodeFunctionalTest extends SitemapTestCase {
     );
   }
 
-  function setUp() {
-    parent::setUp('xmlsitemap', 'xmlsitemap_node');
-  }
-
   function testMassOperations() {
-    $account = $this->drupalCreateUser(array('administer nodes'));
-    $this->drupalLogin($account);
-
-    $nodes = array();
-    for ($i = 0; $i < 2; $i++) {
-      $nodes[$i] = $this->drupalCreateNode();
-      $this->assertNodeInSitemap($nodes[$i]->nid);
-      $this->assertTrue(TRUE, var_export($nodes[$i], TRUE));
-    }
+    $this->drupalLogin($this->admin_user);
 
     $edit = array(
       'operation' => 'xmlsitemap_exclude',
@@ -67,7 +64,7 @@ class XMLSitemapNodeFunctionalTest extends SitemapTestCase {
     $this->drupalPost('admin/content/node', $edit, t('Update'));
 
     for ($i = 0; $i < 2; $i++) {
-      $this->assertNodeNotInSitemap($nodes[$i]->nid);
+      $this->assertNodeNotInSitemap($this->nodes[$i]->nid);
     }
 
     $edit = array(
@@ -78,15 +75,7 @@ class XMLSitemapNodeFunctionalTest extends SitemapTestCase {
     $this->drupalPost('admin/content/node', $edit, t('Update'));
 
     for ($i = 0; $i < 2; $i++) {
-      $this->assertNodeInSitemap($nodes[$i]->nid);
+      $this->assertNodeInSitemap($this->nodes[$i]->nid);
     }
-  }
-
-  function assertNodeInSitemap($nid) {
-    return $this->assertInSitemap(array('type' => 'node', 'id' => $nid));
-  }
-
-  function assertNodeNotInSitemap($nid) {
-    return $this->assertNotInSitemap(array('type' => 'node', 'id' => $nid));
   }
 }
