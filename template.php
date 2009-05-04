@@ -85,37 +85,6 @@ if (theme_get_setting('pixture_superfish')) {
 }
 
 /**
- * Initialize theme settings for search overlabel.
- */
-if (is_null(theme_get_setting('pixture_searchlabel'))) {  // <-- change this line
-  global $theme_key;
-
- /**
-  * The default values for the theme variables. Make sure $defaults exactly
-  * matches the $defaults in the theme-settings.php file.
-  */
-  $defaults = array(             // <-- change this array
-    'pixture_searchlabel' => 0,
-  );
-
-  // Get default theme settings.
-  $settings = theme_get_settings($theme_key);
-
-  // Save default theme settings.
-  variable_set(
-    str_replace('/', '_', 'theme_'. $theme_key .'_settings'),
-    array_merge($defaults, $settings)
-  );
-  // Force refresh of Drupal internals.
-  theme_get_setting('', TRUE);
-  return $defaults['pixture_searchlabel'];
-}
-// Conditionally load the overlabel JS
-if (theme_get_setting('pixture_searchlabel')) {
-  drupal_add_js(drupal_get_path('theme', 'pixture_reloaded') .'/ol/overlabel.js', 'theme');
-}
-
-/**
  * Override or insert PHPTemplate variables into the page templates.
  *
  * @param $vars

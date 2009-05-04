@@ -27,6 +27,8 @@ $info = array(
     '#9397d7,#575dc1,#091c3e,#d0d6f6,#555555' => t('Graphite'),
     '#54677d,#3d5c85,#282e39,#8692a7,#555555' => t('Ash'),
     '#aaaeb1,#4d637a,#8c909b,#eeecec,#555555' => t('Silver'),
+				'#202020,#0633a7,#000000,#808080,#000000' => t('Gothic'),
+    '#d1681d,#8b4513,#ffebcd,#d2691e,#000000' => t('Sandstone'),
   ),
 
   // Images to copy over

@@ -52,9 +52,9 @@
           <div id="branding">
             <?php if ($site_name): ?>
               <?php if ($title): ?>
-                <div><strong><?php print $site_name; ?></strong></div>
+                <div id="site-name"><strong><?php print $site_name; ?></strong></div>
               <?php else: /* Use h1 when the content title is empty */ ?> 
-                <h1><?php print $site_name; ?></h1>
+                <h1 id="site-name"><?php print $site_name; ?></h1>
               <?php endif; ?>
             <?php endif; ?>
             
