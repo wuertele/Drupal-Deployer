@@ -99,6 +99,7 @@ function xmlsitemap_settings_form_validate($form, $form_state) {
   $custom_links = preg_split('/[\r\n]+/', $form_state['values']['xmlsitemap_custom_links'], -1, PREG_SPLIT_NO_EMPTY);
   foreach ($custom_links as $custom_link) {
     if (!valid_url($custom_link)) {
+      // @todo This lets paths like ../directory in.
       form_set_error('xmlsitemap_custom_links', t('Invalid custom link %link.', array('%link' => $custom_link)));
     }
   }

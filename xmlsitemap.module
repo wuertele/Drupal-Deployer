@@ -188,11 +188,10 @@ function xmlsitemap_check_status() {
   include_once './includes/install.inc';
   drupal_load_updates();
 
-  $modules = module_list();
-  foreach ($modules as $module) {
+  foreach (module_implements('requirements') as $module) {
     if (strpos($module, 'xmlsitemap') !== FALSE) {
       $requirements = module_invoke($module, 'requirements', 'runtime');
-      if ($requirements && drupal_requirements_severity($requirements) == (REQUIREMENT_WARNING | REQUIREMENT_ERROR)) {
+      if (drupal_requirements_severity($requirements) == (REQUIREMENT_WARNING | REQUIREMENT_ERROR)) {
         return TRUE;
       }
     }
@@ -338,6 +337,26 @@ function xmlsitemap_recalculate_changefreq(&$link) {
   $link['changefreq'] = (($link['changefreq'] * $link['changecount']) + (REQUEST_TIME - $link['lastmod'])) / ($link['changecount'] + 1);
   $link['changecount']++;
   $link['lastmod'] = REQUEST_TIME;
+}
+
+/**
+ * Calculates the average interval between UNIX timestamps.
+ *
+ * @param $timestamps
+ *   An array of UNIX timestamp integers.
+ * @return
+ *   A float value with the average interval.
+ */
+function xmlsitemap_calculate_changefreq($timestamps) {
+  sort($timestamps);
+  $count = count($timestamps);
+  $diff = 0;
+
+  for ($i = 0; $i < ($count - 1); $i++) {
+    $diff += $timestamps[$i + 1] - $timestamps[$i];
+  }
+
+  return $count > 1 ? ($diff / $count) : 0;
 }
 
 /**
