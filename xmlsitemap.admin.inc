@@ -94,6 +94,14 @@ function xmlsitemap_settings_form_validate($form, $form_state) {
     // If creating the new directory was successful, remove the old directory.
     xmlsitemap_clean_directory($path_old, TRUE);
   }
+
+  // Validate the custom paths.
+  $custom_links = preg_split('/[\r\n]+/', $form_state['values']['xmlsitemap_custom_links'], -1, PREG_SPLIT_NO_EMPTY);
+  foreach ($custom_links as $custom_link) {
+    if (!valid_url($custom_link)) {
+      form_set_error('xmlsitemap_custom_links', t('Invalid custom link %link.', array('%link' => $custom_link)));
+    }
+  }
 }
 
 /**
