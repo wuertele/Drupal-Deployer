@@ -78,9 +78,10 @@ function xmlsitemap_node_comment($comment, $op) {
     case 'delete':
     case 'publish':
     case 'unpublish':
+      $comment = (object) $comment;
       if ($node = node_load($comment->nid, NULL, TRUE)) {
         xmlsitemap_node_create_link($node);
-        if ($op != 'delete') {
+        if ($op == 'publish') {
           xmlsitemap_recalculate_changefreq($node->xmlsitemap);
         }
         xmlsitemap_save_link($node->xmlsitemap);
@@ -255,21 +256,6 @@ function _xmlsitemap_node_mass_update_helper($nid, $updates) {
 }
 
 /**
- * Batch callback; sitemap node links mass update finished.
- */
-function _xmlsitemap_node_mass_update_batch_finished() {
-  if ($success) {
-    drupal_set_message(t('The update has been performed.'));
-  }
-  else {
-    drupal_set_message(t('An error occurred and processing did not complete.'), 'error');
-    $message = format_plural(count($results), '1 item successfully processed:', '@count items successfully processed:');
-    $message .= theme('item_list', $results);
-    drupal_set_message($message);
-  }
-}
-
-/**
  * Batch callback; sitemap node links mass update operation.
  */
 function _xmlsitemap_node_mass_update_batch_process($nodes, $updates, &$context) {
@@ -296,6 +282,21 @@ function _xmlsitemap_node_mass_update_batch_process($nodes, $updates, &$context)
 }
 
 /**
+ * Batch callback; sitemap node links mass update finished.
+ */
+function _xmlsitemap_node_mass_update_batch_finished() {
+  if ($success) {
+    drupal_set_message(t('The update has been performed.'));
+  }
+  else {
+    drupal_set_message(t('An error occurred and processing did not complete.'), 'error');
+    $message = format_plural(count($results), '1 item successfully processed:', '@count items successfully processed:');
+    $message .= theme('item_list', $results);
+    drupal_set_message($message);
+  }
+}
+
+/**
  * Get the sitemap link status of a node.
  *
  * @param $node
@@ -313,12 +314,20 @@ function xmlsitemap_node_get_status($node) {
   return $status;
 }
 
+/**
+ * Fetch all the timestamps for when a node was changed.
+ *
+ * @param $node
+ *   A node object.
+ * @return
+ *   An array of UNIX timestamp integers.
+ */
 function xmlsitemap_node_get_timestamps($node) {
   static $timestamps = array();
 
   if (!isset($timestamps[$node->nid])) {
     $timestamps[$node->nid] = array();
-    $query = db_query("SELECT c.timestamp FROM {comments} c WHERE c.nid = %d AND c.status = %d UNION SELECT nr.timestamp FROM {node_revisions} nr WHERE nr.nid = %d ORDER BY timestamp", $node->nid, COMMENT_PUBLISHED, $node->nid);
+    $query = db_query("SELECT c.timestamp FROM {comments} c WHERE c.nid = %d AND c.status = %d UNION ALL SELECT nr.timestamp FROM {node_revisions} nr WHERE nr.nid = %d", $node->nid, COMMENT_PUBLISHED, $node->nid);
     while ($timestamp = db_result($query)) {
       $timestamps[$node->nid][] = (int) $timestamp;
     }
@@ -329,6 +338,8 @@ function xmlsitemap_node_get_timestamps($node) {
 
 /**
  * Create a sitemap link from a node.
+ *
+ * The link will be saved as $node->xmlsitemap.
  *
  * @param $node
  *   A node object.
