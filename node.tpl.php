@@ -9,7 +9,7 @@
  * @see template_preprocess_node()
  */
 ?>
-<div class="node <?php print $node_classes; ?> <?php if (is_front) { print 'front-node'; } ?>" id="node-<?php print $node->nid; ?>">
+<div id="node-<?php print $node->nid; ?>" class="node <?php print $node_classes; ?>">
   <div class="node-inner-0"><div class="node-inner-1">
     <div class="node-inner-2"><div class="node-inner-3">
 
@@ -18,18 +18,16 @@
       <?php endif; ?>
 
       <?php if ($unpublished): ?>
-        <h4 class="unpublished"><?php print t('Unpublished'); ?></h4>
+        <div class="unpublished"><?php print t('Unpublished'); ?></div>
       <?php endif; ?>
 
-      <?php if (!empty($picture)) print $picture; ?>
+      <?php print $picture; ?>
 
       <?php if (!empty($submitted)): ?>
-        <div class="submitted"><abbr title="<?php print format_date($node->created, 'custom', "l, F j, Y - H:i"); ?>">
-	       <?php print $date; ?></abbr> <?php print t('by'); ?> <em><?php print $name; ?></em>
-        </div>
+        <div class="submitted"><?php print $submitted; ?></div>
       <?php endif; ?>
 
-      <?php if (count($taxonomy)): ?>
+      <?php if ($terms): ?>
         <div class="taxonomy"><?php print t('Posted in ') . $terms; ?></div>
       <?php endif; ?>
 
@@ -37,7 +35,7 @@
         <?php print $content; ?>
       </div>
 
-      <?php if (!empty($links)): ?>
+      <?php if ($links): ?>
         <div class="actions clearfix"><?php print $links; ?></div>
       <?php endif; ?>
 

@@ -13,12 +13,12 @@
   <div class="comment-inner-0"><div class="comment-inner-1">
     <div class="comment-inner-2"><div class="comment-inner-3">
 
-    <?php if (!empty($title)): ?>
+    <?php if ($title): ?>
       <h3 class="title"><?php print $title; if (!empty($new)): ?> <span class="new"><?php print $new; ?></span><?php endif; ?></h3>
     <?php endif; ?>
 
     <?php if ($unpublished): ?>
-      <h4 class="unpublished"><?php print t('Unpublished'); ?></h4>
+      <div class="unpublished"><?php print t('Unpublished'); ?></div>
     <?php endif; ?>
 
     <div class="submitted"><?php print $submitted; ?></div>
@@ -29,7 +29,7 @@
 
       <?php print $content; ?>
 
-      <?php if (!empty($signature)): ?>
+      <?php if ($signature): ?>
         <div class="user-signature clear">
           <?php print $signature ?>
         </div>
@@ -37,7 +37,7 @@
 
     </div>
 
-    <?php if (!empty($links)): ?>
+    <?php if ($links): ?>
       <div class="links clearfix"><?php print $links; ?></div>
     <?php endif; ?>
 

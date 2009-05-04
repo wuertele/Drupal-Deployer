@@ -135,6 +135,19 @@ function pixture_reloaded_preprocess_page(&$vars, $hook) {
   if ($vars['help'] == "<div class=\"help\"><p></p>\n</div>") {
     $vars['help'] = '';
   }
+  
+  // Set variables for the logo and site_name.
+  if (!empty($vars['logo'])) {
+    $vars['site_logo'] = '<a href="'. $vars['front_page'] .'" title="'. t('Home page') .'" rel="home"><img src="'. $vars['logo'] .'" alt="'. $vars['site_name'] .' '. t('logo') .'" /></a>';
+  }
+  if (!empty($vars['site_name'])) {
+    $vars['site_name'] = '<a href="'. $vars['front_page'] .'" title="'. t('Home page') .'" rel="home">'. $vars['site_name'] .'</a>';
+  }
+  
+  // Set variables for the primary and secondary links.
+  if (!empty($vars['primary_links'])) {
+    $vars['primary_menu'] = theme('links', $vars['primary_links'], array('class' => 'links primary-links'));
+  }
 
   // Classes for body element. Allows advanced theming based on context
   // (home page, node of certain type, etc.)
@@ -197,6 +210,10 @@ function pixture_reloaded_preprocess_node(&$vars, $hook) {
     if ($vars['teaser']) {
       // Node is displayed as teaser
       $node_classes[] = 'node-teaser';
+    }
+    if ($vars['$is_front']) {
+      // Node is displayed on the front page
+      $node_classes[] = 'front-node';
     }
   // Class for node type: "node-type-page", "node-type-story", "node-type-my-custom-type", etc.
   $node_classes[] = 'node-type-'. $vars['node']->type;
@@ -274,85 +291,6 @@ function pixture_reloaded_preprocess_block(&$vars, $hook) {
   $block_classes[] = 'count-'. $vars['id'];
   $vars['block_classes'] = implode(' ', $block_classes);
 
-}
-
-/**
- * Override or insert PHPTemplate variables into the search_theme_form template.
- *
- * @param $vars
- *   A sequential array of variables to pass to the theme template.
- * @param $hook
- *   The name of the theme function being called (not used in this case.)
- */ 
-function pixture_reloaded_preprocess_search_theme_form(&$vars, $hook) {
- 
-  // Modify elements of the search form
-  $vars['form']['search_theme_form']['#title'] = t('Search this site');
- 
-  // Set a default value for the search box, don't use if using the theme setting to
-		// move the label into the search box
-  //$vars['form']['search_theme_form']['#value'] = t('Search');
- 
-  // Change the text on the submit button
-  //$vars['form']['submit']['#value'] = t('Go');
- 
-  // Rebuild the rendered version (search form only, rest remains unchanged)
-  unset($vars['form']['search_theme_form']['#printed']);
-  $vars['search']['search_theme_form'] = drupal_render($vars['form']['search_theme_form']);
- 
-  // Rebuild the rendered version (submit button, rest remains unchanged)
-  unset($vars['form']['submit']['#printed']);
-  $vars['search']['submit'] = drupal_render($vars['form']['submit']);
- 
-  // Collect all form elements to make it easier to print the whole form.
-  $vars['search_form'] = implode($vars['search']);
-}
-
-/**
- * Return a themed form element.
- *
- * @param element
- *   An associative array containing the properties of the element. 
-	*   Properties used: title, description, id, required
- * @param $value
- *    The form element's data.
- */
-// Remove colons proceeding a question mark, such as in Poll questions.
-function phptemplate_form_element($element, $value) {
-  $output = theme_form_element($element, $value);
-  return preg_replace('@([.!?]):\s*(<span.*</span>){0,1}(</label>)@i', '$1$2$3', $output);
-}
-// Remove all colons form form elements.
-function pixture_reloaded_form_element($element, $value) {
-  // This is also used in the installer, pre-database setup.
-  $t = get_t();
-
-  $output = '<div class="form-item"';
-  if (!empty($element['#id'])) {
-    $output .= ' id="'. $element['#id'] .'-wrapper"';
-  }
-  $output .= ">\n";
-  $required = !empty($element['#required']) ? '<span class="form-required" title="'. $t('This field is required.') .'">*</span>' : '';
-
-  if (!empty($element['#title'])) {
-    $title = $element['#title'];
-    if (!empty($element['#id'])) {
-      $output .= ' <label for="'. $element['#id'] .'">'. $t('!title !required', array('!title' => filter_xss_admin($title), '!required' => $required)) ."</label>\n";
-    }
-    else {
-      $output .= ' <label>'. $t('!title !required', array('!title' => filter_xss_admin($title), '!required' => $required)) ."</label>\n";
-    }
-  }
-
-  $output .= " $value\n";
-
-  if (!empty($element['#description'])) {
-    $output .= ' <div class="description">'. $element['#description'] ."</div>\n";
-  }
-
-  $output .= "</div>\n";
-
-  return $output;
 }
 
 /**
