@@ -16,6 +16,15 @@ function file_aliases_menu() {
 }
 
 /**
+ * Implementation of hook_theme_registry_alter().
+ */
+function file_aliases_theme_registry_alter(&$theme_registry) {
+  $theme_registry['imagefield_image']['theme path'] = drupal_get_path('module', 'file_aliases');
+  $theme_registry['imagefield_image']['function'] = 'theme_file_aliases_imagefield_image';
+  $theme_registry['imagefield_image']['theme paths'][0] = drupal_get_path('module', 'file_aliases');
+}
+
+/**
  * Implementation of hook_filefield_paths_field_settings().
  */
 function file_aliases_filefield_paths_field_settings() {
@@ -79,6 +88,7 @@ function file_aliases_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
               $path .= '../';
             }
 
+            $file['field']['origpath'] = $file['field']['filepath'];
             $file['field']['filepath'] = $path . $alias;
             $file['field']['filename'] = array_pop(explode('/', $alias));
           }
@@ -90,7 +100,7 @@ function file_aliases_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 }
 
 function file_aliases_load_fid($fid) {
-  if ($_SERVER['REQUEST_URI'] == '/filefield_paths/alias/'. $fid) {
+  if (request_uri() == base_path() .'filefield_paths/alias/'. $fid) {
     drupal_not_found();
     exit;
   }
@@ -107,4 +117,44 @@ function file_aliases_load_fid($fid) {
     header('Cache-Control: public');
     readfile($result->filepath);
   }
+}
+
+/**
+ * Modified version of theme_imagefield_image().
+ */
+function theme_file_aliases_imagefield_image($file, $alt = '', $title = '', $attributes = NULL, $getsize = TRUE) {
+  $file = (array)$file;
+
+  if (isset($file['origpath'])) {
+    $file['alias'] = $file['filepath'];
+    $file['filepath'] = $file['origpath'];
+  }
+
+  if (!file_exists($file['filepath'])) {
+    return '<!-- File not found: '. $file['filepath'] .' -->';
+  }
+
+  if ($getsize && (list($width, $height, $type, $image_attributes) = @getimagesize($file['filepath']))) {
+    $attributes['width'] = $width;
+    $attributes['height'] = $height;
+  }
+
+  if (!empty($title)) {
+    $attributes['title'] = $title;
+  }
+
+  // Alt text should be added even if it is an empty string.
+  $attributes['alt'] = $alt;
+
+  // Add a timestamp to the URL to ensure it is immediately updated after editing.
+  $query_string = '';
+  if (isset($file['timestamp'])) {
+    $query_character = (variable_get('file_downloads', FILE_DOWNLOADS_PUBLIC) == FILE_DOWNLOADS_PRIVATE && variable_get('clean_url', '0') == '0') ? '&' : '?';
+    $query_string = $query_character . $file['timestamp'];
+  }
+
+  $url = file_create_url(isset($file['alias']) ? $file['alias'] : $file['filepath']) . $query_string;
+  $attributes['src'] = $url;
+  $attributes = drupal_attributes($attributes);
+  return '<img '. $attributes .' />';
 }
