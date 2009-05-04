@@ -39,6 +39,11 @@ function xmlsitemap_settings_form() {
     '#options' => array(0 => t('No minimum')) + drupal_map_assoc(array(300, 900, 1800, 3600, 10800, 21600, 32400, 43200, 86400, 172800, 259200, 604800), 'format_interval'),
     '#default_value' => xmlsitemap_var('minimum_lifetime')
   );
+  $form['xmlsitemap']['xmlsitemap_xsl'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Include an XSL stylesheet in the sitemaps.'),
+    '#default_value' => xmlsitemap_var('xsl'),
+  );
   $form['xmlsitemap']['xmlsitemap_chunk_size'] = array(
     '#type' => 'select',
     '#title' => t('Number of links in each sitemap page'),

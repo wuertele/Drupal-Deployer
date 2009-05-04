@@ -188,15 +188,17 @@ function xmlsitemap_check_status() {
   include_once './includes/install.inc';
   drupal_load_updates();
 
-  $requirements += array();
   $modules = module_list();
   foreach ($modules as $module) {
     if (strpos($module, 'xmlsitemap') !== FALSE) {
-      $requirements += module_invoke($module, 'requirements', 'runtime');
+      $requirements = module_invoke($module, 'requirements', 'runtime');
+      if (drupal_requirements_severity($requirements) == (REQUIREMENT_WARNING | REQUIREMENT_ERROR)) {
+        return TRUE;
+      }
     }
   }
 
-  return drupal_requirements_severity($requirements) == (REQUIREMENT_WARNING | REQUIREMENT_ERROR);
+  return FALSE;
 }
 
 /**
@@ -516,7 +518,9 @@ function xmlsitemap_generate_chunk($chunk) {
   $language = language_default();
 
   $output = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-  $output .= '<?xml-stylesheet type="text/xsl" href="'. url('sitemap.xsl', array('absolute' => TRUE)) .'" ?>' . "\n";
+  if (xmlsitemap_var('xsl')) {
+    $output .= '<?xml-stylesheet type="text/xsl" href="'. url('sitemap.xsl', array('absolute' => TRUE)) .'" ?>' . "\n";
+  }
   $output .= '<urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' . "\n";
   $output .= '  xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9"' . "\n";
   $output .= '  url="http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd"' . "\n";
@@ -555,7 +559,9 @@ function xmlsitemap_generate_chunk($chunk) {
  */
 function xmlsitemap_generate_index() {
   $output = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-  $output .= '<?xml-stylesheet type="text/xsl" href="'. url('sitemap.xsl', array('absolute' => TRUE)) .'" ?>' . "\n";
+  if (xmlsitemap_var('xsl')) {
+    $output .= '<?xml-stylesheet type="text/xsl" href="'. url('sitemap.xsl', array('absolute' => TRUE)) .'" ?>' . "\n";
+  }
   $output .= '<sitemapindex xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' . "\n";
   $output .= '  xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9"' . "\n";
   $output .= '  url="http://www.sitemaps.org/schemas/sitemap/0.9/siteindex.xsd"' . "\n";
@@ -587,6 +593,7 @@ function xmlsitemap_variables() {
     'xmlsitemap_batch_limit' => 100,
     'xmlsitemap_custom_links' => '',
     'xmlsitemap_minimum_lifetime' => 86400,
+    'xmlsitemap_xsl' => TRUE,
   );
 }
 

@@ -48,7 +48,7 @@ function xmlsitemap_output($chunk = 0) {
  * Output an XML transformation file for the sitemap XML.
  */
 function xmlsitemap_xsl() {
-  drupal_set_header('Content-type: text/xml; charset=utf-8');
+  drupal_set_header('Content-type: application/xml; charset=utf-8');
   $module_path = drupal_get_path('module', 'xmlsitemap');
   $xml_css = url($module_path . '/xmlsitemap-xml.css');
   $xml_js = url($module_path . '/xmlsitemap-xml.js');
