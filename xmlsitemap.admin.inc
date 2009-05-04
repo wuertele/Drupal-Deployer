@@ -43,6 +43,7 @@ function xmlsitemap_settings_form() {
     '#type' => 'checkbox',
     '#title' => t('Include an XSL stylesheet in the sitemaps.'),
     '#default_value' => xmlsitemap_var('xsl'),
+    '#description' => t('Using the stylesheet will make it easier for non-computers to view and sort.')
   );
   $form['xmlsitemap']['xmlsitemap_chunk_size'] = array(
     '#type' => 'select',
@@ -149,6 +150,9 @@ function _xmlsitemap_rebuild_before() {
 
   // Set the the sitemap will have to be rebuilt.
   variable_set('xmlsitemap_rebuild_needed', TRUE);
+
+  // Save custom data into a temporary table so it can be re-loaded later.
+  //db_query_temporary("SELECT type, id, priority, changefreq, changecount FROM {xmlsitemap}", 'xmlsitemap_temp');
 }
 
 /**
