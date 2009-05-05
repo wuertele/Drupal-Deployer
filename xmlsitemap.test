@@ -107,12 +107,43 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
 
   }
 
+  /**
+   * Test the xmlsitemap_calculate_changereq() function.
+   */
   function testCalculateChangefreq() {
+    // The test values.
+    $values = array(
+      array(),
+      array(REQUEST_TIME),
+      array(REQUEST_TIME, REQUEST_TIME - 200),
+      array(REQUEST_TIME - 200, REQUEST_TIME, REQUEST_TIME - 600),
+    );
 
+    // Expected values.
+    $expecteds = array(0, 0, 200, 300);
+
+    foreach ($values as $i => $value) {
+      $this->assertEqual(xmlsitemap_calculate_changefreq($value), $expecteds[$i]);
+    }
   }
 
+  /**
+   * Test the xmlsitemap_recalculate_changefreq() function.
+   */
   function testRecalculateChangefreq() {
+    // The starting test value.
+    $value = array('lastmod' => REQUEST_TIME - 1000, 'changefreq' => 0, 'changecount' => 0);
 
+    // Expected values.
+    $expecteds = array(
+      array('lastmod' => REQUEST_TIME, 'changefreq' => 1000, 'changecount' => 1),
+      array('lastmod' => REQUEST_TIME, 'changefreq' => 500, 'changecount' => 2),
+    );
+
+    foreach ($expecteds as $expected) {
+      xmlsitemap_recalculate_changefreq($value);
+      $this->assertEqual($value, $expected);
+    }
   }
 }
 
