@@ -75,37 +75,47 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
    * Test the xmlsitemap_get_changefreq() function.
    */
   function testGetChangefreq() {
-    $values = array();
-    $values[0] = FALSE;
-    $values[mt_rand(1, XMLSITEMAP_FREQUENCY_ALWAYS)] = 'always';
-    $values[mt_rand(XMLSITEMAP_FREQUENCY_ALWAYS + 1, XMLSITEMAP_FREQUENCY_HOURLY)] = 'hourly';
-    $values[mt_rand(XMLSITEMAP_FREQUENCY_HOURLY + 1, XMLSITEMAP_FREQUENCY_DAILY)] = 'daily';
-    $values[mt_rand(XMLSITEMAP_FREQUENCY_DAILY + 1, XMLSITEMAP_FREQUENCY_WEEKLY)] = 'weekly';
-    $values[mt_rand(XMLSITEMAP_FREQUENCY_WEEKLY + 1, XMLSITEMAP_FREQUENCY_MONTHLY)] = 'monthly';
-    $values[mt_rand(XMLSITEMAP_FREQUENCY_MONTHLY + 1, XMLSITEMAP_FREQUENCY_YEARLY)] = 'yearly';
-    $values[mt_rand(XMLSITEMAP_FREQUENCY_YEARLY + 1, mt_getrandmax())] = 'never';
+    // The test values.
+    $values = array(
+      0,
+      mt_rand(1, XMLSITEMAP_FREQUENCY_ALWAYS),
+      mt_rand(XMLSITEMAP_FREQUENCY_ALWAYS + 1, XMLSITEMAP_FREQUENCY_HOURLY),
+      mt_rand(XMLSITEMAP_FREQUENCY_HOURLY + 1, XMLSITEMAP_FREQUENCY_DAILY),
+      mt_rand(XMLSITEMAP_FREQUENCY_DAILY + 1, XMLSITEMAP_FREQUENCY_WEEKLY),
+      mt_rand(XMLSITEMAP_FREQUENCY_WEEKLY + 1, XMLSITEMAP_FREQUENCY_MONTHLY),
+      mt_rand(XMLSITEMAP_FREQUENCY_MONTHLY + 1, XMLSITEMAP_FREQUENCY_YEARLY),
+      mt_rand(XMLSITEMAP_FREQUENCY_YEARLY + 1, mt_getrandmax()),
+    );
 
-    foreach ($values as $value => $expected) {
+    // The expected values.
+    $expected = array(
+      FALSE,
+      'always',
+      'hourly',
+      'daily',
+      'weekly',
+      'monthly',
+      'yearly',
+      'never',
+    );
+
+    foreach ($values as $i => $value) {
       $actual = xmlsitemap_get_changefreq($value);
-      $this->assertIdentical($actual, $expected, t('Interval %interval was %actual, expected %expected.', array('%interval' => format_interval($value), '%actual' => $actual, '%expected' => $expected)));
+      $this->assertIdentical($actual, $expected[$i]);
     }
   }
 
-  function testGetChunkCount() {
-
-  }
-
-  function testGetChunkFile() {
-
-  }
-
-  function testGetChunkSize() {
-
-  }
-
-  function testGetLinkCount() {
-
-  }
+  //function testGetChunkCount() {
+  //}
+  //
+  //function testGetChunkFile() {
+  //}
+  //
+  //function testGetChunkSize() {
+  //}
+  //
+  //function testGetLinkCount() {
+  //}
 
   /**
    * Test the xmlsitemap_calculate_changereq() function.
@@ -120,10 +130,12 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
     );
 
     // Expected values.
-    $expecteds = array(0, 0, 200, 300);
+    $expected = array(0, 0, 200, 300);
 
     foreach ($values as $i => $value) {
-      $this->assertEqual(xmlsitemap_calculate_changefreq($value), $expecteds[$i]);
+      $actual = xmlsitemap_calculate_changefreq($value);
+      $this->assertEqual($actual, $expected[$i]);
+
     }
   }
 
@@ -138,6 +150,7 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
     $expecteds = array(
       array('lastmod' => REQUEST_TIME, 'changefreq' => 1000, 'changecount' => 1),
       array('lastmod' => REQUEST_TIME, 'changefreq' => 500, 'changecount' => 2),
+      array('lastmod' => REQUEST_TIME, 'changefreq' => 333, 'changecount' => 3),
     );
 
     foreach ($expecteds as $expected) {
@@ -145,6 +158,21 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
       $this->assertEqual($value, $expected);
     }
   }
+
+  //function testSwitchUser() {
+  //}
+  //
+  //function testWriteRecord() {
+  //}
+  //
+  //function testLoadLink() {
+  //}
+  //
+  //function testSaveLink() {
+  //}
+  //
+  //function testDeleteLink() {
+  //}
 }
 
 class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {

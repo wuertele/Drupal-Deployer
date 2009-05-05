@@ -35,16 +35,21 @@ define('XMLSITEMAP_FREQUENCY_ALWAYS', 60);
  * Implementation of hook_help().
  */
 function xmlsitemap_help($path, $arg) {
+  $output = '';
+
   switch ($path) {
     case 'admin/help#xmlsitemap':
       break;
     case 'admin/settings/xmlsitemap':
-      // Show if there are any errors or warnings from xmlsitemap_requirements().
-      if (xmlsitemap_check_status() && user_access('administer site configuration')) {
-        drupal_set_message(t('One or more problems were detected with your sitemap configuration. Please check the <a href="@status-report">status report</a> for more information.', array('@status-report' => url('admin/reports/status'))), 'warning', FALSE);
-      }
       break;
   }
+
+  if (strpos($path, 'xmlsitemap') !== FALSE) {
+    $output .= '<p>' . t('Your sitemap is at <a href="@sitemap">@sitemap</a>.', array('@sitemap' => url('sitemap.xml', array('absolute' => TRUE)))) . '</p>';
+    xmlsitemap_check_status();
+  }
+
+  return $output;
 }
 
 /**
@@ -157,7 +162,8 @@ function xmlsitemap_xmlsitemap_links() {
 function xmlsitemap_xmlsitemap_link_alter(&$link) {
   // Alter the frontpage priority.
   if ($link['type'] == 'frontpage' || $link['loc'] == '' || $link['loc'] == drupal_get_normal_path(variable_get('site_frontpage', 'node'))) {
-    $link['priority'] = xmlsitemap_var('priority_frontpage');
+    $link['priority'] = xmlsitemap_var('frontpage_priority');
+    $link['changefreq'] = xmlsitemap_var('frontpage_changefreq');
   }
 }
 
@@ -178,26 +184,34 @@ function xmlsitemap_robotstxt() {
 }
 
 /**
- * Check the status of all hook_requirements from xmlsitemap modules.
+ * Check the status of all hook_requirements() from xmlsitemap modules.
  *
+ * @param $return_only
+ *   If TRUE, will return the result, otherwise it will show a message.
  * @return
  *   TRUE if there is a warning or error requirement, or FALSE otherwise.
  */
-function xmlsitemap_check_status() {
+function xmlsitemap_check_status($return_only = FALSE) {
   // Load .install files
   include_once './includes/install.inc';
   drupal_load_updates();
+  $warnings = FALSE;
 
   foreach (module_implements('requirements') as $module) {
     if (strpos($module, 'xmlsitemap') !== FALSE) {
       $requirements = module_invoke($module, 'requirements', 'runtime');
       if (drupal_requirements_severity($requirements) == (REQUIREMENT_WARNING | REQUIREMENT_ERROR)) {
-        return TRUE;
+        $warnings = TRUE;
+        break;
       }
     }
   }
 
-  return FALSE;
+  if ($warnings && !$return_only && user_access('administer site configuration')) {
+    drupal_set_message(t('One or more problems were detected with your sitemap configuration. Please check the <a href="@status-report">status report</a> for more information.', array('@status-report' => url('admin/reports/status'))), 'warning', FALSE);
+  }
+
+  return $warnings;
 }
 
 /**
@@ -247,6 +261,17 @@ function xmlsitemap_get_priority_options($include_default = FALSE) {
   return $options;
 }
 
+function xmlsitemap_get_changefreq_options() {
+  return array(
+     XMLSITEMAP_FREQUENCY_ALWAYS => 'always',
+     XMLSITEMAP_FREQUENCY_HOURLY => 'hourly',
+     XMLSITEMAP_FREQUENCY_DAILY => 'daily',
+     XMLSITEMAP_FREQUENCY_WEEKLY => 'weekly',
+     XMLSITEMAP_FREQUENCY_MONTHLY => 'monthly',
+     XMLSITEMAP_FREQUENCY_YEARLY => 'yearly',
+  );
+}
+
 /**
  * Determine the frequency of updates to a link.
  *
@@ -261,17 +286,7 @@ function xmlsitemap_get_changefreq($interval) {
     return FALSE;
   }
 
-  $frequencies = array(
-    'always' => XMLSITEMAP_FREQUENCY_ALWAYS,
-    'hourly' => XMLSITEMAP_FREQUENCY_HOURLY,
-    'daily' => XMLSITEMAP_FREQUENCY_DAILY,
-    'weekly' => XMLSITEMAP_FREQUENCY_WEEKLY,
-    'monthly' => XMLSITEMAP_FREQUENCY_MONTHLY,
-    'yearly' => XMLSITEMAP_FREQUENCY_YEARLY,
-    //'never' => XMLSITEMAP_FREQUENCY_YEARLY * 2,
-  );
-
-  foreach ($frequencies as $frequency => $value) {
+  foreach (xmlsitemap_get_changefreq_options() as $value => $frequency) {
     if ($interval <= $value) {
       return $frequency;
     }
@@ -334,7 +349,7 @@ function xmlsitemap_get_chunk_size($reset = FALSE) {
  *   A sitemap link array.
  */
 function xmlsitemap_recalculate_changefreq(&$link) {
-  $link['changefreq'] = (($link['changefreq'] * $link['changecount']) + (REQUEST_TIME - $link['lastmod'])) / ($link['changecount'] + 1);
+  $link['changefreq'] = round((($link['changefreq'] * $link['changecount']) + (REQUEST_TIME - $link['lastmod'])) / ($link['changecount'] + 1));
   $link['changecount']++;
   $link['lastmod'] = REQUEST_TIME;
 }
@@ -345,7 +360,7 @@ function xmlsitemap_recalculate_changefreq(&$link) {
  * @param $timestamps
  *   An array of UNIX timestamp integers.
  * @return
- *   A float value with the average interval.
+ *   An integer of the average interval.
  */
 function xmlsitemap_calculate_changefreq($timestamps) {
   sort($timestamps);
@@ -356,7 +371,7 @@ function xmlsitemap_calculate_changefreq($timestamps) {
     $diff += $timestamps[$i + 1] - $timestamps[$i];
   }
 
-  return $count > 0 ? ($diff / $count) : 0;
+  return $count > 0 ? round($diff / $count) : 0;
 }
 
 /**
@@ -553,25 +568,16 @@ function xmlsitemap_generate_chunk($chunk) {
   $limit = xmlsitemap_get_chunk_size();
   $query = db_query_range($sql, array($language->language), $offset, $limit);
 
-  //$sql = "SELECT COALESCE(ua.dst, x.loc) AS alias, x.loc, x.lastmod,
-  //        ((x.changefreq * x.changecount) + (%d - x.lastmod)) / (x.changecount + 1) as changefreq,
-  //        x.priority, ua.language FROM {xmlsitemap} x
-  //        LEFT JOIN {url_alias} ua ON x.loc = ua.src
-  //        WHERE x.status = 1 AND (ua.language IS NULL OR ua.language IN ('', '%s'))
-  //        GROUP BY x.loc";
-  //$offset = max($chunk - 1, 0) * xmlsitemap_get_chunk_size();
-  //$limit = xmlsitemap_get_chunk_size();
-  //$query = db_query_range($sql, array(REQUEST_TIME, $language->language), $offset, $limit);
-
   while ($link = db_fetch_array($query)) {
     $output .= '<url>';
     $output .= '<loc>'. url($link['alias'], array('absolute' => TRUE, 'alias' => TRUE)) .'</loc>';
     if ($link['lastmod']) {
       $output .= '<lastmod>'. gmdate(DATE_W3C, $link['lastmod']) .'</lastmod>';
+        // If the link has a lastmod value, update the changefreq so that links
+        // with a short changefreq but updated two years ago show decay.
+      xmlsitemap_recalculate_changefreq($link);
     }
     if ($link['changefreq']) {
-      // Nodes that were updated a long time ago should show longer changefreq.
-      xmlsitemap_recalculate_changefreq($link);
       $output .= '<changefreq>'. xmlsitemap_get_changefreq($link['changefreq']) .'</changefreq>';
     }
     if ($link['priority'] !== XMLSITEMAP_PRIORITY_DEFAULT) {
@@ -617,7 +623,8 @@ function xmlsitemap_variables() {
     'xmlsitemap_rebuild_needed' => FALSE,
     'xmlsitemap_regenerate_needed' => FALSE,
     'xmlsitemap_chunk_size' => 'auto',
-    'xmlsitemap_priority_frontpage' => '1.0',
+    'xmlsitemap_frontpage_priority' => '1.0',
+    'xmlsitemap_frontpage_changefreq' => XMLSITEMAP_FREQUENCY_DAILY,
     'xmlsitemap_priority_default' => '0.5',
     'xmlsitemap_path' => 'xmlsitemap',
     'xmlsitemap_batch_limit' => 100,

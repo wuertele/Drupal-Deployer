@@ -27,12 +27,6 @@ function xmlsitemap_settings_form() {
     '#default_value' => xmlsitemap_var('batch_limit'),
     '#description' => t('If you have problems running cron or rebuilding the sitemap, you may want to lower this value.'),
   );
-  $form['xmlsitemap']['xmlsitemap_priority_frontpage'] = array(
-    '#type' => 'select',
-    '#title' => t('Frontpage priority'),
-    '#options' => xmlsitemap_get_priority_options(TRUE),
-    '#default_value' => xmlsitemap_var('priority_frontpage'),
-  );
   $form['xmlsitemap']['xmlsitemap_minimum_lifetime'] = array(
     '#type' => 'select',
     '#title' => t('Minimum sitemap lifetime'),
@@ -62,6 +56,24 @@ function xmlsitemap_settings_form() {
     '#description' => t('Subdirectory in the directory %dir where the sitemap data will be stored.', array('%dir' => file_directory_path() .'/')),
   );
 
+  $form['frontpage'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Front page'),
+    '#collapsible' => TRUE,
+  );
+  $form['frontpage']['xmlsitemap_frontpage_priority'] = array(
+    '#type' => 'select',
+    '#title' => t('Frontpage priority'),
+    '#options' => xmlsitemap_get_priority_options(),
+    '#default_value' => xmlsitemap_var('frontpage_priority'),
+  );
+  $form['frontpage']['xmlsitemap_frontpage_changefreq'] = array(
+    '#type' => 'select',
+    '#title' => t('Frontpage change frequency'),
+    '#options' => /*array('auto' => t('Automatic')) +*/ xmlsitemap_get_changefreq_options(),
+    '#default_value' => xmlsitemap_var('frontpage_changefreq'),
+  );
+
   $form['custom'] = array(
     '#type' => 'fieldset',
     '#title' => t('Custom links'),
@@ -72,7 +84,7 @@ function xmlsitemap_settings_form() {
     '#type' => 'textarea',
     '#title' => t('Custom links to include in the sitemap'),
     '#default_value' => xmlsitemap_var('custom_links'),
-    '#description' => t('Enter one path per line. Each path should be relative to the Drupal directory. For example: %example1.', array('%example1' => 'admin/settings/xmlsitemap')),
+    '#description' => t('Enter one path per line. Each path should be relative to the Drupal directory. For example: %example1.', array('%example1' => 'node/add')),
     '#wysiwyg' => FALSE,
   );
 
