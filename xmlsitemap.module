@@ -545,14 +545,23 @@ function xmlsitemap_generate_chunk($chunk) {
   //$output .= '  xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9' . "\n";
   //$output .= '  http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">' . "\n";
 
-  $sql = "SELECT COALESCE(ua.dst, x.loc) AS alias, x.loc, x.lastmod, x.changefreq, x.priority, ua.language FROM {xmlsitemap} x
+  $sql = "SELECT COALESCE(ua.dst, x.loc) AS alias, x.loc, x.lastmod, x.changefreq, x.changecount, x.priority, ua.language FROM {xmlsitemap} x
           LEFT JOIN {url_alias} ua ON x.loc = ua.src
           WHERE x.status = 1 AND (ua.language IS NULL OR ua.language IN ('', '%s'))
           GROUP BY x.loc";
   $offset = max($chunk - 1, 0) * xmlsitemap_get_chunk_size();
   $limit = xmlsitemap_get_chunk_size();
-
   $query = db_query_range($sql, array($language->language), $offset, $limit);
+
+  //$sql = "SELECT COALESCE(ua.dst, x.loc) AS alias, x.loc, x.lastmod,
+  //        ((x.changefreq * x.changecount) + (%d - x.lastmod)) / (x.changecount + 1) as changefreq,
+  //        x.priority, ua.language FROM {xmlsitemap} x
+  //        LEFT JOIN {url_alias} ua ON x.loc = ua.src
+  //        WHERE x.status = 1 AND (ua.language IS NULL OR ua.language IN ('', '%s'))
+  //        GROUP BY x.loc";
+  //$offset = max($chunk - 1, 0) * xmlsitemap_get_chunk_size();
+  //$limit = xmlsitemap_get_chunk_size();
+  //$query = db_query_range($sql, array(REQUEST_TIME, $language->language), $offset, $limit);
 
   while ($link = db_fetch_array($query)) {
     $output .= '<url>';
@@ -561,6 +570,8 @@ function xmlsitemap_generate_chunk($chunk) {
       $output .= '<lastmod>'. gmdate(DATE_W3C, $link['lastmod']) .'</lastmod>';
     }
     if ($link['changefreq']) {
+      // Nodes that were updated a long time ago should show longer changefreq.
+      xmlsitemap_recalculate_changefreq($link);
       $output .= '<changefreq>'. xmlsitemap_get_changefreq($link['changefreq']) .'</changefreq>';
     }
     if ($link['priority'] !== XMLSITEMAP_PRIORITY_DEFAULT) {
@@ -651,25 +662,25 @@ function xmlsitemap_switch_user($new_user = NULL) {
       unset($user_original);
       session_save_session(TRUE);
     }
-    return $user;
-  }
-
-  // Backup the user the first time this is called.
-  if (!isset($user_original)) {
-    $user_original = $user;
-    session_save_session(FALSE);
-  }
-
-  if (is_numeric($new_user)) {
-    if (!$new_user) {
-      $user = drupal_anonymous_user();
-    }
-    else {
-      $user = user_load(array('uid' => $new_user));
-    }
   }
   else {
-    $user = is_object($new_user) ? $new_user : (object) $new_user;
+    // Backup the user the first time this is called.
+    if (!isset($user_original)) {
+      $user_original = $user;
+      session_save_session(FALSE);
+    }
+
+    if (is_numeric($new_user)) {
+      if (!$new_user) {
+        $user = drupal_anonymous_user();
+      }
+      else {
+        $user = user_load(array('uid' => $new_user));
+      }
+    }
+    else {
+      $user = is_object($new_user) ? $new_user : (object) $new_user;
+    }
   }
 
   return $user;

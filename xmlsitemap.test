@@ -106,6 +106,14 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
   function testGetLinkCount() {
 
   }
+
+  function testCalculateChangefreq() {
+
+  }
+
+  function testRecalculateChangefreq() {
+
+  }
 }
 
 class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
@@ -129,19 +137,23 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
     file_check_directory($path, FILE_CREATE_DIRECTORY);
   }
 
-  //function testCustomLinks() {
-  //  $edit = array();
-  //  $edit['xmlsitemap_custom_links'] = "custom-test-1\ncustom-test-2";
-  //  $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
-  //  $this->assertText(t('The configuration options have been saved'));
-  //
-  //  $this->regenerateSitemap();
-  //  xmlsitemap_save_link(array('type' => 'custom', 'id' => 20, 'loc' => 'dave'));
-  //  $this->drupalGet('sitemap.xml');
-  //  $this->assertTrue(TRUE, htmlspecialchars($this->drupalGetContent()));
-  //  $this->assertRaw(url('sitemap.xml', array('absolute' => TRUE)));
-  //  $this->assertRaw(url('admin', array('absolute' => TRUE)));
-  //}
+  function testCustomLinks() {
+    path_set_alias('node', 'content');
+
+    $edit = array();
+    $edit['xmlsitemap_custom_links'] = "invalid-path";
+    $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
+    $this->assertText(t('The custom link invalid-path is either invalid or it cannot be accessed by anonymous users.'));
+
+    $edit['xmlsitemap_custom_links'] = "admin/user/user";
+    $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
+    $this->assertText(t('The custom link admin/user/user is either invalid or it cannot be accessed by anonymous users.'));
+
+    $edit['xmlsitemap_custom_links'] = "content\n";
+    $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
+    $this->assertText(t('The sitemap system stores system paths only, but will use the URL alias in the sitemap output. The custom link content has been stored as node.'));
+    $this->assertInSitemap(array('type' => 'custom', 'loc' => 'node'));
+  }
 
   /**
    * Test the sitemap file caching.
@@ -165,7 +177,7 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
     $this->drupalGet('sitemap.xml');
     $this->assertNoRaw('lifetime-test');
 
-    xmlsitemap_save_link(array('type' => 'test', 'id' => 0, 'loc' => 'lifetime-test'));
+    xmlsitemap_save_link(array('type' => 'testing', 'id' => 1, 'loc' => 'lifetime-test'));
     $this->drupalGet('sitemap.xml');
     $this->assertNoRaw('lifetime-test');
 

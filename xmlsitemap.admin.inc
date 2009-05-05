@@ -96,11 +96,12 @@ function xmlsitemap_settings_form_validate($form, &$form_state) {
   }
 
   // Validate the custom links.
+  db_query("DELETE FROM {xmlsitemap} WHERE type = 'custom'");
   $custom_links = preg_split('/[\r\n]+/', $form_state['values']['xmlsitemap_custom_links'], -1, PREG_SPLIT_NO_EMPTY);
   foreach ($custom_links as $index => $custom_link) {
     $normal_path = trim(drupal_get_normal_path($custom_link));
     if ($custom_link != $normal_path) {
-      drupal_set_message(t('The sitemap system stores system paths only, but will use the URL alias in the sitemap output. The custom link %custom_link has been stored as %normal_path', array('%custom_link' => $custom_link, '%normal_path' => $normal_path)));
+      drupal_set_message(t('The sitemap system stores system paths only, but will use the URL alias in the sitemap output. The custom link %custom_link has been stored as %normal_path.', array('%custom_link' => $custom_link, '%normal_path' => $normal_path)));
       $custom_links[$index] = $normal_path;
     }
 
@@ -111,10 +112,13 @@ function xmlsitemap_settings_form_validate($form, &$form_state) {
     if (!$menu_item || !$menu_item['access']) {
       form_set_error('xmlsitemap_custom_links', t('The custom link %link is either invalid or it cannot be accessed by anonymous users.', array('%link' => $normal_path)));
     }
-
-    // Check if there is a sitemap link with the same location already.
-    if (xmlsitemap_load_link(array('loc' => $normal_path))) {
+    elseif (xmlsitemap_load_link(array('loc' => $normal_path))) {
+      // Check if there is a sitemap link with the same location already.
       form_set_error('xmlsitemap_custom_links', t('There is already an existing link in the sitemap with the path %link.', array('%link' => $normal_path)));
+    }
+    else {
+      $customid = 1;
+      xmlsitemap_save_link(array('type' => 'custom', 'id' => $customid++, 'loc' => $normal_path));
     }
   }
   $form_state['values']['xmlsitemap_custom_links'] = implode("\n", $custom_links);
