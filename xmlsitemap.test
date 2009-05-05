@@ -109,7 +109,7 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
 }
 
 class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
-  protected $admin;
+  protected $admin_user;
 
   public static function getInfo() {
     return array(
@@ -120,11 +120,13 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
   }
 
   function setUp() {
-    parent::setUp('xmlsitemap');
-    $this->admin = $this->drupalCreateUser(array('access content', 'administer xmlsitemap'));
-    $this->drupalLogin($this->admin);
-    //$this->regenerateSitemap();
-    $this->drupalPost('admin/settings/xmlsitemap', array(), t('Save configuration'));
+    parent::setUp('xmlsitemap', 'path');
+    $this->admin_user = $this->drupalCreateUser(array('access content', 'administer xmlsitemap'));
+    $this->drupalLogin($this->admin_user);
+
+    // Check the files directory is created (massive fails if not done).
+    $path = file_create_path(xmlsitemap_var('path'));
+    file_check_directory($path, FILE_CREATE_DIRECTORY);
   }
 
   //function testCustomLinks() {
@@ -141,6 +143,9 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
   //  $this->assertRaw(url('admin', array('absolute' => TRUE)));
   //}
 
+  /**
+   * Test the sitemap file caching.
+   */
   function testSitemapCaching() {
     $this->drupalGet('sitemap.xml');
     $this->assertResponse(200);
@@ -153,6 +158,9 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
     $this->assertResponse(304);
   }
 
+  /**
+   * Test that the sitemap will not be genereated before the lifetime expires.
+   */
   function testMinimumLifetime() {
     $this->drupalGet('sitemap.xml');
     $this->assertNoRaw('lifetime-test');
