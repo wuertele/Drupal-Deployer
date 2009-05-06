@@ -73,7 +73,7 @@ function template_preprocess_project_issue_issue_cockpit(&$vars) {
       }
     }
 
-    $vars['issue_subscribe'] = l(t('Subcribe via e-mail'), 'project/issues/subscribe-mail/'. $node->project['uri'], array('query' => drupal_get_destination()));
+    $vars['issue_subscribe'] = l(t('Subscribe via e-mail'), 'project/issues/subscribe-mail/'. $node->project['uri'], array('query' => drupal_get_destination()));
     $vars['issue_statistics'] = l(t('Issue statistics'), 'project/issues/statistics/'. $node->project['uri']);
     $vars['oldest'] = db_result(db_query(db_rewrite_sql('SELECT min(n.created) FROM {node} n INNER JOIN {project_issues} i ON n.nid = i.nid WHERE n.status = 1 AND i.pid = %d AND i.sid IN '. $open_states), $node->nid));
   }

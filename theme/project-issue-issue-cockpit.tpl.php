@@ -27,8 +27,10 @@
   <div class="issue-cockpit-statistics">
     <?php print $issue_statistics; ?>
   </div>
-  <div class="issue-cockpit-oldest">
-    <?php print t('Oldest open issue: @date', array('@date' => format_date($oldest, 'custom', 'j M y'))); ?>
-  </div>
+  <?php if ($oldest): ?>
+    <div class="issue-cockpit-oldest">
+      <?php print t('Oldest open issue: @date', array('@date' => format_date($oldest, 'custom', 'j M y'))); ?>
+    </div>
+  <?php endif; ?>
 
 <?php endif; ?>
