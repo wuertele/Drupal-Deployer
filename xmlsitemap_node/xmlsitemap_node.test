@@ -14,7 +14,7 @@ class XMLSitemapNodeTestHelper extends XMLSitemapTestHelper {
   function setUp() {
     parent::setUp('xmlsitemap', 'xmlsitemap_node', 'comment');
 
-    $this->admin_user = $this->drupalCreateUser(array('administer nodes'));
+    $this->admin_user = $this->drupalCreateUser(array('administer nodes', 'administer xmlsitemap'));
     //$this->normal_user = $this->drupalCreateUser(array('create page content', 'access content'));
   }
 
@@ -73,6 +73,46 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     // Unpublish the node again.
     $this->drupalPost('node/' . $node->nid . '/edit', array('status' => FALSE), t('Save'));
     $this->assertNodeNotInSitemap($node);
+  }
+
+  /**
+   * Test the import of old nodes via cron.
+   */
+  function testCron() {
+    $this->drupalLogin($this->admin_user);
+
+    $limit = 10;
+    $this->drupalPost('admin/settings/xmlsitemap', array('xmlsitemap_batch_limit' => $limit), t('Save configuration'));
+    $this->assertText(t('The configuration options have been saved.'));
+
+    $nodes = array();
+    for ($i = 1; $i <= ($limit + 1); $i++) {
+      array_push($nodes, $this->drupalCreateNode());
+      // Need to delay by one second so the nodes don't all have the same
+      // timestamp.
+      sleep(1);
+    }
+
+    // Clear all the node link data so we can emulate 'old' nodes.
+    xmlsitemap_node_xmlsitemap_links_clear();
+    foreach ($nodes as $node) {
+      $this->assertNodeNotInSitemap($node);
+    }
+
+    // Run cron to import old nodes.
+    $this->drupalGet($GLOBALS['base_url'] . '/cron.php');
+
+    for ($i = 1; $i <= ($limit + 1); $i++) {
+      $node = array_pop($nodes);
+      if ($i <= $limit) {
+        // The first $limit nodes should be inserted.
+        $this->assertNodeInSitemap($node);
+      }
+      else {
+        // Any beyond $limit should not be in the sitemap.
+        $this->assertNodeNotInSitemap($node);
+      }
+    }
   }
 
   //function testMassOperations() {
