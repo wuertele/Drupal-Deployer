@@ -9,7 +9,7 @@
 function xmlsitemap_menu_cron() {
   if ($menus = array_filter(xmlsitemap_menu_var('menus'))) {
     // Set the global user variable to the anonymous user.
-    xmlsitemap_switch_user(drupal_anonymous_user());
+    xmlsitemap_switch_user(0);
 
     $sql = "SELECT ml.mlid FROM {menu_links} ml LEFT JOIN {xmlsitemap} x ON ml.mlid = x.id WHERE COALESCE(x.type, 'menu') = 'menu' AND x.id IS NULL AND ml.external = 0 AND ml.hidden = 0 AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ")";
     $query = db_query_range($sql, $menus, 0, xmlsitemap_var('batch_limit'));
@@ -21,7 +21,7 @@ function xmlsitemap_menu_cron() {
     }
 
     // Set the global user variable back to the original user.
-    xmlsitemap_switch_user();
+    xmlsitemap_restore_user();
   }
 }
 
@@ -33,7 +33,7 @@ function xmlsitemap_menu_xmlsitemap_links($offset = 0, $limit = 0) {
 
   if ($menus = array_filter(xmlsitemap_menu_var('menus'))) {
     // Set the global user variable to the anonymous user.
-    xmlsitemap_switch_user(drupal_anonymous_user());
+    xmlsitemap_switch_user(0);
 
     $sql = "SELECT ml.mlid FROM {menu_links} ml WHERE ml.mlid > %d AND ml.external = 0 AND ml.hidden = 0 AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ") ORDER BY ml.mlid";
     $args = array_merge(array($offset), $menus);
@@ -45,7 +45,7 @@ function xmlsitemap_menu_xmlsitemap_links($offset = 0, $limit = 0) {
     }
 
     // Set the global user variable back to the original user.
-    xmlsitemap_switch_user();
+    xmlsitemap_restore_user();
   }
 
   return $links;
