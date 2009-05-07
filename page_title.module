@@ -252,26 +252,26 @@ function page_title_get_title() {
     $node = menu_get_object();
     // If the node has a custom page title and the node type is configured to have a custom page title (ie, it's not a leftover from a previous setting), then use it.
     if (!empty($node->page_title) && variable_get('page_title_type_'. $node->type .'_showfield', 0)) {
-      $title = $node->page_title;
+      $title = check_plain(strip_tags($node->page_title));
     }
   }
   // If we're looking at a user profile page, get the user title
   elseif (arg(0) == 'user' && is_numeric(arg(1))) {
     if (variable_get('page_title_user_showfield', 0) && ($user_title = page_title_load_title(arg(1), 'user'))) {
-      $title = $user_title;
+      $title = check_plain(strip_tags($user_title));
     }
   }
   // If we're looking at a taxonomy term page, get the term title
   elseif (arg(0) == 'taxonomy' && arg(1) == 'term' && is_numeric(arg(2)) && module_exists('taxonomy')) {
     $term = taxonomy_get_term(arg(2));
     if (variable_get('page_title_vocab_'. $term->vid .'_showfield', 0) && ($term_title = page_title_load_title($term->tid, 'term'))) {
-      $title = $term_title;
+      $title = check_plain(strip_tags($term_title));
     }
   }
 
   // If nothing above set a title, give the legacy function a chance to act
   if (empty($title)) {
-    $title = page_title_set_title();
+    $title = check_plain(strip_tags(page_title_set_title()));
   }
 
   // If we still have no title, fall back to the title provided by Drupal Core
@@ -384,7 +384,7 @@ function page_title_page_get_title() {
     }
   }
 
-  return check_plain(strip_tags($title));
+  return strip_tags($title);
 }
 
 
