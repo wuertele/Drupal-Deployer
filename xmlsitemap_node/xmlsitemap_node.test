@@ -12,21 +12,24 @@ class XMLSitemapNodeTestHelper extends XMLSitemapTestHelper {
   protected $nodes = array();
 
   function setUp() {
-    parent::setUp('xmlsitemap', 'xmlsitemap_node');
+    parent::setUp('xmlsitemap', 'xmlsitemap_node', 'comment');
 
     $this->admin_user = $this->drupalCreateUser(array('administer nodes'));
-    $this->normal_user = $this->drupalCreateUser(array('create page content', 'access content'));
-    for ($i = 0; $i < 2; $i++) {
-      $this->nodes[$i] = $this->drupalCreateNode();
-    }
+    //$this->normal_user = $this->drupalCreateUser(array('create page content', 'access content'));
   }
 
-  function assertNodeInSitemap($nid) {
-    return $this->assertInSitemap(array('type' => 'node', 'id' => $nid));
+  //function addNodes($count) {
+  //  for ($i = count($this->nodes); $i < ($count + 1); $i++) {
+  //    $this->nodes[$i] = $this->drupalCreateNode();
+  //  }
+  //}
+
+  function assertNodeInSitemap($node) {
+    return $this->assertInSitemap(array('type' => 'node', 'id' => (is_object($node) ? $node->nid : $node)));
   }
 
-  function assertNodeNotInSitemap($nid) {
-    return $this->assertNotInSitemap(array('type' => 'node', 'id' => $nid));
+  function assertNodeNotInSitemap($node) {
+    return $this->assertNotInSitemap(array('type' => 'node', 'id' => (is_object($node) ? $node->nid : $node)));
   }
 }
 
@@ -53,29 +56,49 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     );
   }
 
-  function testMassOperations() {
+  /**
+   * Test that unpublishing a node removes it from the sitemap.
+   */
+  function testUnpublishedNode() {
     $this->drupalLogin($this->admin_user);
 
-    $edit = array(
-      'operation' => 'xmlsitemap_exclude',
-      'nodes[1]' => 1,
-      'nodes[2]' => 2,
-    );
-    $this->drupalPost('admin/content/node', $edit, t('Update'));
+    // Create an unpublished node.
+    $node = $this->drupalCreateNode(array('status' => FALSE));
+    $this->assertNodeNotInSitemap($node);
 
-    for ($i = 0; $i < 2; $i++) {
-      $this->assertNodeNotInSitemap($this->nodes[$i]->nid);
-    }
+    // Publish the node.
+    $this->drupalPost('node/' . $node->nid . '/edit', array('status' => TRUE), t('Save'));
+    $this->assertNodeInSitemap($node);
 
-    $edit = array(
-      'operation' => 'xmlsitemap_include',
-      'nodes[1]' => 1,
-      'nodes[2]' => 2,
-    );
-    $this->drupalPost('admin/content/node', $edit, t('Update'));
-
-    for ($i = 0; $i < 2; $i++) {
-      $this->assertNodeInSitemap($this->nodes[$i]->nid);
-    }
+    // Unpublish the node again.
+    $this->drupalPost('node/' . $node->nid . '/edit', array('status' => FALSE), t('Save'));
+    $this->assertNodeNotInSitemap($node);
   }
+
+  //function testMassOperations() {
+  //  $this->drupalLogin($this->admin_user);
+  //  $this->addNodes(2);
+  //
+  //  $edit = array(
+  //    'operation' => 'xmlsitemap_exclude',
+  //    'nodes[1]' => 1,
+  //    'nodes[2]' => 2,
+  //  );
+  //  $this->drupalPost('admin/content/node', $edit, t('Update'));
+  //
+  //  for ($i = 0; $i < 2; $i++) {
+  //    $this->assertNodeNotInSitemap($this->nodes[$i]->nid);
+  //  }
+  //
+  //  $edit = array(
+  //    'operation' => 'xmlsitemap_include',
+  //    'nodes[1]' => 1,
+  //    'nodes[2]' => 2,
+  //  );
+  //  $this->drupalPost('admin/content/node', $edit, t('Update'));
+  //
+  //  for ($i = 0; $i < 2; $i++) {
+  //    $this->assertNodeInSitemap($this->nodes[$i]->nid);
+  //  }
+  //}
 }
