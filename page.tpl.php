@@ -17,9 +17,7 @@
   <title><?php print $head_title; ?></title>
   <?php print $styles; ?>
   <!--[if IE]>
-    <?php if (file_exists($base_path . $directory .'/ie.css')): ?>
-      <link type="text/css" rel="stylesheet" media="all" href="<?php print $base_path . $directory; ?>/ie.css" >
-    <?php endif; ?>
+    <link type="text/css" rel="stylesheet" media="all" href="<?php print $base_path . $directory; ?>/ie.css" >
   <![endif]-->
   <?php print $scripts; ?>
 </head>
