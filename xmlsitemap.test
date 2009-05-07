@@ -159,8 +159,28 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
     }
   }
 
-  //function testSwitchUser() {
-  //}
+  /**
+   * Test the xmlsitemap_switch_user and xmlsitemap_restore_user() functions.
+   */
+  function testSwitchUser() {
+    global $user;
+
+    $original_user = $user;
+    $new_user = $this->drupalCreateUser();
+
+    xmlsitemap_switch_user($new_user);
+    $this->assertEqual($user->uid, $new_user->uid, t('Switched to new user.'));
+
+    xmlsitemap_switch_user();
+    $this->assertEqual($user->uid, $original_user->uid, t('Restored original user.'));
+
+    xmlsitemap_switch_user(0);
+    $this->assertEqual($user->uid, 0, t('Switched to anonymous user.'));
+
+    xmlsitemap_restore_user();
+    $this->assertEqual($user->uid, $original_user->uid, t('Restored original user.'));
+  }
+
   //
   //function testWriteRecord() {
   //}
