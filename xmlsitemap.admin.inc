@@ -35,7 +35,7 @@ function xmlsitemap_settings_form() {
   );
   $form['xmlsitemap']['xmlsitemap_xsl'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Include an XSL stylesheet in the sitemaps.'),
+    '#title' => t('Include a stylesheet in the sitemaps.'),
     '#default_value' => xmlsitemap_var('xsl'),
     '#description' => t('Using the stylesheet will make it easier for non-computers to view and sort.')
   );
@@ -70,7 +70,7 @@ function xmlsitemap_settings_form() {
   $form['frontpage']['xmlsitemap_frontpage_changefreq'] = array(
     '#type' => 'select',
     '#title' => t('Frontpage change frequency'),
-    '#options' => /*array('auto' => t('Automatic')) +*/ xmlsitemap_get_changefreq_options(),
+    '#options' => /*array(0 => t('Automatic')) +*/ xmlsitemap_get_changefreq_options(),
     '#default_value' => xmlsitemap_var('frontpage_changefreq'),
   );
 
@@ -88,6 +88,7 @@ function xmlsitemap_settings_form() {
     '#wysiwyg' => FALSE,
   );
 
+  $form['#validate'][] = 'xmlsitemap_settings_form_validate';
   $form = system_settings_form($form);
   $form['buttons']['#weight'] = 10;
   return $form;
