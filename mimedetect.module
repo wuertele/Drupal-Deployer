@@ -53,11 +53,12 @@ function mimedetect_mime($file) {
   );
 
   $mime = FALSE;
+  $magic_file = drupal_get_path('module', 'mimedetect') .'/magic';
 
   // Try to use the fileinfo extension first.
   if (extension_loaded('fileinfo')) {
     static $finfo = FALSE;
-    if ($finfo || $finfo = @finfo_open(FILEINFO_MIME, drupal_get_path('module', 'mimedetect') .'/magic')) {
+    if ($finfo || $finfo = @finfo_open(FILEINFO_MIME, $magic_file)) {
       $mime = finfo_file($finfo, realpath($file->filepath));
     }
   }
@@ -70,8 +71,8 @@ function mimedetect_mime($file) {
     // On OSX the -i switch is -I, so if we use the long flags everyone is
     // happy. I checked back to version 3.41 and it still supports the long
     // names but if you run into problems you can use " -bi ".
-    $command = $filebin .' --brief --mime '. escapeshellarg($file->filepath);
-    $mime = trim(exec($command, $out));
+    $command = $filebin .' --brief --mime --magic-file='. escapeshellarg($magic_file) .' '. escapeshellarg($file->filepath);
+    $mime = trim(exec($command));
     // with text we often get charset like 'text/plain; charset=us-ascii'
     $mime = split(';', $mime);
     $mime = trim($mime[0]);
