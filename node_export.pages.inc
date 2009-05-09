@@ -1,21 +1,20 @@
 <?php
 // $Id$
-// $Name$
 
 /**
  * Menu callback to configure module settings.
  */
-function export_settings() {
+function node_export_settings() {
 
   $form['basic'] = array(
     '#type' => 'fieldset',
     '#title' => t('General settings'),
   );
-  $form['basic']['export_method'] = array(
+  $form['basic']['node_export_method'] = array(
     '#type' => 'radios',
     '#title' => t('Method to use when importing a node'),
     '#options' => array('prepopulate' => t('Pre-populate the node form fields'), 'save-edit' => t('Save as a new node then edit')),
-    '#default_value' => variable_get('export_method', 'prepopulate'),
+    '#default_value' => variable_get('node_export_method', 'prepopulate'),
   );
   
   $form['publishing'] = array(
@@ -25,10 +24,10 @@ function export_settings() {
   $types = node_get_types('names');
 
   foreach ($types as $type => $name) {
-    $form['publishing']['export_reset_'. $type] = array(
+    $form['publishing']['node_export_reset_'. $type] = array(
       '#type' => 'checkbox',
       '#title' => t('@s: reset publishing options when exported', array('@s' => $name)),
-      '#default_value' => variable_get('export_reset_'. $type, FALSE),
+      '#default_value' => variable_get('node_export_reset_'. $type, FALSE),
     );
   }
   // Need the variable default key to be something that's never a valid node type.
@@ -36,10 +35,10 @@ function export_settings() {
     '#type' => 'fieldset',
     '#title' => t('Content types that are not to be exported - omitted due to incompatibility'),
   );
-  $form['omit']['export_omitted'] = array(
+  $form['omit']['node_export_omitted'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Omitted content types'),
-    '#default_value' => variable_get('export_omitted', array()),
+    '#default_value' => variable_get('node_export_omitted', array()),
     '#options' => $types,
     '#description' => t('Select any node types which should <em>never</em> be exported. Typically you should will want to select here all node types for which importing fails (e.g. image nodes).'),
   );
@@ -51,11 +50,11 @@ function export_settings() {
  *  exports a node - prepopulate a node editing form
  *  set $return_code to TRUE to not return form but the code instead.
  */
-function export_node_export($original_node, $return_code = FALSE, $iteration = 0) {
+function node_export_node_export($original_node, $return_code = FALSE, $iteration = 0) {
   if (isset($original_node->nid)) {
     global $user;
 
-    if (export_is_permitted($original_node->type)) {
+    if (node_export_is_permitted($original_node->type)) {
       $node = drupal_clone($original_node);
 
       $node->nid = NULL;
@@ -71,7 +70,7 @@ function export_node_export($original_node, $return_code = FALSE, $iteration = 0
       $node->files = array();
       drupal_set_title(t('Export of !title', array('!title' => check_plain($node->title))));
 
-      if (variable_get('export_reset_'. $node->type, FALSE)) {
+      if (variable_get('node_export_reset_'. $node->type, FALSE)) {
         $node_options = variable_get('node_options_'. $node->type, array('status', 'promote'));
         // Fill in the default values.
         foreach (array('status', 'moderate', 'promote', 'sticky', 'revision') as $key) {
@@ -106,9 +105,9 @@ function export_node_export($original_node, $return_code = FALSE, $iteration = 0
       // Let other modules do special fixing up.
       // The function signature is: hook_export_node_alter(&$node, $original_node, $method)
       // Where $method is 'export'
-      drupal_alter("export_node", $node, $original_node, "export");
-      $node_code = export_node_encode($node, $iteration);
-      return ($return_code ? $node_code : drupal_get_form('export_form', $node_code));
+      drupal_alter("node_export_node", $node, $original_node, "export");
+      $node_code = node_export_node_encode($node, $iteration);
+      return ($return_code ? $node_code : drupal_get_form('node_export_form', $node_code));
     }
   }
 }
@@ -116,7 +115,7 @@ function export_node_export($original_node, $return_code = FALSE, $iteration = 0
 /**
  *  Export Form
  */
-function export_form($form_state, $code) {
+function node_export_form($form_state, $code) {
   $form = array();
   $form['export'] = array(
     '#type' => 'textarea',
@@ -134,41 +133,41 @@ function export_form($form_state, $code) {
 /**
  *  Import Node UI
  */
-function export_node_import() {
+function node_export_node_import() {
   global $user;
   $output;
   if ($_POST['import_code']) {
     $node_code = trim($_POST['import_code']);
-    $import = export_node_decode($node_code);
+    $import = node_export_node_decode($node_code);
     if (is_array($import)) {
       foreach ($import as $new_node) {
-        $new_nid = export_node_save($new_node);
+        $new_nid = node_export_node_save($new_node);
         drupal_set_message(t("Imported !node", array('!node' => l($new_node->title, 'node/'. $new_nid))));
       }
       drupal_goto('admin/content/node');
     }
     else {
-      return export_node_check($import);
+      return node_export_node_check($import);
     }
   } 
   else {
-    return drupal_get_form('export_import_form', $form);
+    return drupal_get_form('node_export_import_form', $form);
   }
 }
 
 /**
  *  Import Form
  */
-function export_import_form($form_state) {
-  $form['#prefix'] = t('<p>You may import a node by copy-and-pasting the results of an export node. </p>');
-  $method = variable_get('export_method', 'prepopulate');
+function node_export_import_form($form_state) {
+  $form['#prefix'] = t('<p>You may import a node by copy-and-pasting the results of an exported node. </p>');
+  $method = variable_get('node_export_method', 'prepopulate');
   if ($method == 'prepopulate') {
     $form['#prefix'] .= t('<p>You will be given a prepopulated node add form which you must save to create the node.</p>');
   }
   elseif ($method == 'save-edit') {
     $form['#prefix'] .= t('<p>The node will be created and you will then be taken to the node edit page.</p>');
   }
-  $form['#prefix'] .= t('<p>To change this behaviour, <a href="/admin/settings/export">configure the settings</a>.</p>');
+  $form['#prefix'] .= t('<p>To change this behaviour, <a href="/admin/settings/node_export">configure the settings</a>.</p>');
   $form['import_code'] = array(
     '#type' => 'textarea',
     '#title' => t('Import Code'),
@@ -188,19 +187,19 @@ function export_import_form($form_state) {
 /**
  *  Menu callback: prompt the user to confirm the operation
  */
-function export_node_check($node) {
+function node_export_node_check($node) {
 
-  $method = variable_get('export_method', 'prepopulate');
+  $method = variable_get('node_export_method', 'prepopulate');
   
   switch ($method) {
     case 'save-edit':
-      $new_nid = export_node_save($node);
+      $new_nid = node_export_node_save($node);
       drupal_goto('node/'. $new_nid .'/edit');
       break;
     case 'prepopulate':
     default:
       include_once(drupal_get_path('module', 'node') .'/node.pages.inc');
-      return export_node_prepopulate($node);
+      return node_export_node_prepopulate($node);
       break;
   }
 }
@@ -208,10 +207,10 @@ function export_node_check($node) {
 /**
  *  exports a node - prepopulate a node editing form
  */
-function export_node_prepopulate($original_node) {
+function node_export_node_prepopulate($original_node) {
   global $user;
 
-  if (export_is_permitted($original_node->type)) {
+  if (node_export_is_permitted($original_node->type)) {
     $node = drupal_clone($original_node);
 
     $node->nid = NULL;
@@ -227,7 +226,7 @@ function export_node_prepopulate($original_node) {
     $node->files = array();
     drupal_set_title(check_plain($node->title));
 
-    if (variable_get('export_reset_'. $node->type, FALSE)) {
+    if (variable_get('node_export_reset_'. $node->type, FALSE)) {
       $node_options = variable_get('node_options_'. $node->type, array('status', 'promote'));
       // Fill in the default values.
       foreach (array('status', 'moderate', 'promote', 'sticky', 'revision') as $key) {
@@ -237,7 +236,7 @@ function export_node_prepopulate($original_node) {
     // Let other modules do special fixing up.
     // The function signature is: hook_export_node_alter(&$node, $original_node, $method)
     // Where $method is either 'prepopulate' or 'save-edit'.
-    drupal_alter("export_node", $node, $original_node, "prepopulate");
+    drupal_alter("node_export_node", $node, $original_node, "prepopulate");
     return str_replace('admin/content/import', 'node/add/' . $node->type, drupal_get_form($node->type . '_node_form', $node));
   }
 }
@@ -245,10 +244,10 @@ function export_node_prepopulate($original_node) {
 /**
  *  exports a node by directly saving it.
  */
-function export_node_save($node) {
+function node_export_node_save($node) {
   global $user;
 
-  if (export_is_permitted($node->type)) {
+  if (node_export_is_permitted($node->type)) {
 
     $original_node = drupal_clone($node);
 
@@ -262,7 +261,7 @@ function export_node_save($node) {
     $node->path = NULL;
     $node->files = array();
 
-    if (variable_get('export_reset_'. $node->type, FALSE)) {
+    if (variable_get('node_export_reset_'. $node->type, FALSE)) {
       $node_options = variable_get('node_options_'. $node->type, array('status', 'promote'));
       // Fill in the default values.
       foreach (array('status', 'moderate', 'promote', 'sticky', 'revision') as $key) {
@@ -272,7 +271,7 @@ function export_node_save($node) {
     // Let other modules do special fixing up.
     // The function signature is: hook_export_node_alter(&$node, $original_node, $method)
     // Where $method is either 'prepopulate' or 'save-edit'.
-    drupal_alter("export_node", $node, $original_node, "save-edit");
+    drupal_alter("node_export_node", $node, $original_node, "save-edit");
 
     node_save($node);
 
@@ -285,7 +284,7 @@ function export_node_save($node) {
 /**
  *  build node code string recursively
  */
-function export_node_encode($var, $iteration = 0){
+function node_export_node_encode($var, $iteration = 0){
   $tab = '';
   for ($i = 0; $i < $iteration; $i++) {
     $tab = $tab ."  ";
@@ -299,7 +298,7 @@ function export_node_encode($var, $iteration = 0){
     $empty = empty($var);
     $code = "array(". ($empty ? '' : "\n");
     foreach ($var as $key => $value) {
-      $code .= $tab ."  '". $key ."' => ".export_node_encode($value, $iteration).",\n";
+      $code .= $tab ."  '". $key ."' => ".node_export_node_encode($value, $iteration).",\n";
     }
     $code .= ($empty ? '' : $tab) .")";
     return $code;
@@ -322,19 +321,19 @@ function export_node_encode($var, $iteration = 0){
 /**
  *  eval and return decoded string
  */
-function export_node_decode($string) {
+function node_export_node_decode($string) {
   $array = eval('return '.$string.';');
-  $return = export_node_decode_objects($array);
+  $return = node_export_node_decode_objects($array);
   return $return;
 }
 
 /**
  *  recursively convert arrays back to objects
  */
-function export_node_decode_objects($array) {
+function node_export_node_decode_objects($array) {
   foreach ($array as $k => $v) {
     if (is_array($v)) {
-      $array[$k] = export_node_decode_objects($v);
+      $array[$k] = node_export_node_decode_objects($v);
     }
     if (is_string($v)) {
       $array[$k] = stripslashes($v);
