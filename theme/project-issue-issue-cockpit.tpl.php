@@ -2,9 +2,7 @@
 // $Id$
 ?>
 
-<?php if ($make_issues): ?>
-  <?php print t('To avoid duplicates, please search before submitting a new issue.'); ?>
-<?php endif; ?>
+<?php print t('To avoid duplicates, please search before submitting a new issue.'); ?>
 
 <?php if ($view_issues): ?>
   <?php print $form; ?>
