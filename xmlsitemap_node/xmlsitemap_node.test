@@ -14,7 +14,7 @@ class XMLSitemapNodeTestHelper extends XMLSitemapTestHelper {
   function setUp() {
     parent::setUp('xmlsitemap', 'xmlsitemap_node', 'comment');
 
-    $this->admin_user = $this->drupalCreateUser(array('administer nodes', 'administer xmlsitemap'));
+    $this->admin_user = $this->drupalCreateUser(array('administer nodes', 'administer content types', 'administer xmlsitemap'));
     //$this->normal_user = $this->drupalCreateUser(array('create page content', 'access content'));
   }
 
@@ -76,6 +76,45 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
   }
 
   /**
+   * Test the content type settings.
+   */
+  function testTypeSettings() {
+    $this->drupalLogin($this->admin_user);
+
+    $node_old = $this->drupalCreateNode();
+
+    $edit = array(
+      'xmlsitemap_node_status' => FALSE,
+      'xmlsitemap_node_priority' => 0.7,
+    );
+    $this->drupalGet('admin/content/node-type/page');
+    $this->drupalPost('admin/content/node-type/page', $edit, t('Save content type'));
+    $this->assertText(t('The content type Page has been updated.'));
+
+    $node = $this->drupalCreateNode();
+
+    $link = $this->assertNodeNotInSitemap($node);
+    $this->assertEqual($link['priority'], 0.7);
+    $link = $this->assertNodeInSitemap($node_old);
+    $this->assertEqual($link['priority'], NULL);
+
+    $edit = array(
+      'xmlsitemap_node_status' => TRUE,
+      'xmlsitemap_node_priority' => 'default', // Default (NULL) value.
+    );
+    $this->drupalPost('admin/content/node-type/page', $edit, t('Save content type'));
+    $this->assertText(t('The content type Page has been updated.'));
+
+    $this->drupalPost('node/' . $node->nid . '/edit', array(), t('Save'));
+    $this->assertText(t('Page @title has been updated.', array('@title' => $node->title)));
+
+    $link = $this->assertNodeInSitemap($node);
+    $this->assertEqual($link['priority'], NULL);
+    $link = $this->assertNodeInSitemap($node_old);
+    $this->assertEqual($link['priority'], NULL);
+  }
+
+  /**
    * Test the import of old nodes via cron.
    */
   function testCron() {
@@ -87,7 +126,8 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
 
     $nodes = array();
     for ($i = 1; $i <= ($limit + 1); $i++) {
-      array_push($nodes, $this->drupalCreateNode());
+      $node = $this->drupalCreateNode();
+      array_push($nodes, $node);
       // Need to delay by one second so the nodes don't all have the same
       // timestamp.
       sleep(1);
@@ -106,7 +146,8 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
       $node = array_pop($nodes);
       if ($i <= $limit) {
         // The first $limit nodes should be inserted.
-        $this->assertNodeInSitemap($node);
+        $link = $this->assertNodeInSitemap($node);
+        $this->assertEqual($link['lastmod'], $node->changed, t('Correct lastmod value.'));
       }
       else {
         // Any beyond $limit should not be in the sitemap.
