@@ -52,7 +52,7 @@ function project_release_views_default_views() {
       'table' => 'node',
       'field' => 'created',
       'order' => 'DESC',
-      'granularity' => 'day',
+      'granularity' => 'minute',
       'relationship' => 'none',
     ),
   ));
