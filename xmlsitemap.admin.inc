@@ -60,6 +60,7 @@ function xmlsitemap_settings_form() {
     '#type' => 'fieldset',
     '#title' => t('Front page'),
     '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
   );
   $form['frontpage']['xmlsitemap_frontpage_priority'] = array(
     '#type' => 'select',
@@ -172,7 +173,6 @@ function xmlsitemap_rebuild_confirm_submit($form, &$form_state) {
   _xmlsitemap_rebuild_before();
   batch_set(xmlsitemap_rebuild_batch($form_state));
   $form_state['redirect'] = 'admin/settings/xmlsitemap';
-  _xmlsitemap_rebuild_after();
 }
 
 /**
@@ -293,6 +293,7 @@ function xmlsitemap_rebuild_batch_generate(&$context) {
  */
 function xmlsitemap_rebuild_batch_finished($success, $results, $operations) {
   if ($success) {
+    _xmlsitemap_rebuild_after();
     drupal_set_message(t('The <a href="@sitemap">sitemap</a> was rebuilt.', array('@sitemap' => url('sitemap.xml'))));
   }
   else {
