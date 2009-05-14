@@ -1,6 +1,7 @@
 // $Id$
 // map of instancename -> FCKeditor object
 var fckInstances = {};
+var fckActiveId = false;
 // this object will store teaser information
 var fckTeaser = { lookup : {}, lookupSetup : false, cache : {} };
 
@@ -153,6 +154,11 @@ function Toggle(textareaID, TextTextarea, TextRTE, xss_check)
   }
 }
 
+// Update a global variable containing the active FCKeditor ID.
+function DoFCKeditorUpdateId(editorInstance) {
+  fckActiveId = editorInstance.Name;
+}
+
 /**
  * The FCKeditor_OnComplete function is a special function called everytime an
  * editor instance is completely loaded and available for API interactions.
@@ -162,6 +168,7 @@ function FCKeditor_OnComplete(editorInstance) {
   // Enable the switch button. It is disabled at startup, waiting the editor to be loaded.
   $('#switch_' + editorInstance.Name).show();
   editorInstance.Events.AttachEvent('OnAfterLinkedFieldUpdate', FCKeditor_OnAfterLinkedFieldUpdate);
+  editorInstance.Events.AttachEvent('OnFocus', DoFCKeditorUpdateId);
 
   var teaser = FCKeditor_TeaserInfo(editorInstance.Name);
 
