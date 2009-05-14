@@ -22,7 +22,7 @@ function node_token_values($type, $object = NULL, $options = array()) {
   switch ($type) {
     case 'node':
       $node = $object;
-      $account_mail = db_result(db_query("SELECT mail FROM {users} WHERE uid = %d", $node->uid));
+      $account = db_fetch_object(db_query("SELECT name, mail FROM {users} WHERE uid = %d", $node->uid));
 
       $values['nid']              = $node->nid;
       $values['type']             = $node->type;
@@ -31,10 +31,10 @@ function node_token_values($type, $object = NULL, $options = array()) {
       $values['title']            = check_plain($node->title);
       $values['title-raw']        = $node->title;
       $values['author-uid']       = $node->uid;
-      $values['author-name']      = check_plain($node->name);
-      $values['author-name-raw']  = $node->name;
-      $values['author-mail']      = check_plain($account_mail);
-      $values['author-mail-raw']  = $account_mail;
+      $values['author-name']      = check_plain($account->name);
+      $values['author-name-raw']  = $account->name;
+      $values['author-mail']      = check_plain($account->mail);
+      $values['author-mail-raw']  = $account->mail;
       if (isset($node->created)) {
         $date = (int)$node->created;
         $values['yyyy']           = date('Y', $date);
