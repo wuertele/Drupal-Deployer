@@ -16,7 +16,7 @@ function xmlsitemap_engines_settings_form($form_state) {
 
   $form['xmlsitemap_engines_submit'] = array(
     '#type' => 'checkboxes',
-    '#title' => t('Submit the sitemap to the following engines:'),
+    '#title' => t('Submit the sitemap to the following engines'),
     '#default_value' => xmlsitemap_engines_var('submit'),
   );
   foreach ($form['#engines'] as $engine => $engine_details) {
