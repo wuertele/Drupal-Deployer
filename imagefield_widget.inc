@@ -12,6 +12,10 @@
 function imagefield_widget_settings_form($widget) {
   $form = module_invoke('filefield', 'widget_settings', 'form', $widget);
 
+  if ($form['file_extensions']['#default_value'] == 'txt') {
+    $form['file_extensions']['#default_value'] = 'png gif jpg jpeg';
+  }
+
   $form['max_resolution'] = array(
     '#type' => 'textfield',
     '#title' => t('Maximum resolution for Images'),
