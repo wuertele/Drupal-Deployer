@@ -9,14 +9,14 @@
  * Drupal 7 backport to define REQUEST_TIME.
  */
 if (!defined('REQUEST_TIME')) {
-  define('REQUEST_TIME', time());
+  define('REQUEST_TIME', isset($_SERVER['REQUEST_TIME']) ? $_SERVER['REQUEST_TIME'] : time());
 }
 
 /**
  * PHP 5.2 backport to define DATE_W3C.
  */
 if (!defined('DATE_W3C')) {
-  define('DATE_W3C', 'Y-m-d\TH:i:sP');
+  define('DATE_W3C', 'Y-m-d\TH:i:s+00:00');
 }
 
 /**
@@ -41,12 +41,18 @@ function xmlsitemap_help($path, $arg) {
     case 'admin/help#xmlsitemap':
       break;
     case 'admin/settings/xmlsitemap':
+      $output .= '<p>' . t('Your sitemap is located at <a href="@sitemap">@sitemap</a>.', array('@sitemap' => url('sitemap.xml', array('absolute' => TRUE)))) . '</p>';
       break;
   }
 
-  if (strpos($path, 'xmlsitemap') !== FALSE) {
-    $output .= '<p>' . t('Your sitemap is at <a href="@sitemap">@sitemap</a>.', array('@sitemap' => url('sitemap.xml', array('absolute' => TRUE)))) . '</p>';
+  // Use a static variable because this code may be called more than once.
+  static $checked = FALSE;
+  if (!$checked && strpos($path, 'xmlsitemap') !== FALSE) {
     xmlsitemap_check_status();
+    $checked = TRUE;
+
+    // @todo Remove in final version.
+    $output .= '<p style="text-align: center; font-size: smaller;">' . t('Thank you for helping test the XML sitemap module rewrite, developed by <a href="@link-dave">Dave Reid</a>. Please consider helping <a href="@link-donate">donate to or sponsor the rewrite</a>. This will be removed in the official version.', array('@link-dave' => 'http://davereid.net/', '@link-review' => 'http://drupalmodules.com/module/xml-sitemap', '@link-donate' => 'http://davereid.chipin.com/')) . '</p>';
   }
 
   return $output;
@@ -236,26 +242,29 @@ function xmlsitemap_regenerate() {
 
   // If the chunk count has changed, we will need to rebuild the menu.
   variable_set('menu_rebuild_needed', TRUE);
+
+  variable_set('xmlsitemap_regenerate_last', REQUEST_TIME);
 }
 
 /**
  * Get a list of priority options.
  *
- * @param $include_default
+ * @param $default
  *   Include a 'default' option.
  * @return
  *   An array of options.
  */
-function xmlsitemap_get_priority_options($include_default = FALSE) {
+function xmlsitemap_get_priority_options($default = FALSE) {
   $options = array();
+
+  if ($default !== FALSE) {
+    // @todo Fix this default option text.
+    $options['default'] = $default !== TRUE ? t('Default (@value)', array('@value' => $default)) : t('Default');
+  }
 
   foreach (range(0, 1, 0.1) as $option) {
     $option = number_format($option, 1);
     $options[$option] = $option;
-  }
-
-  if ($include_default) {
-    $options[XMLSITEMAP_PRIORITY_DEFAULT] = t('Default');
   }
 
   return $options;
@@ -421,6 +430,10 @@ function xmlsitemap_save_link(array $link) {
   if (!$link['status']) {
     //xmlsitemap_delete_link(array('type' => $link['type'], 'id' => $link['id']));
     //return FALSE;
+  }
+
+  if ($link['priority'] == 'default') {
+    $link['priority'] = NULL;
   }
 
   // Warn if the priority is an invalid value.
@@ -632,6 +645,7 @@ function xmlsitemap_variables() {
     'xmlsitemap_custom_links' => '',
     'xmlsitemap_minimum_lifetime' => 86400,
     'xmlsitemap_xsl' => TRUE,
+    'xmlsitemap_regenerate_last' => 0,
   );
 }
 
