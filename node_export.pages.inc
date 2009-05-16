@@ -304,7 +304,7 @@ function node_export_node_encode($var, $iteration = 0){
     return $code;
   } else {
     if (is_string($var)) {
-      return "'".addslashes($var)."'";
+      return "'". addslashes($var) ."'";
     } 
     elseif (is_numeric($var)) {
       return $var;
@@ -336,7 +336,12 @@ function node_export_node_decode_objects($array) {
       $array[$k] = node_export_node_decode_objects($v);
     }
     if (is_string($v)) {
-      $array[$k] = stripslashes($v);
+      if (get_magic_quotes_gpc()) {
+          $array[$k] = stripslashes($v);
+      }
+      else {
+          $array[$k] = $v;
+      }
     }
   }
   if ($array['#_export_node_encode_object']) {
