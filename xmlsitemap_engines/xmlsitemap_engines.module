@@ -1,0 +1,137 @@
+<?php
+// $Id$
+
+/**
+ * Implementation of hook_menu().
+ */
+function xmlsitemap_engines_menu() {
+  $items['admin/settings/xmlsitemap/engines'] = array(
+    'title' => 'Search Engines',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('xmlsitemap_engines_settings_form'),
+    'access arguments' => array('administer xmlsitemap'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'xmlsitemap_engines.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_cron().
+ */
+function xmlsitemap_engines_cron() {
+  $engines = array_filter(xmlsitemap_engines_var('submit'));
+  foreach ($engines as $engine) {
+    $url = xmlsitemap_engines_prepare_url(xmlsitemap_engines_get_engines($engine, 'url'));
+    $request = drupal_http_request($url);
+    watchdog('xmlsitemap', 'Submitted the sitemap to %url.', array('%url' => $url));
+  }
+
+  $custom_urls = xmlsitemap_engines_var('custom_urls');
+  $custom_urls = preg_split('/[\r\n]+/', $custom_urls, -1, PREG_SPLIT_NO_EMPTY);
+  foreach ($custom_urls as $custom_url) {
+    $url = xmlsitemap_engines_prepare_url($custom_url);
+    $request = drupal_http_request($url);
+    watchdog('xmlsitemap', 'Submitted the sitemap to %url.', array('%url' => $url));
+  }
+}
+
+/**
+ * Replace valid tokens in the URL with their appropriate values.
+ *
+ * @param $url
+ *   An un-tokenized URL.
+ * @return
+ *   A tokenized URL.
+ */
+function xmlsitemap_engines_prepare_url($url) {
+  return str_replace('[sitemap]', url('sitemap.xml', array('absolute' => TRUE)), $url);
+}
+
+/**
+ * Get a list of supported search engines, or a detail about a specific engine.
+ *
+ * @param $engine
+ *   An optional specific engine to get details about.
+ * @param $value
+ *   An optional value about an engine to get details about.
+ * @return
+ *   If $engine and $value are not specified, a two-level array with all the
+ *   engines and their details. If $engine is specified but $value is not, an
+ *   array with just the details for a specific engine. If $engine and $value
+ *   are both specified, just the specific detail for a specific engine.
+ */
+function xmlsitemap_engines_get_engines($engine = NULL, $value = NULL) {
+  static $engines;
+
+  if (!isset($engines)) {
+    $engines = array(
+      'google' => array(
+        'name' => t('Google'),
+        'url' => 'http://www.google.com/webmasters/tools/ping?sitemap=[sitemap]',
+      ),
+      'yahoo' => array(
+        'name' => t('Yahoo!'),
+        'url' => 'http://search.yahooapis.com/SiteExplorerService/V1/ping?sitemap=[sitemap]',
+      ),
+      'ask' => array(
+        'name' => t('Ask.com'),
+        'url' => 'http://submissions.ask.com/ping?sitemap=[sitemap]',
+      ),
+      'windows_live' => array(
+        'name' => t('Windows Live'),
+        'url' => 'http://webmaster.live.com/ping.aspx?sitemap=[sitemap]',
+      ),
+      'moreover' => array(
+        'name' => t('Moreover'),
+        'url' => 'http://api.moreover.com/ping?u=[sitemap]',
+      ),
+    );
+
+    // Allow other modules to alter or add search engines.
+    drupal_alter('xmlsitemap_engines', $engines);
+    ksort($engines);
+  }
+
+  if (isset($engines[$engine][$value])) {
+    return $engines[$engine][$value];
+  }
+  elseif (isset($engines[$engine])) {
+    return $engines[$engine];
+  }
+  else {
+    return $engines;
+  }
+}
+
+/**
+ * Internal default variables for template_var().
+ */
+function xmlsitemap_engines_variables() {
+  $variables = array(
+    'xmlsitemap_engines_submit' => array(),
+    'xmlsitemap_engines_custom_urls' => '',
+  );
+
+  return $variables;
+}
+
+/**
+ * Internal implementation of variable_get().
+ */
+function xmlsitemap_engines_var($name, $default = NULL) {
+  static $defaults = NULL;
+  if (!isset($defaults)) {
+    $defaults = xmlsitemap_engines_variables();
+  }
+
+  $name = 'xmlsitemap_engines_' . $name;
+
+  // @todo Remove when stable.
+  if (!isset($defaults[$name])) {
+    trigger_error(t('Default variable for %variable not found.', array('%variable' => $name)));
+  }
+
+  return variable_get($name, isset($default) || !isset($defaults[$name]) ? $default : $defaults[$name]);
+}
