@@ -62,7 +62,7 @@ function search_service_content($keys, $simple = FALSE) {
     }
   }
 
-  watchdog('search_service', t('search.content returned !count results for !keys using hooks !hooks', array('!count' => count($results),'!keys' => $keys, '!hooks' => implode($search_hooks, ', '))));
+  watchdog('search_service', t('search.content returned !count results for !keys using hooks !hooks', array('!count' => count($results), '!keys' => $keys, '!hooks' => implode($search_hooks, ', '))));
 
   if ($results and is_array($results) and count($results)) {
     // if simple results requested, remove extra data

@@ -98,9 +98,7 @@ function services_admin_browse_test() {
   $method = services_method_get(arg(4));
 
   $form['arg'] = array('#tree' => TRUE);
-  $timestamp = time();
-  $nonce = user_password();
-  
+
   foreach ($method['#args'] as $key => $arg) {
     $form['name'][$key]         = array(
       '#value' => $arg['#name']
@@ -109,62 +107,20 @@ function services_admin_browse_test() {
       '#value' => ($arg['#optional']) ? t('optional') : t('required')
     );
 
-    switch ($arg['#name']) {
-      case 'hash':
-        $form['arg'][$key] = array(
-          '#title'          => 'Hash',
-          '#type'           => 'textfield',
-          '#default_value'  => hash_hmac('sha256', $timestamp .';'. $_SERVER['HTTP_HOST'] .';'. $nonce .';'. arg(4), services_admin_browse_get_first_key())
-        );
-        break;
-
-      case 'sessid':
-        $form['arg'][$key] = array(
-          '#title'          => 'Session id',
-          '#type'           => 'textfield',
-          '#default_value'  => session_id()
-        );
-        break;
-
-      case 'domain_name':
-        $form['arg'][$key] = array(
-          '#title'          => 'Domain name',
-          '#type'           => 'textfield',
-          '#default_value'  => $_SERVER['HTTP_HOST']
-        );
-        break;
-
-      case 'domain_time_stamp':
-        $form['arg'][$key] = array(
-          '#title'          => 'Timestamp',
-          '#type'           => 'textfield',
-          '#default_value'  => $timestamp
-        );
-        break;
-
-      case 'nonce':
-        $form['arg'][$key] = array(
-          '#title'          => 'Nonce',
-          '#type'           => 'textfield',
-          '#default_value'  => $nonce
-        );
-        break;
-
-      default:
-        if (isset($arg['#size']) && $arg['#size'] == 'big') {
-          $form['arg'][$key] = array(
-            '#type'           => 'textarea'
-          );
-        }
-        else {
-          $form['arg'][$key] = array(
-            '#type'           => 'textfield'
-          );
-        }
-        break;
+    if (isset($arg['#size']) && $arg['#size'] == 'big') {
+      $form['arg'][$key] = array(
+        '#type'           => 'textarea'
+      );
     }
-
+    else {
+      $form['arg'][$key] = array(
+        '#type'           => 'textfield'
+      );
+    }
   }
+
+  services_auth_invoke('alter_browse_form', $form, $method);
+
   $form['submit'] = array(
     '#type'           => 'submit',
     '#value'          => t('Call method')
@@ -174,18 +130,11 @@ function services_admin_browse_test() {
   return $form;
 }
 
-function services_admin_browse_get_first_key() {
-  $keys = services_get_keys();
-  foreach ($keys as $kid => $key) {
-    return $kid;
-  }
-}
-
 function services_admin_browse_test_submit($form, $form_state) {
   global $_services_admin_browse_test_submit_result;
   $method = services_method_get(arg(4));
   $args = services_admin_browse_test_unserialize_args($form_state['values']['arg']);
-  $result = services_method_call($method['#method'], $args);
+  $result = services_method_call($method['#method'], $args, TRUE);
   $_services_admin_browse_test_submit_result = '<pre>'. htmlspecialchars(print_r($result, TRUE)) .'</pre>';
 }
 
@@ -257,50 +206,121 @@ function theme_services_admin_browse_test($form) {
  * Callback for admin page
  */
 function services_admin_settings() {
-  $node_types = node_get_types('names');
-  $defaults = isset($node_types['blog']) ? array('blog' => 1) : array();
-  $form['security'] = array(
-    '#title'        => t('Security'),
-    '#type'         => 'fieldset',
-    '#description'  => t('Changing security settings will require you to adjust all method calls. This will affect all applications using site services.'),
-  );
-  $form['security']['services_use_key'] = array(
-    '#type'           => 'checkbox',
-    '#title'          => t('Use keys'),
-    '#default_value'  => variable_get('services_use_key', TRUE),
-    '#description'    => t('When enabled all method calls need to provide a validation token to autheciate themselves with the server.'),
-  );
-  $form['security']['services_key_expiry'] = array(
-    '#type'           => 'textfield',
-    '#prefix'         => "<div id='services-key-expiry'>",
-    '#suffix'         => "</div>",
-    '#title'          => t('Token expiry time'),
-    '#default_value'  => variable_get('services_key_expiry', 30),
-    '#description'    => t('The time frame for which the token will be valid. Default is 30 secs'),
-  );
-  $form['security']['services_use_sessid'] = array(
-    '#type'           => 'checkbox',
-    '#title'          => t('Use sessid'),
-    '#default_value'  => variable_get('services_use_sessid', TRUE),
-    '#description'    => t('When enabled, all method calls must include a valid sessid. Only disable this setting if the application will use browser-based cookies.')
+  $auth_modules = module_implements('authentication_info');
+
+  // Add security options.
+  if (!empty($auth_modules)) {
+    $auth_options = array('' => t('-- Select a authorization module'));
+    foreach ($auth_modules as $module) {
+      $info = services_auth_info(NULL, $module);
+      $auth_options[$info['#description']][$module] = $info['#title'];
+    }
+
+    $form['security'] = array(
+      '#title'        => t('Security'),
+      '#type'         => 'fieldset',
+      '#description'  => t('Changing security settings will require you to adjust all method calls. This will affect all applications using site services.'),
+    );
+
+    $form['security']['auth_module'] = array(
+      '#type' => 'select',
+      '#title' => t('Authorization module'),
+      '#options' => $auth_options,
+      '#required' => FALSE,
+      '#default_value' => variable_get('services_auth_module', ''),
+      '#ahah' => array(
+        'path' => 'admin/services/ahah/security-options',
+        'wrapper' => 'security-module-options',
+        'method' => 'replace',
+      ),
+    );
+
+    // Placeholder for the auth module options
+    // also used as wrapper for ahah.
+    $form['security']['options'] = array(
+      '#prefix' => '<div id="security-module-options">',
+      '#suffix' => '</div>',
+      'settings' => array(
+        '#value' => sprintf('<div class="description">%s</div>',
+          t('Select a authorization module to configure security')),
+      ),
+    );
+    // Get the configuration form for the authorization module
+    $settings = services_auth_invoke('security_settings');
+    if ($settings) {
+      $form['security']['options']['settings'] = $settings;
+    }
+  }
+  else { // Warn if no authorization module has been installed.
+    drupal_set_message(t('No authorization modules have been installed'), 'warning');
+  }
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save settings'),
   );
 
-  services_admin_js($form);
+  return $form;
+}
 
-  return system_settings_form($form);
+function services_admin_settings_validate($form, $form_state) {
+  // Invoke custom validation for the auth module
+  if (!empty($form_state['values']['auth_module'])) {
+    services_auth_invoke_custom($form_state['values']['auth_module'],
+      'security_settings_validate', $form_state);
+  }
+}
+
+function services_admin_settings_submit($form, $form_state) {
+  // Update the services oauth module variable *if needed*.
+  $old_auth = variable_get('services_auth_module', '');
+  $new_auth = $form_state['values']['auth_module'];
+  if ($old_auth != $new_auth) {
+    variable_set('services_auth_module', $new_auth);
+    // Rebuild menu so that security-related menu items can be conditionally created.
+    menu_rebuild();
+    drupal_set_message('Changed authentication method');
+  }
+  else {
+    drupal_set_message('Updated authentication settings');
+  }
+
+  // Allow the authorization module to handle submitted values.
+  services_auth_invoke('security_settings_submit', $form_state);
+
+  // Clear the services cache so that methods are updated according to auth settings
+  cache_clear_all('services:', 'cache', TRUE);
 }
 
 /**
- * UI enhancement for services page
+ * Callback for the security configuration form ahah.
  */
-function services_admin_js($form) {
-  $out = <<<EOJS
-  $(document).ready(function() {
-    $("#services-key-expiry")[$("#edit-services-use-key").attr('checked') ? 'show' : 'hide']();
-    $("#edit-services-use-key").click(function() {
-      $("#services-key-expiry")[$(this).attr('checked') ? 'show' : 'hide']();
-   });
-  });
-EOJS;
-  drupal_add_js($out, 'inline', 'footer');
+function _services_ahah_security_options() {
+  $cached_form_state = array();
+  $cached_form = form_get_cache($_POST['form_build_id'], $cached_form_state);
+
+  if (!empty($_POST['auth_module'])) {
+    $settings = services_auth_invoke_custom($_POST['auth_module'], 'security_settings');
+  }
+
+  if ($settings) {
+    $cached_form['security']['options']['settings'] = $settings;
+  }
+  else {
+    unset($cached_form['security']['options']['settings']);
+  }
+
+  form_set_cache($_POST['form_build_id'], $cached_form, $cached_form_state);
+
+  $form_state = array('submitted' => FALSE);
+  $options = $cached_form['security']['options'];
+  unset($options['#prefix'], $options['#suffix']);
+  $options = form_builder('_services_ahah_security_options', $options, $form_state);
+  $output = drupal_render($options);
+
+  print drupal_to_js(array(
+    'status' => TRUE,
+    'data' => $output,
+  ));
+  exit;
 }

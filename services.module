@@ -69,46 +69,7 @@ function services_menu() {
     'type'              => MENU_LOCAL_TASK,
     'file'              => 'services_admin_browse.inc',
   );
-  $items['admin/build/services/keys'] = array(
-    'title'             => 'Keys',
-    'description'       => 'Manage application access to site services.',
-    'page callback'     => 'services_admin_keys_list',
-    'access callback'   => 'variable_get',
-    'access arguments'  => array('services_use_key', TRUE),
-    'type'              => MENU_LOCAL_TASK,
-    'file'              => 'services_admin_keys.inc',
-  );
-  $items['admin/build/services/keys/%'] = array(
-    'title'             => 'Edit key',
-    'access arguments'  => array('administer services'),
-    'page callback'     => 'drupal_get_form',
-    'page arguments'    => array('services_admin_keys_form'),
-    'file'              => 'services_admin_keys.inc',
-    'type'              => MENU_CALLBACK,
-  );
-  $items['admin/build/services/keys/%/delete'] = array(
-    'access arguments'  => array('administer services'),
-    'page callback'     => 'drupal_get_form',
-    'page arguments'    => array('services_admin_keys_delete_confirm', 4),
-    'file'              => 'services_admin_keys.inc',
-    'type'              => MENU_CALLBACK,
-  );
-  $items['admin/build/services/keys/list'] = array(
-    'title'             => 'List',
-    'type'              => MENU_DEFAULT_LOCAL_TASK,
-    'access callback'   => 'variable_get',
-    'access arguments'  => array('services_use_key', TRUE),
-    'weight'            => -10,
-  );
-  $items['admin/build/services/keys/add'] = array(
-    'title'             => 'Create key',
-    'page callback'     => 'drupal_get_form',
-    'page arguments'    => array('services_admin_keys_form'),
-    'access callback'   => 'variable_get',
-    'access arguments'  => array('services_use_key', TRUE),
-    'type'              => MENU_LOCAL_TASK,
-    'file'              => 'services_admin_keys.inc',
-  );
+
   $items['admin/build/services/settings'] = array(
     'title'             => 'Settings',
     'description'       => 'Configure service settings.',
@@ -126,6 +87,12 @@ function services_menu() {
     'access arguments'  => array('administer services'),
     'type'              => MENU_DEFAULT_LOCAL_TASK,
     'weight'            => -10,
+  );
+  $items['admin/services/ahah/security-options'] = array(
+    'file'              => 'services_admin_browse.inc',
+    'page callback'     => '_services_ahah_security_options',
+    'access arguments'  => array('administer services'),
+    'type'              => MENU_CALLBACK,
   );
   $items['crossdomain.xml'] = array(
     'access callback'   => 'services_access_menu',
@@ -241,9 +208,79 @@ function services_error($message) {
 }
 
 /**
+ * Gets information about a authentication module.
+ * If a property name is passed the value of the property will be returned,
+ * otherwise the whole information array will be returned.
+ *
+ * @param string $property
+ *  Optional. The name of a single property to get. Defaults to null.
+ * @param string $module
+ *  Optional. The module to get info forDefaults to the current authentication module.
+ * @return mixed
+ *  The information array or property value, or FALSE if the information or property wasn't found
+ */
+function services_auth_info($property = NULL, $module = NULL) {
+  static $info = array();
+  // Default the module param to the current auth module
+  $module = $module ? $module : variable_get('services_auth_module', '');
+
+  if (!isset($info[$module])) {
+    if (!empty($module) && module_exists($module) && is_callable($module . '_authentication_info')) {
+      $info[$module] = call_user_func($module . '_authentication_info');
+    }
+    else {
+      $info[$module] = FALSE;
+    }
+  }
+
+  // If a property was requested it should be returned
+  if ($property) {
+    return isset($info[$module][$property]) ? $info[$module][$property] : FALSE;
+  }
+
+  // Return the info array
+  return $info[$module];
+}
+
+function services_auth_invoke($method, &$arg1 = NULL, &$arg2 = NULL, &$arg3 = NULL) {
+  $module = variable_get('services_auth_module', '');
+  // Get information about the current auth module
+  $func = services_auth_info($method, $module);
+  if ($func) {
+    if ($file = services_auth_info('#file')) {
+      require_once(drupal_get_path('module', $module) . '/' . $file);
+    }
+
+    if (is_callable($func)) {
+      $args = func_get_args();
+      // Replace method name and arg1 with reference to $arg1 and $arg2.
+      array_splice($args, 0, 3, array(&$arg1, &$arg2, &$arg3));
+      return call_user_func_array($func, $args);
+    }
+  }
+}
+
+function services_auth_invoke_custom($module, $method, &$arg1 = NULL, &$arg2 = NULL, &$arg3 = NULL) {
+  // Get information about the auth module
+  $func = services_auth_info($method, $module);
+  if ($func) {
+    if ($file = services_auth_info('#file', $module)) {
+      require_once(drupal_get_path('module', $module) . '/' . $file);
+    }
+
+    if (is_callable($func)) {
+      $args = func_get_args();
+      // Replace module and method name and arg1 with reference to $arg1 and $arg2.
+      array_splice($args, 0, 4, array(&$arg1, &$arg2, &$arg3));
+      return call_user_func_array($func, $args);
+    }
+  }
+}
+
+/**
  * This is the magic function through which all remote method calls must pass.
  */
-function services_method_call($method_name, $args = array()) {
+function services_method_call($method_name, $args = array(), $browsing = FALSE) {
   $method = services_method_get($method_name);
 
   // Check that method exists.
@@ -251,7 +288,7 @@ function services_method_call($method_name, $args = array()) {
     return services_error(t('Method %name does not exist.', array('%name' => $method_name)));
   }
 
-  // Check for missing args and identify if arg is required in the hash.
+  // Check for missing args
   $hash_parameters = array();
   foreach ($method['#args'] as $key => $arg) {
     if (!$arg['#optional']) {
@@ -259,61 +296,14 @@ function services_method_call($method_name, $args = array()) {
         return services_error(t('Missing required arguments.'));
       }
     }
-
-    // Key is part of the hash
-    if (isset($arg['#signed']) && $arg['#signed'] == TRUE && variable_get('services_use_key', TRUE)) {
-      if (is_numeric($args[$key]) || !empty($args[$key])) {
-        if (is_array($args[$key]) || is_object($args[$key])) {
-          $hash_parameters[] = serialize($args[$key]);
-        }
-        else{
-          $hash_parameters[] = $args[$key];
-        }
-      }
-      else{
-        $hash_parameters[] = '';
-      }
-    }
   }
 
-  if ($method['#key'] && variable_get('services_use_key', TRUE)) {
-    $hash = array_shift($args);
-    $domain = array_shift($args);
-    $timestamp = array_shift($args);
-    $nonce = array_shift($args);
-
-    $expiry_time = $timestamp + variable_get('services_key_expiry', 30);
-
-    if ($expiry_time < time()) {
-      return services_error(t('Token has expired.'));
+  // Check authentication
+  if ($auth_error = services_auth_invoke('authenticate_call', $method, $method_name, $args)) {
+    if ($browsing) {
+      drupal_set_message(t('Authentication failed: !message', array('!message' => $auth_error)), 'error');
     }
-
-    // Still in time but has it been used before
-    if (db_result(db_query("SELECT count(*) FROM {services_timestamp_nonce}
-        WHERE domain = '%s' AND timestamp = %d AND nonce = '%s'",
-        $domain, $timestamp, $nonce))) {
-      return services_error(t('Token has been used previously for a request.'));
-    }
-    else{
-      db_query("INSERT INTO {services_timestamp_nonce} (domain, timestamp, nonce)
-        VALUES ('%s', %d, '%s')", $domain, $timestamp, $nonce);
-    }
-
-    $api_key = db_result(db_query("SELECT kid FROM {services_keys} WHERE domain = '%s'", $domain));
-
-    if (!services_validate_key($api_key, $timestamp, $domain, $nonce, $method_name, $hash_parameters, $hash)) {
-      return services_error(t('Invalid API key.'));
-    }
-  }
-
-  // Add additonal processing for methods requiring authentication
-  $session_backup = NULL;
-  if ($method['#auth'] && variable_get('services_use_sessid', TRUE)) {
-    $sessid = array_shift($args);
-    if (empty($sessid)) {
-      return services_error(t('Invalid sessid.'));
-    }
-    $session_backup = services_session_load($sessid);
+    return services_error($auth_error);
   }
 
   // Load the proper file
@@ -321,8 +311,15 @@ function services_method_call($method_name, $args = array()) {
     module_load_include($file['file'], $file['module']);
   }
 
-  // Check access
-  $access_arguments = isset($method['#access arguments']) ? $method['#access arguments'] : $args;
+  // Construct access arguments array
+  if (isset($method['#access arguments'])) {
+    $access_arguments = $method['#access arguments'];
+  }
+  else {
+    // Just use the arguments array if no access arguments have been specified
+    $access_arguments = $args;
+  }
+
   // Call default or custom access callback
   if (call_user_func_array($method['#access callback'], $access_arguments) != TRUE) {
     return services_error(t('Access denied.'));
@@ -340,65 +337,40 @@ function services_method_call($method_name, $args = array()) {
     chdir($server_root);
   }
 
-  // Add additonal processing for methods requiring authentication.
-  if ($session_backup !== NULL) {
-    services_session_unload($session_backup);
-  }
-
   return $result;
 }
 
+function services_get_all_resources() {
+  static $resource_cache;
+  if (!isset($resource_cache)) {
+    $resource_cache = module_invoke_all('service_resource');
+    foreach ($resource_cache as $name => &$res) {
+      $res['#name'] = $name;
+    }
+  }
+  return $resource_cache;
+}
+
+function services_delegate_access($perm) {
+  return services_auth_invoke('delegate_access', $perm);
+}
+
 /**
-   * This should probably be cached in drupal cache.
+ * Gets all service definitions
+ *
+ * @return array
+ *   An array containing all services and thir methods
  */
-function services_get_all() {
-  static $methods_cache;
-  if (!isset($methods_cache)) {
+function services_get_all($include_resources = TRUE) {
+  $cache_key = 'services:methods';
+
+  if (($cache = cache_get($cache_key)) && isset($cache->data)) {
+    return $cache->data;
+  }
+  else {
     $methods = module_invoke_all('service');
 
-    // api_key arg
-    $arg_api_key = array(
-      '#name' => 'hash',
-      '#type' => 'string',
-      '#description' => t('A valid API key.'),
-    );
-
-    // sessid arg
-    $arg_sessid = array(
-      '#name' => 'sessid',
-      '#type' => 'string',
-      '#description' => t('A valid sessid.'),
-    );
-
-    // domain arg
-    $arg_domain_name = array(
-      '#name' => 'domain_name',
-      '#type' => 'string',
-      '#description' => t('A valid domain for the API key.'),
-    );
-
-    $arg_domain_time_stamp = array(
-      '#name' => 'domain_time_stamp',
-      '#type' => 'string',
-      '#description' => t('Time stamp used to hash key.'),
-    );
-
-    $arg_nonce = array(
-      '#name' => 'nonce',
-      '#type' => 'string',
-      '#description' => t('One time use nonce also used hash key.'),
-    );
-
     foreach ($methods as $key => $method) {
-
-      // set method defaults
-      if (!isset($methods[$key]['#auth'])) {
-        $methods[$key]['#auth'] = TRUE;
-      }
-
-      if (!isset($methods[$key]['#key'])) {
-        $methods[$key]['#key'] = TRUE;
-      }
 
       if (!isset($methods[$key]['#access callback'])) {
         $methods[$key]['#access callback'] = 'services_access_menu';
@@ -406,17 +378,6 @@ function services_get_all() {
 
       if (!isset($methods[$key]['#args'])) {
         $methods[$key]['#args'] = array();
-      }
-
-      if ($methods[$key]['#auth'] && variable_get('services_use_sessid', TRUE)) {
-        $methods[$key]['#args'] = array_merge(array($arg_sessid), $methods[$key]['#args']);
-      }
-
-      if ($methods[$key]['#key'] && variable_get('services_use_key', TRUE)) {
-        $methods[$key]['#args'] = array_merge(array($arg_nonce), $methods[$key]['#args']);
-        $methods[$key]['#args'] = array_merge(array($arg_domain_time_stamp), $methods[$key]['#args']);
-        $methods[$key]['#args'] = array_merge(array($arg_domain_name), $methods[$key]['#args']);
-        $methods[$key]['#args'] = array_merge(array($arg_api_key), $methods[$key]['#args']);
       }
 
       // set defaults for args
@@ -437,9 +398,13 @@ function services_get_all() {
       }
       reset($methods[$key]['#args']);
     }
-    $methods_cache = $methods;
+
+    // Allow auth module to alter the methods
+    services_auth_invoke('alter_methods', $methods);
+
+    cache_set($cache_key, $methods);
+    return $methods;
   }
-  return $methods_cache;
 }
 
 /**
@@ -461,24 +426,6 @@ function services_method_get($method_name) {
     }
   }
   return $method_cache[$method_name];
-}
-
-function services_validate_key($kid, $timestamp, $domain, $nonce, $method_name, $hash_parameters, $hash) {
-  $hash_parameters = array_merge(array($timestamp, $domain, $nonce, $method_name), $hash_parameters);
-  $rehash = hash_hmac("sha256", implode(';', $hash_parameters), $kid);
-  return ($rehash == $hash) ? TRUE : FALSE;
-}
-
-function services_get_keys() {
-  static $keys;
-  if (!$keys) {
-    $keys = array();
-    $result = db_query("SELECT * FROM {services_keys}");
-    while ($key = db_fetch_object($result)) {
-      $keys[$key->kid] = $key;
-    }
-  }
-  return $keys;
 }
 
 /**

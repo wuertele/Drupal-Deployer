@@ -59,8 +59,7 @@ function user_service_get($uid) {
  */
 function user_service_get_access($uid) {
   global $user;
-	return (($user->uid == $uid && user_access('get own user data')) ||
-    ($user->uid != $uid && user_access('get any user data')));
+  return (($user->uid == $uid && user_access('get own user data')) || ($user->uid != $uid && user_access('get any user data')));
 }
 
 /**
@@ -83,13 +82,13 @@ function user_service_login($username, $password) {
 
   if ($user->uid) {
     // Regenerate the session ID to prevent against session fixation attacks.
-		sess_regenerate();
-		module_invoke_all('user', 'login', NULL, $user);
-		
+    sess_regenerate();
+    module_invoke_all('user', 'login', NULL, $user);
+
     $return = new stdClass();
     $return->sessid = session_id();
     $return->user = $user;
-		
+
     return $return;
   }
   session_destroy();
@@ -127,10 +126,9 @@ function user_service_logout() {
  */
 function user_service_save($account) {
   // if uid is present then update, otherwise insert
-	$update = user_load($account['uid']);	
-	$account = isset($update->uid) ? user_save($update,$account) : user_save('', $account);  
+  $update = user_load($account['uid']);	
+  $account = isset($update->uid) ? user_save($update,$account) : user_save('', $account);  
   if (!$account) {
-
     return services_error(t('Error on saving the user.'));
   }
 

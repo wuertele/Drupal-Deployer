@@ -1,13 +1,13 @@
 <?php
 // $Id$
+
 /**
- * @author Services Dev Team
  * @file
  *  Generate security keys.
  */
 
-function services_admin_keys_list() {
-  $keys = services_get_keys();
+function services_keyauth_admin_keys_list() {
+  $keys = services_keyauth_get_keys();
   $header = array(t('Key'), t('Title'), t('Domain'), array('data' => t('Operations'), 'colspan' => '2'));
   $rows = array();
 
@@ -40,7 +40,7 @@ function services_admin_keys_list() {
   return theme('table', $header, $rows);
 }
 
-function services_admin_keys_form() {
+function services_keyauth_admin_keys_form() {
   $kid = arg(4);
 
   $key = db_fetch_object(db_query("SELECT * FROM {services_keys} WHERE kid = '%s'", $kid));
@@ -81,13 +81,13 @@ function services_admin_keys_form() {
   return $form;
 }
 
-function services_admin_keys_form_submit($form, &$form_state) {
-  services_admin_keys_save($form_state['values']);
+function services_keyauth_admin_keys_form_submit($form, &$form_state) {
+  services_keyauth_admin_keys_save($form_state['values']);
 
   $form_state['redirect']  =  'admin/build/services/keys';
 }
 
-function services_admin_keys_save(&$key) {
+function services_keyauth_admin_keys_save(&$key) {
   $is_existing = FALSE;
   $key['kid'] = !empty($key['kid']) ? $key['kid'] : md5(uniqid(mt_rand(), TRUE));
   $is_existing =  db_result(db_query("SELECT count(*) FROM {services_keys}
@@ -105,11 +105,11 @@ function services_admin_keys_save(&$key) {
   }
 }
 
-function services_admin_keys_delete($kid) {
+function services_keyauth_admin_keys_delete($kid) {
   db_query("DELETE FROM {services_keys} WHERE kid = '%s'", $kid);
 }
 
-function services_admin_keys_delete_confirm(&$form_state, $kid = 0) {
+function services_keyauth_admin_keys_delete_confirm(&$form_state, $kid = 0) {
   $key = db_fetch_object(db_query("SELECT * FROM {services_keys} WHERE kid = '%s'", $kid));
 
   $form['kid'] = array('#type' => 'value', '#value' => $key->kid);
@@ -122,8 +122,8 @@ function services_admin_keys_delete_confirm(&$form_state, $kid = 0) {
   return confirm_form($form, $message, 'admin/build/services/keys', $caption, t('Delete'));
 }
 
-function services_admin_keys_delete_confirm_submit($form, &$form_state) {
-  services_admin_keys_delete($form_state['values']['kid']);
+function services_keyauth_admin_keys_delete_confirm_submit($form, &$form_state) {
+  services_keyauth_admin_keys_delete($form_state['values']['kid']);
 
   $t_args = array('%key' => $form_state['kid']);
   drupal_set_message(t('The key %key has been deleted.', $t_args));
