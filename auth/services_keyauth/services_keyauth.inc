@@ -148,24 +148,6 @@ function _services_keyauth_alter_browse_form(&$form, $method) {
 }
 
 function _services_keyauth_authenticate_call($method, $method_name, &$args) {
-  // Get parameters that are used for hash
-  /*$hash_parameters = array();
-  foreach ($method['#args'] as $key => $arg) {
-    if (isset($arg['#signed']) && $arg['#signed'] == TRUE && variable_get('services_use_key', TRUE)) {
-      if (is_numeric($args[$key]) || !empty($args[$key])) {
-        if (is_array($args[$key]) || is_object($args[$key])) {
-          $hash_parameters[] = serialize($args[$key]);
-        }
-        else{
-          $hash_parameters[] = $args[$key];
-        }
-      }
-      else{
-        $hash_parameters[] = '';
-      }
-    }
-  }*/
-
   if ($method['#key'] and variable_get('services_use_key', TRUE)) {
     $hash = array_shift($args);
     $domain = array_shift($args);
@@ -180,8 +162,8 @@ function _services_keyauth_authenticate_call($method, $method_name, &$args) {
 
     // Still in time but has it been used before
     if (db_result(db_query("SELECT count(*) FROM {services_timestamp_nonce}
-        WHERE domain = '%s' AND timestamp = %d AND nonce = '%s'",
-        $domain, $timestamp, $nonce))) {
+        WHERE domain = '%s' AND nonce = '%s'",
+        $domain, $nonce))) {
       return services_error(t('Token has been used previously for a request.'));
     }
     else{

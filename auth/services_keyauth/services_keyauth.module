@@ -6,6 +6,18 @@
  *  Provides a key based validation system.
  */
 /**
+ * Implementation of hook_cron().
+ *
+ * Clear down old values from the nonce table.
+ */
+function services_keyauth_cron() {
+  $expiry_time = time() - variable_get('services_key_expiry', 30);
+  db_query("DELETE FROM {services_timestamp_nonce}
+    WHERE timestamp < '%s'", $expiry_time);
+}
+
+
+/**
  * Implementation of hook_authentication_info().
  *
  * @return array
