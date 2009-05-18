@@ -42,10 +42,9 @@ function services_keyauth_schema() {
     'fields' => array(
       'timestamp' => array(
         'description' => 'The timestamp used with the Nonce.',
-        'type'        => 'varchar',
-        'length'      => 32,
-        'not null'    => TRUE,
-        'default'     => ''
+        'type'        => 'int',
+        'not null' => TRUE,
+        'default' => 0,
       ),
       'nonce' => array(
         'description' => 'The random string used on the request.',
@@ -147,5 +146,13 @@ function services_keyauth_update_6002() {
   $update = array();
   db_drop_primary_key($update, 'services_timestamp_nonce');
   db_add_index($update, 'services_timestamp_nonce', 'nonce', array('nonce'));
+  return $update;
+}
+
+function services_keyauth_update_6003() {
+  $update = array();
+  db_drop_index($update, 'services_timestamp_nonce', 'timestamp');
+  db_change_field($update, 'services_timestamp_nonce', 'timestamp', 'timestamp', array('type' => 'int', 'not null' => TRUE, 'default' => 0));
+  db_add_index($update, 'services_timestamp_nonce', 'timestamp', array('timestamp'));
   return $update;
 }
