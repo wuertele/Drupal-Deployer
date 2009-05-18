@@ -63,9 +63,9 @@ function services_keyauth_schema() {
       ),
     ),
     'indexes' => array(
-       'timestamp' => array('timestamp'),
+      'timestamp' => array('timestamp'),
+      'nonce'  => array('nonce'),
     ),
-    'primary key' => array('nonce'),
   );
   $schema['services_key_permissions'] = array(
     'description' => t('Stores services method\'s access rights on a per API key basis.'),
@@ -137,8 +137,15 @@ function services_keyauth_update_6001() {
       'method'        => array('method'),
     ),
     'unique key' => array('key_method' => array('kid','method')),
-  );
+  );    
   $update = array();
   db_create_table($update, 'services_key_permissions', $schema['services_key_permissions']);
+  return $update;
+}
+
+function services_keyauth_update_6002() {
+  $update = array();
+  db_drop_primary_key($update, 'services_timestamp_nonce');
+  db_add_index($update, 'services_timestamp_nonce', 'nonce', array('nonce'));
   return $update;
 }
