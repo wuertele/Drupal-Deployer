@@ -12,8 +12,8 @@
  * @see
  *   taxonomy_get_tree()
  */
-function taxonomy_service_get_tree($vid) {
-  return taxonomy_get_tree($vid);
+function taxonomy_service_get_tree($vid, $parent = 0, $max_depth = NULL) {
+  return taxonomy_get_tree($vid, $parent, -1, $max_depth);
 }
 
 /**
