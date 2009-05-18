@@ -289,7 +289,7 @@ function services_admin_settings_submit($form, $form_state) {
   services_auth_invoke('security_settings_submit', $form_state);
 
   // Clear the services cache so that methods are updated according to auth settings
-  cache_clear_all('services:', 'cache', TRUE);
+  cache_clear_all('services:methods', 'cache');
 }
 
 /**
