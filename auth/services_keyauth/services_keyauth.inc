@@ -113,16 +113,18 @@ function _services_keyauth_get_first_key() {
 }
 
 function _services_keyauth_alter_browse_form(&$form, $method) {
-  $timestamp = time();
-  $nonce = user_password();
+  //$timestamp = time();
+  //$nonce = user_password();
 
   foreach ($method['#args'] as $key => $arg) {
     switch ($arg['#name']) {
       case 'hash':
-        $form['arg'][$key]['#default_value'] = hash_hmac('sha256',
-          $timestamp .';'. $_SERVER['HTTP_HOST'] .';'. $nonce .';'. arg(4),
-          _services_keyauth_get_first_key()
-        );
+        $form['arg'][$key] = array(
+          '#title'          => 'Hash',
+          '#type'           => 'textfield',
+          '#value'          => t('Gets generated after form submission'),
+          '#disabled'       => TRUE
+         );
         break;
       case 'sessid':
         $form['arg'][$key]['#default_value']  = session_id();
@@ -131,10 +133,15 @@ function _services_keyauth_alter_browse_form(&$form, $method) {
         $form['arg'][$key]['#default_value'] = $_SERVER['HTTP_HOST'];
         break;
       case 'domain_time_stamp':
-        $form['arg'][$key]['#default_value'] = $timestamp;
+        $form['arg'][$key] = array(
+           '#title'          => 'Timestamp',
+           '#type'           => 'textfield',
+           '#value'          => t('Gets generated after form submission'),
+           '#disabled'       => TRUE
+         );
         break;
       case 'nonce':
-        $form['arg'][$key]['#default_value'] = $nonce;
+        $form['arg'][$key]['#default_value'] = user_password();
         break;
     }
   }
@@ -142,7 +149,7 @@ function _services_keyauth_alter_browse_form(&$form, $method) {
 
 function _services_keyauth_authenticate_call($method, $method_name, &$args) {
   // Get parameters that are used for hash
-  $hash_parameters = array();
+  /*$hash_parameters = array();
   foreach ($method['#args'] as $key => $arg) {
     if (isset($arg['#signed']) && $arg['#signed'] == TRUE && variable_get('services_use_key', TRUE)) {
       if (is_numeric($args[$key]) || !empty($args[$key])) {
@@ -157,7 +164,7 @@ function _services_keyauth_authenticate_call($method, $method_name, &$args) {
         $hash_parameters[] = '';
       }
     }
-  }
+  }*/
 
   if ($method['#key'] and variable_get('services_use_key', TRUE)) {
     $hash = array_shift($args);
@@ -184,7 +191,8 @@ function _services_keyauth_authenticate_call($method, $method_name, &$args) {
 
     $api_key = db_result(db_query("SELECT kid FROM {services_keys} WHERE domain = '%s'", $domain));
 
-    if (!services_keyauth_validate_key($api_key, $timestamp, $domain, $nonce, $method_name, $hash_parameters, $hash)) {
+    //if (!services_keyauth_validate_key($api_key, $timestamp, $domain, $nonce, $method_name, $hash_parameters, $hash)) {
+    if ($hash != services_get_hash($timestamp, $domain, $nonce, $method, $args)) {
       return services_error(t('Invalid API key.'));
     }
     
@@ -203,4 +211,13 @@ function _services_keyauth_authenticate_call($method, $method_name, &$args) {
     }
     $session_backup = services_session_load($sessid);
   }
+}
+
+function _services_keyauth_alter_browse_form_submit($method, &$args) {
+  $args_stripped = $args;
+  for ($i = 1; $i <= 4; $i++) {
+    array_shift($args_stripped);
+  }
+  $args[2] = time();
+  $args[0] = services_get_hash($args[2], $args[1], $args[3], $method, $args_stripped);
 }

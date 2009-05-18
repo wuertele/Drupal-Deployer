@@ -21,6 +21,7 @@ function services_keyauth_authentication_info() {
     'security_settings_submit' => '_services_keyauth_security_settings_submit',
     'alter_methods' => '_services_keyauth_alter_methods',
     'alter_browse_form' => '_services_keyauth_alter_browse_form',
+    'alter_browse_form_submit' => '_services_keyauth_alter_browse_form_submit',
     'authenticate_call' => '_services_keyauth_authenticate_call',
   );
 }
@@ -75,10 +76,31 @@ function services_keyauth_menu() {
   return $items;
 }
 
-function services_keyauth_validate_key($kid, $timestamp, $domain, $nonce, $method_name, $hash_parameters, $hash) {
+/*function services_keyauth_validate_key($kid, $timestamp, $domain, $nonce, $method_name, $hash_parameters, $hash) {
   $hash_parameters = array_merge(array($timestamp, $domain, $nonce, $method_name), $hash_parameters);
   $rehash = hash_hmac("sha256", implode(';', $hash_parameters), $kid);
   return ($rehash == $hash) ? TRUE : FALSE;
+}*/
+
+function services_get_hash($timestamp, $domain, $nonce, $method, $args) {
+  $hash_parameters = array($timestamp, $domain, $nonce, $method['#method']);
+  foreach ($method['#args'] as $key => $arg) {
+    if ($arg['#signed'] == TRUE) {
+      if (is_numeric($args[$key]) || !empty($args[$key])) {
+        if (is_array($args[$key]) || is_object($args[$key])){
+          $hash_parameters[] = serialize($args[$key]);
+        }
+        else{
+          $hash_parameters[] = $args[$key];
+        }
+      }
+      else{
+        $hash_parameters[] = '';
+      }
+    }
+  }
+  $api_key = db_result(db_query("SELECT kid FROM {services_keys} WHERE domain = '%s'", $domain));
+  return hash_hmac("sha256", implode(';', $hash_parameters), $api_key);
 }
 
 function services_keyauth_get_key($kid) {
