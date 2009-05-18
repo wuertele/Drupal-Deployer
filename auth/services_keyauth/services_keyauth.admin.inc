@@ -52,12 +52,17 @@ function services_keyauth_admin_keys_form() {
     '#default_value'  => $key_kid,
   );
 
+  $accessible_methods = array();
   if ($key_kid != '') {
     $form['key'] = array(
       '#type'           => 'markup',
       '#title'          => t('Key'),
       '#value'          => '<strong>'. t('API Key') .':</strong> '. $key_kid,
     );
+    $result = db_query("SELECT method FROM {services_key_permissions} WHERE kid = '%s'", $key->kid);
+    while ($kid = db_fetch_object($result)) {
+      $accessible_methods[] = $kid->method;
+    }
   }
 
   $form['title'] = array(
@@ -71,6 +76,19 @@ function services_keyauth_admin_keys_form() {
     '#type'           => 'textfield',
     '#default_value'  => isset($key->domain) ? $key->domain : '',
     '#description'    => t('External domain allowed to use this key.'),
+  );
+  
+  $methods = services_get_all();
+  foreach ($methods as $method) {
+    $form_methods[$method['#method']] = $method['#method'];
+  }
+
+  $form['method_access'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Method access'),
+    '#options' => $form_methods,
+    '#default_value' => $accessible_methods,
+    '#description' => t('Define which methods are accessible.'),
   );
 
   $form['submit'] = array(
@@ -96,13 +114,20 @@ function services_keyauth_admin_keys_save(&$key) {
   if ($is_existing) {
     db_query("UPDATE {services_keys} SET title = '%s', domain = '%s'
       WHERE kid = '%s'", $key['title'], $key['domain'], $key['kid']);
-    return SAVED_UPDATED;
+    db_query("DELETE FROM {services_key_permissions} WHERE kid = '%s'", $key['kid']);
+    $return = SAVED_UPDATED;
   }
   else {
     db_query("INSERT INTO {services_keys} (kid, title, domain)
       VALUES ('%s', '%s', '%s')", $key['kid'], $key['title'], $key['domain']);
-    return SAVED_NEW;
+    $return = SAVED_NEW;
   }
+  foreach ($key['method_access'] as $method => $value) {
+    if ($value) {
+      db_query("INSERT INTO {services_key_permissions} (kid, method) VALUES ('%s', '%s')", $key['kid'], $value);
+    }
+  }
+  return $return; 
 }
 
 function services_keyauth_admin_keys_delete($kid) {

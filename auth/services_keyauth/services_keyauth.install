@@ -67,6 +67,30 @@ function services_keyauth_schema() {
     ),
     'primary key' => array('nonce'),
   );
+  $schema['services_key_permissions'] = array(
+    'description' => t('Stores services method\'s access rights on a per API key basis.'),
+    'fields' => array(
+      'kid' => array(
+        'description' => t('The service key ID.'),
+        'type'        => 'char',
+        'length'      => 32,
+        'not null'    => TRUE,
+        'default'     => '',
+      ),
+      'method' => array(
+        'description' => t('Name of service method.'),
+        'type'        => 'varchar',
+        'length'      => 255,
+        'not null'    => TRUE,
+        'default'     => '',
+      ),
+    ),
+    'indexes' => array(
+      'api_key'       => array('kid'),
+      'method'        => array('method'),
+    ),
+    'unique key' => array('key_method' => array('kid','method')),
+  );
   return $schema;
 }
 
@@ -87,4 +111,34 @@ function services_keyauth_uninstall() {
 
   variable_del('services_use_key');
   variable_del('services_use_sessid');
+}
+
+function services_keyauth_update_6001() {
+  $schema['services_key_permissions'] = array(
+    'description' => t('Stores services method\'s access rights on a per API key basis.'),
+    'fields' => array(
+      'kid' => array(
+        'description' => t('The service key ID.'),
+        'type'        => 'char',
+        'length'      => 32,
+        'not null'    => TRUE,
+        'default'     => '',
+      ),
+      'method' => array(
+        'description' => t('Name of service method.'),
+        'type'        => 'varchar',
+        'length'      => 255,
+        'not null'    => TRUE,
+        'default'     => '',
+      ),
+    ),
+    'indexes' => array(
+      'api_key'       => array('kid'),
+      'method'        => array('method'),
+    ),
+    'unique key' => array('key_method' => array('kid','method')),
+  );
+  $update = array();
+  db_create_table($update, 'services_key_permissions', $schema['services_key_permissions']);
+  return $update;
 }
