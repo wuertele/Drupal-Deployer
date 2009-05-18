@@ -17,7 +17,7 @@ function site_verify_list() {
     $rows[] = array(
       $engines[$record->engine]['name'],
       t('Yes'),
-      l('Edit', 'admin/settings/site-verify/edit/' . $record->svid),
+      l('Edit', 'admin/build/site-verify/edit/' . $record->svid),
     );
   }
 
@@ -117,7 +117,7 @@ function site_verify_edit_form($form_state, $record = NULL) {
   }
 
   $form['#attributes'] = array('enctype' => 'multipart/form-data');
-  $form['#redirect'] = 'admin/settings/site-verify';
+  $form['#redirect'] = 'admin/build/site-verify';
   return $form;
 }
 
