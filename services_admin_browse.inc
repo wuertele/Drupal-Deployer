@@ -249,7 +249,7 @@ function services_admin_settings() {
     );
     // Get the configuration form for the authorization module
     $settings = services_auth_invoke('security_settings');
-    if ($settings) {
+    if (is_array($settings)) {
       $form['security']['options']['settings'] = $settings;
     }
   }
