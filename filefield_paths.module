@@ -453,7 +453,9 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       }
 
       // Re-write cck fields
-      content_update($node);
+      if (module_exists('content')) {
+        content_update($node);
+      }
 
       // Cleanup temporary paths
       if ($ffp['#settings']) {
@@ -465,7 +467,7 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
           $imagefield = FALSE;
           foreach ($ffp['#files'] as $file) {
             if ($file['name'] == $name) {
-              if ($file['widget'] == 'imagefield') {
+              if (isset($file['widget']) && $file['widget'] == 'imagefield') {
                 $imagefield = TRUE;
               }
               break;
@@ -602,7 +604,7 @@ function filefield_paths_filefield_paths_process_file($new, &$file, $settings, &
         }
 
         // Move ImageField thumbnail
-        if ($file['widget'] == 'imagefield' && file_exists($thumbnail_source = imagefield_file_admin_thumb_path(array('filepath' => $file['filepath']['old'])))) {
+        if (isset($file['widget']) && $file['widget'] == 'imagefield' && file_exists($thumbnail_source = imagefield_file_admin_thumb_path(array('filepath' => $file['filepath']['old'])))) {
           file_delete($thumbnail_source);
         }
 
