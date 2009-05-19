@@ -11,7 +11,7 @@
  */
 function search_service_nodes($keys, $simple = FALSE, $fields = array()) {
   // define standard keys for simple set
-  $stdkeys = array('link', 'type', 'title', 'user', 'date', 'snippet');
+  $stdkeys = array('node', 'link', 'type', 'title', 'user', 'date', 'snippet');
 
   // invoke the search hook to generate results
   $results = module_invoke('node', 'search', 'search', $keys);
@@ -22,6 +22,9 @@ function search_service_nodes($keys, $simple = FALSE, $fields = array()) {
       for ($i = 0; $i<$num; $i++) {
         $keys = array_keys($results[$i]);
         foreach ($keys as $key) {
+          if ($key == 'node') {
+            $results[$i][$key] = $results[$i]['node']->nid;
+          }          
           if (!in_array($key, $stdkeys)) {
             unset($results[$i][$key]);
           }
