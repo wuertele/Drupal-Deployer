@@ -7,7 +7,7 @@ function site_verify_list() {
   $headers = array(
     t('Engine'),
     t('Verification'),
-    t('Operations'),
+    array('data' => t('Operations'), 'colspan' => 2),
   );
   $rows = array();
 
@@ -18,6 +18,7 @@ function site_verify_list() {
       $engines[$record->engine]['name'],
       t('Yes'),
       l('Edit', 'admin/build/site-verify/edit/' . $record->svid),
+      l('Delete', 'admin/build/site-verify/delete/' . $record->svid),
     );
   }
 
@@ -27,6 +28,7 @@ function site_verify_list() {
         $details['name'],
         '',
         l('Add', 'admin/build/site-verify/add/' . $engine),
+        '',
       );
     }
   }
@@ -53,8 +55,6 @@ function site_verify_edit_form($form_state, $record = NULL) {
     'file_contents' => t('This is a verification page.'),
     'meta' => '',
   );
-
-  dpm($record);
 
   $engine = site_verify_get_engine($record['engine']);
 
@@ -149,6 +149,32 @@ function site_verify_edit_form_submit($form, $form_state) {
 
   // The menu needs to be rebuilt if the page URL has changed or reset.
   variable_set('menu_rebuild_needed', TRUE);
+}
+
+function site_verify_delete_form($form_state, $record) {
+  $record['engine_details'] = site_verify_get_engine($record['engine']);
+
+  $form['record'] = array(
+    '#type' => 'value',
+    '#value' => $record,
+  );
+
+  return confirm_form(
+    $form,
+    t('Are you sure you want to delete the site verification for %engine?', array('%engine' => $record['engine_details']['name'])),
+    'admin/build/site-verify',
+    t('This action cannot be undone.'),
+    t('Delete'),
+    t('Cancel')
+  );
+}
+
+function site_verify_delete_form_submit($form, &$form_state) {
+  $record = $form_state['values']['record'];
+  db_query("DELETE FROM {site_verify} WHERE svid = %d", $record['svid']);
+  drupal_set_message(t('Verification for %engine has been deleted.', array('%engine' => $record['engine_details']['name'])));
+  watchdog('site_verify', 'Verification for %engine deleted.', array('%engine' => $record['engine_details']['name']), WATCHDOG_NOTICE);
+  $form_state['redirect'] = 'admin/build/site-verify';
 }
 
 function site_verify_validate_meta_google($element, &$form_state) {
