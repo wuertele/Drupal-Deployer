@@ -20,13 +20,6 @@ function xmlsitemap_settings_form() {
     '#collapsed' => FALSE,
     '#weight' => -10,
   );
-  $form['xmlsitemap']['xmlsitemap_batch_limit'] = array(
-    '#type' => 'select',
-    '#title' => t('Maximum number of sitemap links to process at once'),
-    '#options' => drupal_map_assoc(array(10, 25, 50, 100, 500)),
-    '#default_value' => xmlsitemap_var('batch_limit'),
-    '#description' => t('If you have problems running cron or rebuilding the sitemap, you may want to lower this value.'),
-  );
   $form['xmlsitemap']['xmlsitemap_minimum_lifetime'] = array(
     '#type' => 'select',
     '#title' => t('Minimum sitemap lifetime'),
@@ -47,6 +40,13 @@ function xmlsitemap_settings_form() {
     // @todo This description is not clear.
     '#description' => t('If there are problems with rebuilding the sitemap, you may want to manually set this value. If you have more than 50,000 links, an index with multiple sitemap pages will be generated. There is a maximum of 1000 sitemap pages.'),
   );
+  $form['xmlsitemap']['xmlsitemap_batch_limit'] = array(
+    '#type' => 'select',
+    '#title' => t('Maximum number of sitemap links to process at once'),
+    '#options' => drupal_map_assoc(array(10, 25, 50, 100, 500, 1000, 2500)),
+    '#default_value' => xmlsitemap_var('batch_limit'),
+    '#description' => t('If you have problems running cron or rebuilding the sitemap, you may want to lower this value.'),
+  );
   $form['xmlsitemap']['xmlsitemap_path'] = array(
     '#type' => 'textfield',
     '#title' => t('Sitemap file cache directory'),
@@ -55,12 +55,18 @@ function xmlsitemap_settings_form() {
     '#maxlength' => 255,
     '#description' => t('Subdirectory in the directory %dir where the sitemap data will be stored.', array('%dir' => file_directory_path() .'/')),
   );
+  $form['xmlsitemap']['xmlsitemap_base_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Base URL'),
+    '#default_value' => xmlsitemap_var('base_url', ''),
+    '#description' => t('If left blank, the default base URL (%base_url) will be used.', array('%base_url' => $GLOBALS['base_url'])),
+  );
 
   $form['frontpage'] = array(
     '#type' => 'fieldset',
     '#title' => t('Front page'),
     '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
+    '#collapsed' => FALSE,
   );
   $form['frontpage']['xmlsitemap_frontpage_priority'] = array(
     '#type' => 'select',
@@ -75,11 +81,18 @@ function xmlsitemap_settings_form() {
     '#default_value' => xmlsitemap_var('frontpage_changefreq'),
   );
 
+  //$form['advanced'] = array(
+  //  '#type' => 'fieldset',
+  //  '#title' => t('Advanced'),
+  //  '#collapsible' => TRUE,
+  //  '#collapsed' => TRUE,
+  //);
+
   $form['custom'] = array(
     '#type' => 'fieldset',
     '#title' => t('Custom links'),
     '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
+    '#collapsed' => !xmlsitemap_var('custom_links'),
   );
   $form['custom']['xmlsitemap_custom_links'] = array(
     '#type' => 'textarea',
@@ -87,6 +100,7 @@ function xmlsitemap_settings_form() {
     '#default_value' => xmlsitemap_var('custom_links'),
     '#description' => t('Enter one path per line. Each path should be relative to the Drupal directory. For example: %example1.', array('%example1' => 'node/add')),
     '#wysiwyg' => FALSE,
+    //'#element_validate' => array('xmlsitemap_validate_custom_links'),
   );
 
   $form['#validate'][] = 'xmlsitemap_settings_form_validate';
@@ -107,6 +121,10 @@ function xmlsitemap_settings_form_validate($form, &$form_state) {
   if ($path_new != $path_old && file_check_directory($path_new, FILE_CREATE_DIRECTORY, 'xmlsitemap_path')) {
     // If creating the new directory was successful, remove the old directory.
     xmlsitemap_clean_directory($path_old, TRUE);
+  }
+
+  if ($form_state['values']['xmlsitemap_base_url'] != '' && !valid_url($form_state['values']['xmlsitemap_base_url'], TRUE)) {
+    form_set_error('xmlsitemap_base_url', t('Invalid base URL.'));
   }
 
   // Validate the custom links.
