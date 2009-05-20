@@ -84,11 +84,11 @@ function _services_keyauth_alter_methods(&$methods) {
 
   foreach ($methods as $key => &$method) {
     // set method defaults
-    if (!isset($method[$key]['#auth'])) {
+    if (!isset($method['#auth'])) {
       $method['#auth'] = TRUE;
     }
 
-    if (!isset($method[$key]['#key'])) {
+    if (!isset($method['#key'])) {
       $method['#key'] = TRUE;
     }
 
