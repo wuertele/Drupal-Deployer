@@ -98,6 +98,7 @@ function services_admin_browse_test() {
   $method = services_method_get(arg(4));
 
   $form['arg'] = array('#tree' => TRUE);
+  $form['format'] = array('#tree' => TRUE);
 
   foreach ($method['#args'] as $key => $arg) {
     $form['name'][$key]         = array(
@@ -117,6 +118,28 @@ function services_admin_browse_test() {
         '#type'           => 'textfield'
       );
     }
+
+    $format_opt = array();
+    switch ($arg['#type']) {
+      case 'array':
+        $format_opt['cdel'] = t('Comma delimited');
+      case 'struct':
+        $format_opt['json'] = t('JSON');
+        $format_opt['sphp'] = t('Serialized PHP');
+        break;
+    }
+    if (!empty($format_opt)) {
+      $form['format'][$key] = array(
+        '#type' => 'select',
+        '#options' => $format_opt,
+      );
+    }
+    else {
+      $form['format'][$key] = array(
+        '#type' => 'value',
+        '#value' => '',
+      );
+    }
   }
 
   services_auth_invoke('alter_browse_form', $form, $method);
@@ -133,14 +156,14 @@ function services_admin_browse_test() {
 function services_admin_browse_test_submit($form, $form_state) {
   global $_services_admin_browse_test_submit_result;
   $method = services_method_get(arg(4));
-  $args = services_admin_browse_test_unserialize_args($form_state['values']['arg']);
+  $args = services_admin_browse_test_unserialize_args($form_state['values']['arg'], $form_state['values']['format']);
   // Allow the authorization module to handle submitted values.
   services_auth_invoke('alter_browse_form_submit', $method, $args);
   $result = services_method_call($method['#method'], $args, TRUE);
   $_services_admin_browse_test_submit_result = '<pre>'. htmlspecialchars(print_r($result, TRUE)) .'</pre>';
 }
 
-function services_admin_browse_test_unserialize_args($values) {
+function services_admin_browse_test_unserialize_args($values, $formats) {
   $method = services_method_get(arg(4));
   $noskip = FALSE;
   // Convert args
@@ -155,15 +178,30 @@ function services_admin_browse_test_unserialize_args($values) {
     }
     $noskip = TRUE;
 
-    switch ($arg['#type']) {
-      case 'array' :
+    switch ($formats[$c]) {
+      case 'cdel';
         if (empty($value)) {
           $return[$c] = NULL;
         }
         else {
-          $return[$c] = explode(',', $value);
+          $return[$c] = split(',', $value);
         }
-
+        break;
+      case 'json':
+        if (empty($value)) {
+          $return[$c] = NULL;
+        }
+        else {
+          $return[$c] = json_decode($value, $arg['#type'] === 'array');
+        }
+        break;
+      case 'sphp':
+        if (empty($value)) {
+          $return[$c] = NULL;
+        }
+        else {
+          $return[$c] = unserialize($value);
+        }
         break;
       default :
         $return[$c] = $value;
@@ -179,7 +217,7 @@ function theme_services_admin_browse_test($form) {
   $output = '';
   $output .= drupal_render($form['test']);
 
-  $header = array(t('Name'), t('Required'), t('Value'));
+  $header = array(t('Name'), t('Required'), t('Value'), t('Format'));
   $rows = array();
   foreach (element_children($form['name']) as $key => $type) {
     $row = array();
@@ -193,6 +231,7 @@ function theme_services_admin_browse_test($form) {
     }
     $row[] = drupal_render($form['optional'][$key]);
     $row[] = drupal_render($form['arg'][$key]);
+    $row[] = drupal_render($form['format'][$key]);
     $rows[] = $row;
   }
 
