@@ -84,14 +84,19 @@ function _services_keyauth_alter_methods(&$methods) {
 
   foreach ($methods as $key => &$method) {
     // set method defaults
-    if (!isset($method['#auth'])) {
-      $method['#auth'] = TRUE;
+    switch ($method['#method']) {
+      case 'system.connect':
+      case 'search.nodes':
+      case 'search.content':
+      case 'search.users':
+        $method['#key'] = FALSE;
+        $method['#auth'] = FALSE;
+        break;
+      default:
+        $method['#key'] = TRUE;
+        $method['#auth'] = TRUE;
     }
-
-    if (!isset($method['#key'])) {
-      $method['#key'] = TRUE;
-    }
-
+    
     if ($method['#auth'] and variable_get('services_use_sessid', TRUE)) {
       array_unshift($method['#args'], $arg_sessid);
     }
