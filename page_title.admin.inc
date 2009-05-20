@@ -96,6 +96,13 @@ function page_title_admin_settings() {
   }
 
 
+  $form['page_title_pager_pattern'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Pattern for pages that contain a pager'),
+    '#default_value' => variable_get('page_title_pager_pattern', ''),
+    '#description' => t('This pattern will be appended to a page title for any given page with a pager on it'),
+  );
+
   // Add the token help to a collapsed fieldset at the end of the configuration page.
   $form['token_help'] = array(
     '#type' => 'fieldset',
