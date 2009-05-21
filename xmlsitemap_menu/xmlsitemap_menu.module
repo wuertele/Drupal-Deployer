@@ -11,7 +11,7 @@ function xmlsitemap_menu_cron() {
     // Set the global user variable to the anonymous user.
     xmlsitemap_switch_user(0);
 
-    $sql = "SELECT ml.mlid FROM {menu_links} ml LEFT JOIN {xmlsitemap} x ON ml.mlid = x.id WHERE COALESCE(x.type, 'menu') = 'menu' AND x.id IS NULL AND ml.external = 0 AND ml.hidden = 0 AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ")";
+    $sql = "SELECT ml.mlid FROM {menu_links} ml LEFT JOIN {xmlsitemap} x ON x.type = 'menu' AND ml.mlid = x.id WHERE x.id IS NULL AND ml.external = 0 AND ml.hidden = 0 AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ")";
     $query = db_query_range($sql, $menus, 0, xmlsitemap_var('batch_limit'));
 
     while ($mlid = db_result($query)) {
@@ -52,29 +52,12 @@ function xmlsitemap_menu_xmlsitemap_links($offset = 0, $limit = 0) {
 }
 
 /**
- * Implementation of hook_xmlsitemap_links_batch().
+ * Implementation of hook_xmlsitemap_links_batch_info().
  */
-function xmlsitemap_menu_xmlsitemap_links_batch(&$context) {
-  if (!isset($context['sandbox']['progress'])) {
-    $context['sandbox']['progress'] = 0;
-    $context['sandbox']['current_mlid'] = 0;
-    $menus = array_filter(xmlsitemap_menu_var('menus'));
-    $context['sandbox']['max'] = $menus ? db_result(db_query("SELECT COUNT(ml.mlid) FROM {menu_links} ml WHERE ml.external = 0 AND ml.hidden = 0 AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ")", $menus)) : 0;
-  }
-
-  $links = xmlsitemap_menu_xmlsitemap_links($context['sandbox']['current_mlid'], xmlsitemap_var('batch_limit'));
-  foreach ($links as $link) {
-    xmlsitemap_save_link($link);
-    $context['sandbox']['progress']++;
-    $context['sandbox']['current_mlid'] = $link['id'];
-    $context['message'] = t('Processing menu link @mlid', array('@mlid' => $link['id']));
-  }
-
-  // Inform the batch engine that we are not finished,
-  // and provide an estimation of the completion level we reached.
-  if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
-    $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
-  }
+function xmlsitemap_menu_xmlsitemap_links_batch_info(&$context) {
+  $context['sandbox']['current'] = 0;
+  $menus = array_filter(xmlsitemap_menu_var('menus'));
+  $context['sandbox']['max'] = $menus ? db_result(db_query("SELECT COUNT(ml.mlid) FROM {menu_links} ml WHERE ml.external = 0 AND ml.hidden = 0 AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ")", $menus)) : 0;
 }
 
 /**
@@ -129,7 +112,7 @@ function xmlsitemap_menu_form_xmlsitemap_settings_form_alter(&$form, $form_state
     '#type' => 'fieldset',
     '#title' => t('Menus'),
     '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
+    '#collapsed' => !xmlsitemap_menu_var('menus'),
   );
   $form['menu']['xmlsitemap_menu_menus'] = array(
     '#type' => 'checkboxes',
