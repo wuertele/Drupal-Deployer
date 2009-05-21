@@ -120,7 +120,7 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
   function testCron() {
     $this->drupalLogin($this->admin_user);
 
-    $limit = 10;
+    $limit = 5;
     $this->drupalPost('admin/settings/xmlsitemap', array('xmlsitemap_batch_limit' => $limit), t('Save configuration'));
     $this->assertText(t('The configuration options have been saved.'));
 
@@ -128,6 +128,8 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     for ($i = 1; $i <= ($limit + 1); $i++) {
       $node = $this->drupalCreateNode();
       array_push($nodes, $node);
+      // Create a link with the same ID but different type.
+      $this->addSitemapLink(array('id' => $node->nid));
       // Need to delay by one second so the nodes don't all have the same
       // timestamp.
       sleep(1);
@@ -140,7 +142,7 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     }
 
     // Run cron to import old nodes.
-    $this->drupalGet($GLOBALS['base_url'] . '/cron.php');
+    drupal_cron_run();
 
     for ($i = 1; $i <= ($limit + 1); $i++) {
       $node = array_pop($nodes);
