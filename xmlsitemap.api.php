@@ -29,7 +29,7 @@ function hook_xmlsitemap_links() {
   $links = array();
 
   $links[] = array(
-    'type' => 'kitten',
+    'type' => 'mymodule',
     'id' => 1,
     'loc' => 'mymodule/menu/path',
     'lastmod' => 346245692,
@@ -40,13 +40,19 @@ function hook_xmlsitemap_links() {
 }
 
 /**
- * Batch version of hook_xmlsitemap_links().
+ * Provide batch information for hook_xmlsitemap_links().
  *
  * It is highly recommended that if your module has a lot of items that could
  * be sitemap links, that you implement this hook.
+ *
+ * All you need to do to implement this hook is add the required $context
+ * information.
  */
-function hook_xmlsitemap_links_batch(&$context) {
-
+function hook_xmlsitemap_links_batch_info(&$context) {
+  // The context value will provide the offset parameter to hook_xmlsitemap_links().
+  $context['current'] = 0;
+  // The max (count) value will allow the batch to know when it is finished.
+  $context['max'] = db_result(db_query("SELECT COUNT(*) FROM {mymodule}"));
 }
 
 /**
@@ -77,8 +83,6 @@ function hook_xmlsitemap_engines_alter(&$engines) {
   $engines['kitten_engine'] = array(
     'name' => t('Kitten Search'),
     'url' => 'http://kittens.com/ping?sitemap=[sitemap]',
-    'verify_url' => FALSE,
-    'verify_key' => FALSE,
   );
 }
 

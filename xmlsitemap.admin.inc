@@ -236,15 +236,9 @@ function xmlsitemap_rebuild_batch($form_state) {
   );
 
   // Fetch all the sitemap links and save them to the {xmlsitemap} table.
-  //foreach (module_implements('xmlsitemap_links') as $module) {
   foreach ($form_state['values']['modules'] as $module) {
     $batch['operations'][] = array('xmlsitemap_rebuild_batch_clear', array($module));
-    if (module_hook($module, 'xmlsitemap_links_batch')) {
-      $batch['operations'][] = array($module .'_xmlsitemap_links_batch', array());
-    }
-    else {
-      $batch['operations'][] = array('xmlsitemap_rebuild_batch_fetch', array($module));
-    }
+    $batch['operations'][] = array('xmlsitemap_rebuild_batch_fetch', array($module));
   }
 
   // Generate all the sitemap pages.
@@ -260,19 +254,31 @@ function xmlsitemap_rebuild_batch_clear($module, &$context) {
 
 function xmlsitemap_rebuild_batch_fetch($module, &$context) {
   if (!isset($context['sandbox']['progress'])) {
+    $context['sandbox']['batch'] = module_hook($module, 'xmlsitemap_links_batch_info');
     $context['sandbox']['progress'] = 0;
-    $context['sandbox']['links'] = module_invoke($module, 'xmlsitemap_links');
-    $context['sandbox']['max'] = count($context['sandbox']['links']);
+    if ($context['sandbox']['batch']) {
+      module_invoke($module, 'xmlsitemap_links_batch_info', $context);
+    }
+    else {
+      $context['sandbox']['current'] = 0;
+      $context['sandbox']['links'] = module_invoke($module, 'xmlsitemap_links');
+      $context['sandbox']['max'] = count($context['sandbox']['links']);
+    }
   }
 
-  $links = array_splice($context['sandbox']['links'], 0, xmlsitemap_var('batch_limit'));
+  if ($context['sandbox']['batch']) {
+    $links = module_invoke($module, 'xmlsitemap_links', $context['sandbox']['current'], xmlsitemap_var('batch_limit'));
+  }
+  else {
+    $links = array_splice($context['sandbox']['links'], 0, xmlsitemap_var('batch_limit'));
+  }
+
   foreach ($links as $link) {
     xmlsitemap_save_link($link);
     $context['sandbox']['progress']++;
+    $context['sandbox']['current'] = $link['id'];
+    $context['message'] = t('Now processing %module link @count.', array('%module' => $module, '@count' => $context['sandbox']['progress']));
   }
-
-  //$context['results'][] = $module;
-  $context['message'] = t('Now processing %module link @count.', array('%module' => $module, '@count' => $context['sandbox']['progress']));
 
   // Inform the batch engine that we are not finished,
   // and provide an estimation of the completion level we reached.
