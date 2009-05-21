@@ -47,12 +47,18 @@ function hook_xmlsitemap_links() {
  *
  * All you need to do to implement this hook is add the required $context
  * information.
+ *
+ * The optional current value will provide the offset parameter to
+ * hook_xmlsitemap_links(). The default value is 0.
+ *
+ * The max (count) value will allow the batch to know when it is finished. This
+ * value is required.
  */
-function hook_xmlsitemap_links_batch_info(&$context) {
-  // The context value will provide the offset parameter to hook_xmlsitemap_links().
-  $context['current'] = 0;
-  // The max (count) value will allow the batch to know when it is finished.
-  $context['max'] = db_result(db_query("SELECT COUNT(*) FROM {mymodule}"));
+function hook_xmlsitemap_links_batch_info() {
+  return array(
+    'current' => -1,
+    'max' => db_result(db_query("SELECT COUNT(*) FROM {mymodule}")),
+  );
 }
 
 /**

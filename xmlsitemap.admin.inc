@@ -255,15 +255,17 @@ function xmlsitemap_rebuild_batch_clear($module, &$context) {
 function xmlsitemap_rebuild_batch_fetch($module, &$context) {
   if (!isset($context['sandbox']['progress'])) {
     $context['sandbox']['batch'] = module_hook($module, 'xmlsitemap_links_batch_info');
-    $context['sandbox']['progress'] = 0;
     if ($context['sandbox']['batch']) {
-      module_invoke($module, 'xmlsitemap_links_batch_info', $context);
+      $context['sandbox'] += module_invoke($module, 'xmlsitemap_links_batch_info');
     }
     else {
-      $context['sandbox']['current'] = 0;
       $context['sandbox']['links'] = module_invoke($module, 'xmlsitemap_links');
       $context['sandbox']['max'] = count($context['sandbox']['links']);
     }
+    $context['sandbox'] += array(
+      'progress' => 0,
+      'current' => 0,
+    );
   }
 
   if ($context['sandbox']['batch']) {
