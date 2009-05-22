@@ -49,15 +49,18 @@ function hook_xmlsitemap_links() {
  * information.
  *
  * The optional current value will provide the offset parameter to
- * hook_xmlsitemap_links(). The default value is 0.
+ * hook_xmlsitemap_links() and should get records that are greater than this
+ * value. The default value is 0.
  *
  * The max (count) value will allow the batch to know when it is finished. This
  * value is required.
  */
 function hook_xmlsitemap_links_batch_info() {
   return array(
-    'current' => -1,
-    'max' => db_result(db_query("SELECT COUNT(*) FROM {mymodule}")),
+    'current' => 0,
+    // This value is used to start selecting items (WHERE id > current).
+    'max' => db_result(db_query("SELECT COUNT(id) FROM {mymodule}")),
+    // This should be the total number of items to process.
   );
 }
 
