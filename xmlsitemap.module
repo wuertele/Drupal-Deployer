@@ -223,9 +223,8 @@ function xmlsitemap_check_status($return_only = FALSE) {
  * Delete and regenerate the sitemap files.
  */
 function xmlsitemap_regenerate() {
-  // Clear the sitemap files directory (but don't remove it!).
-  $path = file_create_path(xmlsitemap_var('path'));
-  xmlsitemap_clean_directory($path, FALSE);
+  // Clear all cached sitemap files.
+  xmlsitemap_clear_cache();
 
   // Generate the sitemap pages.
   $chunk_count = xmlsitemap_get_chunk_count(TRUE);
@@ -482,32 +481,21 @@ function xmlsitemap_delete_link(array $where, array $args = array()) {
 }
 
 /**
- * Recusrively delete all files and directories in the specific filepath.
+ * Delete all cached sitemap XML files.
  *
+ * @param $rmdir
+ *   A boolean that if TRUE the directory will be removed after emptying.
  * @param $path
- *   A string containing a file or directory path.
- * @param $remove_dir
- *   A boolean that if set TRUE and $path is a directory, $path will be removed.
- * @param $level
- *   An integer with the current level of recursion.
- * @return
- *   TRUE for success or path does not exist, or FALSE in the event of an error.
- *
- * @todo Replace with file_unmanaged_delete_recursive in Drupal 7.
+ *   An optional directory path, defaults to the xmlsiteamp cache directory.
  */
-function xmlsitemap_clean_directory($path, $remove_dir = FALSE, $level = 0) {
-  if (is_dir($path) && $handle = opendir($path)) {
-    while (($file = readdir($handle)) !== FALSE) {
-      if ($file == '.' || $file == '..') {
-        continue;
-      }
-      xmlsitemap_clean_directory($path . '/' . $file, $level + 1);
-    }
-    closedir($handle);
-    return $remove_dir ? rmdir($path) : TRUE;
+function xmlsitemap_clear_cache($rmdir = FALSE, $path = NULL) {
+  if (!isset($path)) {
+    $path = file_create_path(xmlsitemap_var('path'));
   }
-  elseif (is_file($path)) {
-    return unlink($path);
+
+  file_scan_directory($path, '.*', array('.', '..', 'CVS', '.svn'), 'file_delete', TRUE);
+  if ($rmdir) {
+    rmdir($path);
   }
 }
 

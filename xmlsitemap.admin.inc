@@ -120,7 +120,7 @@ function xmlsitemap_settings_form_validate($form, &$form_state) {
   $path_old = file_create_path(xmlsitemap_var('path'));
   if ($path_new != $path_old && file_check_directory($path_new, FILE_CREATE_DIRECTORY, 'xmlsitemap_path')) {
     // If creating the new directory was successful, remove the old directory.
-    xmlsitemap_clean_directory($path_old, TRUE);
+    xmlsitemap_clear_cache(TRUE, $path_old);
   }
 
   if ($form_state['values']['xmlsitemap_base_url'] != '' && !valid_url($form_state['values']['xmlsitemap_base_url'], TRUE)) {
@@ -200,10 +200,8 @@ function _xmlsitemap_rebuild_before() {
   // Increase the processing time since this might take a little bit.
   @set_time_limit(240);
 
-  // Delete all sitemap data from the sitemap files directory.
-  $path = file_create_path(xmlsitemap_var('path'));
-  xmlsitemap_clean_directory($path, FALSE);
-  //file_check_directory($path, FILE_CREATE_DIRECTORY);
+  // Clear all cached sitemap files.
+  xmlsitemap_clear_cache();
 
   // Set the the sitemap will have to be rebuilt.
   variable_set('xmlsitemap_rebuild_needed', TRUE);
