@@ -1,0 +1,212 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * This file implements tests for FileField Paths.
+ */
+
+class FileFieldPathsTestCase extends DrupalWebTestCase {
+  protected $admin_user;
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp($modules = array(), $permissions = array()) {
+    $modules = array_merge($modules, array('filefield_paths', 'token'));
+    call_user_func_array(array($this, 'parent::setUp'), $modules);
+
+    // Create and login user
+    $permissions = array_merge($permissions, array('administer content types', 'administer nodes'));
+    $this->admin_user = $this->drupalCreateUser($permissions);
+    $this->drupalLogin($this->admin_user);
+  }
+}
+
+class FileFieldPathsCommentUploadTestCase extends FileFieldPathsTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  public static function getInfo() {
+    return array(
+      'name' => t('Comment Upload integration'),
+      'description' => t('Test FileField Paths integration with the Comment Upload module.'),
+      'group' => t('FileField Paths'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp(
+      array('comment_upload', 'comment', 'upload'), // Modules
+      array('upload files to comments', 'view files uploaded to comments') // Permissions
+    );
+  }
+
+  /**
+   * Test file upload.
+   */
+  function testUploadFile() {
+    // Create content type.
+    $type = $this->drupalCreateContentType();
+
+    // Set Comment Upload and FileField Paths settings.
+    $edit = array(
+      'comment_preview' => 0,
+      'comment_upload' => 1,
+      'ffp_comment_upload[file_path]' => 'node/[nid]',
+      'ffp_comment_upload[file_name]' => '[title-raw].[filefield-extension-original]',
+    );
+    $this->drupalPost('admin/content/node-type/'. str_replace('_', '-', $type->name), $edit, t('Save content type'));
+
+    // Create Node.
+    $settings = array(
+      'type' => $type->name,
+    );
+    $node = $this->drupalCreateNode($settings);
+
+    // Create Comment with uploaded file.
+    $test_files = $this->drupalGetTestFiles('text');
+    $edit = array(
+      'comment' => $this->randomName(32),
+      'files[upload]' => $test_files[0]->filename,
+    );
+    $this->drupalPost('comment/reply/'. $node->nid, $edit, t('Save'));
+
+    // Get Comment ID.
+    $matches = array();
+    preg_match('/node\/[0-9]+\#comment\-([0-9]+)/', $this->getUrl(), $matches);
+    $cid = $matches[1];
+
+    // Load uploaded file.
+    $comment_files = comment_upload_load_files($cid);
+
+    // Check filename has been processed.
+    $filename = $node->title .'.txt';
+    $this->assertEqual($comment_files[1]['filename'], $filename, t('Make sure filename has been processed.'), 'FileField Paths');
+
+    // Check filepath has been processed.
+    $filepath = file_directory_path() .'/node/'. $node->nid .'/'. $comment_files[1]['filename'];
+    $this->assertEqual($comment_files[1]['filepath'], $filepath, t('Make sure filepath has been processed.'), 'FileField Paths');
+  }
+}
+
+class FileFieldPathsFileFieldTestCase extends FileFieldTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  public static function getInfo() {
+    return array(
+      'name' => t('FileField integration'),
+      'description' => t('Test FileField Paths integration with the FileField module.'),
+      'group' => t('FileField Paths'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp('filefield_paths');
+  }
+
+  /**
+   * Test file upload.
+   */
+  function testUploadFile() {
+    // Create content type.
+    $type = $this->drupalCreateContentType();
+
+    // Create CCK FileField.
+    $field_name = 'field_'. drupal_strtolower($this->randomName());
+    $field = $this->createFileField($field_name, $type->name);
+
+    // Set FileField Paths settings.
+    $edit = array(
+      'ffp_'. $field_name .'[file_path]' => 'node/[nid]',
+      'ffp_'. $field_name .'[file_name]' => '[title-raw].[filefield-extension-original]',
+    );
+    $this->drupalPost('admin/content/node-type/'. str_replace('_', '-', $type->name) .'/fields/'. $field_name, $edit, t('Save field settings'));
+
+    // Upoad test file.
+    $test_file = $this->getTestFile('text');
+    $nid = $this->uploadNodeFile($test_file, $field_name, $type->name);
+
+    // Load uploaded file.
+    $node = node_load($nid, NULL, TRUE);
+    $node_file = $node->{$field['field_name']}[0];
+
+    // Check filename has been processed.
+    $filename = $node->title .'.txt';
+    $this->assertEqual($node_file['filename'], $filename, t('Make sure filename has been processed.'), 'FileField Paths');
+
+    // Check filepath has been processed.
+    $filepath = file_directory_path() .'/node/'. $nid .'/'. $node_file['filename'];
+    $this->assertEqual($node_file['filepath'], $filepath, t('Make sure filepath has been processed.'), 'FileField Paths');
+  }
+}
+
+class FileFieldPathsUploadTestCase extends FileFieldPathsTestCase {
+  /**
+   * Implementation of getInfo().
+   */
+  public static function getInfo() {
+    return array(
+      'name' => t('Upload integration'),
+      'description' => t('Test FileField Paths integration with the Upload module.'),
+      'group' => t('FileField Paths'),
+    );
+  }
+
+  /**
+   * Implementation of setUp().
+   */
+  function setUp() {
+    parent::setUp(
+      array('upload'), // Modules
+      array('upload files') // Permissions
+    );
+  }
+
+  /**
+   * Test file upload.
+   */
+  function testUploadFile() {
+    // Create content type.
+    $type = $this->drupalCreateContentType();
+
+    // Set FileField Paths settings.
+    $edit = array(
+      'ffp_upload[file_path]' => 'node/[nid]',
+      'ffp_upload[file_name]' => '[title-raw].[filefield-extension-original]',
+    );
+    $this->drupalPost('admin/content/node-type/'. str_replace('_', '-', $type->name), $edit, t('Save content type'));
+
+    // Create Node with uploaded file.
+    $test_files = $this->drupalGetTestFiles('text');
+    $edit = array(
+      'title' => $this->randomName(8),
+      'files[upload]' => $test_files[0]->filename,
+    );
+    $this->drupalPost('node/add/'. str_replace('_', '-', $type->name), $edit, t('Save'));
+
+    // Get Node ID.
+    $matches = array();
+    preg_match('/node\/([0-9]+)/', $this->getUrl(), $matches);
+    $nid = $matches[1];
+
+    // Load uploaded file.
+    $node = node_load($nid, NULL, TRUE);
+    $node_file = $node->files[1];
+
+    // Check filename has been processed.
+    $filename = $node->title .'.txt';
+    $this->assertEqual($node_file->filename, $filename, t('Make sure filename has been processed.'), 'FileField Paths');
+
+    // Check filepath has been processed.
+    $filepath = file_directory_path() .'/node/'. $nid .'/'. $node_file->filename;
+    $this->assertEqual($node_file->filepath, $filepath, t('Make sure filepath has been processed.'), 'FileField Paths');
+  }
+}
