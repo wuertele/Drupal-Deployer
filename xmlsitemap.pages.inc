@@ -130,7 +130,14 @@ echo <<<END
       </td>
       <td><xsl:value-of select="sitemap:lastmod"/></td>
       <td><xsl:value-of select="sitemap:changefreq"/></td>
-      <td><xsl:value-of select="sitemap:priority"/></td>
+      <td>
+        <xsl:choose>
+          <xsl:when test="sitemap:priority">
+            <xsl:value-of select="sitemap:priority"/>
+          </xsl:when>
+          <xsl:otherwise>0.5</xsl:otherwise>
+        </xsl:choose>
+      </td>
     </tr>
   </xsl:template>
 
