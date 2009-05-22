@@ -223,8 +223,7 @@ function xmlsitemap_check_status($return_only = FALSE) {
  * Delete and regenerate the sitemap files.
  */
 function xmlsitemap_regenerate() {
-  // Clear all cached sitemap files.
-  xmlsitemap_clear_cache();
+  _xmlsitemap_regenerate_before();
 
   // Generate the sitemap pages.
   $chunk_count = xmlsitemap_get_chunk_count(TRUE);
@@ -232,6 +231,27 @@ function xmlsitemap_regenerate() {
     xmlsitemap_generate($i);
   }
 
+  _xmlsitemap_regenerate_after();
+}
+
+/**
+ * Perform operations before rebuilding the sitemap.
+ */
+function _xmlsitemap_regenerate_before() {
+  // Increase the processing time since this might take a little bit.
+  @set_time_limit(240);
+
+  // Clear all cached sitemap files.
+  xmlsitemap_clear_cache();
+
+  // Save custom data into a temporary table so it can be re-loaded later.
+  //db_query_temporary("SELECT type, id, priority, changefreq, changecount FROM {xmlsitemap}", 'xmlsitemap_temp');
+}
+
+/**
+ * Perform operations after rebuilding the sitemap.
+ */
+function _xmlsitemap_regenerate_after() {
   // Show a watchdog message that the sitemap was regenerated.
   watchdog('xmlsitemap', 'Sitemap regenerated.', array(), WATCHDOG_NOTICE, l(t('View'), 'sitemap.xml'));
 

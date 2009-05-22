@@ -188,38 +188,11 @@ function xmlsitemap_rebuild_confirm() {
  * @see xmlsitemap_rebuild_batch()
  */
 function xmlsitemap_rebuild_confirm_submit($form, &$form_state) {
-  _xmlsitemap_rebuild_before();
-  batch_set(xmlsitemap_rebuild_batch($form_state));
-  $form_state['redirect'] = 'admin/settings/xmlsitemap';
-}
-
-/**
- * Perform operations before rebuilding the sitemap.
- */
-function _xmlsitemap_rebuild_before() {
-  // Increase the processing time since this might take a little bit.
-  @set_time_limit(240);
-
-  // Clear all cached sitemap files.
-  xmlsitemap_clear_cache();
-
-  // Set the the sitemap will have to be rebuilt.
+  // Set the rebuild flag incase something fails during the rebuild.
   variable_set('xmlsitemap_rebuild_needed', TRUE);
 
-  // Save custom data into a temporary table so it can be re-loaded later.
-  //db_query_temporary("SELECT type, id, priority, changefreq, changecount FROM {xmlsitemap}", 'xmlsitemap_temp');
-}
-
-/**
- * Perform operations after rebuilding the sitemap.
- */
-function _xmlsitemap_rebuild_after() {
-  // Reset the needs rebuild and regenerate flags.
-  variable_set('xmlsitemap_rebuild_needed', FALSE);
-  variable_set('xmlsitemap_regenerate_needed', FALSE);
-
-  // If the chunk count has changed, we will need to rebuild the menu.
-  variable_set('menu_rebuild_needed', TRUE);
+  batch_set(xmlsitemap_rebuild_batch($form_state));
+  $form_state['redirect'] = 'admin/settings/xmlsitemap';
 }
 
 /**
@@ -294,6 +267,7 @@ function xmlsitemap_rebuild_batch_fetch($module, &$context) {
  */
 function xmlsitemap_rebuild_batch_generate(&$context) {
   if (!isset($context['sandbox']['progress'])) {
+    _xmlsitemap_regenerate_before();
     $context['sandbox']['progress'] = 0;
     $context['sandbox']['max'] = xmlsitemap_get_chunk_count(TRUE) + 1;
   }
@@ -308,6 +282,9 @@ function xmlsitemap_rebuild_batch_generate(&$context) {
   if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
     $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
   }
+  else {
+    _xmlsitemap_regenerate_after();
+  }
 }
 
 /**
@@ -315,7 +292,8 @@ function xmlsitemap_rebuild_batch_generate(&$context) {
  */
 function xmlsitemap_rebuild_batch_finished($success, $results, $operations) {
   if ($success) {
-    _xmlsitemap_rebuild_after();
+    // Reset the rebuild flag since it was successful.
+    variable_set('xmlsitemap_rebuild_needed', FALSE);
     drupal_set_message(t('The <a href="@sitemap">sitemap</a> was rebuilt.', array('@sitemap' => url('sitemap.xml'))));
   }
   else {
