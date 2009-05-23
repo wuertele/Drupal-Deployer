@@ -126,8 +126,8 @@ function xmlsitemap_menu() {
  * Implementation of hook_cron().
  */
 function xmlsitemap_cron() {
-  // @todo I don't think this works properly if cron runs quicker than the minimum lifetime.
-  $can_regenerate = (REQUEST_TIME - variable_get('cron_last', 0)) >= xmlsitemap_var('minimum_lifetime');
+  //$can_regenerate = (REQUEST_TIME - variable_get('cron_last', 0)) >= xmlsitemap_var('minimum_lifetime');
+  $can_regenerate = (REQUEST_TIME - xmlsitemap_var('regenerate_last')) >= xmlsitemap_var('minimum_lifetime');
   if (xmlsitemap_var('regenerate_needed') && $can_regenerate) {
     xmlsitemap_regenerate();
   }
@@ -487,17 +487,31 @@ function xmlsitemap_save_link(array $link) {
  *   An optional array of values to pass to the query.
  */
 function xmlsitemap_delete_link(array $where, array $args = array()) {
-  if ($existing = xmlsitemap_load_link($where, $args)) {
-    db_query("DELETE FROM {xmlsitemap} WHERE type = '%s' AND id = %d", $existing['type'], $existing['id']);
-
-    if ($existing['status']) {
-      // Set the regenerate flag since a sitemap-visible link was deleted.
-      variable_set('xmlsitemap_regenerate_needed', TRUE);
+  foreach ($where as $key => $value) {
+    if (is_string($key)) {
+      $args[] = $value;
+      $where[$key] = $key .' = '. (is_numeric($value) ? '%d' : "'%s'");
     }
-
-    // Allow other modules to respond after deleting the link.
-    //module_invoke_all('xmlsitemap_delete_link', $link);
   }
+
+  if (db_result(db_query("SELECT 1 FROM {xmlsitemap} WHERE " . implode(' AND ', $where), $args))) {
+    // Set the regenerate flag since a sitemap-visible link was deleted.
+    variable_set('xmlsitemap_regenerate_needed', TRUE);
+  }
+
+  db_query("DELETE FROM {xmlsitemap} WHERE " . implode(' AND ', $where), $args);
+
+  //if ($existing = xmlsitemap_load_link($where, $args)) {
+  //  db_query("DELETE FROM {xmlsitemap} WHERE type = '%s' AND id = %d", $existing['type'], $existing['id']);
+  //
+  //  if ($existing['status']) {
+  //    // Set the regenerate flag since a sitemap-visible link was deleted.
+  //    variable_set('xmlsitemap_regenerate_needed', TRUE);
+  //  }
+  //
+  //  // Allow other modules to respond after deleting the link.
+  //  //module_invoke_all('xmlsitemap_delete_link', $link);
+  //}
 }
 
 /**

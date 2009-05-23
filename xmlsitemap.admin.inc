@@ -54,12 +54,14 @@ function xmlsitemap_settings_form() {
     '#size' => 30,
     '#maxlength' => 255,
     '#description' => t('Subdirectory in the directory %dir where the sitemap data will be stored.', array('%dir' => file_directory_path() .'/')),
+    '#required' => TRUE,
   );
   $form['xmlsitemap']['xmlsitemap_base_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Base URL'),
-    '#default_value' => xmlsitemap_var('base_url', ''),
-    '#description' => t('If left blank, the default base URL (%base_url) will be used.', array('%base_url' => $GLOBALS['base_url'])),
+    '#default_value' => xmlsitemap_var('base_url'),
+    '#description' => t('This is the base URL for links generated in the sitemap.'),
+    '#required' => TRUE,
   );
 
   $form['frontpage'] = array(
