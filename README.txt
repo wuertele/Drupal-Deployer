@@ -1,41 +1,52 @@
 $Id$
 
-README file for the clone module for Drupal 6.x.
+Node Export README
 
+CONTENTS OF THIS FILE
+----------------------
+
+  * Introduction
+  * Installation
+  * Configuration
+  * Usage
+
+
+INTRODUCTION
+------------
 The export module allows users to export a node and then import it to another 
 website. The authorship is set to the current user, the menu and url aliases 
 are reset.
-
-Users with the "export node" permission can utilize this functionality. A new
-tab will appear on node pages with the word "export".
 
 This module makes reasonable checks on access permissions.  A user cannot export 
 a node unless they can use the input format of that node, and unless they have
 permission to create new nodes of that type based on a call to node_access().
 
-Settings can be accessed at admin/settings/export.  On this page you can
-set whether the publishing options are reset when making a export of a node.  
-This is set for each node type individually.
-
-This module seems to work with common node types, however YMMV, especially with
-nodes that have any sort of image or file  attachments.   In all cases, but 
-especially if you are using a complex (CCK) or custom node type, you should 
-evaluate this module on a test site with a copy of your database before 
-attempting to use it on a live site.
-
-To install this module, copy the folder with the .info and .module files to the 
-/sites/all/modules  OR /modules directory of your Drupal installation and enable
-it at /admin/build/modules.  A new permission is available, but there are no 
-changes to the database structure. On the settings page you may choose
-node types to be omitted from the export mechanism - no users will be able
-to try to export a node of an omitted type.
-
-To install this module, copy the folder with all the files to the
-/sites/all/modules  OR /sites/default/modules directory of your Drupal 
-installation and enable it at /admin/build/modules.  Two new permissions are 
-available, but there are no changes to the database structure.
+Maintainer: Daniel Braksator (http://drupal.org/user/134005)
+Project page: http://drupal.org/project/node_export.
 
 Note: this module was originally built upon code from the node_clone module
-maintained by Peter Wolanin (pwolanin@drupal) at http://drupal.org/project/node_clone
-which was derived from code posted by Steve Ringwood (nevets@drupal) at http://drupal.org/node/73381#comment-137714
+maintained by Peter Wolanin (http://drupal.org/user/49851) at 
+http://drupal.org/project/node_clone which was derived from code posted by
+Steve Ringwood (http://drupal.org/user/12856) at 
+http://drupal.org/node/73381#comment-137714
 
+
+INSTALLATION
+------------
+1. Copy node_export folder to modules directory (usually sites/all/modules).
+2. At admin/build/modules enable the Node Export module.
+
+
+CONFIGURATION
+-------------
+1. Enable permissions at admin/user/permissions.
+2. Configure module at admin/settings/node_export.
+
+
+USAGE
+-----
+1. To export nodes, either:
+   a) click the 'Export' tab on a node page or,
+   b) use the Content page (admin/content/node) to filter the nodes you wish to
+      export and then choose 'Export nodes' under the 'Update options'.
+2. To import nodes go to 'Import' (admin/content/import).

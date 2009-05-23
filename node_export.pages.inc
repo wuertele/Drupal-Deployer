@@ -336,12 +336,7 @@ function node_export_node_decode_objects($array) {
       $array[$k] = node_export_node_decode_objects($v);
     }
     if (is_string($v)) {
-      if (get_magic_quotes_gpc()) {
-          $array[$k] = stripslashes($v);
-      }
-      else {
-          $array[$k] = $v;
-      }
+      $array[$k] = stripslashes($v);
     }
   }
   if ($array['#_export_node_encode_object']) {
