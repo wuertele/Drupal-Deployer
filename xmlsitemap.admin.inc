@@ -53,7 +53,7 @@ function xmlsitemap_settings_form() {
     '#default_value' => xmlsitemap_var('path'),
     '#size' => 30,
     '#maxlength' => 255,
-    '#description' => t('Subdirectory in the directory %dir where the sitemap data will be stored.', array('%dir' => file_directory_path() .'/')),
+    '#description' => t('Subdirectory in the directory %dir where the sitemap data will be stored. This folder <strong>must not be shared</strong> with any other Drupal site or install using XML sitemap.', array('%dir' => file_directory_path() .'/')),
     '#required' => TRUE,
   );
   $form['xmlsitemap']['xmlsitemap_base_url'] = array(
@@ -126,7 +126,9 @@ function xmlsitemap_settings_form_validate($form, &$form_state) {
     xmlsitemap_clear_cache(TRUE, $path_old);
   }
 
-  if ($form_state['values']['xmlsitemap_base_url'] != '' && !valid_url($form_state['values']['xmlsitemap_base_url'], TRUE)) {
+  $base_url = &$form_state['values']['xmlsitemap_base_url'];
+  $base_url = rtrim($base_url, '/');
+  if ($base_url != '' && !valid_url($base_url, TRUE)) {
     form_set_error('xmlsitemap_base_url', t('Invalid base URL.'));
   }
 }
