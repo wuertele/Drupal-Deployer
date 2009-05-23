@@ -49,7 +49,7 @@ function xmlsitemap_settings_form() {
   );
   $form['xmlsitemap']['xmlsitemap_path'] = array(
     '#type' => 'textfield',
-    '#title' => t('Sitemap file cache directory'),
+    '#title' => t('Sitemap cache directory'),
     '#default_value' => xmlsitemap_var('path'),
     '#size' => 30,
     '#maxlength' => 255,
@@ -72,13 +72,13 @@ function xmlsitemap_settings_form() {
   );
   $form['frontpage']['xmlsitemap_frontpage_priority'] = array(
     '#type' => 'select',
-    '#title' => t('Frontpage priority'),
+    '#title' => t('Priority'),
     '#options' => xmlsitemap_get_priority_options(),
     '#default_value' => xmlsitemap_var('frontpage_priority'),
   );
   $form['frontpage']['xmlsitemap_frontpage_changefreq'] = array(
     '#type' => 'select',
-    '#title' => t('Frontpage change frequency'),
+    '#title' => t('Change frequency'),
     '#options' => /*array(0 => t('Automatic')) +*/ xmlsitemap_get_changefreq_options(),
     '#default_value' => xmlsitemap_var('frontpage_changefreq'),
   );
