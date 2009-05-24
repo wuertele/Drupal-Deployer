@@ -46,7 +46,12 @@ FREQUENTLY ASKED QUESTIONS (FAQ)
 KNOWN ISSUES
 ------------
 
-- There are no known issues at this time.
+- I get the following error from Google Webmaster Tools:
+    "Invalid date - An invalid date was found. Please fix the date or formatting
+    before resubmitting.- Parent tag: url"
+  Most likely you are using PHP 5.1.1 or PHP 5.1.2, which introduced a new
+  date/time constant DATE_W3C but forgot to include a semicolon in the timezone
+  separator. This bug has been fixed in PHP 5.1.3 and above. You should upgrade.
 
 
 MORE INFORMATION
@@ -60,6 +65,9 @@ MORE INFORMATION
 
 - You can view the sitemap.org specification at http://sitemaps.org.
 
+- You can view the module's API documentation at
+  http://project.davereid.net/api/xmlsitemap
+
 
 HOW CAN YOU CONTRIBUTE?
 ---------------------
@@ -68,10 +76,10 @@ HOW CAN YOU CONTRIBUTE?
   http://drupalmodules.com/module/xml-sitemap
 
 - Help translate this module on launchpad.net.
-  https://translations.launchpad.net/drupal-xmlsitemap
+  http://project.davereid.net/translate/projects/xmlsitemap
 
 - Help keep development active by dontating to the maintainer's DrupalCon Paris
-  fund. http://davereid.chipin.com/xmlsitemap-6x-2x-and-drupalcon-paris
+  fund. http://davereid.chipin.com/
 
 - Report any bugs, feature requests, etc. in the issue tracker.
   http://drupal.org/project/issues/xmlsitemap
