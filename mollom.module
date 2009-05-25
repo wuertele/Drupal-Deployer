@@ -20,6 +20,8 @@ define('MOLLOM_MODE_ANALYSIS', 2);
 define('MOLLOM_FALLBACK_BLOCK' , 0);
 define('MOLLOM_FALLBACK_ACCEPT', 1);
 
+define('NETWORK_ERROR', 900);
+
 define('MOLLOM_ERROR'   , 1000);
 define('MOLLOM_REFRESH' , 1100);
 define('MOLLOM_REDIRECT', 1200);
@@ -1050,13 +1052,14 @@ function _mollom_insert_captcha(&$mollom_state, &$element) {
 function _mollom_verify_key() {
   $status = mollom('mollom.verifyKey');
 
-  $message = t('We contacted the Mollom servers to verify your keys');
-
-  if ($status) {
-    drupal_set_message(t('@message: the Mollom services are operating correctly. We are now blocking spam.', array('@message' => $message)));
+  if ($status === NETWORK_ERROR) {
+    drupal_set_message(t('We tried to contact the Mollom servers but we encountered a network error. Please make sure that your web server can make outgoing HTTP requests.'), 'error');
+  }
+  else if ($status === MOLLOM_ERROR) {
+    drupal_set_message(t('We contacted the Mollom servers to verify your keys: your keys do not exist or are no longer valid. Please visit the <em>Manage sites</em> page on the Mollom website again: <a href="@mollom-user">@mollom-user</a>.', array('@mollom-user' => 'http://mollom.com/user')), 'error');
   }
   else {
-    drupal_set_message(t('@message: your keys do not exist or are no longer valid. Please visit the <em>Manage sites</em> page on the Mollom website again: <a href="@mollom-user">@mollom-user</a>.', array('@message' => $message, '@mollom-user' => 'http://mollom.com/user')), 'error');
+    drupal_set_message(t('We contacted the Mollom servers to verify your keys: the Mollom services are operating correctly. We are now blocking spam.'));
   }
 }
 
@@ -1085,6 +1088,10 @@ function _mollom_retrieve_server_list() {
  * Call a remote procedure at the Mollom server.  This function
  * automatically adds the information required to authenticate against
  * Mollom.
+ * 
+ * TODO: currently this function's return value mixes actual values and
+ * error values. We should rewrite the error handling so that calling 
+ * functions can properly handle error situations.
  */
 function mollom($method, $data = array()) {
 
@@ -1148,9 +1155,8 @@ function mollom($method, $data = array()) {
           watchdog('mollom', 'Error @errno from %server: %message - %method - <pre>@data</pre>', array('@errno' => $error->code, '%server' => $server, '%message' => $error->message, '%method' => $method, '@data' => print_r($data, TRUE)), WATCHDOG_ERROR);
 
           // If it is a 'clean' Mollom error we return instantly.
-
           if ($error->code == MOLLOM_ERROR) {
-            return $result;
+            return MOLLOM_ERROR;
           }
 
           // If this is a network error, we go to the next server in the list.
@@ -1171,6 +1177,8 @@ function mollom($method, $data = array()) {
 
   // Report this error:
   watchdog('mollom', 'No Mollom servers could be reached or all servers returned an error -- the server list was emptied.', NULL, WATCHDOG_ERROR);
+  
+  return NETWORK_ERROR;
 }
 
 /**
