@@ -21,6 +21,8 @@ function filefield_filefield_paths_form_alter(&$form, &$ffp) {
       'file_path_default' => $form['widget']['path_settings']['file_path']['#default_value']
     );
 
+    $form['widget']['ffp_'. $form['field_name']['#value']]['#title'] = t('FileField Path settings');
+
     unset($ffp[$form['field_name']['#value']]['form_path']['file_path']['#suffix']);
     $ffp[$form['field_name']['#value']]['form_path']['#attributes'] = array('id' => 'fieldset-path_settings');
   }
@@ -82,7 +84,7 @@ function filefield_filefield_paths_batch_update($field_name, $type_name, &$objec
 
     // Build array of Node IDs.
     while ($node = db_fetch_object($result)) {
-      $objects[$field_name][] = $node->nid;
+      $objects[] = $node->nid;
     }
   }
 }

@@ -20,10 +20,10 @@ function comment_upload_filefield_paths_form_alter(&$form, &$ffp) {
     // Create path settings fieldset
     $ffp['comment_upload']['form_path'] = array(
       '#type' => 'fieldset',
-      '#title' => t('Path settings'),
+      '#title' => t('Comment Upload Path settings'),
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
-      '#weight' => 25,
+      '#weight' => $form['comment']['comment_upload']['#weight'] + 1,
     );
 
     $ffp['comment_upload']['form_path']['file_path'] = array(
@@ -78,7 +78,7 @@ function comment_upload_filefield_paths_batch_update($field_name, $type_name, &$
 
     // Build array of Comment IDs.
     while ($comment = db_fetch_object($result)) {
-      $objects['comment_upload'][] = $comment->cid;
+      $objects[] = $comment->cid;
     }
   }
 }

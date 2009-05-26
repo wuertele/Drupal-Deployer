@@ -20,10 +20,10 @@ function upload_filefield_paths_form_alter(&$form, &$ffp) {
     // Create path settings fieldset
     $ffp['upload']['form_path'] = array(
       '#type' => 'fieldset',
-      '#title' => t('Path settings'),
+      '#title' => t('Upload Path settings'),
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
-      '#weight' => 1,
+      '#weight' => $form['workflow']['upload']['#weight'] + 1,
     );
 
     $ffp['upload']['form_path']['file_path'] = array(
@@ -72,14 +72,14 @@ function upload_filefield_paths_get_fields(&$node, &$ffp) {
  * Implementation of hook_filefield_paths_batch_update().
  */
 function upload_filefield_paths_batch_update($field_name, $type_name, &$objects) {
-  if (!$field_name) {
+  if (empty($field_name)) {
     $result = db_query(
       "SELECT u.nid FROM {upload} u LEFT JOIN {node} n ON u.nid = n.nid WHERE n.type = '%s'", $type_name
     );
 
     // Build array of Node IDs.
     while ($node = db_fetch_object($result)) {
-      $objects['upload'][] = $node->nid;
+      $objects[] = $node->nid;
     }
   }
 }
