@@ -49,7 +49,7 @@ function amazon_schema() {
       'height' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE),
       'width' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE),
     ),
-    'primary key' => array('asin, size'),
+    'primary key' => array('asin', 'size'),
     'indexes' => array(
       'asin' => array('asin'),
     ),
@@ -74,7 +74,7 @@ function amazon_schema() {
       'module' => array('type' => 'varchar', 'length' => 64, 'not null' => TRUE, 'default' => 'amazon'),
       'delta' => array('type' => 'int', 'default' => 0),
     ),
-    'primary key' => array('vid, asin, module'),
+    'primary key' => array('vid', 'asin', 'module'),
     'indexes' => array(
       'nid' => array('nid'),
       'vid' => array('vid'),
@@ -92,10 +92,16 @@ function amazon_update_6001() {
   return $ret;
 }
 
+function amazon_update_6002() {
+  $ret = array();
+  // Make sure that primary keys are correct
+  db_drop_primary_key($ret, 'amazon_item_node');
+  db_add_primary_key($ret, 'amazon_item_node', array('vid', 'asin', 'module'));
+  db_drop_primary_key($ret, 'amazon_item_image');
+  db_add_primary_key($ret, 'amazon_item_image', array('asin', 'size'));
+  return $ret;
+}
+
 function amazon_uninstall() {
-  db_query("DROP TABLE {amazon_item}");
-  db_query("DROP TABLE {amazon_item_participant}");
-  db_query("DROP TABLE {amazon_item_image}");
-  db_query("DROP TABLE {amazon_item_editorial_review}");
-  db_query("DROP TABLE {amazon_item_node}");
+  drupal_uninstall_schema('amazon');
 }
