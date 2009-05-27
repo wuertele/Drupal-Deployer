@@ -18,7 +18,9 @@ class views_handler_field_amazon_image extends views_handler_field {
       $this->additional_fields[] = 'width';
     }
     if (!empty($data['link_format']) && $data['link_format'] == 'amazon') {
-      $this->additional_fields['detailpageurl'] = array('table' => 'amazon_item', 'field' => 'detailpageurl');
+      $this->additional_fields['detailpageurl'] = array(
+        'table' => 'amazon_item', 'field' => 'detailpageurl', 'value' => 'amazon_item_detailpageurl'
+      );
     }
   }
 
@@ -41,6 +43,7 @@ class views_handler_field_amazon_image extends views_handler_field {
    * Provide link to node option
    */
   function options_form(&$form, &$form_state) {
+    parent::options_form($form, $form_state);
     $form['image_size'] = array(
       '#title' => t('Image size'),
       '#type' => 'select',
@@ -81,7 +84,7 @@ class views_handler_field_amazon_image extends views_handler_field {
         return l($image, 'node/'. $values->nid, array('html' => TRUE));
         break;
       case 'amazon':
-        $urlfield = $this->additional_fields['detailpageurl']['field'];
+        $urlfield = $this->additional_fields['detailpageurl']['value'];
         if (!empty($this->relationship)) {
           $urlfield = $this->relationship .'_'. $urlfield;
         }

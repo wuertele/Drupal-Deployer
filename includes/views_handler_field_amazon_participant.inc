@@ -2,8 +2,8 @@
 // $Id$
 
 class views_handler_field_amazon_participant extends views_handler_field_prerender_list {
-  function init(&$view, $options) {
-    parent::init($view, $options);
+  function construct() {
+    parent::construct();
     $this->additional_fields['asin'] = array('table' => 'amazon_item', 'field' => 'asin');
   }
 

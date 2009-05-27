@@ -54,6 +54,9 @@ function amazon_views_handlers() {
       'views_handler_field_amazon_title' => array(
         'parent' => 'views_handler_field',
       ),
+      'views_handler_filter_amazon_image' => array(
+        'parent' => 'views_handler_filter_many_to_one',
+      ),
       'views_handler_filter_amazon_node_module' => array(
         'parent' => 'views_handler_filter_in_operator',
       ),
@@ -175,7 +178,12 @@ function amazon_views_data() {
       'field' => 'url', // the real field
       'handler' => 'views_handler_field_amazon_image',
       'click sortable' => FALSE,
-     ),
+    ),
+    'filter' => array(
+      'field' => 'size',
+      'handler' => 'views_handler_filter_amazon_image',
+      'click sortable' => FALSE,
+    ),
   );
 
   return $data;
