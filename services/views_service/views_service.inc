@@ -97,7 +97,14 @@ function views_service_export($view_name) {
 function views_service_import($view_import, $view_name = '') {
   // Include the necessary files
   require_once drupal_get_path('module', 'views') .'/includes/admin.inc';
+  // If this view exists, delete it so it can be re-imported.
+  $existing_view = views_get_view($view_name);
+  if ($existing_view) {
+    $existing_view->delete();
 
+    // This forces the static cache in views_get_view() to be reset.
+    $existing_view = views_get_view($view_name, TRUE);
+  }
   // Import the the views using the same form as in-site import
   $form_state['values']['name'] = $view_name;
   $form_state['values']['view'] = $view_import;
