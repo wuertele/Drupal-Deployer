@@ -638,7 +638,7 @@ function xmlsitemap_generate_chunk($chunk, $language) {
   //$output .= '  http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">' . "\n";
 
   // @todo Use an ORDER BY pid DESC to respect the most recent alias.
-  $sql = "SELECT COALESCE(ua.dst, x.loc) AS alias, x.loc, x.lastmod, x.changefreq, x.changecount, x.priority FROM {xmlsitemap} x
+  $sql = "SELECT COALESCE(ua.dst, x.loc) AS alias, x.lastmod, x.changefreq, x.changecount, x.priority FROM {xmlsitemap} x
           LEFT JOIN (SELECT src, dst FROM {url_alias} WHERE language IN ('%s', '') GROUP BY src ORDER BY language) ua ON x.loc = ua.src
           WHERE x.status = 1";
   $offset = max($chunk - 1, 0) * xmlsitemap_get_chunk_size();
@@ -660,7 +660,7 @@ function xmlsitemap_generate_chunk($chunk, $language) {
     if ($link['changefreq']) {
       $output .= '<changefreq>'. xmlsitemap_get_changefreq($link['changefreq']) .'</changefreq>';
     }
-    if ($link['priority'] !== XMLSITEMAP_PRIORITY_DEFAULT) {
+    if (isset($link['priority']) && $link['priority'] !== XMLSITEMAP_PRIORITY_DEFAULT && $link['priority'] != 0.5) {
       $output .= '<priority>'. number_format($link['priority'], 1) .'</priority>';
     }
     $output .= '</url>' . "\n";
