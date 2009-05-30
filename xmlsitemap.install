@@ -120,19 +120,26 @@ function xmlsitemap_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
-      'status' => array(
-        'description' => 'A boolean that represents if the item should be in the sitemap.',
-        'type' => 'int',
-        'size' => 'tiny',
-        'default' => 1,
-        'unsigned' => TRUE,
-      ),
       'loc' => array(
         'description' => 'The URL to the item relative to the Drupal path.',
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
         'default' => '',
+      ),
+      'language' => array(
+        'description' => 'The {languages}.language of this link or an empty string if it is language-neutral',
+        'type' => 'varchar',
+        'length' => 12,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'status' => array(
+        'description' => 'A boolean that represents if the item should be in the sitemap.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'default' => 1,
+        'unsigned' => TRUE,
       ),
       'lastmod' => array(
         'description' => 'The UNIX timestamp of last modification of the item.',
@@ -164,6 +171,7 @@ function xmlsitemap_schema() {
     'indexes' => array(
       'loc' => array('loc'),
       'status' => array('status'),
+      'language' => array('language'),
     ),
   );
 
@@ -207,6 +215,19 @@ function xmlsitemap_update_5() {
   $ret = array();
   db_drop_primary_key($ret, 'xmlsitemap');
   db_add_primary_key($ret, 'xmlsitemap', array('id', 'type'));
+  return $ret;
+}
+
+function xmlsitemap_update_6() {
+  $ret = array();
+  $field = array(
+    'type' => 'varchar',
+    'length' => 12,
+    'not null' => TRUE,
+    'default' => '',
+  );
+  db_add_field($ret, 'xmlsitemap', 'language', $field);
+  db_add_index($ret, 'xmlsitemap', 'language', array('language'));
   return $ret;
 }
 
