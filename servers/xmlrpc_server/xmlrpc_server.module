@@ -51,12 +51,19 @@ function xmlrpc_server_call_wrapper() {
 }
 
 function xmlrpc_server_server_error($message) {
-  static $xmlrpcusererr;
   if (!is_array($message)) {
     $message = array($message);
   }
 
   $message = implode(' ', $message);
 
-  return xmlrpc_error($xmlrpcusererr + 1, strip_tags($message));
+  $matches = array();
+  if (preg_match("/\#(\d+)/", $message, $matches)) {
+    $code = $matches[1];
+  } 
+  else {
+    $code = 1;
+  }
+  
+  return xmlrpc_error($code, strip_tags($message));
 }
