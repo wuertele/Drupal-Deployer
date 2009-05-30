@@ -123,6 +123,8 @@ function xmlsitemap_node_form_alter(&$form, $form_state, $form_id) {
 
 /**
  * Implementation of hook_form_FORM_ID_alter().
+ *
+ * @see node_type_form()
  */
 function xmlsitemap_node_form_node_type_form_alter(&$form, $form_state) {
   $type = $form['#node_type']->type;
@@ -144,6 +146,17 @@ function xmlsitemap_node_form_node_type_form_alter(&$form, $form_state) {
     '#options' => xmlsitemap_get_priority_options(TRUE),
     '#default_value' => variable_get('xmlsitemap_node_priority_' . $type, 'default'),
   );
+  //$form['xmlsitemap']['xmlsitemap_node_update'] = array(
+  //  '#type' => 'checkbox',
+  //  '#title' => t('Update existing nodes if these sitemap settings are changed.'),
+  //  '#description' => t('This may take a while. If this is not selected, existing node sitemap links will not be affected. You can also run a <a href="admin/settings/xmlsitemap/rebuild">sitemap rebuild</a> at a later time.'),
+  //  '#default_value' => variable_get('xmlsitemap_node_update_' . $type, FALSE),
+  //);
+  //$form['#submit'][] = 'xmlsitemap_node_type_form_submit';
+}
+
+function xmlsitemap_node_type_form_submit($form, $form_state) {
+  // Process node type updates.
 }
 
 /**
@@ -353,6 +366,7 @@ function xmlsitemap_node_create_link(&$node) {
     'changefreq' => xmlsitemap_calculate_changefreq(xmlsitemap_node_get_timestamps($node)),
     'changecount' => count(xmlsitemap_node_get_timestamps($node)) - 1,
     'node_type' => $node->type,
+    'language' => $node->language,
   );
 
   return $node->xmlsitemap;
@@ -367,6 +381,7 @@ function xmlsitemap_node_variables() {
   foreach ($node_types as $node_type) {
     $defaults['xmlsitemap_node_priority_' . $node_type] = 'default';
     $defaults['xmlsitemap_node_status_' . $node_type] = TRUE;
+    $defaults['xmlsitemap_node_update_' . $node_type] = FALSE;
   }
   return $defaults;
 }
