@@ -126,7 +126,6 @@ function xmlsitemap_schema() {
         'size' => 'tiny',
         'default' => 1,
         'unsigned' => TRUE,
-        'not null' => TRUE,
       ),
       'loc' => array(
         'description' => 'The URL to the item relative to the Drupal path.',
@@ -151,23 +150,27 @@ function xmlsitemap_schema() {
         'type' => 'int',
         'default' => 0,
         'unsigned' => TRUE,
+        'not null' => TRUE,
       ),
       'changecount' => array(
         'description' => 'The number of times this item has been changed. Used to help calculate the next changefreq value.',
         'type' => 'int',
         'default' => 0,
         'unsigned' => TRUE,
+        'not null' => TRUE,
       ),
     ),
     'primary key' => array('type', 'id'),
     'indexes' => array(
       'loc' => array('loc'),
+      'status' => array('status'),
     ),
   );
 
   return $schema;
 }
 
+// @todo Remove these update functions before alpha.
 function xmlsitemap_update_1() {
   $ret = array();
   db_drop_unique_key($ret, 'xmlsitemap', 'loc');
@@ -184,6 +187,19 @@ function xmlsitemap_update_2() {
 function xmlsitemap_update_3() {
   $ret = array();
   db_add_index($ret, 'xmlsitemap', 'loc', array('loc'));
+  return $ret;
+}
+
+function xmlsitemap_update_4() {
+  $ret = array();
+  $field = array(
+    'type' => 'int',
+    'size' => 'tiny',
+    'default' => 1,
+    'unsigned' => TRUE,
+  );
+  db_change_field($ret, 'xmlsitemap', 'status', 'status', $field);
+  db_add_index($ret, 'xmlsitemap', 'status', array('status'));
   return $ret;
 }
 
