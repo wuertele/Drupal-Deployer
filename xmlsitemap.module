@@ -19,11 +19,6 @@ if (!defined('DATE_W3C')) {
   define('DATE_W3C', 'Y-m-d\TH:i:s+00:00');
 }
 
-/**
- * The default priority value for the database.
- */
-define('XMLSITEMAP_PRIORITY_DEFAULT', NULL);
-
 define('XMLSITEMAP_FREQUENCY_YEARLY', 31449600); // 60 * 60 * 24 * 7 * 52
 define('XMLSITEMAP_FREQUENCY_MONTHLY', 2419200); // 60 * 60 * 24 * 7 * 4
 define('XMLSITEMAP_FREQUENCY_WEEKLY', 604800); // 60 * 60 * 24 * 7
@@ -462,7 +457,7 @@ function xmlsitemap_load_link(array $where, array $args = array()) {
 function xmlsitemap_save_link(array $link) {
   $link += array(
     'status' => TRUE,
-    'priority' => XMLSITEMAP_PRIORITY_DEFAULT,
+    'priority' => NULL,
     'changefreq' => 0,
     'changecount' => 0,
   );
@@ -660,7 +655,10 @@ function xmlsitemap_generate_chunk($chunk, $language) {
     if ($link['changefreq']) {
       $output .= '<changefreq>'. xmlsitemap_get_changefreq($link['changefreq']) .'</changefreq>';
     }
-    if (isset($link['priority']) && $link['priority'] !== XMLSITEMAP_PRIORITY_DEFAULT && $link['priority'] != 0.5) {
+    if (isset($link['priority']) && $link['priority'] != 0.5) {
+      // Don't output the priority value for links that have 0.5 priority. This
+      // is the default 'assumed' value if priority is not included as per the
+      // sitemaps.org specification.
       $output .= '<priority>'. number_format($link['priority'], 1) .'</priority>';
     }
     $output .= '</url>' . "\n";
