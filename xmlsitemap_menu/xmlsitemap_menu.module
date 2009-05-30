@@ -7,11 +7,11 @@
  * Process old menu links not found in the {xmlsitemap} table.
  */
 function xmlsitemap_menu_cron() {
-  if ($menus = array_filter(xmlsitemap_menu_var('menus'))) {
+  if ($menus = xmlsitemap_menu_var('menus')) {
     // Set the global user variable to the anonymous user.
     xmlsitemap_switch_user(0);
 
-    $sql = "SELECT ml.mlid FROM {menu_links} ml LEFT JOIN {xmlsitemap} x ON x.type = 'menu' AND ml.mlid = x.id WHERE x.id IS NULL AND ml.external = 0 AND ml.hidden = 0 AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ")";
+    $sql = "SELECT ml.mlid FROM {menu_links} ml LEFT JOIN {xmlsitemap} x ON x.type = 'menu' AND ml.mlid = x.id WHERE x.id IS NULL AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ")";
     $query = db_query_range($sql, $menus, 0, xmlsitemap_var('batch_limit'));
 
     while ($mlid = db_result($query)) {
@@ -31,11 +31,11 @@ function xmlsitemap_menu_cron() {
 function xmlsitemap_menu_xmlsitemap_links($offset = 0, $limit = 0) {
   $links = array();
 
-  if ($menus = array_filter(xmlsitemap_menu_var('menus'))) {
+  if ($menus = xmlsitemap_menu_var('menus')) {
     // Set the global user variable to the anonymous user.
     xmlsitemap_switch_user(0);
 
-    $sql = "SELECT ml.mlid FROM {menu_links} ml WHERE ml.mlid > %d AND ml.external = 0 AND ml.hidden = 0 AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ") ORDER BY ml.mlid";
+    $sql = "SELECT ml.mlid FROM {menu_links} ml WHERE ml.mlid > %d AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ") ORDER BY ml.mlid";
     $args = array_merge(array($offset), $menus);
     $query = ($limit ? db_query_range($sql, $args, 0, $limit) : db_query($sql, $args));
 
@@ -55,9 +55,9 @@ function xmlsitemap_menu_xmlsitemap_links($offset = 0, $limit = 0) {
  * Implementation of hook_xmlsitemap_links_batch_info().
  */
 function xmlsitemap_menu_xmlsitemap_links_batch_info() {
-  $menus = array_filter(xmlsitemap_menu_var('menus'));
+  $menus = xmlsitemap_menu_var('menus');
   return array(
-    'max' => $menus ? db_result(db_query("SELECT COUNT(ml.mlid) FROM {menu_links} ml WHERE ml.external = 0 AND ml.hidden = 0 AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ")", $menus)) : 0,
+    'max' => $menus ? db_result(db_query("SELECT COUNT(ml.mlid) FROM {menu_links} ml WHERE ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ")", $menus)) : 0,
   );
 }
 
@@ -68,11 +68,57 @@ function xmlsitemap_menu_xmlsitemap_links_clear() {
   db_query("DELETE FROM {xmlsitemap} WHERE type = 'menu'");
 }
 
+function xmlsitemap_menu_form_alter(&$form, $form_state, $form_id) {
+  //dpm ($form_id);
+}
+
+function xmlsitemap_menu_form_menu_overview_form_alter(&$form, $form_state) {
+  $form['#submit'][] = 'xmlsitemap_menu_menu_overview_form_submit';
+}
+
+function xmlsitemap_menu_menu_overview_form_submit($form, $form_state) {
+  foreach (element_children($form) as $mlid) {
+    if (isset($form[$mlid]['#item'])) {
+      xmlsitemap_switch_user(0);
+      $menu_item = menu_link_load($form[$mlid]['#item']['mlid']);
+      xmlsitemap_restore_user();
+      xmlsitemap_menu_item_update($menu_item);
+    }
+  }
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter().
+ */
+function xmlsitemap_menu_form_menu_item_delete_form_alter(&$form, $form_state) {
+  $form['#submit'][] = 'xmlsitemap_menu_menu_item_delete_form_submit';
+}
+
+function xmlsitemap_menu_menu_item_delete_form_submit($form, $form_state) {
+  xmlsitemap_menu_item_delete($form['#item']);
+}
+
 /**
  * Implementation of hook_form_FORM_ID_alter().
  */
 function xmlsitemap_menu_form_menu_edit_item_alter(&$form, $form_state) {
-  //$form['#submit'][] = 'xmlsitemap_menu_menu_edit_item_submit';
+  $form['#submit'][] = 'xmlsitemap_menu_menu_edit_item_submit';
+}
+
+function xmlsitemap_menu_menu_edit_item_submit($form, $form_state) {
+  xmlsitemap_switch_user(0);
+  $menu_item = menu_link_load($form_state['values']['menu']['mlid']);
+  xmlsitemap_restore_user();
+  xmlsitemap_menu_item_update($menu_item);
+}
+
+function xmlsitemap_menu_item_update($menu_item) {
+  $link = xmlsitemap_menu_create_link($menu_item);
+  xmlsitemap_save_link($link);
+}
+
+function xmlsitemap_menu_item_delete($menu_item) {
+  xmlsitemap_delete_link(array('type' => 'menu', 'id' => $menu_item['mlid']));
 }
 
 /**
@@ -82,12 +128,18 @@ function xmlsitemap_menu_form_menu_edit_item_alter(&$form, $form_state) {
  *   A loaded menu item.
  */
 function xmlsitemap_menu_create_link($menu_item) {
+  static $menus;
+
+  if (!isset($menus)) {
+    $menus = xmlsitemap_menu_var('menus');
+  }
+
   return array(
     'type' => 'menu',
     'id' => $menu_item['mlid'],
     'loc' => $menu_item['link_path'],
     'priority' => xmlsitemap_menu_get_priority($menu_item),
-    'status' => $menu_item['access'] && !preg_match('%\Anode/\d+\Z%i', $menu_item['link_path']),
+    'status' => $menu_item['access'] && !$menu_item['external'] && !$menu_item['hidden'] && in_array($menu_item['menu_name'], $menus),
   );
 }
 
@@ -140,7 +192,7 @@ function xmlsitemap_menu_settings_form_submit($form, $form_state) {
   $removed_menus = array_diff($current_menus, $selected_menus);
 
   foreach ($removed_menus as $removed_menu) {
-    db_query("DELETE FROM {xmlsitemap} WHERE type = 'menu' AND id IN (SELECT mlid FROM {menu_links} WHERE menu_name = '%s')", $removed_menu);
+    db_query("DELETE FROM {xmlsitemap} x WHERE x.type = 'menu' AND x.id IN (SELECT mlid FROM {menu_links} WHERE menu_name = '%s')", $removed_menu);
   }
 }
 

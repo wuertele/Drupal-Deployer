@@ -34,6 +34,7 @@ function xmlsitemap_engines_settings_form($form_state) {
 
   $form['#validate'][] = 'xmlsitemap_engines_settings_form_validate';
   $form['#submit'][] = 'xmlsitemap_engines_settings_form_submit';
+  $form['array_filter'] = array('#type' => 'value', '#value' => TRUE);
   return system_settings_form($form);
 }
 
