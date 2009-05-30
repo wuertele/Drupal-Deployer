@@ -8,7 +8,7 @@
  */
 function xmlsitemap_node_cron() {
   // Start with the most recently changed nodes first.
-  $query = db_query_range("SELECT n.nid FROM {node} n LEFT JOIN {xmlsitemap} x ON x.type = 'node' AND n.nid = x.id WHERE x.id IS NULL ORDER BY n.changed DESC", 0, xmlsitemap_var('batch_limit'));
+  $query = db_query_range("SELECT n.nid FROM {node} n LEFT JOIN {xmlsitemap} x ON x.type = 'node' AND n.nid = x.id WHERE (x.id IS NULL OR x.status IS NULL) ORDER BY n.changed DESC", 0, xmlsitemap_var('batch_limit'));
   while ($nid = db_result($query)) {
     $node = node_load($nid, NULL, TRUE);
     xmlsitemap_node_create_link($node);
@@ -352,6 +352,7 @@ function xmlsitemap_node_create_link(&$node) {
     'lastmod' => isset($node->changed) ? $node->changed : REQUEST_TIME,
     'changefreq' => xmlsitemap_calculate_changefreq(xmlsitemap_node_get_timestamps($node)),
     'changecount' => count(xmlsitemap_node_get_timestamps($node)) - 1,
+    'node_type' => $node->type,
   );
 
   return $node->xmlsitemap;
