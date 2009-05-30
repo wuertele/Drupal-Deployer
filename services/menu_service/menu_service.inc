@@ -20,7 +20,7 @@ function menu_service_get($menu_id = NULL, $fields = array()) {
   if (sizeof($fields) === 0) {
     $fields = FALSE;
   }
-  $data = menu_tree_page_data($menu_id);
+  $data = menu_tree_all_data($menu_id);
   return menu_service_process($data, $fields);
 }
 
