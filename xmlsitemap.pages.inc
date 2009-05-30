@@ -15,6 +15,8 @@ function xmlsitemap_output_chunk($chunk = 0) {
   $file = xmlsitemap_get_chunk_file($chunk, $language);
 
   if (!file_exists($file) || (isset($_GET['refresh']) && user_access('administer xmlsitemap'))) {
+    // This section of code is for development testing only.
+    // @todo Remove in the final version.
     if (!xmlsitemap_generate($chunk)) {
       return drupal_not_found();
     }

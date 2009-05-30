@@ -63,13 +63,12 @@ function xmlsitemap_settings_form() {
     '#description' => t('This is the base URL for links generated in the sitemap.'),
     '#required' => TRUE,
   );
-  // @todo Enable this feature when http://drupal.org/node/470602 is completed.
   $form['xmlsitemap']['xmlsitemap_languages'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Generate sitemaps for the following languages'),
     '#options' => function_exists('locale_language_list') ? locale_language_list() : array(language_default('language') => array(language_default('name'))),
     '#default_value' => xmlsitemap_var('languages'),
-    //'#access' => module_exists('locale') && FALSE,
+    '#access' => module_exists('locale'),
   );
   // Disable the default langage checkbox. It should always be enabled.
   $form['xmlsitemap']['xmlsitemap_languages'][language_default('language')] = array(
