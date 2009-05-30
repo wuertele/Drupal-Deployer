@@ -7,9 +7,28 @@
  */
 
 /**
+ * Implementation of hook_install().
+ */
+function xmlsitemap_menu_install() {
+  $ret = array();
+  $field = array(
+    'description' => 'The {menu_links}.menu_name of this menu link.',
+    'type' => 'varchar',
+    'length' => 32,
+    'default' => NULL,
+  );
+  db_add_field($ret, 'xmlsitemap', 'menu_name', $field);
+  db_add_index($ret, 'xmlsitemap', 'menu_name', array('menu_name'));
+}
+
+/**
  * Implementation of hook_uninstall().
  */
 function xmlsitemap_menu_uninstall() {
+  $ret = array();
+  db_drop_index($ret, 'xmlsitemap', 'menu_name');
+  db_drop_field($ret, 'xmlsitemap', 'menu_name');
+
   // Remove variables.
   drupal_load('module', 'xmlsitemap_menu');
   $variables = array_keys(xmlsitemap_menu_variables());
@@ -18,8 +37,23 @@ function xmlsitemap_menu_uninstall() {
   }
 }
 
+// @todo Remove these update functions before alpha.
 function xmlsitemap_menu_update_1() {
   $value = xmlsitemap_menu_var('menus');
   variable_set('xmlsitemap_menu_menus', array_filter($value));
   return array();
+}
+
+function xmlsitemap_menu_update_2() {
+  $ret = array();
+  $field = array(
+    'description' => 'The {menu_links}.menu_name of this menu link.',
+    'type' => 'varchar',
+    'length' => 32,
+    'default' => NULL,
+  );
+  db_add_field($ret, 'xmlsitemap', 'menu_name', $field);
+  db_add_index($ret, 'xmlsitemap', 'menu_name', array('menu_name'));
+  $ret[] = update_sql("UPDATE {xmlsitemap} SET menu_name = (SELECT menu_links.menu_name FROM {menu_links} WHERE menu_links.mlid = xmlsitemap.id) WHERE xmlsitemap.type = 'menu'");
+  return $ret;
 }
