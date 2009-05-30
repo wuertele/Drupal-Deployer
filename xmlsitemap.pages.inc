@@ -9,8 +9,10 @@
 /**
  * Output a sitemap page.
  */
-function xmlsitemap_output($chunk = 0) {
-  $file = xmlsitemap_get_chunk_file($chunk);
+function xmlsitemap_output_chunk($chunk = 0) {
+  global $language;
+
+  $file = xmlsitemap_get_chunk_file($chunk, $language);
 
   if (!file_exists($file) || (isset($_GET['refresh']) && user_access('administer xmlsitemap'))) {
     if (!xmlsitemap_generate($chunk)) {

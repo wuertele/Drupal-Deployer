@@ -51,7 +51,8 @@ KNOWN ISSUES
     before resubmitting.- Parent tag: url"
   Most likely you are using PHP 5.1.1 or PHP 5.1.2, which introduced a new
   date/time constant DATE_W3C but forgot to include a semicolon in the timezone
-  separator. This bug has been fixed in PHP 5.1.3 and above. You should upgrade.
+  separator. This bug has been fixed in PHP 5.1.3 and higher.
+  See http://bugs.php.net/bug.php?id=36599.
 
 
 MORE INFORMATION
@@ -75,11 +76,11 @@ HOW CAN YOU CONTRIBUTE?
 - Write a review for this module at drupalmodules.com.
   http://drupalmodules.com/module/xml-sitemap
 
-- Help translate this module on launchpad.net.
+- Help translate this module.
   http://project.davereid.net/translate/projects/xmlsitemap
 
-- Help keep development active by dontating to the maintainer's DrupalCon Paris
-  fund. http://davereid.chipin.com/
+- Help keep development active by dontating to the rewrite fund.
+  http://davereid.chipin.com/
 
 - Report any bugs, feature requests, etc. in the issue tracker.
   http://drupal.org/project/issues/xmlsitemap

@@ -35,7 +35,7 @@ function xmlsitemap_settings_form() {
   $form['xmlsitemap']['xmlsitemap_chunk_size'] = array(
     '#type' => 'select',
     '#title' => t('Number of links in each sitemap page'),
-    '#options' => array('auto' => t('Automatic')) + drupal_map_assoc(array(500, 1000, 2500, 5000, 10000, 25000, 50000)),
+    '#options' => array('auto' => t('Automatic')) + drupal_map_assoc(array(100, 500, 1000, 2500, 5000, 10000, 25000, 50000)),
     '#default_value' => xmlsitemap_var('chunk_size'),
     // @todo This description is not clear.
     '#description' => t('If there are problems with rebuilding the sitemap, you may want to manually set this value. If you have more than 50,000 links, an index with multiple sitemap pages will be generated. There is a maximum of 1000 sitemap pages.'),
@@ -62,6 +62,22 @@ function xmlsitemap_settings_form() {
     '#default_value' => xmlsitemap_var('base_url'),
     '#description' => t('This is the base URL for links generated in the sitemap.'),
     '#required' => TRUE,
+  );
+  // @todo Enable this feature when http://drupal.org/node/470602 is completed.
+  $form['xmlsitemap']['xmlsitemap_languages'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Generate sitemaps for the following languages'),
+    '#options' => function_exists('locale_language_list') ? locale_language_list() : array(language_default('language') => array(language_default('name'))),
+    '#default_value' => xmlsitemap_var('languages'),
+    //'#access' => module_exists('locale') && FALSE,
+  );
+  // Disable the default langage checkbox. It should always be enabled.
+  $form['xmlsitemap']['xmlsitemap_languages'][language_default('language')] = array(
+    '#type' => 'checkbox',
+    '#title' => language_default('name'),
+    '#return_value' => language_default('language'),
+    '#default_value' => TRUE,
+    '#disabled' => TRUE,
   );
 
   $form['frontpage'] = array(
@@ -106,10 +122,28 @@ function xmlsitemap_settings_form() {
   );
 
   $form['#validate'][] = 'xmlsitemap_settings_form_validate';
+  //$form['#submit'][] = 'xmlsitemap_form_submit_flag_regenerate';
   $form['#submit'][] = 'xmlsitemap_settings_form_submit';
   $form = system_settings_form($form);
   $form['buttons']['#weight'] = 10;
+  $form['array_filter'] = array('#type' => 'value', '#value' => TRUE);
   return $form;
+}
+
+/**
+ * Submit handler; Set the regenerate needed flag if variables have changed.
+ *
+ * This function needs to be called before system_settings_form_submit() or any
+ * variable_set ()calls.
+ */
+function xmlsitemap_form_submit_flag_regenerate($form, $form_state) {
+  foreach ($form_state['values'] as $variable => $value) {
+    $stored_value = variable_get($variable, 'xmlsitemap_not_a_variable');
+    if ($stored_value != 'xmlsitemap_not_a_variable' && $stored_value != $value) {
+      variable_set('xmlsitemap_regenerate_needed', TRUE);
+      return;
+    }
+  }
 }
 
 /**
@@ -156,6 +190,10 @@ function xmlsitemap_validate_custom_links($element, &$form_state) {
   xmlsitemap_switch_user(0);
   foreach ($links as $link) {
     $menu_items[$link] = menu_get_item($link);
+    // Since the menu item access results are cached, manually check the current path.
+    if (strpos($link, 'admin/settings/xmlsitemap') === 0 && !user_access('administer xmlsitemap', drupal_anonymous_user())) {
+      $menu_items[$link]['access'] = FALSE;
+    }
   }
   xmlsitemap_restore_user();
 
@@ -243,6 +281,10 @@ function xmlsitemap_rebuild_batch($form_state) {
 
   // Generate all the sitemap pages.
   $batch['operations'][] = array('xmlsitemap_rebuild_batch_generate', array());
+  //$languages = languages_list();
+  //foreach (xmlsitemap_var('languages') as $language) {
+  //  $batch['operations'][] = array('xmlsitemap_rebuild_batch_generate', array($languages[$language]));
+  //}
 
   return $batch;
 }
@@ -288,24 +330,38 @@ function xmlsitemap_rebuild_batch_fetch($module, &$context) {
 }
 
 /**
- * Batch callback; generate one sitemap page.
+ * Batch callback; generate all the sitemap chunks.
  *
- * @todo Fix the max/progress adjustments.
+ * @todo Split generation for each language?
  */
 function xmlsitemap_rebuild_batch_generate(&$context) {
   if (!isset($context['sandbox']['progress'])) {
     _xmlsitemap_regenerate_before();
     $context['sandbox']['progress'] = 0;
-    $context['sandbox']['max'] = xmlsitemap_get_chunk_count(TRUE) + 1;
+    $context['sandbox']['languages'] = xmlsitemap_var('languages');
+    $context['sandbox']['chunk_count'] = xmlsitemap_get_chunk_count(TRUE);
+    // If we have more than one chunk, we need to increment this value by one
+    // since the index page will also need to be generated.
+    if ($context['sandbox']['chunk_count'] > 1) {
+      $context['sandbox']['chunk_count']++;
+    }
+    $context['sandbox']['max'] = count($context['sandbox']['languages']) * $context['sandbox']['chunk_count'];
   }
 
-  $chunk = &$context['sandbox']['progress'];
-  xmlsitemap_generate($chunk);
-  $chunk++;
-  $context['message'] = t('Now generating sitemap page @chunk.', array('@chunk' => $chunk));
+  $languages = language_list();
+  $language = $languages[$context['sandbox']['languages'][0]];
+  $chunk = $context['sandbox']['progress'] % $context['sandbox']['chunk_count'];
+  xmlsitemap_generate($chunk, $language);
+  $context['sandbox']['progress']++;
+  $context['message'] = t('Now generating @language sitemap page @chunk.', array('@language' => $language->name, '@chunk' => $chunk + 1));
 
   if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
     $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
+    if ($context['sandbox']['progress'] % $context['sandbox']['chunk_count'] == 0) {
+      // If we have generated all the chunks of a language's sitemap, proceed
+      // to the next language.
+      array_shift($context['sandbox']['languages']);
+    }
   }
   else {
     _xmlsitemap_regenerate_after();

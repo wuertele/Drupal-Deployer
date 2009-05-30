@@ -95,7 +95,7 @@ function xmlsitemap_menu() {
     'weight' => 10,
   );
   $items['sitemap.xml'] = array(
-    'page callback' => 'xmlsitemap_output',
+    'page callback' => 'xmlsitemap_output_chunk',
     'access arguments' => array('access content'),
     'type' => MENU_CALLBACK,
     'file' => 'xmlsitemap.pages.inc',
@@ -104,7 +104,7 @@ function xmlsitemap_menu() {
   if ($chunks > 1) {
     for ($i = 1; $i <= $chunks; $i++) {
       $items['sitemap-' . $i . '.xml'] = array(
-        'page callback' => 'xmlsitemap_output',
+        'page callback' => 'xmlsitemap_output_chunk',
         'page arguments' => array((string) $i),
         'access arguments' => array('access content'),
         'type' => MENU_CALLBACK,
@@ -183,8 +183,28 @@ function xmlsitemap_xmlsitemap_links_clear() {
  * Implementation of hook_robotstxt().
  */
 function xmlsitemap_robotstxt() {
+  $return = array();
+  $languages = language_list();
+
+  foreach (xmlsitemap_var('languages') as $language) {
+    //$url_options = array(
+    //  'absolute' => TRUE,
+    //  'base_url' => xmlsitemap_var('base_url'),
+    //  'language' => $languages[$language],
+    //);
+    //$return[] = 'Sitemap: '. url('sitemap.xml', $url_options);
+    $return[] = 'Sitemap: '. url('sitemap.xml', _xmlsitemap_url_options($languages[$language]));
+  }
+
+  return $return;
+}
+
+function _xmlsitemap_url_options($language = NULL) {
   return array(
-    'Sitemap: '. url('sitemap.xml', array('base_url' => xmlsitemap_var('base_url'), 'absolute' => TRUE)),
+    'absolute' => TRUE,
+    'alias' => TRUE,
+    'base_url' => xmlsitemap_var('base_url'),
+    'language' => $language,
   );
 }
 
@@ -226,9 +246,12 @@ function xmlsitemap_regenerate() {
   _xmlsitemap_regenerate_before();
 
   // Generate the sitemap pages.
+  $languages = language_list();
   $chunk_count = xmlsitemap_get_chunk_count(TRUE);
-  for ($i = 0; $i <= $chunk_count; $i++) {
-    xmlsitemap_generate($i);
+  foreach (xmlsitemap_var('languages') as $language) {
+    for ($i = 0; $i <= $chunk_count; $i++) {
+      xmlsitemap_generate($i, $languages[$language]);
+    }
   }
 
   _xmlsitemap_regenerate_after();
@@ -536,29 +559,37 @@ function xmlsitemap_clear_cache($rmdir = FALSE, $path = NULL) {
 /**
  * Fetch the data from {xmlsitemap}, generates the sitemap, then caches it.
  *
+ * @param $chunk
+ *   An integer representing the integer of the sitemap page chunk.
+ * @param $language
+ *   A language object, defaults to the default language.
  * @return
  *   TRUE on success; otherwise FALSE
  */
-function xmlsitemap_generate($chunk = 0) {
+function xmlsitemap_generate($chunk = 0, $language = NULL) {
   //cache_clear_all(url('xmlsitemap_'. $chunk .'.xml', array('absolute' => TRUE)), 'cache_page');
 
   if (!is_numeric($chunk) || $chunk > xmlsitemap_get_chunk_count()) {
     return FALSE;
   }
 
+  if (!isset($language)) {
+    $language = language_default();
+  }
+
   if (xmlsitemap_get_chunk_count() == 1) {
     $chunk = 0;
-    $output = xmlsitemap_generate_chunk($chunk);
+    $output = xmlsitemap_generate_chunk($chunk, $language);
   }
   elseif ($chunk) {
-    $output = xmlsitemap_generate_chunk($chunk);
+    $output = xmlsitemap_generate_chunk($chunk, $language);
   }
   else {
-    $output = xmlsitemap_generate_index();
+    $output = xmlsitemap_generate_index($language);
   }
 
   // Write the output file.
-  return file_save_data($output, xmlsitemap_get_chunk_file($chunk), FILE_EXISTS_REPLACE);
+  return file_save_data($output, xmlsitemap_get_chunk_file($chunk, $language), FILE_EXISTS_REPLACE);
 }
 
 /**
@@ -566,11 +597,23 @@ function xmlsitemap_generate($chunk = 0) {
  *
  * @param $chunk
  *   An integer representing the integer of the sitemap page chunk.
+ * @param $language
+ *   A language object, defaults to the default language.
  * @return
  *   A file path to the expected chunk file.
  */
-function xmlsitemap_get_chunk_file($chunk = 0) {
-  return file_create_path(xmlsitemap_var('path')) .'/xmlsitemap-'. $chunk . '.xml';
+function xmlsitemap_get_chunk_file($chunk = 0, $language) {
+  return file_create_path(xmlsitemap_var('path')) .'/xmlsitemap-' . $language->language . '-' . $chunk . '.xml';
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter().
+ *
+ * Set the regeneration needed flag if languages are changed.
+ */
+function xmlsitemap_form_locale_languages_overview_form_alter(&$form, $form_state) {
+  //module_load_include('inc', 'xmlsitemap', 'xmlsitemap.admin');
+  //array_unshift($form['#submit'], 'xmlsitemap_form_submit_flag_regenerate');
 }
 
 /**
@@ -578,13 +621,10 @@ function xmlsitemap_get_chunk_file($chunk = 0) {
  *
  * @param $chunk
  *   An integer representing the integer of the sitemap page chunk.
- *
- * @todo Use an ORDER BY in the SQL?
- * @todo Figure out how to implement multilanguage?
+ * @param $language
+ *   A language object, defaults to the default language.
  */
-function xmlsitemap_generate_chunk($chunk) {
-  $language = language_default();
-
+function xmlsitemap_generate_chunk($chunk, $language) {
   $output = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
   if (xmlsitemap_var('xsl')) {
     $output .= '<?xml-stylesheet type="text/xsl" href="'. url('sitemap.xsl') .'"?>' . "\n";
@@ -594,23 +634,25 @@ function xmlsitemap_generate_chunk($chunk) {
   //$output .= '  xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9' . "\n";
   //$output .= '  http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">' . "\n";
 
-  $sql = "SELECT COALESCE(ua.dst, x.loc) AS alias, x.loc, x.lastmod, x.changefreq, x.changecount, x.priority, ua.language FROM {xmlsitemap} x
-          LEFT JOIN {url_alias} ua ON x.loc = ua.src
-          WHERE x.status = 1 AND (ua.language IS NULL OR ua.language IN ('', '%s'))
-          GROUP BY x.loc";
+  // @todo Use an ORDER BY pid DESC to respect the most recent alias.
+  $sql = "SELECT COALESCE(ua.dst, x.loc) AS alias, x.loc, x.lastmod, x.changefreq, x.changecount, x.priority FROM {xmlsitemap} x
+          LEFT JOIN (SELECT src, dst FROM {url_alias} WHERE language IN ('%s', '') GROUP BY src ORDER BY language) ua ON x.loc = ua.src
+          WHERE x.status = 1";
   $offset = max($chunk - 1, 0) * xmlsitemap_get_chunk_size();
   $limit = xmlsitemap_get_chunk_size();
   $query = db_query_range($sql, array($language->language), $offset, $limit);
 
-  $url_parameters = array(
-    'absolute' => TRUE,
-    'alias' => TRUE,
-    'base_url' => xmlsitemap_var('base_url'),
-  );
+  //$url_options = array(
+  //  'absolute' => TRUE,
+  //  'alias' => TRUE,
+  //  'base_url' => xmlsitemap_var('base_url'),
+  //  'language' => $language,
+  //);
+  $url_options = _xmlsitemap_url_options($language);
 
   while ($link = db_fetch_array($query)) {
     $output .= '<url>';
-    $output .= '<loc>'. url($link['alias'], $url_parameters) .'</loc>';
+    $output .= '<loc>'. url($link['alias'], $url_options) .'</loc>';
     if ($link['lastmod']) {
       $output .= '<lastmod>'. gmdate(DATE_W3C, $link['lastmod']) .'</lastmod>';
         // If the link has a lastmod value, update the changefreq so that links
@@ -633,8 +675,11 @@ function xmlsitemap_generate_chunk($chunk) {
 
 /**
  * Generate the index sitemap.
+ *
+ * @param $language
+ *   A language object, defaults to the default language.
  */
-function xmlsitemap_generate_index() {
+function xmlsitemap_generate_index($language = NULL) {
   $output = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
   if (xmlsitemap_var('xsl')) {
     $output .= '<?xml-stylesheet type="text/xsl" href="'. url('sitemap.xsl') .'"?>' . "\n";
@@ -644,16 +689,18 @@ function xmlsitemap_generate_index() {
   //$output .= '  xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9' . "\n";
   //$output .= '  http://www.sitemaps.org/schemas/sitemap/0.9/siteindex.xsd">' . "\n";
 
-  $url_parameters = array(
-    'absolute' => TRUE,
-    'alias' => TRUE,
-    'base_url' => xmlsitemap_var('base_url'),
-  );
+  //$url_options = array(
+  //  'absolute' => TRUE,
+  //  'alias' => TRUE,
+  //  'base_url' => xmlsitemap_var('base_url'),
+  //  'language' => $language,
+  //);
+  $url_options = _xmlsitemap_url_options($language);
 
   $count = xmlsitemap_get_chunk_count(TRUE);
   for ($i = 1; $i <= $count; $i++) {
     $output .= '<sitemap>';
-    $output .= '<loc>'. url('sitemap-' . $i . '.xml', $url_parameters) .'</loc>';
+    $output .= '<loc>'. url('sitemap-' . $i . '.xml', $url_options) .'</loc>';
     $output .= '<lastmod>'. gmdate(DATE_W3C, REQUEST_TIME) .'</lastmod>';
     $output .= '</sitemap>' . "\n";
   }
@@ -680,6 +727,7 @@ function xmlsitemap_variables() {
     'xmlsitemap_xsl' => TRUE,
     'xmlsitemap_regenerate_last' => 0,
     'xmlsitemap_base_url' => $GLOBALS['base_url'],
+    'xmlsitemap_languages' => array(language_default('language')),
   );
 }
 
