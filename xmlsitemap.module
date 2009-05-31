@@ -301,6 +301,8 @@ function _xmlsitemap_regenerate_after() {
  *   Include a 'default' option.
  * @return
  *   An array of options.
+ *
+ * @see _xmlsitemap_translation_strings()
  */
 function xmlsitemap_get_priority_options($default = FALSE) {
   $options = array();
@@ -312,6 +314,8 @@ function xmlsitemap_get_priority_options($default = FALSE) {
 
   foreach (range(0, 1, 0.1) as $option) {
     $option = number_format($option, 1);
+    // Sorry, we pass a variable through t() since we have provided all the
+    // possible values in _xmlsitemap_translation_strings().
     $options[$option] = t($option);
   }
 
@@ -660,8 +664,7 @@ function xmlsitemap_generate_chunk($chunk, $language) {
   // @todo When should "AND x.language IN ('%s', '')" be used?
   $sql = "SELECT x.loc, COALESCE(ua.dst, x.loc) AS alias, x.lastmod, x.changefreq, x.changecount, x.priority FROM {xmlsitemap} x
           LEFT JOIN {url_alias} ua ON x.loc = ua.src AND ua.language IN ('%s', '')
-          WHERE x.status = 1
-          GROUP BY x.loc";
+          WHERE x.status = 1";
   $args = array($language->language);
   $offset = max($chunk - 1, 0) * xmlsitemap_get_chunk_size();
   $limit = xmlsitemap_get_chunk_size();
