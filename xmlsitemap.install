@@ -250,6 +250,31 @@ function xmlsitemap_update_5() {
 //}
 
 /**
+ * Fetch a short blurb string about module maintainership and sponsors.
+ *
+ * This message will be FALSE in 'official' releases.
+ */
+function _xmlsitemap_get_blurb() {
+  static $blurb;
+
+  if (!isset($blurb)) {
+    $blurb = FALSE;
+    $info = drupal_parse_info_file(drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap.info');
+    if (!isset($info['version']) || preg_match('/dev|alpha|beta|rc/i', $info['version'])) {
+      $sponsors = array(
+        l('Symantec', 'http://www.symantec.com/'),
+        l('WebWise Solutions', 'http://www.webwiseone.com/'),
+        l('Volacci', 'http://www.volacci.com/'),
+      );
+      // Don't extract the following string for translation.
+      $blurb = strtr('<p>Thank you for helping test the XML sitemap module rewrite. Please consider helping offset developer free time by <a href="@link-donate">donating</a> or if your company is interested in sponsoring the rewrite or a specific feature, please <a href="@link-contact">contact the developer</a>. Thank you to the following current sponsors: !sponsors.</p>', array('@link-review' => 'http://drupalmodules.com/module/xml-sitemap', '@link-donate' => 'http://davereid.chipin.com/', '@link-contact' => 'http://davereid.net/contact', '!sponsors' => implode(', ', $sponsors)));
+    }
+  }
+
+  return $blurb;
+}
+
+/**
  * These strings exist only for the extractor to pick them up and make them
  * available for translation. Putting them here keeps them from being parsed
  * on normal pages.
