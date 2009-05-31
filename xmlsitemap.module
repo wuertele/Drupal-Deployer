@@ -47,7 +47,7 @@ function xmlsitemap_help($path, $arg) {
     $checked = TRUE;
 
     // @todo Remove in final version.
-    $output .= '<p style="text-align: center; font-size: smaller;">' . t('Thank you for helping test the XML sitemap module rewrite, developed by <a href="@link-dave">Dave Reid</a>. Please consider helping <a href="@link-donate">donate to or sponsor the rewrite</a>. This will be removed in the official version.', array('@link-dave' => 'http://davereid.net/', '@link-review' => 'http://drupalmodules.com/module/xml-sitemap', '@link-donate' => 'http://davereid.chipin.com/')) . '</p>';
+    $output .= '<p style="text-align: center; font-size: smaller;">' . t('Thank you for helping test the XML sitemap module rewrite. Please consider helping offset my development time by <a href="@link-donate">donating</a>; or if your company is interested in sponsoring the rewrite or a specific feature, <a href="@link-contact">contact the developer</a>. This message will be removed in the first release candidate onwards.', array('@link-review' => 'http://drupalmodules.com/module/xml-sitemap', '@link-donate' => 'http://davereid.chipin.com/', '@link-contact' => 'http://davereid.net/contact')) . '</p>';
   }
 
   return $output;
@@ -654,12 +654,12 @@ function xmlsitemap_generate_chunk($chunk, $language) {
   $url_options = _xmlsitemap_url_options(array('language' => $language));
 
   // @todo Optimize the query.
-  // AND x.language IN ('%s', '')
+  // @todo When should "AND x.language IN ('%s', '')" be used?
   $sql = "SELECT x.loc, COALESCE(ua.dst, x.loc) AS alias, x.lastmod, x.changefreq, x.changecount, x.priority FROM {xmlsitemap} x
           LEFT JOIN {url_alias} ua ON x.loc = ua.src AND ua.language IN ('%s', '')
           WHERE x.status = 1
           GROUP BY x.loc";
-  $args = array($language->language, $language->language);
+  $args = array($language->language);
   $offset = max($chunk - 1, 0) * xmlsitemap_get_chunk_size();
   $limit = xmlsitemap_get_chunk_size();
   $query = db_query_range($sql, $args, $offset, $limit);
