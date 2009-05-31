@@ -43,7 +43,7 @@ function xmlsitemap_settings_form() {
   $form['xmlsitemap']['xmlsitemap_batch_limit'] = array(
     '#type' => 'select',
     '#title' => t('Maximum number of sitemap links to process at once'),
-    '#options' => drupal_map_assoc(array(5, 10, 25, 50, 100, 500, 1000, 2500)),
+    '#options' => drupal_map_assoc(array(5, 10, 25, 50, 100, 250, 500, 1000, 2500)),
     '#default_value' => xmlsitemap_var('batch_limit'),
     '#description' => t('If you have problems running cron or rebuilding the sitemap, you may want to lower this value.'),
   );
