@@ -654,9 +654,10 @@ function xmlsitemap_generate_chunk($chunk, $language) {
   $url_options = _xmlsitemap_url_options(array('language' => $language));
 
   // @todo Optimize the query.
+  // AND x.language IN ('%s', '')
   $sql = "SELECT x.loc, COALESCE(ua.dst, x.loc) AS alias, x.lastmod, x.changefreq, x.changecount, x.priority FROM {xmlsitemap} x
           LEFT JOIN {url_alias} ua ON x.loc = ua.src AND ua.language IN ('%s', '')
-          WHERE x.status = 1 AND x.language IN ('%s', '')
+          WHERE x.status = 1
           GROUP BY x.loc";
   $args = array($language->language, $language->language);
   $offset = max($chunk - 1, 0) * xmlsitemap_get_chunk_size();
