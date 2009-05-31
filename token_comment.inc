@@ -31,12 +31,12 @@ function comment_token_values($type, $object = NULL, $options = array()) {
       $values['comment-author-name']     = check_plain($comment->name);
       $values['comment-author-uid']      = $comment->uid;
       $values['comment-author-homepage'] = check_url($comment->homepage);
-      
+
       // Raw counterparts of user supplied data.
       $values['comment-title-raw']       = $comment->subject;
       $values['comment-body-raw']        = $comment->comment;
       $values['comment-author-name-raw'] = $comment->name;
-      
+
       if (!empty($comment->mail)) {
         $account_mail = $comment->mail;
       }
