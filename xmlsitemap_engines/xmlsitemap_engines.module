@@ -21,11 +21,17 @@ function xmlsitemap_engines_menu() {
  * Implementation of hook_cron().
  */
 function xmlsitemap_engines_cron() {
-  $engines = xmlsitemap_engines_var('submit');
+  if (variable_get('site_offline', 0) || (REQUEST_TIME - xmlsitemap_engines_var('submit_last')) < xmlsitemap_engines_var('minimum_lifetime')) {
+    return;
+  }
+
+  $engines = xmlsitemap_engines_var('engines');
+  $pings = array();
   foreach ($engines as $engine) {
     $url = xmlsitemap_engines_prepare_url(xmlsitemap_engines_get_engines($engine, 'url'));
     $request = drupal_http_request($url);
-    watchdog('xmlsitemap', 'Submitted the sitemap to %url.', array('%url' => $url));
+    $pings[] = $request;
+    watchdog('xmlsitemap', 'Submitted the sitemap to %url. !request', array('%url' => $url, '!request' => var_export($request, TRUE)));
   }
 
   $custom_urls = xmlsitemap_engines_var('custom_urls');
@@ -33,8 +39,12 @@ function xmlsitemap_engines_cron() {
   foreach ($custom_urls as $custom_url) {
     $url = xmlsitemap_engines_prepare_url($custom_url);
     $request = drupal_http_request($url);
-    watchdog('xmlsitemap', 'Submitted the sitemap to %url.', array('%url' => $url));
+    $pings[] = $request;
+    watchdog('xmlsitemap', 'Submitted the sitemap to %url. !request', array('%url' => $url, '!request' => var_export($request, TRUE)));
   }
+
+  variable_set('xmlsitemap_engines_submit_last', REQUEST_TIME);
+  return $pings;
 }
 
 /**
@@ -110,8 +120,10 @@ function xmlsitemap_engines_get_engines($engine = NULL, $value = NULL) {
  */
 function xmlsitemap_engines_variables() {
   $variables = array(
-    'xmlsitemap_engines_submit' => array(),
+    'xmlsitemap_engines_engines' => array(),
     'xmlsitemap_engines_custom_urls' => '',
+    'xmlsitemap_engines_minimum_lifetime' => 43200,
+    'xmlsitemap_engines_submit_last' => 0,
   );
 
   return $variables;

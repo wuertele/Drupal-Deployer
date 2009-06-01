@@ -8,20 +8,25 @@
 
 /**
  * Admin settings form.
- *
- * @todo Minimum submission times.
  */
 function xmlsitemap_engines_settings_form($form_state) {
   $form['#engines'] = xmlsitemap_engines_get_engines();
 
-  $form['xmlsitemap_engines_submit'] = array(
+  $form['xmlsitemap_engines_engines'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Submit the sitemap to the following engines'),
-    '#default_value' => xmlsitemap_engines_var('submit'),
+    '#default_value' => xmlsitemap_engines_var('engines'),
   );
   foreach ($form['#engines'] as $engine => $engine_details) {
-    $form['xmlsitemap_engines_submit']['#options'][$engine] = $engine_details['name'];
+    $form['xmlsitemap_engines_engines']['#options'][$engine] = $engine_details['name'];
   }
+
+  $form['xmlsitemap_engines_minimum_lifetime'] = array(
+    '#type' => 'select',
+    '#title' => t('Do not submit more often than every'),
+    '#options' => /*array(0 => t('No minimum')) +*/ drupal_map_assoc(array(300, 900, 1800, 3600, 10800, 21600, 32400, 43200, 86400, 172800, 259200, 604800, 604800 * 2, 604800 * 4), 'format_interval'),
+    '#default_value' => xmlsitemap_engines_var('minimum_lifetime')
+  );
 
   $form['xmlsitemap_engines_custom_urls'] = array(
     '#type' => 'textarea',
