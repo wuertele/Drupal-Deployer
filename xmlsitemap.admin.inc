@@ -366,9 +366,9 @@ function xmlsitemap_rebuild_batch_finished($success, $results, $operations) {
   if ($success) {
     // Reset the rebuild flag since it was successful.
     variable_set('xmlsitemap_rebuild_needed', FALSE);
-    drupal_set_message(t('The <a href="@sitemap">sitemap</a> was rebuilt.', array('@sitemap' => url('sitemap.xml'))));
+    drupal_set_message(t('The sitemap was rebuilt.'));
   }
   else {
-    drupal_set_message(t('The <a href="@sitemap">sitemap</a> was not successfully rebuilt.', array('@sitemap' => url('sitemap.xml'))), 'error');
+    drupal_set_message(t('The sitemap was not successfully rebuilt.'), 'error');
   }
 }
