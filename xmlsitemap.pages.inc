@@ -17,6 +17,7 @@ function xmlsitemap_output_chunk($chunk = 0) {
   if (!file_exists($file) || (isset($_GET['refresh']) && user_access('administer xmlsitemap'))) {
     // This section of code is for development testing only.
     // @todo Remove in the final version.
+    module_load_include('inc', 'xmlsitemap');
     if (!xmlsitemap_generate($chunk)) {
       return drupal_not_found();
     }

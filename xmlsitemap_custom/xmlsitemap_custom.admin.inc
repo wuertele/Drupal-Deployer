@@ -25,7 +25,7 @@ function xmlsitemap_custom_list_links() {
 
   $rows[] = array(
     array(
-      'data' => l(t('Add a custom link'), 'admin/settings/xmlsitemap/custom/add', array('query' => drupal_get_destination())),
+      'data' => l(t('Add custom link'), 'admin/settings/xmlsitemap/custom/add', array('query' => drupal_get_destination())),
       'colspan' => 3,
     ),
   );

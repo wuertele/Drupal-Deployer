@@ -179,7 +179,7 @@ function xmlsitemap_robotstxt() {
 /**
  * @todo Document this function.
  *
- * @todo Move to xmlsitemap.inc
+ * @todo Move to xmlsitemap.inc?
  */
 function xmlsitemap_get_sitemaps() {
   $sitemaps = array();
@@ -197,7 +197,7 @@ function xmlsitemap_get_sitemaps() {
 /**
  * @todo Document this function.
  *
- * @todo Move to xmlsitemap.inc
+ * @todo Move to xmlsitemap.inc?
  */
 function _xmlsitemap_url_options(array $options = array()) {
   return $options + array(
@@ -205,60 +205,6 @@ function _xmlsitemap_url_options(array $options = array()) {
     //'alias' => TRUE,
     'base_url' => xmlsitemap_var('base_url'),
   );
-}
-
-/**
- * Delete and regenerate the sitemap files.
- *
- * @todo Move to xmlsitemap.inc
- */
-function xmlsitemap_regenerate() {
-  _xmlsitemap_regenerate_before();
-
-  // Generate the sitemap pages.
-  $languages = language_list();
-  $chunk_count = xmlsitemap_get_chunk_count(TRUE);
-  foreach (xmlsitemap_var('languages') as $language) {
-    for ($i = 0; $i <= $chunk_count; $i++) {
-      xmlsitemap_generate($i, $languages[$language]);
-    }
-  }
-
-  _xmlsitemap_regenerate_after();
-}
-
-/**
- * Perform operations before rebuilding the sitemap.
- *
- * @todo Move to xmlsitemap.inc
- */
-function _xmlsitemap_regenerate_before() {
-  // Increase the processing time since this might take a little bit.
-  @set_time_limit(240);
-
-  // Clear all cached sitemap files.
-  xmlsitemap_clear_cache();
-
-  // Save custom data into a temporary table so it can be re-loaded later.
-  //db_query_temporary("SELECT type, id, priority, changefreq, changecount FROM {xmlsitemap}", 'xmlsitemap_temp');
-}
-
-/**
- * Perform operations after rebuilding the sitemap.
- *
- * @todo Move to xmlsitemap.inc
- */
-function _xmlsitemap_regenerate_after() {
-  // Show a watchdog message that the sitemap was regenerated.
-  watchdog('xmlsitemap', 'Sitemap regenerated.', array(), WATCHDOG_NOTICE, l(t('View'), 'sitemap.xml'));
-
-  // Unset the regenerate flag.
-  variable_set('xmlsitemap_regenerate_needed', FALSE);
-
-  // If the chunk count has changed, we will need to rebuild the menu.
-  variable_set('menu_rebuild_needed', TRUE);
-
-  variable_set('xmlsitemap_generated_last', REQUEST_TIME);
 }
 
 /**
@@ -540,44 +486,6 @@ function xmlsitemap_clear_cache($rmdir = FALSE, $path = NULL) {
 }
 
 /**
- * Fetch the data from {xmlsitemap}, generates the sitemap, then caches it.
- *
- * @param $chunk
- *   An integer representing the integer of the sitemap page chunk.
- * @param $language
- *   A language object, defaults to the default language.
- * @return
- *   TRUE on success; otherwise FALSE
- *
- * @todo Move to xmlsitemap.inc
- */
-function xmlsitemap_generate($chunk = 0, $language = NULL) {
-  //cache_clear_all(url('xmlsitemap_'. $chunk .'.xml', array('absolute' => TRUE)), 'cache_page');
-
-  if (!is_numeric($chunk) || $chunk > xmlsitemap_get_chunk_count()) {
-    return FALSE;
-  }
-
-  if (!isset($language)) {
-    $language = language_default();
-  }
-
-  if (xmlsitemap_get_chunk_count() == 1) {
-    $chunk = 0;
-    $output = xmlsitemap_generate_chunk($chunk, $language);
-  }
-  elseif ($chunk) {
-    $output = xmlsitemap_generate_chunk($chunk, $language);
-  }
-  else {
-    $output = xmlsitemap_generate_index($language);
-  }
-
-  // Write the output file.
-  return file_save_data($output, xmlsitemap_get_chunk_file($chunk, $language), FILE_EXISTS_REPLACE);
-}
-
-/**
  * Get the filename of a specific sitemap page chunk.
  *
  * @param $chunk
@@ -601,103 +509,6 @@ function xmlsitemap_get_chunk_file($chunk = 0, $language) {
 function xmlsitemap_form_locale_languages_overview_form_alter(&$form, $form_state) {
   //module_load_include('inc', 'xmlsitemap', 'xmlsitemap.admin');
   //array_unshift($form['#submit'], 'xmlsitemap_form_submit_flag_regenerate');
-}
-
-/**
- * @todo Document this function.
- *
- * @todo Move to xmlsitemap.inc
- */
-function _xmlsitemap_generate_chunk_header($index = FALSE) {
-  $output = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-  if (xmlsitemap_var('xsl')) {
-    $output .= '<?xml-stylesheet type="text/xsl" href="'. url('sitemap.xsl', _xmlsitemap_url_options()) .'"?>' . "\n";
-  }
-  $output .= '<' . ($index ? 'sitemapindex' : 'urlset') . ' xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
-  //$output .= '<' . ($index ? 'sitemapindex' : 'urlset') . ' xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"' . "\n";
-  //$output .= '  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' . "\n";
-  //$output .= '  xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9' . "\n";
-  //$output .= '  http://www.sitemaps.org/schemas/sitemap/0.9/' . ($index ? 'siteindex.xsd' : 'sitemap.xsd') . '">' . "\n";
-  return $output;
-}
-
-/**
- * Generate one page (chunk) of the sitemap.
- *
- * @param $chunk
- *   An integer representing the integer of the sitemap page chunk.
- * @param $language
- *   A language object, defaults to the default language.
- *
- * @todo Move to xmlsitemap.inc
- */
-function xmlsitemap_generate_chunk($chunk, $language) {
-  $output = _xmlsitemap_generate_chunk_header();
-  $url_options = _xmlsitemap_url_options(array('language' => $language));
-
-  // @todo Optimize the query.
-  // @todo When should "AND x.language IN ('%s', '')" be used? Drupal still lists English content when viewing site in French.
-  //$sql = "SELECT x.loc, COALESCE(ua.dst, x.loc) AS alias, x.lastmod, x.changefreq, x.changecount, x.priority, ua.language, ua.pid FROM {xmlsitemap} x
-  //        LEFT JOIN {url_alias} ua ON x.loc = ua.src AND ua.language IN ('%s', '')
-  //        WHERE x.status = 1
-  //        ORDER BY x.loc, ua.language DESC, ua.pid DESC";
-  //$args = array($language->language);
-  $sql = "SELECT x.loc, x.lastmod, x.changefreq, x.changecount, x.priority FROM {xmlsitemap} x
-          WHERE x.status = 1";
-  $args = array();
-  $offset = max($chunk - 1, 0) * xmlsitemap_get_chunk_size();
-  $limit = xmlsitemap_get_chunk_size();
-  $query = db_query_range($sql, $args, $offset, $limit);
-
-  while ($link = db_fetch_array($query)) {
-    $output .= '<url>';
-    //$output .= '<loc>'. url($link['alias'], $url_options) .'</loc>';
-    $output .= '<loc>'. url($link['loc'], $url_options) .'</loc>';
-    if ($link['lastmod']) {
-      $output .= '<lastmod>'. gmdate(DATE_W3C, $link['lastmod']) .'</lastmod>';
-        // If the link has a lastmod value, update the changefreq so that links
-        // with a short changefreq but updated two years ago show decay.
-      //xmlsitemap_recalculate_changefreq($link);
-      $link['changefreq'] = (REQUEST_TIME - $link['lastmod'] + $link['changefreq']) / 2;
-    }
-    if ($link['changefreq']) {
-      $output .= '<changefreq>'. xmlsitemap_get_changefreq($link['changefreq']) .'</changefreq>';
-    }
-    if (isset($link['priority']) && $link['priority'] != 0.5) {
-      // Don't output the priority value for links that have 0.5 priority. This
-      // is the default 'assumed' value if priority is not included as per the
-      // sitemaps.org specification.
-      $output .= '<priority>'. number_format($link['priority'], 1) .'</priority>';
-    }
-    $output .= '</url>' . "\n";
-  }
-
-  $output .= '</urlset>';
-  return $output;
-}
-
-/**
- * Generate the index sitemap.
- *
- * @param $language
- *   A language object, defaults to the default language.
- *
- * @todo Move to xmlsitemap.inc
- */
-function xmlsitemap_generate_index($language = NULL) {
-  $output = _xmlsitemap_generate_chunk_header(TRUE);
-  $url_options = _xmlsitemap_url_options(array('language' => $language));
-  $chunk_count = xmlsitemap_get_chunk_count(TRUE);
-
-  for ($i = 1; $i <= $chunk_count; $i++) {
-    $output .= '<sitemap>';
-    $output .= '<loc>'. url('sitemap-' . $i . '.xml', $url_options) .'</loc>';
-    $output .= '<lastmod>'. gmdate(DATE_W3C, REQUEST_TIME) .'</lastmod>';
-    $output .= '</sitemap>' . "\n";
-  }
-
-  $output .= '</sitemapindex>';
-  return $output;
 }
 
 /**

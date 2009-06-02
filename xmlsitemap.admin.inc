@@ -216,7 +216,7 @@ function xmlsitemap_rebuild_batch($form_state) {
     'operations' => array(),
     'finished' => 'xmlsitemap_rebuild_batch_finished',
     'title' => t('Rebuilding Sitemap'),
-    'file' => drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap.admin.inc',
+    'file' => drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap.inc',
   );
 
   // Fetch all the sitemap links and save them to the {xmlsitemap} table.
@@ -234,87 +234,4 @@ function xmlsitemap_rebuild_batch($form_state) {
   $batch['operations'][] = array('_xmlsitemap_regenerate_after', array());
 
   return $batch;
-}
-
-/**
- * Batch callback; clear sitemap links for a specific module.
- */
-function xmlsitemap_rebuild_batch_clear($module, &$context) {
-  module_invoke($module, 'xmlsitemap_links_clear');
-  $context['message'] = t('Now clearing %module links.', array('%module' => $module));
-}
-
-/**
- * Batch callback; fetch and add the sitemap links for a specific module.
- */
-function xmlsitemap_rebuild_batch_fetch($module, &$context) {
-  if (!isset($context['sandbox']['progress'])) {
-    $context['sandbox']['batch'] = module_hook($module, 'xmlsitemap_links_batch_info');
-    if ($context['sandbox']['batch']) {
-      $context['sandbox'] += module_invoke($module, 'xmlsitemap_links_batch_info');
-    }
-    else {
-      $context['sandbox']['links'] = module_invoke($module, 'xmlsitemap_links');
-      $context['sandbox']['max'] = count($context['sandbox']['links']);
-    }
-    $context['sandbox'] += array(
-      'progress' => 0,
-      'current' => 0,
-    );
-  }
-
-  if ($context['sandbox']['batch']) {
-    $links = module_invoke($module, 'xmlsitemap_links', $context['sandbox']['current'], xmlsitemap_var('batch_limit'));
-  }
-  else {
-    $links = array_splice($context['sandbox']['links'], 0, xmlsitemap_var('batch_limit'));
-  }
-
-  foreach ($links as $link) {
-    xmlsitemap_save_link($link);
-    $context['sandbox']['progress']++;
-    $context['sandbox']['current'] = $link['id'];
-    $context['message'] = t('Now processing %module link @count.', array('%module' => $module, '@count' => $context['sandbox']['progress']));
-  }
-
-  if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
-    $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
-  }
-}
-
-/**
- * Batch callback; generate the sitemap chunks for a language.
- */
-function xmlsitemap_rebuild_batch_generate($language, &$context) {
-  if (!isset($context['sandbox']['progress'])) {
-    $context['sandbox']['progress'] = 0;
-    $context['sandbox']['max'] = xmlsitemap_get_chunk_count(TRUE);
-    // If we have more than one chunk, we need to increment this value by one
-    // since the index page will also need to be generated.
-    if ($context['sandbox']['max'] > 1) {
-      $context['sandbox']['max']++;
-    }
-  }
-
-  xmlsitemap_generate($context['sandbox']['progress'], $language);
-  $context['sandbox']['progress']++;
-  $context['message'] = t('Now generating @language sitemap page @chunk.', array('@language' => $language->name, '@chunk' => $context['sandbox']['progress']));
-
-  if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
-    $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
-  }
-}
-
-/**
- * Batch callback; sitemap rebuild finished.
- */
-function xmlsitemap_rebuild_batch_finished($success, $results, $operations) {
-  if ($success) {
-    // Reset the rebuild flag since it was successful.
-    variable_set('xmlsitemap_rebuild_needed', FALSE);
-    drupal_set_message(t('The sitemap was rebuilt.'));
-  }
-  else {
-    drupal_set_message(t('The sitemap was not successfully rebuilt.'), 'error');
-  }
 }
