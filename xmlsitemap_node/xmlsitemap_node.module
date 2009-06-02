@@ -139,6 +139,7 @@ function xmlsitemap_node_form_node_type_form_alter(&$form, $form_state) {
     '#type' => 'checkbox',
     '#title' => t('Include this content type in the sitemap.'),
     '#default_value' => variable_get('xmlsitemap_node_status_' . $type, TRUE),
+    '#access' => FALSE,
   );
   $form['xmlsitemap']['xmlsitemap_node_priority'] = array(
     '#type' => 'select',
@@ -151,12 +152,51 @@ function xmlsitemap_node_form_node_type_form_alter(&$form, $form_state) {
   //  '#title' => t('Update existing nodes if these sitemap settings are changed.'),
   //  '#description' => t('This may take a while. If this is not selected, existing node sitemap links will not be affected. You can also run a <a href="admin/settings/xmlsitemap/rebuild">sitemap rebuild</a> at a later time.'),
   //  '#default_value' => variable_get('xmlsitemap_node_update_' . $type, FALSE),
+  //  '#access' => FALSE,
   //);
-  //$form['#submit'][] = 'xmlsitemap_node_type_form_submit';
+
+  array_unshift($form['#submit'], 'xmlsitemap_node_type_form_submit');
 }
 
 function xmlsitemap_node_type_form_submit($form, $form_state) {
+  $new_type = $form_state['values']['type'];
+  $old_type = $form_state['values']['old_type'];
+  $new_priority = $form_state['values']['xmlsitemap_node_priority'];
+  $new_status = $form_state['values']['xmlsitemap_node_status'];
+
+  $updates = array();
+  $args = array();
+
+  if ($new_priority != variable_get('xmlsitemap_node_priority_' . $old_type, 'default')) {
+    if ($new_priority == 'default') {
+      $updates[] = "priority = NULL";
+    }
+    else {
+      $updates[] = "priority = %f";
+      $args[] = $new_priority;
+    }
+  }
+  if ($old_type != $new_type) {
+    $updates[] = "node_type = '%s'";
+    $args[] = $new_type;
+  }
+  //if ($new_status != variable_get('xmlsitemap_node_status_' . $old_type, TRUE)) {
+  //  if ($new_status) {
+  //    $updates[] = "status = NULL";
+  //  }
+  //  else {
+  //    $updates[] = "status = %d";
+  //    $args[] = FALSE;
+  //  }
+  //}
+
   // Process node type updates.
+  if ($updates) {
+    $sql = "UPDATE {xmlsitemap} SET " . implode(', ', $updates) . " WHERE node_type = '%s'";
+    $args[] = $old_type;
+    db_query($sql, $args);
+    variable_set('xmlsitemap_regenerate_needed', TRUE);
+  }
 }
 
 /**
