@@ -1,0 +1,37 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Unit tests for the xmlsitemap_engines module.
+ */
+class XMLSitemapEnginesFunctionalTest extends DrupalWebTestCase {
+  protected $admin_user;
+
+  public static function getInfo() {
+    return array(
+      'name' => 'XML sitemap engines interface tests',
+      'description' => 'Functional tests for the XML sitemap engines module.',
+      'group' => 'XML sitemap',
+    );
+  }
+
+  function setUp() {
+    parent::setUp('xmlsitemap', 'xmlsitemap_engines', 'xmlsitemap_engines_test');
+    $this->admin_user = $this->drupalCreateUser(array('access content', 'administer xmlsitemap'));
+    $this->drupalLogin($this->admin_user);
+  }
+
+  function testPing() {
+    $edit = array('xmlsitemap_engines_engines[simpletest]' => TRUE);
+    $this->drupalPost('admin/settings/xmlsitemap/engines', $edit, t('Save configuration'));
+    $this->assertText(t('The configuration options have been saved.'));
+
+    drupal_cron_run();
+    //$this->drupalGet('ping', array('query' => 'sitemap=http://mysql.drupal6dev.local/sitemap.xml'));
+    $query = db_query("SELECT type, message, variables, severity, link FROM {watchdog} ORDER BY wid DESC");
+    while ($watchdog = db_fetch_array($query)) {
+      //$this->assertTrue(TRUE, var_export($watchdog, TRUE));
+    }
+  }
+}
