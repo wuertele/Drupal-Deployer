@@ -59,9 +59,21 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
   protected function regenerateSitemap() {
     variable_set('xmlsitemap_regenerate_needed', TRUE);
     variable_set('xmlsitemap_generated_last', REQUEST_TIME - xmlsitemap_var('minimum_lifetime') - 30);
-    //variable_set('cron_last', REQUEST_TIME - xmlsitemap_var('minimum_lifetime') - 30);
     drupal_cron_run();
   }
+
+  /**
+   * Check the files directory is created (massive fails if not done).
+   */
+  protected function checkFilesDirectory() {
+    $path = file_create_path(xmlsitemap_var('path'));
+    file_check_directory($path, FILE_CREATE_DIRECTORY);
+  }
+
+  //protected function saveSettings($url, array $settings) {
+  //  $this->drupalPost($url, $settings, t('Save configuration'));
+  //  $this->assertText(t('The configuration options have been saved.'));
+  //}
 }
 
 class XMLSitemapUnitTest extends XMLSitemapTestHelper {
@@ -215,32 +227,7 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
     parent::setUp('xmlsitemap', 'path');
     $this->admin_user = $this->drupalCreateUser(array('access content', 'administer xmlsitemap'));
     $this->drupalLogin($this->admin_user);
-
-    // Check the files directory is created (massive fails if not done).
-    $path = file_create_path(xmlsitemap_var('path'));
-    file_check_directory($path, FILE_CREATE_DIRECTORY);
-  }
-
-  function testCustomLinks() {
-    path_set_alias('node', 'content');
-
-    $edit = array();
-    $edit['xmlsitemap_custom_links'] = "invalid-path";
-    $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
-    $this->assertText(t('The custom link invalid-path is either invalid or it cannot be accessed by anonymous users.'));
-
-    $edit['xmlsitemap_custom_links'] = "admin/user/user";
-    $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
-    $this->assertText(t('The custom link admin/user/user is either invalid or it cannot be accessed by anonymous users.'));
-
-    $edit['xmlsitemap_custom_links'] = "admin/settings/xmlsitemap";
-    $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
-    $this->assertText(t('The custom link admin/settings/xmlsitemap is either invalid or it cannot be accessed by anonymous users.'));
-
-    $edit['xmlsitemap_custom_links'] = "content\n";
-    $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
-    $this->assertText(t('The sitemap system stores system paths only, but will use the URL alias in the sitemap output. The custom link content has been stored as node.'));
-    $this->assertInSitemap(array('type' => 'custom', 'loc' => 'node'));
+    $this->checkFilesDirectory();
   }
 
   /**
@@ -312,10 +299,5 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
 
     $this->drupalGet('sitemap.xml');
     $this->assertRaw('<loc>http://example.com/</loc>');
-  }
-
-  protected function saveSettings(array $settings) {
-    $this->drupalPost('admin/settings/xmlsitemap', $settings, t('Save configuration'));
-    $this->assertText(t('The configuration options have been saved.'));
   }
 }
