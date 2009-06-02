@@ -231,17 +231,18 @@ function xmlsitemap_rebuild_confirm() {
   $modules = module_implements('xmlsitemap_links', TRUE);
   $form['modules'] = array(
     '#type' => 'select',
-    '#title' => t('Select which modules\' links you would like to rebuild'),
+    '#title' => t("Select which modules' links you would like to rebuild"),
+    '#description' => t('If no modules are selected, the sitemap files will just be regenerated.'),
     '#multiple' => TRUE,
     '#options' => drupal_map_assoc($modules),
-    '#default_value' => $modules,
+    '#default_value' => array(),
   );
 
   return confirm_form(
     $form,
     t('Are you sure you want to rebuild the sitemap?'),
     'admin/settings/xmlsitemap',
-    t("This action rebuilds your site's sitemap, and may be a lengthy process."),
+    t("This action rebuilds your site's sitemap, and may be a lengthy process. This will also recreate the sitemap files."),
     t('Rebuild sitemap'),
     t('Cancel')
   );
@@ -279,20 +280,27 @@ function xmlsitemap_rebuild_batch($form_state) {
   }
 
   // Generate all the sitemap pages.
-  $batch['operations'][] = array('xmlsitemap_rebuild_batch_generate', array());
-  //$languages = languages_list();
-  //foreach (xmlsitemap_var('languages') as $language) {
-  //  $batch['operations'][] = array('xmlsitemap_rebuild_batch_generate', array($languages[$language]));
-  //}
+  $batch['operations'][] = array('_xmlsitemap_regenerate_before', array());
+  $languages = language_list();
+  foreach (xmlsitemap_var('languages') as $language) {
+    $batch['operations'][] = array('xmlsitemap_rebuild_batch_generate', array($languages[$language]));
+  }
+  $batch['operations'][] = array('_xmlsitemap_regenerate_after', array());
 
   return $batch;
 }
 
+/**
+ * Batch callback; clear sitemap links for a specific module.
+ */
 function xmlsitemap_rebuild_batch_clear($module, &$context) {
   module_invoke($module, 'xmlsitemap_links_clear');
   $context['message'] = t('Now clearing %module links.', array('%module' => $module));
 }
 
+/**
+ * Batch callback; fetch and add the sitemap links for a specific module.
+ */
 function xmlsitemap_rebuild_batch_fetch($module, &$context) {
   if (!isset($context['sandbox']['progress'])) {
     $context['sandbox']['batch'] = module_hook($module, 'xmlsitemap_links_batch_info');
@@ -329,41 +337,25 @@ function xmlsitemap_rebuild_batch_fetch($module, &$context) {
 }
 
 /**
- * Batch callback; generate all the sitemap chunks.
- *
- * @todo Split generation for each language?
+ * Batch callback; generate the sitemap chunks for a language.
  */
-function xmlsitemap_rebuild_batch_generate(&$context) {
+function xmlsitemap_rebuild_batch_generate($language, &$context) {
   if (!isset($context['sandbox']['progress'])) {
-    _xmlsitemap_regenerate_before();
     $context['sandbox']['progress'] = 0;
-    $context['sandbox']['languages'] = xmlsitemap_var('languages');
-    $context['sandbox']['chunk_count'] = xmlsitemap_get_chunk_count(TRUE);
+    $context['sandbox']['max'] = xmlsitemap_get_chunk_count(TRUE);
     // If we have more than one chunk, we need to increment this value by one
     // since the index page will also need to be generated.
-    if ($context['sandbox']['chunk_count'] > 1) {
-      $context['sandbox']['chunk_count']++;
+    if ($context['sandbox']['max'] > 1) {
+      $context['sandbox']['max']++;
     }
-    $context['sandbox']['max'] = count($context['sandbox']['languages']) * $context['sandbox']['chunk_count'];
   }
 
-  $languages = language_list();
-  $language = $languages[$context['sandbox']['languages'][0]];
-  $chunk = $context['sandbox']['progress'] % $context['sandbox']['chunk_count'];
-  xmlsitemap_generate($chunk, $language);
+  xmlsitemap_generate($context['sandbox']['progress'], $language);
   $context['sandbox']['progress']++;
-  $context['message'] = t('Now generating @language sitemap page @chunk.', array('@language' => $language->name, '@chunk' => $chunk + 1));
+  $context['message'] = t('Now generating @language sitemap page @chunk.', array('@language' => $language->name, '@chunk' => $context['sandbox']['progress']));
 
   if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
     $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
-    if ($context['sandbox']['progress'] % $context['sandbox']['chunk_count'] == 0) {
-      // If we have generated all the chunks of a language's sitemap, proceed
-      // to the next language.
-      array_shift($context['sandbox']['languages']);
-    }
-  }
-  else {
-    _xmlsitemap_regenerate_after();
   }
 }
 
