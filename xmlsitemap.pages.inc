@@ -8,6 +8,8 @@
 
 /**
  * Output a sitemap page.
+ *
+ * @see xmlsitemap_file_transfer
  */
 function xmlsitemap_output_chunk($chunk = 0) {
   global $language;
@@ -46,7 +48,42 @@ function xmlsitemap_output_chunk($chunk = 0) {
   );
 
   // Transfer the file as output.
-  file_transfer($file, $headers);
+  xmlsitemap_file_transfer($file, $headers);
+}
+
+/**
+ * Modified version of file_transfer() that invokes hook_exit()s afterwards.
+ *
+ * @see file_transfer()
+ */
+function xmlsitemap_file_transfer($source, $headers) {
+  if (ob_get_level()) {
+    ob_end_clean();
+  }
+
+  foreach ($headers as $header) {
+    // To prevent HTTP header injection, we delete new lines that are
+    // not followed by a space or a tab.
+    // See http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
+    //$header = preg_replace('/\r?\n(?!\t| )/', '', $header);
+    drupal_set_header($header);
+  }
+
+  //$source = file_create_path($source);
+
+  // Transfer file in 1024 byte chunks to save memory usage.
+  if ($fd = fopen($source, 'rb')) {
+    while (!feof($fd)) {
+      print fread($fd, 1024);
+    }
+    fclose($fd);
+  }
+  else {
+    drupal_not_found();
+  }
+
+  module_invoke_all('exit');
+  exit();
 }
 
 /**
