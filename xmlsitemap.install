@@ -39,13 +39,13 @@ function xmlsitemap_requirements($phase) {
     }
     $requirements['xmlsitemap_generated'] = array(
       'title' => $t('XML sitemap'),
-      'value' => xmlsitemap_var('regenerate_last') ? $t('Last generated at !date (!interval ago).', array('!date' => format_date(xmlsitemap_var('regenerate_last'), 'small'), '!interval' => format_interval(REQUEST_TIME - xmlsitemap_var('regenerate_last')))) : $t('Cached files have not been generated yet.'),
+      'value' => xmlsitemap_var('generated_last') ? $t('Last generated at !date (!interval ago).', array('!date' => format_date(xmlsitemap_var('generated_last'), 'small'), '!interval' => format_interval(REQUEST_TIME - xmlsitemap_var('generated_last')))) : $t('Cached files have not been generated yet.'),
     );
     if (xmlsitemap_var('rebuild_needed')) {
       $requirements['xmlsitemap_generated']['severity'] = REQUIREMENT_ERROR;
       $requirements['xmlsitemap_generated']['description'] = $t('The sitemap data is out of sync and needs to be <a href="@link-rebuild">completely rebuilt<a>.', array('@rebuild' => url('admin/settings/xmlsitemap/rebuild')));
     }
-    elseif ((REQUEST_TIME - xmlsitemap_var('regenerate_last')) > variable_get('cron_threshold_warning', 172800)) {
+    elseif ((REQUEST_TIME - xmlsitemap_var('generated_last')) > variable_get('cron_threshold_warning', 172800)) {
       $requirements['xmlsitemap_generated']['severity'] = REQUIREMENT_WARNING;
       $requirements['xmlsitemap_generated']['description'] = $t('The sitemap cached files are out of date and need to be regenerated. You can <a href="@link-cron">run cron manually</a> to regenerate the sitemap files.', array('@link-cron' => url('admin/reports/status/run-cron')));
     }
@@ -219,7 +219,18 @@ function xmlsitemap_update_5() {
   return $ret;
 }
 
-//function xmlsitemap_update_6() {
+function xmlsitemap_update_6() {
+  $ret = array();
+  if (db_column_exists('xmlsitemap', 'language')) {
+    db_drop_index('xmlsitemap', 'language');
+    db_drop_field('xmlsitemap', 'language');
+  }
+  variable_set('xmlsitemap_generated_last', variable_get('xmlsitemap_regenerate_last', 0));
+  variable_del('xmlsitemap_regenerate_last');
+  return $ret;
+}
+
+//function xmlsitemap_update_7() {
 //  $ret = array();
 //  $field = array(
 //    'description' => 'Manual override value of {xmlsitemap}.priority. Valid values range from 0.0 to 1.0.',
@@ -230,7 +241,7 @@ function xmlsitemap_update_5() {
 //  return $ret;
 //}
 
-//function xmlsitemap_update_7() {
+//function xmlsitemap_update_8() {
 //  $ret = array();
 //  $field = array(
 //    'description' => 'The {languages}.language of this link or an empty string if it is language-neutral',
@@ -243,33 +254,6 @@ function xmlsitemap_update_5() {
 //  db_add_index($ret, 'xmlsitemap', 'language', array('language'));
 //  return $ret;
 //}
-
-/**
- * Fetch a short blurb string about module maintainership and sponsors.
- *
- * This message will be FALSE in 'official' releases.
- *
- * @todo Move to xmlsitemap.inc.
- */
-function _xmlsitemap_get_blurb($check_version = TRUE) {
-  static $blurb;
-
-  if (!isset($blurb)) {
-    $blurb = FALSE;
-    $info = drupal_parse_info_file(drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap.info');
-    if (!$check_version || !isset($info['version']) || preg_match('/dev|alpha|beta|rc/i', $info['version'])) {
-      $sponsors = array(
-        l('Symantec', 'http://www.symantec.com/'),
-        l('WebWise Solutions', 'http://www.webwiseone.com/'),
-        l('Volacci', 'http://www.volacci.com/'),
-      );
-      // Don't extract the following string for translation.
-      $blurb = strtr('<p>Thank you for helping test the XML sitemap module rewrite. Please consider helping offset developer free time by <a href="@link-donate">donating</a> or if your company is interested in sponsoring the rewrite or a specific feature, please <a href="@link-contact">contact the developer</a>. Thank you to the following current sponsors: !sponsors.</p>', array('@link-review' => 'http://drupalmodules.com/module/xml-sitemap', '@link-donate' => 'http://davereid.chipin.com/', '@link-contact' => 'http://davereid.net/contact', '!sponsors' => implode(', ', $sponsors)));
-    }
-  }
-
-  return $blurb;
-}
 
 /**
  * These strings exist only for the extractor to pick them up and make them

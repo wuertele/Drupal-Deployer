@@ -2,6 +2,20 @@
 // $Id$
 
 /**
+ * Implementation of hook_help().
+ */
+function xmlsitemap_engines_help($path, $arg) {
+  $output = '';
+  switch ($path) {
+    case 'admin/settings/xmlsitemap/engines':
+      $output .= t('In order to verify site ownership with the search engines listed below, it is highly recommended to download and install the <a href="@site-verify">Site verification module</a>.', array('@site-verify' => 'http://drupal.org/project/site_verify'));
+      break;
+  }
+
+  return $output;
+}
+
+/**
  * Implementation of hook_menu().
  */
 function xmlsitemap_engines_menu() {
@@ -21,7 +35,9 @@ function xmlsitemap_engines_menu() {
  * Implementation of hook_cron().
  */
 function xmlsitemap_engines_cron() {
-  if (variable_get('site_offline', 0) || (REQUEST_TIME - xmlsitemap_engines_var('submit_last')) < xmlsitemap_engines_var('minimum_lifetime')) {
+  if (variable_get('site_offline', 0)
+      || (xmlsitemap_engines_var('submit_updated') && xmlsitemap_var('generated_last') < xmlsitemap_engines_var('submit_last'))
+      || (REQUEST_TIME - xmlsitemap_engines_var('submit_last')) < xmlsitemap_engines_var('minimum_lifetime')) {
     return;
   }
 
@@ -122,8 +138,9 @@ function xmlsitemap_engines_variables() {
   $variables = array(
     'xmlsitemap_engines_engines' => array(),
     'xmlsitemap_engines_custom_urls' => '',
-    'xmlsitemap_engines_minimum_lifetime' => 43200,
+    'xmlsitemap_engines_minimum_lifetime' => 3600,
     'xmlsitemap_engines_submit_last' => 0,
+    'xmlsitemap_engines_submit_updated' => TRUE,
   );
 
   return $variables;

@@ -44,7 +44,7 @@ function xmlsitemap_help($path, $arg) {
   static $checked = FALSE;
   if (!$checked && strpos($path, 'xmlsitemap') !== FALSE) {
     $checked = TRUE;
-    module_load_install('xmlsitemap');
+    module_load_include('inc', 'xmlsitemap');
     xmlsitemap_check_status();
     if ($blurb = _xmlsitemap_get_blurb()) {
       $output .= '<div class="form-item"><div class="description">' . $blurb . '</div></div>';
@@ -123,7 +123,7 @@ function xmlsitemap_menu() {
  */
 function xmlsitemap_cron() {
   if (!xmlsitemap_var('regenerate_needed')
-      || (REQUEST_TIME - xmlsitemap_var('regenerate_last')) < xmlsitemap_var('minimum_lifetime')) {
+      || (REQUEST_TIME - xmlsitemap_var('generated_last')) < xmlsitemap_var('minimum_lifetime')) {
     return;
   }
 
@@ -220,39 +220,6 @@ function _xmlsitemap_url_options(array $options = array()) {
 }
 
 /**
- * Check the status of all hook_requirements() from xmlsitemap modules.
- *
- * @param $return_only
- *   If TRUE, will return the result, otherwise it will show a message.
- * @return
- *   TRUE if there is a warning or error requirement, or FALSE otherwise.
- *
- * @todo Move to xmlsitemap.inc.
- */
-function xmlsitemap_check_status($return_only = FALSE) {
-  // Load .install files
-  include_once './includes/install.inc';
-  drupal_load_updates();
-  $warnings = FALSE;
-
-  foreach (module_implements('requirements') as $module) {
-    if (strpos($module, 'xmlsitemap') !== FALSE) {
-      $requirements = module_invoke($module, 'requirements', 'runtime');
-      if (drupal_requirements_severity($requirements) >= REQUIREMENT_WARNING) {
-        $warnings = TRUE;
-        break;
-      }
-    }
-  }
-
-  if ($warnings && !$return_only && user_access('administer site configuration')) {
-    drupal_set_message(t('One or more problems were detected with your sitemap configuration. Please check the <a href="@status-report">status report</a> for more information.', array('@status-report' => url('admin/reports/status'))), 'warning', FALSE);
-  }
-
-  return $warnings;
-}
-
-/**
  * Delete and regenerate the sitemap files.
  *
  * @todo Move to xmlsitemap.inc
@@ -294,7 +261,6 @@ function _xmlsitemap_regenerate_before() {
  * @todo Move to xmlsitemap.inc
  */
 function _xmlsitemap_regenerate_after() {
-
   // Show a watchdog message that the sitemap was regenerated.
   watchdog('xmlsitemap', 'Sitemap regenerated.', array(), WATCHDOG_NOTICE, l(t('View'), 'sitemap.xml'));
 
@@ -304,7 +270,7 @@ function _xmlsitemap_regenerate_after() {
   // If the chunk count has changed, we will need to rebuild the menu.
   variable_set('menu_rebuild_needed', TRUE);
 
-  variable_set('xmlsitemap_regenerate_last', REQUEST_TIME);
+  variable_set('xmlsitemap_generated_last', REQUEST_TIME);
 }
 
 /**
@@ -762,9 +728,11 @@ function xmlsitemap_variables() {
     'xmlsitemap_custom_links' => '',
     'xmlsitemap_minimum_lifetime' => 0,
     'xmlsitemap_xsl' => TRUE,
-    'xmlsitemap_regenerate_last' => 0,
+    'xmlsitemap_generated_last' => 0,
     'xmlsitemap_base_url' => $GLOBALS['base_url'],
     'xmlsitemap_languages' => array(language_default('language')),
+    // Removed variables are set to NULL so they can still be deleted.
+    'xmlsitemap_regenerate_last' => NULL,
   );
 }
 

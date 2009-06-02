@@ -58,7 +58,7 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
    */
   protected function regenerateSitemap() {
     variable_set('xmlsitemap_regenerate_needed', TRUE);
-    variable_set('xmlsitemap_regenerate_last', REQUEST_TIME - xmlsitemap_var('minimum_lifetime') - 30);
+    variable_set('xmlsitemap_generated_last', REQUEST_TIME - xmlsitemap_var('minimum_lifetime') - 30);
     //variable_set('cron_last', REQUEST_TIME - xmlsitemap_var('minimum_lifetime') - 30);
     drupal_cron_run();
   }
@@ -232,7 +232,7 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
     $edit['xmlsitemap_custom_links'] = "admin/user/user";
     $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
     $this->assertText(t('The custom link admin/user/user is either invalid or it cannot be accessed by anonymous users.'));
-    
+
     $edit['xmlsitemap_custom_links'] = "admin/settings/xmlsitemap";
     $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
     $this->assertText(t('The custom link admin/settings/xmlsitemap is either invalid or it cannot be accessed by anonymous users.'));
@@ -275,7 +275,7 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
     $this->drupalGet('sitemap.xml');
     $this->assertNoRaw('lifetime-test');
 
-    variable_set('xmlsitemap_regenerate_last', REQUEST_TIME - 300);
+    variable_set('xmlsitemap_generated_last', REQUEST_TIME - 300);
     drupal_cron_run();
     $this->drupalGet('sitemap.xml');
     $this->assertRaw('lifetime-test');
