@@ -41,12 +41,18 @@ function xmlsitemap_engines_cron() {
     return;
   }
 
+  // Since drupal_http_request() does not pass the SimpleTest user agent 'flag'
+  // in Drupal 6 core, we need to manually set the user agent header.
+  // See http://drupal.org/node/478982.
+  $headers = array();
+  if (preg_match("/simpletest\d+/", $GLOBALS['db_prefix'], $matches)) {
+    $headers['User-Agent'] = $matches[0];
+  }
+
   $engines = xmlsitemap_engines_var('engines');
-  $pings = array();
   foreach ($engines as $engine) {
     $url = xmlsitemap_engines_prepare_url(xmlsitemap_engines_get_engines($engine, 'url'));
-    $request = drupal_http_request($url);
-    $pings[] = $request;
+    $request = drupal_http_request($url, $headers);
     watchdog('xmlsitemap', 'Submitted the sitemap to %url. !request', array('%url' => $url, '!request' => var_export($request, TRUE)));
   }
 
@@ -54,13 +60,11 @@ function xmlsitemap_engines_cron() {
   $custom_urls = preg_split('/[\r\n]+/', $custom_urls, -1, PREG_SPLIT_NO_EMPTY);
   foreach ($custom_urls as $custom_url) {
     $url = xmlsitemap_engines_prepare_url($custom_url);
-    $request = drupal_http_request($url);
-    $pings[] = $request;
+    $request = drupal_http_request($url, $headers);
     watchdog('xmlsitemap', 'Submitted the sitemap to %url. !request', array('%url' => $url, '!request' => var_export($request, TRUE)));
   }
 
   variable_set('xmlsitemap_engines_submit_last', REQUEST_TIME);
-  return $pings;
 }
 
 /**
