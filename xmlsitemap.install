@@ -14,17 +14,16 @@ function xmlsitemap_requirements($phase) {
   $t = get_t();
 
   if ($phase == 'runtime') {
-    $cron_warning = (REQUEST_TIME - variable_get('cron_last', 0)) > variable_get('cron_threshold_warning', 172800);
     if (!file_check_directory(file_create_path(xmlsitemap_var('path')), FILE_CREATE_DIRECTORY)) {
       $requirements['xmlsitemap_directory'] = array(
-        'title' => $t('Sitemap cache directory'),
+        'title' => $t('XML sitemap cache directory'),
         'value' => $t('Not found or writable'),
         'severity' => REQUIREMENT_ERROR,
       );
     }
     if (!user_access('access content', drupal_anonymous_user())) {
       $requirements['xmlsitemap_access'] = array(
-        'title' => $t('Sitemap anonymous access'),
+        'title' => $t('XML sitemap anonymous access'),
         'value' => $t('Access denied'),
         'description' => $t('Search engines (anonymous users) cannot currently access your sitemap. Please assign the "access content" permission the the anonymous user role.'),
         'severity' => REQUIREMENT_ERROR,
@@ -32,27 +31,23 @@ function xmlsitemap_requirements($phase) {
     }
     if (xmlsitemap_get_chunk_count() > 1000) {
       $requirements['xmlsitemap_chunk_count'] = array(
-        'title' => $t('Sitemap page count'),
+        'title' => $t('XML sitemap chunk count'),
         'value' => xmlsitemap_get_chunk_count(),
         'description' => $t('It is not recommended to have more than 1000 sitemap pages. Please increase the number of links per page.'),
         'severity' => REQUIREMENT_ERROR,
       );
     }
+    $requirements['xmlsitemap_generated'] = array(
+      'title' => $t('XML sitemap'),
+      'value' => xmlsitemap_var('regenerate_last') ? $t('Last generated at !date (!interval ago).', array('!date' => format_date(xmlsitemap_var('regenerate_last'), 'small'), '!interval' => format_interval(REQUEST_TIME - xmlsitemap_var('regenerate_last')))) : $t('Cached files have not been generated yet.'),
+    );
     if (xmlsitemap_var('rebuild_needed')) {
-      $requirements['xmlsitemap_rebuild'] = array(
-        'title' => $t('Sitemap'),
-        'value' => $t('<a href="@rebuild">Needs rebuilding</a>', array('@rebuild' => url('admin/settings/xmlsitemap/rebuild'))),
-        'description' => $t('The sitemap is out of sync and needs to be rebuilt.'),
-        'severity' => REQUIREMENT_ERROR,
-      );
+      $requirements['xmlsitemap_generated']['severity'] = REQUIREMENT_ERROR;
+      $requirements['xmlsitemap_generated']['description'] = $t('The sitemap data is out of sync and needs to be <a href="@link-rebuild">completely rebuilt<a>.', array('@rebuild' => url('admin/settings/xmlsitemap/rebuild')));
     }
-    elseif (xmlsitemap_var('regenerate_needed') && $cron_warning) {
-      $requirements['xmlsitemap_rebuild'] = array(
-        'title' => $t('Sitemap'),
-        'value' => $t('<a href="@regenerate">Needs regeneration</a>', array('@regenerate' => url('admin/reports/status/run-cron'))),
-        'description' => $t('The sitemap files need to be regenerated.'),
-        'severity' => REQUIREMENT_WARNING,
-      );
+    elseif ((REQUEST_TIME - xmlsitemap_var('regenerate_last')) > variable_get('cron_threshold_warning', 172800)) {
+      $requirements['xmlsitemap_generated']['severity'] = REQUIREMENT_WARNING;
+      $requirements['xmlsitemap_generated']['description'] = $t('The sitemap cached files are out of date and need to be regenerated. You can <a href="@link-cron">run cron manually</a> to regenerate the sitemap files.', array('@link-cron' => url('admin/reports/status/run-cron')));
     }
   }
   return $requirements;
@@ -253,14 +248,16 @@ function xmlsitemap_update_5() {
  * Fetch a short blurb string about module maintainership and sponsors.
  *
  * This message will be FALSE in 'official' releases.
+ *
+ * @todo Move to xmlsitemap.inc.
  */
-function _xmlsitemap_get_blurb() {
+function _xmlsitemap_get_blurb($check_version = TRUE) {
   static $blurb;
 
   if (!isset($blurb)) {
     $blurb = FALSE;
     $info = drupal_parse_info_file(drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap.info');
-    if (!isset($info['version']) || preg_match('/dev|alpha|beta|rc/i', $info['version'])) {
+    if (!$check_version || !isset($info['version']) || preg_match('/dev|alpha|beta|rc/i', $info['version'])) {
       $sponsors = array(
         l('Symantec', 'http://www.symantec.com/'),
         l('WebWise Solutions', 'http://www.webwiseone.com/'),
