@@ -105,21 +105,6 @@ function xmlsitemap_settings_form() {
   //  '#collapsed' => TRUE,
   //);
 
-  $form['custom'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Custom links'),
-    '#collapsible' => TRUE,
-    '#collapsed' => !xmlsitemap_var('custom_links'),
-  );
-  $form['custom']['xmlsitemap_custom_links'] = array(
-    '#type' => 'textarea',
-    '#title' => t('Custom links to include in the sitemap'),
-    '#default_value' => xmlsitemap_var('custom_links'),
-    '#description' => t('Enter one path per line. Each path should be relative to the Drupal directory. For example: %example1.', array('%example1' => 'node/add')),
-    '#wysiwyg' => FALSE,
-    '#element_validate' => array('xmlsitemap_validate_custom_links'),
-  );
-
   $form['#validate'][] = 'xmlsitemap_settings_form_validate';
   $form['#submit'][] = 'xmlsitemap_form_submit_flag_regenerate';
   $form['#submit'][] = 'xmlsitemap_settings_form_submit';
@@ -170,60 +155,11 @@ function xmlsitemap_settings_form_validate($form, &$form_state) {
 }
 
 /**
- * Element validator; Validates the custom links.
- */
-function xmlsitemap_validate_custom_links($element, &$form_state) {
-  $links = preg_split('/[\r\n]+/', $element['#value'], -1, PREG_SPLIT_NO_EMPTY);
-
-  foreach ($links as $index => $link) {
-    $normal_path = drupal_get_normal_path($link);
-    if ($link != $normal_path) {
-      drupal_set_message(t('The sitemap system stores system paths only, but will use the URL alias in the sitemap output. The custom link %link has been stored as %normal_path.', array('%link' => $link, '%normal_path' => $normal_path)));
-      $links[$index] = $normal_path;
-    }
-  }
-  $links = array_unique($links);
-
-  // Save the normalized paths back into the form values for submission.
-  $form_state['values']['xmlsitemap_custom_links'] = implode("\n", $links);
-
-  // Test anonymous user access to the custom link paths.
-  $menu_items = array();
-  xmlsitemap_switch_user(0);
-  foreach ($links as $link) {
-    $menu_items[$link] = menu_get_item($link);
-    // Since the menu item access results are cached, manually check the current path.
-    if (strpos($link, 'admin/settings/xmlsitemap') === 0 && !user_access('administer xmlsitemap', drupal_anonymous_user())) {
-      $menu_items[$link]['access'] = FALSE;
-    }
-  }
-  xmlsitemap_restore_user();
-
-  foreach ($links as $link) {
-    if (xmlsitemap_load_link(array('loc' => $link, 'status' => TRUE))) {
-      form_error($element, t('There is already an existing link in the sitemap with the path %link.', array('%link' => $link)));
-      drupal_set_message(t('There is already an existing link in the sitemap with the path %link.', array('%link' => $link)), 'error', FALSE);
-    }
-    elseif (!$menu_items[$link] || !$menu_items[$link]['access']) {
-      form_error($element, t('The custom link %link is either invalid or it cannot be accessed by anonymous users.', array('%link' => $link)));
-      drupal_set_message(t('The custom link %link is either invalid or it cannot be accessed by anonymous users.', array('%link' => $link)), 'error', FALSE);
-    }
-  }
-}
-
-/**
- * Submit handler; save the custom links.
+ * Submit handler;
  *
  * @see xmlsitemap_settings_form()
  */
 function xmlsitemap_settings_form_submit($form, $form_state) {
-  db_query("DELETE FROM {xmlsitemap} WHERE type = 'custom'");
-  $custom_links = preg_split('/[\r\n]+/', $form_state['values']['xmlsitemap_custom_links'], -1, PREG_SPLIT_NO_EMPTY);
-  $id = 1;
-  foreach ($custom_links as $custom_link) {
-    xmlsitemap_save_link(array('type' => 'custom', 'id' => $id++, 'loc' => $custom_link));
-  }
-
   $frontpage_link = array(
     'type' => 'frontpage',
     'id' => 0,
