@@ -28,9 +28,9 @@ class XMLSitemapEnginesFunctionalTest extends DrupalWebTestCase {
     $this->assertText(t('The configuration options have been saved.'));
 
     drupal_cron_run();
-    $query = db_query("SELECT type, message, variables, severity, link FROM {watchdog} WHERE type = 'xmlsitemap' ORDER BY wid DESC");
-    while ($watchdog = db_fetch_array($query)) {
-      $this->assertTrue(TRUE, var_export($watchdog, TRUE));
-    }
+    $sent = db_result(db_query_range("SELECT 1 FROM {watchdog} WHERE type = 'xmlsitemap' AND message = 'Submitted the sitemap to %url. !request'", 0, 1));
+    $received = db_result(db_query_range("SELECT 1 FROM {watchdog} WHERE type = 'xmlsitemap' AND message = 'Recieved ping for @sitemap.' AND variables = '%s'", serialize(array('@sitemap' => url('sitemap.xml', array('absolute' => TRUE)))), 0, 1));
+    $this->assertTrue($sent, t('Sent ping via xmlsitemap_engines_cron().'));
+    $this->assertTrue($received, t('Received ping for sitemap.'));
   }
 }
