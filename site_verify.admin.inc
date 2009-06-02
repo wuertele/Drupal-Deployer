@@ -108,6 +108,10 @@ function site_verify_edit_form($form_state, $record = NULL) {
     '#value' => t('Save'),
     '#weight' => 10,
   );
+  $form['cancel'] = array(
+    '#value' => l(t('Cancel'), 'admin/build/site-verify'),
+    '#weight' => 11,
+  );
 
   if (!variable_get('clean_url', 0)) {
     drupal_set_message(t('Using verification files will not work if <a href="@clean-urls">clean URLs</a> are disabled.', array('@clean-urls' => url('admin/settings/clean-url'))), 'error', FALSE);
