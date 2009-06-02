@@ -7,7 +7,7 @@
  */
 
 function xmlsitemap_custom_list_links() {
-  $headers = array(
+  $header = array(
     array('data' => t('Location'), 'field' => 'loc'),
     array('data' => t('Operations'), 'colspan' => 2),
   );
@@ -30,7 +30,7 @@ function xmlsitemap_custom_list_links() {
     ),
   );
 
-  $output = theme('table', $headers, $rows);
+  $output = theme('table', $header, $rows);
   return $output;
 }
 
@@ -58,6 +58,7 @@ function xmlsitemap_custom_edit_link_form($form_state, $link = array()) {
     '#title' => t('Path to link'),
     '#field_prefix' => url('', array('absolute' => TRUE)),
     '#default_value' => $link['loc'],
+    '#required' => TRUE,
   );
 
   $form['submit'] = array(
@@ -77,6 +78,7 @@ function xmlsitemap_custom_edit_link_form($form_state, $link = array()) {
 
 function xmlsitemap_custom_edit_link_form_validate($form, &$form_state) {
   $link = &$form_state['values'];
+  $link['loc'] = trim($link['loc']);
 
   $normal_path = drupal_get_normal_path($link['loc']);
   if ($link['loc'] != $normal_path) {

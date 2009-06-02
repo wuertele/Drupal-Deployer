@@ -1,0 +1,62 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Unit tests for the xmlsitemap_custom module.
+
+/**
+ * Helper test class with some added functions for testing.
+ */
+class XMLSitemapCustomFunctionalTest extends XMLSitemapTestHelper {
+  protected $admin_user;
+
+  public static function getInfo() {
+    return array(
+      'name' => 'XML sitemap custom interface tests',
+      'description' => 'Functional tests for the XML sitemap custom module.',
+      'group' => 'XML sitemap',
+    );
+  }
+
+  function setUp() {
+    parent::setUp('xmlsitemap', 'xmlsitemap_custom', 'path');
+    $this->admin_user = $this->drupalCreateUser(array('access content', 'administer xmlsitemap'));
+    $this->drupalLogin($this->admin_user);
+
+    // Check the files directory is created (massive fails if not done).
+    $path = file_create_path(xmlsitemap_var('path'));
+    file_check_directory($path, FILE_CREATE_DIRECTORY);
+
+    // Set a path alias for the node page.
+    path_set_alias('node', 'content');
+  }
+
+  function testCustomLinks() {
+    $this->drupalGet('admin/settings/xmlsitemap/custom/');
+    $this->clickLink(t('Add a custom link'));
+
+    $edit = array();
+    $edit['loc'] = "invalid-path";
+    $this->drupalPost(NULL, $edit, t('Save'));
+    $this->assertText(t('The custom link @link is either invalid or it cannot be accessed by anonymous users.', array('@link' => $edit['loc'])));
+    $this->assertNotInSitemap(array('type' => 'custom', 'loc' => $edit['loc']));
+
+    $edit['loc'] = "admin/user/user";
+    $this->drupalPost(NULL, $edit, t('Save'));
+    $this->assertText(t('The custom link @link is either invalid or it cannot be accessed by anonymous users.', array('@link' => $edit['loc'])));
+    $this->assertNotInSitemap(array('type' => 'custom', 'loc' => $edit['loc']));
+
+    // Test that the current page, which shouldn't give a false positive for
+    // $menu_item['access'] since the result has been cached already.
+    $edit['loc'] = "admin/settings/xmlsitemap/custom/add";
+    $this->drupalPost(NULL, $edit, t('Save'));
+    $this->assertText(t('The custom link @link is either invalid or it cannot be accessed by anonymous users.', array('@link' => $edit['loc'])));
+    $this->assertNotInSitemap(array('type' => 'custom', 'loc' => $edit['loc']));
+
+    $edit['loc'] = " content ";
+    $this->drupalPost(NULL, $edit, t('Save'));
+    $this->assertText(t('The sitemap system stores system paths only, but will use the URL alias in the sitemap output. The custom link @link has been stored as @normal_path.', array('@link' => 'content', '@normal_path' => 'node')));
+    $this->assertInSitemap(array('type' => 'custom', 'loc' => 'node'));
+  }
+}
