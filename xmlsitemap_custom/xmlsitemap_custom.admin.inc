@@ -13,7 +13,7 @@ function xmlsitemap_custom_list_links() {
   );
   $rows = array();
 
-  $sql = "SELECT id, loc, priority FROM {xmlsitemap} WHERE type = 'custom'" . tablesort_sql($headers);
+  $sql = "SELECT id, loc, priority FROM {xmlsitemap} WHERE type = 'custom'" . tablesort_sql($header);
   $query = db_query($sql);
   while ($link = db_fetch_object($query)) {
     $rows[] = array(
