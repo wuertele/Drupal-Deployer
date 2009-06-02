@@ -30,13 +30,17 @@ define('XMLSITEMAP_FREQUENCY_ALWAYS', 60);
  * Implementation of hook_help().
  */
 function xmlsitemap_help($path, $arg) {
+  module_load_include('inc', 'xmlsitemap');
   $output = '';
 
   switch ($path) {
     case 'admin/help#xmlsitemap':
+      $sitemaps = xmlsitemap_get_sitemaps(TRUE);
+      $output .= format_plural(count($sitemaps), 'Your sitemap is located at !sitemaps.', 'Your sitemaps are located at: !sitemaps', array('!sitemaps' => count($sitemaps) > 1 ? theme('item_list', $sitemaps) : $sitemaps[0]));
       break;
     case 'admin/settings/xmlsitemap':
-      $output .= '<p>' . t('Your sitemap is located at <a href="@sitemap">@sitemap</a>.', array('@sitemap' => url('sitemap.xml', array('absolute' => TRUE)))) . '</p>';
+      $sitemaps = xmlsitemap_get_sitemaps(TRUE);
+      $output .= format_plural(count($sitemaps), 'Your sitemap is located at !sitemaps.', 'Your sitemaps are located at: !sitemaps', array('!sitemaps' => count($sitemaps) > 1 ? theme('item_list', $sitemaps) : $sitemaps[0]));
       break;
   }
 
@@ -44,7 +48,6 @@ function xmlsitemap_help($path, $arg) {
   static $checked = FALSE;
   if (!$checked && strpos($path, 'xmlsitemap') !== FALSE) {
     $checked = TRUE;
-    module_load_include('inc', 'xmlsitemap');
     xmlsitemap_check_status();
     if ($blurb = _xmlsitemap_get_blurb()) {
       $output .= '<div class="form-item"><div class="description">' . $blurb . '</div></div>';
@@ -169,6 +172,7 @@ function xmlsitemap_xmlsitemap_links_clear() {
  * Implementation of hook_robotstxt().
  */
 function xmlsitemap_robotstxt() {
+  module_load_include('inc', 'xmlsitemap');
   $sitemaps = xmlsitemap_get_sitemaps();
   foreach ($sitemap as $index => $sitemap) {
     $sitemaps[$index] = 'Sitemap: ' . $sitemap;
@@ -176,36 +180,8 @@ function xmlsitemap_robotstxt() {
   return $sitemaps;
 }
 
-/**
- * @todo Document this function.
- *
- * @todo Move to xmlsitemap.inc?
- */
-function xmlsitemap_get_sitemaps() {
-  $sitemaps = array();
-  $languages = language_list();
-  $options = _xmlsitemap_url_options();
-
-  foreach (xmlsitemap_var('languages') as $language) {
-    $options['language'] = $languages[$language];
-    $sitemaps[] = url('sitemap.xml', $options);
-  }
-
-  return $sitemaps;
-}
-
-/**
- * @todo Document this function.
- *
- * @todo Move to xmlsitemap.inc?
- */
-function _xmlsitemap_url_options(array $options = array()) {
-  return $options + array(
-    'absolute' => TRUE,
-    //'alias' => TRUE,
-    'base_url' => xmlsitemap_var('base_url'),
-  );
-}
+//function xmlsitemap_url_rewrite_output(&$path, &$options, $original_path) {
+//}
 
 /**
  * Get a list of priority options.

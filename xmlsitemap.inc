@@ -55,7 +55,7 @@ function _xmlsitemap_regenerate_after() {
 function _xmlsitemap_generate_chunk_header($index = FALSE) {
   $output = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
   if (xmlsitemap_var('xsl')) {
-    $output .= '<?xml-stylesheet type="text/xsl" href="'. url('sitemap.xsl', _xmlsitemap_url_options()) .'"?>' . "\n";
+    $output .= '<?xml-stylesheet type="text/xsl" href="'. url('sitemap.xsl') .'"?>' . "\n";
   }
   $output .= '<' . ($index ? 'sitemapindex' : 'urlset') . ' xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
   //$output .= '<' . ($index ? 'sitemapindex' : 'urlset') . ' xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"' . "\n";
@@ -74,8 +74,12 @@ function _xmlsitemap_generate_chunk_header($index = FALSE) {
  *   A language object, defaults to the default language.
  */
 function xmlsitemap_generate_chunk($chunk, $language) {
-  $output = _xmlsitemap_generate_chunk_header();
-  $url_options = _xmlsitemap_url_options(array('language' => $language));
+  $url_options = array(
+    'absolute' => TRUE,
+    //'alias' => TRUE,
+    'base_url' => xmlsitemap_var('base_url'),
+    'language' => $language,
+  );
 
   // @todo Optimize the query.
   // @todo When should "AND x.language IN ('%s', '')" be used? Drupal still lists English content when viewing site in French.
@@ -91,6 +95,7 @@ function xmlsitemap_generate_chunk($chunk, $language) {
   $limit = xmlsitemap_get_chunk_size();
   $query = db_query_range($sql, $args, $offset, $limit);
 
+  $output = _xmlsitemap_generate_chunk_header();
   while ($link = db_fetch_array($query)) {
     $output .= '<url>';
     //$output .= '<loc>'. url($link['alias'], $url_options) .'</loc>';
@@ -125,17 +130,20 @@ function xmlsitemap_generate_chunk($chunk, $language) {
  *   A language object, defaults to the default language.
  */
 function xmlsitemap_generate_index($language = NULL) {
-  $output = _xmlsitemap_generate_chunk_header(TRUE);
-  $url_options = _xmlsitemap_url_options(array('language' => $language));
+  $url_options = array(
+    'absolute' => TRUE,
+    'base_url' => xmlsitemap_var('base_url'),
+    'language' => $language,
+  );
   $chunk_count = xmlsitemap_get_chunk_count(TRUE);
 
+  $output = _xmlsitemap_generate_chunk_header(TRUE);
   for ($i = 1; $i <= $chunk_count; $i++) {
     $output .= '<sitemap>';
     $output .= '<loc>'. url('sitemap-' . $i . '.xml', $url_options) .'</loc>';
     $output .= '<lastmod>'. gmdate(DATE_W3C, REQUEST_TIME) .'</lastmod>';
     $output .= '</sitemap>' . "\n";
   }
-
   $output .= '</sitemapindex>';
   return $output;
 }
@@ -259,6 +267,37 @@ function xmlsitemap_rebuild_batch_finished($success, $results, $operations) {
   else {
     drupal_set_message(t('The sitemap was not successfully rebuilt.'), 'error');
   }
+}
+
+/**
+ * Get an array of the current site's sitemaps.
+ *
+ * @param $links
+ *   A boolean if TRUE, the array elements will be HTML links.
+ * @return
+ *   An array of sitemaps.
+ */
+function xmlsitemap_get_sitemaps($links = FALSE) {
+  static $sitemaps = array();
+
+  if (!$sitemaps) {
+    $languages = language_list();
+    $sitemap_languages = xmlsitemap_var('languages');
+    natsort($sitemap_languages);
+
+    $url_options = array(
+      'absolute' => TRUE,
+      'base_url' => xmlsitemap_var('base_url'),
+    );
+
+    foreach ($sitemap_languages as $language) {
+      $url_options['language'] = $languages[$language];
+      $sitemap = url('sitemap.xml', $url_options);
+      $sitemaps[] = $links ? l($sitemap, $sitemap) : $sitemap;
+    }
+  }
+
+  return $sitemaps;
 }
 
 /**
