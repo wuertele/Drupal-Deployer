@@ -121,7 +121,7 @@ function xmlsitemap_settings_form() {
   );
 
   $form['#validate'][] = 'xmlsitemap_settings_form_validate';
-  //$form['#submit'][] = 'xmlsitemap_form_submit_flag_regenerate';
+  $form['#submit'][] = 'xmlsitemap_form_submit_flag_regenerate';
   $form['#submit'][] = 'xmlsitemap_settings_form_submit';
   $form = system_settings_form($form);
   $form['buttons']['#weight'] = 10;
@@ -133,11 +133,14 @@ function xmlsitemap_settings_form() {
  * Submit handler; Set the regenerate needed flag if variables have changed.
  *
  * This function needs to be called before system_settings_form_submit() or any
- * variable_set ()calls.
+ * calls to variable_set().
  */
 function xmlsitemap_form_submit_flag_regenerate($form, $form_state) {
   foreach ($form_state['values'] as $variable => $value) {
     $stored_value = variable_get($variable, 'xmlsitemap_not_a_variable');
+    if (is_array($value) && isset($form_state['values']['array_filter'])) {
+      $value = array_keys(array_filter($value));
+    }
     if ($stored_value != 'xmlsitemap_not_a_variable' && $stored_value != $value) {
       variable_set('xmlsitemap_regenerate_needed', TRUE);
       return;
@@ -220,6 +223,13 @@ function xmlsitemap_settings_form_submit($form, $form_state) {
   foreach ($custom_links as $custom_link) {
     xmlsitemap_save_link(array('type' => 'custom', 'id' => $id++, 'loc' => $custom_link));
   }
+
+  $frontpage_link = array(
+    'type' => 'frontpage',
+    'id' => 0,
+    'loc' => '',
+  );
+  xmlsitemap_save_link($frontpage_link);
 }
 
 /**
