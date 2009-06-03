@@ -316,7 +316,7 @@ function _xmlsitemap_get_blurb($check_version = TRUE) {
         l('Symantec', 'http://www.symantec.com/'),
         l('WebWise Solutions', 'http://www.webwiseone.com/'),
         l('Volacci', 'http://www.volacci.com/'),
-        //l('Lanetro', 'http://www.lanetro.com/'),
+        l('lanetro', 'http://www.lanetro.com/'),
       );
       // Don't extract the following string for translation.
       $blurb = strtr('<p>Thank you for helping test the XML sitemap module rewrite. Please consider helping offset developer free time by <a href="@link-donate">donating</a> or if your company is interested in sponsoring the rewrite or a specific feature, please <a href="@link-contact">contact the developer</a>. Thank you to the following current sponsors: !sponsors, and all the indivduals that have donated. This message will not be seen in the stable versions.</p>', array('@link-review' => 'http://drupalmodules.com/module/xml-sitemap', '@link-donate' => 'http://davereid.chipin.com/', '@link-contact' => 'http://davereid.net/contact', '!sponsors' => implode(', ', $sponsors)));
