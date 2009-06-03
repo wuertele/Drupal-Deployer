@@ -168,6 +168,28 @@ function xmlsitemap_menu_form_xmlsitemap_settings_form_alter(&$form, $form_state
     '#collapsible' => TRUE,
     '#collapsed' => !xmlsitemap_menu_var('menus'),
   );
+
+  $header = array(
+    t('Menu'),
+    t('Included in sitemap?'),
+    t('Default priority'),
+  );
+  $rows = array();
+  $menus = menu_get_menus();
+  foreach ($menus as $menu => $name) {
+    $status = variable_get('xmlsitemap_menu_status_' . $menu, FALSE);
+    $priority = variable_get('xmlsitemap_menu_priority_' . $menu, 'default');
+    $rows[] = array(
+      l($name, 'admin/build/menu-customize/' . $menu . '/edit', array('query' => drupal_get_destination())),
+      $status ? t('Included') : t('Not included'),
+      t($priority),
+    );
+  }
+  $form['menu']['menu_list'] = array(
+    '#value' => theme('table', $header, $rows),
+    '#access' => FALSE,
+  );
+
   $form['menu']['xmlsitemap_menu_menus'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Menus to include in the sitemap'),
@@ -193,7 +215,7 @@ function xmlsitemap_menu_settings_form_submit($form, $form_state) {
   $removed_menus = array_diff($current_menus, $selected_menus);
 
   foreach ($removed_menus as $removed_menu) {
-    db_query("DELETE FROM {xmlsitemap} x WHERE x.type = 'menu' AND x.id IN (SELECT mlid FROM {menu_links} WHERE menu_name = '%s')", $removed_menu);
+    db_query("DELETE FROM {xmlsitemap} WHERE id IN (SELECT mlid FROM {menu_links} WHERE menu_name = '%s') AND type = 'menu'", $removed_menu);
   }
 }
 
