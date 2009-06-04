@@ -49,19 +49,24 @@ function xmlsitemap_engines_cron() {
     $headers['User-Agent'] = $matches[0];
   }
 
+  $sitemaps = xmlsitemap_get_sitemaps();
   $engines = xmlsitemap_engines_var('engines');
   foreach ($engines as $engine) {
-    $url = xmlsitemap_engines_prepare_url(xmlsitemap_engines_get_engines($engine, 'url'));
-    $request = drupal_http_request($url, $headers);
-    watchdog('xmlsitemap', 'Submitted the sitemap to %url. !request', array('%url' => $url, '!request' => var_export($request, TRUE)));
+    foreach ($sitemaps as $sitemap) {
+      $url = xmlsitemap_engines_prepare_url(xmlsitemap_engines_get_engines($engine, 'url'), $sitemap);
+      $request = drupal_http_request($url, $headers);
+      watchdog('xmlsitemap', 'Submitted the sitemap to %url. !request', array('%url' => $url, '!request' => var_export($request, TRUE)));
+    }
   }
 
   $custom_urls = xmlsitemap_engines_var('custom_urls');
   $custom_urls = preg_split('/[\r\n]+/', $custom_urls, -1, PREG_SPLIT_NO_EMPTY);
   foreach ($custom_urls as $custom_url) {
-    $url = xmlsitemap_engines_prepare_url($custom_url);
-    $request = drupal_http_request($url, $headers);
-    watchdog('xmlsitemap', 'Submitted the sitemap to %url. !request', array('%url' => $url, '!request' => var_export($request, TRUE)));
+    foreach ($sitemaps as $sitemap) {
+      $url = xmlsitemap_engines_prepare_url($custom_url, $sitemap);
+      $request = drupal_http_request($url, $headers);
+      watchdog('xmlsitemap', 'Submitted the sitemap to %url. !request', array('%url' => $url, '!request' => var_export($request, TRUE)));
+    }
   }
 
   variable_set('xmlsitemap_engines_submit_last', REQUEST_TIME);
@@ -75,8 +80,8 @@ function xmlsitemap_engines_cron() {
  * @return
  *   A tokenized URL.
  */
-function xmlsitemap_engines_prepare_url($url) {
-  return str_replace('[sitemap]', url('sitemap.xml', array('absolute' => TRUE)), $url);
+function xmlsitemap_engines_prepare_url($url, $sitemap) {
+  return str_replace('[sitemap]', $sitemap, $url);
 }
 
 /**

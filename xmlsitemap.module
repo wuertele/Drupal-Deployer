@@ -30,7 +30,6 @@ define('XMLSITEMAP_FREQUENCY_ALWAYS', 60);
  * Implementation of hook_help().
  */
 function xmlsitemap_help($path, $arg) {
-  module_load_include('inc', 'xmlsitemap');
   $output = '';
 
   switch ($path) {
@@ -48,6 +47,7 @@ function xmlsitemap_help($path, $arg) {
   static $checked = FALSE;
   if (!$checked && strpos($path, 'xmlsitemap') !== FALSE) {
     $checked = TRUE;
+    module_load_include('inc', 'xmlsitemap');
     xmlsitemap_check_status();
     if ($blurb = _xmlsitemap_get_blurb()) {
       $output .= '<div class="form-item"><div class="description">' . $blurb . '</div></div>';
@@ -182,6 +182,37 @@ function xmlsitemap_robotstxt() {
 
 //function xmlsitemap_url_rewrite_output(&$path, &$options, $original_path) {
 //}
+
+/**
+ * Get an array of the current site's sitemaps.
+ *
+ * @param $links
+ *   A boolean if TRUE, the array elements will be HTML links.
+ * @return
+ *   An array of sitemaps.
+ */
+function xmlsitemap_get_sitemaps($links = FALSE) {
+  static $sitemaps = array();
+
+  if (!$sitemaps) {
+    $languages = language_list();
+    $sitemap_languages = xmlsitemap_var('languages');
+    natsort($sitemap_languages);
+
+    $url_options = array(
+      'absolute' => TRUE,
+      'base_url' => xmlsitemap_var('base_url'),
+    );
+
+    foreach ($sitemap_languages as $language) {
+      $url_options['language'] = $languages[$language];
+      $sitemap = url('sitemap.xml', $url_options);
+      $sitemaps[] = $links ? l($sitemap, $sitemap) : $sitemap;
+    }
+  }
+
+  return $sitemaps;
+}
 
 /**
  * Get a list of priority options.

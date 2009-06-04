@@ -297,37 +297,6 @@ function xmlsitemap_rebuild_batch_finished($success, $results, $operations) {
 }
 
 /**
- * Get an array of the current site's sitemaps.
- *
- * @param $links
- *   A boolean if TRUE, the array elements will be HTML links.
- * @return
- *   An array of sitemaps.
- */
-function xmlsitemap_get_sitemaps($links = FALSE) {
-  static $sitemaps = array();
-
-  if (!$sitemaps) {
-    $languages = language_list();
-    $sitemap_languages = xmlsitemap_var('languages');
-    natsort($sitemap_languages);
-
-    $url_options = array(
-      'absolute' => TRUE,
-      'base_url' => xmlsitemap_var('base_url'),
-    );
-
-    foreach ($sitemap_languages as $language) {
-      $url_options['language'] = $languages[$language];
-      $sitemap = url('sitemap.xml', $url_options);
-      $sitemaps[] = $links ? l($sitemap, $sitemap) : $sitemap;
-    }
-  }
-
-  return $sitemaps;
-}
-
-/**
  * Fetch a short blurb string about module maintainership and sponsors.
  *
  * This message will be FALSE in 'official' releases.
