@@ -301,3 +301,25 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
     $this->assertRaw('<loc>http://example.com/</loc>');
   }
 }
+
+class XMLSitemapRobotsTxtIntegrationTest extends XMLSitemapTestHelper {
+  public static function getInfo() {
+    return array(
+      'name' => 'XML sitemap robots.txt',
+      'description' => 'Integration tests for the XML sitemap and robots.txt module.',
+      'group' => 'XML sitemap',
+      'dependencies' => array('robotstxt'),
+    );
+  }
+
+  function setUp() {
+    parent::setUp('xmlsitemap', 'robotstxt');
+  }
+
+  function testRobotsTxt() {
+    // Request the un-clean robots.txt path so this will work in case there is
+    // still the robots.txt file in the root directory.
+    $this->drupalGet('', array('query' => 'q=robots.txt'));
+    $this->assertRaw('Sitemap: ' . url('sitemap.xml', array('absolute' => TRUE)));
+  }
+}
