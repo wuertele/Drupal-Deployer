@@ -10,8 +10,13 @@ function xmlsitemap_regenerate() {
   // Generate the sitemap pages.
   $languages = language_list();
   $chunk_count = xmlsitemap_get_chunk_count(TRUE);
+  if ($chunk_count > 1) {
+    // If we have more than one chunk, we need to increment this value by one
+    // since the index page (chunk 0) will also need to be generated.
+    $chunk_count++;
+  }
   foreach (xmlsitemap_var('languages') as $language) {
-    for ($i = 0; $i <= $chunk_count; $i++) {
+    for ($i = 0; $i < $chunk_count; $i++) {
       xmlsitemap_generate($i, $languages[$language]);
     }
   }
@@ -50,30 +55,87 @@ function _xmlsitemap_regenerate_after() {
 }
 
 /**
- * @todo Document this function.
- */
-function _xmlsitemap_generate_chunk_header($index = FALSE) {
-  $output = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-  if (xmlsitemap_var('xsl')) {
-    $output .= '<?xml-stylesheet type="text/xsl" href="'. url('sitemap.xsl') .'"?>' . "\n";
-  }
-  $output .= '<' . ($index ? 'sitemapindex' : 'urlset') . ' xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
-  //$output .= '<' . ($index ? 'sitemapindex' : 'urlset') . ' xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"' . "\n";
-  //$output .= '  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' . "\n";
-  //$output .= '  xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9' . "\n";
-  //$output .= '  http://www.sitemaps.org/schemas/sitemap/0.9/' . ($index ? 'siteindex.xsd' : 'sitemap.xsd') . '">' . "\n";
-  return $output;
-}
-
-/**
- * Generate one page (chunk) of the sitemap.
+ * Fetch the data from {xmlsitemap}, generates the sitemap, then caches it.
  *
  * @param $chunk
  *   An integer representing the integer of the sitemap page chunk.
  * @param $language
  *   A language object, defaults to the default language.
+ * @return
+ *   TRUE on success; otherwise FALSE
+ *
+ * @todo Revise/simplify or remove the function.
  */
-function xmlsitemap_generate_chunk($chunk, $language) {
+function xmlsitemap_generate($chunk = 0, $language = NULL) {
+  if (!is_numeric($chunk) || $chunk > xmlsitemap_get_chunk_count()) {
+    trigger_error("Inproper conditiion hit in xmlsitemap_generate(). Chunk: $chunk, Chunk Count: " . xmlsitemap_get_chunk_count());
+    return FALSE;
+  }
+
+  if (!isset($language)) {
+    $language = language_default();
+  }
+
+  $file = xmlsitemap_get_chunk_file($chunk, $language);
+
+  if (!$handle = fopen($file, 'wb')) {
+    watchdog('xmlsitemap', 'Could not open file @file for writing.', array('@file' => $file), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  $status = TRUE;
+  if (xmlsitemap_get_chunk_count() > 1 && !$chunk) {
+    xmlsitemap_generate_index($handle, $status, $language);
+  }
+  else {
+    xmlsitemap_generate_chunk($handle, $status, $chunk, $language);
+  }
+  fclose($handle);
+
+  if (!$status) {
+    watchdog('xmlsitemap', 'Unknown error occurred while writing to file @file.', array('@file' => $file), WATCHDOG_ERROR);
+  }
+
+  return $status;
+}
+
+//function xmlsitemap_fwrite($handle, &$status, $string) {
+//  $status &= (bool) fwrite($handle, $string);
+//}
+
+/**
+ * Write the proper XML sitemap header.
+ *
+ * @param $handle
+ *   A file system pointer resource that is typically created using fopen().
+ * @param $status
+ * @param $index
+ */
+function xmlsitemap_generate_chunk_header($handle, &$status, $index = FALSE) {
+  $status &= (bool) fwrite($handle, '<?xml version="1.0" encoding="UTF-8"?>' . "\n");
+  if (xmlsitemap_var('xsl')) {
+    $status &= (bool) fwrite($handle, '<?xml-stylesheet type="text/xsl" href="'. url('sitemap.xsl') .'"?>' . "\n");
+  }
+  $status &= (bool) fwrite($handle, '<' . ($index ? 'sitemapindex' : 'urlset') . ' xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n");
+  //$status &= (bool) fwrite($handle, '<' . ($index ? 'sitemapindex' : 'urlset') . ' xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"' . "\n");
+  //$status &= (bool) fwrite($handle, '  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' . "\n");
+  //$status &= (bool) fwrite($handle, '  xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9' . "\n");
+  //$status &= (bool) fwrite($handle, '  http://www.sitemaps.org/schemas/sitemap/0.9/' . ($index ? 'siteindex.xsd' : 'sitemap.xsd') . '">' . "\n");
+  return $status;
+}
+
+/**
+ * Generate one page (chunk) of the sitemap.
+ *
+ * @param $handle
+ *   A file system pointer resource that is typically created using fopen().
+ * @param $status
+ * @param $chunk
+ *   An integer representing the integer of the sitemap page chunk.
+ * @param $language
+ *   A language object, defaults to the default language.
+ */
+function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language = NULL) {
   $url_options = array(
     'absolute' => TRUE,
     //'alias' => TRUE,
@@ -95,95 +157,60 @@ function xmlsitemap_generate_chunk($chunk, $language) {
   $limit = xmlsitemap_get_chunk_size();
   $query = db_query_range($sql, $args, $offset, $limit);
 
-  $output = _xmlsitemap_generate_chunk_header();
+  xmlsitemap_generate_chunk_header($handle, $status);
   while ($link = db_fetch_array($query)) {
-    $output .= '<url>';
-    //$output .= '<loc>'. url($link['alias'], $url_options) .'</loc>';
-    $output .= '<loc>'. url($link['loc'], $url_options) .'</loc>';
+    $status &= (bool) fwrite($handle, '<url>');
+    //$status &= fwrite($handle, '<loc>'. url($link['alias'], $url_options) .'</loc>');
+    $status &= (bool) fwrite($handle, '<loc>'. url($link['loc'], $url_options) .'</loc>');
     if ($link['lastmod']) {
-      $output .= '<lastmod>'. gmdate(DATE_W3C, $link['lastmod']) .'</lastmod>';
+      $status &= (bool) fwrite($handle, '<lastmod>'. gmdate(DATE_W3C, $link['lastmod']) .'</lastmod>');
         // If the link has a lastmod value, update the changefreq so that links
         // with a short changefreq but updated two years ago show decay.
       //xmlsitemap_recalculate_changefreq($link);
       $link['changefreq'] = (REQUEST_TIME - $link['lastmod'] + $link['changefreq']) / 2;
     }
     if ($link['changefreq']) {
-      $output .= '<changefreq>'. xmlsitemap_get_changefreq($link['changefreq']) .'</changefreq>';
+      $status &= (bool) fwrite($handle, '<changefreq>'. xmlsitemap_get_changefreq($link['changefreq']) .'</changefreq>');
     }
     if (isset($link['priority']) && $link['priority'] != 0.5) {
       // Don't output the priority value for links that have 0.5 priority. This
       // is the default 'assumed' value if priority is not included as per the
       // sitemaps.org specification.
-      $output .= '<priority>'. number_format($link['priority'], 1) .'</priority>';
+      $status &= (bool) fwrite($handle, '<priority>'. number_format($link['priority'], 1) .'</priority>');
     }
-    $output .= '</url>' . "\n";
+    $status &= (bool) fwrite($handle, '</url>' . "\n");
   }
 
-  $output .= '</urlset>';
-  return $output;
+  $status &= (bool) fwrite($handle, '</urlset>');
+  return $status;
 }
 
 /**
  * Generate the index sitemap.
  *
+ * @param $handle
+ *   A file system pointer resource that is typically created using fopen().
+ * @param $status
  * @param $language
  *   A language object, defaults to the default language.
  */
-function xmlsitemap_generate_index($language = NULL) {
+function xmlsitemap_generate_index($handle, &$status, $language = NULL) {
   $url_options = array(
     'absolute' => TRUE,
     'base_url' => xmlsitemap_var('base_url'),
     'language' => $language,
   );
   $chunk_count = xmlsitemap_get_chunk_count(TRUE);
-
-  $output = _xmlsitemap_generate_chunk_header(TRUE);
+  xmlsitemap_generate_chunk_header($handle, $status, TRUE);
   for ($i = 1; $i <= $chunk_count; $i++) {
-    $output .= '<sitemap>';
-    $output .= '<loc>'. url('sitemap-' . $i . '.xml', $url_options) .'</loc>';
-    $output .= '<lastmod>'. gmdate(DATE_W3C, REQUEST_TIME) .'</lastmod>';
-    $output .= '</sitemap>' . "\n";
+    $status &= (bool) fwrite($handle, '<sitemap>');
+    $status &= (bool) fwrite($handle, '<loc>' . url('sitemap-' . $i . '.xml', $url_options) . '</loc>');
+    // @todo Use the actual lastmod value of the chunk file.
+    $status &= (bool) fwrite($handle, '<lastmod>' . gmdate(DATE_W3C, REQUEST_TIME) . '</lastmod>');
+    $status &= (bool) fwrite($handle, '</sitemap>' . "\n");
   }
-  $output .= '</sitemapindex>';
-  return $output;
-}
-
-/**
- * Fetch the data from {xmlsitemap}, generates the sitemap, then caches it.
- *
- * @param $chunk
- *   An integer representing the integer of the sitemap page chunk.
- * @param $language
- *   A language object, defaults to the default language.
- * @return
- *   TRUE on success; otherwise FALSE
- *
- * @todo Revise/simplify or remove the function.
- */
-function xmlsitemap_generate($chunk = 0, $language = NULL) {
-  //cache_clear_all(url('xmlsitemap_'. $chunk .'.xml', array('absolute' => TRUE)), 'cache_page');
-
-  if (!is_numeric($chunk) || $chunk > xmlsitemap_get_chunk_count()) {
-    return FALSE;
-  }
-
-  if (!isset($language)) {
-    $language = language_default();
-  }
-
-  if (xmlsitemap_get_chunk_count() == 1) {
-    $chunk = 0;
-    $output = xmlsitemap_generate_chunk($chunk, $language);
-  }
-  elseif ($chunk) {
-    $output = xmlsitemap_generate_chunk($chunk, $language);
-  }
-  else {
-    $output = xmlsitemap_generate_index($language);
-  }
-
-  // Write the output file.
-  return file_save_data($output, xmlsitemap_get_chunk_file($chunk, $language), FILE_EXISTS_REPLACE);
+  $status &= (bool) fwrite($handle, '</sitemapindex>');
+  return $status;
 }
 
 /**
@@ -240,7 +267,7 @@ function xmlsitemap_rebuild_batch_generate($language, &$context) {
     $context['sandbox']['progress'] = 0;
     $context['sandbox']['max'] = xmlsitemap_get_chunk_count(TRUE);
     // If we have more than one chunk, we need to increment this value by one
-    // since the index page will also need to be generated.
+    // since the index page (chunk 0) will also need to be generated.
     if ($context['sandbox']['max'] > 1) {
       $context['sandbox']['max']++;
     }

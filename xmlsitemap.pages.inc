@@ -17,10 +17,8 @@ function xmlsitemap_output_chunk($chunk = 0) {
   $file = xmlsitemap_get_chunk_file($chunk, $language);
 
   if (!file_exists($file) || (isset($_GET['refresh']) && user_access('administer xmlsitemap'))) {
-    // This section of code is for development testing only.
-    // @todo Remove in the final version.
     module_load_include('inc', 'xmlsitemap');
-    if (!xmlsitemap_generate($chunk)) {
+    if (!xmlsitemap_generate($chunk, $language)) {
       return drupal_not_found();
     }
   }
@@ -72,11 +70,11 @@ function xmlsitemap_file_transfer($source, $headers) {
   //$source = file_create_path($source);
 
   // Transfer file in 1024 byte chunks to save memory usage.
-  if ($fd = fopen($source, 'rb')) {
-    while (!feof($fd)) {
-      print fread($fd, 1024);
+  if ($handle = fopen($source, 'rb')) {
+    while (!feof($handle)) {
+      print fread($handle, 1024);
     }
-    fclose($fd);
+    fclose($handle);
   }
   else {
     drupal_not_found();
