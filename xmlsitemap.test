@@ -70,6 +70,20 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
     file_check_directory($path, FILE_CREATE_DIRECTORY);
   }
 
+  protected function assertXMLSitemapProblems($problem_text = FALSE) {
+    $this->drupalGet('admin/settings/xmlsitemap');
+    $this->assertText(t('One or more problems were detected with your sitemap configuration. Please check the status report for more information.'));
+    if ($problem_text) {
+      $this->clickLink(t('status report'));
+      $this->assertText($problem_text);
+    }
+  }
+
+  protected function assertNoXMLSitemapProblems() {
+    $this->drupalGet('admin/settings/xmlsitemap');
+    $this->assertNoText(t('One or more problems were detected with your sitemap configuration. Please check the status report for more information.'));
+  }
+
   //protected function saveSettings($url, array $settings) {
   //  $this->drupalPost($url, $settings, t('Save configuration'));
   //  $this->assertText(t('The configuration options have been saved.'));
@@ -225,7 +239,7 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
 
   function setUp() {
     parent::setUp('xmlsitemap', 'path');
-    $this->admin_user = $this->drupalCreateUser(array('access content', 'administer xmlsitemap'));
+    $this->admin_user = $this->drupalCreateUser(array('access content', 'administer site configuration', 'administer xmlsitemap'));
     $this->drupalLogin($this->admin_user);
     $this->checkFilesDirectory();
   }
@@ -299,6 +313,35 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
 
     $this->drupalGet('sitemap.xml');
     $this->assertRaw('<loc>http://example.com/</loc>');
+  }
+
+  /**
+   * Test that configuration problems are reported properly in the status report.
+   */
+  function testStatusReport() {
+    // Test the rebuild flag.
+    variable_set('xmlsitemap_rebuild_needed', TRUE);
+    $this->assertXMLSitemapProblems(t('The sitemap data is out of sync and needs to be completely rebuilt.'));
+    $this->clickLink(t('completely rebuilt'));
+    variable_set('xmlsitemap_rebuild_needed', FALSE);
+    $this->assertNoXMLSitemapProblems();
+
+    // Test the regenerate flag (and cron hasn't run in a while).
+    variable_set('xmlsitemap_regenerate_needed', TRUE);
+    variable_set('xmlsitemap_generated_last', REQUEST_TIME - variable_get('cron_threshold_warning', 172800) - 10);
+    $this->assertXMLSitemapProblems(t('The sitemap cached files are out of date and need to be regenerated. You can run cron manually to regenerate the sitemap files.'));
+    $this->clickLink(t('run cron manually'));
+    $this->assertNoXMLSitemapProblems();
+
+    // Test anonymous users access to sitemap.xml.
+    $anon_permissions = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", DRUPAL_ANONYMOUS_RID));
+    db_query("UPDATE {permission} SET perm = '' WHERE rid = %d", DRUPAL_ANONYMOUS_RID);
+    $this->assertXMLSitemapProblems(t('Search engines (anonymous users) cannot currently access your sitemap. Please assign the "access content" permission the the anonymous user role.'));
+    db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", $anon_permissions, DRUPAL_ANONYMOUS_RID);
+    $this->assertNoXMLSitemapProblems();
+
+    // Test chunk count > 1000.
+    // Test directory not writable.
   }
 }
 
