@@ -166,6 +166,17 @@ function xmlsitemap_xmlsitemap_link_alter(&$link) {
     $link['priority'] = xmlsitemap_var('frontpage_priority');
     $link['changefreq'] = xmlsitemap_var('frontpage_changefreq');
   }
+
+  // Alter some of the data so that we can compare against existing links.
+  if ($link['priority'] === 'default') {
+    $link['priority'] = NULL;
+  }
+  if ($link['priority_override'] === 'default') {
+    $link['priority_override'] = NULL;
+  }
+  if (isset($link['status'])) {
+    $link['status'] = (int) $link['status'];
+  }
 }
 
 /**
@@ -407,27 +418,17 @@ function xmlsitemap_load_link(array $where, array $args = array()) {
  */
 function xmlsitemap_save_link(array $link) {
   $link += array(
-    'status' => TRUE,
+    'status' => 1,
     'lastmod' => 0,
     'priority' => NULL,
     'priority_override' => NULL,
     'changefreq' => 0,
     'changecount' => 0,
-    'language' => '',
+    //'language' => '',
   );
 
   // Allow other modules to alter the link (priority, status, etc.).
   drupal_alter('xmlsitemap_link', $link);
-
-  // If the link is not going to be in the sitemap, delete its data.
-  if (!$link['status']) {
-    //xmlsitemap_delete_link(array('type' => $link['type'], 'id' => $link['id']));
-    //return FALSE;
-  }
-
-  if ($link['priority'] == 'default') {
-    $link['priority'] = NULL;
-  }
 
   // Warn if the priority is an invalid value.
   if ($link['priority'] < 0 || $link['priority'] > 1) {
@@ -435,7 +436,9 @@ function xmlsitemap_save_link(array $link) {
   }
 
   $existing = xmlsitemap_load_link(array('type' => $link['type'], 'id' => $link['id']));
-  if (!$existing || array_intersect_assoc($link, $existing)) {
+  $link_changed = !$existing || array_diff_assoc($existing, $link);
+
+  if ($link_changed) {
     // This is a new or changed entry, set that we need a sitemap rebuild.
     variable_set('xmlsitemap_regenerate_needed', TRUE);
 

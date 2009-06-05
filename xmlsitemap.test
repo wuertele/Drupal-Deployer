@@ -216,10 +216,75 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
   //
   //function testLoadLink() {
   //}
-  //
-  //function testSaveLink() {
-  //}
-  //
+
+  /**
+   * Test that xmlsitemap_save_link() will set the regenerate needed flag only
+   * when values are changed properly.
+   */
+  function testSaveLink() {
+    $this->assertFalse(xmlsitemap_var('regenerate_needed'));
+
+    $link = array('type' => 'testing', 'id' => 1, 'loc' => 'testing', 'status' => TRUE);
+    xmlsitemap_save_link($link);
+    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
+    variable_set('xmlsitemap_regenerate_needed', FALSE);
+
+    $link['status'] = 0;
+    xmlsitemap_save_link($link);
+    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
+    variable_set('xmlsitemap_regenerate_needed', FALSE);
+
+    // No regenerate needed since 0 == FALSE.
+    $link['status'] = FALSE;
+    xmlsitemap_save_link($link);
+    $this->assertFalse(xmlsitemap_var('regenerate_needed'));
+
+    $link['status'] = NULL;
+    xmlsitemap_save_link($link);
+    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
+    variable_set('xmlsitemap_regenerate_needed', FALSE);
+
+    $link['priority'] = NULL;
+    $link['loc'] = 'new_location';
+    xmlsitemap_save_link($link);
+    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
+    variable_set('xmlsitemap_regenerate_needed', FALSE);
+
+    $link['priority'] = 0.0;
+    xmlsitemap_save_link($link);
+    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
+    variable_set('xmlsitemap_regenerate_needed', FALSE);
+
+    $link['priority'] = 0.1;
+    xmlsitemap_save_link($link);
+    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
+    variable_set('xmlsitemap_regenerate_needed', FALSE);
+
+    $link['priority'] = 1.0;
+    xmlsitemap_save_link($link);
+    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
+    variable_set('xmlsitemap_regenerate_needed', FALSE);
+
+    $link['priority'] = 1;
+    xmlsitemap_save_link($link);
+    $this->assertFalse(xmlsitemap_var('regenerate_needed'));
+
+    $link['priority'] = 0;
+    xmlsitemap_save_link($link);
+    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
+    variable_set('xmlsitemap_regenerate_needed', FALSE);
+
+    $link['priority'] = NULL;
+    xmlsitemap_save_link($link);
+    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
+    variable_set('xmlsitemap_regenerate_needed', FALSE);
+
+    $link['priority'] = 'default';
+    $link['priority_override'] = 'default';
+    xmlsitemap_save_link($link);
+    $this->assertFalse(xmlsitemap_var('regenerate_needed'));
+  }
+
   //function testDeleteLink() {
   //}
 }
