@@ -195,14 +195,10 @@ function xmlsitemap_get_sitemaps($links = FALSE) {
   static $sitemaps = array();
 
   if (!$sitemaps) {
+    $url_options = xmlsitemap_get_url_options();
     $languages = language_list();
     $sitemap_languages = xmlsitemap_var('languages');
     natsort($sitemap_languages);
-
-    $url_options = array(
-      'absolute' => TRUE,
-      'base_url' => xmlsitemap_var('base_url'),
-    );
 
     foreach ($sitemap_languages as $language) {
       $url_options['language'] = $languages[$language];
@@ -212,6 +208,18 @@ function xmlsitemap_get_sitemaps($links = FALSE) {
   }
 
   return $sitemaps;
+}
+
+/**
+ * Return a list of commonly used parameters for url() used by XML sitemap.
+ *
+ * @see url()
+ */
+function xmlsitemap_get_url_options($options = array()) {
+  return $options + array(
+    'absolute' => TRUE,
+    'base_url' => xmlsitemap_var('base_url'),
+  );
 }
 
 /**
@@ -504,8 +512,8 @@ function xmlsitemap_clear_cache($rmdir = FALSE, $path = NULL) {
  *
  * @todo Move to xmlsitemap.inc
  */
-function xmlsitemap_get_chunk_file($chunk = 0, $language) {
-  return file_create_path(xmlsitemap_var('path')) .'/xmlsitemap-' . $language->language . '-' . $chunk . '.xml';
+function xmlsitemap_get_chunk_file($chunk = 0, $language, $compressed = FALSE) {
+  return file_create_path(xmlsitemap_var('path')) .'/xmlsitemap-' . $language->language . '-' . $chunk . ($compressed ? '.gz' : '.xml');
 }
 
 /**
@@ -536,6 +544,7 @@ function xmlsitemap_variables() {
     'xmlsitemap_generated_last' => 0,
     'xmlsitemap_base_url' => $GLOBALS['base_url'],
     'xmlsitemap_languages' => array(language_default('language')),
+    'xmlsitemap_gz' => FALSE,
     // Removed variables are set to NULL so they can still be deleted.
     'xmlsitemap_regenerate_last' => NULL,
     'xmlsitemap_custom_links' => NULL,

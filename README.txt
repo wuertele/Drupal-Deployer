@@ -46,13 +46,7 @@ FREQUENTLY ASKED QUESTIONS (FAQ)
 KNOWN ISSUES
 ------------
 
-- I get the following error from Google Webmaster Tools:
-    "Invalid date - An invalid date was found. Please fix the date or formatting
-    before resubmitting.- Parent tag: url"
-  Most likely you are using PHP 5.1.1 or PHP 5.1.2, which introduced a new
-  date/time constant DATE_W3C but forgot to include a semicolon in the timezone
-  separator. This bug has been fixed in PHP 5.1.3 and higher.
-  See http://bugs.php.net/bug.php?id=36599.
+- See http://drupal.org/node/482550 for a list of the current known issues.
 
 
 MORE INFORMATION

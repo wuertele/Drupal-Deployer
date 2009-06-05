@@ -95,6 +95,10 @@ function xmlsitemap_generate($chunk = 0, $language = NULL) {
   if (!$status) {
     watchdog('xmlsitemap', 'Unknown error occurred while writing to file @file.', array('@file' => $file), WATCHDOG_ERROR);
   }
+  elseif (xmlsitemap_var('gz')) {
+    $file_gz = xmlsitemap_get_chunk_file($chunk, $language, TRUE);
+    file_put_contents($file_gz, gzencode(file_get_contents($file), 9));
+  }
 
   return $status;
 }
@@ -136,12 +140,7 @@ function xmlsitemap_generate_chunk_header($handle, &$status, $index = FALSE) {
  *   A language object, defaults to the default language.
  */
 function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language = NULL) {
-  $url_options = array(
-    'absolute' => TRUE,
-    //'alias' => TRUE,
-    'base_url' => xmlsitemap_var('base_url'),
-    'language' => $language,
-  );
+  $url_options = xmlsitemap_get_url_options(array('language' => $language));
 
   // @todo Optimize the query.
   // @todo When should "AND x.language IN ('%s', '')" be used? Drupal still lists English content when viewing site in French.
@@ -164,8 +163,8 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language = NULL) 
     $status &= (bool) fwrite($handle, '<loc>'. url($link['loc'], $url_options) .'</loc>');
     if ($link['lastmod']) {
       $status &= (bool) fwrite($handle, '<lastmod>'. gmdate(DATE_W3C, $link['lastmod']) .'</lastmod>');
-        // If the link has a lastmod value, update the changefreq so that links
-        // with a short changefreq but updated two years ago show decay.
+      // If the link has a lastmod value, update the changefreq so that links
+      // with a short changefreq but updated two years ago show decay.
       //xmlsitemap_recalculate_changefreq($link);
       $link['changefreq'] = (REQUEST_TIME - $link['lastmod'] + $link['changefreq']) / 2;
     }
@@ -180,8 +179,8 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language = NULL) 
     }
     $status &= (bool) fwrite($handle, '</url>' . "\n");
   }
-
   $status &= (bool) fwrite($handle, '</urlset>');
+
   return $status;
 }
 
@@ -195,12 +194,9 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language = NULL) 
  *   A language object, defaults to the default language.
  */
 function xmlsitemap_generate_index($handle, &$status, $language = NULL) {
-  $url_options = array(
-    'absolute' => TRUE,
-    'base_url' => xmlsitemap_var('base_url'),
-    'language' => $language,
-  );
+  $url_options = xmlsitemap_get_url_options(array('language' => $language));
   $chunk_count = xmlsitemap_get_chunk_count(TRUE);
+
   xmlsitemap_generate_chunk_header($handle, $status, TRUE);
   for ($i = 1; $i <= $chunk_count; $i++) {
     $status &= (bool) fwrite($handle, '<sitemap>');
@@ -210,6 +206,7 @@ function xmlsitemap_generate_index($handle, &$status, $language = NULL) {
     $status &= (bool) fwrite($handle, '</sitemap>' . "\n");
   }
   $status &= (bool) fwrite($handle, '</sitemapindex>');
+
   return $status;
 }
 

@@ -32,6 +32,13 @@ function xmlsitemap_settings_form() {
     '#default_value' => xmlsitemap_var('xsl'),
     '#description' => t('Using the stylesheet will make it easier for non-computers to view and sort.')
   );
+  $form['xmlsitemap']['xmlsitemap_gz'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Generate additional compressed sitemaps using gzip.'),
+    '#default_value' => xmlsitemap_var('gz'),
+    '#disabled' => !function_exists('gzencode'),
+    '#access' => FALSE,
+  );
   $form['xmlsitemap']['xmlsitemap_chunk_size'] = array(
     '#type' => 'select',
     '#title' => t('Number of links in each sitemap page'),
