@@ -92,7 +92,8 @@ function xmlsitemap_settings_form() {
     '#type' => 'fieldset',
     '#title' => t('Front page'),
     '#collapsible' => TRUE,
-    '#collapsed' => FALSE,
+    '#collapsed' => TRUE,
+    '#weight' => -1,
   );
   $form['frontpage']['xmlsitemap_frontpage_priority'] = array(
     '#type' => 'select',
@@ -112,15 +113,51 @@ function xmlsitemap_settings_form() {
   //  '#title' => t('Advanced'),
   //  '#collapsible' => TRUE,
   //  '#collapsed' => TRUE,
+  //  '#weight' => 10,
   //);
 
   $form['#validate'][] = 'xmlsitemap_settings_form_validate';
   $form['#submit'][] = 'xmlsitemap_form_submit_flag_regenerate';
   $form['#submit'][] = 'xmlsitemap_settings_form_submit';
   $form = system_settings_form($form);
-  $form['buttons']['#weight'] = 10;
+  $form['buttons']['#weight'] = 20;
   $form['array_filter'] = array('#type' => 'value', '#value' => TRUE);
   return $form;
+}
+
+/**
+ * Create a list of items that can be included in the sitemap.
+ *
+ * @param $item_type
+ *   A translated string of the item type.
+ * @param $items
+ *   An array of items with the following keys:
+ *     'name': The translated name of the item.
+ *     'link': The path to edit the item.
+ *     'status': The item's sitemap status.
+ *     'priority': The items default sitemap priority.
+ * @param $form_item
+ *   The form item to add the list to.
+ */
+function xmlsitemap_settings_list($item_type, $items, &$form_item) {
+  $header = array(
+    $item_type,
+    t('Included in sitemap?'),
+    t('Default priority'),
+  );
+  $rows = array();
+
+  foreach ($items as $item) {
+    $rows[] = array(
+      l($item['name'], $item['link'], array('query' => drupal_get_destination())),
+      $item['status'] ? t('Included') : t('Not included'),
+      $item['priority'] == 'default' ? t('Default') : t($item['priority']),
+    );
+  }
+
+  $form_item['list'] = array(
+    '#value' => theme('table', $header, $rows),
+  );
 }
 
 /**
@@ -169,6 +206,7 @@ function xmlsitemap_settings_form_validate($form, &$form_state) {
  * @see xmlsitemap_settings_form()
  */
 function xmlsitemap_settings_form_submit($form, $form_state) {
+  // Save any changes to the frontpage link.
   $frontpage_link = array(
     'type' => 'frontpage',
     'id' => 0,

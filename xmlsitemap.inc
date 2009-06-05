@@ -147,18 +147,18 @@ function xmlsitemap_generate_chunk_header($handle, &$status, $index = FALSE) {
  *   A language object, defaults to the default language.
  */
 function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language = NULL) {
-  $url_options = xmlsitemap_get_url_options(array('language' => $language));
-
   // @todo Optimize the query.
   // @todo When should "AND x.language IN ('%s', '')" be used? Drupal still lists English content when viewing site in French.
-  //$sql = "SELECT x.loc, COALESCE(ua.dst, x.loc) AS alias, x.lastmod, x.changefreq, x.changecount, x.priority, ua.language, ua.pid FROM {xmlsitemap} x
+  //$sql = "SELECT x.loc, COALESCE(ua.dst, x.loc) AS url, x.lastmod, x.changefreq, x.changecount, COALESCE(x.priority_override, x.priority) AS priority, ua.language, ua.pid FROM {xmlsitemap} x
   //        LEFT JOIN {url_alias} ua ON x.loc = ua.src AND ua.language IN ('%s', '')
   //        WHERE x.status = 1
   //        ORDER BY x.loc, ua.language DESC, ua.pid DESC";
   //$args = array($language->language);
-  $sql = "SELECT x.loc, x.lastmod, x.changefreq, x.changecount, x.priority FROM {xmlsitemap} x
+  //$url_options = xmlsitemap_get_url_options(array('language' => $language, 'alias' => TRUE));
+  $sql = "SELECT x.loc AS url, x.lastmod, x.changefreq, x.changecount, COALESCE(x.priority_override, x.priority) AS priority FROM {xmlsitemap} x
           WHERE x.status = 1";
   $args = array();
+  $url_options = xmlsitemap_get_url_options(array('language' => $language));
   $offset = max($chunk - 1, 0) * xmlsitemap_get_chunk_size();
   $limit = xmlsitemap_get_chunk_size();
   $query = db_query_range($sql, $args, $offset, $limit);
@@ -166,8 +166,7 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language = NULL) 
   xmlsitemap_generate_chunk_header($handle, $status);
   while ($link = db_fetch_array($query)) {
     $status &= (bool) fwrite($handle, '<url>');
-    //$status &= fwrite($handle, '<loc>'. url($link['alias'], $url_options) .'</loc>');
-    $status &= (bool) fwrite($handle, '<loc>'. url($link['loc'], $url_options) .'</loc>');
+    $status &= (bool) fwrite($handle, '<loc>'. url($link['url'], $url_options) .'</loc>');
     if ($link['lastmod']) {
       $status &= (bool) fwrite($handle, '<lastmod>'. gmdate(DATE_W3C, $link['lastmod']) .'</lastmod>');
       // If the link has a lastmod value, update the changefreq so that links
