@@ -3,7 +3,9 @@
 
 /**
  * @file
- * Documentation for xmlsitemap API.
+ * Documentation for the xmlsitemap API.
+ *
+ * @ingroup xmlsitemap
  */
 
 /**

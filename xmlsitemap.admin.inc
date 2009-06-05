@@ -4,6 +4,8 @@
 /**
  * @file
  * Administrative page callbacks for the xmlsitemap module.
+ *
+ * @ingroup xmlsitemap
  */
 
 /**

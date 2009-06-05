@@ -2,6 +2,13 @@
 // $Id$
 
 /**
+ * @file
+ * Miscellaneous functions for the xmlsitemap module.
+ *
+ * @ingroup xmlsitemap
+ */
+
+/**
  * Delete and regenerate the sitemap files.
  */
 function xmlsitemap_regenerate() {
