@@ -18,8 +18,8 @@ function xmlsitemap_custom_list_links() {
   while ($link = db_fetch_object($query)) {
     $rows[] = array(
       l($link->loc, $link->loc),
-      l('Edit', 'admin/settings/xmlsitemap/custom/edit/' . $link->id, array('query' => drupal_get_destination())),
-      l('Delete', 'admin/settings/xmlsitemap/custom/delete/' . $link->id, array('query' => drupal_get_destination())),
+      l(t('Edit'), 'admin/settings/xmlsitemap/custom/edit/' . $link->id, array('query' => drupal_get_destination())),
+      l(t('Delete'), 'admin/settings/xmlsitemap/custom/delete/' . $link->id, array('query' => drupal_get_destination())),
     );
   }
 

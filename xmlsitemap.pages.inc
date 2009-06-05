@@ -11,7 +11,7 @@
 /**
  * Output a sitemap page.
  *
- * @see xmlsitemap_file_transfer
+ * @see xmlsitemap_file_transfer()
  */
 function xmlsitemap_output_chunk($chunk = 0) {
   global $language;
