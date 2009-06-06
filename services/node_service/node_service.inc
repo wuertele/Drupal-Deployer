@@ -95,7 +95,7 @@ function node_service_save($edit) {
   // Load the required includes for drupal_execute
   module_load_include('inc', 'node', 'node.pages');
   $nid = NULL;
-
+  $edit = (array) $edit;
   if ($edit['nid']) {
     $node = node_load($edit['nid']);
     if ($node->nid) {
@@ -147,6 +147,7 @@ function node_service_save($edit) {
  *   Boolean. TRUE if the user has the permission to save a node.
  */
 function node_service_save_access($node) {
+  $node = (array) $node;
   if (isset($node['nid'])) {
     return node_access('update', $node);
   }
