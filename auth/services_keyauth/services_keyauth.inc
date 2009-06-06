@@ -201,7 +201,7 @@ function _services_keyauth_authenticate_call($method, $method_name, &$args) {
 }
 
 function _services_keyauth_alter_browse_form_submit($method, &$args) {
-  if ($method['#key']) {
+  if ($method['#key'] && variable_get('services_use_key', TRUE)) {
     $args_stripped = $args;
   
     for ($i = 1; $i <= 4; $i++) {
