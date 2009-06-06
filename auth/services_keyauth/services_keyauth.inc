@@ -201,10 +201,13 @@ function _services_keyauth_authenticate_call($method, $method_name, &$args) {
 }
 
 function _services_keyauth_alter_browse_form_submit($method, &$args) {
-  $args_stripped = $args;
-  for ($i = 1; $i <= 4; $i++) {
-    array_shift($args_stripped);
+  if ($method['#key']) {
+    $args_stripped = $args;
+  
+    for ($i = 1; $i <= 4; $i++) {
+      array_shift($args_stripped);
+    }
+    $args[2] = time();
+    $args[0] = services_get_hash($args[2], $args[1], $args[3], $method, $args_stripped);
   }
-  $args[2] = time();
-  $args[0] = services_get_hash($args[2], $args[1], $args[3], $method, $args_stripped);
 }
