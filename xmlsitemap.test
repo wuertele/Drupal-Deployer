@@ -41,7 +41,7 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
     static $last_id = 1;
 
     $link += array(
-      'type' => 'testing',
+      'type' => 'simpletest',
       'id' => $last_id,
       'loc' => $this->randomName(),
     );
@@ -290,8 +290,26 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
     $this->assertFalse(xmlsitemap_var('regenerate_needed'));
   }
 
-  //function testDeleteLink() {
-  //}
+  function testDeleteLink() {
+    // Test that the regenerate flag is set when visible links are deleted.
+    $link1 = $this->addSitemapLink(array('loc' => 'testing1', 'status' => FALSE));
+    $link2 = $this->addSitemapLink(array('loc' => 'testing1', 'status' => TRUE));
+    $link3 = $this->addSitemapLink(array('status' => FALSE));
+    variable_set('xmlsitemap_regenerate_needed', FALSE);
+    $this->assertFalse(xmlsitemap_var('regenerate_needed'));
+
+    // Test delete multiple links.
+    xmlsitemap_delete_link(array('loc' => 'testing1'));
+    $this->assertFalse(xmlsitemap_load_link(array('type' => $link1['type'], 'id' => $link1['id'])));
+    $this->assertFalse(xmlsitemap_load_link(array('type' => $link2['type'], 'id' => $link2['id'])));
+    $this->assertTrue(xmlsitemap_load_link(array('type' => $link3['type'], 'id' => $link3['id'])));
+    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
+    variable_set('xmlsitemap_regenerate_needed', FALSE);
+
+    xmlsitemap_delete_link(array('type' => $link3['type'], 'id' => $link3['id']));
+    $this->assertFalse(xmlsitemap_load_link(array('type' => $link3['type'], 'id' => $link3['id'])));
+    $this->assertFalse(xmlsitemap_var('regenerate_needed'));
+  }
 }
 
 class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {

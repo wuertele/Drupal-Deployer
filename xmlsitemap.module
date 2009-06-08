@@ -389,27 +389,110 @@ function xmlsitemap_calculate_changefreq($timestamps) {
 }
 
 /**
- * Load a specific sitemap link.
+ * Given an {xmlsitemap} field, return the correct %-placeholder.
  *
- * @param $where
- *   An array of conditions (can be values keyed on column name).
- * @param $args
- *   An optional array of values to pass to the query.
+ * @param $field
+ *   The {xmlsitemap} schema field name.
  * @return
- *   An object representing a sitemap link.
+ *   The placeholder string to embed in a query for that type.
+ *
+ * @see db_type_placeholder()
  */
-function xmlsitemap_load_link(array $where, array $args = array()) {
-  foreach ($where as $key => $value) {
-    if (is_string($key)) {
+function _xmlsitemap_get_placeholder($field) {
+  static $schema;
+  if (!isset($schema)) {
+    $schema = drupal_get_schema('xmlsitemap');
+  }
+  return db_type_placeholder($schema['fields'][$field]['type']);
+}
+
+/**
+ * Check if there is a visible sitemap link given a certain set of conditions.
+ *
+ * Optionally will set the regenerate needed flag to TRUE if there is a match.
+ *
+ * @param $conditions
+ *   An array of values to match keyed by field.
+ * @return
+ *   TRUE if there is a visible link, or FALSE if there is not.
+ */
+function _xmlsitemap_check_visible_link(array $conditions = array(), $flag = FALSE) {
+  $conditions['status'] = 1;
+  $has_visible = (bool) xmlsitemap_load_link($conditions);
+
+  if ($has_visible && $flag) {
+    variable_set('xmlsitemap_regenerate_needed', TRUE);
+  }
+}
+
+/**
+ * Perform a mass update of sitemap data.
+ *
+ * If visible links are updated, this will automatically set the regenerate
+ * needed flag to TRUE.
+ *
+ * @param $updates
+ *   An array of values to update fields to, keyed by field name.
+ * @param $conditions
+ *   An array of values to match keyed by field.
+ * @return
+ *   The number of rows that were updated.
+ */
+function xmlsitemap_update_links($updates = array(), $conditions = array()) {
+  // If we are going to modify a visible sitemap link, we will need to set
+  // the regenerate needed flag.
+  _xmlsitemap_check_visible_link($conditions, TRUE);
+
+  $args = array();
+
+  foreach ($updates as $field => $value) {
+    if ($field == 'priority' && $value === 'default') {
+      // Default priority is NULL, but we use the string 'default' in the
+      // interface so the correct default value is selected.
+      $updates[$field] = 'priority = NULL';
+    }
+    elseif ($field == 'status' && $value) {
+      // If changing status from excluded to included, set status to NULL since
+      // we may need to re-evaluate things like node_access().
+      $updates[$field] = 'status = NULL';
+    }
+    else {
+      $updates[$field] = $field . ' = ' . _xmlsitemap_get_placeholder($field);
       $args[] = $value;
-      $where[$key] = $key .' = '. (is_numeric($value) ? '%d' : "'%s'");
     }
   }
 
-  $link = db_fetch_array(db_query_range("SELECT * FROM {xmlsitemap} WHERE ". implode(' AND ', $where), $args, 0, 1));
+  foreach ($conditions as $field => $value) {
+    $conditions[$field] = $field . ' = ' . _xmlsitemap_get_placeholder($field);
+    $args[] = $value;
+  }
+
+  // Process updates.
+  $sql = "UPDATE {xmlsitemap} SET " . implode(', ', $updates) . " WHERE " . implode(' AND ', $conditions);
+  db_query($sql, $args);
+
+  return db_affected_rows();
+}
+
+/**
+ * Load a specific sitemap link.
+ *
+ * @param $where
+ *   An array of values to match keyed by field.
+ * @return
+ *   An array representing a sitemap link.
+ */
+function xmlsitemap_load_link(array $conditions) {
+  $args = array();
+  foreach ($conditions as $field => $value) {
+    $conditions[$field] = $field . ' = ' . _xmlsitemap_get_placeholder($field);
+    $args[] = $value;
+  }
+
+  $link = db_fetch_array(db_query_range("SELECT * FROM {xmlsitemap} WHERE ". implode(' AND ', $conditions), $args, 0, 1));
 
   // Allow other modules to respond after loading the link.
-  //module_invoke_all('xmlsitemap_load_link', $link);
+  //module_invoke_all('xmlsitemap_load_link', $link, $conditions);
 
   return $link;
 }
@@ -431,7 +514,7 @@ function xmlsitemap_save_link(array $link) {
     //'language' => '',
   );
 
-  // Allow other modules to alter the link (priority, status, etc.).
+  // Allow other modules to alter the link before saving.
   drupal_alter('xmlsitemap_link', $link);
 
   // Warn if the priority is an invalid value.
@@ -454,7 +537,7 @@ function xmlsitemap_save_link(array $link) {
     }
   }
 
-  // Allow other modules to save the link.
+  // Allow other modules to respond after saving the link.
   //module_invoke_all('xmlsitemap_save_link', $link);
 
   return $link;
@@ -463,37 +546,25 @@ function xmlsitemap_save_link(array $link) {
 /**
  * Delete a sitemap link.
  *
- * @param $where
- *   An array of values to match keyed by column.
- * @param $args
- *   An optional array of values to pass to the query.
+ * If a visible sitemap link was deleted, this will automatically set the
+ * regenerate needed flag.
+ *
+ * @param $conditions
+ *   An array of values to match keyed by field.
  */
-function xmlsitemap_delete_link(array $where, array $args = array()) {
-  foreach ($where as $key => $value) {
-    if (is_string($key)) {
-      $args[] = $value;
-      $where[$key] = $key .' = '. (is_numeric($value) ? '%d' : "'%s'");
-    }
+function xmlsitemap_delete_link(array $conditions) {
+  _xmlsitemap_check_visible_link($conditions, TRUE);
+
+  $args = array();
+  foreach ($conditions as $field => $value) {
+    $conditions[$field] = $field . ' = ' . _xmlsitemap_get_placeholder($field);
+    $args[] = $value;
   }
 
-  if (db_result(db_query("SELECT 1 FROM {xmlsitemap} WHERE " . implode(' AND ', $where), $args))) {
-    // Set the regenerate flag since a sitemap-visible link was deleted.
-    variable_set('xmlsitemap_regenerate_needed', TRUE);
-  }
+  db_query("DELETE FROM {xmlsitemap} WHERE " . implode(' AND ', $conditions), $args);
 
-  db_query("DELETE FROM {xmlsitemap} WHERE " . implode(' AND ', $where), $args);
-
-  //if ($existing = xmlsitemap_load_link($where, $args)) {
-  //  db_query("DELETE FROM {xmlsitemap} WHERE type = '%s' AND id = %d", $existing['type'], $existing['id']);
-  //
-  //  if ($existing['status']) {
-  //    // Set the regenerate flag since a sitemap-visible link was deleted.
-  //    variable_set('xmlsitemap_regenerate_needed', TRUE);
-  //  }
-  //
-  //  // Allow other modules to respond after deleting the link.
-  //  //module_invoke_all('xmlsitemap_delete_link', $link);
-  //}
+  // Allow other modules to respond after deleting the link.
+  //module_invoke_all('xmlsitemap_delete_link', $conditions);
 }
 
 /**
