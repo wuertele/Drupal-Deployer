@@ -686,6 +686,12 @@ function project_issue_form($node, $form_state, $include_metadata_fields = FALSE
       '#required' => TRUE,
     );
   }
+  else {
+    $form['issue_details']['title'] = array(
+      '#type' => 'value',
+      '#value' => $node->title,
+    );
+  }
 
   $form['issue_details']['body'] = array(
     '#type' => 'textarea',
