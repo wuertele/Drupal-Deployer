@@ -92,8 +92,8 @@ function xmlsitemap_file_transfer($source, $headers) {
 function xmlsitemap_output_xsl() {
   drupal_set_header('Content-type: application/xml; charset=utf-8');
   $module_path = drupal_get_path('module', 'xmlsitemap');
-  $xsl_css = url($module_path . '/xmlsitemap-xml.css');
-  $xsl_js = url($module_path . '/xmlsitemap-xml.js');
+  $xsl_css = base_path() . $module_path . '/xmlsitemap-xml.css';
+  $xsl_js = base_path() . $module_path . '/xmlsitemap-xml.js';
 
   $contents = file_get_contents($module_path . '/xmlsitemap.xsl');
   $contents = str_replace(array('[xsl-css]', '[xsl-js]'), array($xsl_css, $xsl_js), $contents);
