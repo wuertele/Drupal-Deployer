@@ -418,11 +418,29 @@ function _xmlsitemap_get_placeholder($field) {
  */
 function _xmlsitemap_check_visible_link(array $conditions = array(), $flag = FALSE) {
   $conditions['status'] = 1;
-  $has_visible = (bool) xmlsitemap_load_link($conditions);
+  $result = (bool) xmlsitemap_load_link($conditions);
 
-  if ($has_visible && $flag) {
+  if ($result && $flag) {
     variable_set('xmlsitemap_regenerate_needed', TRUE);
   }
+
+  return $result;
+}
+
+/**
+ * Condition builder for queries.
+ */
+function _xmlsitemap_build_conditions(&$conditions, &$args = array()) {
+  foreach ($conditions as $field => $value) {
+    if ($value === NULL) {
+      $conditions[$field] = $field . ' IS NULL';
+    }
+    else {
+      $conditions[$field] = $field . ' = ' . _xmlsitemap_get_placeholder($field);
+      $args[] = $value;
+    }
+  }
+  return $args;
 }
 
 /**
@@ -434,12 +452,7 @@ function _xmlsitemap_check_visible_link(array $conditions = array(), $flag = FAL
  *   An array representing the first sitemap link matching the conditions found.
  */
 function xmlsitemap_load_link(array $conditions) {
-  $args = array();
-  foreach ($conditions as $field => $value) {
-    $conditions[$field] = $field . ' = ' . _xmlsitemap_get_placeholder($field);
-    $args[] = $value;
-  }
-
+  $args = _xmlsitemap_build_conditions($conditions);
   $link = db_fetch_array(db_query_range("SELECT * FROM {xmlsitemap} WHERE ". implode(' AND ', $conditions), $args, 0, 1));
 
   // Allow other modules to respond after loading the link.
@@ -513,7 +526,6 @@ function xmlsitemap_update_links($updates = array(), $conditions = array()) {
   _xmlsitemap_check_visible_link($conditions, TRUE);
 
   $args = array();
-
   foreach ($updates as $field => $value) {
     if ($field == 'priority' && $value === 'default') {
       // Default priority is NULL, but we use the string 'default' in the
@@ -531,12 +543,8 @@ function xmlsitemap_update_links($updates = array(), $conditions = array()) {
     }
   }
 
-  foreach ($conditions as $field => $value) {
-    $conditions[$field] = $field . ' = ' . _xmlsitemap_get_placeholder($field);
-    $args[] = $value;
-  }
-
   // Process updates.
+  _xmlsitemap_build_conditions($conditions, $args);
   $sql = "UPDATE {xmlsitemap} SET " . implode(', ', $updates) . " WHERE " . implode(' AND ', $conditions);
   db_query($sql, $args);
 
@@ -557,12 +565,7 @@ function xmlsitemap_update_links($updates = array(), $conditions = array()) {
 function xmlsitemap_delete_link(array $conditions) {
   _xmlsitemap_check_visible_link($conditions, TRUE);
 
-  $args = array();
-  foreach ($conditions as $field => $value) {
-    $conditions[$field] = $field . ' = ' . _xmlsitemap_get_placeholder($field);
-    $args[] = $value;
-  }
-
+  $args = _xmlsitemap_build_conditions($conditions);
   db_query("DELETE FROM {xmlsitemap} WHERE " . implode(' AND ', $conditions), $args);
 
   // Allow other modules to respond after deleting the link.
