@@ -16,6 +16,14 @@ function services_keyauth_cron() {
     WHERE timestamp < '%s'", $expiry_time);
 }
 
+/**
+ * This function is called to determine whether the current user has 
+ * access to a keys configuration.
+ * 
+ */
+function services_keyauth_access() {
+  return user_access('administer services') && variable_get('services_use_key', FALSE);
+}
 
 /**
  * Implementation of hook_authentication_info().
@@ -48,8 +56,7 @@ function services_keyauth_menu() {
     'title'             => 'Keys',
     'description'       => 'Manage application access to site services.',
     'page callback'     => 'services_keyauth_admin_keys_list',
-    'access callback'   => 'variable_get',
-    'access arguments'  => array('services_use_key', TRUE),
+    'access callback'   => 'services_keyauth_access',
     'type'              => MENU_LOCAL_TASK,
     'file'              => 'services_keyauth.admin.inc',
   );
@@ -71,16 +78,14 @@ function services_keyauth_menu() {
   $items['admin/build/services/keys/list'] = array(
     'title'             => 'List',
     'type'              => MENU_DEFAULT_LOCAL_TASK,
-    'access callback'   => 'variable_get',
-    'access arguments'  => array('services_use_key', TRUE),
+    'access callback'   => 'services_keyauth_access',
     'weight'            => -10,
   );
   $items['admin/build/services/keys/add'] = array(
     'title'             => 'Create key',
     'page callback'     => 'drupal_get_form',
     'page arguments'    => array('services_keyauth_admin_keys_form'),
-    'access callback'   => 'variable_get',
-    'access arguments'  => array('services_use_key', TRUE),
+    'access callback'   => 'services_keyauth_access',
     'type'              => MENU_LOCAL_TASK,
     'file'              => 'services_keyauth.admin.inc',
   );
