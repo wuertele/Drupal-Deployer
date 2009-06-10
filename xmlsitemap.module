@@ -431,7 +431,11 @@ function _xmlsitemap_check_visible_link(array $conditions = array(), $flag = FAL
  * Condition builder for queries.
  */
 function _xmlsitemap_build_conditions(&$conditions, &$args = array()) {
+  $primary_key = isset($conditions['type']) && isset($conditions['id']);
   foreach ($conditions as $field => $value) {
+    if ($primary_key && $field != 'type' && $field != 'id') {
+      unset($conditions[$field]);
+    }
     if ($value === NULL) {
       $conditions[$field] = $field . ' IS NULL';
     }
@@ -472,7 +476,7 @@ function xmlsitemap_save_link(array $link) {
     'status' => 1,
     'lastmod' => 0,
     'priority' => NULL,
-    'priority_override' => NULL,
+    //'priority_override' => NULL,
     'changefreq' => 0,
     'changecount' => 0,
     //'language' => '',
@@ -527,15 +531,10 @@ function xmlsitemap_update_links($updates = array(), $conditions = array()) {
 
   $args = array();
   foreach ($updates as $field => $value) {
-    if ($field == 'priority' && $value === 'default') {
+    if (($field == 'priority' && $value === 'default') || ($field == 'status' && $value)) {
       // Default priority is NULL, but we use the string 'default' in the
       // interface so the correct default value is selected.
-      $updates[$field] = 'priority = NULL';
-    }
-    elseif ($field == 'status' && $value) {
-      // If changing status from excluded to included, set status to NULL since
-      // we may need to re-evaluate things like node_access().
-      $updates[$field] = 'status = NULL';
+      $updates[$field] = $field . ' = NULL';
     }
     else {
       $updates[$field] = $field . ' = ' . _xmlsitemap_get_placeholder($field);

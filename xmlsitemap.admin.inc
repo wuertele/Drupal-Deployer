@@ -80,6 +80,7 @@ function xmlsitemap_settings_form() {
     '#access' => module_exists('locale'),
   );
   // Disable the default langage checkbox. It should always be enabled.
+  // @todo List the individual sitemap links as description values for the language checkboxes?
   $form['xmlsitemap']['xmlsitemap_languages'][language_default('language')] = array(
     '#type' => 'checkbox',
     '#title' => language_default('name'),
@@ -94,6 +95,12 @@ function xmlsitemap_settings_form() {
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
     '#weight' => -1,
+  );
+  $form['frontpage']['path'] = array(
+    '#type' => 'item',
+    '#title' => t('Current front page'),
+    '#value' => url('', array('absolute' => TRUE)),
+    '#description' => t('The front page path can be changed at <a href="@url-frontpage">@url-frontpage</a>.', array('@url-frontpage' => url('admin/settings/site-information'))),
   );
   $form['frontpage']['xmlsitemap_frontpage_priority'] = array(
     '#type' => 'select',
