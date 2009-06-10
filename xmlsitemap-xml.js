@@ -1,5 +1,10 @@
 // $Id$
 
+/**
+ * Google Sitmaps Stylesheets (GSStylesheets) JavaScript
+ * License http://www.gnu.org/copyleft/lesser.html GNU/LGPL
+ */
+
 var selectedColor = "blue";
 var defaultColor = "black";
 var hdrRows = 1;
@@ -142,4 +147,3 @@ function compRows(a, b){
   }
   return 0;
 }
-

@@ -309,8 +309,7 @@ function _xmlsitemap_get_blurb($check_version = TRUE) {
 
   if (!isset($blurb)) {
     $blurb = FALSE;
-    $info = drupal_parse_info_file(drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap.info');
-    if (!$check_version || !isset($info['version']) || preg_match('/dev|alpha|beta/i', $info['version'])) {
+    if (!$check_version || preg_match('/dev|alpha|beta/i', _xmlsitemap_get_version())) {
       $sponsors = array(
         l('Symantec', 'http://www.symantec.com/'),
         l('WebWise Solutions', 'http://www.webwiseone.com/'),
@@ -318,11 +317,19 @@ function _xmlsitemap_get_blurb($check_version = TRUE) {
         l('lanetro', 'http://www.lanetro.com/'),
       );
       // Don't extract the following string for translation.
-      $blurb = strtr('<p>Thank you for helping test the XML sitemap module rewrite. Please consider helping offset developer free time by <a href="@link-donate">donating</a> or if your company is interested in sponsoring the rewrite or a specific feature, please <a href="@link-contact">contact the developer</a>. Thank you to the following current sponsors: !sponsors, and all the indivduals that have donated. This message will not be seen in the stable versions.</p>', array('@link-review' => 'http://drupalmodules.com/module/xml-sitemap', '@link-donate' => 'http://davereid.chipin.com/', '@link-contact' => 'http://davereid.net/contact', '!sponsors' => implode(', ', $sponsors)));
+      $blurb = '<p>Thank you for helping test the XML sitemap module rewrite. Please consider helping offset developer free time by <a href="http://davereid.chipin.com/">donating</a> or if your company is interested in sponsoring the rewrite or a specific feature, please <a href="http://davereid.net/contact">contact the developer</a>. Thank you to the following current sponsors: ' . implode(', ', $sponsors) . ', and all the indivduals that have donated. This message will not be seen in the stable versions.</p>';
+      //http://drupalmodules.com/module/xml-sitemap
     }
   }
 
   return $blurb;
+}
+
+function _xmlsitemap_get_version() {
+  $file = db_fetch_object(db_query("SELECT filename, name, type, status, schema_version FROM {system} WHERE type = 'module' AND name = 'xmlsitemap'"));
+  $info = drupal_parse_info_file(drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap.info');
+  drupal_alter('system_info', $info, $file);
+  return $info['version'];
 }
 
 /**

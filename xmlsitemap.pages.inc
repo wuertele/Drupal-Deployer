@@ -90,12 +90,13 @@ function xmlsitemap_file_transfer($source, $headers) {
  * Output an XML transformation file for the sitemap XML.
  */
 function xmlsitemap_output_xsl() {
+  module_load_include('inc', 'xmlsitemap');
   drupal_set_header('Content-type: application/xml; charset=utf-8');
   $module_path = drupal_get_path('module', 'xmlsitemap');
   $xsl_css = base_path() . $module_path . '/xmlsitemap-xml.css';
   $xsl_js = base_path() . $module_path . '/xmlsitemap-xml.js';
 
   $contents = file_get_contents($module_path . '/xmlsitemap.xsl');
-  $contents = str_replace(array('[xsl-css]', '[xsl-js]'), array($xsl_css, $xsl_js), $contents);
+  $contents = str_replace(array('[xsl-css]', '[xsl-js]', '[version]'), array($xsl_css, $xsl_js, _xmlsitemap_get_version()), $contents);
   echo $contents;
 }
