@@ -13,6 +13,7 @@ class XMLSitemapNodeTestHelper extends XMLSitemapTestHelper {
 
   function setUp() {
     parent::setUp('xmlsitemap', 'xmlsitemap_node', 'comment');
+    $this->checkFilesDirectory();
 
     $this->admin_user = $this->drupalCreateUser(array('administer nodes', 'administer content types', 'administer xmlsitemap'));
     //$this->normal_user = $this->drupalCreateUser(array('create page content', 'access content'));
@@ -24,12 +25,22 @@ class XMLSitemapNodeTestHelper extends XMLSitemapTestHelper {
   //  }
   //}
 
-  function assertNodeInSitemap($node) {
+  protected function assertNodeInSitemap($node) {
     return $this->assertInSitemap(array('type' => 'node', 'id' => (is_object($node) ? $node->nid : $node)));
   }
 
-  function assertNodeNotInSitemap($node) {
+  protected function assertNodeNotInSitemap($node) {
     return $this->assertNotInSitemap(array('type' => 'node', 'id' => (is_object($node) ? $node->nid : $node)));
+  }
+
+  protected function assertNodeLinkValues($node, array $values) {
+    $link = xmlsitemap_load_link(array('type' => 'node', 'id' => $node->nid));
+    if (!$link) {
+      $this->fail(t('Could not load sitemap link for node @nid.', array('@nid' => $node->nid)));
+    }
+    else {
+      $this->assertLinkValues($link, $values);
+    }
   }
 }
 
@@ -82,21 +93,19 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     $this->drupalLogin($this->admin_user);
 
     $node_old = $this->drupalCreateNode();
+    $this->assertNodeLinkValues($node_old, array('status' => TRUE, 'priority' => NULL));
 
     $edit = array(
       'xmlsitemap_node_status' => FALSE,
-      'xmlsitemap_node_priority' => 0.7,
+      'xmlsitemap_node_priority' => '0.0',
     );
     $this->drupalGet('admin/content/node-type/page');
     $this->drupalPost('admin/content/node-type/page', $edit, t('Save content type'));
     $this->assertText(t('The content type Page has been updated.'));
 
     $node = $this->drupalCreateNode();
-
-    $link = $this->assertNodeNotInSitemap($node);
-    $this->assertEqual($link['priority'], 0.7);
-    $link = $this->assertNodeInSitemap($node_old);
-    $this->assertEqual($link['priority'], NULL);
+    $this->assertNodeLinkValues($node, array('status' => FALSE, 'priority' => 0.0));
+    $this->assertNodeLinkValues($node_old, array('status' => FALSE, 'priority' => 0.0));
 
     $edit = array(
       'xmlsitemap_node_status' => TRUE,
@@ -105,13 +114,17 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     $this->drupalPost('admin/content/node-type/page', $edit, t('Save content type'));
     $this->assertText(t('The content type Page has been updated.'));
 
-    $this->drupalPost('node/' . $node->nid . '/edit', array(), t('Save'));
-    $this->assertText(t('Page @title has been updated.', array('@title' => $node->title)));
+    // Since the status has been set to NULL, check that these are still not visible.
+    $this->assertNodeLinkValues($node, array('status' => NULL, 'priority' => NULL));
+    $this->assertNodeLinkValues($node_old, array('status' => NULL, 'priority' => NULL));
 
-    $link = $this->assertNodeInSitemap($node);
-    $this->assertEqual($link['priority'], NULL);
-    $link = $this->assertNodeInSitemap($node_old);
-    $this->assertEqual($link['priority'], NULL);
+    // Run cron and now the links should be visible.
+    drupal_cron_run();
+    $this->assertNodeLinkValues($node, array('status' => TRUE, 'priority' => NULL));
+    $this->assertNodeLinkValues($node_old, array('status' => TRUE, 'priority' => NULL));
+
+    //$this->drupalPost('node/' . $node->nid . '/edit', array(), t('Save'));
+    //$this->assertText(t('Page @title has been updated.', array('@title' => $node->title)));
   }
 
   /**
@@ -148,8 +161,7 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
       $node = array_pop($nodes);
       if ($i <= $limit) {
         // The first $limit nodes should be inserted.
-        $link = $this->assertNodeInSitemap($node);
-        $this->assertEqual($link['lastmod'], $node->changed, t('Correct lastmod value.'));
+        $this->assertNodeLinkValues($node, array('status' => TRUE, 'lastmod' => $node->changed));
       }
       else {
         // Any beyond $limit should not be in the sitemap.

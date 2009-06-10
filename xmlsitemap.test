@@ -37,7 +37,20 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
     return $link;
   }
 
-  protected function addSitemapLink($link = array()) {
+  protected function assertLinkValues($link, array $values) {
+    foreach ($values as $key => $value) {
+      if ($value === NULL || $link[$key] === NULL) {
+        // For nullable fields, always check for identical values (===).
+        $this->assertIdentical($link[$key], $value, t('Identical values for link field @key.', array('@key' => $key)));
+      }
+      else {
+        // Otherwise check simple equality (==).
+        $this->assertEqual($link[$key], $value, t('Equal values for link field @key.', array('@key' => $key)));
+      }
+    }
+  }
+
+  protected function addSitemapLink(array $link = array()) {
     static $last_id = 1;
 
     $link += array(
