@@ -68,8 +68,67 @@ function xmlsitemap_menu_xmlsitemap_links_clear() {
   db_query("DELETE FROM {xmlsitemap} WHERE type = 'menu'");
 }
 
+/**
+ * Implementation of hook_form_FORM_ID_alter().
+ *
+ * @see node_type_form()
+ */
+function xmlsitemap_menu_form_menu_edit_menu_alter(&$form, $form_state) {
+  $menu_name = $form['menu_name']['#value'];
+  $form['xmlsitemap'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('XML sitemap'),
+    '#description' => t('Changing these settings will not change existing any existing menu items in the menu.'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $form['xmlsitemap']['xmlsitemap_menu_status'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Include this menu in the sitemap.'),
+    '#default_value' => variable_get('xmlsitemap_menu_status_' . $menu_name, TRUE),
+  );
+  $form['xmlsitemap']['xmlsitemap_menu_priority'] = array(
+    '#type' => 'select',
+    '#title' => t('Default priority'),
+    '#options' => xmlsitemap_get_priority_options(TRUE),
+    '#default_value' => variable_get('xmlsitemap_menu_priority_' . $menu_name, 'default'),
+  );
+  $form['submit']['#weight'] = 10;
+  $form['#submit'][] = 'xmlsitemap_menu_menu_edit_menu_submit';
+}
+
+function xmlsitemap_menu_menu_edit_menu_submit($form, $form_state) {
+  $menu = $form_state['values']['menu_name'];
+  $new_priority = $form_state['values']['xmlsitemap_menu_priority'];
+  $new_status = $form_state['values']['xmlsitemap_menu_status'];
+
+  $updates = array();
+  if ($new_priority != variable_get('xmlsitemap_menu_priority_' . $menu_name, 'default')) {
+    $updates['priority'] = $new_priority;
+  }
+  if ($new_status != variable_get('xmlsitemap_menu_status_' . $menu_name, FALSE)) {
+    $updates['status'] = $new_status;
+  }
+
+  if ($updates) {
+    xmlsitemap_update_links($updates, array('type' => 'menu', 'menu_name' => $menu));
+  }
+
+  variable_set('xmlsitemap_menu_priority_' . $menu, $new_priority);
+  variable_set('xmlsitemap_menu_status_' . $menu, $new_status);
+}
+
+function xmlsitemap_menu_form_menu_delete_menu_confirm_alter(&$form, $form_state) {
+  $form['#submit'][] = 'xmlsitemap_menu_form_menu_delete_menu_confirm_submit';
+}
+
+function xmlsitemap_menu_form_menu_delete_menu_confirm_submit($form, $form_state) {
+  xmlsitemap_delete_link(array('type' => 'menu', 'menu_name' => $form['#menu']['menu_name']));
+}
+
 function xmlsitemap_menu_form_alter(&$form, $form_state, $form_id) {
-  //dpm ($form_id);
+  //dpm($form_id);
+  //dpm($form);
 }
 
 function xmlsitemap_menu_form_menu_overview_form_alter(&$form, $form_state) {
@@ -160,6 +219,9 @@ function xmlsitemap_menu_get_priority($menu_item) {
 
 /**
  * Implementation of hok_form_FORM_ID_alter().
+ *
+ * Show a list of menus and their status/priorities at
+ * admin/settings/xmlsitemap.
  */
 function xmlsitemap_menu_form_xmlsitemap_settings_form_alter(&$form, $form_state) {
   $form['menu'] = array(
@@ -167,57 +229,50 @@ function xmlsitemap_menu_form_xmlsitemap_settings_form_alter(&$form, $form_state
     '#title' => t('Menus'),
     '#collapsible' => TRUE,
     '#collapsed' => !xmlsitemap_menu_var('menus'),
+    '#weight' => 0,
+    '#access' => user_access('administer menu'),
   );
 
-  $header = array(
-    t('Menu'),
-    t('Included in sitemap?'),
-    t('Default priority'),
-  );
-  $rows = array();
   $menus = menu_get_menus();
   foreach ($menus as $menu => $name) {
-    $status = variable_get('xmlsitemap_menu_status_' . $menu, FALSE);
-    $priority = variable_get('xmlsitemap_menu_priority_' . $menu, 'default');
-    $rows[] = array(
-      l($name, 'admin/build/menu-customize/' . $menu . '/edit', array('query' => drupal_get_destination())),
-      $status ? t('Included') : t('Not included'),
-      t($priority),
+    $menus[$menu] = array(
+      'name' => $name,
+      'link' => 'admin/build/menu-customize/' . $menu . '/edit',
+      'status' => variable_get('xmlsitemap_menu_status_' . $menu, FALSE),
+      'priority' => variable_get('xmlsitemap_menu_priority_' . $menu, 'default'),
     );
   }
-  $form['menu']['menu_list'] = array(
-    '#value' => theme('table', $header, $rows),
-    '#access' => FALSE,
-  );
+  xmlsitemap_settings_list(t('Menu'), $menus, $form['menu']);
 
-  $form['menu']['xmlsitemap_menu_menus'] = array(
-    '#type' => 'checkboxes',
-    '#title' => t('Menus to include in the sitemap'),
-    '#options' => menu_get_menus(),
-    '#default_value' => xmlsitemap_menu_var('menus'),
-    '#suffix' => '<hr />',
-  );
+  //$form['menu']['xmlsitemap_menu_menus'] = array(
+  //  '#type' => 'checkboxes',
+  //  '#title' => t('Menus to include in the sitemap'),
+  //  '#options' => menu_get_menus(),
+  //  '#default_value' => xmlsitemap_menu_var('menus'),
+  //  '#suffix' => '<hr />',
+  //);
+
   $form['menu']['xmlsitemap_menu_calculate_priority'] = array(
     '#type' => 'checkbox',
     '#title' => t('Calculate priority based on menu item depth and weight.'),
     '#default_value' => xmlsitemap_menu_var('calculate_priority'),
   );
 
-  array_unshift($form['#submit'], 'xmlsitemap_menu_settings_form_submit');
+  //array_unshift($form['#submit'], 'xmlsitemap_menu_settings_form_submit');
 }
 
 /**
  * Submit handler; Remove links from de-selected menus.
  */
-function xmlsitemap_menu_settings_form_submit($form, $form_state) {
-  $current_menus = xmlsitemap_menu_var('menus');
-  $selected_menus = $form_state['values']['xmlsitemap_menu_menus'];
-  $removed_menus = array_diff($current_menus, $selected_menus);
-
-  foreach ($removed_menus as $removed_menu) {
-    db_query("DELETE FROM {xmlsitemap} WHERE id IN (SELECT mlid FROM {menu_links} WHERE menu_name = '%s') AND type = 'menu'", $removed_menu);
-  }
-}
+//function xmlsitemap_menu_settings_form_submit($form, $form_state) {
+//  $current_menus = xmlsitemap_menu_var('menus');
+//  $selected_menus = $form_state['values']['xmlsitemap_menu_menus'];
+//  $removed_menus = array_diff($current_menus, $selected_menus);
+//
+//  foreach ($removed_menus as $removed_menu) {
+//    db_query("DELETE FROM {xmlsitemap} WHERE id IN (SELECT mlid FROM {menu_links} WHERE menu_name = '%s') AND type = 'menu'", $removed_menu);
+//  }
+//}
 
 /**
  * Internal default variables for template_var().
