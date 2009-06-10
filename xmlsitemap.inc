@@ -75,7 +75,8 @@ function _xmlsitemap_regenerate_after() {
  */
 function xmlsitemap_generate($chunk = 0, $language = NULL) {
   if (!is_numeric($chunk) || $chunk > xmlsitemap_get_chunk_count()) {
-    trigger_error("Inproper conditiion hit in xmlsitemap_generate(). Chunk: $chunk, Chunk Count: " . xmlsitemap_get_chunk_count());
+    // Don't bother translating this string.
+    trigger_error('Improper condition hit in xmlsitemap_generate(). Chunk: ' . $chunk . ', Chunk Count: ' . xmlsitemap_get_chunk_count());
     return FALSE;
   }
 
