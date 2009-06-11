@@ -33,7 +33,7 @@ function page_title_admin_settings() {
     '#theme' => 'page_title_admin_settings'
   );
 
-
+  // Define the basic scope column values
   $form['patterns']['scope'] = array(
     'page_title_default' => array('#type' => 'markup', '#value' => t('Global Only'),),
     'page_title_front'   => array('#type' => 'markup', '#value' => t('Global Only'),),
@@ -116,7 +116,7 @@ function page_title_admin_settings() {
     $form['patterns']['scope'][$key] = array('#type' => 'markup', '#value' => t('User'),);
   }
 
-
+  // Define the page pattern text field. This is appended to any page requests containing 'page=[0-9]+' in the query string
   $form['page_title_pager_pattern'] = array(
     '#type' => 'textfield',
     '#title' => t('Pattern for pages that contain a pager'),
