@@ -22,13 +22,13 @@ function initXsl(tabName,fileType) {
     html = ".0.";
     freq = ".2.";
     initTable(tabName);
-    setSort(tabName, 3, 1);
+    //setSort(tabName, 3, 1);
   }
   else {
     desc = ".1.";
     html = ".0.";
     initTable(tabName);
-    setSort(tabName, 1, 1);
+    //setSort(tabName, 0, 1);
   }
 
   var theURL = document.getElementById("head1");
