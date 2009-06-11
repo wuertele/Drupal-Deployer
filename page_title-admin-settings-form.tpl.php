@@ -11,6 +11,7 @@ foreach (element_children($form['pattern']) as $key) {
 
   $row = array(
     drupal_render($title),
+    drupal_render($form['scope'][$key]),
     drupal_render($form['pattern'][$key]),
     isset($form['showfield'][$key .'_showfield']) ? drupal_render($form['showfield'][$key .'_showfield']) : '',
   );
@@ -18,6 +19,6 @@ foreach (element_children($form['pattern']) as $key) {
   $rows[] = $row;
 }
 
-print theme('table', array(t('Page Type'), t('Pattern'), t('Show Field')), $rows);
+print theme('table', array(t('Page Type'), t('Token Scope'), t('Pattern'), t('Show Field')), $rows);
 
 print drupal_render($form);

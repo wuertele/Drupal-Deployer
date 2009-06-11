@@ -34,6 +34,12 @@ function page_title_admin_settings() {
   );
 
 
+  $form['patterns']['scope'] = array(
+    'page_title_default' => array('#type' => 'markup', '#value' => t('Global Only'),),
+    'page_title_front'   => array('#type' => 'markup', '#value' => t('Global Only'),),
+    'page_title_user'    => array('#type' => 'markup', '#value' => t('User'),),
+  );
+
   // Define the 'default' token patterns
   $form['patterns']['pattern'] = array(
     'page_title_default' => array(
@@ -73,6 +79,8 @@ function page_title_admin_settings() {
     $form['patterns']['showfield'][$key .'_showfield'] = array(
       '#default_value' => variable_get($key .'_showfield', 0),
     ) + $showfield_form_element;
+
+    $form['patterns']['scope'][$key] = array('#type' => 'markup', '#value' => t('Node'),);
   }
 
 
@@ -92,7 +100,20 @@ function page_title_admin_settings() {
       $form['patterns']['showfield'][$key .'_showfield'] = array(
         '#default_value' => variable_get($key .'_showfield', 0),
       ) + $showfield_form_element;
+
+      $form['patterns']['scope'][$key] = array('#type' => 'markup', '#value' => t('Taxonomy'),);
     }
+  }
+
+  // Add the blog homepage pattern field
+  if (module_exists('blog')) {
+    $key = 'page_title_blog';
+    $form['patterns']['pattern'][$key] = array(
+      '#title' => t('Blog Homepage'),
+      '#default_value' => variable_get($key, ''),
+    ) + $pattern_form_element;
+
+    $form['patterns']['scope'][$key] = array('#type' => 'markup', '#value' => t('User'),);
   }
 
 
