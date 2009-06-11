@@ -166,25 +166,25 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language = NULL) 
 
   xmlsitemap_generate_chunk_header($handle, $status);
   while ($link = db_fetch_array($query)) {
-    $status &= (bool) fwrite($handle, '<url>');
-    $status &= (bool) fwrite($handle, '<loc>'. url($link['url'], $url_options) .'</loc>');
+    $link_output = '<url><loc>' . url($link['url'], $url_options) . '</loc>';
     if ($link['lastmod']) {
-      $status &= (bool) fwrite($handle, '<lastmod>'. gmdate(DATE_W3C, $link['lastmod']) .'</lastmod>');
+      $link_output .= '<lastmod>' . gmdate(DATE_W3C, $link['lastmod']) . '</lastmod>';
       // If the link has a lastmod value, update the changefreq so that links
       // with a short changefreq but updated two years ago show decay.
       //xmlsitemap_recalculate_changefreq($link);
       $link['changefreq'] = (REQUEST_TIME - $link['lastmod'] + $link['changefreq']) / 2;
     }
     if ($link['changefreq']) {
-      $status &= (bool) fwrite($handle, '<changefreq>'. xmlsitemap_get_changefreq($link['changefreq']) .'</changefreq>');
+      $link_output .= '<changefreq>' . xmlsitemap_get_changefreq($link['changefreq']) . '</changefreq>';
     }
     if (isset($link['priority']) && $link['priority'] != 0.5) {
       // Don't output the priority value for links that have 0.5 priority. This
       // is the default 'assumed' value if priority is not included as per the
       // sitemaps.org specification.
-      $status &= (bool) fwrite($handle, '<priority>'. number_format($link['priority'], 1) .'</priority>');
+      $link_output .= '<priority>' . number_format($link['priority'], 1) . '</priority>';
     }
-    $status &= (bool) fwrite($handle, '</url>' . "\n");
+    $link_output .= '</url>' . PHP_EOL;
+    $status &= (bool) fwrite($handle, $link_output);
   }
   $status &= (bool) fwrite($handle, '</urlset>');
 
