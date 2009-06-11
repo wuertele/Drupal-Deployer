@@ -9,6 +9,35 @@
  */
 
 /**
+ * Given an internal Drupal path, return the alias for the path.
+ *
+ * This is similar to drupal_get_path_alias(), but designed to fetch all alises
+ * at once so that only one database query is executed instead of several or
+ * possibly thousands during sitemap generation.
+ *
+ * @param $path
+ *   An internal Drupal path.
+ * @param $language
+ *   A language code to look use when looking up the paths.
+ */
+function xmlsitemap_get_path_alias($path, $language) {
+  static $aliases;
+  static $aliases_langauge;
+
+  if (!isset($aliases) || $aliases_langauge != $language) {
+    // @todo Don't reset the language-neutral path aliases.
+    $aliases = array();
+    $aliases_langauge = $language;
+    $query = db_query("SELECT src, dst FROM {url_alias} WHERE language IN ('%s', '') ORDER BY language, pid", $language);
+    while ($alias = db_fetch_object($query)) {
+      $aliases[$alias->src] = $alias->dst;
+    }
+  }
+
+  return isset($aliases[$path]) ? $aliases[$path] : $path;
+}
+
+/**
  * Delete and regenerate the sitemap files.
  */
 function xmlsitemap_regenerate() {
@@ -159,14 +188,15 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language = NULL) 
   $sql = "SELECT x.loc AS url, x.lastmod, x.changefreq, x.changecount, COALESCE(x.priority_override, x.priority) AS priority FROM {xmlsitemap} x
           WHERE x.status = 1";
   $args = array();
-  $url_options = xmlsitemap_get_url_options(array('language' => $language));
+  $url_options = xmlsitemap_get_url_options(array('language' => $language, 'alias' => TRUE));
   $offset = max($chunk - 1, 0) * xmlsitemap_get_chunk_size();
   $limit = xmlsitemap_get_chunk_size();
   $query = db_query_range($sql, $args, $offset, $limit);
 
   xmlsitemap_generate_chunk_header($handle, $status);
   while ($link = db_fetch_array($query)) {
-    $link_output = '<url><loc>' . url($link['url'], $url_options) . '</loc>';
+    $link_alias = xmlsitemap_get_path_alias($link['url'], $language->language);
+    $link_output = '<url><loc>' . url($link_alias, $url_options) . '</loc>';
     if ($link['lastmod']) {
       $link_output .= '<lastmod>' . gmdate(DATE_W3C, $link['lastmod']) . '</lastmod>';
       // If the link has a lastmod value, update the changefreq so that links
@@ -201,7 +231,7 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language = NULL) 
  *   A language object, defaults to the default language.
  */
 function xmlsitemap_generate_index($handle, &$status, $language = NULL) {
-  $url_options = xmlsitemap_get_url_options(array('language' => $language));
+  $url_options = xmlsitemap_get_url_options(array('language' => $language, 'alias' => TRUE));
   $chunk_count = xmlsitemap_get_chunk_count(TRUE);
 
   xmlsitemap_generate_chunk_header($handle, $status, TRUE);
