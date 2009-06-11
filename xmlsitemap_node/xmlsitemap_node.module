@@ -103,57 +103,6 @@ function xmlsitemap_node_form_xmlsitemap_settings_form_alter(&$form, $form_state
 }
 
 /**
- * Implementation of hook_form_alter().
- */
-//function xmlsitemap_node_form_alter(&$form, $form_state, $form_id) {
-//  if (isset($form['type']) && isset($form['#node']) && $form['type']['#value'] .'_node_form' == $form_id) {
-//    $node = $form['#node'];
-//    if (!isset($node->nid)) {
-//      // Handle new nodes that do not have a value for nid yet.
-//      $node->nid = NULL;
-//    }
-//    $link = xmlsitemap_node_create_link($node);
-//
-//    $form['xmlsitemap'] = array(
-//      '#type' => 'fieldset',
-//      '#tree' => TRUE,
-//      '#title' => t('Sitemap'),
-//      '#collapsible' => TRUE,
-//      '#collapsed' => TRUE,
-//      '#weight' => 30,
-//      '#access' => FALSE && (user_access('administer xmlsitemap') || user_access('administer nodes')),
-//    );
-//    //$form['xmlsitemap']['status'] = array(
-//    //  '#type' => 'checkbox',
-//    //  '#title' => t('Include this content in the sitemap.'),
-//    //  '#default_value' => $node->xmlsitemap['status'],
-//    //);
-//    //$form['xmlsitemap']['priority_override'] = array(
-//    //  '#type' => 'select',
-//    //  '#title' => t('Priority'),
-//    //  '#options' => xmlsitemap_get_priority_options(TRUE, $link['priority']),
-//    //  '#default_value' => $node->xmlsitemap['priority_override'],
-//    //);
-//    $form['xmlsitemap']['lastmod'] = array(
-//      '#type' => 'value',
-//      '#value' => $node->xmlsitemap['lastmod'],
-//    );
-//    $form['xmlsitemap']['changefreq'] = array(
-//      '#type' => 'value',
-//      '#value' => $node->xmlsitemap['changefreq'],
-//    );
-//    $form['xmlsitemap']['changecount'] = array(
-//      '#type' => 'value',
-//      '#value' => $node->xmlsitemap['changecount'],
-//    );
-//    //if (isset($node->nid) && !node_access('view', $node, drupal_anonymous_user())) {
-//    //  $form['xmlsitemap']['xmlsitemap_status']['#disabled'] = TRUE;
-//    //  $form['xmlsitemap']['xmlsitemap_status']['#description'] = t('If this content is not viewable by anonymous users, it will be excluded from the sitemap.');
-//    //}
-//  }
-//}
-
-/**
  * Implementation of hook_form_FORM_ID_alter().
  *
  * @see node_type_form()
@@ -203,6 +152,58 @@ function xmlsitemap_node_type_form_submit($form, $form_state) {
 
   if ($updates) {
     xmlsitemap_update_links($updates, array('type' => 'node', 'node_type' => $node_type));
+  }
+}
+
+/**
+ * Implementation of hook_form_alter().
+ */
+function xmlsitemap_node_form_alter(&$form, $form_state, $form_id) {
+  if (isset($form['type']) && isset($form['#node']) && $form['type']['#value'] .'_node_form' == $form_id) {
+    $node = $form['#node'];
+    if (!isset($node->nid)) {
+      // Handle new nodes that do not have a value for nid yet.
+      $node->nid = NULL;
+    }
+    $link = xmlsitemap_node_create_link($node);
+
+    $form['xmlsitemap'] = array(
+      '#type' => 'fieldset',
+      '#tree' => TRUE,
+      '#title' => t('XML sitemap'),
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#access' => user_access('administer xmlsitemap') || user_access('administer nodes'),
+    );
+    //$form['xmlsitemap']['status_override'] = array(
+    //  '#type' => 'checkbox',
+    //  '#title' => t('Include this content in the sitemap.'),
+    //  '#default_value' => $node->xmlsitemap['status_override'],
+    //);
+    $form['xmlsitemap']['priority_override'] = array(
+      '#type' => 'select',
+      '#title' => t('Priority'),
+      '#options' => xmlsitemap_get_priority_options($link['priority']),
+      '#default_value' => $node->xmlsitemap['priority_override'],
+      '#description' => user_access('administer content types') ? t('The default priority for this content type can be changed <a href="@link-type">here</a>.', array('@link-type' => url('admin/content/node-type/' . $node->type, array('query' => drupal_get_destination())))) : '',
+    );
+    $form['xmlsitemap']['lastmod'] = array(
+      '#type' => 'value',
+      '#value' => $node->xmlsitemap['lastmod'],
+    );
+    $form['xmlsitemap']['changefreq'] = array(
+      '#type' => 'value',
+      '#value' => $node->xmlsitemap['changefreq'],
+    );
+    $form['xmlsitemap']['changecount'] = array(
+      '#type' => 'value',
+      '#value' => $node->xmlsitemap['changecount'],
+    );
+
+    //if (isset($node->nid) && !node_access('view', $node, drupal_anonymous_user())) {
+    //  $form['xmlsitemap']['status_override']['#disabled'] = TRUE;
+    //  $form['xmlsitemap']['status_override']['#description'] = t('This content is not currently visible to anonymous users, so it cannot be included in the sitemap.');
+    //}
   }
 }
 
