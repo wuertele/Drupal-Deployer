@@ -22,19 +22,34 @@
  */
 function xmlsitemap_get_path_alias($path, $language) {
   static $aliases;
-  static $aliases_langauge;
+  static $last_language;
 
-  if (!isset($aliases) || $aliases_langauge != $language) {
-    // @todo Don't reset the language-neutral path aliases.
-    $aliases = array();
-    $aliases_langauge = $language;
-    $query = db_query("SELECT src, dst FROM {url_alias} WHERE language IN ('%s', '') ORDER BY language, pid", $language);
+  if (!isset($aliases)) {
+    $aliases['all'] = array();
+    $query = db_query("SELECT src, dst FROM {url_alias} WHERE language = '' ORDER BY pid");
     while ($alias = db_fetch_object($query)) {
-      $aliases[$alias->src] = $alias->dst;
+      $aliases['all'][$alias->src] = $alias->dst;
     }
   }
+  if ($language && $last_language != $language) {
+    unset($aliases[$last_language]);
+    $aliases[$language] = array();
+    $query = db_query("SELECT src, dst FROM {url_alias} WHERE language = '%s' ORDER BY pid", $language);
+    while ($alias = db_fetch_object($query)) {
+      $aliases[$language][$alias->src] = $alias->dst;
+    }
+    $last_language = $language;
+  }
 
-  return isset($aliases[$path]) ? $aliases[$path] : $path;
+  if ($language && isset($aliases[$language][$path])) {
+    return $aliases[$language][$path];
+  }
+  elseif (isset($aliases['all'][$path])) {
+    return $aliases['all'][$path];
+  }
+  else {
+    return $path;
+  }
 }
 
 /**
@@ -179,12 +194,6 @@ function xmlsitemap_generate_chunk_header($handle, &$status, $index = FALSE) {
 function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language = NULL) {
   // @todo Optimize the query.
   // @todo When should "AND x.language IN ('%s', '')" be used? Drupal still lists English content when viewing site in French.
-  //$sql = "SELECT x.loc, COALESCE(ua.dst, x.loc) AS url, x.lastmod, x.changefreq, x.changecount, COALESCE(x.priority_override, x.priority) AS priority, ua.language, ua.pid FROM {xmlsitemap} x
-  //        LEFT JOIN {url_alias} ua ON x.loc = ua.src AND ua.language IN ('%s', '')
-  //        WHERE x.status = 1
-  //        ORDER BY x.loc, ua.language DESC, ua.pid DESC";
-  //$args = array($language->language);
-  //$url_options = xmlsitemap_get_url_options(array('language' => $language, 'alias' => TRUE));
   $sql = "SELECT x.loc AS url, x.lastmod, x.changefreq, x.changecount, COALESCE(x.priority_override, x.priority) AS priority FROM {xmlsitemap} x
           WHERE x.status = 1";
   $args = array();
