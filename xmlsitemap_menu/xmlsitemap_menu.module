@@ -17,7 +17,7 @@ function xmlsitemap_menu_cron() {
     //$query = db_query_range($sql, $menus, 0, xmlsitemap_var('batch_limit'));
 
     while ($mlid = db_result($query)) {
-      $menu_item = menu_link_load($mlid);
+      $menu_item = xmlsitemap_menu_menu_link_load($mlid);
       $link = xmlsitemap_menu_create_link($menu_item);
       xmlsitemap_save_link($link);
     }
@@ -25,6 +25,17 @@ function xmlsitemap_menu_cron() {
     // Set the global user variable back to the original user.
     xmlsitemap_restore_user();
   //}
+}
+
+/**
+ * Load a menu link and its associated sitemap link data.
+ */
+function xmlsitemap_menu_menu_link_load($mlid) {
+  $menu_item = menu_link_load($mlid);
+  if ($data = xmlsitemap_load_link(array('type' => 'menu', 'id' => $mlid))) {
+    $menu_item['xmlsitemap'] = $data;
+  }
+  return $menu_item;
 }
 
 /**
@@ -44,7 +55,7 @@ function xmlsitemap_menu_xmlsitemap_links($offset = 0, $limit = 0) {
     $query = ($limit ? db_query_range($sql, $args, 0, $limit) : db_query($sql, $args));
 
     while ($mlid = db_result($query)) {
-      $menu_item = menu_link_load($mlid);
+      $menu_item = xmlsitemap_menu_menu_link_load($mlid);
       $links[] = xmlsitemap_menu_create_link($menu_item);
     }
 
@@ -194,14 +205,22 @@ function xmlsitemap_menu_item_delete($menu_item) {
  *   A loaded menu item.
  */
 function xmlsitemap_menu_create_link($menu_item) {
-  return array(
+  if (!isset($menu_item['xmlsitemap'])) {
+    $menu_item['xmlsitemap'] = array();
+  }
+
+  $menu_item['xmlsitemap'] += array(
     'type' => 'menu',
     'id' => $menu_item['mlid'],
     'loc' => $menu_item['link_path'],
-    'priority' => xmlsitemap_menu_get_priority($menu_item),
-    'status' => $menu_item['access'] && !$menu_item['external'] && !$menu_item['hidden'] && variable_get('xmlsitemap_menu_status_' . $menu_item['menu_name'], FALSE),
     'menu_name' => $menu_item['menu_name'],
   );
+
+  // The following values must always be checked because they are volatile.
+  $menu_item['xmlsitemap']['status'] = xmlsitemap_menu_get_status($menu_item);
+  $menu_item['xmlsitemap']['priority'] = xmlsitemap_menu_get_priority($menu_item);
+
+  return $menu_item['xmlsitemap'];
 }
 
 /**
@@ -216,6 +235,10 @@ function xmlsitemap_menu_get_priority($menu_item) {
   else {
     return variable_get('xmlsitemap_menu_priority_' . $menu_item['menu_name'], 'default');
   }
+}
+
+function xmlsitemap_menu_get_status($menu_item) {
+  $status = $menu_item['access'] && !$menu_item['external'] && !$menu_item['hidden'] && variable_get('xmlsitemap_menu_status_' . $menu_item['menu_name'], FALSE);
 }
 
 /**
