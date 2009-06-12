@@ -315,8 +315,8 @@ function xmlsitemap_get_changefreq($interval) {
 function xmlsitemap_get_chunk_count($reset = FALSE) {
   static $chunks;
   if (!isset($chunks) || $reset) {
-    $count = xmlsitemap_get_link_count($reset);
-    $chunks = ceil(max($count, 1) / xmlsitemap_get_chunk_size($reset));
+    $count = max(xmlsitemap_get_link_count($reset), 1);
+    $chunks = ceil($count / xmlsitemap_get_chunk_size($reset));
   }
   return $chunks;
 }
@@ -327,7 +327,7 @@ function xmlsitemap_get_chunk_count($reset = FALSE) {
 function xmlsitemap_get_link_count($reset = FALSE) {
   static $count;
   if (!isset($count) || $reset) {
-    $count = db_result(db_query("SELECT COUNT(*) FROM {xmlsitemap} WHERE status = 1"));
+    $count = db_result(db_query("SELECT COUNT(id) FROM {xmlsitemap} WHERE status = 1"));
   }
   return $count;
 }
@@ -348,7 +348,7 @@ function xmlsitemap_get_chunk_size($reset = FALSE) {
   static $size;
   if (!isset($size) || $reset) {
     $size = xmlsitemap_var('chunk_size');
-    if ($size == 'auto') {
+    if ($size === 'auto') {
       $count = max(xmlsitemap_get_link_count($reset), 1); // Prevent divide by zero.
       $size = min(ceil($count / 10000) * 5000, 50000);
     }
