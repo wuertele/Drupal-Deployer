@@ -115,7 +115,7 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
   }
 
   /**
-   * Test the xmlsitemap_get_changefreq() function.
+   * Tests for xmlsitemap_get_changefreq().
    */
   function testGetChangefreq() {
     // The test values.
@@ -152,9 +152,31 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
    * Tests for xmlsitemap_get_chunk_count().
    */
   function testGetChunkCount() {
-    db_query("UPDATE {xmlsitemap} SET status = 0");
+    // Set a low chunk size for testing.
+    variable_set('xmlsitemap_chunk_size', 4);
+
+    // Make the total number of links just equal to the chunk size.
+    $count = db_result(db_query("SELECT COUNT(id) FROM {xmlsitemap}"));
+    for ($i = $count; $i < 4; $i++) {
+      $this->addSitemapLink();
+      $this->assertEqual(xmlsitemap_get_chunk_count(TRUE), 1);
+    }
+    $this->assertEqual(db_result(db_query("SELECT COUNT(id) FROM {xmlsitemap}")), 4);
+
+    // Add a disabled link, should not change the chunk count.
+    $this->addSitemapLink(array('status' => FALSE));
     $this->assertEqual(xmlsitemap_get_chunk_count(TRUE), 1);
 
+    // Add a visible link, should finally bump up the chunk count.
+    $this->addSitemapLink();
+    $this->assertEqual(xmlsitemap_get_chunk_count(TRUE), 2);
+
+    // Change all links to disabled. The chunk count should be 1 not 0.
+    db_query("UPDATE {xmlsitemap} SET status = 0");
+    $this->assertEqual(xmlsitemap_get_chunk_count(TRUE), 1);
+    $this->assertEqual(xmlsitemap_get_link_count(), 0);
+
+    // Delete all links. The chunk count should be 1 not 0.
     db_query("DELETE FROM {xmlsitemap}");
     $this->assertEqual(db_result(db_query("SELECT COUNT(id) FROM {xmlsitemap}")), 0);
     $this->assertEqual(xmlsitemap_get_chunk_count(TRUE), 1);
@@ -170,7 +192,7 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
   //}
 
   /**
-   * Test the xmlsitemap_calculate_changereq() function.
+   * Tests for xmlsitemap_calculate_changereq().
    */
   function testCalculateChangefreq() {
     // The test values.
@@ -192,7 +214,7 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
   }
 
   /**
-   * Test the xmlsitemap_recalculate_changefreq() function.
+   * Test for xmlsitemap_recalculate_changefreq().
    */
   function testRecalculateChangefreq() {
     // The starting test value.
@@ -212,7 +234,7 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
   }
 
   /**
-   * Test the xmlsitemap_switch_user and xmlsitemap_restore_user() functions.
+   * Tests for xmlsitemap_switch_user and xmlsitemap_restore_user().
    */
   function testSwitchUser() {
     global $user;
@@ -240,7 +262,7 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
   //}
 
   /**
-   * Unit tests for xmlsitemap_save_link().
+   * Tests for xmlsitemap_save_link().
    */
   function testSaveLink() {
     $this->assertFalse(xmlsitemap_var('regenerate_needed'));
@@ -312,7 +334,7 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
   }
 
   /**
-   * Unit tests for xmlsitemap_delete_link().
+   * Tests for xmlsitemap_delete_link().
    */
   function testDeleteLink() {
     // Add our testing data.
@@ -339,7 +361,7 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
   }
 
   /**
-   * Unit tests for xmlsitemap_update_links().
+   * Tests for xmlsitemap_update_links().
    */
   function testUpdateLinks() {
     // Add our testing data.
