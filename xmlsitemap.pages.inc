@@ -93,10 +93,10 @@ function xmlsitemap_output_xsl() {
   module_load_include('inc', 'xmlsitemap');
   drupal_set_header('Content-type: application/xml; charset=utf-8');
   $module_path = drupal_get_path('module', 'xmlsitemap');
-  $xsl_css = base_path() . $module_path . '/xmlsitemap-xml.css';
-  $xsl_js = base_path() . $module_path . '/xmlsitemap-xml.js';
+  $xsl_css = base_path() . $module_path . '/xsl/xmlsitemap.xsl.css';
+  $xsl_js = base_path() . $module_path . '/xsl/xmlsitemap.xsl.js';
 
-  $contents = file_get_contents($module_path . '/xmlsitemap.xsl');
+  $contents = file_get_contents($module_path . '/xsl/xmlsitemap.xsl');
   $contents = str_replace(array('[xsl-css]', '[xsl-js]', '[version]'), array($xsl_css, $xsl_js, _xmlsitemap_get_version()), $contents);
   echo $contents;
 }
