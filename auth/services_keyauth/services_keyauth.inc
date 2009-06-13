@@ -97,11 +97,11 @@ function _services_keyauth_alter_methods(&$methods) {
         $method['#auth'] = TRUE;
     }
     
-    if ($method['#auth'] and variable_get('services_use_sessid', TRUE)) {
+    if ($method['#auth'] && variable_get('services_use_sessid', TRUE)) {
       array_unshift($method['#args'], $arg_sessid);
     }
 
-    if ($method['#key'] and variable_get('services_use_key', TRUE)) {
+    if ($method['#key'] && variable_get('services_use_key', TRUE)) {
       array_unshift($method['#args'], $arg_nonce);
       array_unshift($method['#args'], $arg_domain_time_stamp);
       array_unshift($method['#args'], $arg_domain_name);
@@ -110,16 +110,7 @@ function _services_keyauth_alter_methods(&$methods) {
   }
 }
 
-function _services_keyauth_get_first_key() {
-  $keys = services_keyauth_get_keys();
-  foreach ($keys as $kid => $key) {
-    return $kid;
-  }
-}
-
 function _services_keyauth_alter_browse_form(&$form, $method) {
-  //$timestamp = time();
-  //$nonce = user_password();
 
   foreach ($method['#args'] as $key => $arg) {
     switch ($arg['#name']) {
@@ -153,7 +144,7 @@ function _services_keyauth_alter_browse_form(&$form, $method) {
 }
 
 function _services_keyauth_authenticate_call($method, $method_name, &$args) {
-  if ($method['#key'] and variable_get('services_use_key', TRUE)) {
+  if ($method['#key'] && variable_get('services_use_key', TRUE)) {
     $hash = array_shift($args);
     $domain = array_shift($args);
     $timestamp = array_shift($args);
