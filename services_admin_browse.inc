@@ -344,7 +344,7 @@ function _services_ahah_security_options() {
     $settings = services_auth_invoke_custom($_POST['auth_module'], 'security_settings');
   }
 
-  if ($settings) {
+  if (is_array($settings)) {
     $cached_form['security']['options']['settings'] = $settings;
   }
   else {
