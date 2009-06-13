@@ -76,6 +76,7 @@ function services_keyauth_admin_keys_form() {
     '#type'           => 'textfield',
     '#default_value'  => isset($key->domain) ? $key->domain : '',
     '#description'    => t('External domain allowed to use this key.'),
+    '#required'       => TRUE,
   );
   
   $methods = services_get_all();
