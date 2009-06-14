@@ -92,15 +92,10 @@ function xmlsitemap_settings_form() {
   $form['frontpage'] = array(
     '#type' => 'fieldset',
     '#title' => t('Front page'),
+    '#description' => t('The front page path can be changed at <a href="@url-frontpage">@url-frontpage</a>.', array('@url-frontpage' => url('admin/settings/site-information'))),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
     '#weight' => -1,
-  );
-  $form['frontpage']['path'] = array(
-    '#type' => 'item',
-    '#title' => t('Current front page'),
-    '#value' => url('', array('absolute' => TRUE)),
-    '#description' => t('The front page path can be changed at <a href="@url-frontpage">@url-frontpage</a>.', array('@url-frontpage' => url('admin/settings/site-information'))),
   );
   $form['frontpage']['xmlsitemap_frontpage_priority'] = array(
     '#type' => 'select',
