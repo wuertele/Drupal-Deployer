@@ -228,7 +228,9 @@ function xmlsitemap_settings_form_submit($form, $form_state) {
  * @see xmlsitemap_rebuild_confirm_submit()
  */
 function xmlsitemap_rebuild_confirm() {
-  $modules = module_implements('xmlsitemap_links', TRUE);
+  // Show only the modules that implement the 6.x-2.x hooks.
+  $modules = module_implements('xmlsitemap_links_clear', TRUE);
+
   $form['modules'] = array(
     '#type' => 'select',
     '#title' => t("Select which modules' links you would like to rebuild"),
