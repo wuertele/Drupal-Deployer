@@ -1020,7 +1020,7 @@ function project_issue_insert($node) {
   );
   foreach ($fields as $field => $default) {
     // Some of the incoming data may not have the correct default.
-    if (!$node->$field) {
+    if (empty($node->$field)) {
       $node->$field = $default;
     }
     $original_issue_data->$field = $node->$field;
