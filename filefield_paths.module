@@ -378,7 +378,11 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 
       // Process files.
       foreach ($ffp['#files'] as &$file) {
-        module_invoke_all('filefield_paths_process_file', $file['new'], $file, $ffp['#settings'][$file['name']], $node, $update);
+        // Invoke hook_filefield_paths_process_file().
+        foreach (module_implements('filefield_paths_process_file') as $module) {
+          $function = $module .'_filefield_paths_process_file';
+          $function($file['new'], $file, $ffp['#settings'][$file['name']], $node, $update);
+        }
       }
 
       // Re-write node entry if required.
@@ -406,20 +410,10 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
           $paths = explode('/', $field['filepath']['value']);
           filefield_paths_cleanup_temp($paths);
 
-          // Check for ImageFields.
-          $imagefield = FALSE;
-          foreach ($ffp['#files'] as $file) {
-            if ($file['name'] == $name) {
-              if (isset($file['widget']) && $file['widget'] == 'imagefield') {
-                $imagefield = TRUE;
-              }
-              break;
-            }
-          }
-          // Cleanup ImageFields temporary thumbnail paths.
-          if ($imagefield) {
-            array_unshift($paths, 'imagefield_thumbs');
-            filefield_paths_cleanup_temp($paths);
+          // Invoke hook_filefield_paths_cleanup().
+          foreach (module_implements('filefield_paths_cleanup') as $module) {
+            $function = $module .'_filefield_paths_cleanup';
+            $function($ffp, $paths, $name);
           }
         }
       }
@@ -494,7 +488,7 @@ function filefield_paths_filefield_paths_process_file($new, &$file, $settings, &
       if (filefield_paths_file_move($file)) {
 
         // Fix reference to old paths in Body and Teaser
-        // @TODO: allow for CCK fields
+        // TODO: allow for CCK fields
         if (isset($node->body)) {
           $file['filepath']['new'] = str_replace($file['filename']['old'], $file['filename']['new'], $file['filepath']['new']);
 
@@ -510,11 +504,6 @@ function filefield_paths_filefield_paths_process_file($new, &$file, $settings, &
 
             $update->node = TRUE;
           }
-        }
-
-        // Move ImageField thumbnail.
-        if (isset($file['widget']) && $file['widget'] == 'imagefield' && file_exists($thumbnail_source = imagefield_file_admin_thumb_path(array('filepath' => $file['filepath']['old'])))) {
-          file_delete($thumbnail_source);
         }
 
         // Store new filename in file Array
