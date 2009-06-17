@@ -89,7 +89,8 @@ function page_title_theme() {
  * Updates settings after a node type change.
  */
 function page_title_node_type($op, $info) {
-  if ($op == 'update' && !empty($info->old_type) and $info->type != $info->old_type) {
+  // Handle a content type rename
+  if ($op == 'update' && !empty($info->old_type) && $info->type != $info->old_type) {
     // Load the old node type settings.
     $temp = variable_get('page_title_type_'. $info->old_type, '');
 
@@ -99,15 +100,21 @@ function page_title_node_type($op, $info) {
     }
 
     // Delete the old setting
-    variable_del('page_title_type_'. $info-old_type);
-
+    variable_del('page_title_type_'. $info->old_type);
 
     // Essentially, do the same as above but with the _showfield suffix for the node type
     $temp = variable_get('page_title_type_'. $info->old_type .'_showfield', 0);
     if ($temp) {
       variable_set('page_title_type_'. $info->type .'_showfield', $temp);
     }
-    variable_del('page_title_type_'. $info-old_type .'_showfield');
+    variable_del('page_title_type_'. $info->old_type .'_showfield');
+
+  }
+
+  // If deleted, remove the variables
+  if ($op == 'delete') {
+    variable_del('page_title_type_'. $info->type);
+    variable_del('page_title_type_'. $info->type .'_showfield');
   }
 }
 
@@ -201,6 +208,9 @@ function page_title_node_type_form_submit($form, &$form_state) {
   $show_field = $form_state['values']['page_title']['show_field']['show_field'] ? 1 : 0;
   variable_set('page_title_type_'. $form_state['values']['type'] .'_showfield', $show_field);
   variable_set('page_title_type_'. $form_state['values']['type'], $form_state['values']['page_title']['pattern']);
+
+  // For some reason the node module adds the fieldset as a separate entry in the variables table... we dont want this!
+  variable_del('page_title_'. $form_state['values']['type']);
 }
 
 

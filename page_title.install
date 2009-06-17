@@ -73,9 +73,27 @@ function page_title_update_6200() {
  */
 function page_title_uninstall() {
   drupal_uninstall_schema('page_title');
+
+  // Clear variables
+  variable_del('page_title_default');
   variable_del('page_title_individual');
   variable_del('page_title_front');
-  foreach (node_get_types('names') AS $type => $name) {
-    variable_del("page_title_display_$type");
+  variable_del('page_title_blog');
+  variable_del('page_title_user');
+  variable_del('page_title_user_showfield');
+  variable_del('page_title_pager_pattern');
+
+  // Clear the node specific variables
+  $types = node_get_types('names');
+  foreach ($types as $type => $name) {
+    variable_del("page_title_type_{$type}");
+    variable_del("page_title_type_{$type}_showfield");
+  }
+
+  // Clear the vocab specific variables
+  $vocabs = taxonomy_get_vocabularies();
+  foreach ($vocabs as $vid => $vocab) {
+    variable_del("page_title_vocab_{$vid}");
+    variable_del("page_title_vocab_{$vid}_showfield");
   }
 }
