@@ -62,6 +62,13 @@ wish to use.
   http://[www.yoursite.com/path/to/drupal]/admin/content/node-type/[node-type]
 
 
+* Image module
+
+  Settings can be found on the Images configuration page in 'Image file settings
+  > Image Path settings'.
+  http://[www.yoursite.com/path/to/drupal]/admin/settings/image
+
+
 * Comment Upload module
 
   Settings can be found on the content types configuration page in 'Comment

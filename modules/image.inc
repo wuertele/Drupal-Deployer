@@ -61,7 +61,8 @@ function image_filefield_paths_get_fields(&$node, &$ffp) {
         'field' => array(
           'filepath' => &$file,
           'filename' => $file_info['basename'],
-          'fid' => $info[$name]
+          'fid' => $info[$name],
+          'type' => $name
         ),
         'module' => 'image',
         'name' => 'image',
