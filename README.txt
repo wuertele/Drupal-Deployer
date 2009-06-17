@@ -18,6 +18,7 @@ Features
   * FileField module.
   * ImageField module.
   * ImageField Crop module.
+  * Image module.
   * Comment Upload module.
 * File path and filename cleanup options:
   * Filter out words and punctuation by taking advantage of the Pathauto module.
