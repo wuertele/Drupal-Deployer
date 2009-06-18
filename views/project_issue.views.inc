@@ -237,7 +237,7 @@ function project_issue_views_plugins() {
         'path' => $path,
         'theme' => 'views_view_table',
         'theme file' => 'theme.inc',
-        'theme path' => "$views_path/views/theme",
+        'theme path' => "$views_path/theme",
         'uses row plugin' => FALSE,
         'uses fields' => TRUE,
         'uses options' => TRUE,
