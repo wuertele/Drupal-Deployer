@@ -19,15 +19,36 @@ function node_export_settings() {
   
   $form['publishing'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Should the publishing options ( e.g. published, promoted, etc) be reset to the defaults?'),
+    '#title' => t('Reset values on import?'),
   );
   $types = node_get_types('names');
 
   foreach ($types as $type => $name) {
     $form['publishing']['node_export_reset_'. $type] = array(
       '#type' => 'checkbox',
-      '#title' => t('@s: reset publishing options when exported', array('@s' => $name)),
+      '#title' => t('@s: reset publishing options when importing', array('@s' => $name)),
       '#default_value' => variable_get('node_export_reset_'. $type, FALSE),
+      '#description' => t("This will reset 'status', 'moderate', 'promote', 'sticky', and 'revision'."),
+    );
+    $form['publishing']['node_export_reset_created_'. $type] = array(
+      '#type' => 'checkbox',
+      '#title' => t('@s: reset created time ("Authored on" date) when importing', array('@s' => $name)),
+      '#default_value' => variable_get('node_export_reset_created_'. $type, TRUE),
+    );
+    $form['publishing']['node_export_reset_menu_'. $type] = array(
+      '#type' => 'checkbox',
+      '#title' => t('@s: reset menu link when importing', array('@s' => $name)),
+      '#default_value' => variable_get('node_export_reset_menu_'. $type, TRUE),
+    );
+    $form['publishing']['node_export_reset_path_'. $type] = array(
+      '#type' => 'checkbox',
+      '#title' => t('@s: reset path when importing', array('@s' => $name)),
+      '#default_value' => variable_get('node_export_reset_path_'. $type, TRUE),
+    );
+    $form['publishing']['node_export_reset_book_mlid_'. $type] = array(
+      '#type' => 'checkbox',
+      '#title' => t('@s: reset book menu link when importing', array('@s' => $name)),
+      '#default_value' => variable_get('node_export_reset_book_mlid_'. $type, TRUE),
     );
   }
   // Need the variable default key to be something that's never a valid node type.
@@ -57,26 +78,7 @@ function node_export_node_export($original_node, $return_code = FALSE, $iteratio
     if (node_export_is_permitted($original_node->type)) {
       $node = drupal_clone($original_node);
 
-      $node->nid = NULL;
-      $node->vid = NULL;
-      $node->name = $user->name;
-      $node->uid = $user->uid;
-      $node->created = NULL;
-      $node->menu = NULL;
-      if (isset($node->book['mlid'])) {
-        $node->book['mlid'] = NULL;
-      }
-      $node->path = NULL;
-      $node->files = array();
       drupal_set_title(t('Export of !title', array('!title' => check_plain($node->title))));
-
-      if (variable_get('node_export_reset_'. $node->type, FALSE)) {
-        $node_options = variable_get('node_options_'. $node->type, array('status', 'promote'));
-        // Fill in the default values.
-        foreach (array('status', 'moderate', 'promote', 'sticky', 'revision') as $key) {
-          $node->$key = in_array($key, $node_options);
-        }
-      }
 
       // Fix taxonomy array
       if (isset($node->taxonomy) && count($node->taxonomy)) {
@@ -91,13 +93,11 @@ function node_export_node_export($original_node, $return_code = FALSE, $iteratio
             $new_taxonomy[$term->vid][$term->tid] = $term->tid;
           }
         }
-
         if (isset($new_taxonomy['tags']) && count($new_taxonomy['tags'])) {
           // Comma seperate the tags
           foreach ($new_taxonomy['tags'] as $vid => $tags) {
             $new_taxonomy['tags'][$vid] = implode(', ', $tags);
           }
-
         }
         $node->taxonomy = $new_taxonomy;
       }
@@ -208,35 +208,8 @@ function node_export_node_check($node) {
  *  exports a node - prepopulate a node editing form
  */
 function node_export_node_prepopulate($original_node) {
-  global $user;
-
   if (node_export_is_permitted($original_node->type)) {
-    $node = drupal_clone($original_node);
-
-    $node->nid = NULL;
-    $node->vid = NULL;
-    $node->name = $user->name;
-    $node->uid = $user->uid;
-    $node->created = NULL;
-    $node->menu = NULL;
-    if (isset($node->book['mlid'])) {
-      $node->book['mlid'] = NULL;
-    }
-    $node->path = NULL;
-    $node->files = array();
-    drupal_set_title(check_plain($node->title));
-
-    if (variable_get('node_export_reset_'. $node->type, FALSE)) {
-      $node_options = variable_get('node_options_'. $node->type, array('status', 'promote'));
-      // Fill in the default values.
-      foreach (array('status', 'moderate', 'promote', 'sticky', 'revision') as $key) {
-        $node->$key = in_array($key, $node_options);
-      }
-    }
-    // Let other modules do special fixing up.
-    // The function signature is: hook_export_node_alter(&$node, $original_node, $method)
-    // Where $method is either 'prepopulate' or 'save-edit'.
-    drupal_alter("node_export_node", $node, $original_node, "prepopulate");
+    $node = node_export_node_clone($original_node, "prepopulate");
     return str_replace('admin/content/import', 'node/add/' . $node->type, drupal_get_form($node->type . '_node_form', $node));
   }
 }
@@ -244,21 +217,44 @@ function node_export_node_prepopulate($original_node) {
 /**
  *  exports a node by directly saving it.
  */
-function node_export_node_save($node) {
-  global $user;
+function node_export_node_save($original_node) {
+  if (node_export_is_permitted($original_node->type)) {
+    $node = node_export_node_clone($original_node, "save-edit");
+    node_save($node);
+    return $node->nid;
+  }
+}
 
-  if (node_export_is_permitted($node->type)) {
+/**
+ *  Prepare a clone of the node during import.
+ */
+function node_export_node_clone($original_node, $mode) {
+    global $user;
 
-    $original_node = drupal_clone($node);
+    $node = drupal_clone($original_node);
 
     $node->nid = NULL;
     $node->vid = NULL;
+
     $node->name = $user->name;
     $node->uid = $user->uid;
-    $node->created = NULL;
-    $node->menu = NULL;
-    $node->book['mlid'] = NULL;
-    $node->path = NULL;
+
+    if (variable_get('node_export_reset_created_'. $node->type, TRUE)) {
+      $node->created = NULL;
+    }
+
+    if (variable_get('node_export_reset_menu_'. $node->type, TRUE)) {
+      $node->menu = NULL;
+    }
+
+    if (variable_get('node_export_reset_path_'. $node->type, TRUE)) {
+      $node->path = NULL;
+    }
+
+    if (variable_get('node_export_reset_book_mlid_'. $node->type, TRUE) && isset($node->book['mlid'])) {
+      $node->book['mlid'] = NULL;
+    }
+
     $node->files = array();
 
     if (variable_get('node_export_reset_'. $node->type, FALSE)) {
@@ -271,15 +267,9 @@ function node_export_node_save($node) {
     // Let other modules do special fixing up.
     // The function signature is: hook_export_node_alter(&$node, $original_node, $method)
     // Where $method is either 'prepopulate' or 'save-edit'.
-    drupal_alter("node_export_node", $node, $original_node, "save-edit");
-
-    node_save($node);
-
-    return $node->nid;
-  }
+    drupal_alter("node_export_node", $node, $original_node, $mode);
 
 }
-
 
 /**
  *  build node code string recursively
