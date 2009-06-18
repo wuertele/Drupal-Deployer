@@ -54,22 +54,23 @@ function image_filefield_paths_get_fields(&$node, &$ffp) {
     }
 
     foreach ($node->images as $name => &$file) {
-      $file_info = pathinfo($file);
-
-      // TODO: add fid to field.
-      $ffp['#files'][] = array(
-        'field' => array(
-          'filepath' => &$file,
-          'filename' => $file_info['basename'],
-          'fid' => $info[$name],
-          'type' => $name
-        ),
-        'module' => 'image',
-        'name' => 'image',
-        'new' => $node->new_file
-      );
-
-      $ffp['#types']['image'] = TRUE;
+      if (isset($info[$name])) {
+        $file_info = pathinfo($file);
+  
+        $ffp['#files'][] = array(
+          'field' => array(
+            'filepath' => &$file,
+            'filename' => $file_info['basename'],
+            'fid' => $info[$name],
+            'type' => $name
+          ),
+          'module' => 'image',
+          'name' => 'image',
+          'new' => $node->new_file
+        );
+  
+        $ffp['#types']['image'] = TRUE;
+      }
     }
   }
 }
