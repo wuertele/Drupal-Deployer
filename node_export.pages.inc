@@ -45,11 +45,6 @@ function node_export_settings() {
       '#title' => t('@s: reset path when importing', array('@s' => $name)),
       '#default_value' => variable_get('node_export_reset_path_'. $type, TRUE),
     );
-    $form['publishing']['node_export_reset_book_mlid_'. $type] = array(
-      '#type' => 'checkbox',
-      '#title' => t('@s: reset book menu link when importing', array('@s' => $name)),
-      '#default_value' => variable_get('node_export_reset_book_mlid_'. $type, TRUE),
-    );
   }
   // Need the variable default key to be something that's never a valid node type.
   $form['omit'] = array(
@@ -251,7 +246,7 @@ function node_export_node_clone($original_node, $mode) {
       $node->path = NULL;
     }
 
-    if (variable_get('node_export_reset_book_mlid_'. $node->type, TRUE) && isset($node->book['mlid'])) {
+    if (isset($node->book['mlid'])) {
       $node->book['mlid'] = NULL;
     }
 
