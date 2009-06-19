@@ -85,7 +85,6 @@ function viewreference_field_settings($op, $field) {
       $form['referenceable_views'] = array(
         '#type' => 'checkboxes',
         '#title' => t('Views that can be referenced'),
-        '#description' => t('Select the views that can be referenced. If you select no views, all views will be available.'),
         '#multiple' => TRUE,
         '#default_value' => is_array($field['referenceable_views']) ? $field['referenceable_views'] : array(),
         '#options' => viewreference_get_list_of_views(),
@@ -136,8 +135,8 @@ function viewreference_field_settings($op, $field) {
 
     case 'database columns':
       $columns = array(
-        'view_id' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE, 'default' => 0),
-        'arguments' => array('type' => 'text', 'size' => 'big'),
+        'view_id' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
+        'arguments' => array('type' => 'text', 'size' => 'big', 'default' => ''),
       );
       return $columns;
 
@@ -216,8 +215,10 @@ function theme_viewreference_formatter_default($element) {
   if (!empty($element['#item']['view_id']) && is_numeric($element['#item']['view_id'])) {
     $view = db_fetch_object(db_query("SELECT name, position FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
     $args = viewreference_get_element_args($element);
+    $output = '';
+    //$output .= views_embed_view($view->name, $view->position);
     $view_object = views_get_view($view->name);
-    $output = $view_object->preview($view->position, $args);
+    $output .= $view_object->preview($view->position, $args);
   }
   return $output;
 }
@@ -227,10 +228,8 @@ function theme_viewreference_formatter_default($element) {
  */
 function theme_viewreference_formatter_plain($element) {
   if (!empty($element['#item']['view_id']) && is_numeric($element['#item']['view_id'])) {
-    $view = db_fetch_object(db_query("SELECT name, position, title FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
-    $view_object = views_get_view($view->name);
-    $title = $view_object->get_title() ? $view_object->get_title() : $view->title;
-    $output = t($title);
+    $view = db_fetch_object(db_query("SELECT title FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
+    $output = t(check_plain($view->title));
   }
   return $output;
 }
@@ -240,20 +239,21 @@ function theme_viewreference_formatter_plain($element) {
  */
 function theme_viewreference_formatter_link($element) {
   if (!empty($element['#item']['view_id']) && is_numeric($element['#item']['view_id'])) {
-    $view = db_fetch_object(db_query("SELECT name, position, title FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
+    $view = db_fetch_object(db_query("SELECT title, name FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
     $view_object = views_get_view($view->name);
-    if (isset($view_object->display[$view->position]->display_options['path']) && !$view_object->disabled) {
-      $args = viewreference_get_element_args($element);
+    $output = '';
+
+    if (isset($view_object->display['page']->display_options['path']) && $view_object->disabled != 1) {
+      $args = viewreference_arguments_string_to_array($element['#item']['arguments']);
       $url_args = implode("/", $args);
-      $path = $view_object->display[$view->position]->display_options['path'];
+      $path = $view_object->display['page']->display_options['path'];
       if ($url_args) {
         $path .= "/". $url_args;
       }
-      $title = $view_object->get_title() ? $view_object->get_title() : $view->title;
-      $output = l(t($title), $view_object->get_url($args, $path));
+      $output .= l(t(check_plain($view->title)), $path);
     }
     else {
-      $output = t($title);
+      $output .= t(check_plain($view->title));
     }
   }
   return $output;
@@ -310,20 +310,17 @@ function viewreference_elements() {
   return array(
     'viewreference_select' => array(
       '#input' => TRUE,
-      '#columns' => array('uid'),
-      '#delta' => 0,
+      '#columns' => array('uid'), '#delta' => 0,
       '#process' => array('viewreference_select_process'),
       ),
     'viewreference_autocomplete' => array(
       '#input' => TRUE,
-      '#columns' => array('name'),
-      '#delta' => 0,
+      '#columns' => array('name'), '#delta' => 0,
       '#process' => array('viewreference_autocomplete_process'),
       '#autocomplete_path' => FALSE,
       ),
     );
 }
-
 
 /**
  * Implementation of hook_widget().
@@ -357,6 +354,7 @@ function viewreference_elements() {
  *   the form item for a single element for this field
  */
 function viewreference_widget(&$form, &$form_state, $field, $items, $delta = 0) {
+  //error_log('items'.print_r($items,true));
   switch ($field['widget']['type']) {
     case 'viewreference_select':
       $element = array(
@@ -388,9 +386,9 @@ function viewreference_autocomplete_value($element, $edit = FALSE) {
     $vid = $element['#default_value'][$field_key];
     $value = db_result(db_query("SELECT title FROM {viewreference} WHERE view_id = '%d'", $vid));
     $value .= ' [view:'. $vid .']';
-    return array($field_key => $value, $args_key => $element['#default_value'][$args_key]);
+    return array($field_key => $value, $element['#columns'][1] => $element['#default_value'][$args_key]);
   }
-  return array($field_key => NULL, $args_key => NULL);
+  return array($field_key => NULL, $element['#columns'][1] => $element['#default_value'][$args_key]);
 }
 
 /**
@@ -439,10 +437,11 @@ function viewreference_select_process($element, $edit, $form_state, $form) {
 
     $element[$element['#columns'][1]] = array(
       '#type' => $args_widget,
-      '#default_value' => is_string($element['#value'][$element['#columns'][1]]) ? $element['#value'][$element['#columns'][1]] : '',
+      '#default_value' => isset($element['#value'][$element['#columns'][1]]) ? $element['#value'][$element['#columns'][1]] : '',
       '#element_validate' => array('viewreference_arguments_validate'),
       '#title' => $element['#title'] .' '. t('arguments'),
       '#suffix' => t('</div>'),
+      '#rows' => $field['rows'],
 
       // The following values were set by the content module and need
       // to be passed down to the nested element.
@@ -453,10 +452,6 @@ function viewreference_select_process($element, $edit, $form_state, $form) {
       '#description' => $element['#description'],
     );
 
-    if ($field['rows'] > 1) {
-      $element[$element['#columns'][1]]['#rows'] = $field['rows'];
-    }
-
   }
   else {
     $element[$element['#columns'][0]]['#suffix'] = t('</div>');
@@ -464,7 +459,6 @@ function viewreference_select_process($element, $edit, $form_state, $form) {
 
   return $element;
 }
-
 
 /**
  * Process an individual element.
@@ -508,7 +502,7 @@ function viewreference_autocomplete_process($element, $edit, $form_state, $form)
 
     $element[$element['#columns'][1]] = array(
       '#type' => $args_widget,
-      '#default_value' => is_string($element['#value'][$element['#columns'][1]]) ? $element['#value'][$element['#columns'][1]] : '',
+      '#default_value' => isset($element['#value'][$element['#columns'][1]]) ? $element['#value'][$element['#columns'][1]] : '',
       '#element_validate' => array('viewreference_arguments_validate'),
       '#title' => $element['#title'] .' '. t('arguments'),
       '#suffix' => t('</div>'),
@@ -555,7 +549,7 @@ function viewreference_select_validate($element, &$form_state) {
 function viewreference_autocomplete_validate($element, &$form_state) {
   $field_name = $element['#field_name'];
   $field = content_fields($field_name);
-  $field_key = $element['#columns'][0];
+  $field_key  = $element['#columns'][0];
   $delta = $element['#delta'];
   $value = $element['#value'][$field_key];
   $vid = NULL;
@@ -581,7 +575,6 @@ function viewreference_autocomplete_validate($element, &$form_state) {
   return $element;
 }
 
-
 /**
  * Implementation of hook_allowed_values().
  */
@@ -597,7 +590,6 @@ function viewreference_allowed_values($field) {
   return $options;
 }
 
-
 /**
  * Fetch an array of all candidate referenced views,
  * for use in presenting the selection form to the user.
@@ -609,11 +601,7 @@ function _viewreference_potential_references($field, $return_full_views = FALSE,
   $args = array();
 
   if (is_array($field['referenceable_views'])) {
-    $view_list = $field['referenceable_views'];
-    if (!count(array_filter($view_list))) {
-      $view_list = array_keys(viewreference_get_list_of_views());
-    }
-    foreach ($view_list as $related_key => $related_view) {
+    foreach ($field['referenceable_views'] as $related_key => $related_view) {
       if ($related_view) {
         $related_views[] = "view_id = %d";
         $args[] = $related_view;
@@ -738,7 +726,6 @@ function viewreference_get_list_of_views() {
   return $views;
 }
 
-
 /**
  * Convert arguments text field entry to an array of arguments
  */
@@ -752,7 +739,10 @@ function viewreference_get_element_args($element) {
   $args = array();
 
   if ($php_arguments) {
-    $arguments = drupal_eval($string);
+    $variables = array(
+      'node' => $element['#node'],
+    );
+    $arguments = viewreference_eval($string, $variables);
   }
   else if ($dsv_arguments) {
     $arguments = $string;
@@ -767,4 +757,38 @@ function viewreference_get_element_args($element) {
 
   return $args;
 
+}
+
+/**
+ * Evaluate the code, whilst selecting what variables will be available in the PHP.
+ */
+function viewreference_eval($code, $variables = array()) {
+  global $theme_path, $theme_info, $conf;
+
+  // Store current theme path.
+  $old_theme_path = $theme_path;
+
+  // Restore theme_path to the theme, as long as drupal_eval() executes,
+  // so code evaluted will not see the caller module as the current theme.
+  // If theme info is not initialized get the path from theme_default.
+  if (!isset($theme_info)) {
+    $theme_path = drupal_get_path('theme', $conf['theme_default']);
+  }
+  else {
+    $theme_path = dirname($theme_info->filename);
+  }
+
+  foreach ((array)$variables as $key => $value) {
+    $$key = $value;
+  }
+
+  ob_start();
+  print eval('?>'. $code);
+  $output = ob_get_contents();
+  ob_end_clean();
+
+  // Recover original theme path.
+  $theme_path = $old_theme_path;
+
+  return $output;
 }
