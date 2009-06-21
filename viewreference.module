@@ -212,11 +212,10 @@ function viewreference_field_formatter_info() {
  *
  */
 function theme_viewreference_formatter_default($element) {
+  $output = '';
   if (!empty($element['#item']['view_id']) && is_numeric($element['#item']['view_id'])) {
     $view = db_fetch_object(db_query("SELECT name, position FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
     $args = viewreference_get_element_args($element);
-    $output = '';
-    //$output .= views_embed_view($view->name, $view->position);
     $view_object = views_get_view($view->name);
     $output .= $view_object->preview($view->position, $args);
   }
@@ -227,9 +226,10 @@ function theme_viewreference_formatter_default($element) {
  * Theme function for 'plain' nodereference field formatter.
  */
 function theme_viewreference_formatter_plain($element) {
+  $output = '';
   if (!empty($element['#item']['view_id']) && is_numeric($element['#item']['view_id'])) {
     $view = db_fetch_object(db_query("SELECT title FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
-    $output = t(check_plain($view->title));
+    $output .= t(check_plain($view->title));
   }
   return $output;
 }
@@ -238,10 +238,10 @@ function theme_viewreference_formatter_plain($element) {
  * Theme function for 'link' nodereference field formatter.
  */
 function theme_viewreference_formatter_link($element) {
+  $output = '';
   if (!empty($element['#item']['view_id']) && is_numeric($element['#item']['view_id'])) {
     $view = db_fetch_object(db_query("SELECT title, name FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
     $view_object = views_get_view($view->name);
-    $output = '';
 
     if (isset($view_object->display['page']->display_options['path']) && $view_object->disabled != 1) {
       $args = viewreference_arguments_string_to_array($element['#item']['arguments']);
