@@ -15,6 +15,7 @@ Authors:
 * Jeff Robbins (jjeff)
 * Angela Byron (webchick)
 * Addison Berry (add1sun)
+* Daniel F. Kudwien (sun)
 
 This Module Made by Robots: http://www.lullabot.com
 
