@@ -100,7 +100,7 @@ function node_export_node_export($original_node, $return_code = FALSE, $iteratio
       // Let other modules do special fixing up.
       // The function signature is: hook_export_node_alter(&$node, $original_node, $method)
       // Where $method is 'export'
-      drupal_alter("node_export_node", $node, $original_node, "export");
+      drupal_alter('node_export_node', $node, $original_node, 'export');
       $node_code = node_export_node_encode($node, $iteration);
       return ($return_code ? $node_code : drupal_get_form('node_export_form', $node_code));
     }
@@ -137,7 +137,7 @@ function node_export_node_import() {
     if (is_array($import)) {
       foreach ($import as $new_node) {
         $new_nid = node_export_node_save($new_node);
-        drupal_set_message(t("Imported !node", array('!node' => l($new_node->title, 'node/'. $new_nid))));
+        drupal_set_message(t('Imported !node', array('!node' => l($new_node->title, 'node/'. $new_nid))));
       }
       drupal_goto('admin/content/node');
     }
@@ -204,7 +204,7 @@ function node_export_node_check($node) {
  */
 function node_export_node_prepopulate($original_node) {
   if (node_export_is_permitted($original_node->type)) {
-    $node = node_export_node_clone($original_node, "prepopulate");
+    $node = node_export_node_clone($original_node, 'prepopulate');
     return str_replace('admin/content/import', 'node/add/' . $node->type, drupal_get_form($node->type . '_node_form', $node));
   }
 }
@@ -214,7 +214,7 @@ function node_export_node_prepopulate($original_node) {
  */
 function node_export_node_save($original_node) {
   if (node_export_is_permitted($original_node->type)) {
-    $node = node_export_node_clone($original_node, "save-edit");
+    $node = node_export_node_clone($original_node, 'save-edit');
     node_save($node);
     return $node->nid;
   }
@@ -262,8 +262,9 @@ function node_export_node_clone($original_node, $mode) {
     // Let other modules do special fixing up.
     // The function signature is: hook_export_node_alter(&$node, $original_node, $method)
     // Where $method is either 'prepopulate' or 'save-edit'.
-    drupal_alter("node_export_node", $node, $original_node, $mode);
-
+    drupal_alter('node_export_node', $node, $original_node, $mode);
+    
+    return $node;
 }
 
 /**
@@ -272,7 +273,7 @@ function node_export_node_clone($original_node, $mode) {
 function node_export_node_encode($var, $iteration = 0){
   $tab = '';
   for ($i = 0; $i < $iteration; $i++) {
-    $tab = $tab ."  ";
+    $tab = $tab .'  ';
   }
   $iteration++;
   if (is_object($var)) {
@@ -281,11 +282,11 @@ function node_export_node_encode($var, $iteration = 0){
   }
   if (is_array($var)) {
     $empty = empty($var);
-    $code = "array(". ($empty ? '' : "\n");
+    $code = 'array('. ($empty ? '' : "\n");
     foreach ($var as $key => $value) {
       $code .= $tab ."  '". $key ."' => ".node_export_node_encode($value, $iteration).",\n";
     }
-    $code .= ($empty ? '' : $tab) .")";
+    $code .= ($empty ? '' : $tab) .')';
     return $code;
   } else {
     if (is_string($var)) {
