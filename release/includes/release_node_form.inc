@@ -471,3 +471,54 @@ function project_release_db_save($node, $is_new) {
   db_query($sql, $values);
 }
 
+/**
+ * Redirect node/add/project_release/* to node/add/project-release/*.
+ */
+function project_release_add_redirect_page() {
+  $arg = arg(3);
+  drupal_goto('node/add/project-release/' . (empty($arg) ? '' : $arg));
+}
+
+/**
+ * Form builder for a simple form to select a project when creating a new
+ * release (as the first "page", but this is not really a multi-page form).
+ */
+function project_release_pick_project_form() {
+  $form = array();
+
+  drupal_set_title(t('Submit @name', array('@name' => node_get_types('name', 'project_release'))));
+
+  // Fetch a list of all projects.
+  $uris = NULL;
+  $projects = array(0 => t('- Select a project -')) + project_projects_select_options($uris);
+  if (count($projects) == 1) {
+    drupal_set_message(t('You do not have access to any projects.'), 'error');
+  }
+
+  $form['pid'] = array(
+    '#type' => 'select',
+    '#title' => t('Project'),
+    '#options' => $projects,
+    '#required' => TRUE,
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Next'),
+  );
+  return $form;
+}
+
+function project_release_pick_project_form_validate($form, &$form_state) {
+  if (empty($form_state['values']['pid'])) {
+    form_set_error('pid', t('You must select a project.'));
+  }
+  $node = node_load($form_state['values']['pid']);
+  if (empty($node) || $node->type != 'project_project') {
+    form_set_error('pid', t('Invalid project selected.'));
+  }
+}
+
+function project_release_pick_project_form_submit($form, &$form_state) {
+  $form_state['redirect'] = 'node/add/project-release/'. $form_state['values']['pid'];
+}
+
