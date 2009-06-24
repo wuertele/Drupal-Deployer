@@ -137,7 +137,7 @@ function amazon_test_form($form_state) {
 }
 
 function amazon_test_form_submit($form, &$form_state) {
-  $items = amazon_item_lookup($form_state['values']['asin']);
+  $items = amazon_item_lookup($form_state['values']['asin'], TRUE);
   if (is_array($items)) {
     $item = array_pop($items);
     amazon_item_delete($item['asin']);
