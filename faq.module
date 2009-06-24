@@ -1308,3 +1308,75 @@ function faq_preprocess_page(&$variables) {
 function faq_tt($string_id, $default, $language = NULL) {
   return function_exists('tt') ? tt($string_id, $default, $language) : $default;
 }
+
+/**
+ * Implementation of hook_filter().
+ */
+function faq_filter($op, $delta = 0, $format = -1, $text = '', $cache_id = 0) {
+  switch ($op) {
+    case 'list':
+      return array(
+        0 => t('Embed FAQ page'),
+      );
+
+    case 'no cache':
+      switch ($delta) {
+        case 0:
+          return TRUE;
+      }
+
+    case 'description':
+      switch ($delta) {
+        case 0:
+          return t('Embed FAQ page using [faq] type tags.  Disables filter caching so not recommended for all input formats.');
+      }
+
+    case "process":
+      switch ($delta) {
+        case 0:
+          $text = preg_replace_callback('/\[faq:?([^\]]*)\]/', '_faq_faq_page_filter_replacer', $text);
+          // Remove comments, as they're not supported by all input formats.
+          $text = preg_replace('/<!--.*?-->/', '', $text);
+          return $text;
+      }
+      return $text;
+
+    default:
+      return $text;
+  }
+}
+
+/**
+ * Implementation of hook_filter_tips().
+ */
+function faq_filter_tips($delta, $format, $long = FALSE) {
+  switch ($delta) {
+    case 0:
+      return t('[faq] or [faq:123,questions_inline,categories_inline] - insert FAQ content based on the optional category, question style and category style.');
+  }
+}
+
+/**
+ * Helper function for faq input filter.
+ */
+function _faq_faq_page_filter_replacer($matches) {
+  $tid = 0;
+  $faq_display = '';
+  $category_display = '';
+  if (strlen($matches[1])) {
+    list ($tid, $faq_display, $category_display) = explode(',', $matches[1] .',,');
+    $tid = (int) trim($tid);
+    $faq_display = trim($faq_display);
+    $category_display = trim($category_display);
+    // These two checks ensure that a typo in the faq_display or
+    // category_display string still results in the FAQ showing.
+    if ($faq_display && !in_array($faq_display, array('questions_top', 'hide_answer', 'questions_inline', 'new_page'))) {
+      $faq_display = '';
+    }
+    if ($category_display && !in_array($category_display, array('hide_qa', 'new_page', 'categories_inline'))) {
+      $category_display = '';
+    }
+  }
+
+  return faq_page($tid, $faq_display, $category_display);
+}
