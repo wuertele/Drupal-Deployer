@@ -9,7 +9,7 @@
  * save configuration and setup.
  */
 
-define('AMAZON_ECS_SCHEMA', '2008-04-07');
+define('AMAZON_ECS_SCHEMA', '2009-03-31');
 define('AMAZON_PARTICIPANT_TYPES', 'Author,Artist,Actor,Director,Creator');
 
 // Other common sizes include SwatchImage, TinyImage, and ThumbnailImage.
@@ -189,7 +189,7 @@ function amazon_http_request($operation, $parameters = array(), $locale = NULL) 
   $parameters += array(
     'Service' => 'AWSECommerceService',
     'Version' => AMAZON_ECS_SCHEMA,
-    'AWSAccessKeyId' => variable_get('amazon_aws_access_key', '0CD9RCQYM0TBVH55NB82'),
+    'AWSAccessKeyId' => variable_get('amazon_aws_access_key', ''),
     'Operation' => $operation,
   );
   if ($associate_id = amazon_get_associate_id()) {
@@ -197,16 +197,39 @@ function amazon_http_request($operation, $parameters = array(), $locale = NULL) 
       'AssociateTag' => $associate_id,
     );
   }
+  $parameters_after_hook = module_invoke_all('amazon_request', $parameters);
+  if (!empty($parameters_after_hook)) {
+    $parameters = $parameters_after_hook;
+  }
+  $parameters += array('Timestamp' => gmdate("Y-m-d\TH:i:s"). 'Z');
+  uksort($parameters, 'strnatcmp');
 
   $params = array();
   foreach($parameters as $key => $value) {
     if (is_array($value)) {
       $value = implode(',', $value);
     }
-    $params[] = urlencode($key) .'='. urlencode($value);
+    $param = str_replace("%7E", "~", rawurlencode($key));
+    $value = str_replace("%7E", "~", rawurlencode($value));
+    $params[] = $param .'='. $value;
   }
-  module_invoke_all('amazon_request', $parameters);
-  $url = $locale_data['url'] .'?'. implode('&', $params);
+  $secret_access_key=variable_get('amazon_aws_secret_access_key',"");
+  if ($secret_access_key == "") {
+    watchdog('amazon',"No Secret Access Key configured. You must configure one at Admin->Settings->Amazon API",NULL,'error');
+    drupal_set_message(t("Amazon Module: No Secret Access Key is configured. Please contact your site administrator"));
+    return FALSE;
+  }
+  // Thanks for signature creation code from http://mierendo.com/software/aws_signed_query/
+  $query_string = implode('&',$params);
+  $parsed_url = parse_url($locale_data['url']);
+  $host=strtolower($parsed_url['host']);
+  $string_to_sign="GET\n$host\n{$parsed_url['path']}\n$query_string";
+
+  $signature = base64_encode(hash_hmac('sha256', $string_to_sign, $secret_access_key, TRUE));
+  $signature = str_replace("%7E", "~", rawurlencode($signature));
+  $query_string .= "&Signature=$signature";
+
+  $url = $locale_data['url'] .'?'. $query_string;
   // Make the request and return a SimpleXML object.
   $results = drupal_http_request($url, array(), 'GET');
   if ($results->code == '200') {

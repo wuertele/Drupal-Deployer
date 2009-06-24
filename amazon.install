@@ -5,6 +5,28 @@ function amazon_install() {
   drupal_install_schema('amazon');
 }
 
+/**
+ * implementation of hook_requirements to make sure we let them know about
+ * the requirement for amazon_aws_secret_access_key
+ * @param $phase
+ * @return unknown_type
+ */
+function amazon_requirements($phase) {
+  $secret_access_key=variable_get('amazon_aws_secret_access_key',"");
+  $api_key = variable_get('amazon_aws_access_key',"");
+  $requirement = array();
+  if (empty($secret_access_key) || empty($api_key)) {
+    drupal_set_message(t("The Amazon API must be configured with an Access Key ID and an Amazon AWS Secret Access Key to function. Go to !settings.",array("!settings"=>l(t("Amazon API Setttings"),'admin/settings/amazon'))));
+    $requirement['title'] = t("Amazon AWS Secret Access Key");
+    $requirement['severity'] = REQUIREMENT_WARNING;
+    $requirement['value'] = t("Not Set");
+    $requirement['description'] = t("The Amazon API must be configured with an Access Key ID and an Amazon AWS Secret Access Key to function. Go to !settings.",array("!settings"=>l(t("Amazon API Setttings"),'admin/settings/amazon')));
+    return array('amazon_aws_secret_access_key',$requirement);
+  }
+
+  return NULL;
+}
+
 function amazon_schema() {
   $schema['amazon_item'] = array(
     'fields' => array(

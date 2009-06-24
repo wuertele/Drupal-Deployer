@@ -41,9 +41,18 @@ function amazon_settings_form($form_state) {
 
   $form['amazon_aws_access_key'] = array(
     '#type' => 'textfield',
-    '#title' => t('Amazon API key'),
-    '#description' => t('Applications must use a unique key to access Amazon services. One is supplied with the Drupal Amazon API module by default, but developers building high-traffic custom modules on the Amazon API may want to enter a custom key here.'),
-    '#default_value' => variable_get('amazon_aws_access_key', '0CD9RCQYM0TBVH55NB82'),
+    '#title' => t('Amazon AWS Access Key ID'),
+    '#description' => t('You must sign up for an Amazon AWS account to use the Product Advertising Service. See !more_info for information and a registration form.',array('!more_info'=>l(t('More information here.'),'http://docs.amazonwebservices.com/AWSECommerceService/latest/DG/index.html?AboutAWSAccounts.html',array('html'=>TRUE)))),
+    '#default_value' => variable_get('amazon_aws_access_key', ''),
+    '#required' => TRUE,
+  );
+
+  $form['amazon_aws_secret_access_key'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Amazon AWS Secret Access Key'),
+    '#description' => t('You must sign up for an Amazon AWS account to use the Product Advertising Service. See !more_info for information and a registration form.',array('!more_info'=>l(t('More information here.'),'http://docs.amazonwebservices.com/AWSECommerceService/latest/DG/index.html?AboutAWSAccounts.html',array('html'=>TRUE)))),
+    '#default_value' => variable_get('amazon_aws_secret_access_key',""),
+    '#required' => TRUE,
   );
 
   // Now add the Javascript that does the fancy hide/show effects.
