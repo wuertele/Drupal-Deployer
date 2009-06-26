@@ -112,9 +112,9 @@ function recipe_delete($node) {
 }
 
 /**
- * Implementation of hook_form().
- */
-function recipe_form(&$node) {
+* Implementation of hook_form().
+*/
+function recipe_form(&$node,$form_state) {
   // drupal 4.7 requires the title field to be defined by the custom node's module
   $form['title'] = array('#type' => 'textfield', '#title' => t('Title'),
     '#size' => 60, '#maxlength' => 128, '#required' => TRUE,
@@ -179,17 +179,40 @@ function recipe_form(&$node) {
       $num_ingredients = $id+1;
       if ($id == 0) {
         $j = '0';
-      }
-      else {
+      } else {
         $j = $id;
       }
-      if ($ingredient->name && isset($ingredient->quantity)) {
+     
+      // For preview, node->ingredients is an array, for actual display, it's an object
+      $name = '';
+      $unit_id = '';
+      $abbreviation = '';
+      $quantity = 0;
+      if (is_array($ingredient)) {
+        $name = $ingredient['name'];
+        $unit_id = $ingredient['unit_id'];
+        $abbreviation = $ingredient['abbreviation'];
+        $quantity = $ingredient['quantity'];
+      } else {
+        $name = $ingredient->name;
+        $unit_id = $ingredient->unit_id;
+        $abbreviation = $ingredient->abbreviation;
+        $quantity = $ingredient->quantity;
+      }     
+
+      if ($name && isset($quantity)) {
         // When can the following statement be true?
         if (!$ingredient) {
           drupal_set_message(t('Recipe Module: An error has occured.  Please report this error to the system administrator.'), 'error');
-          $ingredient->quantity = '';
-          $ingredient->unit_id = 21;
-          $ingredient->name = '';
+          if (is_array($ingredient)) {
+            $ingredient['quantity'] = '';
+            $ingredient['unit_id'] = 21;
+            $ingredient['name'] = '';
+          } else {
+            $ingredient->quantity = '';
+            $ingredient->unit_id = 21;
+            $ingredient->name = '';
+          }
         }
         if ($system == 'complex') {
           $form['ingredients'][$j]['open_tags'] = array(
@@ -198,7 +221,7 @@ function recipe_form(&$node) {
           $form['ingredients'][$j]['quantity'] = array(
             '#type' => 'textfield',
             '#title' => '',
-            '#default_value' => preg_replace('/\&frasl;/', '/', recipe_ingredient_quantity_from_decimal($ingredient->quantity)),
+            '#default_value' => preg_replace('/\&frasl;/', '/', recipe_ingredient_quantity_from_decimal($quantity)),
             '#size' => 8,
             '#maxlength' => 8,
           );
@@ -208,7 +231,7 @@ function recipe_form(&$node) {
           $form['ingredients'][$j]['unit_id'] = array(
             '#type' => 'select',
             '#title' => '',
-            '#default_value' => $ingredient->unit_id,
+            '#default_value' => $unit_id,
             '#options' => recipe_unit_options(),
           );
           $form['ingredients'][$j]['mid2_tags'] = array(
@@ -217,7 +240,7 @@ function recipe_form(&$node) {
           $form['ingredients'][$j]['name'] = array(
             '#type' => 'textfield',
             '#title' => '',
-            '#default_value' => $ingredient->name,
+            '#default_value' => $name,
             '#size' => 64,
             '#maxlength' => 128,
             '#autocomplete_path' => $callback,
@@ -227,17 +250,17 @@ function recipe_form(&$node) {
           );
         }
         else {
-          if ($ingredient->name) {
-            if ($ingredient->quantity == 0) {
-              $ingredient->quantity = '';
+          if ($name) {
+            if ($quantity == 0) {
+              $quantity = '';
             }
             else {
-              $ingredient->quantity .= ' ';
+              $quantity .= ' ';
             }
-            if ($ingredient->abbreviation != '') {
-              $ingredient->abbreviation .= ' ';
+            if ($abbreviation != '') {
+              $abbreviation .= ' ';
             }
-            $ingredient->name = $ingredient->quantity . $ingredient->abbreviation . $ingredient->name;
+            $name = $quantity . $abbreviation . $name;
           }
           $form['ingredients'][$j]['open_tags'] = array(
             '#value' => '<tr><th>',
@@ -246,7 +269,7 @@ function recipe_form(&$node) {
           $form['ingredients'][$j]['name'] = array(
             '#type' => 'textfield',
             '#title' => '',
-            '#default_value' => $ingredient->name,
+            '#default_value' => $name,
             '#size' => 64,
             '#maxlength' => 128,
             '#autocomplete_path' => $callback,
@@ -556,7 +579,7 @@ function recipe_ingredient_id_from_name($name) {
     if (!$ingredient_id) {
       global $active_db;
       $node_link = db_result(db_query("SELECT nid FROM {node} n WHERE title = '%s'", $name));
-      if (empty($node_link)) { $node_link=0; }
+
       db_query("INSERT INTO {recipe_ingredient} (name, link) VALUES ('%s', '%s')", $name, $node_link);
       $ingredient_id = db_result(db_query("SELECT id FROM {recipe_ingredient} WHERE LOWER(name)='%s'", trim(strtolower($name))));
     }
@@ -1329,6 +1352,20 @@ function recipe_tax_get_terms($vid) {
 }
 
 /**
+ * Hook into generic node creation/update and check if the added node
+ * fixes any links in existing recipes.
+ */
+function recipe_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  switch ($op) {
+    case 'insert':
+    case 'update':
+      // TODO: Could filter for only nodes of type 'ingredient'
+      db_query("UPDATE {recipe_ingredient} SET link='%d' WHERE LOWER(name)='%s'", $node->nid, trim(strtolower($node->title)) );
+      break;
+  }
+}
+
+/**
  * Helper function for array map purposes.
  * @param term the term object from which the tid will be extracted.
  *
@@ -1469,7 +1506,7 @@ function theme_recipe_node($node, $yield_form = TRUE) {
   return $output;
 }
 
-function recipe_custom_yield_form($node) {
+function recipe_custom_yield_form($form_id, $node) {
     $form['custom_yield_container'] = array(
       '#type' => 'fieldset',
       '#collapsible' => FALSE,
