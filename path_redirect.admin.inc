@@ -100,7 +100,7 @@ function path_redirect_edit_form(&$form_state, $edit = array()) {
     '#default_value' => $edit['path'],
     '#required' => TRUE,
     '#field_prefix' => url('', array('absolute' => TRUE)) . (variable_get('clean_url', 0) ? '' : '?q='),
-    '#autocomplete_path' => db_table_exists('watchdog') ? 'admin/build/path-redirect/autocomplete' : '',
+    '#autocomplete_path' => db_table_exists('watchdog') ? 'js/path_redirect/autocomplete_404' : '',
   );
 
   $form['redirect'] = array(
@@ -345,8 +345,8 @@ function path_redirect_get_path_segment($index = 0) {
  * Autocompletion callback for the add/edit redirect form. Returns a list of
  * current 404s on the site.
  */
-function path_redirect_autocomplete() {
-  $string = path_redirect_get_path_segment(4);
+function path_redirect_js_autocomplete_404() {
+  $string = path_redirect_get_path_segment(3);
   $matches = array();
 
   // Get a list of 404s, sorted by the number of times each 404 was processed.
