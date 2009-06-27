@@ -76,18 +76,13 @@ function path_redirect_edit($form_state, $rid = FALSE) {
 
 function path_redirect_edit_form(&$form_state, $edit = array()) {
   // Merge default values.
-  $_GET += array(
-    'src' => '',
-    'dst' => '',
-    'language' => '',
-  );
   $edit += array(
     'rid' => NULL,
-    'path' => urldecode($_GET['src']),
-    'redirect' => urldecode($_GET['dst']),
+    'path' => isset($_GET['src']) ? urldecode($_GET['src']) : '',
+    'redirect' => isset($_GET['dst']) ? urldecode($_GET['dst']) : '',
     'query' => NULL,
     'fragment' => NULL,
-    'language' => urldecode($_GET['language']),
+    'language' => isset($_GET['language']) ? urldecode($_GET['language']) : '',
     'type' => path_redirect_var('default_status'),
   );
 
@@ -199,10 +194,13 @@ function path_redirect_edit_validate($form, &$form_state) {
     // The "from" path should not conflict with another redirect
     form_set_error('path', t('The <strong>from</strong> path you entered is already redirected. You can <a href="@edit-page">edit this redirect</a> instead.', array('@edit-page' => url('admin/build/path-redirect/edit/'. $result->rid))));
   }
-  //elseif (db_result(db_query("SELECT * FROM {url_alias} WHERE dst = '%s'", array(':dst' => $form_state['values']['path'])))) {
-  //  // A redirect's 'from' cannot match any values from url_alias, it will cause an infinite loop.
-  //  form_set_error('path', t('The path you entered will cause an infinite loop.'));
-  //}
+  elseif ($pid = db_result(db_query("SELECT pid FROM {url_alias} WHERE dst = '%s'", array(':dst' => $form_state['values']['path'])))) {
+    // A redirect's 'from' cannot match any values from url_alias, it will cause an infinite loop.
+    form_set_error('path', t('You cannot add an existing alias as a redirect as it will not work. You must <a href="@alias-delete">delete the alias</a> first.', array('@alias-delete' => url('admin/build/path/delete/' . $pid, array('query' => drupal_get_destination())))));
+  }
+  elseif (menu_get_item($form_state['values']['path'])) {
+    form_set_error('path', t('You cannot create a redirect from a currently valid path.'));
+  }
 
   if (!valid_url($form_state['values']['redirect']) && !valid_url($form_state['values']['redirect'], TRUE) && $form_state['values']['redirect'] != '<front>') {
     form_set_error('redirect', t('The redirect <strong>to</strong> path does not appear valid.'));
