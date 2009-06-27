@@ -57,7 +57,7 @@ HOW CAN YOU CONTRIBUTE?
   http://drupalmodules.com/module/path-redirect
 
 - Help translate this module on launchpad.net.
-  https://translations.launchpad.net/drupal-path-redirect
+  http://project.davereid.net/translate/projects/path_redirect
 
 - Report any bugs, feature requests, etc. in the issue tracker.
   http://drupal.org/project/issues/path_redirect
