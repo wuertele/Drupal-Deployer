@@ -122,7 +122,7 @@ function xmlsitemap_settings_form() {
   $form['#submit'][] = 'xmlsitemap_form_submit_flag_regenerate';
   $form['#submit'][] = 'xmlsitemap_settings_form_submit';
   $form = system_settings_form($form);
-  $form['buttons']['#weight'] = 20;
+  $form['buttons']['#weight'] = 100;
   $form['array_filter'] = array('#type' => 'value', '#value' => TRUE);
   return $form;
 }
@@ -152,7 +152,7 @@ function xmlsitemap_settings_list($item_type, $items, &$form_item) {
   foreach ($items as $item) {
     $rows[] = array(
       l($item['name'], $item['link'], array('query' => drupal_get_destination())),
-      $item['status'] ? t('Included') : t('Not included'),
+      $item['status'] ? t('Yes') : t('No'),
       $item['priority'] == 'default' ? t('Default') : t($item['priority']),
     );
   }
@@ -223,6 +223,15 @@ function xmlsitemap_settings_form_submit($form, $form_state) {
  * @see xmlsitemap_rebuild_confirm_submit()
  */
 function xmlsitemap_rebuild_confirm() {
+  if (!xmlsitemap_var('rebuild_needed')) {
+    if (!xmlsitemap_var('regenerate_needed')) {
+      drupal_set_message(t('Your sitemap is up to date and does not need to be rebuilt.'), 'warning');
+    }
+    else {
+      drupal_set_message(t('A rebuild is not necessary. If you are just wanting to re-create the sitemap files, you can <a href="@link-cron">run cron manually</a>.', array('@link-cron' => url())), 'warning');
+    }
+  }
+
   // Show only the modules that implement the 6.x-2.x hooks.
   $modules = module_implements('xmlsitemap_links_clear', TRUE);
 
@@ -232,14 +241,14 @@ function xmlsitemap_rebuild_confirm() {
     '#description' => t('If no modules are selected, the sitemap files will just be regenerated.'),
     '#multiple' => TRUE,
     '#options' => drupal_map_assoc($modules),
-    '#default_value' => array(),
+    '#default_value' => xmlsitemap_var('rebuild_needed') ? $modules : array(),
   );
 
   return confirm_form(
     $form,
     t('Are you sure you want to rebuild the sitemap?'),
     'admin/settings/xmlsitemap',
-    t("This action rebuilds your site's sitemap, and may be a lengthy process. This will also recreate the sitemap files."),
+    t("This action rebuilds your site's XML sitemap, and may be a lengthy process. This will also re-create the XML sitemap files."),
     t('Rebuild sitemap'),
     t('Cancel')
   );
