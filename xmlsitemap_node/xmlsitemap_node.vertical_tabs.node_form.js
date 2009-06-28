@@ -1,5 +1,7 @@
 // $Id$
 
+Drupal.verticalTabs = Drupal.verticalTabs || {};
+
 Drupal.verticalTabs.xmlsitemap = function() {
   var vals = [];
   vals.push(Drupal.t('Included in sitemap'));
