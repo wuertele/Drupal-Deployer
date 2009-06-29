@@ -34,44 +34,6 @@ function xmlsitemap_settings_form() {
     '#default_value' => xmlsitemap_var('xsl'),
     '#description' => t('Using the stylesheet will make it easier for non-computers to view and sort.')
   );
-  $form['xmlsitemap']['xmlsitemap_gz'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Generate additional compressed sitemaps using gzip.'),
-    '#default_value' => xmlsitemap_var('gz'),
-    '#disabled' => !function_exists('gzencode'),
-    '#access' => FALSE,
-  );
-  $form['xmlsitemap']['xmlsitemap_chunk_size'] = array(
-    '#type' => 'select',
-    '#title' => t('Number of links in each sitemap page'),
-    '#options' => array('auto' => t('Automatic')) + drupal_map_assoc(array(100, 500, 1000, 2500, 5000, 10000, 25000, 50000)),
-    '#default_value' => xmlsitemap_var('chunk_size'),
-    // @todo This description is not clear.
-    '#description' => t('If there are problems with rebuilding the sitemap, you may want to manually set this value. If you have more than 50,000 links, an index with multiple sitemap pages will be generated. There is a maximum of 1000 sitemap pages.'),
-  );
-  $form['xmlsitemap']['xmlsitemap_batch_limit'] = array(
-    '#type' => 'select',
-    '#title' => t('Maximum number of sitemap links to process at once'),
-    '#options' => drupal_map_assoc(array(5, 10, 25, 50, 100, 250, 500, 1000, 2500)),
-    '#default_value' => xmlsitemap_var('batch_limit'),
-    '#description' => t('If you have problems running cron or rebuilding the sitemap, you may want to lower this value.'),
-  );
-  $form['xmlsitemap']['xmlsitemap_path'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Sitemap cache directory'),
-    '#default_value' => xmlsitemap_var('path'),
-    '#size' => 30,
-    '#maxlength' => 255,
-    '#description' => t('Subdirectory in the directory %dir where the sitemap data will be stored. This folder <strong>must not be shared</strong> with any other Drupal site or install using XML sitemap.', array('%dir' => file_directory_path() .'/')),
-    '#required' => TRUE,
-  );
-  $form['xmlsitemap']['xmlsitemap_base_url'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Base URL'),
-    '#default_value' => xmlsitemap_var('base_url'),
-    '#description' => t('This is the base URL for links generated in the sitemap.'),
-    '#required' => TRUE,
-  );
   $form['xmlsitemap']['xmlsitemap_languages'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Generate sitemaps for the following languages'),
@@ -89,13 +51,57 @@ function xmlsitemap_settings_form() {
     '#disabled' => TRUE,
   );
 
+  $form['advanced'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Advanced settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#weight' => 50,
+  );
+  //$form['advanced']['xmlsitemap_gz'] = array(
+  //  '#type' => 'checkbox',
+  //  '#title' => t('Generate additional compressed sitemaps using gzip.'),
+  //  '#default_value' => xmlsitemap_var('gz'),
+  //  '#disabled' => !function_exists('gzencode'),
+  //);
+  $form['advanced']['xmlsitemap_chunk_size'] = array(
+    '#type' => 'select',
+    '#title' => t('Number of links in each sitemap page'),
+    '#options' => array('auto' => t('Automatic')) + drupal_map_assoc(array(100, 500, 1000, 2500, 5000, 10000, 25000, 50000)),
+    '#default_value' => xmlsitemap_var('chunk_size'),
+    // @todo This description is not clear.
+    '#description' => t('If there are problems with rebuilding the sitemap, you may want to manually set this value. If you have more than 50,000 links, an index with multiple sitemap pages will be generated. There is a maximum of 1000 sitemap pages.'),
+  );
+  $form['advanced']['xmlsitemap_batch_limit'] = array(
+    '#type' => 'select',
+    '#title' => t('Maximum number of sitemap links to process at once'),
+    '#options' => drupal_map_assoc(array(5, 10, 25, 50, 100, 250, 500, 1000, 2500)),
+    '#default_value' => xmlsitemap_var('batch_limit'),
+    '#description' => t('If you have problems running cron or rebuilding the sitemap, you may want to lower this value.'),
+  );
+  $form['advanced']['xmlsitemap_path'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Sitemap cache directory'),
+    '#default_value' => xmlsitemap_var('path'),
+    '#size' => 30,
+    '#maxlength' => 255,
+    '#description' => t('Subdirectory in the directory %dir where the sitemap data will be stored. This folder <strong>must not be shared</strong> with any other Drupal site or install using XML sitemap.', array('%dir' => file_directory_path() .'/')),
+    '#required' => TRUE,
+  );
+  $form['advanced']['xmlsitemap_base_url'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Base URL'),
+    '#default_value' => xmlsitemap_var('base_url'),
+    '#description' => t('This is the base URL for links generated in the sitemap.'),
+    '#required' => TRUE,
+  );
+
   $form['frontpage'] = array(
     '#type' => 'fieldset',
     '#title' => t('Front page'),
     '#description' => t('The front page path can be changed at <a href="@url-frontpage">@url-frontpage</a>.', array('@url-frontpage' => url('admin/settings/site-information'))),
     '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#weight' => -1,
+    //'#weight' => 10,
   );
   $form['frontpage']['xmlsitemap_frontpage_priority'] = array(
     '#type' => 'select',
@@ -110,20 +116,12 @@ function xmlsitemap_settings_form() {
     '#default_value' => xmlsitemap_var('frontpage_changefreq'),
   );
 
-  //$form['advanced'] = array(
-  //  '#type' => 'fieldset',
-  //  '#title' => t('Advanced'),
-  //  '#collapsible' => TRUE,
-  //  '#collapsed' => TRUE,
-  //  '#weight' => 10,
-  //);
-
   $form['#validate'][] = 'xmlsitemap_settings_form_validate';
   $form['#submit'][] = 'xmlsitemap_form_submit_flag_regenerate';
   $form['#submit'][] = 'xmlsitemap_settings_form_submit';
+  $form['array_filter'] = array('#type' => 'value', '#value' => TRUE);
   $form = system_settings_form($form);
   $form['buttons']['#weight'] = 100;
-  $form['array_filter'] = array('#type' => 'value', '#value' => TRUE);
   return $form;
 }
 

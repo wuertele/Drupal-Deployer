@@ -625,10 +625,7 @@ function xmlsitemap_form_locale_languages_overview_form_alter(&$form, $form_stat
  */
 function xmlsitemap_form_xmlsitemap_settings_form_alter(&$form, $form_state) {
   if (module_exists('vertical_tabs')) {
-    // The $fieldsets array is a list of all supported fieldsets in core
-    // for the node form, and their JavaScript summary creators.
-    $fieldsets = array('xmlsitemap', 'frontpage', 'menu', 'node', 'taxonomy', 'user');
-    vertical_tabs_add_vertical_tabs($form, $fieldsets);
+    vertical_tabs_add_vertical_tabs($form);
   }
 }
 
@@ -830,14 +827,14 @@ function xmlsitemap_write_record($table, &$object, $update = array()) {
 }
 
 // @todo Remove when http://drupal.org/project/500044 is fixed.
-function vertical_tabs_add_vertical_tabs(&$form, $fieldsets) {
+function vertical_tabs_add_vertical_tabs(&$form, $fieldsets = NULL) {
   // The javascript to add to the page.
   $settings = array();
   // Iterate through the form, finding fieldsets.
   foreach (element_children($form) as $delta => $key) {
     // We need to make sure that the element we have is a fieldset
     // and the user has access to this field.
-    if (in_array($key, $fieldsets) &&
+    if ((!isset($fieldsets) || in_array($key, $fieldsets)) &&
       (isset($form[$key]['#type']) && $form[$key]['#type'] == 'fieldset') &&
       (!isset($form[$key]['#access']) || $form[$key]['#access'] != FALSE)) {
       // Add the JavaScript.
@@ -846,7 +843,7 @@ function vertical_tabs_add_vertical_tabs(&$form, $fieldsets) {
         'weight' => (isset($form[$key]['#weight']) ? $form[$key]['#weight'] : 0) + (0.01 * $delta),
       );
       // If there's a summary callback, then add it.
-      if (isset($form[$key]['#summary_callback']) || in_array($key, $fieldsets)) {
+      if (isset($form[$key]['#summary_callback'])) {
         $settings[$key]['callback'] = (isset($form[$key]['#summary_callback']) ? $form[$key]['#summary_callback'] : $key);
         $settings[$key]['args'] = (isset($form[$key]['#summary_arguments']) ? $form[$key]['#summary_arguments'] : array());
       }
