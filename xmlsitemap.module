@@ -42,11 +42,9 @@ function xmlsitemap_help($path, $arg) {
   switch ($path) {
     case 'admin/help#xmlsitemap':
       $sitemaps = xmlsitemap_get_sitemaps(TRUE);
-      $output .= format_plural(count($sitemaps), 'Your sitemap is located at !sitemaps.', 'Your sitemaps are located at: !sitemaps', array('!sitemaps' => count($sitemaps) > 1 ? theme('item_list', $sitemaps) : $sitemaps[0]));
+      $output .= format_plural(count($sitemaps), 'Your sitemap is located at: !sitemaps', 'Your sitemaps are located at: !sitemaps', array('!sitemaps' => theme('item_list', $sitemaps)));
       break;
     case 'admin/settings/xmlsitemap':
-      $sitemaps = xmlsitemap_get_sitemaps(TRUE);
-      $output .= format_plural(count($sitemaps), 'Your sitemap is located at !sitemaps.', 'Your sitemaps are located at: !sitemaps', array('!sitemaps' => count($sitemaps) > 1 ? theme('item_list', $sitemaps) : $sitemaps[0]));
       break;
   }
 
@@ -225,7 +223,7 @@ function xmlsitemap_get_sitemaps($links = FALSE) {
     foreach ($sitemap_languages as $language) {
       $url_options['language'] = $languages[$language];
       $sitemap = url('sitemap.xml', $url_options);
-      $sitemaps[] = $links ? l($sitemap, $sitemap) : $sitemap;
+      $sitemaps[$language] = $links ? l($sitemap, $sitemap) : $sitemap;
     }
   }
 
@@ -625,7 +623,7 @@ function xmlsitemap_form_locale_languages_overview_form_alter(&$form, $form_stat
  */
 function xmlsitemap_form_xmlsitemap_settings_form_alter(&$form, $form_state) {
   if (module_exists('vertical_tabs')) {
-    vertical_tabs_add_vertical_tabs($form);
+    _xmlsitemap_add_vertical_tabs($form);
   }
 }
 
@@ -827,7 +825,7 @@ function xmlsitemap_write_record($table, &$object, $update = array()) {
 }
 
 // @todo Remove when http://drupal.org/project/500044 is fixed.
-function vertical_tabs_add_vertical_tabs(&$form, $fieldsets = NULL) {
+function _xmlsitemap_add_vertical_tabs(&$form, $fieldsets = NULL) {
   // The javascript to add to the page.
   $settings = array();
   // Iterate through the form, finding fieldsets.
@@ -841,14 +839,11 @@ function vertical_tabs_add_vertical_tabs(&$form, $fieldsets = NULL) {
       $settings[$key] = array(
         'name' => $form[$key]['#title'],
         'weight' => (isset($form[$key]['#weight']) ? $form[$key]['#weight'] : 0) + (0.01 * $delta),
+        'callback' => (isset($form[$key]['#summary_callback']) ? $form[$key]['#summary_callback'] : $key),
+        'args' => (isset($form[$key]['#summary_arguments']) ? $form[$key]['#summary_arguments'] : array()),
       );
-      // If there's a summary callback, then add it.
-      if (isset($form[$key]['#summary_callback'])) {
-        $settings[$key]['callback'] = (isset($form[$key]['#summary_callback']) ? $form[$key]['#summary_callback'] : $key);
-        $settings[$key]['args'] = (isset($form[$key]['#summary_arguments']) ? $form[$key]['#summary_arguments'] : array());
-      }
       // Add a class to identify the fieldset.
-      if (isset($form[$key]['#attributes']['class']) && !empty($form[$key]['#attributes']['class'])) {
+      if (isset($form[$key]['#attributes']['class'])) {
         $form[$key]['#attributes']['class'] .= ' vertical-tabs-fieldset vertical-tabs-'. $key;
       }
       else {
@@ -889,8 +884,7 @@ function vertical_tabs_add_vertical_tabs(&$form, $fieldsets = NULL) {
       '#theme' => 'vertical_tabs',
       '#attributes' => array('class' => 'vertical-tabs clear-block'),
     );
-    
+
     return TRUE;
   }
 }
-

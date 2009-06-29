@@ -20,7 +20,6 @@ function xmlsitemap_settings_form() {
     '#title' => t('Settings'),
     '#collapsible' => TRUE,
     '#collapsed' => FALSE,
-    '#weight' => -10,
   );
   $form['xmlsitemap']['xmlsitemap_minimum_lifetime'] = array(
     '#type' => 'select',
@@ -32,23 +31,14 @@ function xmlsitemap_settings_form() {
     '#type' => 'checkbox',
     '#title' => t('Include a stylesheet in the sitemaps.'),
     '#default_value' => xmlsitemap_var('xsl'),
-    '#description' => t('Using the stylesheet will make it easier for non-computers to view and sort.')
+    '#description' => t('Using the stylesheet will make it easier for actual people to view your XML sitemap since it will not be raw XML output.')
   );
   $form['xmlsitemap']['xmlsitemap_languages'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Generate sitemaps for the following languages'),
     '#options' => function_exists('locale_language_list') ? locale_language_list() : array(language_default('language') => array(language_default('name'))),
     '#default_value' => xmlsitemap_var('languages'),
-    '#access' => module_exists('locale'),
-  );
-  // Disable the default langage checkbox. It should always be enabled.
-  // @todo List the individual sitemap links as description values for the language checkboxes?
-  $form['xmlsitemap']['xmlsitemap_languages'][language_default('language')] = array(
-    '#type' => 'checkbox',
-    '#title' => language_default('name'),
-    '#return_value' => language_default('language'),
-    '#default_value' => TRUE,
-    '#disabled' => TRUE,
+    '#process' => array('expand_checkboxes', '_xmlsitemap_process_language_checkboxes'),
   );
 
   $form['advanced'] = array(
@@ -56,6 +46,7 @@ function xmlsitemap_settings_form() {
     '#title' => t('Advanced settings'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
+    '#weight' => 10,
   );
   //$form['advanced']['xmlsitemap_gz'] = array(
   //  '#type' => 'checkbox',
@@ -100,7 +91,8 @@ function xmlsitemap_settings_form() {
     '#title' => t('Front page'),
     '#description' => t('The front page path can be changed at <a href="@url-frontpage">@url-frontpage</a>.', array('@url-frontpage' => url('admin/settings/site-information'))),
     '#collapsible' => TRUE,
-    //'#weight' => 10,
+    '#collapsed' => TRUE,
+    '#weight' => 20,
   );
   $form['frontpage']['xmlsitemap_frontpage_priority'] = array(
     '#type' => 'select',
@@ -125,6 +117,25 @@ function xmlsitemap_settings_form() {
 }
 
 /**
+ * Show a link to each languages' sitemap and disable the default language
+ * checkbox.
+ */
+function _xmlsitemap_process_language_checkboxes($element) {
+  $sitemaps = xmlsitemap_get_sitemaps(TRUE);
+  foreach (element_children($element) as $key) {
+    if ($key == language_default('language')) {
+      $element[$key]['#disabled'] = TRUE;
+      $element[$key]['#default_value'] = TRUE;
+      $element[$key]['#weight'] = -1;
+    }
+    if (isset($sitemaps[$key])) {
+      $element[$key]['#description'] = $sitemaps[$key];
+    }
+  }
+  return $element;
+}
+
+/**
  * Create a list of items that can be included in the sitemap.
  *
  * @param $item_type
@@ -138,10 +149,10 @@ function xmlsitemap_settings_form() {
  * @param $form_item
  *   The form item to add the list to.
  */
-function xmlsitemap_settings_list($item_type, $items, &$form_item) {
+function xmlsitemap_settings_list($item_title, $items, &$form_item, $item_type = '') {
   $header = array(
-    $item_type,
-    t('Included in sitemap?'),
+    $item_title,
+    t('Included'),
     t('Default priority'),
   );
   $rows = array();
@@ -157,6 +168,14 @@ function xmlsitemap_settings_list($item_type, $items, &$form_item) {
   $form_item['list'] = array(
     '#value' => theme('table', $header, $rows),
   );
+
+  //if ($item_type) {
+  //  $count = db_result(db_query("SELECT COUNT(id) FROM {xmlsitemap} WHERE type = '%s' AND access = 1 AND status = 1", $item_type));
+  //  $form_item['count'] = array(
+  //    '#type' => 'item',
+  //    '#value' => format_plural($count, 'There is @count @type link in the sitemap.', 'There are @count @type links in the sitemap', array('@type' => drupal_strtolower($item_title))),
+  //  );
+  //}
 }
 
 /**
