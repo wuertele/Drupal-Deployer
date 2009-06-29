@@ -56,7 +56,6 @@ function xmlsitemap_settings_form() {
     '#title' => t('Advanced settings'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
-    '#weight' => 50,
   );
   //$form['advanced']['xmlsitemap_gz'] = array(
   //  '#type' => 'checkbox',
