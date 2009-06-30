@@ -36,7 +36,7 @@ function xmlsitemap_settings_form() {
   $form['xmlsitemap']['xmlsitemap_languages'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Generate sitemaps for the following languages'),
-    '#options' => function_exists('locale_language_list') ? locale_language_list() : array(language_default('language') => array(language_default('name'))),
+    '#options' => function_exists('locale_language_list') ? locale_language_list() : array(language_default('language') => language_default('name')),
     '#default_value' => xmlsitemap_var('languages'),
     '#process' => array('expand_checkboxes', '_xmlsitemap_process_language_checkboxes'),
   );
