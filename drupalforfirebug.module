@@ -1,4 +1,11 @@
 <?php 
+
+/**
+* Implementation of hook_init() 
+*/
+function drupalforfirebug_init() {
+}
+
 /**
 * Implementation of hook_menu()
 */
@@ -117,31 +124,21 @@ function drupalforfirebug_get($panetype) {
 */
 function drupalforfirebug_get_sql_log() {
   $output = '<fieldset>';
-
   if (!module_exists('devel')) {
     $output .= '<legend>Devel Module is Not Installed</legend>';
     $output .= 'Please install and enable the Devel Module to display the SQL queries.';
     return $output;
-  }
-  if (!variable_get('dev_query', 0)) {   
-
+  } elseif (!variable_get('dev_query', 0)) {
     $output .= '<legend>Query Logging is Not Enabled</legend>';
-    $output .= 'Please enable query logging in the Devel Module Settings to use this feature.';
+    $output .= 'Please enable "Collect query info" in the Devel Module Settings (admin/settings/devel) to use this feature.';
     return $output;
-  }
-  if (module_exists('devel') && variable_get('dev_query', 0)) {
+  } else {
     global $queries;
     list($counts, $query_summary) = devel_query_summary();
     $output .= '<legend>SQL Query Log</legend>';
-    $output .= devel_query_table($queries, $counts);
-  } else {
-    if (!variable_get('dev_query', 0) && module_exists('devel')) {
-      $output .= t('Please Enable the Devel Modules to Log SQL Queries: ') . ' ' . l(t('Enable SQL Queries'), url('admin/settings/devel', array('absolute' => TRUE)), array('target' => '_blank')) . '.'; 
-    } else {
-      $output .= t('Please Enable the Devel Modules to Log SQL Queries: ') . ' ' . l(t('See Devel Project Page'), url('http://www.drupal.org/project/devel', array('absolute' => TRUE)), array('target' => '_blank')) . '.'; 
-    }
-  } 
-  $output .= '</fieldset>';
+    $output .= drupalforfirebug_devel_query_table($queries, $counts);
+  }
+  $output .= '</fieldset>'; 
   return $output;
 }
 
@@ -483,3 +480,41 @@ function theme_drupalforfirebug_field_object($marker, $id, $op = NULL, $data) {
   
   return $output;
 }
+
+/**
+* Replication of Devel Query Display (but as a table instead of CSS styled div structure)
+* This is done to work with the Firefox extension which has a harder time loading CSS
+*/
+function drupalforfirebug_devel_query_table($queries, $counts) {
+  $header = array ('ms', '#', 'where', 'query');
+  $i = 0;
+  foreach ($queries as $query) {
+    $ar = explode("\n", $query[0]);
+    $function=array_shift($ar);
+    $count = isset($counts[$query[0]]) ? $counts[$query[0]] : 0;
+    $query[0]=join(' ',$ar);
+
+    $diff = round($query[1] * 1000, 2);
+    if ($diff > variable_get('devel_execution', 5)) {
+      $cell[$i][] = array ('data' => $diff, 'class' => 'marker');
+    }
+    else {
+      $cell[$i][] = $diff;
+    }
+    if ($count > 1) {
+      $cell[$i][] = array ('data' => $count, 'class' => 'marker');
+    }
+    else {
+      $cell[$i][] = $count;
+    }
+    $cell[$i][] = l($function, "http://api.drupal.org/api/HEAD/function/$function");
+    $cell[$i][] = check_plain($query[0]);
+    $i++;
+    unset($diff, $count);
+  }
+  if (variable_get('devel_query_sort', DEVEL_QUERY_SORT_BY_SOURCE)) {
+    usort($cell, '_devel_table_sort');
+  }
+  return theme('table', $header, $cell);
+}
+ 
