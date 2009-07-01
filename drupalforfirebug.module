@@ -74,7 +74,7 @@ function drupalforfirebug_user($op, &$edit, &$account, $category = NULL) {
     $account_clone = drupal_clone($account);
     $account_clone->pass = '**Not shown for security reasons**';
     $data = drupalforfirebug_array_compare((array) $account_clone, (array) $account_clone);
-    $output = theme('drupalforfirebug_field_object', 'user', $op, $uid, $data);
+    $output = theme('drupalforfirebug_field_object', 'user', $uid, $op, $data);
     drupalforfirebug_log($output, 'hook_user');
   }
 }
@@ -116,28 +116,32 @@ function drupalforfirebug_get($panetype) {
 * Output Function to Return the Results of the SQL Log
 */
 function drupalforfirebug_get_sql_log() {
+  $output = '<fieldset>';
+
   if (!module_exists('devel')) {
-    $output = '<h4>Devel Module is Not Installed</h4>';
+    $output .= '<legend>Devel Module is Not Installed</legend>';
     $output .= 'Please install and enable the Devel Module to display the SQL queries.';
     return $output;
   }
   if (!variable_get('dev_query', 0)) {   
-    $output = '<h4>Query Logging is Not Enabled</h4>';
+
+    $output .= '<legend>Query Logging is Not Enabled</legend>';
     $output .= 'Please enable query logging in the Devel Module Settings to use this feature.';
     return $output;
   }
   if (module_exists('devel') && variable_get('dev_query', 0)) {
     global $queries;
     list($counts, $query_summary) = devel_query_summary();
-    $output = '<h4>SQL Query Log</h4>';
+    $output .= '<legend>SQL Query Log</legend>';
     $output .= devel_query_table($queries, $counts);
   } else {
     if (!variable_get('dev_query', 0) && module_exists('devel')) {
-      $output = t('Please Enable the Devel Modules to Log SQL Queries: ') . ' ' . l(t('Enable SQL Queries'), url('admin/settings/devel', array('absolute' => TRUE)), array('target' => '_blank')) . '.'; 
+      $output .= t('Please Enable the Devel Modules to Log SQL Queries: ') . ' ' . l(t('Enable SQL Queries'), url('admin/settings/devel', array('absolute' => TRUE)), array('target' => '_blank')) . '.'; 
     } else {
-      $output = t('Please Enable the Devel Modules to Log SQL Queries: ') . ' ' . l(t('See Devel Project Page'), url('http://www.drupal.org/project/devel', array('absolute' => TRUE)), array('target' => '_blank')) . '.'; 
+      $output .= t('Please Enable the Devel Modules to Log SQL Queries: ') . ' ' . l(t('See Devel Project Page'), url('http://www.drupal.org/project/devel', array('absolute' => TRUE)), array('target' => '_blank')) . '.'; 
     }
   } 
+  $output .= '</fieldset>';
   return $output;
 }
 
@@ -162,21 +166,35 @@ function drupalforfirebug_get_php_exec_area() {
 }
 
 function drupalforfirebug_get_php_exec($code = NULL) {
+  $output = '<fieldset>';
   if (!user_access('Execute Firebug PHP')) {
-    $output = '<h4>Execute PHP Code</h4>';
+    $output .= '<legend>' . t('Execute Firebug PHP') . '</legend>';
     $output .= 'You do not have the proper permissions to use this functionality.';
+    $output .= '</fieldset>';
     print $output;
     exit();
   } else {
     if (!$code) {
-      $output = '<h4>Execute PHP Code</h4>';
+      $output .= '<legend>' . t('Execute Firebug PHP') . '</legend>';
       $output .= drupal_get_form('drupalforfirebug_execute_form');
+      $output .= '</fieldset>';
       print $output;
       exit();
     } else {
-      $output = eval("print '<h4>PHP Code Execution Results</h4>';" . $code);
-      $output .= '<h4>Execute PHP Code</h4>';
+      $output = '<legend>PHP Code Execution Results</legend>';
+
+      // Run the PHP command, get output in variable
+      ob_start();
+      eval($code);
+      $eval_result = ob_get_contents();
+      ob_end_clean();
+
+      $output .= '<PRE>' . $eval_result . '</PRE>';
+      $output .= '</fieldset>';
+      $output .= '<fieldset>';
+      $output .= '<legend>' . t('Execute Firebug PHP') . '</legend>';
       $output .= drupal_get_form('drupalforfirebug_execute_form');
+      $output .= '</fieldset>';
       print $output;
       exit();
     }
@@ -251,8 +269,7 @@ function drupalforfirebug_perm() {
 */
 function drupalforfirebug_exit() {
   // Garbage Collection
-  global $dfp_runtime;
-  unset($dfp_runtime);
+  unset($_GLOBALS['dfp_runtime']);
 }
 
 /**

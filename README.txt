@@ -4,7 +4,7 @@ matt cheney (populist)
 matt@chapterthree.com
 ----------------------
 
--- to use this module you must also download and install the drupal for firebug firefox extension. you can download a copy on the mozilla.org page (https://addons.mozilla.org/en-US/firefox/addon/8370) or linked from the drupal.org project page (http://www.drupal.org/project/drupalforfirebug). 
+-- to use this module you must also download and install the drupal for firebug firefox extension. the extension is now public and available at https://addons.mozilla.org/en-US/firefox/addon/8370.
 
 -- to see this module in action (after installing the firefox extension), check out the demonstration test site at http://drupalforfirebug.chapterthree.com/tests.
 
