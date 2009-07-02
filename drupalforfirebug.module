@@ -19,26 +19,13 @@ function drupalforfirebug_menu() {
 }
 
 /**
- * Implementation of hook_theme()
- *
- * Register our functions.
- */
-function drupalforfirebug_theme() {
-  return array(
-    'drupalforfirebug_field_object' => array(
-      'arguments' => array('type' => NULL, 'id' => NULL, 'data' => NULL),
-    ),
-  );
-}
-
-/**
 *  Implementation of hook_nodeapi() 
 */
 function drupalforfirebug_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
   global $dfp_runtime;
   $nid = (isset($node->nid)) ? $node->nid : '*'. t('NEW') . '*';
   $data = drupalforfirebug_array_compare((array) $dfp_runtime['drupalforfirebug_nodes']['original'][$node->type][$nid], (array) $node);
-  $output = theme('drupalforfirebug_field_object', 'node', $nid, $op, $data);
+  $output = drupalforfirebug_field_object('node', $nid, $op, $data);
   drupalforfirebug_log($output, 'hook_nodeapi');
 }
 
@@ -48,7 +35,7 @@ function drupalforfirebug_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 function drupalforfirebug_views_pre_view(&$view, &$display_id) {
   global $dfp_runtime;
   $data = drupalforfirebug_array_compare((array) $dfp_runtime['drupalforfirebug_views']['original'][$view->name], (array) $view);
-  $output = theme('drupalforfirebug_field_object', 'view', $view->name, NULL, $data);
+  $output = drupalforfirebug_field_object('view', $view->name, NULL, $data);
   drupalforfirebug_log($output, 'hook_views');
 }
 
@@ -60,7 +47,7 @@ function drupalforfirebug_form_alter(&$form, $form_state, $form_id) {
   if ($form_id != 'drupalforfirebug_execute_form') {
     $form_modified = (array) $form;
     $data = drupalforfirebug_array_compare($dfp_runtime['drupalforfirebug_forms']['original'][$form_id], $form_modified);
-    $output = theme('drupalforfirebug_field_object', 'form', $form_id, NULL, $data);
+    $output = drupalforfirebug_field_object('form', $form_id, NULL, $data);
     drupalforfirebug_log($output, 'hook_form_alter');
   }
 }
@@ -81,7 +68,7 @@ function drupalforfirebug_user($op, &$edit, &$account, $category = NULL) {
     $account_clone = drupal_clone($account);
     $account_clone->pass = '**' . t('Not shown for security reasons') . '**';
     $data = drupalforfirebug_array_compare((array) $account_clone, (array) $account_clone);
-    $output = theme('drupalforfirebug_field_object', 'user', $uid, $op, $data);
+    $output = drupalforfirebug_field_object('user', $uid, $op, $data);
     drupalforfirebug_log($output, 'hook_user');
   }
 }
@@ -465,11 +452,12 @@ function html_drupalforfirebug_show_array($array){
 
 
 /**
- * Theme function for fieldsets that wrap object dumps
+ * Function for fieldsets that wrap object dumps
  *
  * For efficiency and consistent behavior in firebug window
+ * Use to be a theme function, but that broke things
  */
-function theme_drupalforfirebug_field_object($marker, $id, $op = NULL, $data) {
+function drupalforfirebug_field_object($marker, $id, $op = NULL, $data) {
   $output = '<fieldset class="toggler">';
   $output .= '<legend><strong><a href="#"><em>' . $op . '</em> $'. $marker .'->'. $id . '</a></strong></legend>';
   $output .= '<div class="content" style="display: none;">';
