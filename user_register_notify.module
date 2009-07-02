@@ -107,7 +107,6 @@ function user_register_notify_user($op, &$edit, &$account, $category = NULL) {
 
 function user_register_notify_mail($key, &$message, $params) {
   global $base_url;
-
   if ($key == 'user-register-notify-admin') {
     $language = $message['language'];
     $langcode = $language->language;
@@ -116,14 +115,14 @@ function user_register_notify_mail($key, &$message, $params) {
     $profile_data = "";
     $og_data = "";
 
-    if($params['action'] == 'insert') {
+    if ($params['action'] == 'insert') {
       $action = 'created';
     }
     else {
       $action = 'updated';
     }
     if (module_exists('profile')) {
-      $result = db_query('SELECT f.title, f.type, v.value FROM {profile_fields} f INNER JOIN {profile_values} v ON f.fid = v.fid WHERE uid = %d', $uaccount->uid);
+      $result = db_query('SELECT f.title, f.name, f.type, v.value FROM {profile_fields} f INNER JOIN {profile_values} v ON f.fid = v.fid WHERE uid = %d', $uaccount->uid);
       while ($field = db_fetch_object($result)) {
         switch ($field->type) {
           case 'date':
@@ -131,16 +130,22 @@ function user_register_notify_mail($key, &$message, $params) {
             if (is_array($date_field)) {
               $date_timestamp = mktime(0, 0, 0, $date_field['month'], $date_field['day'], $date_field['year']);
               $profile_data .= sprintf("%s: %s\n", $field->title, format_date($date_timestamp));
+              $variables['!'. $field->name] = format_date($date_timestamp);
             }
             break;
           case 'checkbox':
-            if ($field->value)
+            if ($field->value) {
               $profile_data .= sprintf("%s: Checked\n", $field->title);
-            else
+              $variables['!'. $field->name] = "Checked";
+            } 
+            else {
               $profile_data .= sprintf("%s: Not Checked\n", $field->title);
+              $variables['!'. $field->name] = "Not Checked";
+            }
             break;
           default:
             $profile_data .= sprintf("%s: %s\n", $field->title, $field->value);
+            $variables['!'. $field->name] = check_plain($field->value);
         }
       }
     }
@@ -149,7 +154,7 @@ function user_register_notify_mail($key, &$message, $params) {
     }
 
     if (module_exists('og')) {
-     $result = db_query('SELECT o.og_description, n.title FROM {og_uid} u INNER JOIN {og} o ON o.nid = u.nid INNER JOIN {node} n on n.nid = u.nid WHERE u.uid = %d', $uaccount->uid);
+      $result = db_query('SELECT o.og_description, n.title FROM {og_uid} u INNER JOIN {og} o ON o.nid = u.nid INNER JOIN {node} n on n.nid = u.nid WHERE u.uid = %d', $uaccount->uid);
       $og_data = t("Organic groups belonged to:\n");
 
       while ($og = db_fetch_object($result)) {
@@ -160,21 +165,19 @@ function user_register_notify_mail($key, &$message, $params) {
       $og_data = t("Organic Groups Module Not Installed.\n");
     }
 
-    $variables = array(
-      '!user_name' => isset($uaccount->realname) ? $uaccount->realname : $uaccount->name,
-      '!user_mail' => $uaccount->mail,
-      '!user_view' => url('user/'. $uaccount->uid, array('absolute' => TRUE)),
-      '!user_edit' => url('user/'. $uaccount->uid .'/edit', array('absolute' => TRUE)),
-      '!user_delete' => url('user/'. $uaccount->uid .'/delete', array('absolute' => TRUE)),
-      '!site' => variable_get('site_name', 'Drupal'),
-      '!uri' => $base_url,
-      '!uri_brief' => drupal_substr($base_url, drupal_strlen('http://')),
-      '!date' => format_date(time()),
-      '!profile' => check_plain($profile_data),
-      '!og' => check_plain($og_data),
-      '!action' => check_plain($action),
-    );
-    watchdog('user_register_notify', check_plain($account_data));
+    $variables['!user_name'] = isset($uaccount->realname) ? $uaccount->realname : $uaccount->name;
+    $variables['!user_mail'] = $uaccount->mail;
+    $variables['!user_view'] = url('user/'. $uaccount->uid, array('absolute' => TRUE));
+    $variables['!user_edit'] = url('user/'. $uaccount->uid .'/edit', array('absolute' => TRUE));
+    $variables['!user_delete'] = url('user/'. $uaccount->uid .'/delete', array('absolute' => TRUE));
+    $variables['!site'] = variable_get('site_name', 'Drupal');
+    $variables['!uri'] = $base_url;
+    $variables['!uri_brief'] = drupal_substr($base_url, drupal_strlen('http://'));
+    $variables['!date'] = format_date(time());
+    $variables['!profile'] = check_plain($profile_data);
+    $variables['!og'] = check_plain($og_data);
+    $variables['!action'] = check_plain($action);
+
     $message['subject'] = t(variable_get('user_register_notify_subject', USER_REGISTER_NOTIFY_SUBJECT), $variables);
     $message['body'] = t(variable_get('user_register_notify_body', USER_REGISTER_NOTIFY_BODY), $variables);
   }
