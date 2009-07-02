@@ -51,27 +51,26 @@ function user_register_notify_setup_email(&$edit, &$account, $action = 'insert')
       'action' => $action,
     );
 
+    $emails = array();
     switch ($notify_type) {
       case 'Custom':
-        $to = variable_get('user_register_notify_mailto', $from);
+        $emails = preg_split('/,[\w]+/', variable_get('user_register_notify_mailto', $from));
         break;
       case 'Both':
-        $to = variable_get('user_register_notify_mailto', $from);
-        // There is no break there for a reason.
+        $emails = preg_split('/,[\w]+/', variable_get('user_register_notify_mailto', $from));
+        // There is no break here for a reason.
       case 'Role':
         $roles = implode(',', variable_get('user_register_notify_roles', array()));
         if (!empty($roles)) {
           $result = db_query("SELECT mail FROM {users} AS u INNER JOIN {users_roles} AS r ON u.uid = r.uid WHERE r.rid IN('%s')", $roles);
-          $emails = array();
           while ($mail = db_fetch_object($result)) {
             $emails[] = $mail->mail;
-          }
-          if (!empty($emails)) {
-            $to = $to .' '. implode(', ', $emails);
           }
         }
         break;
     }
+    $emails = array_unique($emails);
+    $to = implode(', ', $emails);
 
 //    watchdog('user_register_notify', check_plain($to));
 
@@ -111,7 +110,6 @@ function user_register_notify_mail($key, &$message, $params) {
     $language = $message['language'];
     $langcode = $language->language;
     $uaccount = $params['account'];
-    $account_data = "";
     $profile_data = "";
     $og_data = "";
 
