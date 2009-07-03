@@ -51,7 +51,7 @@ function xmlsitemap_engines_settings_form_validate(&$form, $form_state) {
   $custom_urls = &$form_state['values']['xmlsitemap_engines_custom_urls'];
   $custom_urls = preg_split('/[\r\n]+/', $custom_urls, -1, PREG_SPLIT_NO_EMPTY);
   foreach ($custom_urls as $custom_url) {
-    $url = xmlsitemap_engines_prepare_url($custom_url);
+    $url = xmlsitemap_engines_prepare_url($custom_url, '');
     if (!valid_url($url, TRUE)) {
       form_set_error('xmlsitemap_engines_custom_urls', t('Invalid custom URL %url.', array('%url' => $custom_url)));
     }
