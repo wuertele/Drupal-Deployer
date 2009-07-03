@@ -282,9 +282,17 @@ function theme_imagefield_image($file, $alt = '', $title = '', $attributes = NUL
     return '<!-- File not found: '. $file['filepath'] .' -->';
   }
 
-  if ($getsize && (list($width, $height, $type, $image_attributes) = @getimagesize($file['filepath']))) {
-    $attributes['width'] = $width;
-    $attributes['height'] = $height;
+  if ($getsize) {
+    // Use cached width and height if available.
+    if (!empty($file['data']['width']) && !empty($file['data']['height'])) {
+      $attributes['width']  = $file['data']['width'];
+      $attributes['height'] = $file['data']['height'];
+    }
+    // Otherwise pull the width and height from the file.
+    elseif (list($width, $height, $type, $image_attributes) = @getimagesize($file['filepath'])) {
+      $attributes['width'] = $width;
+      $attributes['height'] = $height;
+    }
   }
 
   if (!empty($title)) {
