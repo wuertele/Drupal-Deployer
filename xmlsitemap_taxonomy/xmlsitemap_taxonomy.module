@@ -1,0 +1,368 @@
+<?php
+// $Id$
+
+/**
+ * Implementation of hook_cron().
+ *
+ * Process old taxonomy terms not found in the {xmlsitemap} table.
+ */
+function xmlsitemap_taxonomy_cron() {
+  if ($vids = xmlsitemap_taxonomy_get_vids()) {
+    $query = db_query_range("SELECT t.tid FROM {term_data} t LEFT JOIN {xmlsitemap} x ON x.type = 'taxonomy' AND t.tid = x.id WHERE (x.id IS NULL OR x.status IS NULL) AND t.vid IN (" . db_placeholders($vids) . ")", $vids, 0, xmlsitemap_var('batch_limit'));
+    while ($tid = db_result($query)) {
+      $term = xmlsitemap_taxonomy_taxonomy_term_load($tid);
+      $link = xmlsitemap_taxonomy_create_link($term);
+      xmlsitemap_save_link($link);
+    }
+  }
+}
+
+/**
+ * Implementation of hook_xmlsitemap_links().
+ */
+function xmlsitemap_taxonomy_xmlsitemap_links($offset = 0, $limit = 0) {
+  $links = array();
+
+  if ($vids = xmlsitemap_taxonomy_get_vids()) {
+    $sql = "SELECT t.tid FROM {term_data} t WHERE t.tid > %d AND t.vid IN (" . db_placeholders($vids) . ") ORDER BY t.tid";
+    $args = array_merge(array($offset), $vids);
+    $query = ($limit ? db_query_range($sql, $args, 0, $limit) : db_query($sql, $args));
+
+    while ($tid = db_result($query)) {
+      $term = xmlsitemap_taxonomy_taxonomy_term_load($tid);
+      $links[] = xmlsitemap_taxonomy_create_link($term);
+    }
+  }
+
+  return $links;
+}
+
+/**
+ * Implementation of hook_xmlsitemap_links_batch_info().
+ */
+function xmlsitemap_taxonomy_xmlsitemap_links_batch_info() {
+  $vids = xmlsitemap_taxonomy_get_vids();
+  return array(
+    'max' => $vids ? db_result(db_query("SELECT COUNT(t.tid) FROM {term_data} t WHERE t.vid IN (" . db_placeholders($vids) . ")", $vids)) : 0,
+  );
+}
+
+/**
+ * Implementation of hook_xmlsitemap_link_clear().
+ */
+function xmlsitemap_taxonomy_xmlsitemap_links_clear() {
+  db_query("DELETE FROM {xmlsitemap} WHERE type = 'taxonomy'");
+}
+
+/**
+ * Load a taxonomy term and its associated sitemap link data.
+ *
+ * Use this instead of taxonomy_get_term().
+ *
+ * @todo Convert this to hook_taxonomy_term_load() in Drupal 7.
+ */
+function xmlsitemap_taxonomy_taxonomy_term_load($tid) {
+  $term = taxonomy_get_term($tid);
+  if ($data = xmlsitemap_load_link(array('type' => 'taxonomy', 'id' => $tid))) {
+    $term->xmlsitemap = $data;
+  }
+  return $term;
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter().
+ *
+ * Show a summary of vocabularies on the XML sitemap settings page.
+ */
+function xmlsitemap_taxonomy_form_xmlsitemap_settings_form_alter(&$form, $form_state) {
+  $form['taxonomy'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Taxonomy'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#weight' => 40,
+    '#access' => user_access('administer taxonomy'),
+  );
+
+  $vocabularies = taxonomy_get_vocabularies();
+  foreach ($vocabularies as $vid => $vocabulary) {
+    $vocabularies[$vid] = array(
+      'name' => $vocabulary->name,
+      'link' => 'admin/content/taxonomy/edit/vocabulary/' . $vid,
+      'status' => xmlsitemap_taxonomy_var('status_' . $vid),
+      'priority' => xmlsitemap_taxonomy_var('priority_' . $vid),
+    );
+  }
+  xmlsitemap_settings_list(t('Vocabulary'), $vocabularies, $form['taxonomy']);
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter().
+ *
+ * @see taxonomy_form_vocabulary()
+ */
+function xmlsitemap_taxonomy_form_taxonomy_form_vocabulary_alter(&$form, $form_state) {
+  $vid = isset($form['vid']['#value']) ? $form['vid']['#value'] : 0;
+
+  $form['xmlsitemap'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('XML sitemap'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#access' => user_access('administer xmlsitemap'),
+  );
+  $form['xmlsitemap']['xmlsitemap_taxonomy_status'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Include in the sitemap'),
+    '#default_value' => variable_get('xmlsitemap_taxonomy_status_' . $vid, 0),
+  );
+  $form['xmlsitemap']['xmlsitemap_taxonomy_priority'] = array(
+    '#type' => 'select',
+    '#title' => t('Default priority'),
+    '#options' => xmlsitemap_get_priority_options(TRUE),
+    '#default_value' => variable_get('xmlsitemap_taxonomy_priority_' . $vid, 'default'),
+  );
+
+  // @todo Enable these features:
+  //$form['xmlsitemap']['xmlsitemap_taxonomy_calculate_priority'] = array(
+  //  '#type' => 'checkbox',
+  //  '#title' => t('Calculate priority based on term depth and weight.'),
+  //  '#default_value' => xmlsitemap_taxonomy_var('calculate_priority_' . $vid),
+  //);
+  //$form['xmlsitemap']['xmlsitemap_taxonomy_include_empty_terms'] = array(
+  //  '#type' => 'checkbox',
+  //  '#title' => t('Include terms that do not have any associated content.'),
+  //  '#default_value' => xmlsitemap_taxonomy_var('include_empty_terms_' . $vid),
+  //);
+
+  // The submit and delete buttons need to be weighted down.
+  $form['submit'] += array('#weight' => 10);
+  if (isset($form['delete'])) {
+    $form['delete'] += array('#weight' => 11);
+  }
+
+  $form['#submit'][] = 'xmlsitemap_taxonomy_taxonomy_form_vocabulary_submit';
+}
+
+/**
+ * Form submit handler; update settings when a taxonomy vocabulary is saved.
+ */
+function xmlsitemap_taxonomy_taxonomy_form_vocabulary_submit($form, $form_state) {
+  $vid = $form_state['values']['vid'];
+  $new_status = $form_state['values']['xmlsitemap_taxonomy_status'];
+  $new_priority = $form_state['values']['xmlsitemap_taxonomy_priority'];
+
+  $updates = array();
+  if ($new_status != variable_get('xmlsitemap_taxonomy_status_' . $vid, 0)) {
+    $updates['status'] = $new_status;
+  }
+  if ($new_priority != variable_get('xmlsitemap_taxonomy_priority_' . $vid, 'default')) {
+    $updates['priority'] = $new_priority;
+  }
+  if ($updates) {
+    xmlsitemap_update_links($updates, array('type' => 'taxonomy', 'term_vid' => $vid));
+  }
+
+  variable_set('xmlsitemap_taxonomy_status_' . $vid, $new_status);
+  variable_set('xmlsitemap_taxonomy_priority_' . $vid, $new_priority);
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter().
+ *
+ * @todo Implement individual term status and priority.
+ */
+//function xmlsitemap_taxonomy_form_taxonomy_form_term_alter(&$form, $form_state) {
+//  $term = (object) $form['#term'];
+//  $term->vid = $form['vid']['#value'];
+//  $link = xmlsitemap_taxonomy_create_link($term);
+//
+//  $form['xmlsitemap'] = array(
+//    '#type' => 'fieldset',
+//    '#tree' => TRUE,
+//    '#title' => t('XML sitemap'),
+//    '#collapsible' => TRUE,
+//    '#collapsed' => TRUE,
+//    '#access' => user_access('administer xmlsitemap'),
+//  );
+//  $form['xmlsitemap']['status_override'] = array(
+//    '#type' => 'checkbox',
+//    '#title' => t('Include in the sitemap'),
+//    '#default_value' => $link['status_override'],
+//  );
+//  $form['xmlsitemap']['priority_override'] = array(
+//    '#type' => 'select',
+//    '#title' => t('Priority'),
+//    '#options' => xmlsitemap_get_priority_options($link['priority']),
+//    '#default_value' => $link['priority_override'],
+//    '#description' => user_access('administer taxonomy') ? t('The default priority for this vocabulary can be changed <a href="@link-type">here</a>.', array('@link-type' => url('admin/content/taxonomy/edit/vocabulary/' . $term->vid, array('query' => drupal_get_destination())))) : '',
+//  );
+//
+//  // The submit and delete buttons need to be weighted down.
+//  $form['submit'] += array('#weight' => 10);
+//  if (isset($form['delete'])) {
+//    $form['delete'] += array('#weight' => 11);
+//  }
+//}
+
+/**
+ * Implementation of hook_taxonomy().
+ */
+function xmlsitemap_taxonomy_taxonomy($op, $type, $array = NULL) {
+  if ($type == 'vocabulary') {
+    $vid = $array['vid'];
+    // Insert and update actions handled by xmlsitemap_taxonomy_taxonomy_form_vocabulary_submit().
+    if ($op == 'delete') {
+      xmlsitemap_delete_link(array('type' => 'taxonomy', 'term_vid' => $vid));
+      variable_del('xmlsitemap_taxonomy_status_' . $vid);
+      variable_del('xmlsitemap_taxonomy_priority_' . $vid);
+    }
+  }
+  if ($type == 'term') {
+    $tid = $array['tid'];
+    if ($op == 'insert' || $op == 'update') {
+      $link = xmlsitemap_taxonomy_create_link((object) $array);
+      xmlsitemap_save_link($link);
+    }
+    elseif ($op == 'delete') {
+      xmlsitemap_delete_link(array('type' => 'taxonomy', 'id' => $tid));
+    }
+  }
+}
+
+/**
+ * Create a sitemap link from a taxonomy term.
+ *
+ * @param $term
+ *   A taxonomy term object.
+ * @return
+ *   An array representing a sitemap link.
+ */
+function xmlsitemap_taxonomy_create_link($term) {
+  //if (!is_object($term)) {
+  //  $term = (object) $term;
+  //}
+  if (!isset($term->xmlsitemap)) {
+    $term->xmlsitemap = array();
+  }
+
+  $term->xmlsitemap += array(
+    'id' => $term->tid,
+    'type' => 'taxonomy',
+    'loc' => taxonomy_term_path($term),
+    'priority_override' => xmlsitemap_taxonomy_var('calculate_priority_' . $term->vid) ? xmlsitemap_taxonomy_calculate_term_priority($term) : NULL,
+    'term_vid' => $term->vid,
+  );
+
+  // The following values must always be checked because they are volatile.
+  // @todo How can we check taxonomy term access?
+  //$term->xmlsitemap['access'] = xmlsitemap_taxonomy_get_term_status($term);
+  $term->xmlsitemap['status'] = variable_get('xmlsitemap_taxonomy_status_' . $term->vid, 0);
+  $term->xmlsitemap['priority'] = variable_get('xmlsitemap_taxonomy_priority_' . $term->vid, 'default');
+
+  return $term->xmlsitemap;
+}
+
+/**
+ * Calculate the priority of a taxonomy term based on depth and weight.
+ */
+function xmlsitemap_taxonomy_calculate_term_priority($term) {
+  // Calculate priority.
+  // Min weight = -128
+  // Max weight = 127
+  // Max depth = ?
+  return NULL;
+}
+
+/**
+ * Find the tree depth of a taxonomy term.
+ *
+ * @param $tid
+ *   A term ID.
+ * @return
+ *   The tree depth of the term.
+ */
+function xmlsitemap_taxonomy_get_term_depth($tid) {
+  static $depths = array();
+
+  if (!isset($depths[$tid])) {
+    if ($parent = db_result(db_query("SELECT parent FROM {term_hierarchy} WHERE tid = %d", $tid))) {
+      // If the term has a parent, the term's depth is the parent's depth + 1.
+      if (!isset($depths[$parent])) {
+        $depths[$parent] = xmlsitemap_taxonomy_get_term_depth($parent);
+      }
+      $depths[$tid] = $depths[$parent] + 1;
+    }
+    else {
+      // Term has no parents, so depth is 0.
+      $depths[$tid] = 0;
+    }
+  }
+
+  return $depths[$tid];
+}
+
+function xmlsitemap_taxonomy_get_node_count($term) {
+  return db_result(db_query_range("SELECT 1 FROM {term_node} tn LEFT JOIN {node n} USING (nid) WHERE tn.tid = %d AND n.status = 1", $term->tid, 0, 1));
+}
+
+/**
+ * Fetch an array of vocabulary IDs to be included in the sitemap.
+ */
+function xmlsitemap_taxonomy_get_vids() {
+  $vids = array_keys(taxonomy_get_vocabularies());
+  foreach ($vids as $index => $vid) {
+    if (!variable_get('xmlsitemap_taxonomy_status_' . $vid, 0)) {
+      unset($vids[$index]);
+    }
+  }
+  return $vids;
+}
+
+/**
+ * Internal default variables for template_var().
+ */
+function xmlsitemap_taxonomy_variables() {
+  $defaults = array(
+    // Removed variables set to NULL.
+    'xmlsitemap_taxonomy_include_empty_terms' => NULL,
+    'xmlsitemap_taxonomy_calculate_priority' => NULL,
+  );
+  $vids = array_keys(taxonomy_get_vocabularies());
+  foreach ($vids as $vid) {
+    $defaults['xmlsitemap_taxonomy_status_' . $vid] = 0;
+    $defaults['xmlsitemap_taxonomy_priority_' . $vid] = 'default';
+    $defaults['xmlsitemap_taxonomy_calculate_priority_' . $vid] = FALSE;
+    //$defaults['xmlsitemap_taxonomy_include_empty_terms_' . $vid] = TRUE;
+    //$defaults += _xmlsitemap_taxonomy_variables_vid($vid);
+  }
+  return $defaults;
+}
+
+//function _xmlsitemap_taxonomy_variables_vid($vid) {
+//  $defaults = array();
+//  $defaults['xmlsitemap_taxonomy_status_' . $vid] = 0;
+//  $defaults['xmlsitemap_taxonomy_priority_' . $vid] = 'default';
+//  $defaults['xmlsitemap_taxonomy_calculate_priority_' . $vid] = FALSE;
+//  $defaults['xmlsitemap_taxonomy_include_empty_terms_' . $vid] = TRUE;
+//  return $defaults;
+//}
+
+/**
+ * Internal implementation of variable_get().
+ */
+function xmlsitemap_taxonomy_var($name, $default = NULL) {
+  static $defaults = NULL;
+  if (!isset($defaults)) {
+    $defaults = xmlsitemap_taxonomy_variables();
+  }
+
+  $name = 'xmlsitemap_taxonomy_' . $name;
+
+  // @todo Remove when stable.
+  if (!isset($defaults[$name])) {
+    trigger_error(t('Default variable for %variable not found.', array('%variable' => $name)));
+  }
+
+  return variable_get($name, isset($default) || !isset($defaults[$name]) ? $default : $defaults[$name]);
+}
