@@ -172,12 +172,13 @@ function xmlsitemap_xmlsitemap_link_alter(&$link) {
   if ($link['priority_override'] === 'default') {
     $link['priority_override'] = NULL;
   }
-  if (isset($link['status'])) {
-    // Because status could be a boolean, we need to convert it to an integer
-    // because when using array_diff_assoc(), '0' does not equal FALSE because
-    // they are converted to strings. We do want these values to be equal.
-    // @todo Change these values to be integers and not booleans?
-    $link['status'] = (int) $link['status'];
+
+  // @todo Remove when booleans are no longer used.
+  if (!is_int($link['status'])) {
+    $links['status'] = (int) $link['status'];
+  }
+  if (!is_int($link['access'])) {
+    $links['access'] = (int) $link['access'];
   }
 }
 
@@ -199,9 +200,6 @@ function xmlsitemap_robotstxt() {
   }
   return $sitemaps;
 }
-
-//function xmlsitemap_url_rewrite_output(&$path, &$options, $original_path) {
-//}
 
 /**
  * Get an array of the current site's sitemaps.
@@ -325,7 +323,7 @@ function xmlsitemap_get_chunk_count($reset = FALSE) {
 function xmlsitemap_get_link_count($reset = FALSE) {
   static $count;
   if (!isset($count) || $reset) {
-    $count = db_result(db_query("SELECT COUNT(id) FROM {xmlsitemap} WHERE status = 1"));
+    $count = db_result(db_query("SELECT COUNT(id) FROM {xmlsitemap} WHERE access = 1 AND status = 1"));
   }
   return $count;
 }
@@ -415,6 +413,7 @@ function _xmlsitemap_get_placeholder($field) {
  *   TRUE if there is a visible link, or FALSE if there is not.
  */
 function _xmlsitemap_check_visible_link(array $conditions = array(), $flag = FALSE) {
+  $conditions['access'] = 1;
   $conditions['status'] = 1;
   $result = (bool) xmlsitemap_load_link($conditions);
 
@@ -431,9 +430,6 @@ function _xmlsitemap_check_visible_link(array $conditions = array(), $flag = FAL
 function _xmlsitemap_build_conditions(&$conditions, &$args = array()) {
   $primary_key = isset($conditions['type']) && isset($conditions['id']);
   foreach ($conditions as $field => $value) {
-    if ($primary_key && $field != 'type' && $field != 'id') {
-      unset($conditions[$field]);
-    }
     if ($value === NULL) {
       $conditions[$field] = $field . ' IS NULL';
     }
@@ -471,6 +467,7 @@ function xmlsitemap_load_link(array $conditions) {
  */
 function xmlsitemap_save_link(array $link) {
   $link += array(
+    'access' => 1,
     'status' => 1,
     'lastmod' => 0,
     'priority' => NULL,
@@ -529,7 +526,7 @@ function xmlsitemap_update_links($updates = array(), $conditions = array()) {
 
   $args = array();
   foreach ($updates as $field => $value) {
-    if (($field == 'priority' && $value === 'default') || ($field == 'status' && $value)) {
+    if ($value === NULL || ($field == 'priority' && $value === 'default')) {
       // Default priority is NULL, but we use the string 'default' in the
       // interface so the correct default value is selected.
       $updates[$field] = $field . ' = NULL';
@@ -695,7 +692,7 @@ function xmlsitemap_switch_user($new_user = NULL) {
       session_save_session(FALSE);
     }
 
-    if (is_numeric($new_user)) {
+    if (is_numeric($new_user) && $user->uid != $new_user) {
       if (!$new_user) {
         $user = drupal_anonymous_user();
       }
@@ -714,7 +711,8 @@ function xmlsitemap_switch_user($new_user = NULL) {
 /**
  * Restore the user that was originally loaded.
  *
- * @return Current user.
+ * @return
+ *  Current user.
  */
 function xmlsitemap_restore_user() {
   return xmlsitemap_switch_user();

@@ -38,7 +38,6 @@ function xmlsitemap_custom_edit_link_form($form_state, $link = array()) {
   $link += array(
     'id' => (int) db_result(db_query("SELECT MAX(id) FROM {xmlsitemap} WHERE type = 'custom'")) + 1,
     'loc' => '',
-    'status' => TRUE,
     'priority' => 'default',
     'lastmod' => 0,
     'changefreq' => 0,

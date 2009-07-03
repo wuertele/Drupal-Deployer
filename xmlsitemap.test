@@ -21,7 +21,7 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
    */
   protected function assertInSitemap($conditions) {
     $link = xmlsitemap_load_link($conditions);
-    $this->assertTrue($link && $link['status'], t('Link found in sitemap.'));
+    $this->assertTrue($link && $link['access'] && $link['status'], t('Link found in sitemap.'));
     return $link;
   }
 
@@ -33,7 +33,7 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
    */
   protected function assertNotInSitemap($conditions) {
     $link = xmlsitemap_load_link($conditions);
-    $this->assertTrue(!$link || !$link['status'], t('Link not found in sitemap.'));
+    $this->assertTrue(!$link || !$link['access'] || !$link['status'], t('Link not found in sitemap.'));
     return $link;
   }
 
@@ -267,32 +267,19 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
   function testSaveLink() {
     $this->assertFalse(xmlsitemap_var('regenerate_needed'));
 
-    $link = array('type' => 'testing', 'id' => 1, 'loc' => 'testing', 'status' => TRUE);
+    $link = array('type' => 'testing', 'id' => 1, 'loc' => 'testing', 'status' => 1);
     xmlsitemap_save_link($link);
     $this->assertTrue(xmlsitemap_var('regenerate_needed'));
     variable_set('xmlsitemap_regenerate_needed', FALSE);
-
-    $link['status'] = TRUE;
-    xmlsitemap_save_link($link);
-    $this->assertFalse(xmlsitemap_var('regenerate_needed'));
 
     $link['status'] = 0;
     xmlsitemap_save_link($link);
     $this->assertTrue(xmlsitemap_var('regenerate_needed'));
     variable_set('xmlsitemap_regenerate_needed', FALSE);
 
-    $link['status'] = FALSE;
-    xmlsitemap_save_link($link);
-    $this->assertFalse(xmlsitemap_var('regenerate_needed'));
-
-    $link['status'] = NULL;
-    xmlsitemap_save_link($link);
-    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
-    variable_set('xmlsitemap_regenerate_needed', FALSE);
-
     $link['priority'] = NULL;
     $link['loc'] = 'new_location';
-    $link['status'] = TRUE;
+    $link['status'] = 1;
     xmlsitemap_save_link($link);
     $this->assertTrue(xmlsitemap_var('regenerate_needed'));
     variable_set('xmlsitemap_regenerate_needed', FALSE);
@@ -328,7 +315,7 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
 
     $link['priority'] = 'default';
     $link['priority_override'] = 'default';
-    $link['status'] = TRUE;
+    $link['status'] = 1;
     xmlsitemap_save_link($link);
     $this->assertFalse(xmlsitemap_var('regenerate_needed'));
   }
@@ -338,9 +325,9 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
    */
   function testDeleteLink() {
     // Add our testing data.
-    $link1 = $this->addSitemapLink(array('loc' => 'testing1', 'status' => FALSE));
-    $link2 = $this->addSitemapLink(array('loc' => 'testing1', 'status' => TRUE));
-    $link3 = $this->addSitemapLink(array('status' => FALSE));
+    $link1 = $this->addSitemapLink(array('loc' => 'testing1', 'status' => 0));
+    $link2 = $this->addSitemapLink(array('loc' => 'testing1', 'status' => 1));
+    $link3 = $this->addSitemapLink(array('status' => 0));
     variable_set('xmlsitemap_regenerate_needed', FALSE);
     $this->assertFalse(xmlsitemap_var('regenerate_needed'));
 
@@ -489,7 +476,7 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
   function testStatusReport() {
     // Test the rebuild flag.
     variable_set('xmlsitemap_rebuild_needed', TRUE);
-    $this->assertXMLSitemapProblems(t('The sitemap data is out of sync and needs to be completely rebuilt.'));
+    $this->assertXMLSitemapProblems(t('The XML sitemap data is out of sync and needs to be completely rebuilt.'));
     $this->clickLink(t('completely rebuilt'));
     $this->assertResponse(200);
     variable_set('xmlsitemap_rebuild_needed', FALSE);
@@ -498,7 +485,7 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
     // Test the regenerate flag (and cron hasn't run in a while).
     variable_set('xmlsitemap_regenerate_needed', TRUE);
     variable_set('xmlsitemap_generated_last', REQUEST_TIME - variable_get('cron_threshold_warning', 172800) - 10);
-    $this->assertXMLSitemapProblems(t('The sitemap cached files are out of date and need to be regenerated. You can run cron manually to regenerate the sitemap files.'));
+    $this->assertXMLSitemapProblems(t('The XML cached files are out of date and need to be regenerated. You can run cron manually to regenerate the sitemap files.'));
     $this->clickLink(t('run cron manually'));
     $this->assertResponse(200);
     $this->assertNoXMLSitemapProblems();
@@ -506,7 +493,7 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
     // Test anonymous users access to sitemap.xml.
     $anon_permissions = db_result(db_query("SELECT perm FROM {permission} WHERE rid = %d", DRUPAL_ANONYMOUS_RID));
     db_query("UPDATE {permission} SET perm = '' WHERE rid = %d", DRUPAL_ANONYMOUS_RID);
-    $this->assertXMLSitemapProblems(t('Search engines (anonymous users) cannot currently access your sitemap. Please assign the "access content" permission the the anonymous user role.'));
+    $this->assertXMLSitemapProblems(t('Search engines (anonymous users) cannot currently access your XML sitemap. Please assign the "access content" permission the the anonymous user role.'));
     db_query("UPDATE {permission} SET perm = '%s' WHERE rid = %d", $anon_permissions, DRUPAL_ANONYMOUS_RID);
     $this->assertNoXMLSitemapProblems();
 

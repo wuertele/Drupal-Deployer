@@ -239,7 +239,7 @@ function xmlsitemap_settings_form_submit($form, $form_state) {
  * @see xmlsitemap_rebuild_confirm_submit()
  */
 function xmlsitemap_rebuild_confirm() {
-  if (!xmlsitemap_var('rebuild_needed')) {
+  if (!$_POST && !xmlsitemap_var('rebuild_needed')) {
     if (!xmlsitemap_var('regenerate_needed')) {
       drupal_set_message(t('Your sitemap is up to date and does not need to be rebuilt.'), 'warning');
     }

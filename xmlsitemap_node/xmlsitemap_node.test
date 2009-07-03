@@ -93,7 +93,7 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     $this->drupalLogin($this->admin_user);
 
     $node_old = $this->drupalCreateNode();
-    $this->assertNodeLinkValues($node_old, array('status' => TRUE, 'priority' => NULL));
+    $this->assertNodeLinkValues($node_old, array('status' => 1, 'priority' => NULL));
 
     $edit = array(
       'xmlsitemap_node_status' => FALSE,
@@ -104,8 +104,8 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     $this->assertText(t('The content type Page has been updated.'));
 
     $node = $this->drupalCreateNode();
-    $this->assertNodeLinkValues($node, array('status' => FALSE, 'priority' => 0.0));
-    $this->assertNodeLinkValues($node_old, array('status' => FALSE, 'priority' => 0.0));
+    $this->assertNodeLinkValues($node, array('status' => 0, 'priority' => 0.0));
+    $this->assertNodeLinkValues($node_old, array('status' => 0, 'priority' => 0.0));
 
     $edit = array(
       'xmlsitemap_node_status' => TRUE,
@@ -115,13 +115,8 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     $this->assertText(t('The content type Page has been updated.'));
 
     // Since the status has been set to NULL, check that these are still not visible.
-    $this->assertNodeLinkValues($node, array('status' => NULL, 'priority' => NULL));
-    $this->assertNodeLinkValues($node_old, array('status' => NULL, 'priority' => NULL));
-
-    // Run cron and now the links should be visible.
-    drupal_cron_run();
-    $this->assertNodeLinkValues($node, array('status' => TRUE, 'priority' => NULL));
-    $this->assertNodeLinkValues($node_old, array('status' => TRUE, 'priority' => NULL));
+    $this->assertNodeLinkValues($node, array('status' => 1, 'priority' => NULL));
+    $this->assertNodeLinkValues($node_old, array('status' => 1, 'priority' => NULL));
 
     //$this->drupalPost('node/' . $node->nid . '/edit', array(), t('Save'));
     //$this->assertText(t('Page @title has been updated.', array('@title' => $node->title)));
@@ -161,7 +156,7 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
       $node = array_pop($nodes);
       if ($i <= $limit) {
         // The first $limit nodes should be inserted.
-        $this->assertNodeLinkValues($node, array('status' => TRUE, 'lastmod' => $node->changed));
+        $this->assertNodeLinkValues($node, array('status' => 1, 'lastmod' => $node->changed));
       }
       else {
         // Any beyond $limit should not be in the sitemap.

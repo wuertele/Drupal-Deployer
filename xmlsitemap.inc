@@ -255,10 +255,10 @@ function xmlsitemap_generate_chunk_header($handle, &$status, $index = FALSE) {
  *   A language object, defaults to the default language.
  */
 function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language = NULL) {
-  // @todo Optimize the query.
   // @todo When should "AND x.language IN ('%s', '')" be used? Drupal still lists English content when viewing site in French.
-  $sql = "SELECT x.loc AS url, x.lastmod, x.changefreq, x.changecount, COALESCE(x.priority_override, x.priority) AS priority FROM {xmlsitemap} x
-          WHERE x.status = 1";
+  $sql = "SELECT x.loc, x.lastmod, x.changefreq, x.changecount, COALESCE(x.priority_override, x.priority) AS priority FROM {xmlsitemap} x
+          WHERE x.access = 1 AND x.status = 1
+          ORDER BY x.loc";
   $args = array();
   $url_options = xmlsitemap_get_url_options(array('language' => $language, 'alias' => TRUE));
   $offset = max($chunk - 1, 0) * xmlsitemap_get_chunk_size();
@@ -267,8 +267,8 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language = NULL) 
 
   xmlsitemap_generate_chunk_header($handle, $status);
   while ($link = db_fetch_array($query)) {
-    $link_alias = xmlsitemap_get_path_alias($link['url'], $language->language);
-    $link_output = '<url><loc>' . url($link_alias, $url_options) . '</loc>';
+    $link['alias'] = xmlsitemap_get_path_alias($link['loc'], $language->language);
+    $link_output = '<url><loc>' . url($link['alias'], $url_options) . '</loc>';
     if ($link['lastmod']) {
       $link_output .= '<lastmod>' . gmdate(DATE_W3C, $link['lastmod']) . '</lastmod>';
       // If the link has a lastmod value, update the changefreq so that links
