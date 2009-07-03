@@ -99,6 +99,30 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
   //  $this->drupalPost($url, $settings, t('Save configuration'));
   //  $this->assertText(t('The configuration options have been saved.'));
   //}
+
+  private function getWatchdogMessage(array $conditions) {
+    static $watchdog_schema;
+
+    if (!isset($watchdog_schema)) {
+      $watchdog_schema = drupal_get_schema('watchdog');
+    }
+
+    $args = array();
+    foreach ($conditions as $field => $value) {
+      $conditions[$field] = $field . ' = ' . db_type_placeholder($watchdog_schema['fields'][$field]['type']);
+      $args[] = ($field == 'variables' && is_array($value)) ? serialize($value) : $value;
+    }
+
+    return db_result(db_query_range("SELECT 1 FROM {watchdog} WHERE " . implode(' AND ', $conditions), $args, 0, 1));
+  }
+
+  protected function assertWatchdogMessage(array $conditions, $message = 'Watchdog message found.') {
+    $this->assertTrue($this->getWatchdogMessage($conditions), $message);
+  }
+
+  protected function assertNoWatchdogMessage(array $conditions, $message = 'Watchdog message not found.') {
+    $this->assertFalse($this->getWatchdogMessage($conditions), $message);
+  }
 }
 
 class XMLSitemapUnitTest extends XMLSitemapTestHelper {
