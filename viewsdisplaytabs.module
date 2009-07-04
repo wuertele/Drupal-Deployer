@@ -1,0 +1,302 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Views Display Tabs - A module that exposes a view's displays as tabs.
+ *
+ * Authors:
+ *   Jakob Persson (http://drupal.org/user/37564)
+ *   Joakim Stai (http://drupal.org/user/88701)
+ *
+ * Sponsors:
+ *   SF Bio (www.sf.se)
+ *   NodeOne (www.nodeone.se)
+ */
+
+
+/*******************************************************************************
+ * HOOKS
+ */
+
+/**
+ * Implementation of hook_menu()
+ */
+function viewsdisplaytabs_menu() {
+  $items = array();
+
+  $items['admin/settings/viewsdisplaytabs'] = array(
+    'title' => 'Views Display Tabs',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('viewsdisplaytabs_admin'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+
+}
+
+/**
+ * Implementation of hook_theme()
+ */
+function viewsdisplaytabs_theme($existing, $type, $theme, $path) {
+  return array(
+    'viewsdisplaytabs_admin' => array(
+      'arguments' => array('form' => null),
+    ),
+    'viewsdisplaytabs_tab' => array(
+      'arguments' => array('title' => null, 'url' => null, 'display_name' => null),
+    ),
+    'viewsdisplaytabs_tab_groups' => array(
+      'arguments' => array('display' => null, 'group' => null, 'class' => null),
+    ),
+  );
+}
+
+/**
+ * Preprocess the primary theme implementation for a view.
+ *
+ * Add the display tabs to the view's header
+ */
+function viewsdisplaytabs_preprocess_views_view(&$vars) {
+  global $base_path;
+
+  $view = $vars['view'];
+
+  $settings = variable_get('viewsdisplaytabs_settings', array());
+  if ($settings['view_enabled'][$view->name] == 1) {
+    $display_filter = $settings['view_display_filter'][$view->name];
+
+    // Collect displays and build grouping array
+    foreach ($view->display as $display_name => $display_data) {
+      if (!$display_filter || ($display_filter && preg_match('/^'. $display_filter .'.*/i', $display_name))) {
+
+        // Allow grouping of tabs with grouping separator in titles/names: group[sep]title
+        // If the separator is at position 0 or does not exist it all, do not group
+        $sep = $settings['view_group_separator'][$view->name];
+        if ($sep && strpos($display_data->display_title, $sep)) {
+          list($group, $title) = explode($sep, $display_data->display_title);
+        }
+        else {
+          $title = $display_data->display_title;
+          $group = 0;
+        }
+
+        // Build a grouping array for later
+        $displays[$group][] = theme('viewsdisplaytabs_tab', $title, $_GET['q'], $display_name);
+      }
+    }
+
+    // Build header
+    $header .= theme('viewsdisplaytabs_tab_groups', $displays, 'viewsdisplaytabs-tab-group');
+
+    // Assign header
+    $vars['header'] .= $header;
+
+    // Add JS
+    $js = drupal_add_js();
+    $js['setting']['viewsdisplaytabs']['views'][$view->name] = $view->name;
+    drupal_add_js($js['setting'], 'setting');
+    drupal_add_js(drupal_get_path('module', 'viewsdisplaytabs') .'/viewsdisplaytabs.js');
+    drupal_add_js('misc/jquery.form.js');
+  }
+}
+
+/*******************************************************************************
+ * THEME FUNCTIONS
+ */
+
+/**
+ * Theme the admin settings screen
+ *
+ * @param $form
+ *     A form array
+ *
+ * @return
+ *     A rendered form
+ */
+function theme_viewsdisplaytabs_admin($form) {
+
+  // Overview table:
+  $header = array(t('Enabled'), t('View name'), t('Display Filter'), t('Separator'), t('Edit View'));
+
+  $view_list = $form['views']['view_list'];
+
+  if (isset($view_list['view_name']) && is_array($view_list['view_name'])) {
+    foreach (element_children($view_list['view_name']) as $key) {
+      $cells = array(
+        drupal_render($view_list['view_enabled'][$key]),
+        drupal_render($view_list['view_name'][$key]),
+        drupal_render($view_list['view_display_filter'][$key]),
+        drupal_render($view_list['view_group_separator'][$key]),
+        drupal_render($view_list['edit_view'][$key]),
+      );
+      $rows[] = $cells;
+    }
+  }
+  else {
+    $rows[] = array(array('data' => t('No supported views available.'), 'colspan' => count($header)));
+  }
+
+  $form['views']['view_list'] = array(
+    '#value' => theme('table', $header, $rows),
+  );
+
+  $output .= drupal_render($form);
+
+  return $output;
+}
+
+
+/**
+ * Theme a tab
+ *
+ * @param <type> $title
+ * @param <type> $url
+ * @param <type> $display_name
+ * @return <type>
+ */
+function theme_viewsdisplaytabs_tab($title, $url, $display_name) {
+  return l($title, $url, array('attributes' => array('class' => 'viewsdisplaytabs-tab', 'rel' => $display_name)));
+}
+
+/**
+ * Theme the groups of tabs
+ * @param <type> $display_items
+ * @param <type> $group
+ * @param <type> $class
+ * @return <type>
+ */
+function theme_viewsdisplaytabs_tab_groups($displays, $class) {
+  $out = '<div class="viewsdisplaytabs-wrapper">';
+  foreach ($displays as $group => $display_items) {
+    $group = ( $group === 0 ? null : $group );
+    $out .= theme('item_list', $display_items, $group, 'ul', array('class' => $class));
+  }
+  $out .= '</div>';
+  return $out;
+}
+
+
+/*******************************************************************************
+ * MENU CALLBACKS
+ */
+
+/**
+ * Administration settings page callback
+ */
+function viewsdisplaytabs_admin() {
+  // Get settings
+  $settings = variable_get('viewsdisplaytabs_settings', array());
+
+  $form = array();
+  $form[] = array(
+    '#value' => t("<p>Views Display Tabs exposes a view's displays as links which you can then style as tabs if you so choose. In the future, this module may provide its own CSS to display the links as tabs by default. Right now you have to do the styling yourself.</p>
+<p>In order to use this module you will need at least one view which has <strong>AJAX enabled</strong>. The view <strong>must have at least two displays</strong>. As this module was developed for a specific feature for a client of ours, it's not extremely generic (yet). It works with views that have (apart from the default display) at least two displays: page or block (what the user sees first), and one or more displays of type embed. These will become the tabs the user can click.</p>
+<p>You can control what displays to expose as tabs by enter a filter string in the settings for the view here below. The filter will be matched against the machine readable id of the display (usually page_1, block_1 or embed_1). If you only want your displays of type <em>embed</em> to show as tabs, type <code>embed</em> in the filter field.</p>
+<p>We had a need to group tabs, why we've made it possible to group tabs using a separator character. By setting a separator character for a view and then using the following naming convention for your tabs you may group them. Each group will then become its own list of links. Assuming ':' (colon) is used as separator:
+<code>[title of group]:[title of tab]</code></p>
+<p>For example</p>
+<code>
+Articles:Most viewed<br/>
+Articles:Most commented<br/>
+Articles:Newest<br/>
+Blog posts:Most viewed<br/>
+Blog posts:Most commented<br/>
+Blog posts:Newest
+</code>"),
+  );
+
+$form['views'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Views'),
+    '#collapsible' => false,
+    '#collapsed' => false,
+  );
+
+  $views = views_get_all_views();
+
+  foreach ($views as $vid => $view) {
+    if (viewsdisplaytabs_supported_view($view)) {
+
+      $view_enabled = array(
+        '#type' => 'checkbox',
+        '#default_value' => $settings['view_enabled'][$vid],
+      );
+      
+      $view_display_filter = array(
+        '#type' => 'textfield',
+        '#size' => 20,
+        '#maxlength' => 128,
+        '#default_value' => $settings['view_display_filter'][$vid],
+      );
+
+      $view_group_separator = array(
+        '#type' => 'textfield',
+        '#size' => 1,
+        '#maxlength' => 4,
+        '#default_value' => $settings['view_group_separator'][$vid],
+      );
+
+      $form['views']['view_list']['view_enabled'][$vid]["view_enabled_$vid"] = $view_enabled;
+      $form['views']['view_list']['view_name'][$vid]["view_name_$vid"] = array('#value' => $view->name);
+      $form['views']['view_list']['view_display_filter'][$vid]["view_display_filter_$vid"] = $view_display_filter;
+      $form['views']['view_list']['view_group_separator'][$vid]["view_group_separator_$vid"] = $view_group_separator;
+      $form['views']['view_list']['edit_view'][$vid]["edit_view_$vid"] = array('#value' => l(t('edit'), "admin/build/views/edit/$vid", array('query' => array('destination' => $_GET['q']))));
+    }
+  }
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save settings')
+  );
+
+  return $form;
+
+}
+
+/*******************************************************************************
+ * HELPER FUNCTIONS
+ */
+
+/**
+ * Determine whether the view is supported by Views Display Tabs
+ *
+ * @param $view
+ * @return Boolean True or False
+ */
+function viewsdisplaytabs_supported_view($view) {
+  foreach ($view->display as $display_name => $display) {
+    if ($display->display_options['use_ajax']) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Submit handler for settings form
+ *
+ * @param <type> $form
+ * @param <type> $form_state
+ */
+function viewsdisplaytabs_admin_submit($form, $form_state) {
+  foreach ($form_state['values'] as $field => $value) {
+    if (preg_match('/view_enabled_(.*)/i', $field, $result)) {
+      $view_enabled[$result[1]] = $value;
+    }
+    if (preg_match('/view_display_filter_(.*)/i', $field, $result)) {
+      $view_display_filter[$result[1]] = $value;
+    }
+    if (preg_match('/view_group_separator_(.*)/i', $field, $result)) {
+      $view_group_separator[$result[1]] = $value;
+    }
+  }
+  variable_set('viewsdisplaytabs_settings', array(
+    'view_enabled' => $view_enabled,
+    'view_display_filter' => $view_display_filter, 
+    'view_group_separator' => $view_group_separator
+    )
+  );
+}
