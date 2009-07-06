@@ -179,10 +179,7 @@ function viewreference_field($op, &$node, $field, &$items, $teaser, $page) {
  * Implementation of hook_content_is_empty().
  */
 function viewreference_content_is_empty($item, $field) {
-  if (empty($item['view_id'])) {
-    return TRUE;
-  }
-  return FALSE;
+  return empty($item['view_id']);
 }
 
 /**
@@ -229,7 +226,9 @@ function theme_viewreference_formatter_default($element) {
 function theme_viewreference_formatter_plain($element) {
   $output = '';
   if (!empty($element['#item']['view_id']) && is_numeric($element['#item']['view_id'])) {
-    $view = db_fetch_object(db_query("SELECT title FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
+    $view = db_fetch_object(db_query("SELECT name, title FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
+    $view_object = views_get_view($view->name);
+    $title = $view_object->get_title() ? $view_object->get_title() : $view->title;
     $output .= check_plain($view->title);
   }
   return $output;
@@ -243,6 +242,7 @@ function theme_viewreference_formatter_link($element) {
   if (!empty($element['#item']['view_id']) && is_numeric($element['#item']['view_id'])) {
     $view = db_fetch_object(db_query("SELECT name, position, title FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
     $view_object = views_get_view($view->name);
+    $title = $view_object->get_title() ? $view_object->get_title() : $view->title;
     if (isset($view_object->display[$view->position]->display_options['path']) && !$view_object->disabled) {
       $args = viewreference_get_element_args($element);
       $url_args = implode("/", $args);
@@ -250,8 +250,7 @@ function theme_viewreference_formatter_link($element) {
       if ($url_args) {
         $path .= "/". $url_args;
       }
-      $title = $view_object->get_title() ? $view_object->get_title() : $view->title;
-      $output .= l(check_plain($title), $view_object->get_url($args, $path));
+      $output .= l($title, $view_object->get_url($args, $path));
     }
     else {
       $output .= check_plain($title);
