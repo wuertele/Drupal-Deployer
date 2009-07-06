@@ -241,20 +241,20 @@ function theme_viewreference_formatter_plain($element) {
 function theme_viewreference_formatter_link($element) {
   $output = '';
   if (!empty($element['#item']['view_id']) && is_numeric($element['#item']['view_id'])) {
-    $view = db_fetch_object(db_query("SELECT title, name FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
+    $view = db_fetch_object(db_query("SELECT name, position, title FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
     $view_object = views_get_view($view->name);
-
-    if (isset($view_object->display['page']->display_options['path']) && $view_object->disabled != 1) {
-      $args = viewreference_arguments_string_to_array($element['#item']['arguments']);
+    if (isset($view_object->display[$view->position]->display_options['path']) && !$view_object->disabled) {
+      $args = viewreference_get_element_args($element);
       $url_args = implode("/", $args);
-      $path = $view_object->display['page']->display_options['path'];
+      $path = $view_object->display[$view->position]->display_options['path'];
       if ($url_args) {
         $path .= "/". $url_args;
       }
-      $output .= l(check_plain($view->title), $path);
+      $title = $view_object->get_title() ? $view_object->get_title() : $view->title;
+      $output .= l(check_plain($title), $view_object->get_url($args, $path));
     }
     else {
-      $output .= check_plain($view->title);
+      $output .= check_plain($title);
     }
   }
   return $output;
