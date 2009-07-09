@@ -24,6 +24,7 @@ Features
   * ImageField Crop module.
   * Image module.
   * Comment Upload module.
+  * Audio module.
 * File path and filename cleanup options:
   * Filter out words and punctuation by taking advantage of the Pathauto module.
   * Convert unicode characters into US-ASCII with the Transliteration module.
@@ -79,6 +80,13 @@ wish to use.
   Settings can be found on the content types configuration page in 'Comment
   settings > Comment Upload Path settings'.
   http://[www.yoursite.com/path/to/drupal]/admin/content/node-type/[node-type]
+
+
+* Audio module
+
+  Settings can be found on the content types configuration page in 'Audio Path
+  settings'.
+  http://[www.yoursite.com/path/to/drupal]/admin/content/node-type/audio
 
 
 Frequently Asked Questions

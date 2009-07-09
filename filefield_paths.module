@@ -491,15 +491,22 @@ function filefield_paths_filefield_paths_process_file($new, &$file, $settings, &
 
         // Fix reference to old paths in Body and Teaser
         // TODO: allow for CCK fields
-        // TODO: preg_reaplce to better support FileField Insert.
         if (isset($node->body)) {
           $file['filepath']['new'] = str_replace($file['filename']['old'], $file['filename']['new'], $file['filepath']['new']);
 
-          $body = str_replace($file['filepath']['old'], $file['filepath']['new'], $node->body);
-          $body = str_replace(drupal_urlencode($file['filepath']['old']), $file['filepath']['new'], $body);
+          $pattern = array(
+            'regex' => str_replace('/', '\/', file_directory_path()) .'(.*?)'. str_replace('/', '\/', str_replace(file_directory_path(), '', $file['filepath']['old'])),
+            'regex_enc' => str_replace('/', '\/', drupal_urlencode(file_directory_path())) .'(.*?)'. str_replace('/', '\/', str_replace(drupal_urlencode(file_directory_path()), '', drupal_urlencode($file['filepath']['old']))),
+            'replace' => file_directory_path() .'$1'. str_replace(file_directory_path(), '', $file['filepath']['new']),
+          );
 
-          $teaser = str_replace($file['filepath']['old'], $file['filepath']['new'], $node->teaser);
-          $teaser = str_replace(drupal_urlencode($file['filepath']['old']), $file['filepath']['new'], $teaser);
+          $body = $node->body;
+          $body = preg_replace('/'. $pattern['regex'] .'/s', $pattern['replace'], $body);
+          $body = preg_replace('/'. $pattern['regex_enc'] .'/s', $pattern['replace'], $body);
+
+          $teaser = $node->teaser;
+          $teaser = preg_replace('/'. $pattern['regex'] .'/s', $pattern['replace'], $teaser);
+          $teaser = preg_replace('/'. $pattern['regex_enc'] .'/s', $pattern['replace'], $teaser);
 
           if ($body != $node->body || $teaser != $node->teaser) {
             $node->body = $body;
@@ -547,12 +554,17 @@ function filefield_paths_token_values($type, $object = NULL) {
       $tokens['filefield-onlyname'] = $item['filename'];
       $tokens['filefield-extension'] = $item['extension'];
     }
-    // Original filename
+    // Original filename.
     $orig = $item;
+    $filename = $object[0]['filename'];
     if (!empty($object[0]['origname'])) {
       $orig = pathinfo($object[0]['origname']);
+      $filename = $object[0]['origname'];
     }
-    $tokens['filefield-onlyname-original'] = $orig['filename'];
+    // PHP < 5.2: pathinfo() doesn't return 'filename' variable.
+    $tokens['filefield-onlyname-original'] = isset($orig['filename'])
+      ? $orig['filename']
+      : basename($filename, '.'. $orig['extension']);
     $tokens['filefield-extension-original'] = $orig['extension'];
     // Tokens for Image module integration.
     if (module_exists('image')) {
