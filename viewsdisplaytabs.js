@@ -1,6 +1,8 @@
 // $Id$
 
 /**
+ * Copyright (C) 2009 imBridge NodeOne AB
+ *
  * @file
  * Views Display Tabs - A module that exposes a view's displays as tabs.
  *
@@ -55,6 +57,8 @@ viewsDisplayTabs.behavior = function() {
     var parentViewName = parentView.match(/view-id-(\w*)\s/);
     parentViewName = parentViewName[1];
 
+    var tabset = false;
+
     $.each(Drupal.settings.views.ajaxViews, function(i, settings) {
       
       if (settings.view_name == parentViewName) {
@@ -65,9 +69,11 @@ viewsDisplayTabs.behavior = function() {
         // Get the view
         var view = $('div.view-id-' + settings.view_name);
 
-        // Add active class to current tab
-        if (elem.rel == settings.view_display_id) {
-          $(elem).addClass('viewsdisplaytabs-active');
+        // Activate the tab that is the default active tab if no tab matches active the display
+        var default_display = Drupal.settings.viewsdisplaytabs.default_display[settings.view_name];
+        var activetab = $('a[rel="' + settings.view_display_id + '"]', view).addClass('viewsdisplaytabs-active');
+        if ($(activetab).length < 1) {
+          $('a[rel="' + default_display + '"]', view).addClass('viewsdisplaytabs-active');
         }
 
         elem.submitForm = function() {
@@ -84,12 +90,18 @@ viewsDisplayTabs.behavior = function() {
           $(form).find('input[name="view_display_id"]').remove();
           $(form).append('<input type="hidden" name="view_display_id" value="'+ settings.view_display_id +'"/>');
 
-          // Append a throbber
-          $(this).after('<span class="views-throbbing">&nbsp</span>');
+          // Append a throbber if enabled for this view
+          if (Drupal.settings.viewsdisplaytabs.view_throbber[settings.view_name]) {
+            $(this).after('<span class="views-throbbing">&nbsp</span>');
+          }
 
+          // Add throbber class to indicate to the user we're working
+          $(this).addClass('throbbing');
+          
           // Submit the form
           $(form).submit();
         }
+        
       }
     });
   })
