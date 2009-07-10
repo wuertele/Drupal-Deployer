@@ -257,6 +257,16 @@ function _htmlpurifier_settings($delta, $format) {
   drupal_add_js(HTMLPurifier_Printer_ConfigForm::getJavaScript(), 'inline');
   
   $form = array();
+  $form['dashboard'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Dashboard'),
+    '#collapsible' => true,
+  );
+  $form['dashboard']["htmlpurifier_clear_cache"] = array(
+    '#type' => 'submit',
+    '#value' => t('Clear cache (Warning: Can result in performance degradation)'),
+    '#submit' => array('_htmlpurifier_clear_cache')
+  );
 
   $form['htmlpurifier'] = array(
     '#type' => 'fieldset',
@@ -269,7 +279,6 @@ function _htmlpurifier_settings($delta, $format) {
     '#default_value' => variable_get("htmlpurifier_help_$format", TRUE),
     '#description' => t('If enabled, a short note will be added to the filter tips explaining that HTML will be transformed to conform with HTML standards. You may want to disable this option when the HTML Purifier is used to check the output of another filter like BBCode.'),
   );
-  
   if ($config_function = _htmlpurifier_config_load($format)) {
     $form['htmlpurifier']['notice'] = array(
       '#type' => 'markup',
@@ -337,4 +346,12 @@ function _htmlpurifier_config_hack($form_element, &$form_state) {
     $form_state['values'][$key] = $form_element['#post'][$key];
   }
   return $form_element;
+}
+
+/**
+ * Clears the HTML Purifier internal Drupal cache.
+ */
+function _htmlpurifier_clear_cache($form, &$form_state) {
+    drupal_set_message("Cache cleared");
+    db_query("DELETE FROM {cache_htmlpurifier}");
 }
