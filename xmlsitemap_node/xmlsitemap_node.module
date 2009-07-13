@@ -284,9 +284,15 @@ function xmlsitemap_node_create_link(&$node) {
     'priority_override' => NULL,
     'lastmod' => isset($node->changed) ? $node->changed : REQUEST_TIME,
     'changefreq' => xmlsitemap_calculate_changefreq(xmlsitemap_node_get_timestamps($node)),
-    'changecount' => max(count(xmlsitemap_node_get_timestamps($node)) - 1, 0),
+    'changecount' => count(xmlsitemap_node_get_timestamps($node)) - 1,
     'node_type' => $node->type,
   );
+
+  // Temporary check and fix for http://drupal.org/node/516928.
+  if ($node->xmlsitemap['changecount'] < 0) {
+    trigger_error("Changecount for node {$node->nid} was negative (timestamps: " . implode(', ', xmlsitemap_node_get_timestamps($node)) . ". Please report this to <a href=\"http://drupal.org/node/516928\">http://drupal.org/node/516928</a>.", E_USER_ERROR);
+    $node->xmlsitemap['changecount'] = 0;
+  }
 
   // The following values must always be checked because they are volatile.
   $node->xmlsitemap['access'] = node_access('view', $node, drupal_anonymous_user());
