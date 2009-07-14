@@ -91,10 +91,10 @@ function xmlsitemap_node_form_xmlsitemap_settings_form_alter(&$form, $form_state
   );
 
   $node_types = node_get_types('names');
-  foreach ($node_types as $node_type => $name) {
+  foreach ($node_types as $node_type => $node_type_name) {
     $node_types[$node_type] = array(
-      'name' => t($name),
-      'link' => 'admin/content/node-type/' . $node_type,
+      'name' => check_plain(drupal_ucfirst($node_type_name)), // Or use t()?
+      'link' => 'admin/content/node-type/' . str_replace('_', '-', $node_type),
       'status' => variable_get('xmlsitemap_node_status_' . $node_type, 1),
       'priority' => variable_get('xmlsitemap_node_priority_' . $node_type, 'default'),
     );
@@ -286,8 +286,8 @@ function xmlsitemap_node_create_link(&$node) {
     'loc' => 'node/'. $node->nid,
     'priority_override' => NULL,
     'lastmod' => isset($node->changed) ? $node->changed : REQUEST_TIME,
-    'changefreq' => xmlsitemap_calculate_changefreq(xmlsitemap_node_get_timestamps($node)),
-    'changecount' => count(xmlsitemap_node_get_timestamps($node)) - 1,
+    'changefreq' => $node->nid ? xmlsitemap_calculate_changefreq(xmlsitemap_node_get_timestamps($node)) : 0,
+    'changecount' => $node->nid ? count(xmlsitemap_node_get_timestamps($node)) - 1 : 0,
     'node_type' => $node->type,
   );
 
