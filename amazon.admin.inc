@@ -42,7 +42,7 @@ function amazon_settings_form($form_state) {
   $form['amazon_aws_access_key'] = array(
     '#type' => 'textfield',
     '#title' => t('Amazon AWS Access Key ID'),
-    '#description' => t('You must sign up for an Amazon AWS account to use the Product Advertising Service. See !more_info for information and a registration form.',array('!more_info'=>l(t('More information here.'),'http://docs.amazonwebservices.com/AWSECommerceService/latest/DG/index.html?AboutAWSAccounts.html',array('html'=>TRUE)))),
+    '#description' => t('You must sign up for an Amazon AWS account to use the Product Advertising Service. See !more_info for information and a registration form.',array('!more_info'=>l(t('the AWS home page'),'https://aws-portal.amazon.com/gp/aws/developer/account/index.html?ie=UTF8&action=access-key',array('html'=>TRUE)))),
     '#default_value' => variable_get('amazon_aws_access_key', ''),
     '#required' => TRUE,
   );
@@ -50,7 +50,7 @@ function amazon_settings_form($form_state) {
   $form['amazon_aws_secret_access_key'] = array(
     '#type' => 'textfield',
     '#title' => t('Amazon AWS Secret Access Key'),
-    '#description' => t('You must sign up for an Amazon AWS account to use the Product Advertising Service. See !more_info for information and a registration form.',array('!more_info'=>l(t('More information here.'),'http://docs.amazonwebservices.com/AWSECommerceService/latest/DG/index.html?AboutAWSAccounts.html',array('html'=>TRUE)))),
+    '#description' => t('You must sign up for an Amazon AWS account to use the Product Advertising Service. See !more_info for information and a registration form.',array('!more_info'=>l(t('the AWS home page'),'https://aws-portal.amazon.com/gp/aws/developer/account/index.html?ie=UTF8&action=access-key',array('html'=>TRUE)))),
     '#default_value' => variable_get('amazon_aws_secret_access_key',""),
     '#required' => TRUE,
   );

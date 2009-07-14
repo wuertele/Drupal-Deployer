@@ -35,3 +35,52 @@ function asin_enable() {
 function asin_disable() {
   content_notify('disable', 'asin');
 }
+
+
+/**
+ * Database schema update from the ugly, borked D5 version.
+ */
+function asin_update_6001() {
+  if ($abort = content_check_update('asin')) {
+    return $abort;
+  }
+
+  // Build a list of fields that need data updating.
+  module_load_install('content');
+  module_load_include('inc', 'content', 'includes/content.admin');
+  module_load_include('inc', 'content', 'includes/content.crud');
+
+  $ret = array();
+  $fields = array();
+
+  content_clear_type_cache(TRUE);
+ 
+  // Grab the list of fields to update.
+  foreach (content_field_instance_read() as $field) {
+    if ($field['type'] == 'asin' && $field['widget']['type'] == 'asin') {
+      $fields[] = $field;
+    }
+  }
+  
+  content_clear_type_cache(TRUE);
+
+  // Update database storage (add data column, since the D5 version assumed all control).
+  foreach ($fields as $field) {
+    $new_field = $field;
+
+    // Setup the previous definition.
+    $field['columns'] = array();
+    // Setup the new.
+    $new_field['columns']['asin'] = array('type' => 'varchar', 'length' => 32, 'not null' => FALSE);
+    $field['widget']['type'] = 'asin_text';
+
+    content_alter_db($field, $new_field);
+    content_field_instance_update($field);
+
+    $ret[] = array('success' => TRUE, 'query' => 'Updated database schema and widget settings for ' . $field['field_name']);
+  }
+  
+  content_clear_type_cache(TRUE);
+
+  return $ret;
+}
