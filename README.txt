@@ -17,7 +17,7 @@ How to install and use
       at least one view that has AJAX enabled. See the instructions on the
       settings page for more information.
    3. Check the module you want to enable display tabs for and check the
-     displays you want to show as tabs. Choose whether you want the tabs to show
+      displays you want to show as tabs. Choose whether you want the tabs to show
       a throbber (loading animation) while the view is loading.
    4. Your view's header will now contain the displays as item lists. You may
       theme these lists as tabs if you so choose. Clicking a display's link will
@@ -30,61 +30,8 @@ REQUIREMENTS
 In order to use this module you will need at least one view which has AJAX
 enabled. The view must have at least two displays that render as HTML. Displays
 of type Block or Page render as HTML. These will become the tabs the user can
-click.
-
-DISPLAYS
-You can control what displays to expose as tabs by checking them. Click
-Displays to reveal a list of displays, check the checkbox next to each of them
-to have it show as a tab.
-
-THROBBER
-Check 'throbber' to have a throbber (loading animation) show while the tab is
-loading.
-
-DEFAULT ACTIVE
-The 'default active' select field allows you to set a tab to be active by
-default. Doing this won't make the display associated with that tab load by
-default it will only *make it seem as if that display were loaded by default*.
-
-This is useful as it will give the site's users the impression that one tab is
-already active. They will also conclude that what they see is a result of the
-filtering done with that tab and that they can return to that filtering again
-simply by clicking that tab.
-
-Note: For this to be of any use, the first display that Views loads *must have
-the same configuration as the one you set as default active*.
-
-The first display Views will load is the display used to render the view onto
-your page. If you have placed you view in a block, the display of that block
-will load first. If your view is a page on your site with its own site path,
-then the display with that path will load first.
-
-Make sure that the first display to load, page, block or else (there are several
-modules that add additional display plugins to Views) is identical to another
-display. Then set that other display as 'default active'.
-
-GROUPING
-We had a need to group tabs, why we've made it possible to group tabs using a
-separator character. By setting a separator character for a view and then using
-the following naming convention for your tabs you may group them. Each group
-will then become its own list of links.
-
-Assuming ':' (colon) is used as separator:
-
-[title of group]:[title of tab]
-
-For example:
-
-Articles:Most viewed
-Articles:Most commented
-Articles:Newest
-Blog posts:Most viewed
-Blog posts:Most commented
-Blog posts:Newest
-
-EDIT
-This is a link you can use to quickly edit your view and then get back to
-the Views Display Tabs setting as soon as you've saved your changes.
+click. Follows is an explanation of the configuration settings at
+admin/settings/viewsdisplaytabs
 
 ABOUT
 This module was developed by Jakob Persson with ideas and feedback from

@@ -65,9 +65,11 @@ function viewsdisplaytabs_preprocess_views_view(&$vars) {
   global $base_path;
 
   $view = $vars['view'];
-
+  $empty = !(bool) count($view->result);
   $settings = variable_get('viewsdisplaytabs_settings', array());
-  if ($settings['view_enabled'][$view->name] == 1) {
+  $show = ( $empty ? $empty && $settings['view_show_empty'][$view->name] == 1 : true );
+
+  if ($settings['view_enabled'][$view->name] == 1 && $show) {
     $selected_displays = $settings['view_displays'][$view->name];
 
     // Collect displays and build grouping array
@@ -124,7 +126,7 @@ function viewsdisplaytabs_preprocess_views_view(&$vars) {
 function theme__viewsdisplaytabs_admin($form) {
 
   // Overview table:
-  $header = array(t('Enabled'), t('Name'), t('Displays'), t('Default Active'), t('Separator'), t('Throbber'), t('Edit'));
+  $header = array(t('Enabled'), t('Name'), t('Displays'), t('Default Active'), t('Show when empty'), t('Separator'), t('Throbber'), t('Edit'));
 
   $view_list = $form['views']['view_list'];
 
@@ -135,6 +137,7 @@ function theme__viewsdisplaytabs_admin($form) {
         drupal_render($view_list['view_name'][$key]),
         drupal_render($view_list['view_displays'][$key]),
         drupal_render($view_list['view_displays_default'][$key]),
+        drupal_render($view_list['view_show_empty'][$key]),
         drupal_render($view_list['view_group_separator'][$key]),
         drupal_render($view_list['view_throbber'][$key]),
         drupal_render($view_list['edit_view'][$key]),
@@ -211,20 +214,46 @@ function _viewsdisplaytabs_admin() {
   );
   $form['help'][] = array(
     '#value' => t("<p>In order to use this module you will need at least one view which has <strong>AJAX enabled</strong>. It works with views that have (apart from the default display) <strong>at least two displays that render as HTML</strong> (page and block for example). These will become the tabs the user can click.</p>
-<p>You can control what displays to expose as tabs by expanding the Displays list and checking the ones you want to show as tabs.</p>
-<p>You have the option to display a throbber while the view is loading the display. The throbber is a small animation shown next to the title of the tab to indicate to the user that the browser is loading the view.</p>
-<p>We had a need to group tabs, why we've made it possible to group tabs using a separator character. By setting a separator character for a view and then using the following naming convention for your tabs you may group them. Each group will then become its own list of links. Assuming ':' (colon) is used as separator:
-<code>[title of group]:[title of tab]</code></p>
-<p>For example:</p>
-<code>
-Articles:Most viewed<br/>
-Articles:Most commented<br/>
-Articles:Newest<br/>
-Blog posts:Most viewed<br/>
-Blog posts:Most commented<br/>
-Blog posts:Newest
-</code>
-"),
+
+<dl>
+	<dt>Enabled</dt>
+	<dd><p>Check to enable display tabs for this view.</p></dd>
+
+	<dt>Displays</dt>
+	<dd><p>Check the displays you want to expose as tabs. If no displays are checked, all tabs become displays.</p></dd>
+
+	<dt>Default Active</dt>
+	<dd><p>The 'default active' select field allows you to set a tab to be active by default. Doing this won't make the display associated with that tab load by default it will only <em>make it seem as if that display were loaded by default</em>.</p>
+	<p>This is useful as it will give the site's users the impression that one tab is already active. They will also conclude that what they see is a result of the filtering done with that tab and that they can return to that filtering again simply by clicking that tab.</p>
+
+	<p>Note: For this to be of any use, the first display that Views loads <em>must have the same configuration as the one you set as default active</em>.</p>
+
+	<p>The first display Views will load is the display used to render the view onto your page. If you have placed you view in a block, the display of that block will load first. If your view is a page on your site with its own site path, then the display with that path will load first.</p>
+
+	<p>Make sure that the first display to load, page, block or else (there are several modules that add additional display plugins to Views) is identical to another display. Then set that other display as 'default active'.</p></dd>
+
+	<dt>Show when empty</dt>
+	<dd><p>Check this box to make display tabs show even if the view is empty, i.e. has no results to display.</p></dd>
+
+	<dt>Separator</dt>
+	<dd><p>You can group tabs using a separator character. By setting a separator character for a view and then using the following naming convention for your tabs you may group them. Each group will then become its own list of links. Assuming ':' (colon) is used as separator:
+	<code>[title of group]:[title of tab]</code></p>
+	<p>For example:</p>
+	<code>
+	Articles:Most viewed<br/>
+	Articles:Most commented<br/>
+	Articles:Newest<br/>
+	Blog posts:Most viewed<br/>
+	Blog posts:Most commented<br/>
+	Blog posts:Newest
+	</code></dd>
+
+	<dt>Throbber</dt>
+	<dd><p>Check to display a throbber while the view is loading the display. The throbber is a small animation shown next to the title of the tab to indicate to the user that the browser is loading the view.</p></dd>
+
+	<dt>Edit</dt>
+	<dd><p>A link to edit the view.<p></dd>
+</dl>"),
 );
 
 $form['views'] = array(
@@ -265,6 +294,12 @@ $form['views'] = array(
         '#options' => ( is_array($view_data->displays) ? array('' => '<None>') + $view_data->displays : array() ),
       );
 
+      $view_show_empty = array(
+        '#type' => 'checkbox',
+        '#default_value' => ( isset($settings['view_show_empty'][$vid]) ? $settings['view_show_empty'][$vid] : 0 ),
+      );
+
+
       $view_group_separator = array(
         '#type' => 'textfield',
         '#size' => 1,
@@ -281,6 +316,7 @@ $form['views'] = array(
       $form['views']['view_list']['view_name'][$vid]["view_name_$vid"] = array('#value' => $view->name);
       $form['views']['view_list']['view_displays'][$vid]["view_displays_fieldset_$vid"] = $view_displays_fieldset;
       $form['views']['view_list']['view_displays_default'][$vid]["view_displays_default_$vid"] = $view_displays_default;
+      $form['views']['view_list']['view_show_empty'][$vid]["view_show_empty_$vid"] = $view_show_empty;
       $form['views']['view_list']['view_group_separator'][$vid]["view_group_separator_$vid"] = $view_group_separator;
       $form['views']['view_list']['edit_view'][$vid]["edit_view_$vid"] = array('#value' => l(t('edit'), "admin/build/views/edit/$vid", array('query' => array('destination' => $_GET['q']))));
       $form['views']['view_list']['view_throbber'][$vid]["view_throbber_$vid"] = $view_throbber;
@@ -343,6 +379,9 @@ function _viewsdisplaytabs_admin_submit($form, $form_state) {
     if (preg_match('/view_displays_default_(.*)/i', $field, $result)) {
       $view_displays_default[$result[1]] = $value;
     }
+    elseif (preg_match('/view_show_empty_(.*)/i', $field, $result)) {
+      $view_show_empty[$result[1]] = $value;
+    }
     elseif (preg_match('/view_displays_(.*)/i', $field, $result)) {
       // We only save displays that have been checked, value is 1
       foreach ($value as $display_name => $display_selected) {
@@ -361,8 +400,9 @@ function _viewsdisplaytabs_admin_submit($form, $form_state) {
   variable_set('viewsdisplaytabs_settings', array(
     'view_enabled' => $view_enabled,
     'view_displays' => $view_displays,
-    'view_group_separator' => $view_group_separator,
     'view_displays_default' => $view_displays_default,
+    'view_show_empty' => $view_show_empty,
+    'view_group_separator' => $view_group_separator,
     'view_throbber' => $view_throbber
     )
   );
