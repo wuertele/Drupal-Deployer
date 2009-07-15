@@ -1,6 +1,6 @@
 <?php
 // $Id$
-
+// Making a dummy commit since the development rebuild script has forgotten about us. :(
 /**
  * @file
  * Documentation for the xmlsitemap API.
