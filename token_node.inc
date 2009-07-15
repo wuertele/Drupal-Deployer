@@ -35,7 +35,15 @@ function node_token_values($type, $object = NULL, $options = array()) {
       $values['author-name-raw']    = $account->name;
       $values['author-mail']        = check_plain($account->mail);
       $values['author-mail-raw']    = $account->mail;
-      $values['node_comment_count'] = $node->comment_count;
+
+      if (module_exists('comment')) {
+        $values['node_comment_count'] = $node->comment_count;
+        $values['unread_comment_count'] = comment_num_new($node->nid);
+      }
+      else {
+        $values['node_comment_count'] = 0;
+        $values['unread_comment_count'] = 0;
+      }
 
       if (isset($node->created)) {
         $date = (int)$node->created;
@@ -185,6 +193,7 @@ function node_token_list($type = 'all') {
     $tokens['node']['author-mail']     = t("Node author's e-mail.");
     $tokens['node']['author-mail-raw'] = t("Node author's e-mail. WARNING - raw user input.");
     $tokens['node']['node_comment_count'] = t("The number of comments on a node.");
+    $tokens['node']['unread_comment_count'] = t("The number of new comments on a node.");
 
     $tokens['node']['term']            = t("Name of top taxonomy term");
     $tokens['node']['term-raw']        = t("Unfiltered name of top taxonomy term. WARNING - raw user input.");
