@@ -84,3 +84,38 @@ function asin_update_6001() {
 
   return $ret;
 }
+
+/**
+ * Migrate old data from the D5 version.
+ */
+function asin_update_6002() {
+  module_load_install('content');
+  module_load_include('inc', 'content', 'includes/content.admin');
+  module_load_include('inc', 'content', 'includes/content.crud');
+
+  // Grab the list of fields to update.
+  $fields = array();
+  foreach (content_field_instance_read() as $field) {
+    if ($field['type'] == 'asin') {
+      $fields[$field['field_name']] = $field;
+    }
+  }
+
+
+  if (!empty($fields)) {
+    $batch = array(
+      'title' => t('Migrating ASIN CCK field values'),
+      'operations' => array(
+        array('_asin_migrate_field_from_d5', array($fields)),
+      ),
+      'finished' => '_asin_migrate_fields_finished',
+      'init_message' => t('Beginning ASIN migration.'),
+      'progress_message' => t('Processed @current out of @total.'),
+      'error_message' => t('ASIN CCK field update encountered an error.'),
+      'file' => drupal_get_path('module', 'asin') .'/asin.d5-migrate.inc',
+    );
+    batch_set($batch);
+  }
+
+  return array();
+}
