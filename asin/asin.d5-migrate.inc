@@ -70,8 +70,8 @@ function _asin_migrate_from_d5($nid, $fields) {
 
   node_save($node);
   $sql = "DELETE FROM {amazonnode} WHERE nid = %d AND ntype IN (" . db_placeholders($fields, 'varchar') . ")";
-  $params[] = $node->nid;
-  $params += array_keys($fields);
+  $params = array_keys($fields);
+  array_unshift($params, $nid);
   db_query($sql, $params);
 
   return $node;
