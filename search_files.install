@@ -58,6 +58,33 @@ function search_files_install() {
   drupal_set_message(t('Your search cron limit, which limits the number of items searched per cron run, has been set to 10. If it had been left at the default 100 your cron jobs could potentially continuously timeout. If you want to change this back you can do so <a href="!link">here</a>', array('!link' => url('admin/settings/search'))));
 }
 
+/* http://drupal.org/node/114774#update-n
+ */
+function search_files_update_6200() {
+  $ret = array();
+
+  /* rename variables */
+  search_files_variable_rename_ifexists('search_cron_limit', 'search_files_cron_limit');
+
+  return $ret;
+}
+
+/* rename table if it exists, otherwise skip silently */
+function search_files_db_rename_table_ifexists(&$ret, $table, $new_name) {
+  if (db_table_exists($table)) {
+    db_rename_table($ret, $table, $new_name);
+  }
+}
+
+/* rename variable if it exists, otherwise skip silently */
+function search_files_variable_rename_ifexists($name, $new_name) {
+  global $conf;
+  if ($name != $new_name and isset($conf[$name])) {
+    variable_set($new_name, variable_get($name, NULL));
+    variable_del($name);
+  }
+}
+
 function search_files_uninstall() {
   drupal_uninstall_schema('search_files');
   db_query('DELETE FROM {variable} WHERE name LIKE "search_files_%"');
