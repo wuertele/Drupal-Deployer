@@ -382,15 +382,29 @@ function node_export_node_decode_objects($array) {
 function node_export_get_menu($node) {
   // This will fetch the existing menu item if the node had one.
   node_invoke_nodeapi($node, 'prepare');
-  if (!empty($node->menu['link_title'])) {
+
+  // Only keep the values we care about.
+  if (!empty($node->menu)) {
+
+    // Store a copy of the old menu
     $old_menu = $node->menu;
+
     // Now fetch the defaults for a new menu entry.
     $node = NULL;
     node_invoke_nodeapi($node, 'prepare');
-    $node->menu['link_title'] = $old_menu['link_title'];
-    $node->menu['plid'] = $old_menu['plid'];
-    $node->menu['menu_name'] = $old_menu['menu_name'];
-    $node->menu['weight'] = $old_menu['weight'];
+
+    // Make a list of values to attempt to copy.
+    $menu_fields = array(
+      'link_title', 'plid', 'menu_name', 'weight', // These should import properly always.
+      'hidden', 'expanded', 'has_children', // These will only import properly on 'Save as a new node then edit' imports.
+    );
+
+    // Copy those fields from the old menu over the new menu defaults.
+    foreach ($menu_fields as $menu_field) {
+      $node->menu[$menu_field] = $old_menu[$menu_field];
+    }
+
+    // Return the menu.
     return $node->menu;
   }
 
