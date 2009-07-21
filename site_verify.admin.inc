@@ -138,7 +138,7 @@ function site_verify_edit_form_validate($form, &$form_state) {
       if ($form['file_contents']['#access']) {
         $form_state['values']['file_contents'] = $contents;
       }
-      drupal_set_message(t('The verification file <a href="@filename">%filename</a> was successfully imported.', array('%filename' => $file->filename)));
+      drupal_set_message(t('The verification file <a href="@filename">@filename</a> was successfully imported.', array('@filename' => $file->filename)));
     }
   }
 }
