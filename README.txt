@@ -25,6 +25,9 @@ How to install and use
       This only works with AJAX at the moment (no graceful degradation for
       browsers with poor JavaScript support).
 
+NOTE: If you view uses exposed filters and you want these to show regardless
+of what tab is selected you have to add these filters to every display.
+
 
 REQUIREMENTS
 In order to use this module you will need at least one view which has AJAX
