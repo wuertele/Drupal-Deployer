@@ -96,6 +96,9 @@ following files:
    - fckconfig.js
    - fckstyles.xml
    - fcktemplates.xml
+   - fckeditor.php
+   - fckeditor_php4.php
+   - fckeditor_php5.php
 and a directory named editor.
 
 The correct directory structure is as follows:
