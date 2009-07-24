@@ -326,6 +326,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#title' => t('Visibility settings'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
+    '#description' => t('The following settings are combined with the visibility settings of the global profile.'),
   );
 
   $form['fckeditor_exclude_settings']['min_rows'] = array(
@@ -881,6 +882,7 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
     '#title' => t('Visibility settings'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
+    '#description' => t('The following settings are combined with the visibility settings of the specific profile.'),
   );
 
   $form['fckeditor_exclude_settings']['excl_mode'] = array(
