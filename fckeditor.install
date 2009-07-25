@@ -212,12 +212,12 @@ function fckeditor_requirements($phase) {
       $requirements['fckeditor']['description'] = t('FCKeditor was not found at %sourcepath', array('%sourcepath' => $sourcepath));
       $requirements['fckeditor']['severity'] = REQUIREMENT_ERROR;
     }
+    elseif (($installed_version = _fckeditor_requirements_getinstalledversion()) === NULL) {
+      $requirements['fckeditor']['description'] = t('FCKeditor version could not be determined');
+      $requirements['fckeditor']['severity'] = REQUIREMENT_INFO;
+    }
     //Let's wait with version checking until a formal way of informing about new FCKeditor releases by fckeditor.net site is available
     /*
-    elseif (($installed_version = _fckeditor_requirements_getinstalledversion()) === NULL) {
-    $requirements['fckeditor']['description'] = t('FCKeditor version could not be determined');
-    $requirements['fckeditor']['severity'] = REQUIREMENT_INFO;
-    }
     elseif (($available_version = _fckeditor_requirements_getavailableversion($available_version_error)) === NULL) {
     $requirements['fckeditor']['description'] = t('The latest available FCKeditor version could not be determined, the HTTP error while fetching the version information was: @error', array('@error' => $available_version_error));
     $requirements['fckeditor']['severity'] = REQUIREMENT_INFO;
@@ -241,10 +241,9 @@ function fckeditor_requirements($phase) {
       }
     }
 
-    /*
     if (!empty($installed_version)) {
-    $requirements['fckeditor']['value'] = $installed_version;
-    }*/
+      $requirements['fckeditor']['value'] = $installed_version;
+    }
   }
 
   return $requirements;
@@ -272,6 +271,10 @@ function _fckeditor_requirements_isinstalled() {
  *
  * It tries to locate the version of the FCKeditor sources in
  * fckeditor.js
+ * 
+ * Releases have a version number such as "2.6.4.1"
+ * SVN nightly releases have a minor version number with SVN appended: "2.6 SVN"
+ * SVN check outs have the string "[Development]"
  *
  * This function is used by fckeditor_requirements()
  *
@@ -284,7 +287,7 @@ function _fckeditor_requirements_getinstalledversion() {
 
   $configcontents = file_get_contents($jspath);
   $matches = array();
-  if (preg_match('#FCKeditor\.prototype\.Version\s*=\s*\'([\d\.]+)\'\s*;#', $configcontents, $matches)) {
+  if (preg_match('#FCKeditor\.prototype\.Version\s*=\s*\'([\d\.]+(?: SVN)?|\[Development\])\'\s*;#', $configcontents, $matches)) {
     return $matches[1];
   }
   return NULL;
