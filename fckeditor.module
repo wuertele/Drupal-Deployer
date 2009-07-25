@@ -671,8 +671,9 @@ function fckeditor_process_textarea($element) {
         if (!empty($profile->settings['UserFilesPath'])) $_SESSION['FCKeditor']['UserFilesPath'] = strtr($profile->settings['UserFilesPath'], array("%f" => file_directory_path(), "%u" => $user->uid, "%b" => $host, "%n" => $user->name));
         if (!empty($profile->settings['UserFilesAbsolutePath'])) $_SESSION['FCKeditor']['UserFilesAbsolutePath'] = strtr($profile->settings['UserFilesAbsolutePath'], array("%f" => file_directory_path(), "%u" => $user->uid, "%b" => base_path(), "%d" => $_SERVER['DOCUMENT_ROOT'], "%n" => $user->name));
         if (variable_get('file_downloads', '') == FILE_DOWNLOADS_PRIVATE) {
-          $private_dir = trim(isset($global_profile->settings['private_dir']) ? $global_profile->settings['private_dir'] : "", "/\\");
-          if (strlen($private_dir)) {
+          $private_dir = isset($global_profile->settings['private_dir']) ? trim($global_profile->settings['private_dir'], '\/') : '';
+          if (!empty($private_dir)) {
+            $private_dir = strtr($private_dir, array('%u' => $user->uid));
             $_SESSION['FCKeditor']['UserFilesPath'] = url('system/files') .'/'. $private_dir .'/';
             $_SESSION['FCKeditor']['UserFilesAbsolutePath'] = realpath(file_directory_path()) . DIRECTORY_SEPARATOR . $private_dir . DIRECTORY_SEPARATOR;
           }
