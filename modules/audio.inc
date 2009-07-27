@@ -51,7 +51,7 @@ function audio_filefield_paths_form_submit(&$form_state, &$ffp) {
  * Implementation of hook_filefield_paths_get_fields().
  */
 function audio_filefield_paths_get_fields(&$node, &$ffp) {
-  if (is_object($node) && $node->form_id == $node->type .'_node_form' && isset($node->audio['file'])) {
+  if (is_object($node) && isset($node->audio['file'])) {
     $node->audio['file'] = (array) $node->audio['file'];
 
     $ffp['#files'][] = array(

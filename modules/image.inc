@@ -56,7 +56,7 @@ function image_filefield_paths_get_fields(&$node, &$ffp) {
     foreach ($node->images as $name => &$file) {
       if (isset($info[$name])) {
         $file_info = pathinfo($file);
-  
+
         $ffp['#files'][] = array(
           'field' => array(
             'filepath' => &$file,
@@ -68,7 +68,7 @@ function image_filefield_paths_get_fields(&$node, &$ffp) {
           'name' => 'image',
           'new' => $node->new_file
         );
-  
+
         $ffp['#types']['image'] = TRUE;
       }
     }

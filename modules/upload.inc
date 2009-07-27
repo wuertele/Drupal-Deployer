@@ -50,7 +50,7 @@ function upload_filefield_paths_form_submit(&$form_state, &$ffp) {
  * Implementation of hook_filefield_paths_get_fields().
  */
 function upload_filefield_paths_get_fields(&$node, &$ffp) {
-  if (is_object($node) && $node->form_id == $node->type .'_node_form') {
+  if (is_object($node) && !isset($node->cid)) {
     if (isset($node->files)) {
       foreach ($node->files as &$file) {
         $file = (array) $file;

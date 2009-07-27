@@ -470,11 +470,6 @@ function filefield_paths_get_fields(&$node, $op = NULL) {
  */
 function filefield_paths_filefield_paths_process_file($new, &$file, $settings, &$node, &$update) {
   if ($new) {
-    // Process filepath
-    $file['filepath']['old'] = $file['field']['filepath'];
-    $file['filepath']['new'] = filefield_paths_process_string(file_directory_path() .'/'. $settings['filepath']['value'] .'/'. $file['field']['filename'], 'node', $node, $settings['filepath']);
-    $file['filepath']['new'] = filefield_paths_process_string($file['filepath']['new'], 'field', array(0 => $file['field']), $settings['filepath']);
-
     // Process filename
     $file['filename']['old'] = $file['field']['filename'];
     if (($file['filename']['new'] = $settings['filename']['value']) != '') {
@@ -484,6 +479,11 @@ function filefield_paths_filefield_paths_process_file($new, &$file, $settings, &
     else {
       $file['filename']['new'] = $file['field']['filename'];
     }
+
+    // Process filepath
+    $file['filepath']['old'] = $file['field']['filepath'];
+    $file['filepath']['new'] = filefield_paths_process_string(file_directory_path() .'/'. $settings['filepath']['value'] .'/'. $file['filename']['new'], 'node', $node, $settings['filepath']);
+    $file['filepath']['new'] = filefield_paths_process_string($file['filepath']['new'], 'field', array(0 => $file['field']), $settings['filepath']);
 
     // Finalize files if necessary
     if (dirname($file['filepath']['new']) != dirname($file['field']['filepath']) || $file['filename']['new'] != $file['field']['filename']) {
