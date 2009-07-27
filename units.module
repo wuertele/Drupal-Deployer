@@ -1,0 +1,151 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Units module.
+ */
+
+/**
+ * Collect and return units definitions from modules
+ */
+function units_get_units($name = NULL) {
+  static $units;
+  
+  if (!isset($units)) {
+    $units = array();
+    $items = module_invoke_all('define_units');
+
+    foreach ($items as $name => $unit) {
+      $units[$name] = $unit;
+    }
+    // Allow other modules to alter units definitions using hook_units_alter()
+    drupal_alter('units', $units);
+  }
+  return $units;
+}
+
+/**
+ * Return array of unit full names keyed by unit short names
+ */
+function units_get_unit_names($name = NULL) {
+  $names = array();
+  $units = units_get_units();
+  foreach ($units as $short => $unit) {
+    $names[$short] = $unit['name'];
+  }
+  return $name ? $names[$name] : $names; 
+}
+
+/**
+ * Provide information about implemented unit converters.
+ */
+function units_get_conversions($from = NULL, $to = NULL) {
+  static $conversions;
+  if (!isset($conversions)) {
+    $conversions = array();
+    
+    // Build global conversion matrix
+    $global_conversions = module_invoke_all('units_conversions');
+    
+    foreach ($global_conversions as $from_name => $to_names) {
+      // Validate from-unit against supported unit types.
+      if (units_validate($from_name)) {
+        $conversions[$from_name] = array();
+        foreach ($to_names as $to_name => $from_to_converters) {
+          // Validate to-unit against supported unit types.
+          if (units_validate($to_name)) {
+            $conversions[$from_name][$to_name] = $from_to_converters;
+          }
+        }
+      }
+    }
+    // Allow modules to alter conversions matrix via hook_units_conversions_alter()
+    drupal_alter('units_conversions', $conversions);
+  }
+  if ($from) {
+    if ($to) {
+      return $conversions[$from][$to];
+    }
+    return $conversions[$from];
+  }
+  return $conversions;
+}
+
+/**
+ * Return convert callback name for pair of units.
+ */
+function units_get_conversion($from, $to) {
+  $units = units_get_units();
+  $converters = units_get_conversions($from, $to);    
+  // Currently we select last item in converters array
+  // TODO: Implement selection of conversion provider
+  $converter = array_pop($converters);
+  return $converter;
+}
+
+/**
+ * Return array of implemented converters
+ */
+function units_get_converters($converter_id = NULL) {
+  static $converters;
+  if (!isset($converters)) {
+    $converters = module_invoke_all('units_converter_info');
+  }
+  if ($converter_id) {
+    return $converters[$converter_id];
+  }
+  return $converters;
+}
+
+/**
+ * Convert values between units. 
+ */
+function units_convert($value, $from, $to, $options = array()) {
+  $converter = units_get_converter($from, $to);
+  $result = $converter($value, $from, $to, $options);
+  units_log('convert', $result);
+  // @todo: future integrations go here
+  return $result;
+}
+
+/**
+ * Return symbol of unit
+ */
+function units_get_symbol($name) {
+  $units = units_get_units();
+  return isset($units[$name]['symbol']) ? $units[$name]['symbol'] : ''; 
+}
+
+/**
+ * Log conversions
+ * 
+ * TODO: implement watchdog logging
+ */
+function units_log($op, $result) {
+  if ($op == 'convert') {
+    // Possible log options: "errors"
+    $log_level = variable_get('units_log_conversions', 'error');
+    if ($log_level == 'error' && !$result['status']) {
+      // Error: log to watchdog  
+    }
+    else if ($log_level == 'all') {
+      // Success: log to watchdog
+    }
+  }
+}
+
+/**
+ * Validate unit and optional amount. Return 0 for no errors, or error text. 
+ */
+function units_validate($name, $amount = 1) {
+  $units = units_get_units();
+  if (!isset($units[$name])) {
+    return FALSE;
+  }
+  if (!isset($units[$name]['validation callback'])) {
+    return TRUE;
+  }
+  // TODO: Invoke validation callbacks and return error messages
+  return TRUE;
+}
