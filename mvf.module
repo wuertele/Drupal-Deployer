@@ -1,0 +1,486 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Measured Value Field module.
+ */
+
+/**
+ * Implementation of hook_init().
+ */ 
+function mvf_init() {
+  if (module_exists('diff')) {
+    module_load_include('inc', 'mvf', 'includes/mvf.diff');
+  }
+}
+
+
+/**
+ * Implementation of hook_theme().
+ */
+function mvf_theme() {
+  return array(
+    'mvf_widget' => array('arguments' => array('element' => NULL)),
+    'mvf_formatter_default' => array('arguments' => array('element' => NULL), 'function' => 'theme_mvf_formatter_generic'),
+    'mvf_formatter_nozeros' => array('arguments' => array('element' => NULL), 'function' => 'theme_mvf_formatter_generic'),
+    'mvf_formatter_unformatted' => array('arguments' => array('element' => NULL)),
+    'mvf_field' => array('arguments' => array('amount' => NULL, 'unit' => NULL, 'display_options' => NULL, 'separator' => NULL)),
+  );
+}
+
+/**
+ * Implementation of hook_field_info().
+ */
+function mvf_field_info() {
+  return array('mvf' => array('label' => t('Measured Value')));
+}
+
+/**
+ * Implementation of hook_field_settings().
+ */
+function mvf_field_settings($op, $field) {
+  switch ($op) {
+    case 'form':
+      $form = array();
+      $form['precision'] = array(
+        '#type' => 'select',
+        '#title' => t('Precision'),
+        '#options' => drupal_map_assoc(range(1, 20)),
+        '#default_value' => (is_numeric($field['precision']) && (int)$field['precision'] > 0 ? $field['precision'] : 10),
+        '#description' => t('The total number of digits to store in the database, including digits to the right of the decimal point.'),
+      );
+      $form['decimals'] = array(
+        '#type' => 'select',
+        '#title' => t('Decimals'),
+        '#options' => drupal_map_assoc(range(0, 4)),
+        '#default_value' => (is_numeric($field['decimals']) && (int)$field['decimals'] >= 0 ? $field['decimals'] : 2),
+        '#description' => t('The number of digits to the right of the decimal point.'),
+      );
+      formatted_number_add_js();
+      return $form;
+
+    case 'save':
+      return array('precision', 'decimals');
+
+    case 'database columns':
+      $precision = (isset($field['precision']) ? $field['precision'] : 10);
+      $decimals = (isset($field['decimals']) ? $field['decimals'] : 2);
+      return array(
+        'amount' => array('type' => 'numeric', 'precision' => $precision, 'scale' => $decimals, 'not null' => FALSE, 'sortable' => TRUE, 'views' => TRUE),
+        'unit' => array('type' => 'varchar', 'length' => 64, 'not null' => FALSE, 'sortable' => TRUE, 'views' => TRUE),
+      );
+  }
+}
+
+/**
+ * Implementation of hook_content_is_empty().
+ */
+function mvf_content_is_empty($item, $field) {
+  return !is_numeric($item['amount']);
+}
+
+/**
+ * Implementation of hook_field().
+ */
+function mvf_field($op, &$node, $field, &$items, $teaser, $page) {
+  if ($op == 'validate') {
+    if (is_array($items)) {
+      foreach ($items as $delta => $item) {
+        $error_element = (isset($item['_error_element']) ? $item['_error_element'] : '');
+        if (is_array($item) && isset($item['_error_element'])) {
+          unset($item['_error_element']);
+        }
+        $errors = array_merge(
+          formatted_number_validate_field_value($field, $item['amount']),
+          mvf_validate_field_value($field, $item['amount'], $item['unit'])
+        );
+        if (!empty($errors)) {
+          foreach ($errors as $message) {
+            form_set_error($error_element, $message);
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implementation of hook_field_formatter_info().
+ */
+function mvf_field_formatter_info() {
+  return array(
+    'default' => array('label' => t('Default'), 'field types' => array('mvf')),
+    'nozeros' => array('label' => t('Remove redundant zeros'), 'field types' => array('mvf')),
+    'unformatted' => array('label' => t('Unformatted'), 'field types' => array('mvf')),
+  );
+}
+
+/**
+ * Implementation of hook_widget_info().
+ */
+function mvf_widget_info() {
+  return array(
+    'mvf_widget' => array('label' => t('Amount and units'), 'field types' => array('mvf')),
+  );
+}
+
+/**
+ * Implementation of hook_widget_settings().
+ */
+function mvf_widget_settings($op, $widget) {
+  switch ($op) {
+    case 'form':
+      $form = array();
+      $options = array('short' => t('Short name'), 'full' => t('Full name'));
+      $form['unit_select_mode'] = array(
+        '#type' => 'radios',
+        '#title' => t('Unit selection mode'),
+        '#options' => $options,
+        '#default_value' => (isset($widget['unit_select_mode']) && isset($options[$widget['unit_select_mode']]) ? $widget['unit_select_mode'] : 'full'),
+        '#required' => TRUE,
+        '#description' => t('Choose the format of the label that will be displayed for options of the units select list.'),
+      );
+      $options = mvf_get_display_modes();
+      $form['unit_display_mode'] = array(
+        '#type' => 'select',
+        '#title' => t('Unit display mode'),
+        '#options' => $options,
+        '#default_value' => (isset($widget['unit_display_mode']) && isset($options[$widget['unit_display_mode']]) ? $widget['unit_display_mode'] : 'a|+|c'),
+        '#required' => TRUE,
+        '#description' => t('Choose the format that will be used to display this money field when a node is rendered.'),
+      );
+      $options = array('field' => t('Field precision'), 'unit' => t('Unit precision'));
+      $form['decimals_display_mode'] = array(
+        '#type' => 'radios',
+        '#title' => t('Decimals display mode'),
+        '#options' => $options,
+        '#default_value' => (isset($widget['decimals_display_mode']) && isset($options[$widget['decimals_display_mode']]) ? $widget['decimals_display_mode'] : 'field'),
+        '#required' => TRUE,
+        '#description' => t('Choose the method to select the number of decimals used to display the field. The standard precision for each unit is displayed in the <em>Available units</em> list.'),
+      );
+      $unit_options = array();
+      foreach (units_get_units() as $id => $unit) {
+        $unit_options[$id] = $unit['name'] .' ['. $unit['decimals'] .']';
+      }
+      $form['units'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Available units'),
+        '#collapsible' => TRUE, '#collapsed' => TRUE,
+        '#description' => t('Choose the units that you want to enable for this field. Do not select any unit to enable them all.'),
+      );
+      $form['units']['#description'] .= ' '. t('The number between square brakets indicates the standard precision for each unit.');
+      if (isset($widget['allowed_units']) && is_array($widget['allowed_units'])) {
+        // Get filtered array.
+        $allowed_units = array_filter($widget['allowed_units']);
+        // If not empty, create array for the form element values.
+        if (!empty($allowed_units)) {
+          $allowed_units = array_keys($allowed_units);
+          $allowed_units = array_combine($allowed_units, $allowed_units);
+        }
+      }
+      else {
+        $allowed_units = array();
+      }
+      $form['units']['allowed_units'] = array(
+        '#type' => 'checkboxes',
+        '#options' => $unit_options,
+        '#default_value' => $allowed_units,
+        '#checkall' => TRUE,
+        '#prefix' => '<div class="mvf-unit-checkboxes">', '#suffix' => '</div>',
+      );
+      drupal_add_css(drupal_get_path('module', 'mvf') .'/mvf.css');
+      return $form;
+
+    case 'save':
+      return array('unit_select_mode', 'unit_display_mode', 'decimals_display_mode', 'allowed_units');
+  }
+}
+
+/**
+ * Obtain display modes for money fields.
+ */
+function mvf_get_display_modes() {
+  return array(
+    's|a' => t('Symbol + Amount'),
+    's|+|a' => t('Symbol + Space + Amount'),
+    'a|s' => t('Amount + Symbol'),
+    'a|+|s' => t('Amount + Space + Symbol'),
+    's|a|+|c' => t('Symbol + Amount + Space + Unit Short Name'),
+    's|+|a|+|c' => t('Symbol + Space + Amount + Space + Unit Short Name'),
+    'a|+|c' => t('Amount + Space + Unit Short Name'),
+    'c|+|a' => t('Unit Short Name + Space + Amount'),
+    'c|+|a|s' => t('Unit Short Name + Space + Amount + Symbol'),
+    'c|+|a|+|s' => t('Unit Short Name + Space + Amount + Space + Symbol'),
+  );
+}
+
+/**
+ * Implementation of hook_widget().
+ */
+function mvf_widget(&$form, &$form_state, $field, $items, $delta = 0) {
+  return array(
+    '#type' => $field['widget']['type'],
+    '#default_value' => (isset($items[$delta]) ? $items[$delta] : NULL),
+  );
+}
+
+/**
+ * Implementation of FAPI hook_elements().
+ */
+function mvf_elements() {
+  return array(
+    'mvf_widget' => array(
+      '#input' => TRUE,
+      '#columns' => array('amount', 'unit'),
+      '#delta' => 0,
+      '#process' => array('mvf_widget_process'),
+    ),
+  );
+}
+
+/**
+ * Process an individual Money CCK field element.
+ */
+function mvf_widget_process($element, $edit, $form_state, $form) {
+  $field_name = $element['#field_name'];
+  $field = $form['#field_info'][$field_name];
+
+  // Amount reuses the formatted_number element.
+  $field_key = $element['#columns'][0];
+  $element = formatted_number_widget_process($element, $edit, $form_state, $form);
+  // Field requirement validation is done in hook_field().
+  $element[$field_key]['#required'] = FALSE;
+  // Do not use title/description of the formatted number.
+  unset($element[$field_key]['#title'], $element[$field_key]['#description']);
+
+  // Unit uses a select list element.
+  $field_key = $element['#columns'][1];
+  $element[$field_key] = array(
+    '#type' => 'select',
+    '#default_value' => (isset($element['#value'][$field_key]) ? $element['#value'][$field_key] : array()),
+    '#options' => mvf_get_widget_units($field),
+    // The following values were set by the content module and need
+    // to be passed down to the nested element.
+    '#required' => $element['#required'],
+    '#field_name' => $element['#field_name'],
+    '#type_name' => $element['#type_name'],
+    '#delta' => $element['#delta'],
+    '#columns' => $element['#columns'],
+  );
+
+  return $element;
+}
+
+/**
+ * Helper function to validate a measured value field.
+ *
+ * Validates the unit and its relation with the amount.
+ * Both fields must be specified, or none.
+ *
+ * @param array $field
+ *   The field array.
+ * @param number $amount
+ *   The number that should be validated.
+ * @param number $unit
+ *   The unit that should be validated.
+ * @return array
+ *   An array with error messages or empty if value is correct.
+ */
+function mvf_validate_field_value($field, $amount, $unit) {
+  $widget_label = t($field['widget']['label']);
+  $errors = array();
+  if (empty($unit)) {
+    if ($field['required']) {
+      $errors[] = t('%name: Unit is required.', array('%name' => $widget_label));
+    }
+    else if (is_numeric($amount)) {
+      $errors[] = t('%name: Unit is required when an amount is specified.', array('%name' => $widget_label));
+    }
+  }
+  else {
+    // When validating the default value in field settings panel, CCK is giving
+    // us the options at field level, not within the widget item of the field.
+    if (!empty($field['allowed_units'])) {
+      $allowed_units = (isset($field['allowed_units']) ? array_filter($field['allowed_units']) : array());
+      $amount_required = FALSE;
+    }
+    else {
+      $allowed_units = (isset($field['widget']['allowed_units']) ? array_filter($field['widget']['allowed_units']) : array());
+      $amount_required = TRUE;
+    }
+    // When no unit is enabled, allow them all.
+    if (empty($allowed_units)) {
+      $allowed_units = units_get_unit_names();
+    }
+    if (!isset($allowed_units[$unit])) {
+      if (!$field['required']) {
+        $errors[] = t('%name: The unit %unit is not allowed.', array('%name' => $widget_label, '%unit' => $unit));
+      }
+    }
+    else if (!is_numeric($amount) && $amount_required) {
+      $errors[] = t('%name: A valid amount is required when a unit is specified.', array('%name' => $widget_label));
+    }
+  }
+  return $errors;
+}
+
+/**
+ * Build unit options for the given field/widget.
+ */
+function mvf_get_widget_units($field) {
+  // Currently implemented modes: short, full. See mvf_widget_settings().
+  $mode = $field['widget']['unit_select_mode'];
+
+  // Prepare the array of allowed units.
+  if (isset($field['widget']['allowed_units']) && is_array($field['widget']['allowed_units'])) {
+    // Obtain the list of allowed units. Note that this array is in the form of 'short name' => boolean.
+    $allowed_units = array_filter($field['widget']['allowed_units']);
+  }
+  else {
+    // Initialize array when the list has not been already set in field settings.
+    $allowed_units = array();
+  }
+
+  // When no unit has been specified in widget settings we allow them all.
+  if (empty($allowed_units)) {
+    // Note that this array is built in the form of 'short name' => 'full name'.
+    $allowed_units = units_get_unit_names();
+  }
+  else {
+    // One or more units have been specified in widget settings.
+    if ($mode == 'full') {
+      // Build the array in the form of 'short name' => 'full name' extracting the
+      // allowed units from the array returned from Units_api.
+      $allowed_units = array_intersect_key(units_get_unit_names(), $allowed_units);
+    }
+  }
+
+  // If the requested mode is 'short', then we need to transform the array
+  // so that item keys are also used for values.
+  if ($mode == 'short') {
+    $allowed_units = array_keys($allowed_units);
+    $allowed_units = array_combine($allowed_units, $allowed_units);
+  }
+
+  // When field is not required, an additional empty unit is pushed on top of the resulting list.
+  if (!$field['required']) {
+    $allowed_units = array('' => ($mode == 'short' ? '---' : t('-- Select unit --'))) + $allowed_units;
+  }
+
+  return $allowed_units;
+}
+
+/**
+ * Display a MVF field (widget).
+ *
+ * @ingroup themeable
+ */
+function theme_mvf_widget($element) {
+  formatted_number_add_js();
+  $children = '<div class="container-inline">'. $element['#children'] .'</div>';
+  return theme('form_element', $element, $children);
+}
+
+/**
+ * Display a MVF field (unformatted).
+ *
+ * @ingroup themeable
+ */
+function theme_mvf_formatter_unformatted($element) {
+  $amount = isset($element['#item']['amount']) ? $element['#item']['amount'] : NULL;
+  if (!is_numeric($amount)) {
+    return '';
+  }
+
+  $field = content_fields($element['#field_name'], $element['#type_name']);
+  $item = $element['#item']['unit'];
+
+  // Format the whole field based on widget display options.
+  return theme('mvf_field', $amount, $unit, $field['widget']['unit_display_mode'], ' ');
+}
+
+/**
+ * Display a MVF field (formatted).
+ *
+ * @ingroup themeable
+ */
+function theme_mvf_formatter_generic($element) {
+  $amount = isset($element['#item']['amount']) ? $element['#item']['amount'] : NULL;
+  if (!is_numeric($amount)) {
+    return '';
+  }
+
+  $field = content_fields($element['#field_name'], $element['#type_name']);
+  $unit = $element['#item']['unit'];
+
+  // The number of decimals depends on the formatter being used and
+  // the field options.
+  if ($element['#formatter'] == 'nozeros') {
+    // For this formatter we display only relevant zeros.
+    $decimals = -1;
+  }
+  else {
+    // See if the precision should be taken from the field itself or from the unit data.
+    if (isset($field['widget']['decimals_display_mode']) && $field['widget']['decimals_display_mode'] == 'unit') {
+      $units = units_get_units();
+      if (isset($units[$unit]['decimals'])) {
+        $decimals = $units[$unit]['decimals'];
+      }
+    }
+  }
+  // When no decimals have been set, use the number from the field settings.
+  if (!isset($decimals)) {
+    $decimals = (isset($field['decimals']) ? (int)$field['decimals'] : 0);
+  }
+
+  // Format the amount.
+  $formatted_number = format_number($amount, $decimals);
+
+  // Format the whole field based on widget display options.
+  return theme('mvf_field', $formatted_number, $unit, $field['widget']['unit_display_mode']);
+}
+
+/**
+ * Display an amount and unit with the given display options.
+ *
+ * @param $amount
+ *   The amount (raw or formatted).
+ * @param $unit
+ *   The unit short name.
+ * @param $display_options
+ *   The string that provides display options as configured in widget settings.
+ * @param $separator
+ *   The character used as a separator when specified by '+' is display options.
+ *   Defaults to non-break space.
+ *
+ * @ingroup themeable
+ */
+function theme_mvf_field($amount, $unit, $display_options, $separator = "\xC2\xA0") {
+  $output = '';
+  foreach (explode('|', $display_options) as $option) {
+    switch ($option) {
+      case 'a':
+        // The amount.
+        $output .= $amount;
+        break;
+      case 's':
+        // Unit symbol.
+        $unit_symbol = units_get_symbol($unit);
+        if (!empty($unit_symbol)) {
+          $output .= $unit_symbol;
+          break;
+        }
+        // Fall back to unit short name.
+      case 'c':
+        // short nit  name.
+        $output .= $unit;
+        break;
+      case '+':
+        // Separator.
+        $output .= $separator;
+        break;
+    }
+  }
+  return $output;
+}
