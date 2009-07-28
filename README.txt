@@ -180,7 +180,7 @@ directory on the server and add new content to that directory
 
    2. Locate file named settings.php inside your drupal directory
       (usually sites/default/settings.php) and set $cookie_domain variable to the
-      appropiate domain (remember to uncomment that line). If you not do this,
+      appropriate domain (remember to uncomment that line). If you not do this,
       FCKeditor will claim that file browser is disabled
 
    3. Enabling file uploads is a security risk. That's why you have to grant a

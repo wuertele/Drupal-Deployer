@@ -582,7 +582,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#default_value' => !empty($profile->settings['css_path']) ? $profile->settings['css_path'] : "",
     '#size' => 40,
     '#maxlength' => 255,
-    '#description' => t('Enter path to CSS file (Example: "css/editor.css") or a list of css files seperated by a comma (Example: "/themes/garland/style.css,http://example.com/style.css"). Make sure to select "Define css" above.<br />Available placeholders:<br /><strong>%h</strong> - host name (!host).<br /><strong>%t</strong> - path to theme (!theme).', array('!host' => base_path(), '!theme' => base_path() . path_to_theme() .'/'))
+    '#description' => t('Enter path to CSS file (Example: "css/editor.css") or a list of css files separated by a comma (Example: "/themes/garland/style.css,http://example.com/style.css"). Make sure to select "Define css" above.<br />Available placeholders:<br /><strong>%h</strong> - host name (!host).<br /><strong>%t</strong> - path to theme (!theme).', array('!host' => base_path(), '!theme' => base_path() . path_to_theme() .'/'))
   );
 
   $form['css']['css_style'] = array(
@@ -969,7 +969,7 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
       '#default_value' => $current_private_dir,
       '#size' => 40,
       '#maxlength' => 255,
-      '#description' => t('The path relative to the location of the private directory where FCKeditor should store uploaded files.') .'<br />'. t('<strong>Warning:</strong> FCKeditor does not implement any kind of access protection on files available in this location. All files stored in the directory defined above might be accessible by unathenticated users if there is no information about the file in the Drupal\'s database.') .'<br />'. t('System path to the private folder is: !system_path.', array('!system_path' => realpath(file_directory_path()) . DIRECTORY_SEPARATOR)) .'<br />'. t('Available wildcard characters:<br/><strong>%u</strong> - User ID.') .'<br />'. t('Current path: !path', array('!path' => $current_private_dir .' ('. file_create_path($current_private_dir) .')')),
+      '#description' => t('The path relative to the location of the private directory where FCKeditor should store uploaded files.') .'<br />'. t('<strong>Warning:</strong> FCKeditor does not implement any kind of access protection on files available in this location. All files stored in the directory defined above might be accessible by unauthenticated users if there is no information about the file in the Drupal\'s database.') .'<br />'. t('System path to the private folder is: !system_path.', array('!system_path' => realpath(file_directory_path()) . DIRECTORY_SEPARATOR)) .'<br />'. t('Available wildcard characters:<br/><strong>%u</strong> - User ID.') .'<br />'. t('Current path: !path', array('!path' => $current_private_dir .' ('. file_create_path($current_private_dir) .')')),
     );
   }
 
