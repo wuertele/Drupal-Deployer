@@ -16,14 +16,13 @@ How to install and use
       have AJAX enabled. If there are no views in the list, make sure there's
       at least one view that has AJAX enabled. See the instructions on the
       settings page for more information.
-   3. Check the module you want to enable display tabs for and check the
-      displays you want to show as tabs. Choose whether you want the tabs to show
-      a throbber (loading animation) while the view is loading.
-   4. Your view's header will now contain the displays as item lists. You may
-      theme these lists as tabs if you so choose. Clicking a display's link will
-      update the view and replace the current display with the one you clicked.
-      This only works with AJAX at the moment (no graceful degradation for
-      browsers with poor JavaScript support).
+   3. Check the view you want to enable display tabs for and check the
+      displays you want to show as tabs. Choose whether you want the tabs to
+      show a throbber (loading animation) while the view is loading.
+   4. Your view's header will now contain the displays as simple tabs.
+      Clicking a display's link will update the view and replace the current
+      display with the one you clicked. This only works with AJAX at the moment
+      (no graceful degradation for browsers with poor JavaScript).
 
 NOTE: If your view uses exposed filters and you want these to show regardless
 of what tab is selected you have to add these filters to every display.
