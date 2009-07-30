@@ -155,7 +155,7 @@ function mollom_captcha_js($type, $session_id) {
  * Helper function to load a Mollom session ID from the database.
  */
 function mollom_get_data($did) {
-  return db_fetch_object(db_query("SELECT * FROM {mollom} WHERE did = '%s'", $did));
+  return db_fetch_object(db_query_range("SELECT * FROM {mollom} WHERE did = '%s'", $did, 0, 1));
 }
 
 /**
@@ -169,7 +169,7 @@ function mollom_set_data($did, $data) {
   }
 
   // @todo Convert to drupal_write_record().
-  if (db_result(db_query("SELECT session FROM {mollom} WHERE did = '%s'", $did))) {
+  if (db_result(db_query_range("SELECT 1 FROM {mollom} WHERE did = '%s'", $did, 0, 1))) {
     db_query("UPDATE {mollom} SET session = '%s', quality = '%s', reputation = '%s', languages = '%s' WHERE did = '%s'", $data['session_id'], $data['quality'], $data['reputation'], $data['languages'], $did);
   }
   else {
@@ -467,7 +467,7 @@ function mollom_node_admin_overview_submit($form, &$form_state) {
 
         if ($node = node_load($nid)) {
           if ($operation == 'unpublish') {
-            db_query('UPDATE {node} SET status = 0 WHERE nid = %d', $nid);
+            db_query("UPDATE {node} SET status = 0 WHERE nid = %d", $nid);
           }
           elseif ($operation == 'delete') {
             node_delete($nid);
