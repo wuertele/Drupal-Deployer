@@ -178,15 +178,19 @@ function mollom_set_data($did, $data) {
 }
 
 /**
+ * Implementation of hook_mail_alter().
+ *
  * This function adds a 'report as inappropriate' link to the e-mails sent
  * by the contact module.
  */
 function mollom_mail_alter(&$message) {
-  if (isset($GLOBALS['mollom_response']) && isset($GLOBALS['mollom_response']['session_id'])) {
+  // Only attach the Mollom report link to mails sent by actual users and not
+  // any mails sent by Drupal since they should never be reported as spam.
+  $valid_ids = array('page_mail', 'page_copy', 'user_mail', 'user_copy');
+  if (isset($GLOBALS['mollom_response']['session_id']) && in_array($message['id'], $valid_ids)) {
     $report_link = t('Report as inappropriate: @link', array('@link' => url('mollom/contact/'. $GLOBALS['mollom_response']['session_id'], array('absolute' => TRUE))));
     // The _mail_alter hook seems to accept both arrays as strings so we
-    // need to handle both. TODO: it seems like something we want to clean
-    // up upstream.
+    // need to handle both.
     if (is_array($message['body'])) {
       $message['body'][] = $report_link;
     }
