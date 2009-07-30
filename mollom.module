@@ -42,27 +42,28 @@ function mollom_help($path, $arg) {
 /**
  * Implementation of hook_link().
  */
-function mollom_link($type, $object = NULL) {
-  // We extend the comment links so people can send feedback:
-  if ($type == 'comment' && user_access('administer comments') && _mollom_get_mode('comment_form')) {
-    $links['comment_spam'] = array(
-      'title' => t('mark as abuse'),
-      'href' => "mollom/comment/$object->cid",
-      'html' => TRUE,
-    );
+function mollom_link($type, $object, $teaser = FALSE) {
+  $links = array();
 
-    return $links;
+  // Only show the links if the module is configured.
+  if (variable_get('mollom_public_key', '') && variable_get('mollom_private_key', '')) {
+    if ($type == 'comment' && user_access('administer comments') && _mollom_get_mode('comment_form')) {
+      $links['mollom_comment_report'] = array(
+        'title' => t('Report to Mollom'),
+        'href' => 'mollom/comment/' . $object->cid,
+        'html' => TRUE,
+      );
+    }
+    if ($type == 'node' && user_access('administer nodes') && _mollom_get_mode($object->type . '_node_form')) {
+      $links['mollom_node_report'] = array(
+        'title' => t('Report to Mollom'),
+        'href' => 'mollom/node/' . $object->nid,
+        'html' => TRUE,
+      );
+    }
   }
 
-  if ($type == 'node' && user_access('administer nodes') && _mollom_get_mode($object->type .'_node_form')) {
-    $links['node_spam'] = array(
-      'title' => t('Delete post'),
-      'href' => "mollom/node/$object->nid",
-      'html' => TRUE,
-    );
-
-    return $links;
-  }
+  return $links;
 }
 
 /**
@@ -84,7 +85,7 @@ function mollom_menu() {
     'type' => MENU_CALLBACK,
   );
   $items['mollom/contact'] = array(
-    'title' => 'Report and delete',
+    'title' => 'Report',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('mollom_report_contact'),
     'access callback' => TRUE, // Everyone can report contact form feedback.
