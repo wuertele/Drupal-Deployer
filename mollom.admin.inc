@@ -7,7 +7,7 @@
  */
 
 /**
- * Administration settings form.
+ * Form builder; Administration settings form.
  *
  * @see system_settings_form()
  */
@@ -123,5 +123,85 @@ function _mollom_verify_key() {
   }
   else {
     drupal_set_message(t('We contacted the Mollom servers to verify your keys: the Mollom services are operating correctly. We are now blocking spam.'));
+  }
+}
+
+/**
+ * Submit handler; mass-report and delete comments.
+ */
+function mollom_comment_admin_overview_submit($form, &$form_state) {
+  // The operation has the following format: <operation>,
+  // where '<operation>' can be 'unpublish' or 'delete'.
+  list($id, $operation) = explode('-', $form_state['values']['operation']);
+
+  if ($id == 'mollom') {
+    foreach ($form_state['values']['comments'] as $cid => $value) {
+      if ($value) {
+        // First, send the proper information to the XML-RPC server:
+        if ($data = mollom_get_data('comment-'. $cid)) {
+          mollom('mollom.sendFeedback', array('session_id' => $data->session, 'feedback' => 'spam'));
+        }
+
+        // Second, perform the proper operation on the comments:
+        if ($comment = _comment_load($cid)) {
+          if ($operation == 'unpublish') {
+            db_query("UPDATE {comments} SET status = %d WHERE cid = %d", COMMENT_NOT_PUBLISHED, $cid);
+            _comment_update_node_statistics($comment->nid);
+          }
+          elseif ($operation == 'delete') {
+            _comment_delete_thread($comment);
+            _comment_update_node_statistics($comment->nid);
+          }
+        }
+      }
+    }
+
+    // Clear the cache:
+    cache_clear_all();
+
+    if ($operation == 'delete') {
+      drupal_set_message(t('The selected comments have been reported as inappropriate and are deleted.'));
+    }
+    else {
+      drupal_set_message(t('The selected comments have been reported as inappropriate and are unpublished.'));
+    }
+  }
+}
+
+/**
+ * Submit handler; mass-report and unpublish or delete nodes.
+ */
+function mollom_node_admin_overview_submit($form, &$form_state) {
+  // The operation has the following format: <operation>,
+  // where '<operation>' can be 'unpublish' or 'delete'.
+  list($id, $operation) = explode('-', $form_state['values']['operation']);
+
+  if ($id == 'mollom') {
+    foreach ($form_state['values']['nodes'] as $nid => $value) {
+      if ($value) {
+        if ($data = mollom_get_data('node-'. $nid)) {
+          mollom('mollom.sendFeedback', array('session_id' => $data->session, 'feedback' => 'spam'));
+        }
+
+        if ($node = node_load($nid)) {
+          if ($operation == 'unpublish') {
+            db_query("UPDATE {node} SET status = 0 WHERE nid = %d", $nid);
+          }
+          elseif ($operation == 'delete') {
+            node_delete($nid);
+          }
+        }
+      }
+    }
+
+    // Clear the cache:
+    cache_clear_all();
+
+    if ($operation == 'delete') {
+      drupal_set_message(t('The selected posts have been reported as inappropriate and are deleted.'));
+    }
+    else {
+      drupal_set_message(t('The selected posts have been reported as inappropriate and are unpublished.'));
+    }
   }
 }
