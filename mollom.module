@@ -161,12 +161,19 @@ function mollom_get_data($did) {
 /**
  * Helper function to store a Mollom session ID into the database.
  */
-function mollom_set_data($session, $quality, $reputation, $languages, $did) {
+function mollom_set_data($did, $data) {
+  // Merge in some default values that may have not been in the response.
+  $data += array('reputation' => '', 'languages' => '');
+  if ($data['languages']) {
+    $data['languages'] = implode(' ', $data['languages']);
+  }
+
+  // @todo Convert to drupal_write_record().
   if (db_result(db_query("SELECT session FROM {mollom} WHERE did = '%s'", $did))) {
-    db_query("UPDATE {mollom} SET session = '%s', quality = '%s', reputation = '%s', languages = '%s' WHERE did = '%s'", $session, $quality, $reputation, $languages, $did);
+    db_query("UPDATE {mollom} SET session = '%s', quality = '%s', reputation = '%s', languages = '%s' WHERE did = '%s'", $data['session_id'], $data['quality'], $data['reputation'], $data['languages'], $did);
   }
   else {
-    db_query("INSERT INTO {mollom} (session, quality, reputation, languages, did) VALUES ('%s', '%s', '%s', '%s', '%s')", $session, $quality, $reputation, $languages, $did);
+    db_query("INSERT INTO {mollom} (session, quality, reputation, languages, did) VALUES ('%s', '%s', '%s', '%s', '%s')", $data['session_id'], $data['quality'], $data['reputation'], $data['languages'], $did);
   }
 }
 
@@ -319,11 +326,8 @@ function mollom_report_contact_submit($form, &$form_state) {
  * This function implements the _nodeapi hook and is called when a node is inserted.
  */
 function mollom_nodeapi($node, $op) {
-  if ($op == 'insert' && isset($GLOBALS['mollom_response']) && isset($GLOBALS['mollom_response']['session_id'])) {
-    $quality = $GLOBALS['mollom_response']['quality'];
-    $reputation = $GLOBALS['mollom_response']['reputation'];
-    $languages = isset($GLOBALS['mollom_response']['languages']) ? implode(' ', $GLOBALS['mollom_response']['languages']) : '';
-    mollom_set_data($GLOBALS['mollom_response']['session_id'], $quality, $reputation, $languages, 'node-'. $node->nid);
+  if ($op == 'insert' && isset($GLOBALS['mollom_response']['session_id'])) {
+    mollom_set_data('node-' . $node->nid, $GLOBALS['mollom_response']);
   }
 }
 
@@ -331,11 +335,8 @@ function mollom_nodeapi($node, $op) {
  * This function implements the _comment hook and is called when a comment is inserted.
  */
 function mollom_comment($comment, $op) {
-  if ($op == 'insert' && isset($GLOBALS['mollom_response']) && isset($GLOBALS['mollom_response']['session_id'])) {
-    $quality = $GLOBALS['mollom_response']['quality'];
-    $reputation = $GLOBALS['mollom_response']['reputation'];
-    $languages = isset($GLOBALS['mollom_response']['languages']) ? implode(' ', $GLOBALS['mollom_response']['languages']) : '';
-    mollom_set_data($GLOBALS['mollom_response']['session_id'], $quality, $reputation, $languages, 'comment-'. $comment['cid']);
+  if ($op == 'insert' && isset($GLOBALS['mollom_response']['session_id'])) {
+    mollom_set_data('comment-' . $comment['cid'], $GLOBALS['mollom_response']);
   }
 }
 
