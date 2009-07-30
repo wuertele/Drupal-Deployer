@@ -12,7 +12,7 @@
  * @see system_settings_form()
  */
 function mollom_admin_settings() {
-  $keys = variable_get('mollom_public_key', '') && variable_get('mollom_private_key', '');
+  $keys = _mollom_access();
 
   if ($keys) {
     // Print a status message about the key:

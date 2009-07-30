@@ -46,7 +46,7 @@ function mollom_link($type, $object, $teaser = FALSE) {
   $links = array();
 
   // Only show the links if the module is configured.
-  if (variable_get('mollom_public_key', '') && variable_get('mollom_private_key', '')) {
+  if (_mollom_access()) {
     if ($type == 'comment' && user_access('administer comments') && _mollom_get_mode('comment_form')) {
       $links['mollom_comment_report'] = array(
         'title' => t('Report to Mollom'),
@@ -74,6 +74,7 @@ function mollom_menu() {
     'title' => 'Report and delete',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('mollom_report_comment'),
+    'access callback' => '_mollom_access',
     'access arguments' => array('administer comments'),
     'file' => 'mollom.pages.inc',
     'type' => MENU_CALLBACK,
@@ -82,6 +83,7 @@ function mollom_menu() {
     'title' => 'Report and delete',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('mollom_report_node'),
+    'access callback' => '_mollom_access',
     'access arguments' => array('administer nodes'),
     'file' => 'mollom.pages.inc',
     'type' => MENU_CALLBACK,
@@ -90,30 +92,45 @@ function mollom_menu() {
     'title' => 'Report',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('mollom_report_contact'),
-    'access callback' => TRUE, // Everyone can report contact form feedback.
+    'access callback' => '_mollom_access',
     'file' => 'mollom.pages.inc',
     'type' => MENU_CALLBACK,
   );
   $items['admin/settings/mollom'] = array(
-    'description' => 'Mollom is a web service that helps you manage your community.',
     'title' => 'Mollom',
+    'description' => 'Mollom is a web service that helps you manage your community.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('mollom_admin_settings'),
     'access arguments' => array('administer mollom'),
     'file' => 'mollom.admin.inc',
   );
 
-  // Menu callback used for AJAX purposes:
+  // Menu callback used for AJAX request for new CAPTCHAs.
   $items['mollom/captcha/%/%'] = array(
-    'title' => 'Request CAPTCHA',
     'page callback' => 'mollom_captcha_js',
     'page arguments' => array(2, 3),
-    'access callback' => TRUE,
+    'access callback' => '_mollom_access',
     'file' => 'mollom.pages.inc',
     'type' => MENU_CALLBACK,
   );
 
   return $items;
+}
+
+/**
+ * Access callback; check if the module is configured.
+ *
+ * Note this function does not actually check if the keys are valid for the
+ * site, but just if the keys have been entered.
+ *
+ * @param $permission
+ *   An optional permission string to check with user_access().
+ * @return
+ *   TRUE if the module has been configured and user_access() has been checked,
+ *   FALSE otherwise.
+ */
+function _mollom_access($permission = FALSE) {
+  return variable_get('mollom_public_key', '') && variable_get('mollom_private_key', '') && (!$permission || user_access($permission));
 }
 
 /**
