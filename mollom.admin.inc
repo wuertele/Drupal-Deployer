@@ -26,15 +26,6 @@ function mollom_admin_settings() {
       _mollom_verify_key();
     }
 
-    $form['statistics'] = array(
-      '#type' => 'fieldset',
-      '#title' => t('Site usage statistics'),
-      '#collapsible' => TRUE,
-    );
-    $form['statistics']['message'] = array(
-      '#value' => '<div><embed src="http://mollom.com/statistics.swf?key='. check_plain(variable_get('mollom_public_key', '')) .'" quality="high" width="100%" height="430" name="Mollom" align="middle" play="true" loop="false" allowScriptAccess="sameDomain" type="application/x-shockwave-flash" pluginspage="http://www.adobe.com/go/getflashplayer"></embed></div>',
-    );
-
     $form['spam'] = array(
       '#type' => 'fieldset',
       '#title' => t('Spam protection settings'),
@@ -204,4 +195,15 @@ function mollom_node_admin_overview_submit($form, &$form_state) {
       drupal_set_message(t('The selected posts have been reported as inappropriate and are unpublished.'));
     }
   }
+}
+
+/**
+ * Display a reports page.
+ */
+function mollom_reports_page() {
+  $form['statistics'] = array(
+    '#type' => 'item',
+    '#value' => '<embed src="http://mollom.com/statistics.swf?key='. check_plain(variable_get('mollom_public_key', '')) .'" quality="high" width="100%" height="430" name="Mollom" align="middle" play="true" loop="false" allowScriptAccess="sameDomain" type="application/x-shockwave-flash" pluginspage="http://www.adobe.com/go/getflashplayer"></embed>',
+  );
+  return drupal_render($form);
 }
