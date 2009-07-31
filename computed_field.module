@@ -32,11 +32,6 @@ function computed_field_field_settings($op, $field) {
         '#description' => t('The variables available to your code are: ') .'<code>&amp;$node, $field, and &amp;$node_field</code>'. t('. To set the value of the field, set ') .'<code>$node_field[0][\'value\']</code>'. t('. Here\'s a simple example which sets the computed field\'s value to the value of the sum of the number fields field_a and field_b: ') .'<code>$node_field[0][\'value\'] = $node->field_a[0][\'value\'] + $node->field_b[0][\'value\'];</code>',
         '#default_value' => !empty($field['code']) ? $field['code'] : '$node_field[0][\'value\'] = "";',
       );
-      $form['display'] = array(
-        '#type' => 'checkbox',
-        '#title' => t('Display this field'),
-        '#default_value' => is_numeric($field['code']) ? $field['code'] : TRUE ,
-      );
       $form['display_format'] = array(
         '#type' => 'textarea',
         '#title' => t('Display Format'),
@@ -91,7 +86,7 @@ function computed_field_field_settings($op, $field) {
       }
       break;
     case 'save':
-      return array('code', 'display', 'display_format', 'store', 'data_type', 'data_length', 'data_not_NULL', 'data_default', 'data_sortable');
+      return array('code', 'display_format', 'store', 'data_type', 'data_length', 'data_not_NULL', 'data_default', 'data_sortable');
     case 'database columns':
       if ($field['store']) {
         $columns = array('value' => array());
@@ -164,13 +159,11 @@ function computed_field_field($op, &$node, $field, &$node_field, $teaser, $page)
       }
       break;
     case 'view':
-      if ($field['display']) {
-        $items = array();
-        foreach ($node_field as $delta => $item) {
-          $items[$delta]['view'] = content_format($field, $item, 'default', $node);
-        }
-        return theme('field', $node, $field, $items, $teaser, $page);
+      $items = array();
+      foreach ($node_field as $delta => $item) {
+        $items[$delta]['view'] = content_format($field, $item, 'default', $node);
       }
+      return theme('field', $node, $field, $items, $teaser, $page);
       break;
     case 'validate':
       break;
@@ -214,11 +207,10 @@ function computed_field_widget(&$form, &$form_state, $field, $items, $delta = 0)
  */
 function computed_field_view_item($field, $node_field_item, $node = NULL) {
   global $base_url;
-  if ($field['display']) {
-    $display = '';
-    eval($field['display_format']);
-    return $display;
-  }
+
+  $display = '';
+  eval($field['display_format']);
+  return $display;
 }
 
 /**
