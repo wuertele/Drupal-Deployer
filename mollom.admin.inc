@@ -34,7 +34,7 @@ function mollom_admin_settings() {
         '<ul><li>'. t("<strong>Text analysis and CAPTCHA backup</strong>: Mollom analyzes the data submitted on the form and presents a CAPTCHA challenge if necessary. This option is strongly recommended, as it takes full advantage of the Mollom anti-spam service to categorize your posts into ham (not spam) and spam.") .'</li>'.
         '<li>'. t("<strong>CAPTCHA only</strong>: the form's data is not sent to Mollom for analysis, and a remotely-hosted CAPTCHA challenge is always presented. This option is useful when you wish to always display a CAPTCHA or want to send less data to the Mollom network. Note, however, that forms displayed with a CAPTCHA are never cached, so always displaying a CAPTCHA challenge may reduce performance.") .'</li>'.
         '<li>'. t('<strong>No protection</strong>: Mollom is not used with this form.') .'</li></ul>'.
-        '<p>'. t("Data is processsed and stored as explained in our <a href=\"http://mollom.com/service-agreement-free-subscriptions\">Web Service Privacy Policy</a>. It is your responsibility to provide any necessary notices and obtain the appropriate consent regarding Mollom's use of your data. For more information, see <a href=\"http://mollom.com/how-mollom-works\">How Mollom Works</a> and the <a href=\"http://mollom.com/faq\">Mollom FAQ</a>.") .'</p>',
+        '<p>'. t("Data is processsed and stored as explained in our <a href=\"@mollom-privacy\">Web Service Privacy Policy</a>. It is your responsibility to provide any necessary notices and obtain the appropriate consent regarding Mollom's use of your data. For more information, see <a href=\"@mollom-works\">How Mollom Works</a> and the <a href=\"@mollom-faq\">Mollom FAQ</a>.", array('@mollom-privacy' => 'http://mollom.com/service-agreement-free-subscriptions', '@mollom-works' => 'http://mollom.com/how-mollom-works', '@mollom-faq' => 'http://mollom.com/faq')) .'</p>',
       '#collapsible' => TRUE,
     );
 
@@ -78,7 +78,7 @@ function mollom_admin_settings() {
   $form['access-keys'] = array(
     '#type' => 'fieldset',
     '#title' => t('Mollom access keys'),
-    '#description' => t('In order to use Mollom, you need both a public and private key. To obtain your keys, simply <a href="http://mollom.com/user/register">create a user account on mollom.com</a>, <a href="http://mollom.com/user">login to mollom.com</a>, and <a href="http://mollom.com/site-manager/add">create a subscription</a> for your site.  Once you created a subscription, your private and public access keys will be available from the <a href="http://mollom.com/site-manager">site manager on mollom.com</a>. Copy-paste them in the form below, and you are ready to go.'),
+    '#description' => t('In order to use Mollom, you need both a public and private key. To obtain your keys, simply <a href="@mollom-register">create a user account on mollom.com</a>, <a href="@mollom-login">login to mollom.com</a>, and <a href="@mollom-manager-add">create a subscription</a> for your site.  Once you created a subscription, your private and public access keys will be available from the <a href="@mollom-manager">site manager on mollom.com</a>. Copy-paste them in the form below, and you are ready to go.', array('@mollom-register' => 'http://mollom.com/user/register', '@mollom-login' => 'http://mollom.com/user', '@mollom-manager-add' => 'http://mollom.com/site-manager/add', '@mollom-manager' => 'http://mollom.com/site-manager')),
     '#collapsible' => TRUE,
     '#collapsed' => $keys,
   );
