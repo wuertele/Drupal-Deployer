@@ -22,7 +22,7 @@ class project_issue_handler_field_issue_queue_link extends views_handler_field {
   }
 
   function options_form(&$form, &$form_state) {
-    parent::option_definition();
+    parent::options_form($form, $form_state);
     $form['link_type'] = array(
       '#type' => 'radios',
       '#title' => t('Type of link to display'),
