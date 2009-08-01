@@ -855,3 +855,55 @@ function _mollom_debug($message) {
   // print $message .'<br />';
   // error_log($message);
 }
+
+/**
+ * Fetch the site's Mollom statistics from the API.
+ *
+ * @param $refresh
+ *   A boolean if TRUE, will force the statistics to be re-fetched and stored
+ *   in the cache.
+ * @return
+ *   An array of statistics.
+ */
+function mollom_get_statistics($refresh = FALSE) {
+  $statistics = FALSE;
+  $cache = cache_get('mollom:statistics');
+
+  // Only fetch if $refresh is TRUE, the cache is empty, or the cache is expired.
+  if ($refresh || !$cache || time() >= $cache->expire) {
+    if (_mollom_access()) {
+      $statistics = drupal_map_assoc(array(
+        'total_days',
+        'total_accepted',
+        'total_rejected',
+        'yesterday_accepted',
+        'yesterday_rejected',
+        'today_accepted',
+        'today_rejected',
+      ));
+
+      foreach ($statistics as $statistic) {
+        $result = mollom('mollom.getStatistics', array('type' => $statistic));
+        if ($result === NETWORK_ERROR || $result === MOLLOM_ERROR) {
+          // If there was an error, stop fetching statistics and store FALSE
+          // in the cache. This will help prevent from making unnecessary
+          // requests to Mollom if the service is down or the server cannot
+          // connect to the Mollom service.
+          $statistics = FALSE;
+          break;
+        }
+        else {
+          $statistics[$statistic] = $result;
+        }
+      }
+    }
+
+    // Cache the statistics and set them to expire in one hour.
+    cache_set('mollom:statistics', $statistics, 'cache', time() + 3600);
+  }
+  else {
+    $statistics = $cache->data;
+  }
+
+  return $statistics;
+}
