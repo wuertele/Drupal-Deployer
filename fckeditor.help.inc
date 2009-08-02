@@ -118,7 +118,7 @@ function fckeditor_help_delegate($path, $arg) {
       $output .= '</ol>';
 
       $output .= '<h3>'. t('Modules: Image Assist') .'</h3>';
-      $output .= '<p>'. t('Image Assist can be integrated with FCKeditor. To do this, simply copy the "!iaf1" file to "!iaf2".', array('!iaf1' => drupal_get_path('module', 'fckeditor') .'/img_assist_fckeditor.js', '!iaf2' => drupal_get_path('module', 'img_assist') .'/img_assist_fckeditor.js')) .'</p>';
+      $output .= '<p>'. t('Image Assist version 1 and 2 can be integrated with FCKeditor. It is no longer necessary to copy a Javascript file.') .'</p>';
 
       break;
   }

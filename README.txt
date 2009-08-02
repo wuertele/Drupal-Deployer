@@ -192,8 +192,7 @@ directory on the server and add new content to that directory
 
 Modules: Image Assist
 ---------------------
-Image Assist can be integrated with FCKeditor.
-To do this, simply copy the modules/fckeditor/img_assist_fckeditor.js file to modules/img_assist/img_assist_fckeditor.js.
+Image Assist version 1 and 2 can be integrated with FCKeditor. It is no longer necessary to copy a Javascript file.
 
 Modules: Link to content (EXPERIMENTAL)
 ---------------------------------------

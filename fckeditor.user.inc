@@ -169,3 +169,52 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
 
   return NULL;
 }
+
+/**
+ * This function wraps img_assist_loader
+ */
+function fckeditor_wrapper_img_assist_loader() {
+  if (module_exists('img_assist')) {
+    $fckpath = drupal_get_path('module', 'fckeditor');
+    $fckjs = $fckpath . '/img_assist_fckeditor.js';
+
+    $iapath = drupal_get_path('module', 'img_assist');
+    $iamodule = drupal_parse_info_file($iapath . '/img_assist.info');
+    $majorversion = (int) $iamodule['version']{4};
+    
+    switch($majorversion) {
+      case 2:
+        // add img_assist js files before our own file to 
+        drupal_add_js($iapath . '/img_assist_popup.js');
+        drupal_add_js($iapath . '/img_assist_textarea.js');
+        drupal_add_js($fckjs);
+        img_assist_loader();
+        break;
+      
+      case 1:
+        ob_start();
+        img_assist_loader();
+        $text = ob_get_clean();
+        
+        $search = '<script type="text/javascript" src="'. base_path() . $iapath .'/img_assist_fckeditor.js"></script>';
+        $new = '<script type="text/javascript" src="'. base_path() . $iapath .'/img_assist_textarea.js"></script>'."\n".
+        '<script type="text/javascript" src="'. base_path() . $fckjs .'"></script>';
+        
+        if(strpos($text, $search) !== false) {
+          $text = str_replace($search, $new, $text);
+          
+          echo $text;
+          break;
+        } else {
+          drupal_set_message(t('Image Assist output was not recognized'), 'error');
+          return '';
+        }
+      
+      default:
+        drupal_set_message(t('Image Assist version @version is not supported', array('@version' => $iamodule['version'])), 'error');
+        return '';
+    }
+  } else {
+    drupal_not_found();
+  }
+}
