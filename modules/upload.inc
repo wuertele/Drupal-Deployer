@@ -23,7 +23,7 @@ function upload_filefield_paths_form_alter(&$form, &$ffp) {
       '#title' => t('Upload Path settings'),
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
-      '#weight' => $form['workflow']['upload']['#weight'] + 1,
+      '#weight' => isset($form['workflow']['upload']['#weight']) ? $form['workflow']['upload']['#weight'] + 1 : 1,
     );
 
     $ffp['upload']['form_path']['file_path'] = array(
@@ -39,7 +39,7 @@ function upload_filefield_paths_form_alter(&$form, &$ffp) {
  * Implementation of hook_filefield_paths_form_submit().
  */
 function upload_filefield_paths_form_submit(&$form_state, &$ffp) {
-  if ($form_state['values']['form_id'] == 'node_type_form') {
+  if (isset($form_state['values']['form_id']) && $form_state['values']['form_id'] == 'node_type_form') {
     $ffp['upload'] = array(
       'type' => $form_state['values']['type'],
     );
@@ -59,7 +59,7 @@ function upload_filefield_paths_get_fields(&$node, &$ffp) {
           'field' => &$file,
           'module' => 'upload',
           'name' => 'upload',
-          'new' => $file['new']
+          'new' => isset($file['new']) ? $file['new'] : FALSE
         );
 
         $ffp['#types']['upload'] = TRUE;

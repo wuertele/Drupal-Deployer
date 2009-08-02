@@ -10,7 +10,7 @@
  * Implementation of hook_filefield_paths_form_alter().
  */
 function image_filefield_paths_form_alter(&$form, &$ffp) {
-  if ($form['#id'] == 'image-admin-settings') {
+  if (isset($form['#id']) && $form['#id'] == 'image-admin-settings') {
     $ffp['image'] = array(
       'type' => 'image',
       'form_path' => &$form['files']['ffp_image'],
@@ -36,9 +36,11 @@ function image_filefield_paths_form_alter(&$form, &$ffp) {
  * Implementation of hook_filefield_paths_form_submit().
  */
 function image_filefield_paths_form_submit(&$form_state, &$ffp) {
-  $ffp['image'] = array(
-    'type' => 'image',
-  );
+  if (isset($form_state['values']['ffp_image'])) {
+    $ffp['image'] = array(
+      'type' => 'image',
+    );
+  }
 }
 
 /**
