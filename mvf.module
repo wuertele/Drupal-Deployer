@@ -124,6 +124,36 @@ function mvf_field_settings($op, $field) {
         $db_columns['value2']['views'] = FALSE;
       }
       return $db_columns;
+      
+    case 'views data':
+      $data = content_views_field_views_data($field);
+      $db_info = content_database_info($field);
+      $table_alias = content_views_tablename($field);
+      
+      // Swap in the CCK filter handler with custom one.
+      $data[$table_alias][$field['field_name'] .'_value']['filter']['handler'] = 'mvf_filter_handler';
+      
+      // Add in another set of fields for the "To" value.
+      if (!empty($field['tovalue'])) {
+        $data[$table_alias][$field['field_name'] .'_value']['field']['title'] = $data[$table_alias][$field['field_name'] .'_value']['title'];
+        $data[$table_alias][$field['field_name'] .'_value']['field']['title short'] = $data[$table_alias][$field['field_name'] .'_value']['title short'];
+
+        $data[$table_alias][$field['field_name'] .'_value2'] = $data[$table_alias][$field['field_name'] .'_value'];
+
+        $data[$table_alias][$field['field_name'] .'_value']['title'] .= ' - ' . t('"From" value');
+        $data[$table_alias][$field['field_name'] .'_value']['title short'] .= ' - ' . t('"From" value');
+        $data[$table_alias][$field['field_name'] .'_value']['field']['title'] .= ' - ' . t('"From" value');
+        $data[$table_alias][$field['field_name'] .'_value']['field']['title short'] .= ' - ' . t('"From" value');
+        
+        $data[$table_alias][$field['field_name'] .'_value2']['title'] .= ' - ' . t('"To" value');
+        $data[$table_alias][$field['field_name'] .'_value2']['title short'] .= ' - ' . t('"To" value');
+        $data[$table_alias][$field['field_name'] .'_value2']['field']['title'] .= ' - ' . t('"To" value');
+        $data[$table_alias][$field['field_name'] .'_value2']['field']['title short'] .= ' - ' . t('"To" value');
+
+        $data[$table_alias][$field['field_name'] .'_value2']['field']['field'] .= '2';
+        $data[$table_alias][$field['field_name'] .'_value2']['sort']['field'] .= '2';
+      }
+      return $data;
   }
 }
 
@@ -154,10 +184,9 @@ function mvf_field($op, &$node, $field, &$items, $teaser, $page) {
   if ($op == 'presave') {
     if (is_array($items)) {
       foreach ($items as $delta => $item) {
-        // Empty "To" value should be saved as NULL rather than 0
-        // For "From" value hook_content_is_empty() deals with it.
-        if ($field['tovalue'] && empty($item['value2'])) {
-          $items[$delta]['value2'] = NULL;
+        // Empty "To" value should be saved equal to "From" value
+        if (empty($item['value2'])) {
+          $items[$delta]['value2'] = $items[$delta]['value'];
         }
       }
     }
@@ -389,9 +418,11 @@ function mvf_widget_process($element, $edit, $form_state, $form) {
     if (is_numeric($default_value2)) {
       $default_value2 = format_number($default_value2, $field_decimals);
     }
-    $element[$to_field]['#default_value'] = $default_value2;
+    // Empty "To" value is stored as equal to the "From" value. 
+    // We hide it and present empty field like it's really empty.
+    $element[$to_field]['#default_value'] = ($element[$from_field]['#default_value'] == $default_value2) ? '' : $default_value2;
     // Requirement check depends on field setting.
-    $element[$from_field]['#required'] = ($field['required'] && $field['tovalue'] == 'required');
+    $element[$to_field]['#required'] = ($field['required'] && $field['tovalue'] == 'required');
     // Adapt titles to make it clear which is the "From" and which
     // is the "To" 
     $element[$from_field]['#title'] = t('From');
@@ -597,7 +628,7 @@ function mvf_get_widget_units($field) {
  * @ingroup themeable
  */
 function theme_mvf_widget($element) {
-  //formatted_number_add_js();
+  formatted_number_add_js();
   $children = '<div class="container-inline">'. $element['#children'] .'</div>';
   return theme('form_element', $element, $children);
 }
@@ -617,8 +648,16 @@ function theme_mvf_formatter_unformatted($element) {
   $field = content_fields($element['#field_name'], $element['#type_name']);
   $item = $element['#item']['unit'];
 
+  // Empty "To" value is stored as equal to the "From" value. 
+  // We display field as single value if both values are equal.
+  if ($value2 != '' && $value2 != $value) {
+    $display_mode = $field['widget']['unit_display_mode_range'];
+  }
+  else {
+    $display_mode = $field['widget']['unit_display_mode_single'];
+  }
   // Format the whole field based on widget display options.
-  return theme('mvf_field', $value, $value2, $unit, $field['widget']['unit_display_mode'], ' ');
+  return theme('mvf_field', $value, $value2, $unit, $display_mode, ' ');
 }
 
 /**
@@ -656,8 +695,10 @@ function theme_mvf_formatter_generic($element) {
   }
 
   // Format the values.
+  // Empty "To" value is stored as equal to the "From" value. 
+  // We display field as single value if both values are equal.
   $formatted_number = format_number($value, $decimals);
-  if ($value2 != '') {
+  if ($value2 != '' && $value2 != $value) {
     $formatted_number2 = format_number($value2, $decimals);
     $display_mode = $field['widget']['unit_display_mode_range'];
   }
