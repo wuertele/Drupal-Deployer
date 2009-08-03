@@ -277,7 +277,12 @@ function _project_release_form_add_text_element(&$form, $title, $value, $is_edit
   }
 }
 
-function project_release_node_form_validate(&$form, &$form_state) {
+/**
+ * Private callback to validate a release node form.
+ *
+ * @see project_release_node_form_validate()
+ */
+function _project_release_node_form_validate(&$form, &$form_state) {
   global $user;
   $project_release = $form_state['values']['project_release'];
   if (!empty($form_state['values']['validate_version'])) {
