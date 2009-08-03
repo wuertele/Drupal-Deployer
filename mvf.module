@@ -268,15 +268,24 @@ function mvf_widget_settings($op, $widget) {
       );
       $unit_options = array();
       foreach (units_get_units() as $id => $unit) {
-        $unit_options[$id] = $unit['name'] .' ['. $unit['decimals'] .']';
+        if (units_unit_is_enabled($id)) {
+          $unit_options[$id] = $unit['name'] .' ['. $unit['decimals'] .']';
+        }
       }
+      $description  = t('Choose the units that you want to enable for this field. Do not select any unit to enable them all.');
+      $description .= '<br/>';
+      $description .= t('The number between square brakets indicates the standard precision for each unit.');
+      $description .= '<br/><br/>';
+      $description .= t(
+        '<strong>Hint:</strong> visit !page and setup site-wide list of units you want to work with. This will save you from browsing long lists of units in each MVF configuration.',
+        array('!page' => l('Units configuration page', 'admin/content/units'))
+      );
       $form['units'] = array(
         '#type' => 'fieldset',
         '#title' => t('Available units'),
         '#collapsible' => TRUE, '#collapsed' => TRUE,
-        '#description' => t('Choose the units that you want to enable for this field. Do not select any unit to enable them all.'),
+        '#description' => $description,
       );
-      $form['units']['#description'] .= ' '. t('The number between square brakets indicates the standard precision for each unit.');
       if (isset($widget['allowed_units']) && is_array($widget['allowed_units'])) {
         // Get filtered array.
         $allowed_units = array_filter($widget['allowed_units']);
@@ -582,6 +591,13 @@ function mvf_widget_validate($element, &$form_state) {
 function mvf_get_widget_units($field) {
   // Currently implemented modes: short, full. See mvf_widget_settings().
   $mode = $field['widget']['unit_select_mode'];
+  
+  // We start from globally enabled units as the base.
+  // Units get enabled or disabled at Units module UI ("admin/content/units").
+  $enabled_list = units_get_enabled_units();
+  $enabled_list = array_combine($enabled_list, $enabled_list);
+  // Empty list of enabled units returned means "all units are enabled".
+  $site_enabled_units = empty($enabled_list) ? units_get_unit_names() : array_intersect_key(units_get_unit_names(), $enabled_list);
 
   // Prepare the array of allowed units.
   if (isset($field['widget']['allowed_units']) && is_array($field['widget']['allowed_units'])) {
@@ -592,18 +608,18 @@ function mvf_get_widget_units($field) {
     // Initialize array when the list has not been already set in field settings.
     $allowed_units = array();
   }
-
+  
   // When no unit has been specified in widget settings we allow them all.
   if (empty($allowed_units)) {
     // Note that this array is built in the form of 'short name' => 'full name'.
-    $allowed_units = units_get_unit_names();
+    $allowed_units = $site_enabled_units;
   }
   else {
     // One or more units have been specified in widget settings.
     if ($mode == 'full') {
       // Build the array in the form of 'short name' => 'full name' extracting the
       // allowed units from the array returned from Units_api.
-      $allowed_units = array_intersect_key(units_get_unit_names(), $allowed_units);
+      $allowed_units = array_intersect_key($site_enabled_units, $allowed_units);
     }
   }
 
@@ -613,7 +629,7 @@ function mvf_get_widget_units($field) {
     $allowed_units = array_keys($allowed_units);
     $allowed_units = array_combine($allowed_units, $allowed_units);
   }
-
+  
   // When field is not required, an additional empty unit is pushed on top of the resulting list.
   if (!$field['required']) {
     $allowed_units = array('' => ($mode == 'short' ? '---' : t('-- Select unit --'))) + $allowed_units;

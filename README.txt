@@ -56,12 +56,6 @@ REQUIREMENTS
   in Currency Exchange module.
 
 
-RECOMMENDED
-===========
-
-- Checkall (http://drupal.org/project/checkall)
-
-
 INSTALLATION
 ============
 
@@ -71,6 +65,10 @@ INSTALLATION
   subdirectory structure.
 
 - Goto Administer > Site building > Modules to install this module.
+
+- For maximum comfort, goto Administer > Content management  > Units and setup 
+  site-wide list of enabled units. This will save you lot of time, because
+  each MVF instance will use globally enabled units as a base.
 
 - Create or edit content types and start adding Measured Value Fields.
   Note, that you need to have some units provided by the Units module for
