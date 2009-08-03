@@ -1,11 +1,16 @@
-$Id
+$Id$
 
 Units module provides following API functions:
 
-1) Hooks
+1) Main hooks and functions to use. These are considered to be stable part of
+   the API.
  
+  Hooks:
+  ======
+  
   hook_define_units()
   
+    Main hook of Units module API.
     Returns array of arrays of unit definitions, with unit short names as keys.
     Short name should be 1 word if possible. Short name alse serve as ID of unit 
     (i.e. array key and database stored value), so it must be unique within 
@@ -26,27 +31,63 @@ Units module provides following API functions:
       // Can contain several sentences.
       'description' => 'Currency of United States of America',
       
-      // Symbol of unit, or abbreviation       
+      // Symbol of unit, or abbreviation.
       'symbol' => '$',
       
-      // Category of unit. Serving for grouping up similar unit types e.g. in UI
+      // Name of the category of unit. Serves for grouping up similar unit 
+      // types e.g. in UI.
       'category' => 'currency',
       
-      // If defined, contains array of validation callbacks (function names) that 
-      // check provided value and return any errors found. There can be many 
-      // validation callbacks, which will be called one after another.  
+      // If defined, contains array of validation callbacks (function names) 
+      // that check provided value and return any errors found. There can be 
+      // many validation callbacks, which will be called one after another.
+      // Note: validation facility is not yet implemented.
       'validation callback' => array('callback_1', 'callback_2'),
       
-      // Decimals. Number of digits to display after dot for the unit.
-      // Note: this is recommended value. It's not enforced in any way in Units module. 
+      // Decimals. The number of digits to the right of the decimal point.
+      // Note: this is just recommended value. It's not enforced in Units 
+      // module.
       'decimals' => '2'
     );
   
+  
   hook_units_alter(&$units)
   
-    Allows modules to alter units collection after it was built. It allows one module to
-    alter definition of other module's unit
-
+    Allows modules to alter units collection after it was built. It allows one 
+    module to alter definition of other module's unit
+    
+ 
+  Some useful functions:
+  ====================== 
+  
+  units_get_units()
+    
+    Main workhorse function.
+    Returns array of unit definitions, keyed by unit short names.
+  
+    
+  units_get_enabled_units()
+  
+    Returns array of enabled units short names. By convention, empty array 
+    means "all units are enabled". Units get enabled or disabled in UI at 
+    "admin/content/units".
+  
+    
+  units_get_unit_names($unit = NULL)
+  
+    Returns full name of selected unit, or array of unit full names, keyed by 
+    unit short names, if unit is not provided.
+  
+  
+  units_get_symbol($unit)
+  
+    Returns symbol for unit, if one exists, or empty string otherwise.  
+  
+  
+3) Functions and hooks that are half-implemented, or not implemented yet. 
+   These functions may be changed or removed in future.
+  
+   
   hook_units_conversions()
     
     Allows modules to describe possible conversions between units. This hook should return
@@ -57,16 +98,19 @@ Units module provides following API functions:
     Converter IDs are defined by hook_units_converter_info(). Multiple converters 
     per from-to pair are supported so in the future it will be possible to choose 
     preferred conversion provider
+  
     
   hook_units_conversions_alter(&$conversions)
   
     Allow modules to alter global conversion matrix after it was built.
+  
     
   hook_units_converter_info()
   
-    Allows modules to define unit converters. Should return array of converter definitions,
-    keyed by Converter ID (machine-readable name). To prevent naming collisions, better to 
-    prefix ID with converter category or module name.
+    Allows modules to define unit converters. Should return array of converter 
+    definitions, keyed by Converter ID (machine-readable name). To prevent 
+    naming collisions, it's better to prefix ID with converter category or 
+    module name.
     Example converter definition (from Currency Units module):
     
       'currency_yahoo' => array(
@@ -83,32 +127,19 @@ Units module provides following API functions:
     Converter function should be like this: 
     foo_convert($unit_from, $unit_to, $amount, $options = array())
       
-     Additional conversion options will be added in the future, probably. 
-
-2) Some useful functions (for full list see module code)
-
-  units_get_units()
-    
-    Returns array of unit definitions, keyed by unit short names.
-    
-  units_get_unit_names($unit = NULL)
+    Additional conversion options will be added in the future, probably. 
   
-    Returns full name of selected unit, or array of unit full names, keyed by unit 
-    short names, if unit is not provided.
-  
-  units_get_symbol($unit)
-  
-    Returns symbol for unit, if one exists, or empty string otherwise.  
     
   units_validate($unit, $amount = NULL)
   
-    Validates unit and optional amount using several methods: first, unit is checked
-    against list of supported units. Then, if unit has one or more validation callbacks
-    they will be called one by another.
+    Validates unit and optional amount using several methods: first, unit is
+    checked against list of supported units. Then, if unit has one or more 
+    validation callbacks they will be called one by another.
+  
     
   units_convert($value, $from, $to, $options = array())
   
-    Converts $value from $from unit type to $to unit type, using $options. Currently
-    options are not implemented and are subject for discussing. 
-    First candidate for putting in $options is conversion provider selection facility 
-    (to be implemented... )
+    Converts $value from $from unit type to $to unit type, using $options. 
+    Currently options are not implemented and are subject for discussing. 
+    First candidate for putting in $options is conversion provider selection 
+    facility (to be implemented... )

@@ -7,22 +7,115 @@
  */
 
 /**
- * Collect and return units definitions from modules
+ * Implementation of hook_menu()
  */
-function units_get_units($name = NULL) {
+function units_menu() {
+  $items = array();
+  $items['admin/content/units'] = array(
+    'title' => 'Units',
+    'description' => 'Manage site-wide collection of units of measurement.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('units_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+  );
+  return $items;
+}
+
+/**
+ * Units configuration form
+ */
+function units_admin_settings() {
+  $form = array();
+  $description = t('Configure site-wide list of enabled units. Modules that integrate with Units module may use this list.
+  <br/> If nothing is selected in ALL categories, all units will be enabled.'); 
+  $form['description'] = array(
+    '#value' => $description,
+  );
+  $units = units_get_units();
+  foreach($units as $name => $unit) {
+    $categories[$unit['category']] = t('Units in "@cat" category', array('@cat' => $unit['category']));
+  }
+  foreach($categories as $cat => $desc) {
+    $form['category_' .$cat] = array(
+      '#type' => 'fieldset',
+      '#title' => $desc,
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+    );
+    foreach($units as $name => $unit) {
+      if ($unit['category'] == $cat) {
+        $form['category_' .$cat]['enable_'. $name] = array(
+          '#type' => 'checkbox',
+          '#title' => $unit['name'],
+          '#default_value' => in_array($name, units_get_enabled_units()) ? 1 : 0,
+        );
+      }
+    }
+  }
+  $form['save'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+    '#submit' => array('units_admin_settings_submit'),
+  );
+  return $form;
+}
+
+/**
+ * Submit callback for units admin settings form. 
+ */
+function units_admin_settings_submit($form, &$form_state) {
+  $units = units_get_units();
+  $enabled = array();
+  foreach ($units as $name => $unit) {
+    if (isset($form_state['values']['enable_'. $name]) && $form_state['values']['enable_'. $name] == 1) {
+      $enabled[] = $name;
+    }
+  }
+  variable_set('units_enabled_units', $enabled);
+  drupal_set_message(t('Enabled units list has been saved.'));
+  $form_state['redirect'] = 'admin/content/units';  
+}
+
+
+/**
+ *  Check if provided unit is enabled.
+ */
+function units_unit_is_enabled($name) {
+  $enabled = units_get_enabled_units();
+  if (empty($enabled)) {
+    return TRUE;
+  }
+  return in_array($name, $enabled);
+}
+
+/**
+ * Collect and return units definitions from modules.
+ */
+function units_get_units($options = NULL) {
   static $units;
-  
   if (!isset($units)) {
     $units = array();
     $items = module_invoke_all('define_units');
-
     foreach ($items as $name => $unit) {
       $units[$name] = $unit;
     }
-    // Allow other modules to alter units definitions using hook_units_alter()
+    // Allow other modules to alter units definitions using hook_units_alter().
     drupal_alter('units', $units);
   }
   return $units;
+}
+
+/**
+ * Return array of short names of enabled units.
+ * 
+ * Empty array means "all units enabled".
+ */
+function units_get_enabled_units() {
+  static $enabled_units;
+  if (!isset($enabled_units)) {
+    $enabled_units = variable_get('units_enabled_units', array()); 
+  }
+  return $enabled_units;
 }
 
 /**
