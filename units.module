@@ -27,27 +27,28 @@ function units_menu() {
 function units_admin_settings() {
   $form = array();
   $description = t('Configure site-wide list of enabled units. Modules that integrate with Units module may use this list.
-  <br/> If nothing is selected in ALL categories, all units will be enabled.'); 
+  <br/>If nothing is selected in ALL categories, all units will be enabled.'); 
   $form['description'] = array(
     '#value' => $description,
   );
   $units = units_get_units();
-  foreach($units as $name => $unit) {
-    $categories[$unit['category']] = t('Units in "@cat" category', array('@cat' => $unit['category']));
+  $categories = array();
+  foreach($units as $id => $unit) {
+    $categories[$unit['category_id']] = check_plain($unit['category']);
   }
-  foreach($categories as $cat => $desc) {
-    $form['category_' .$cat] = array(
+  foreach($categories as $cat_id => $desc) {
+    $form['category_' .$cat_id] = array(
       '#type' => 'fieldset',
       '#title' => $desc,
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
     );
-    foreach($units as $name => $unit) {
-      if ($unit['category'] == $cat) {
-        $form['category_' .$cat]['enable_'. $name] = array(
+    foreach($units as $id => $unit) {
+      if ($unit['category_id'] == $cat_id) {
+        $form['category_' .$cat_id]['enable_'. $id] = array(
           '#type' => 'checkbox',
-          '#title' => $unit['name'],
-          '#default_value' => in_array($name, units_get_enabled_units()) ? 1 : 0,
+          '#title' => $unit['fullname'],
+          '#default_value' => in_array($id, units_get_enabled_units()) ? 1 : 0,
         );
       }
     }
@@ -66,9 +67,9 @@ function units_admin_settings() {
 function units_admin_settings_submit($form, &$form_state) {
   $units = units_get_units();
   $enabled = array();
-  foreach ($units as $name => $unit) {
-    if (isset($form_state['values']['enable_'. $name]) && $form_state['values']['enable_'. $name] == 1) {
-      $enabled[] = $name;
+  foreach ($units as $id => $unit) {
+    if (isset($form_state['values']['enable_'. $id]) && $form_state['values']['enable_'. $id] == 1) {
+      $enabled[] = $id;
     }
   }
   variable_set('units_enabled_units', $enabled);
@@ -80,24 +81,24 @@ function units_admin_settings_submit($form, &$form_state) {
 /**
  *  Check if provided unit is enabled.
  */
-function units_unit_is_enabled($name) {
+function units_unit_is_enabled($id) {
   $enabled = units_get_enabled_units();
   if (empty($enabled)) {
     return TRUE;
   }
-  return in_array($name, $enabled);
+  return in_array($id, $enabled);
 }
 
 /**
  * Collect and return units definitions from modules.
  */
-function units_get_units($options = NULL) {
+function units_get_units() {
   static $units;
   if (!isset($units)) {
     $units = array();
     $items = module_invoke_all('define_units');
-    foreach ($items as $name => $unit) {
-      $units[$name] = $unit;
+    foreach ($items as $id => $unit) {
+      $units[$id] = $unit;
     }
     // Allow other modules to alter units definitions using hook_units_alter().
     drupal_alter('units', $units);
@@ -119,15 +120,25 @@ function units_get_enabled_units() {
 }
 
 /**
- * Return array of unit full names keyed by unit short names
+ * Return array of unit names keyed by unit id's
+ * 
+ * @param $full
+ *   if not null, return full names, otherwise short names.
  */
-function units_get_unit_names($name = NULL) {
+function units_get_unit_names($full = NULL) {
   $names = array();
   $units = units_get_units();
-  foreach ($units as $short => $unit) {
-    $names[$short] = $unit['name'];
+  if ($full) {
+    foreach ($units as $id => $unit) {
+      $names[$id] = $unit['fullname'];
+    }
   }
-  return $name ? $names[$name] : $names; 
+  else {
+    foreach ($units as $id => $unit) {
+      $names[$id] = $unit['shortname'];
+    }
+  }
+  return $names; 
 }
 
 /**
@@ -141,14 +152,14 @@ function units_get_conversions($from = NULL, $to = NULL) {
     // Build global conversion matrix
     $global_conversions = module_invoke_all('units_conversions');
     
-    foreach ($global_conversions as $from_name => $to_names) {
+    foreach ($global_conversions as $from_unit => $to_units) {
       // Validate from-unit against supported unit types.
-      if (units_validate($from_name)) {
-        $conversions[$from_name] = array();
-        foreach ($to_names as $to_name => $from_to_converters) {
+      if (units_validate($from_unit)) {
+        $conversions[$from_unit] = array();
+        foreach ($to_units as $to_unit => $from_to_converters) {
           // Validate to-unit against supported unit types.
-          if (units_validate($to_name)) {
-            $conversions[$from_name][$to_name] = $from_to_converters;
+          if (units_validate($to_unit)) {
+            $conversions[$from_unit][$to_unit] = $from_to_converters;
           }
         }
       }
@@ -205,9 +216,9 @@ function units_convert($value, $from, $to, $options = array()) {
 /**
  * Return symbol of unit
  */
-function units_get_symbol($name) {
+function units_get_symbol($unit_id) {
   $units = units_get_units();
-  return isset($units[$name]['symbol']) ? $units[$name]['symbol'] : ''; 
+  return isset($units[$unit_id]['symbol']) ? $units[$unit_id]['symbol'] : ''; 
 }
 
 /**
@@ -231,12 +242,12 @@ function units_log($op, $result) {
 /**
  * Validate unit and optional amount. Return 0 for no errors, or error text. 
  */
-function units_validate($name, $amount = 1) {
+function units_validate($unit_id, $amount = 1) {
   $units = units_get_units();
-  if (!isset($units[$name])) {
+  if (!isset($units[$unit_id])) {
     return FALSE;
   }
-  if (!isset($units[$name]['validation callback'])) {
+  if (!isset($units[$unit_id]['validation callback'])) {
     return TRUE;
   }
   // TODO: Invoke validation callbacks and return error messages

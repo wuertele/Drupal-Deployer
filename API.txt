@@ -11,21 +11,29 @@ Units module provides following API functions:
   hook_define_units()
   
     Main hook of Units module API.
-    Returns array of arrays of unit definitions, with unit short names as keys.
-    Short name should be 1 word if possible. Short name alse serve as ID of unit 
-    (i.e. array key and database stored value), so it must be unique within 
-    all Units implementations.
-    For best compatibility, and to prevent name collisions, names defined 
-    by international standards must be used, if possible.
-     
+    Returns array of arrays of unit definitions, with unit id's as keys.
+    
+    ID of unit is it's machine-readable name (i.e. alphanumeric characters 
+    and underscores). It's database stored value, and must be unique within
+    all Units implementations. For the sake of uniqueness, it's better to 
+    prefix unit id with it's category id.
+    
+    For simplicity, unit category descriptions are stored in units themselves. 
+    As there are probably not that many units needed for single site, it won't
+    be big penalty.    
+
     Structure of unit definition:
-    'short name' => array('property1' => 'value1', ...)
+    'id' => array('property1' => 'value1', 'property2' => 'value2', ...)
     
     Example definition providing all properties currently supported:
     
-    'USD' => array( 
+    'currency_usd' => array(
+      // Short name ( ~ 1 word if possible).  
+      // all Units implementations.
+      'shortname' = 'USD',
+       
       // Full name, e.g. several words describing unit.
-      'name' = 'U.S. Dollar',
+      'fullname' = 'U.S. Dollar',
 
       // Optional detailed description of the unit.
       // Can contain several sentences.
@@ -34,9 +42,13 @@ Units module provides following API functions:
       // Symbol of unit, or abbreviation.
       'symbol' => '$',
       
+      // Machine-readable name of the category of unit. Serves for storing 
+      // category internally.
+      'category_id' => 'currency',
+      
       // Name of the category of unit. Serves for grouping up similar unit 
       // types e.g. in UI.
-      'category' => 'currency',
+      'category' => 'World Currencies',
       
       // If defined, contains array of validation callbacks (function names) 
       // that check provided value and return any errors found. There can be 
@@ -63,7 +75,7 @@ Units module provides following API functions:
   units_get_units()
     
     Main workhorse function.
-    Returns array of unit definitions, keyed by unit short names.
+    Returns array of unit definitions, keyed by unit id.
   
     
   units_get_enabled_units()
@@ -73,7 +85,7 @@ Units module provides following API functions:
     "admin/content/units".
   
     
-  units_get_unit_names($unit = NULL)
+  units_get_unit_names($unit_id = NULL)
   
     Returns full name of selected unit, or array of unit full names, keyed by 
     unit short names, if unit is not provided.
