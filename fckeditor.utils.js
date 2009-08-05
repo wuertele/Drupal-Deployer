@@ -138,8 +138,6 @@ function Toggle(textareaID, TextTextarea, TextRTE, xss_check)
       teaser.buttonContainer.hide();
       teaser.textareaContainer.hide();
       teaser.checkboxContainer.show();
-    } else {
-      text = textArea.val();
     }
 
     editorInstance.SetData(text, true);
