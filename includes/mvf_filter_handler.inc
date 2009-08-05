@@ -52,9 +52,9 @@ class mvf_filter_handler extends content_handler_filter_float {
     $max = $this->value['max'];
     $group = $this->options['group'];
     if ($this->operator == 'overlaps') {
-      $overlap  = "($field1 >= %f AND $field2 <= %f)"; // full overlap
-      $overlap .= "OR ($field1 <= %f AND $field2 >= %f)"; // left edge within
-      $overlap .= "OR ($field1 <= %f AND $field2 >= %f)"; // right edge within
+      $overlap  = "($field1 >= %f AND $field2 <= %f)"; // Full overlap.
+      $overlap .= "OR ($field1 <= %f AND $field2 >= %f)"; // Left edge within.
+      $overlap .= "OR ($field1 <= %f AND $field2 >= %f)"; // Right edge within.
       $this->query->add_where($group, $overlap, $min, $max, $min, $min, $max, $max);
     }
     else {

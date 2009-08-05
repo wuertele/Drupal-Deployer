@@ -269,7 +269,7 @@ function mvf_widget_settings($op, $widget) {
       $unit_options = array();
       foreach (units_get_units() as $id => $unit) {
         if (units_unit_is_enabled($id)) {
-          $unit_options[$id] = $unit['name'] .' ['. $unit['decimals'] .']';
+          $unit_options[$id] = $unit['fullname'] .' ['. $unit['decimals'] .']';
         }
       }
       $description  = t('Choose the units that you want to enable for this field. Do not select any unit to enable them all.');
@@ -591,50 +591,49 @@ function mvf_widget_validate($element, &$form_state) {
 function mvf_get_widget_units($field) {
   // Currently implemented modes: short, full. See mvf_widget_settings().
   $mode = $field['widget']['unit_select_mode'];
-  
-  // We start from globally enabled units as the base.
-  // Units get enabled or disabled at Units module UI ("admin/content/units").
-  $enabled_list = units_get_enabled_units();
-  $enabled_list = array_combine($enabled_list, $enabled_list);
-  // Empty list of enabled units returned means "all units are enabled".
-  $site_enabled_units = empty($enabled_list) ? units_get_unit_names() : array_intersect_key(units_get_unit_names(), $enabled_list);
 
   // Prepare the array of allowed units.
   if (isset($field['widget']['allowed_units']) && is_array($field['widget']['allowed_units'])) {
-    // Obtain the list of allowed units. Note that this array is in the form of 'short name' => boolean.
+    // Obtain the list of allowed units. Note that this array is in the form of 'unit_id' => boolean.
     $allowed_units = array_filter($field['widget']['allowed_units']);
   }
   else {
     // Initialize array when the list has not been already set in field settings.
     $allowed_units = array();
   }
+
+  // Depending on mode, unit array is built in the form "id" => "shortname",
+  // or "id" => "fullname".
+  switch ($mode) {
+    case 'short':
+      $site_units = units_get_unit_names();
+      break;
+    case 'full':
+      $site_units = units_get_unit_names(1);
+      break;
+  }
   
-  // When no unit has been specified in widget settings we allow them all.
-  if (empty($allowed_units)) {
-    // Note that this array is built in the form of 'short name' => 'full name'.
-    $allowed_units = $site_enabled_units;
+  // Reduce units array to globally enabled units.
+  // Units get enabled or disabled at Units module UI ("admin/content/units").
+  // Empty list of enabled units returned means "all units are enabled".
+  $enabled_list = units_get_enabled_units();
+
+  if (empty($enabled_list)) {
+    $site_enabled_units = $site_units;
   }
   else {
-    // One or more units have been specified in widget settings.
-    if ($mode == 'full') {
-      // Build the array in the form of 'short name' => 'full name' extracting the
-      // allowed units from the array returned from Units_api.
-      $allowed_units = array_intersect_key($site_enabled_units, $allowed_units);
-    }
+    $enabled_list = array_combine($enabled_list, $enabled_list);
+    $site_enabled_units = array_intersect_key($site_units, $enabled_list);
   }
 
-  // If the requested mode is 'short', then we need to transform the array
-  // so that item keys are also used for values.
-  if ($mode == 'short') {
-    $allowed_units = array_keys($allowed_units);
-    $allowed_units = array_combine($allowed_units, $allowed_units);
-  }
+  // When no unit has been specified in widget settings we allow them all.
+  $allowed_units = empty($allowed_units) ? $site_enabled_units : array_intersect_key($site_enabled_units, $allowed_units);
   
   // When field is not required, an additional empty unit is pushed on top of the resulting list.
   if (!$field['required']) {
     $allowed_units = array('' => ($mode == 'short' ? '---' : t('-- Select unit --'))) + $allowed_units;
   }
-
+  
   return $allowed_units;
 }
 
@@ -662,7 +661,7 @@ function theme_mvf_formatter_unformatted($element) {
   }
 
   $field = content_fields($element['#field_name'], $element['#type_name']);
-  $item = $element['#item']['unit'];
+  $unit = $element['#item']['unit'];
 
   // Empty "To" value is stored as equal to the "From" value. 
   // We display field as single value if both values are equal.
@@ -722,6 +721,7 @@ function theme_mvf_formatter_generic($element) {
     $formatted_number2 = '';
     $display_mode = $field['widget']['unit_display_mode_single'];
   }
+  
   // Format the whole field based on widget display options.
   return theme('mvf_field', $formatted_number, $formatted_number2, $unit, $display_mode);
 }
@@ -734,7 +734,7 @@ function theme_mvf_formatter_generic($element) {
  * @param $value2
  *   "To" value (raw or formatted).  
  * @param $unit
- *   The unit short name.
+ *   Id of the unit.
  * @param $display_options
  *   The string that provides display options as configured in widget settings.
  * @param $separator
@@ -768,7 +768,9 @@ function theme_mvf_field($value, $value2, $unit, $display_options, $separator = 
         // Fall back to unit short name.
       case 'u':
         // Unit short name.
-        $output .= $unit;
+        $units = units_get_units();
+        $unitname = $units[$unit]['shortname'];
+        $output .= $unitname;
         break;
       case '+':
         // Separator.
