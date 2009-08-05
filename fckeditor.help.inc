@@ -41,11 +41,11 @@ function fckeditor_help_delegate($path, $arg) {
         $output = '<p>'. t('The Global Profile allows you to define settings that are common for all profiles. Values defined in other profiles will be appended to the global configuration. This way you can avoid repeating some of the settings that are usually the same in each profile.') .'</p>';
         break;
       }
-      else if (!empty($arg[3]) && in_array($arg[3], array("add", "edit"))) {
+      elseif (!empty($arg[3]) && in_array($arg[3], array("add", "edit"))) {
         $output = '<p>'. t('Note: FCKeditor is highly configurable. The most commonly used features are listed below. If you want to take a look at all available settings, open "!fckconfig" and then customize "!fckeditor_config" to your needs. This is also the only way to define new toolbar sets. It is advised to not edit "fckconfig.js" because you may overwrite it accidentally when you update the editor.', array('!fckconfig' => drupal_get_path('module', 'fckeditor') ."/fckeditor/fckconfig.js", '!fckeditor_config' => drupal_get_path('module', 'fckeditor') ."/fckeditor.config.js")) .'</p>';
         break;
       }
-      else if (!empty($arg[3]) && in_array($arg[3], array("delete", "deleteg"))) {
+      elseif (!empty($arg[3]) && in_array($arg[3], array("delete", "deleteg"))) {
         break;
       }
       $output = '<p>'. t('The FCKeditor module allows Drupal to replace textarea fields with a rich text or <acronym title="What You See Is What You Get">WYSIWYG</acronym> editor. This editor brings many of the powerful functionalities of known desktop editors like Word to the web. It\'s relatively lightweight and doesn\'t require any kind of installation on the client computer.') .'</p><p>'. t('More information about the editor is located at the <a href="!fckeditorlink">FCKeditor homepage</a>. A small user guide is located at <a href="!userguidelink">FCKeditor userguide</a>.', array('!fckeditorlink' => 'http://www.fckeditor.net', '!userguidelink' => 'http://docs.fckeditor.net/FCKeditor/Users_Guide')) .'</p>';

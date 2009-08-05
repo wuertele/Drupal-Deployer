@@ -182,7 +182,7 @@ function fckeditor_wrapper_img_assist_loader() {
     $iamodule = drupal_parse_info_file($iapath . '/img_assist.info');
     $majorversion = (int) $iamodule['version']{4};
     
-    switch($majorversion) {
+    switch ($majorversion) {
       case 2:
         // add img_assist js files before our own file to 
         drupal_add_js($iapath . '/img_assist_popup.js');
@@ -200,12 +200,13 @@ function fckeditor_wrapper_img_assist_loader() {
         $new = '<script type="text/javascript" src="'. base_path() . $iapath .'/img_assist_textarea.js"></script>'."\n".
         '<script type="text/javascript" src="'. base_path() . $fckjs .'"></script>';
         
-        if(strpos($text, $search) !== false) {
+        if (strpos($text, $search) !== FALSE) {
           $text = str_replace($search, $new, $text);
           
           echo $text;
           break;
-        } else {
+        }
+        else {
           drupal_set_message(t('Image Assist output was not recognized'), 'error');
           return '';
         }
@@ -214,7 +215,8 @@ function fckeditor_wrapper_img_assist_loader() {
         drupal_set_message(t('Image Assist version @version is not supported', array('@version' => $iamodule['version'])), 'error');
         return '';
     }
-  } else {
+  }
+  else {
     drupal_not_found();
   }
 }

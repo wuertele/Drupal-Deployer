@@ -761,11 +761,10 @@ function fckeditor_admin_profile_form_validate($form, &$form_state) {
     if ($edit['css_mode'] != 'self') {
       form_set_error('css_path', t('CSS path is not empty. Please set the "Editor CSS" option to "define css" mode.'));
     }
-    else if (FALSE !== strpos($edit['css_path'], '"')) {
+    elseif (FALSE !== strpos($edit['css_path'], '"')) {
       form_set_error('css_path', t('Double quotes are not allowed in CSS path.'));
     }
-
-    else if (substr($edit['css_path'], 0, 1) == "'" && substr($edit['css_path'], -1) == "'") {
+    elseif (substr($edit['css_path'], 0, 1) == "'" && substr($edit['css_path'], -1) == "'") {
       form_set_error('css_path', t('Enter valid path, do not surround it with quotes.'));
     }
   }
@@ -774,10 +773,10 @@ function fckeditor_admin_profile_form_validate($form, &$form_state) {
     if ($edit['css_style'] != 'self') {
       form_set_error('styles_path', t('Path to predefined styles is not empty. Please set the "Predefined styles" option to "define path to fckstyles.xml" mode.'));
     }
-    else if (FALSE !== strpos($edit['styles_path'], '"')) {
+    elseif (FALSE !== strpos($edit['styles_path'], '"')) {
       form_set_error('styles_path', t('Double quotes are not allowed in path.'));
     }
-    else if (substr($edit['styles_path'], 0, 1) == "'" && substr($edit['styles_path'], -1) == "'") {
+    elseif (substr($edit['styles_path'], 0, 1) == "'" && substr($edit['styles_path'], -1) == "'") {
       form_set_error('styles_path', t('Enter valid path, do not surround it with quotes.'));
     }
   }
