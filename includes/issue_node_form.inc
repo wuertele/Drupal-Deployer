@@ -298,7 +298,7 @@ function _project_issue_form($node, $form_state, $include_metadata_fields = FALS
     }
     else {
       $form['issue_info']['sid'] = array(
-        '#type' => 'hidden',
+        '#type' => 'value',
         '#value' => $default_state,
       );
       $form['issue_info']['status'] = array(
@@ -307,6 +307,42 @@ function _project_issue_form($node, $form_state, $include_metadata_fields = FALS
         '#value' => check_plain(project_issue_state($default_state)),
       );
     }
+  }
+  else {
+    // If we're not allowing issue metadata changes, add all of these values
+    // into the form so they show up in the $node->project_issue array during
+    // validation and submit, so we're consistent with where they live.
+    $form['project_issue'] = array('#tree' => TRUE);
+    $form['project_issue']['pid'] = array(
+      '#type' => 'value',
+      '#value' => $node->project_issue['pid'],
+    );
+    if (isset($node->project_issue['rid'])) {
+      $form['project_issue']['rid'] = array(
+        '#type' => 'value',
+        '#value' => $node->project_issue['rid'],
+      );
+    }
+    $form['project_issue']['component'] = array(
+      '#type' => 'value',
+      '#value' => $node->project_issue['component'],
+    );
+    $form['project_issue']['category'] = array(
+      '#type' => 'value',
+      '#value' => $node->project_issue['category'],
+    );
+    $form['project_issue']['priority'] = array(
+      '#type' => 'value',
+      '#value' => $node->project_issue['priority'],
+    );
+    $form['project_issue']['assigned'] = array(
+      '#type' => 'value',
+      '#value' => $node->project_issue['assigned'],
+    );
+    $form['project_issue']['sid'] = array(
+      '#type' => 'value',
+      '#value' => $node->project_issue['sid'],
+    );
   }
 
   $form['issue_details'] = array(
