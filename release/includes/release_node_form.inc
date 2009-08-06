@@ -461,6 +461,11 @@ function project_release_db_save($node, $is_new) {
     $types['version_extra'] = "'%s'";
     $values['version_extra'] = $node->project_release['version_extra'];
   }
+  // This is a special case since it doesn't live in $node->project_release[].
+  if (isset($node->version_api_tid)) {
+    $types['version_api_tid'] = "%d";
+    $values['version_api_tid'] = $node->version_api_tid;
+  }
 
   if ($is_new) {
     $types['nid'] = "%d";
