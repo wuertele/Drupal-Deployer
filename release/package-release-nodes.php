@@ -127,6 +127,7 @@ $project_id = $argv[2];
 
 // Setup variables for Drupal bootstrap
 $_SERVER['HTTP_HOST'] = $site_name;
+$_SERVER['REMOTE_ADDR'] = '127.0.0.1';
 $_SERVER['REQUEST_URI'] = '/' . $script_name;
 $_SERVER['SCRIPT_NAME'] = '/' . $script_name;
 $_SERVER['PHP_SELF'] = '/' . $script_name;
