@@ -160,7 +160,7 @@ function _services_keyauth_authenticate_call($method, $method_name, &$args) {
     if (db_result(db_query("SELECT count(*) FROM {services_timestamp_nonce}
         WHERE domain = '%s' AND nonce = '%s'",
         $domain, $nonce))) {
-      return services_error(t('Token has been used previously for a request.'));
+      return services_error(t('Token has been used previously for a request. Re-try with another nonce key.'));
     }
     else{
       db_query("INSERT INTO {services_timestamp_nonce} (domain, timestamp, nonce)
