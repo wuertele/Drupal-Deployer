@@ -153,7 +153,7 @@ function services_keyauth_admin_keys_delete_confirm_submit($form, &$form_state) 
 
   $t_args = array('%key' => $form_state['kid']);
   drupal_set_message(t('The key %key has been deleted.', $t_args));
-  watchdog('menu', 'Deleted key %key.', array('%key' => $t_args), WATCHDOG_NOTICE);
+  watchdog('menu', 'Deleted key %key.', $t_args, WATCHDOG_NOTICE);
 
   $form_state['redirect'] = 'admin/build/services/keys';
 }
