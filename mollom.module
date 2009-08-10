@@ -691,13 +691,16 @@ function mollom_validate_captcha(&$mollom_state, $edit) {
 
     _mollom_debug('mollom_validate_captcha the captcha result was '. (int)$result);
 
-    if ($result == FALSE) {
-      watchdog('mollom', 'Incorrect CAPTCHA');
-      form_set_error('mollom][captcha', t('The CAPTCHA was not completed correctly. Please complete this new CAPTCHA and try again.'));
-    }
-    else {
+    // Important: we explictly check for TRUE because mollom.checkCaptcha() can 
+    // return FALSE as well as an error message (e.g. when the Mollom ID expired
+    // or when the Mollom ID is invalid).
+    if ($result === TRUE) {
       watchdog('mollom', 'Correct CAPTCHA');
       $mollom_state['#passed_captcha'] = TRUE;
+    }
+    else {
+      watchdog('mollom', 'Incorrect CAPTCHA');
+      form_set_error('mollom][captcha', t('The CAPTCHA was not completed correctly. Please complete this new CAPTCHA and try again.'));
     }
   }
   else {
