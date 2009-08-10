@@ -274,7 +274,7 @@ function package_releases($type, $project_id = 0) {
   }
 
   // Finally, regenerate release history XML files for all projects we touched.
-  if (!empty($project_release_create_history)) {
+  if (!empty($project_nids) && !empty($project_release_create_history)) {
     wd_msg('Re-generating release history XML files');
     $i = $fails = 0;
     foreach ($project_nids as $project_nid => $value) {
