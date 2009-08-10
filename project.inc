@@ -122,7 +122,7 @@ function project_project_form($node, $form_state) {
     '#default_value' => isset($node->project['uri']) ? $node->project['uri'] : NULL,
     '#size' => 40,
     '#maxlength' => 50,
-    '#description' => t('This will be used to generate a /project/&lt;shortname&gt;/ URL for your project.'),
+    '#description' => (variable_get('project_enable_alias', TRUE)) ? t('This will be used to generate a /project/&lt;shortname&gt;/ URL for your project.') : '',
     '#required' => TRUE,
   );
   $form['project_node']['body_field'] = node_body_field($node, t('Full description'), 1);
@@ -382,14 +382,14 @@ function project_project_nodeapi(&$node, $op, $arg) {
   switch ($op) {
     case 'insert':
       _project_save_taxonomy($node);
-      if (module_exists('path')) {
+      if (module_exists('path') && variable_get('project_enable_alias', TRUE)) {
         path_set_alias("node/$node->nid", 'project/'. $node->project['uri'], NULL, $language);
       }
       break;
 
     case 'update':
       _project_save_taxonomy($node);
-      if (module_exists('path')) {
+      if (module_exists('path') && variable_get('project_enable_alias', TRUE)) {
         path_set_alias("node/$node->nid");  // Clear existing alias.
         path_set_alias("node/$node->nid", 'project/'. $node->project['uri'], NULL, $language);
       }
