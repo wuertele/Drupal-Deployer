@@ -150,6 +150,14 @@ function mollom_perm() {
 }
 
 /**
+ * Implementation of hook_cron().
+ */
+function mollom_cron() {
+  // Delete expired cache entries from the Mollom cache table.
+  cache_clear_all(NULL, 'cache_mollom');  
+}
+
+/**
  * Helper function to load a Mollom session ID from the database.
  */
 function mollom_get_data($did) {
@@ -530,12 +538,12 @@ function mollom_expand_element($element, $edit, &$form_state, $form) {
     if (!$mollom_session_id) {
       watchdog('mollom', 'The mollom ID sent by the user is badly formatted.');
     }
-    else if (!$cache = cache_get($edit['session_id'], 'cache_mollom')) {
-      if (time() - $timestamp > 30*60) {
-        watchdog('mollom', 'The mollom ID sent by the user is invalid, possibly expired.');
+    else if (!$cache = cache_get($mollom_session_id, 'cache_mollom')) {
+      if (time() - $timestamp > 30 * 60) {
+        watchdog('mollom', 'The mollom ID sent by the user is invalid, possibly expired: %session.', array('%session' => $mollom_session_id));
       }
       else {
-        watchdog('mollom', 'The mollom ID sent by the user is invalid.');
+        watchdog('mollom', 'The mollom ID sent by the user is invalid: %session.', array('%session' => $mollom_session_id));
       }
     }
     else if ($cache->data['#form_id'] !== $form_state['values']['form_id']) {
@@ -547,9 +555,6 @@ function mollom_expand_element($element, $edit, &$form_state, $form) {
     else {
       $mollom_state = $cache->data;
     }
-  }
-  else if (!empty($edit)) {
-    
   }
 
   // ... finally, if no valid state has been found, we generate an empty one.
@@ -704,13 +709,13 @@ function mollom_validate_captcha(&$mollom_state, $edit) {
 
   _mollom_debug("mollom_validate_captcha");
 
-  if (empty($mollom_state['#session_id'])) {
+  /*if (empty($mollom_state['#session_id'])) {
     // Mollom cannot possibly verify the CAPTCHA if we don't have a decent
     // session ID to start with.
     watchdog('mollom', 'The user submitted a form protected by a CAPTCHA without a Mollom ID.');
     form_set_error('mollom][captcha', t('The CAPTCHA was not completed correctly. Please complete this new CAPTCHA and try again.'));
   }
-  else if (!empty($edit['captcha'])) {
+  else */ if (!empty($edit['captcha'])) {
     // Check the CAPTCHA result:
     $result = mollom('mollom.checkCaptcha', array(
       'session_id' => $mollom_state['#session_id'],
