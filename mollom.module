@@ -524,9 +524,32 @@ function mollom_expand_element($element, $edit, &$form_state, $form) {
   }
   // ... or from data posted by the user. In that case we validate that the correct
   // form_id and user session ID is used...
-  elseif (!empty($edit['session_id']) && ($cache = cache_get($edit['session_id'], 'cache_mollom'))
-    && $cache->data['#form_id'] === $form_state['values']['form_id'] && $cache->data['#user_session_id'] === session_id()) {
-    $mollom_state = $cache->data;
+  elseif (!empty($edit['session_id'])) {
+    list ($timestamp, $mollom_session_id) = explode('-', $edit['session_id'], 2);
+
+    if (!$mollom_session_id) {
+      watchdog('mollom', 'The mollom ID sent by the user is badly formatted.');
+    }
+    else if (!$cache = cache_get($edit['session_id'], 'cache_mollom')) {
+      if (time() - $timestamp > 30*60) {
+        watchdog('mollom', 'The mollom ID sent by the user is invalid, possibly expired.');
+      }
+      else {
+        watchdog('mollom', 'The mollom ID sent by the user is invalid.');
+      }
+    }
+    else if ($cache->data['#form_id'] !== $form_state['values']['form_id']) {
+      watchdog('mollom', 'The mollom ID has been tampered with: it was generated for form %form1, but is used on form %form2.', array('%form1' => $cache->data['#form_id'], '%form2' => $form_state['values']['form_id']));
+    }
+    else if ($cache->data['#user_session_id'] !== session_id()) {
+      watchdog('mollom', 'The mollom ID has been tampered with: it was generated for a user with sid %sid1, but is used by a user with sid %sid2.', array('%sid1' => $cache->data['#user_session_id'], '%sid2' => session_id()));
+    }
+    else {
+      $mollom_state = $cache->data;
+    }
+  }
+  else if (!empty($edit)) {
+    
   }
 
   // ... finally, if no valid state has been found, we generate an empty one.
@@ -576,7 +599,7 @@ function mollom_expand_element($element, $edit, &$form_state, $form) {
     // persists form rebuilds.
     $element['session_id'] = array(
       '#type' => 'hidden',
-      '#value' => $mollom_state['#session_id'],
+      '#value' => time() .'-'. $mollom_state['#session_id'],
     );
     cache_set($mollom_state['#session_id'], $mollom_state, 'cache_mollom', 60*30);
 
@@ -681,7 +704,13 @@ function mollom_validate_captcha(&$mollom_state, $edit) {
 
   _mollom_debug("mollom_validate_captcha");
 
-  if (!empty($edit['captcha'])) {
+  if (empty($mollom_state['#session_id'])) {
+    // Mollom cannot possibly verify the CAPTCHA if we don't have a decent
+    // session ID to start with.
+    watchdog('mollom', 'The user submitted a form protected by a CAPTCHA without a Mollom ID.');
+    form_set_error('mollom][captcha', t('The CAPTCHA was not completed correctly. Please complete this new CAPTCHA and try again.'));
+  }
+  else if (!empty($edit['captcha'])) {
     // Check the CAPTCHA result:
     $result = mollom('mollom.checkCaptcha', array(
       'session_id' => $mollom_state['#session_id'],
