@@ -414,7 +414,7 @@ function package_release_contrib($nid, $uri, $version, $rev, $dir) {
   $tarball_needs_subdir = TRUE;
   if ($contrib_type == 'translations' && $uri != 'drupal-pot') {
     // Translation projects are packaged differently based on core version.
-    if (intval($version) == 6) {
+    if (intval($version) > 5) {
       if (!($to_tar = package_release_contrib_d6_translation($uri, $version, $view_link))) {
         // Return on error.
         return FALSE;
