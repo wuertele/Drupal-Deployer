@@ -30,10 +30,6 @@ function _project_release_form(&$release, &$form_state) {
       exit;
     }
     project_project_set_breadcrumb($project, TRUE);
-    $form['project'] = array(
-      '#type' => 'value',
-      '#value' => $project,
-    );
     $format = project_release_get_version_format($project);
     $release->project_release['pid'] = $pid;
   }
@@ -47,6 +43,10 @@ function _project_release_form(&$release, &$form_state) {
     project_project_set_breadcrumb($project, $breadcrumb);
     $format = project_release_get_version_format($project);
   }
+  $form['project'] = array(
+    '#type' => 'value',
+    '#value' => $project,
+  );
 
   $modify = $admin || !$is_edit;
 
