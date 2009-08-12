@@ -37,7 +37,7 @@ function node_token_values($type, $object = NULL, $options = array()) {
       $values['author-mail-raw']    = $account->mail;
 
       if (module_exists('comment')) {
-        $values['node_comment_count'] = $node->comment_count;
+        $values['node_comment_count'] = isset($node->comment_count) ? $node->comment_count : 0;
         $values['unread_comment_count'] = comment_num_new($node->nid);
       }
       else {
