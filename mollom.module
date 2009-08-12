@@ -536,21 +536,21 @@ function mollom_expand_element($element, $edit, &$form_state, $form) {
     list ($timestamp, $mollom_session_id) = explode('-', $edit['session_id'], 2);
 
     if (!$mollom_session_id) {
-      watchdog('mollom', 'The mollom ID sent by the user is badly formatted.');
+      watchdog('mollom', "The Mollom ID '%session' is badly formatted.", array('%session' => $edit['session_id']));
     }
     else if (!$cache = cache_get($mollom_session_id, 'cache_mollom')) {
       if (time() - $timestamp > 30 * 60) {
-        watchdog('mollom', "The mollom ID '%session' is invalid, probably expired.", array('%session' => $mollom_session_id));
+        watchdog('mollom', "The Mollom ID '%session' is invalid, probably expired.", array('%session' => $mollom_session_id));
       }
       else {
-        watchdog('mollom', "The mollom ID '%session' is invalid, probably reused.", array('%session' => $mollom_session_id));
+        watchdog('mollom', "The Mollom ID '%session' is invalid, probably reused.", array('%session' => $mollom_session_id));
       }
     }
     else if ($cache->data['#form_id'] !== $form_state['values']['form_id']) {
-      watchdog('mollom', "The mollom ID '%session' has been tampered with: it was generated for form %form1, but is used on form %form2.", array('%session' => $mollom_session_id, '%form1' => $cache->data['#form_id'], '%form2' => $form_state['values']['form_id']));
+      watchdog('mollom', "The Mollom ID '%session' has been tampered with: it was generated for form %form1, but is used on form %form2.", array('%session' => $mollom_session_id, '%form1' => $cache->data['#form_id'], '%form2' => $form_state['values']['form_id']));
     }
     else if ($cache->data['#user_session_id'] !== session_id()) {
-      watchdog('mollom', "The mollom ID '%session' has been tampered with: it was generated for a user with sid %sid1, but is used by a user with sid %sid2.", array('%session' => $mollom_session_id, '%sid1' => $cache->data['#user_session_id'], '%sid2' => session_id()));
+      watchdog('mollom', "The Mollom ID '%session' has been tampered with: it was generated for a user with sid %sid1, but is used by a user with sid %sid2.", array('%session' => $mollom_session_id, '%sid1' => $cache->data['#user_session_id'], '%sid2' => session_id()));
     }
     else {
       $mollom_state = $cache->data;
