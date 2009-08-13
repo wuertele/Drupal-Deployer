@@ -576,7 +576,7 @@ function mollom_expand_element($element, $edit, &$form_state, $form) {
 
     // First, perform captcha validation if required.
     if (!empty($mollom_state['#require_captcha']) && empty($mollom_state['#passed_captcha'])) {
-      mollom_validate_captcha($mollom_state, $edit);
+      mollom_validate_captcha($mollom_state, $form_state, $edit);
     }
 
     // Then, perform text analysis if required.
@@ -705,7 +705,7 @@ function mollom_validate_analysis(&$mollom_state, $form_state, &$edit) {
 /**
  * This form API validator function is called to check a CAPTCHA on a form.
  */
-function mollom_validate_captcha(&$mollom_state, $edit) {
+function mollom_validate_captcha(&$mollom_state, $form_state, $edit) {
 
   _mollom_debug("mollom_validate_captcha");
 
@@ -729,11 +729,11 @@ function mollom_validate_captcha(&$mollom_state, $edit) {
     // return FALSE as well as an error message (e.g. when the Mollom ID expired
     // or when the Mollom ID is invalid).
     if ($result === TRUE) {
-      watchdog('mollom', 'The CAPTCHA resonse was correct. Form data: %data', array('%data' => print_r($edit, TRUE)));
+      watchdog('mollom', 'The CAPTCHA resonse was correct. Form data: %data', array('%data' => print_r($form_state['values'], TRUE)));
       $mollom_state['#passed_captcha'] = TRUE;
     }
     else {
-      watchdog('mollom', 'The CAPTCHA response was incorrect. Form data: %data', array('%data' => print_r($edit, TRUE)));
+      watchdog('mollom', 'The CAPTCHA response was incorrect. Form data: %data', array('%data' => print_r($form_state['values'], TRUE)));
       form_set_error('mollom][captcha', t('The CAPTCHA was not completed correctly. Please complete this new CAPTCHA and try again.'));
     }
   }
