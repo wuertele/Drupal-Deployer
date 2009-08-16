@@ -224,7 +224,7 @@ function fckeditor_requirements($phase) {
     }
     elseif (version_compare($installed_version, $available_version, '<')) {
     $requirements['fckeditor']['severity'] = REQUIREMENT_WARNING;
-    $requirements['fckeditor']['description'] = t('The latest available FCKeditor version is @version. You can download it at !fcklink.', array('@version' => $available_version, '!fcklink' => l('FCKeditor.net', 'http://fckeditor.net')));
+    $requirements['fckeditor']['description'] = t('The latest available FCKeditor version is @version. You can download it at !fcklink.', array('@version' => $available_version, '!fcklink' => l('FCKeditor.net', 'http://www.fckeditor.net')));
     }
     */
     else {
@@ -238,6 +238,15 @@ function fckeditor_requirements($phase) {
           $requirements['fckeditor']['severity'] = REQUIREMENT_ERROR;
           $requirements['fckeditor']['description'] = $error;
         }
+      }
+    }
+
+    // FCKeditor before 2.6.4.1 has a security problem
+    // check if the version only contains dots and digits
+    if (!empty($installed_version) && preg_match('#^[\d\.]+$#', $installed_version)) {
+      if (version_compare($installed_version, '2.6.4.1', '<')) {
+        $requirements['fckeditor']['severity'] = REQUIREMENT_WARNING;
+        $requirements['fckeditor']['description'] = t('The installed version of FCKeditor is known to have a security problem. You can download an updated version at !fcklink.', array('!fcklink' => l('FCKeditor.net', 'http://www.fckeditor.net')));
       }
     }
 
