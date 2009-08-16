@@ -41,7 +41,7 @@ FCKConfig.ToolbarSets['DrupalFull'] = [
  */
 //['Link','Unlink','LinkToNode','LinkToMenu','Anchor'],
 ['Link','Unlink','Anchor'],
-['Image','Flash','Table','Rule','SpecialChar','DrupalBreak'],
+['Image','Flash','Table','Rule','Smiley','SpecialChar','DrupalBreak'],
 //uncomment this line to enable the page break button
 //remember to load appropriate plugin with FCKConfig.Plugins.Add
 //['Image','Flash','Table','Rule','SpecialChar','DrupalBreak','DrupalPageBreak'],
