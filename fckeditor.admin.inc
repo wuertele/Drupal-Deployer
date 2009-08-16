@@ -961,11 +961,10 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
   );
 
   if (variable_get('file_downloads', '') == FILE_DOWNLOADS_PRIVATE) {
-    $current_private_dir = !isset($edit->settings['private_dir']) ? "" : $edit->settings['private_dir'];
     $form['fckeditor_advanced_settings']['private_dir'] = array(
       '#type' => 'textfield',
       '#title' => t('Location of files uploaded with FCKeditor in the private folder'),
-      '#default_value' => $current_private_dir,
+      '#default_value' => !empty($profile->settings['private_dir']) ? $profile->settings['private_dir'] : '',
       '#size' => 40,
       '#maxlength' => 255,
       '#description' => t('The path relative to the location of the private directory where FCKeditor should store uploaded files.') .'<br />'. t('<strong>Warning:</strong> FCKeditor does not implement any kind of access protection on files available in this location. All files stored in the directory defined above might be accessible by unauthenticated users if there is no information about the file in the Drupal\'s database.') .'<br />'. t('System path to the private folder is: !system_path.', array('!system_path' => realpath(file_directory_path()) . DIRECTORY_SEPARATOR)) .'<br />'. t('Available wildcard characters:<br/><strong>%u</strong> - User ID.') .'<br />'. t('Current path: !path', array('!path' => $current_private_dir .' ('. file_create_path($current_private_dir) .')')),
