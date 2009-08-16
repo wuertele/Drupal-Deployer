@@ -177,13 +177,20 @@ function fckeditor_wrapper_img_assist_loader() {
   if (module_exists('img_assist')) {
     $fckpath = drupal_get_path('module', 'fckeditor');
     $fckjs = $fckpath . '/img_assist_fckeditor.js';
-
     $iapath = drupal_get_path('module', 'img_assist');
-    $iamodule = drupal_parse_info_file($iapath . '/img_assist.info');
-    $majorversion = (int) $iamodule['version']{4};
+
+    // find the version of img_assist by looking at the CVS Id version
+    $cvsversion = -1;
+    $iafp = fopen($iapath . '/img_assist.module', 'r');
+    $cvsidlines = fread($iafp, 100); // the cvs version is probably in the first 100 bytes
+    fclose($iafp);
+    $matches = array();
+    if (preg_match('# \d+\.(\d+)[\d\.]* #', $cvsidlines, $matches)) {
+      $cvsversion = (int) $matches[1];
+    }
     
-    switch ($majorversion) {
-      case 2:
+    switch ($cvsversion) {
+      case 75: // this branch is the branch for 6.x-2.x of img_assist
         // add img_assist js files before our own file to 
         drupal_add_js($iapath . '/img_assist_popup.js');
         drupal_add_js($iapath . '/img_assist_textarea.js');
@@ -191,7 +198,7 @@ function fckeditor_wrapper_img_assist_loader() {
         img_assist_loader();
         break;
       
-      case 1:
+      case 72: // this branch is the branch for 6.x-1.x of img_assist
         ob_start();
         img_assist_loader();
         $text = ob_get_clean();
@@ -212,7 +219,7 @@ function fckeditor_wrapper_img_assist_loader() {
         }
       
       default:
-        drupal_set_message(t('Image Assist version @version is not supported', array('@version' => $iamodule['version'])), 'error');
+        drupal_set_message(t('This Image Assist version is not supported'), 'error');
         return '';
     }
   }
