@@ -324,3 +324,12 @@ if (typeof(FCKeditor_IsCompatibleBrowser) == 'function' && !FCKeditor_IsCompatib
     return false;
   }
 }
+
+/**
+ * Integration for ajax.module
+ */
+function doFCKeditorSave() {
+  for(var textareaid in fckInstances) {
+    FCKeditor_OnAfterLinkedFieldUpdate(FCKeditorAPI.GetInstance(textareaid));
+  }
+}
