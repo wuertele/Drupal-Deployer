@@ -206,6 +206,7 @@ function FCKeditor_OnAfterLinkedFieldUpdate(editorInstance) {
 
   var teaser = FCKeditor_TeaserInfo(taid);
 
+  // when textArea is hidden, FCKeditor is visible
   if ($(textArea).is(':hidden')) {
     var text = editorInstance.GetData(true);
     // #372150 and #374386
