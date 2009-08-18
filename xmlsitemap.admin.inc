@@ -211,6 +211,14 @@ function xmlsitemap_settings_form_validate($form, &$form_state) {
     xmlsitemap_clear_cache(TRUE, $path_old);
   }
 
+  // Check that the chunk size will not create more than 1000 chunks.
+  $chunk_size = $form_state['values']['xmlsitemap_chunk_size'];
+  if ($chunk_size != 'auto' || $chunk_size != 50000) {
+    if (xmlsitemap_get_link_count() / $chunk_size > 1000) {
+      form_set_error('xmlsitemap_chunk_size', t('The sitemap page link count of @size will create more than 1,000 sitemap pages. Please increase the link count.', array('@size' => $chunk_size)));
+    }
+  }
+
   $base_url = &$form_state['values']['xmlsitemap_base_url'];
   $base_url = rtrim($base_url, '/');
   if ($base_url != '' && !valid_url($base_url, TRUE)) {
