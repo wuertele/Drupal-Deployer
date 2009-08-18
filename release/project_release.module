@@ -226,6 +226,13 @@ function project_release_check_supported_versions($pid, $tid, $major, $delete) {
   // return the value to our caller.
   $did_update = FALSE;
 
+  // If we're being called as a release node is being edited and saved, and
+  // the site we're running on is using DB replication, we need to make sure
+  // we're talking to the primary DB so that all of this works.
+  if (function_exists('db_set_ignore_slave')) {
+    db_set_ignore_slave();
+  }
+
   // Regardless of if we're deleting, adding, or editing, we need to know the
   // latest and recommended releases (if any) from the given branch. If
   // there's no published release, these values will be 0.
