@@ -320,6 +320,34 @@ function xmlsitemap_generate_index($handle, &$status, $language = NULL) {
 }
 
 /**
+ * Batch information callback.
+ */
+function xmlsitemap_rebuild_batch($form_state) {
+  $batch = array(
+    'operations' => array(),
+    'finished' => 'xmlsitemap_rebuild_batch_finished',
+    'title' => t('Rebuilding Sitemap'),
+    'file' => drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap.inc',
+  );
+
+  // Fetch all the sitemap links and save them to the {xmlsitemap} table.
+  foreach ($form_state['values']['modules'] as $module) {
+    $batch['operations'][] = array('xmlsitemap_rebuild_batch_clear', array($module));
+    $batch['operations'][] = array('xmlsitemap_rebuild_batch_fetch', array($module));
+  }
+
+  // Generate all the sitemap pages.
+  $batch['operations'][] = array('_xmlsitemap_regenerate_before', array());
+  $languages = language_list();
+  foreach (xmlsitemap_var('languages') as $language) {
+    $batch['operations'][] = array('xmlsitemap_rebuild_batch_generate', array($languages[$language]));
+  }
+  $batch['operations'][] = array('_xmlsitemap_regenerate_after', array());
+
+  return $batch;
+}
+
+/**
  * Batch callback; clear sitemap links for a specific module.
  */
 function xmlsitemap_rebuild_batch_clear($module, &$context) {

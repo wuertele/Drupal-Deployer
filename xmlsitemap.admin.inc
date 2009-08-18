@@ -287,34 +287,7 @@ function xmlsitemap_rebuild_confirm_submit($form, &$form_state) {
   // Set the rebuild flag incase something fails during the rebuild.
   variable_set('xmlsitemap_rebuild_needed', TRUE);
 
+  module_load_include('inc', 'xmlsitemap');
   batch_set(xmlsitemap_rebuild_batch($form_state));
   $form_state['redirect'] = 'admin/settings/xmlsitemap';
-}
-
-/**
- * Batch information callback.
- */
-function xmlsitemap_rebuild_batch($form_state) {
-  $batch = array(
-    'operations' => array(),
-    'finished' => 'xmlsitemap_rebuild_batch_finished',
-    'title' => t('Rebuilding Sitemap'),
-    'file' => drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap.inc',
-  );
-
-  // Fetch all the sitemap links and save them to the {xmlsitemap} table.
-  foreach ($form_state['values']['modules'] as $module) {
-    $batch['operations'][] = array('xmlsitemap_rebuild_batch_clear', array($module));
-    $batch['operations'][] = array('xmlsitemap_rebuild_batch_fetch', array($module));
-  }
-
-  // Generate all the sitemap pages.
-  $batch['operations'][] = array('_xmlsitemap_regenerate_before', array());
-  $languages = language_list();
-  foreach (xmlsitemap_var('languages') as $language) {
-    $batch['operations'][] = array('xmlsitemap_rebuild_batch_generate', array($languages[$language]));
-  }
-  $batch['operations'][] = array('_xmlsitemap_regenerate_after', array());
-
-  return $batch;
 }
