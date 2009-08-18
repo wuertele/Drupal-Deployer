@@ -247,9 +247,13 @@ function xmlsitemap_rebuild_confirm() {
       drupal_set_message(t('Your sitemap is up to date and does not need to be rebuilt.'), 'warning');
     }
     else {
-      drupal_set_message(t('A rebuild is not necessary. If you are just wanting to re-create the sitemap files, you can <a href="@link-cron">run cron manually</a>.', array('@link-cron' => url())), 'warning');
+      drupal_set_message(t('A rebuild is not necessary. If you are just wanting to re-create the sitemap files, you can <a href="@link-cron">run cron manually</a>.', array('@link-cron' => url('admin/reports/status/run-cron'))), 'warning');
     }
   }
+
+  $form['warning'] = array(
+    '#value' => t('If you have just installed the module, this can be helpful to import all your site\'s content into the sitemap. Otherwise, this should be considered a last-resort method. <strong>This will result in the loss of all your custom inclusion/exclusion and priorty values.</strong>'),
+  );
 
   // Show only the modules that implement the 6.x-2.x hooks.
   $modules = module_implements('xmlsitemap_links_clear', TRUE);
