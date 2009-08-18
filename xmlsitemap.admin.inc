@@ -233,12 +233,7 @@ function xmlsitemap_settings_form_validate($form, &$form_state) {
  */
 function xmlsitemap_settings_form_submit($form, $form_state) {
   // Save any changes to the frontpage link.
-  $frontpage_link = array(
-    'type' => 'frontpage',
-    'id' => 0,
-    'loc' => '',
-  );
-  xmlsitemap_save_link($frontpage_link);
+  xmlsitemap_save_link(array('type' => 'frontpage', 'id' => 0, 'loc' => ''));
 }
 
 /**
