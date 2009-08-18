@@ -89,19 +89,18 @@ function xmlsitemap_custom_edit_link_form_validate($form, &$form_state) {
   $menu_item = NULL;
   xmlsitemap_switch_user(0);
   $menu_item = menu_get_item($link['loc']);
+  xmlsitemap_restore_user();
+
   // Since the menu item access results are cached, manually check the current path.
-  if (strpos($link['loc'], 'admin/settings/xmlsitemap') === 0 && !user_access('administer xmlsitemap', drupal_anonymous_user())) {
+  if (strpos($link['loc'], 'admin/settings/xmlsitemap/custom') === 0 && !user_access('administer xmlsitemap', drupal_anonymous_user())) {
     $menu_item['access'] = FALSE;
   }
-  xmlsitemap_restore_user();
 
   if (db_result(db_query_range("SELECT 1 FROM {xmlsitemap} WHERE loc = '%s' AND status = 1 AND type <> 'custom'", $link['loc'], 0, 1))) {
     form_set_error('loc', t('There is already an existing link in the sitemap with the path %link.', array('%link' => $link['loc'])));
-    drupal_set_message(t('There is already an existing link in the sitemap with the path %link.', array('%link' => $link['loc'])), 'error', FALSE);
   }
-  elseif (empty($menu_item) || empty($menu_item['access'])) {
+  elseif (empty($menu_item['access'])) {
     form_set_error('loc', t('The custom link %link is either invalid or it cannot be accessed by anonymous users.', array('%link' => $link['loc'])));
-    drupal_set_message(t('The custom link %link is either invalid or it cannot be accessed by anonymous users.', array('%link' => $link['loc'])), 'error', FALSE);
   }
 }
 
