@@ -96,7 +96,7 @@ function xmlsitemap_node_form_xmlsitemap_settings_form_alter(&$form, $form_state
       'name' => check_plain(drupal_ucfirst($node_type_name)), // Or use t()?
       'link' => 'admin/content/node-type/' . str_replace('_', '-', $node_type),
       'status' => variable_get('xmlsitemap_node_status_' . $node_type, 1),
-      'priority' => variable_get('xmlsitemap_node_priority_' . $node_type, 'default'),
+      'priority' => variable_get('xmlsitemap_node_priority_' . $node_type, 0.5),
     );
   }
   xmlsitemap_settings_list(t('Content type'), $node_types, $form['node']);
@@ -126,7 +126,7 @@ function xmlsitemap_node_form_node_type_form_alter(&$form, $form_state) {
     '#type' => 'select',
     '#title' => t('Default priority'),
     '#options' => xmlsitemap_get_priority_options(TRUE),
-    '#default_value' => variable_get('xmlsitemap_node_priority_' . $node_type, 'default'),
+    '#default_value' => variable_get('xmlsitemap_node_priority_' . $node_type, 0.5),
   );
 
   // Add our submit handler before node_type_form_submit() so we can compare
@@ -144,7 +144,7 @@ function xmlsitemap_node_type_form_submit($form, $form_state) {
   if ($new_status != variable_get('xmlsitemap_node_status_' . $node_type, 1)) {
     $updates['status'] = $new_status;
   }
-  if ($new_priority != variable_get('xmlsitemap_node_priority_' . $node_type, 'default')) {
+  if ($new_priority != variable_get('xmlsitemap_node_priority_' . $node_type, 0.5)) {
     $updates['priority'] = $new_priority;
   }
   if ($node_type != $new_type) {
@@ -300,7 +300,7 @@ function xmlsitemap_node_create_link(&$node) {
   // The following values must always be checked because they are volatile.
   $node->xmlsitemap['access'] = node_access('view', $node, drupal_anonymous_user());
   $node->xmlsitemap['status'] = variable_get('xmlsitemap_node_status_' . $node->type, 1);
-  $node->xmlsitemap['priority'] = variable_get('xmlsitemap_node_priority_' . $node->type, 'default');
+  $node->xmlsitemap['priority'] = variable_get('xmlsitemap_node_priority_' . $node->type, 0.5);
   $node->xmlsitemap['language'] = isset($node->language) ? $node->language : '';
 
   return $node->xmlsitemap;
@@ -313,7 +313,7 @@ function xmlsitemap_node_variables() {
   $defaults = array();
   $node_types = array_keys(node_get_types('names'));
   foreach ($node_types as $node_type) {
-    $defaults['xmlsitemap_node_priority_' . $node_type] = 'default';
+    $defaults['xmlsitemap_node_priority_' . $node_type] = 0.5;
     $defaults['xmlsitemap_node_status_' . $node_type] = 1;
     // @todo Remove the variable.
     $defaults['xmlsitemap_node_update_' . $node_type] = NULL;

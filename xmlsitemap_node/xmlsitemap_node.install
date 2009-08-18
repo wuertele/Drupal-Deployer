@@ -83,7 +83,24 @@ function xmlsitemap_node_update_1() {
   return $ret;
 }
 
-//function xmlsitemap_node_update_2() {
+function xmlsitemap_node_update_2() {
+  $ret = array();
+  $node_types = array_keys(node_get_types('names'));
+  foreach ($node_types as $node_type) {
+    if (variable_get('xmlsitemap_node_priority_' . $node_type, 'default') === 'default') {
+      variable_set('xmlsitemap_node_priority_' . $node_type, 0.5);
+    }
+  }
+  return $ret;
+}
+
+function xmlsitemap_node_update_3() {
+  $ret = array();
+  $ret[] = update_sql("UPDATE {system} SET weight = 0 WHERE type = 'module' AND name = 'xmlsitemap_node'");
+  return $ret;
+}
+
+//function xmlsitemap_node_update_x() {
 //  $ret = array();
 //  if (db_column_exists('xmlsitemap', 'language')) {
 //    $ret[] = update_sql("UPDATE {xmlsitemap} SET language = (SELECT node.language FROM {node} WHERE node.nid = xmlsitemap.id AND node.language <> '') WHERE xmlsitemap.type = 'node'");
@@ -94,9 +111,3 @@ function xmlsitemap_node_update_1() {
 //  }
 //  return $ret;
 //}
-
-function xmlsitemap_menu_update_5() {
-  $ret = array();
-  $ret[] = update_sql("UPDATE {system} SET weight = 0 WHERE type = 'module' AND name = 'xmlsitemap_node'");
-  return $ret;
-}
