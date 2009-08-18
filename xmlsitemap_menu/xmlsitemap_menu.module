@@ -106,7 +106,7 @@ function xmlsitemap_menu_form_xmlsitemap_settings_form_alter(&$form, $form_state
       'name' => $name,
       'link' => 'admin/build/menu-customize/' . $menu . '/edit',
       'status' => variable_get('xmlsitemap_menu_status_' . $menu, 0),
-      'priority' => variable_get('xmlsitemap_menu_priority_' . $menu, 'default'),
+      'priority' => variable_get('xmlsitemap_menu_priority_' . $menu, 0.5),
     );
   }
   xmlsitemap_settings_list(t('Menu'), $menus, $form['menu']);
@@ -134,7 +134,7 @@ function xmlsitemap_menu_form_menu_edit_menu_alter(&$form, $form_state) {
     '#type' => 'select',
     '#title' => t('Default priority'),
     '#options' => xmlsitemap_get_priority_options(TRUE),
-    '#default_value' => variable_get('xmlsitemap_menu_priority_' . $menu, 'default'),
+    '#default_value' => variable_get('xmlsitemap_menu_priority_' . $menu, 0.5),
   );
 
   // @todo Enable this feature:
@@ -161,7 +161,7 @@ function xmlsitemap_menu_menu_edit_menu_submit($form, $form_state) {
   $new_status = $form_state['values']['xmlsitemap_menu_status'];
 
   $updates = array();
-  if ($new_priority != variable_get('xmlsitemap_menu_priority_' . $menu, 'default')) {
+  if ($new_priority != variable_get('xmlsitemap_menu_priority_' . $menu, 0.5)) {
     $updates['priority'] = $new_priority;
   }
   if ($new_status != variable_get('xmlsitemap_menu_status_' . $menu, 0)) {
@@ -285,7 +285,7 @@ function xmlsitemap_menu_create_link($menu_item) {
   // The following values must always be checked because they are volatile.
   $menu_item['xmlsitemap']['access'] = $menu_item['access'] && !$menu_item['external'] && !$menu_item['hidden'];
   $menu_item['xmlsitemap']['status'] = variable_get('xmlsitemap_menu_status_' . $menu_item['menu_name'], 0);
-  $menu_item['xmlsitemap']['priority'] = variable_get('xmlsitemap_menu_priority_' . $menu_item['menu_name'], 'default');
+  $menu_item['xmlsitemap']['priority'] = variable_get('xmlsitemap_menu_priority_' . $menu_item['menu_name'], 0.5);
 
   return $menu_item['xmlsitemap'];
 }
@@ -311,7 +311,7 @@ function xmlsitemap_menu_variables() {
   $menus = array_keys(menu_get_menus());
   foreach ($menus as $menu) {
     $defaults['xmlsitemap_menu_status_' . $menu] = 0;
-    $defaults['xmlsitemap_menu_priority_' . $menu] = 'default';
+    $defaults['xmlsitemap_menu_priority_' . $menu] = 0.5;
     $defaults['xmlsitemap_menu_calculate_priority_' . $menu] = FALSE;
   }
   return $defaults;
