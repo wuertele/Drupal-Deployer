@@ -58,24 +58,16 @@ function cck_fieldgroup_tabs_admin_settings() {
  * Implementation of hook_form_alter().
  */
 function cck_fieldgroup_tabs_form_alter(&$form, $form_state, $form_id) {
-  if (isset($form['type']) && $form['type']['#value'] .'_node_form' == $form_id) {
+  if (isset($form['type']) && isset($form['type']['#value']) && $form['type']['#value'] .'_node_form' == $form_id) {
     if (!isset($form['#pre_render'])) {
       $form['#pre_render'] = array();
     }
     // Register a process callback.
     $form['#pre_render'][] = 'cck_fieldgroup_tabs_pre_render';
-    // Set the #input flag to trigger processing.
-    $form['#input'] = TRUE;
   }
   else if ($form_id == 'content_display_overview_form') {
     if (isset($form['#groups']) && $form['#groups']) {
-      // Check for old CCK behaviour - TODO Remove with next CCK RC
-      if (function_exists('_content_admin_display_contexts')) {
-        $contexts = _content_admin_display_contexts($form['#contexts_selector']);
-      }
-      else {
-        $contexts = content_build_modes($form['#contexts']);
-      }
+      $contexts = content_build_modes($form['#contexts']);
       foreach ($form['#groups'] as $name) {
         foreach (array_keys($contexts) as $key) {
           $form[$name][$key]['format']['#options']['tabs'] = t('tabs');
@@ -196,9 +188,6 @@ function cck_fieldgroup_tabs_nodeapi(&$node, $op, $teaser, $page) {
           }
           $node->content['fieldgroup_tabs']['fieldgroup_tabs_basic'] = $residual;
         }
-        // Explicitly build, as drupal_render won't invoke form element #process callbacks.
-        $empty = array();
-        $node->content['fieldgroup_tabs'] = form_builder('tabset', $node->content['fieldgroup_tabs'], $empty);
       }
       break;
   }
