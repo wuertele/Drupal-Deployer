@@ -11,7 +11,7 @@ function xmlsitemap_menu_cron() {
     // Set the global user variable to the anonymous user.
     xmlsitemap_switch_user(0);
 
-    $sql = "SELECT ml.mlid FROM {menu_links} ml LEFT JOIN {xmlsitemap} x ON x.type = 'menu' AND ml.mlid = x.id WHERE (x.id IS NULL OR x.status IS NULL) AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ")";
+    $sql = "SELECT ml.mlid FROM {menu_links} ml LEFT JOIN {xmlsitemap} x ON x.type = 'menu' AND ml.mlid = x.id WHERE x.id IS NULL AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ")";
     $query = db_query_range($sql, $menus, 0, xmlsitemap_var('batch_limit'));
 
     while ($mlid = db_result($query)) {
@@ -86,7 +86,7 @@ function xmlsitemap_menu_menu_link_load($mlid, $switch_user = FALSE) {
 }
 
 /**
- * Implementation of hok_form_FORM_ID_alter().
+ * Implementation of hook_form_FORM_ID_alter().
  *
  * Show a summary of menus on the XML sitemap settings page.
  */
@@ -119,23 +119,13 @@ function xmlsitemap_menu_form_xmlsitemap_settings_form_alter(&$form, $form_state
  */
 function xmlsitemap_menu_form_menu_edit_menu_alter(&$form, $form_state) {
   $menu = isset($form['menu_name']['#value']) ? $form['menu_name']['#value'] : '';
-  $form['xmlsitemap'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('XML sitemap'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
+
+  module_load_include('inc', 'xmlsitemap', 'xmlsitemap.admin');
+  $options = array(
+    'status' => variable_get('xmlsitemap_menu_status_' . $menu, 0),
+    'priority' => variable_get('xmlsitemap_menu_priority_' . $menu, 0.5),
   );
-  $form['xmlsitemap']['xmlsitemap_menu_status'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Include in the sitemap'),
-    '#default_value' => variable_get('xmlsitemap_menu_status_' . $menu, 0),
-  );
-  $form['xmlsitemap']['xmlsitemap_menu_priority'] = array(
-    '#type' => 'select',
-    '#title' => t('Default priority'),
-    '#options' => xmlsitemap_get_priority_options(),
-    '#default_value' => variable_get('xmlsitemap_menu_priority_' . $menu, 0.5),
-  );
+  xmlsitemap_add_form_type_options($form, 'menu', $options);
 
   // @todo Enable this feature:
   //$form['xmlsitemap']['xmlsitemap_menu_calculate_priority'] = array(
@@ -160,16 +150,11 @@ function xmlsitemap_menu_menu_edit_menu_submit($form, $form_state) {
   $new_priority = $form_state['values']['xmlsitemap_menu_priority'];
   $new_status = $form_state['values']['xmlsitemap_menu_status'];
 
-  $updates = array();
-  if ($new_priority != variable_get('xmlsitemap_menu_priority_' . $menu, 0.5)) {
-    $updates['priority'] = $new_priority;
-  }
   if ($new_status != variable_get('xmlsitemap_menu_status_' . $menu, 0)) {
-    $updates['status'] = $new_status;
+    xmlsitemap_update_links(array('status' => $new_status), array('type' => 'menu', 'subtype' => $menu, 'status_override' => 0));
   }
-
-  if ($updates) {
-    xmlsitemap_update_links($updates, array('type' => 'menu', 'menu_name' => $menu));
+  if ($new_priority != variable_get('xmlsitemap_menu_priority_' . $menu, 0.5)) {
+    xmlsitemap_update_links(array('priority' => $new_priority), array('type' => 'menu', 'subtype' => $menu, 'priority_override' => 0));
   }
 
   variable_set('xmlsitemap_menu_priority_' . $menu, $new_priority);
@@ -190,7 +175,7 @@ function xmlsitemap_menu_form_menu_delete_menu_confirm_alter(&$form, $form_state
  */
 function xmlsitemap_menu_form_menu_delete_menu_confirm_submit($form, $form_state) {
   $menu = $form['#menu']['menu_name'];
-  xmlsitemap_delete_link(array('type' => 'menu', 'menu_name' => $menu));
+  xmlsitemap_delete_link(array('type' => 'menu', 'subtype' => $menu));
   variable_del('xmlsitemap_menu_status_' . $menu);
   variable_del('xmlsitemap_menu_priority_ ' . $menu);
 }
@@ -278,14 +263,17 @@ function xmlsitemap_menu_create_link($menu_item) {
     'type' => 'menu',
     'id' => $menu_item['mlid'],
     'loc' => $menu_item['link_path'],
-    'priority_override' => xmlsitemap_menu_var('calculate_priority_' . $menu_item['menu_name']) ? xmlsitemap_menu_calculate_priority($menu_item) : NULL,
-    'menu_name' => $menu_item['menu_name'],
+    'status' => variable_get('xmlsitemap_menu_status_' . $menu_item['menu_name'], 0),
+    'status_default' => variable_get('xmlsitemap_menu_status_' . $menu_item['menu_name'], 0),
+    'status_override' => 0,
+    'priority' => variable_get('xmlsitemap_menu_priority_' . $menu_item['menu_name'], 0.5),
+    'priority_default' => variable_get('xmlsitemap_menu_priority_' . $menu_item['menu_name'], 0.5),
+    'priority_override' => 0,
   );
 
   // The following values must always be checked because they are volatile.
   $menu_item['xmlsitemap']['access'] = $menu_item['access'] && !$menu_item['external'] && !$menu_item['hidden'];
-  $menu_item['xmlsitemap']['status'] = variable_get('xmlsitemap_menu_status_' . $menu_item['menu_name'], 0);
-  $menu_item['xmlsitemap']['priority'] = variable_get('xmlsitemap_menu_priority_' . $menu_item['menu_name'], 0.5);
+  $menu_item['xmlsitemap']['subtype'] = $menu_item['menu_name'];
 
   return $menu_item['xmlsitemap'];
 }

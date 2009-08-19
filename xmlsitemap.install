@@ -106,9 +106,9 @@ function xmlsitemap_schema() {
       'id' => array(
         'description' => 'Primary key with type; a unique id for the item.',
         'type' => 'int',
-        'default' => 0,
         'not null' => TRUE,
         'unsigned' => TRUE,
+        'default' => 0,
       ),
       'type' => array(
         'description' => 'Primary key with id; the type of item (e.g. node, user, etc.).',
@@ -116,6 +116,12 @@ function xmlsitemap_schema() {
         'length' => 12,
         'not null' => TRUE,
         'default' => '',
+      ),
+      'subtype' => array(
+        'description' => 'A sub-type identifier for the link (node type, menu name, term VID, etc.).',
+        'type' => 'varchar',
+        'length' => 32,
+        'default' => NULL,
       ),
       'loc' => array(
         'description' => 'The URL to the item relative to the Drupal path.',
@@ -135,53 +141,65 @@ function xmlsitemap_schema() {
         'description' => 'A boolean that represents if the item is viewable by the anonymous user. This field is useful to store the result of node_access() so we can retain changefreq and priority_override information.',
         'type' => 'int',
         'size' => 'tiny',
-        'default' => 1,
-        'unsigned' => TRUE,
         'not null' => TRUE,
+        'default' => 1,
       ),
       'status' => array(
         'description' => 'An integer that represents if the item is included in the sitemap.',
         'type' => 'int',
         'size' => 'tiny',
+        'not null' => TRUE,
         'default' => 1,
-        //'unsigned' => TRUE,
+      ),
+      'status_override' => array(
+        'description' => 'A boolean that if TRUE means that the status field has been overridden from its default value.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
       ),
       'lastmod' => array(
         'description' => 'The UNIX timestamp of last modification of the item.',
         'type' => 'int',
-        'default' => 0,
         'unsigned' => TRUE,
         'not null' => TRUE,
+        'default' => 0,
       ),
       'priority' => array(
         'description' => 'The priority of this URL relative to other URLs on your site. Valid values range from 0.0 to 1.0.',
         'type' => 'float',
         'default' => NULL,
+        // @todo Convert this field to non-nullable.
+        //'default' => 0.5,
+        //'not null' => NULL,
       ),
       'priority_override' => array(
-        'description' => 'Manual override value of {xmlsitemap}.priority. Valid values range from 0.0 to 1.0.',
-        'type' => 'float',
-        'default' => NULL,
+        'description' => 'A boolean that if TRUE means that the priority field has been overridden from its default value.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
       ),
       'changefreq' => array(
         'description' => 'The average time in seconds between changes of this item.',
         'type' => 'int',
-        'default' => 0,
         'unsigned' => TRUE,
         'not null' => TRUE,
+        'default' => 0,
       ),
       'changecount' => array(
         'description' => 'The number of times this item has been changed. Used to help calculate the next changefreq value.',
         'type' => 'int',
-        'default' => 0,
         'unsigned' => TRUE,
         'not null' => TRUE,
+        'default' => 0,
       ),
     ),
     'primary key' => array('id', 'type'),
     'indexes' => array(
       'loc' => array('loc'),
       'access_status_loc' => array('access', 'status', 'loc'),
+      'type_subtype' => array('type', 'subtype'),
       //'language' => array('language'),
     ),
   );
@@ -313,6 +331,52 @@ function xmlsitemap_update_12() {
   return $ret;
 }
 
+function xmlsitemap_update_13() {
+  $ret = array();
+  db_change_field($ret, 'xmlsitemap', 'priority_override', 'priority_override_value', array('type' => 'float', 'default' => NULL));
+  $override_field = array(
+    'type' => 'int',
+    'size' => 'tiny',
+    'default' => 0,
+    'not null' => TRUE,
+  );
+  db_add_field($ret, 'xmlsitemap', 'status_override', $override_field);
+  db_add_field($ret, 'xmlsitemap', 'priority_override', $override_field);
+  $ret[] = update_sql("UPDATE {xmlsitemap} SET priority_override = 1, priority = priority_override_value WHERE priority_override_value IS NOT NULL");
+  $ret[] = update_sql("UPDATE {xmlsitemap} SET priority = 0.5 WHERE priority_override_value IS NULL");
+  db_drop_field($ret, 'xmlsitemap', 'priority_override_value');
+  return $ret;
+}
+
+function xmlsitemap_update_14() {
+  $ret = array();
+  db_add_field($ret, 'xmlsitemap', 'subtype', array('type' => 'varchar', 'length' => 32, 'default' => NULL));
+  $fields = array('node' => 'node_type', 'menu' => 'menu_name', 'taxonomy' => 'term_vid');
+  foreach ($fields as $type => $field) {
+    if (db_column_exists('xmlsitemap', $field)) {
+      $ret[] = update_sql("UPDATE {xmlsitemap} SET subtype = $field WHERE type = '$type'");
+      db_drop_field($ret, 'xmlsitemap', $field);
+      @db_drop_index($ret, 'xmlsitemap', $field);
+    }
+  }
+  db_add_index($ret, 'xmlsitemap', 'type_subtype', array('type', 'subtype'));
+  return $ret;
+}
+
+function xmlsitemap_update_15() {
+  $ret = array();
+  $ret[] = update_sql("DELETE FROM {xmlsitemap} WHERE status IS NULL OR access IS NULL");
+  $field = array(
+    'type' => 'int',
+    'size' => 'tiny',
+    'default' => 1,
+    'not null' => TRUE,
+  );
+  db_change_field($ret, 'xmlsitemap', 'access', 'access', $field);
+  db_change_field($ret, 'xmlsitemap', 'status', 'status', $field);
+  return $ret;
+}
+
 //function xmlsitemap_update_x() {
 //  $ret = array();
 //  $field = array(
@@ -326,24 +390,3 @@ function xmlsitemap_update_12() {
 //  db_add_index($ret, 'xmlsitemap', 'language', array('language'));
 //  return $ret;
 //}
-
-/**
- * These strings exist only for the extractor to pick them up and make them
- * available for translation. Putting them here keeps them from being parsed
- * on normal pages.
- *
- * Idea borrowed from the date and event modules. Thanks karens and killes!
- */
-function _xmlsitemap_translation_strings() {
-  t('0.0');
-  t('0.1');
-  t('0.2');
-  t('0.3');
-  t('0.4');
-  t('0.5');
-  t('0.6');
-  t('0.7');
-  t('0.8');
-  t('0.9');
-  t('1.0');
-}

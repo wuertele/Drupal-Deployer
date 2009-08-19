@@ -164,22 +164,6 @@ function xmlsitemap_xmlsitemap_link_alter(&$link) {
     $link['priority'] = xmlsitemap_var('frontpage_priority');
     $link['changefreq'] = xmlsitemap_var('frontpage_changefreq');
   }
-
-  // Alter some of the data so that we can compare against existing links.
-  if ($link['priority'] === 'default') {
-    $link['priority'] = NULL;
-  }
-  if ($link['priority_override'] === 'default') {
-    $link['priority_override'] = NULL;
-  }
-
-  // @todo Remove when booleans are no longer used.
-  if (!is_int($link['status'])) {
-    $links['status'] = (int) $link['status'];
-  }
-  if (!is_int($link['access'])) {
-    $links['access'] = (int) $link['access'];
-  }
 }
 
 /**
@@ -237,48 +221,6 @@ function xmlsitemap_get_url_options($options = array()) {
   return $options + array(
     'absolute' => TRUE,
     'base_url' => xmlsitemap_var('base_url'),
-  );
-}
-
-/**
- * Get a list of priority options.
- *
- * @param $default
- *   Include a 'default' option.
- * @return
- *   An array of options.
- *
- * @see _xmlsitemap_translation_strings()
- */
-function xmlsitemap_get_priority_options($default = FALSE) {
-  $options = array();
-
-  if ($default !== FALSE) {
-    // @todo Fix this default option text.
-    $options['default'] = $default !== TRUE && $default !== 'default' ? t('Default (@value)', array('@value' => $default)) : t('Default');
-  }
-
-  foreach (range(0, 1, 0.1) as $option) {
-    $option = number_format($option, 1);
-    // Sorry, we pass a variable through t() since we have provided all the
-    // possible values in _xmlsitemap_translation_strings().
-    $options[$option] = t($option);
-  }
-
-  return $options;
-}
-
-/**
- * @todo Document this function.
- */
-function xmlsitemap_get_changefreq_options() {
-  return array(
-    XMLSITEMAP_FREQUENCY_ALWAYS => 'always',
-    XMLSITEMAP_FREQUENCY_HOURLY => 'hourly',
-    XMLSITEMAP_FREQUENCY_DAILY => 'daily',
-    XMLSITEMAP_FREQUENCY_WEEKLY => 'weekly',
-    XMLSITEMAP_FREQUENCY_MONTHLY => 'monthly',
-    XMLSITEMAP_FREQUENCY_YEARLY => 'yearly',
   );
 }
 
@@ -516,9 +458,10 @@ function xmlsitemap_save_link(array $link) {
   $link += array(
     'access' => 1,
     'status' => 1,
+    'status_override' => 0,
     'lastmod' => 0,
-    'priority' => NULL,
-    'priority_override' => NULL,
+    'priority' => 0.5,
+    'priority_override' => 0,
     'changefreq' => 0,
     'changecount' => 0,
     //'language' => '',
@@ -537,7 +480,7 @@ function xmlsitemap_save_link(array $link) {
     $link['changecount'] = 0;
   }
 
-  $existing = db_result(db_query_range("SELECT loc, access, status, lastmod, priority, changefreq, changecount FROM {xmlsitemap} WHERE type = '%s' AND id = %d", $link['type'], $link['id'], 0, 1));
+  $existing = db_fetch_array(db_query_range("SELECT loc, access, status, lastmod, priority, changefreq, changecount FROM {xmlsitemap} WHERE type = '%s' AND id = %d", $link['type'], $link['id'], 0, 1));
 
   // Check if this is a changed link and set the regenerate flag if necessary.
   if (!variable_get('xmlsitemap_regenerate_needed', TRUE)) {
@@ -579,7 +522,7 @@ function xmlsitemap_update_links($updates = array(), $conditions = array()) {
 
   $args = array();
   foreach ($updates as $field => $value) {
-    if ($value === NULL || ($field == 'priority' && $value === 'default')) {
+    if ($value === NULL) {
       // Default priority is NULL, but we use the string 'default' in the
       // interface so the correct default value is selected.
       $updates[$field] = $field . ' = NULL';
@@ -594,7 +537,6 @@ function xmlsitemap_update_links($updates = array(), $conditions = array()) {
   _xmlsitemap_build_conditions($conditions, $args);
   $sql = "UPDATE {xmlsitemap} SET " . implode(', ', $updates) . " WHERE " . implode(' AND ', $conditions);
   db_query($sql, $args);
-
   return db_affected_rows();
 }
 
@@ -940,4 +882,33 @@ function _xmlsitemap_add_vertical_tabs(&$form, $fieldsets = NULL) {
 
     return TRUE;
   }
+}
+
+function xmlsitemap_process_form_link_options($form, &$form_state) {
+  $link = &$form_state['values']['xmlsitemap'];
+  $fields = array('status' => 1, 'priority' => 0.5);
+
+  foreach ($fields as $field => $default) {
+    if ($link[$field] === 'default') {
+      $link[$field] = isset($link[$field . '_default']) ? $link[$field . '_default'] : $default;
+      $link[$field . '_override'] = 0;
+    }
+    else {
+      $link[$field . '_override'] = 1;
+    }
+  }
+}
+
+/**
+ * @todo Document this function.
+ */
+function xmlsitemap_get_changefreq_options() {
+  return array(
+    XMLSITEMAP_FREQUENCY_ALWAYS => 'always',
+    XMLSITEMAP_FREQUENCY_HOURLY => 'hourly',
+    XMLSITEMAP_FREQUENCY_DAILY => 'daily',
+    XMLSITEMAP_FREQUENCY_WEEKLY => 'weekly',
+    XMLSITEMAP_FREQUENCY_MONTHLY => 'monthly',
+    XMLSITEMAP_FREQUENCY_YEARLY => 'yearly',
+  );
 }

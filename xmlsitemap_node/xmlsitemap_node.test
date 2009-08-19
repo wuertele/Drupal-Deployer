@@ -73,17 +73,27 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
   function testUnpublishedNode() {
     $this->drupalLogin($this->admin_user);
 
+    // Test message shown?
+    //$this->drupalGet('node/add/story');
+
     // Create an unpublished node.
     $node = $this->drupalCreateNode(array('status' => FALSE));
     $this->assertNodeNotInSitemap($node);
+
+    // Test message not shown.
 
     // Publish the node.
     $this->drupalPost('node/' . $node->nid . '/edit', array('status' => TRUE), t('Save'));
     $this->assertNodeInSitemap($node);
 
+    // Test message shown.
+
     // Unpublish the node again.
     $this->drupalPost('node/' . $node->nid . '/edit', array('status' => FALSE), t('Save'));
     $this->assertNodeNotInSitemap($node);
+
+    // Test that the message is shown.
+    //$this->drupalGet('node/' . $node->nid . '/edit');
   }
 
   /**
@@ -93,7 +103,7 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     $this->drupalLogin($this->admin_user);
 
     $node_old = $this->drupalCreateNode();
-    $this->assertNodeLinkValues($node_old, array('status' => 1, 'priority' => NULL));
+    $this->assertNodeLinkValues($node_old, array('status' => 1, 'priority' => 0.5));
 
     $edit = array(
       'xmlsitemap_node_status' => FALSE,
@@ -109,14 +119,13 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
 
     $edit = array(
       'xmlsitemap_node_status' => TRUE,
-      'xmlsitemap_node_priority' => 'default', // Default (NULL) value.
+      'xmlsitemap_node_priority' => '0.5',
     );
     $this->drupalPost('admin/content/node-type/page', $edit, t('Save content type'));
     $this->assertText(t('The content type Page has been updated.'));
 
-    // Since the status has been set to NULL, check that these are still not visible.
-    $this->assertNodeLinkValues($node, array('status' => 1, 'priority' => NULL));
-    $this->assertNodeLinkValues($node_old, array('status' => 1, 'priority' => NULL));
+    $this->assertNodeLinkValues($node, array('status' => 1, 'priority' => 0.5));
+    $this->assertNodeLinkValues($node_old, array('status' => 1, 'priority' => 0.5));
 
     //$this->drupalPost('node/' . $node->nid . '/edit', array(), t('Save'));
     //$this->assertText(t('Page @title has been updated.', array('@title' => $node->title)));

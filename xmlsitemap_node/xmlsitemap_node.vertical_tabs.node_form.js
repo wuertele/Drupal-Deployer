@@ -1,13 +1,19 @@
 // $Id$
 
-// The following line is necessary since our JavaScript will execute before the
-// Vertical tabs code.
 Drupal.verticalTabs = Drupal.verticalTabs || {};
 
 Drupal.verticalTabs.xmlsitemap = function() {
   var vals = [];
-  //vals.push(Drupal.t('Included in sitemap'));
-  var priority = $('#edit-xmlsitemap-priority-override').val();
-  vals.push(Drupal.t('Priority @priority', { '@priority': priority }));
+
+  // Inclusion select field
+  var status = $('#edit-xmlsitemap-status').val();
+  var status_text = $("#edit-xmlsitemap-status option[value='" + status + "']").text();
+  vals.push(Drupal.t('Inclusion: @status', { '@status': status_text }));
+
+  // Priority select field
+  var priority = $('#edit-xmlsitemap-priority').val();
+  var priority_text = $("#edit-xmlsitemap-priority option[value='" + priority + "']").text();
+  vals.push(Drupal.t('Priority: @priority', { '@priority': priority_text }));
+
   return vals.join('<br />');
 }

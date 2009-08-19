@@ -103,7 +103,7 @@ function xmlsitemap_settings_form() {
   $form['frontpage']['xmlsitemap_frontpage_changefreq'] = array(
     '#type' => 'select',
     '#title' => t('Change frequency'),
-    '#options' => /*array(0 => t('Automatic')) +*/ xmlsitemap_get_changefreq_options(),
+    '#options' => xmlsitemap_get_changefreq_options(),
     '#default_value' => xmlsitemap_var('frontpage_changefreq'),
   );
 
@@ -290,4 +290,181 @@ function xmlsitemap_rebuild_confirm_submit($form, &$form_state) {
   module_load_include('inc', 'xmlsitemap');
   batch_set(xmlsitemap_rebuild_batch($form_state));
   $form_state['redirect'] = 'admin/settings/xmlsitemap';
+}
+
+/**
+ * Add the link type XML sitemap options to the link type's form.
+ */
+function xmlsitemap_add_form_type_options(&$form, $module, $options) {
+  $form['xmlsitemap'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('XML sitemap'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#access' => user_access('administer xmlsitemap'),
+  );
+  $form['xmlsitemap']['xmlsitemap_' . $module . '_status'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Include in the sitemap'),
+    '#default_value' => $options['status'],
+  );
+  $form['xmlsitemap']['xmlsitemap_' . $module . '_priority'] = array(
+    '#type' => 'select',
+    '#title' => t('Default priority'),
+    '#options' => xmlsitemap_get_priority_options(),
+    '#default_value' => $options['priority'],
+  );
+}
+
+/**
+ * Add a link's XML sitemap options to the link's form.
+ */
+function xmlsitemap_add_form_link_options(&$form, $link) {
+  $form['xmlsitemap'] = array(
+    '#type' => 'fieldset',
+    '#tree' => TRUE,
+    '#title' => t('XML sitemap'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#access' => user_access('administer xmlsitemap'),
+  );
+
+  // Show a warning if the link is not accessible and will not be included in
+  // the sitemap.
+  if (!$link['access']) {
+    $form['xmlsitemap']['warning'] = array(
+      '#type' => 'markup',
+      '#prefix' => '<p><strong>',
+      '#suffix' => '</strong></p>',
+      '#value' => ('This item is not currently visible to anonymous users, so it will not be included in the sitemap.'),
+    );
+  }
+
+  // Status field (inclusion/exclusion)
+  $form['xmlsitemap']['status'] = array(
+    '#type' => 'select',
+    '#title' => t('Inclusion'),
+    '#options' => xmlsitemap_get_status_options($link['status_default']),
+    '#default_value' => $link['status_override'] ? $link['status'] : 'default',
+  );
+  $form['xmlsitemap']['status_default'] = array(
+    '#type' => 'value',
+    '#value' => $link['status_default'],
+  );
+  $form['xmlsitemap']['status_override'] = array(
+    '#type' => 'value',
+    '#value' => $link['status_override'],
+  );
+
+  // Priority field
+  $form['xmlsitemap']['priority'] = array(
+    '#type' => 'select',
+    '#title' => t('Priority'),
+    '#options' => xmlsitemap_get_priority_options($link['priority_default']),
+    '#default_value' => $link['priority_override'] ? number_format($link['priority'], 1) : 'default',
+    '#description' => t('The priority of this URL relative to other URLs on your site.'),
+  );
+  $form['xmlsitemap']['priority_default'] = array(
+    '#type' => 'value',
+    '#value' => $link['priority_default'],
+  );
+  $form['xmlsitemap']['priority_override'] = array(
+    '#type' => 'value',
+    '#value' => $link['priority_override'],
+  );
+
+  // Other persistent fields.
+  //$form['xmlsitemap']['lastmod'] = array(
+  //  '#type' => 'value',
+  //  '#value' => $node->xmlsitemap['lastmod'],
+  //);
+  //$form['xmlsitemap']['changefreq'] = array(
+  //  '#type' => 'value',
+  //  '#value' => $node->xmlsitemap['changefreq'],
+  //);
+  //$form['xmlsitemap']['changecount'] = array(
+  //  '#type' => 'value',
+  //  '#value' => $node->xmlsitemap['changecount'],
+  //);
+
+  // Add the submit handler to adjust the default values if selected.
+  if (!in_array('xmlsitemap_process_form_link_options', $form['#submit'])) {
+    array_unshift($form['#submit'], 'xmlsitemap_process_form_link_options');
+  }
+}
+
+/**
+ * Get a list of priority options.
+ *
+ * @param $default
+ *   Include a 'default' option.
+ * @return
+ *   An array of options.
+ *
+ * @see _xmlsitemap_translation_strings()
+ */
+function xmlsitemap_get_priority_options($default = NULL) {
+  $options = array();
+
+  if (isset($default)) {
+    if ($default === TRUE) {
+      $options['default'] = t('Default');
+    }
+    elseif (is_numeric($default)) {
+      $options['default'] = t('Default (@value)', array('@value' => number_format($default, 1)));
+    }
+  }
+
+  $options += array(
+    '0.0' => t('0.0 (lowest)'),
+    '0.1' => t('0.1'),
+    '0.2' => t('0.2'),
+    '0.3' => t('0.3'),
+    '0.4' => t('0.4'),
+    '0.5' => t('0.5 (normal)'),
+    '0.6' => t('0.6'),
+    '0.7' => t('0.7'),
+    '0.8' => t('0.8'),
+    '0.9' => t('0.9'),
+    '1.0' => t('1.0 (highest)'),
+  );
+
+  //foreach (range(0, 1, 0.1) as $option) {
+  //  $option = number_format($option, 1);
+  //  // Sorry, we pass a variable through t() since we have provided all the
+  //  // possible values in _xmlsitemap_translation_strings().
+  //  $options[$option] = t($option);
+  //}
+
+  return $options;
+}
+
+/**
+ * Get a list of priority options.
+ *
+ * @param $default
+ *   Include a 'default' option.
+ * @return
+ *   An array of options.
+ *
+ * @see _xmlsitemap_translation_strings()
+ */
+function xmlsitemap_get_status_options($default = NULL) {
+  $options = array();
+
+  if (isset($default)) {
+    //if ($default === TRUE) {
+    //  $options['default'] = t('Default');
+    //}
+    //else {
+      $options['default'] = t('Default (@value)', array('@value' => $default ? t('included') : t('excluded')));
+    //}
+  }
+
+  $options += array(
+    1 => t('Included'),
+    0 => t('Excluded'),
+  );
+
+  return $options;
 }

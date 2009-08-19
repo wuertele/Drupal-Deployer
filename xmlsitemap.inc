@@ -256,7 +256,7 @@ function xmlsitemap_generate_chunk_header($handle, &$status, $index = FALSE) {
  */
 function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language = NULL) {
   // @todo When should "AND x.language IN ('%s', '')" be used? Drupal still lists English content when viewing site in French.
-  $sql = "SELECT x.loc, x.lastmod, x.changefreq, x.changecount, COALESCE(x.priority_override, x.priority) AS priority FROM {xmlsitemap} x
+  $sql = "SELECT x.loc, x.lastmod, x.changefreq, x.changecount, x.priority FROM {xmlsitemap} x
           WHERE x.access = 1 AND x.status = 1
           ORDER BY x.loc";
   $args = array();
