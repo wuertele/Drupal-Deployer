@@ -37,8 +37,10 @@ function cck_fieldgroup_tabs_menu_alter(&$callbacks) {
   }
 }
 
-// Load up modified AHAH callback functions
-module_load_include('inc', 'cck_fieldgroup_tabs', 'cck_fieldgroup_tabs_ahah');
+function cck_fieldgroup_tabs_init() {
+  // Load up modified AHAH callback functions
+  module_load_include('inc', 'cck_fieldgroup_tabs', 'cck_fieldgroup_tabs_ahah');
+}
 
 /**
  * Admin settings.
@@ -74,53 +76,17 @@ function cck_fieldgroup_tabs_admin_settings() {
 }
 
 /*
- * Implementation of hook_form_alter()
+ * Implementation of hook_form_alter().
  */
 function cck_fieldgroup_tabs_form_alter(&$form, $form_state, $form_id) {
   if (isset($form['type']) && $form['type']['#value'] .'_node_form' == $form_id) {
-    foreach (fieldgroup_groups($form['type']['#value']) as $group_name => $group) {
-      if (isset($form[$group_name]) && $group['settings']['form']['style'] == 'tabs' && (!isset($form[$group_name]['#access']) || $form[$group_name]['#access'])) {
-        // Add a tabset if not already added.
-        if (!isset($form['fieldgroup_tabs'])) {
-          $form['fieldgroup_tabs'] = array(
-            '#type' => 'tabset',
-            '#weight' => $group['weight'],
-            '#pre_render' => array('cck_fieldgroup_tabs_prerender_error_js'),
-          );
-        }
-        // Otherwise, reset the weight if lower than what's already set.
-        // This ensures the tabset has the weight of the lowest fieldgroup
-        // it includes.
-        else if ($group['weight'] < $form['fieldgroup_tabs']['#weight']) {
-          $form['fieldgroup_tabs']['#weight'] = $group['weight'];
-        }
-        $element = $form[$group_name];
-        $element['#type'] = 'tabpage';
-        unset($element['#collapsible'], $element['#collapsed']);
-        $form['fieldgroup_tabs'][$group_name] = $element;
-        unset($form[$group_name]);
-      }
+    if (!isset($form['#pre_render'])) {
+      $form['#pre_render'] = array();
     }
-    $node_type = $form['type']['#value'];
-    if (isset($form['fieldgroup_tabs']) && variable_get('cck_fieldset_tabs_residual', FALSE)) {
-      // Add residual content to a tab if desired.
-      $title = t(variable_get('cck_fieldset_tabs_residual_title_' . $node_type, variable_get('cck_fieldset_tabs_residual_title', t('Basics'))));
-      $residual = array(
-        '#type' => 'tabpage',
-        // Pass the value through t() if needed.
-        '#title' =>  t($title != t('Basics') ? $title : 'Basics'),
-        '#weight' => variable_get('cck_fieldset_tabs_residual_weight', -20),
-      );
-      foreach (element_children($form) as $key) {
-        // Skip the buttons so that they are below the tabset. Don't process
-        // hidden or value fields.
-        if ($key != 'fieldgroup_tabs' && $key != 'buttons' && (!isset($form[$key]['#type']) || !in_array($form[$key]['#type'], array('hidden', 'value')))) {
-          $residual[$key] = $form[$key];
-          unset($form[$key]);
-        }
-      }
-      $form['fieldgroup_tabs']['fieldgroup_tabs_basic'] = $residual;
-    }
+    // Register a process callback.
+    $form['#pre_render'][] = 'cck_fieldgroup_tabs_pre_render';
+    // Set the #input flag to trigger processing.
+    $form['#input'] = TRUE;
   }
   else if ($form_id == 'content_display_overview_form') {
     if (isset($form['#groups']) && $form['#groups']) {
@@ -143,6 +109,66 @@ function cck_fieldgroup_tabs_form_alter(&$form, $form_state, $form_id) {
   }
 }
 
+/*
+ * Form pre-render callback.
+ *
+ * Convert fieldset elements to tabs.
+ */
+function cck_fieldgroup_tabs_pre_render($form) {
+  foreach (fieldgroup_groups($form['type']['#value']) as $group_name => $group) {
+    if (isset($form[$group_name]) && $group['settings']['form']['style'] == 'tabs' && (!isset($form[$group_name]['#access']) || $form[$group_name]['#access'])) {
+      // Add a tabset if not already added.
+      if (!isset($form['fieldgroup_tabs'])) {
+        $form['fieldgroup_tabs'] = array(
+          '#type' => 'tabset',
+          '#weight' => $group['weight'],
+          '#pre_render' => array('cck_fieldgroup_tabs_prerender_error_js'),
+        );
+      }
+      // Otherwise, reset the weight if lower than what's already set.
+      // This ensures the tabset has the weight of the lowest fieldgroup
+      // it includes.
+      else if ($group['weight'] < $form['fieldgroup_tabs']['#weight']) {
+        $form['fieldgroup_tabs']['#weight'] = $group['weight'];
+      }
+      $element = $form[$group_name];
+      $element['#type'] = 'tabpage';
+      unset($element['#collapsible'], $element['#collapsed']);
+      $form['fieldgroup_tabs'][$group_name] = $element;
+      unset($form[$group_name]);
+    }
+  }
+  $node_type = $form['type']['#value'];
+  if (isset($form['fieldgroup_tabs']) && variable_get('cck_fieldset_tabs_residual', FALSE)) {
+    // Add residual content to a tab if desired.
+    $title = t(variable_get('cck_fieldset_tabs_residual_title_' . $node_type, variable_get('cck_fieldset_tabs_residual_title', t('Basics'))));
+    $residual = array(
+      '#type' => 'tabpage',
+      // Pass the value through t() if needed.
+      '#title' =>  t($title != t('Basics') ? $title : 'Basics'),
+      '#weight' => variable_get('cck_fieldset_tabs_residual_weight', -20),
+    );
+    foreach (element_children($form) as $key) {
+      // Skip the buttons so that they are below the tabset. Don't process
+      // hidden or value fields.
+      if ($key != 'fieldgroup_tabs' && $key != 'buttons' && (!isset($form[$key]['#type']) || !in_array($form[$key]['#type'], array('hidden', 'value')))) {
+        $residual[$key] = $form[$key];
+        unset($form[$key]);
+      }
+    }
+    $form['fieldgroup_tabs']['fieldgroup_tabs_basic'] = $residual;
+  }
+  // A #theme property prevents child elements from being passed to pre_render callbacks
+  // so we need to explicitly call the pre_render functions in tabs module.
+  if (isset($form['fieldgroup_tabs']) && isset($form['#theme']) && empty($form['#theme_used'])) {
+    $form['fieldgroup_tabs'] = tabs_pre_render_tabset($form['fieldgroup_tabs']);
+  }
+  return $form;
+}
+
+/*
+ * Implementation of hook_nodeapi().
+ */
 function cck_fieldgroup_tabs_nodeapi(&$node, $op, $teaser, $page) {
   switch ($op) {
     case 'view':
