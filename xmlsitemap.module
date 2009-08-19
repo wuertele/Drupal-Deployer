@@ -405,23 +405,70 @@ function _xmlsitemap_get_placeholder($field) {
 /**
  * Check if there is a visible sitemap link given a certain set of conditions.
  *
- * Optionally will set the regenerate needed flag to TRUE if there is a match.
- *
  * @param $conditions
  *   An array of values to match keyed by field.
+ * @param $flag
+ *   An optional boolean that if TRUE, will set the regenerate needed flag if
+ *   there is a match. Defaults to FALSE.
  * @return
- *   TRUE if there is a visible link, or FALSE if there is not.
+ *   TRUE if there is a visible link, or FALSE otherwise.
  */
-function _xmlsitemap_check_visible_link(array $conditions = array(), $flag = FALSE) {
+function _xmlsitemap_check_visible_links(array $conditions = array(), $flag = FALSE) {
   $conditions['access'] = 1;
   $conditions['status'] = 1;
-  $result = (bool) xmlsitemap_load_link($conditions);
+  $args = _xmlsitemap_build_conditions($conditions);
+  $visible = db_result(db_query_range("SELECT 1 FROM {xmlsitemap} WHERE ". implode(' AND ', $conditions), $args, 0, 1));
 
-  if ($result && $flag) {
+  if ($visible && $flag) {
     variable_set('xmlsitemap_regenerate_needed', TRUE);
   }
 
-  return $result;
+  return $visible;
+}
+
+/**
+ * Check if there is sitemap link is changed from the existing data.
+ *
+ * @param $link
+ *   An array of a sitemap link.
+ * @param $original_link
+ *   An optional array of the existing data. If not provided, the existing data
+ *   will be loaded from the database.
+ * @param $flag
+ *   An optional boolean that if TRUE, will set the regenerate needed flag if
+ *   there is a match. Defaults to FALSE.
+ * @return
+ *   TRUE if the link is changed, or FALSE otherwise.
+ */
+function _xmlsitemap_check_changed_link(array $link, array $original_link = NULL, $flag = FALSE) {
+  // Load the existing link if not already provided.
+  if ($original_link === NULL) {
+    $original_link = db_fetch_array(db_query_range("SELECT loc, lastmod, changefreq, changecount, priority, access, status, language FROM {xmlsitemap} WHERE type = '%s' AND id = %d", $link['type'], $link['id'], 0, 1));
+  }
+
+  $changed = FALSE;
+  if (!$original_link) {
+    if ($link['access'] && $link['status']) {
+      // Adding a new visible link.
+      $changed = TRUE;
+    }
+  }
+  else {
+    if (!($original_link['access'] && $original_link['status']) && $link['access'] && $link['status']) {
+      // Changing a non-visible link to a visible link.
+      $changed = TRUE;
+    }
+    elseif ($original_link['access'] && $original_link['status'] && array_diff_assoc($original_link, $link)) {
+      // Changing a visible link
+      $changed = TRUE;
+    }
+  }
+
+  if ($changed && $flag) {
+    variable_set('xmlsitemap_regenerate_needed', TRUE);
+  }
+
+  return $changed;
 }
 
 /**
@@ -483,26 +530,25 @@ function xmlsitemap_save_link(array $link) {
   // Temporary validation checks.
   // @todo Remove in final?
   if ($link['priority'] < 0 || $link['priority'] > 1) {
-    trigger_error(strtr('Invalid sitemap link priority %priority.<br />@link', array('%priority' => $link['priority'], '@link' => var_export($link, TRUE))), E_USER_ERROR);
+    trigger_error(t('Invalid sitemap link priority %priority.<br />@link', array('%priority' => $link['priority'], '@link' => var_export($link, TRUE))), E_USER_ERROR);
   }
   if ($link['changecount'] < 0) {
-    trigger_error(strtr('Negative changecount value. Please report this to <a href="@516928">@516928</a>.', array('@516928' => 'http://drupal.org/node/516928')), E_USER_ERROR);
+    trigger_error(t('Negative changecount value. Please report this to <a href="@516928">@516928</a>.<br />@link', array('@516928' => 'http://drupal.org/node/516928', '@link' => var_export($link, TRUE))), E_USER_ERROR);
     $link['changecount'] = 0;
   }
 
-  $existing = xmlsitemap_load_link(array('type' => $link['type'], 'id' => $link['id']));
-  $link_changed = !$existing || array_diff_assoc($existing, $link);
+  $existing = db_result(db_query_range("SELECT loc, access, status, lastmod, priority, changefreq, changecount FROM {xmlsitemap} WHERE type = '%s' AND id = %d", $link['type'], $link['id'], 0, 1));
 
-  if ($link_changed) {
-    // This is a new or changed entry, set that we need a sitemap rebuild.
-    variable_set('xmlsitemap_regenerate_needed', TRUE);
+  // Check if this is a changed link and set the regenerate flag if necessary.
+  if (!variable_get('xmlsitemap_regenerate_needed', TRUE)) {
+    _xmlsitemap_check_changed_link($link, $existing, TRUE);
+  }
 
-    if ($existing) {
-      xmlsitemap_write_record('xmlsitemap', $link, array('type', 'id'));
-    }
-    else {
-      xmlsitemap_write_record('xmlsitemap', $link);
-    }
+  if ($existing) {
+    xmlsitemap_write_record('xmlsitemap', $link, array('type', 'id'));
+  }
+  else {
+    xmlsitemap_write_record('xmlsitemap', $link);
   }
 
   // Allow other modules to respond after saving the link.
@@ -527,7 +573,9 @@ function xmlsitemap_save_link(array $link) {
 function xmlsitemap_update_links($updates = array(), $conditions = array()) {
   // If we are going to modify a visible sitemap link, we will need to set
   // the regenerate needed flag.
-  _xmlsitemap_check_visible_link($conditions, TRUE);
+  if (!variable_get('xmlsitemap_regenerate_needed', TRUE)) {
+    _xmlsitemap_check_visible_links($conditions, TRUE);
+  }
 
   $args = array();
   foreach ($updates as $field => $value) {
@@ -562,7 +610,9 @@ function xmlsitemap_update_links($updates = array(), $conditions = array()) {
  *   The number of links that were deleted.
  */
 function xmlsitemap_delete_link(array $conditions) {
-  _xmlsitemap_check_visible_link($conditions, TRUE);
+  if (!variable_get('xmlsitemap_regenerate_needed', TRUE)) {
+    _xmlsitemap_check_visible_links($conditions, TRUE);
+  }
 
   $args = _xmlsitemap_build_conditions($conditions);
   db_query("DELETE FROM {xmlsitemap} WHERE " . implode(' AND ', $conditions), $args);
