@@ -161,7 +161,7 @@ function xmlsitemap_settings_list($item_title, $items, &$form_item, $item_type =
     $rows[] = array(
       l($item['name'], $item['link'], array('query' => drupal_get_destination())),
       $item['status'] ? t('Yes') : t('No'),
-      $item['priority'] == 'default' ? t('Default') : t($item['priority']),
+      $item['priority'] == 'default' ? t('Default') : t(number_format($item['priority'], 1)),
     );
   }
 
@@ -415,26 +415,17 @@ function xmlsitemap_get_priority_options($default = NULL) {
     }
   }
 
-  $options += array(
-    '1.0' => t('1.0 (highest)'),
-    '0.9' => t('0.9'),
-    '0.8' => t('0.8'),
-    '0.7' => t('0.7'),
-    '0.6' => t('0.6'),
-    '0.5' => t('0.5 (normal)'),
-    '0.4' => t('0.4'),
-    '0.3' => t('0.3'),
-    '0.2' => t('0.2'),
-    '0.1' => t('0.1'),
-    '0.0' => t('0.0 (lowest)'),
-  );
+  foreach (range(1, 0, 0.1) as $option) {
+    $option = number_format($option, 1);
+    // Sorry, we pass a variable through t() since we have provided all the
+    // possible values in _xmlsitemap_translation_strings().
+    $options[$option] = t($option);
+  }
 
-  //foreach (range(0, 1, 0.1) as $option) {
-  //  $option = number_format($option, 1);
-  //  // Sorry, we pass a variable through t() since we have provided all the
-  //  // possible values in _xmlsitemap_translation_strings().
-  //  $options[$option] = t($option);
-  //}
+  // Add some helpful indicators for the highest, middle, and lowest values.
+  $options['1.0'] .= ' ' . t('(highest)');
+  $options['0.5'] .= ' ' . t('(normal)');
+  $options['0.0'] .= ' ' . t('(lowest)');
 
   return $options;
 }
