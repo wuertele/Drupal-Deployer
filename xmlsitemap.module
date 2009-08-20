@@ -387,23 +387,24 @@ function _xmlsitemap_check_visible_links(array $conditions = array(), $flag = FA
  * Check if there is sitemap link is changed from the existing data.
  *
  * @param $link
- *   An array of a sitemap link.
+ *   An array of the sitemap link.
  * @param $original_link
- *   An optional array of the existing data. If not provided, the existing data
- *   will be loaded from the database.
+ *   An optional array of the existing data. This should only contain the
+ *   fields necessary for comparison. If not provided the existing data will be
+ *   loaded from the database.
  * @param $flag
  *   An optional boolean that if TRUE, will set the regenerate needed flag if
  *   there is a match. Defaults to FALSE.
  * @return
  *   TRUE if the link is changed, or FALSE otherwise.
  */
-function _xmlsitemap_check_changed_link(array $link, array $original_link = NULL, $flag = FALSE) {
-  // Load the existing link if not already provided.
+function _xmlsitemap_check_changed_link(array $link, $original_link = NULL, $flag = FALSE) {
+  $changed = FALSE;
+
   if ($original_link === NULL) {
-    $original_link = db_fetch_array(db_query_range("SELECT loc, lastmod, changefreq, changecount, priority, access, status, language FROM {xmlsitemap} WHERE type = '%s' AND id = %d", $link['type'], $link['id'], 0, 1));
+    $original_link = db_fetch_array(db_query_range("SELECT loc, access, status, lastmod, priority, changefreq, changecount, language FROM {xmlsitemap} WHERE type = '%s' AND id = %d", $link['type'], $link['id'], 0, 1));
   }
 
-  $changed = FALSE;
   if (!$original_link) {
     if ($link['access'] && $link['status']) {
       // Adding a new visible link.
