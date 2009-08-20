@@ -129,9 +129,9 @@ function xmlsitemap_menu_form_menu_edit_menu_alter(&$form, $form_state) {
   //  '#default_value' => variable_get('xmlsitemap_menu_calculate_priority_' . $menu, FALSE),
   //);
 
-  $form['submit'] += array('#weight' => 9);
+  $form['submit'] += array('#weight' => 50);
   if (isset($form['delete'])) {
-    $form['delete'] += array('#weight' => 10);
+    $form['delete'] += array('#weight' => 51);
   }
 
   $form['#submit'][] = 'xmlsitemap_menu_menu_edit_menu_submit';
@@ -224,12 +224,12 @@ function xmlsitemap_menu_menu_edit_item_submit($form, $form_state) {
   xmlsitemap_menu_item_update($menu_item);
 }
 
-function xmlsitemap_menu_item_update($menu_item) {
+function xmlsitemap_menu_item_update(array $menu_item) {
   $link = xmlsitemap_menu_create_link($menu_item);
   xmlsitemap_save_link($link);
 }
 
-function xmlsitemap_menu_item_delete($menu_item) {
+function xmlsitemap_menu_item_delete(array $menu_item) {
   xmlsitemap_delete_link(array('type' => 'menu', 'id' => $menu_item['mlid']));
 }
 
@@ -252,7 +252,7 @@ function xmlsitemap_menu_get_menus() {
  * @param $menu_item
  *   A loaded menu item.
  */
-function xmlsitemap_menu_create_link($menu_item) {
+function xmlsitemap_menu_create_link(array $menu_item) {
   if (!isset($menu_item['xmlsitemap'])) {
     $menu_item['xmlsitemap'] = array();
   }
@@ -280,7 +280,7 @@ function xmlsitemap_menu_create_link($menu_item) {
 /**
  * Calculate the priority of a menu link based on depth and weight.
  */
-function xmlsitemap_menu_calculate_priority($menu_item) {
+function xmlsitemap_menu_calculate_priority(array $menu_item) {
   $priority = (MENU_MAX_DEPTH - $menu_item['depth'] + 1) / MENU_MAX_DEPTH;
   $priority -= (50 + $menu_item['weight']) / (100 * (MENU_MAX_DEPTH + 1));
   return $priority;
