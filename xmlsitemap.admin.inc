@@ -57,7 +57,7 @@ function xmlsitemap_settings_form() {
   $form['advanced']['xmlsitemap_chunk_size'] = array(
     '#type' => 'select',
     '#title' => t('Number of links in each sitemap page'),
-    '#options' => array('auto' => t('Automatic')) + drupal_map_assoc(array(100, 500, 1000, 2500, 5000, 10000, 25000, 50000)),
+    '#options' => array('auto' => t('Automatic (recommended)')) + drupal_map_assoc(array(100, 500, 1000, 2500, 5000, 10000, 25000, 50000)),
     '#default_value' => xmlsitemap_var('chunk_size'),
     // @todo This description is not clear.
     '#description' => t('If there are problems with rebuilding the sitemap, you may want to manually set this value. If you have more than 50,000 links, an index with multiple sitemap pages will be generated. There is a maximum of 1000 sitemap pages.'),
@@ -65,7 +65,7 @@ function xmlsitemap_settings_form() {
   $form['advanced']['xmlsitemap_batch_limit'] = array(
     '#type' => 'select',
     '#title' => t('Maximum number of sitemap links to process at once'),
-    '#options' => drupal_map_assoc(array(5, 10, 25, 50, 100, 250, 500, 1000, 2500)),
+    '#options' => drupal_map_assoc(array(5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000)),
     '#default_value' => xmlsitemap_var('batch_limit'),
     '#description' => t('If you have problems running cron or rebuilding the sitemap, you may want to lower this value.'),
   );
