@@ -71,14 +71,8 @@ function xmlsitemap_menu_xmlsitemap_links_clear() {
 /**
  * Load a menu link and its associated sitemap link data.
  */
-function xmlsitemap_menu_menu_link_load($mlid, $switch_user = FALSE) {
-  if ($switch_user) {
-    xmlsitemap_switch_user(0);
-  }
+function xmlsitemap_menu_menu_link_load($mlid) {
   $menu_item = menu_link_load($mlid);
-  if ($switch_user) {
-    xmlsitemap_restore_user();
-  }
   if ($data = xmlsitemap_load_link(array('type' => 'menu', 'id' => $mlid))) {
     $menu_item['xmlsitemap'] = $data;
   }
@@ -116,6 +110,7 @@ function xmlsitemap_menu_form_xmlsitemap_settings_form_alter(&$form, $form_state
  * Implementation of hook_form_FORM_ID_alter().
  *
  * @see menu_edit_menu()
+ * @see xmlsitemap_menu_menu_edit_menu_submit()
  */
 function xmlsitemap_menu_form_menu_edit_menu_alter(&$form, $form_state) {
   $menu = isset($form['menu_name']['#value']) ? $form['menu_name']['#value'] : '';
@@ -165,6 +160,7 @@ function xmlsitemap_menu_menu_edit_menu_submit($form, $form_state) {
  * Implementation of hook_form_FORM_ID_alter().
  *
  * @see menu_delete_menu_confirm()
+ * @see xmlsitemap_menu_form_menu_delete_menu_confirm_submit()
  */
 function xmlsitemap_menu_form_menu_delete_menu_confirm_alter(&$form, $form_state) {
   $form['#submit'][] = 'xmlsitemap_menu_form_menu_delete_menu_confirm_submit';
@@ -222,7 +218,9 @@ function xmlsitemap_menu_form_menu_edit_item_alter(&$form, $form_state) {
  * Form submit callback; update the sitemap link when a menu item is updated.
  */
 function xmlsitemap_menu_menu_edit_item_submit($form, $form_state) {
-  $menu_item = menu_link_load($form_state['values']['menu']['mlid'], TRUE);
+  xmlsitemap_switch_user(0);
+  $menu_item = xmlsitemap_menu_menu_link_load($form_state['values']['menu']['mlid']);
+  xmlsitemap_restore_user();
   xmlsitemap_menu_item_update($menu_item);
 }
 
