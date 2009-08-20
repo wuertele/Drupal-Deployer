@@ -62,12 +62,6 @@ function xmlsitemap_custom_edit_link_form($form_state, $link = array()) {
     '#default_value' => $link['loc'],
     '#required' => TRUE,
   );
-  //$form['xmlsitemap']['status'] = array(
-  //  '#type' => 'select',
-  //  '#title' => t('Inclusion'),
-  //  '#options' => xmlsitemap_get_status_options(),
-  //  '#default_value' => $link['status'],
-  //);
   $form['xmlsitemap']['priority'] = array(
     '#type' => 'select',
     '#title' => t('Priority'),
