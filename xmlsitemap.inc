@@ -225,21 +225,30 @@ function xmlsitemap_generate($chunk = 0, $language = NULL) {
 /**
  * Write the proper XML sitemap header.
  *
+ * @param $type
  * @param $handle
  *   A file system pointer resource that is typically created using fopen().
  * @param $status
- * @param $index
+ * @param $language
  */
-function xmlsitemap_generate_chunk_header($handle, &$status, $index = FALSE) {
-  $status &= (bool) fwrite($handle, '<?xml version="1.0" encoding="UTF-8"?>' . "\n");
+function xmlsitemap_generate_chunk_header($type, $handle, &$status, $language) {
+  $output = '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL;
+
+  // Add the stylesheet link.
   if (xmlsitemap_var('xsl')) {
-    $status &= (bool) fwrite($handle, '<?xml-stylesheet type="text/xsl" href="'. url('sitemap.xsl') .'"?>' . "\n");
+    $output .= '<?xml-stylesheet type="text/xsl" href="'. url('sitemap.xsl', array('language' => $language)) .'"?>' . PHP_EOL;
   }
-  $status &= (bool) fwrite($handle, '<' . ($index ? 'sitemapindex' : 'urlset') . ' xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n");
-  //$status &= (bool) fwrite($handle, '<' . ($index ? 'sitemapindex' : 'urlset') . ' xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"' . "\n");
-  //$status &= (bool) fwrite($handle, '  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' . "\n");
-  //$status &= (bool) fwrite($handle, '  xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9' . "\n");
-  //$status &= (bool) fwrite($handle, '  http://www.sitemaps.org/schemas/sitemap/0.9/' . ($index ? 'siteindex.xsd' : 'sitemap.xsd') . '">' . "\n");
+
+  $output .= '<' . $type . ' xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . PHP_EOL;
+
+  // This is the full XML header required for schema validation.
+  //$schemas = array('sitemapindex' => 'siteindex.xsd', 'urlset' => 'sitemap.xsd');
+  //$output .= '<' . $type . ' xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"' . PHP_EOL;
+  //$output .= '  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' . PHP_EOL;
+  //$output .= '  xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9' . PHP_EOL;
+  //$output .= '  http://www.sitemaps.org/schemas/sitemap/0.9/' . $schemas[$type] . '">' . PHP_EOL;
+
+  $status &= (bool) fwrite($handle, $output);
   return $status;
 }
 
@@ -249,23 +258,34 @@ function xmlsitemap_generate_chunk_header($handle, &$status, $index = FALSE) {
  * @param $handle
  *   A file system pointer resource that is typically created using fopen().
  * @param $status
+ *   A boolean that will be altered by reference with the success status of
+ *   writing to $handle.
  * @param $chunk
  *   An integer representing the integer of the sitemap page chunk.
  * @param $language
- *   A language object, defaults to the default language.
+ *   A language object for the sitemap chunk.
  */
-function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language = NULL) {
-  // @todo When should "AND x.language IN ('%s', '')" be used? Drupal still lists English content when viewing site in French.
-  $sql = "SELECT x.loc, x.lastmod, x.changefreq, x.changecount, x.priority FROM {xmlsitemap} x
-          WHERE x.access = 1 AND x.status = 1
-          ORDER BY x.loc";
+function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
+  $query = array(
+    'SELECT'   => 'SELECT x.loc, x.lastmod, x.changefreq, x.changecount, x.priority',
+    'FROM'     => 'FROM {xmlsitemap} x',
+    'WHERE'    => 'WHERE x.access = 1 AND x.status = 1',
+    'ORDER BY' => 'ORDER BY x.loc',
+  );
   $args = array();
+
+  // Allow other modules to alter the sitemap query SQL and arguments.
+  $data = &$query;
+  $data['__drupal_alter_by_ref'] = array(&$args);
+  drupal_alter('xmlsitemap_query_alter', $data, $language);
+
+  $sql = implode($query, ' ');
   $url_options = xmlsitemap_get_url_options(array('language' => $language, 'alias' => TRUE));
   $offset = max($chunk - 1, 0) * xmlsitemap_get_chunk_size();
   $limit = xmlsitemap_get_chunk_size();
   $query = db_query_range($sql, $args, $offset, $limit);
 
-  xmlsitemap_generate_chunk_header($handle, $status);
+  xmlsitemap_generate_chunk_header('urlset', $handle, $status, $language);
   while ($link = db_fetch_array($query)) {
     $link['alias'] = xmlsitemap_get_path_alias($link['loc'], $language->language);
     $link_output = '<url><loc>' . url($link['alias'], $url_options) . '</loc>';
@@ -302,11 +322,11 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language = NULL) 
  * @param $language
  *   A language object, defaults to the default language.
  */
-function xmlsitemap_generate_index($handle, &$status, $language = NULL) {
+function xmlsitemap_generate_index($handle, &$status, $language) {
   $url_options = xmlsitemap_get_url_options(array('language' => $language, 'alias' => TRUE));
   $chunk_count = xmlsitemap_get_chunk_count(TRUE);
 
-  xmlsitemap_generate_chunk_header($handle, $status, TRUE);
+  xmlsitemap_generate_chunk_header('sitemapindex', $handle, $status, $language);
   for ($i = 1; $i <= $chunk_count; $i++) {
     $status &= (bool) fwrite($handle, '<sitemap>');
     $status &= (bool) fwrite($handle, '<loc>' . url('sitemap-' . $i . '.xml', $url_options) . '</loc>');

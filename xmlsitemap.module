@@ -927,3 +927,24 @@ function xmlsitemap_get_changefreq_options() {
     XMLSITEMAP_FREQUENCY_YEARLY => 'yearly',
   );
 }
+
+/**
+ * Implementation of hook_xmlsitemap_query_alter().
+ */
+function i18n_xmlsitemap_query_alter(array &$query, array &$args, $language) {
+  switch (variable_get('i18n_selection_mode', 'simple')) {
+    case 'simple':
+      $query['WHERE'] .= " AND x.language IN ('%s', '')";
+      $args[] = $language->language;
+      break;
+    case 'strict':
+      $query['WHERE'] .= " AND x.language = '%s'";
+      $args[] = $language->language;
+      break;
+    //'simple' => t('Current language and language neutral.'),
+    //'mixed' => t('Mixed current language (if available) or default language (if not) and language neutral.'),
+    //'default' => t('Only default language and language neutral.'),
+    //'strict' => t('Only current language.'),
+    //'off' => t('All content. No language conditions apply.'),
+  }
+}
