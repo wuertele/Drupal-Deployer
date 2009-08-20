@@ -35,13 +35,16 @@ function xmlsitemap_custom_list_links() {
 }
 
 function xmlsitemap_custom_edit_link_form($form_state, $link = array()) {
+  module_load_include('inc', 'xmlsitemap', 'xmlsitemap.admin');
+
   $link += array(
     'id' => (int) db_result(db_query("SELECT MAX(id) FROM {xmlsitemap} WHERE type = 'custom'")) + 1,
     'loc' => '',
-    'priority' => 'default',
+    'priority' => 0.5,
     'lastmod' => 0,
     'changefreq' => 0,
     'changecount' => 0,
+    'language' => '',
   );
 
   $form['type'] = array(
@@ -59,6 +62,28 @@ function xmlsitemap_custom_edit_link_form($form_state, $link = array()) {
     '#default_value' => $link['loc'],
     '#required' => TRUE,
   );
+  //$form['xmlsitemap']['status'] = array(
+  //  '#type' => 'select',
+  //  '#title' => t('Inclusion'),
+  //  '#options' => xmlsitemap_get_status_options(),
+  //  '#default_value' => $link['status'],
+  //);
+  $form['xmlsitemap']['priority'] = array(
+    '#type' => 'select',
+    '#title' => t('Priority'),
+    '#options' => xmlsitemap_get_priority_options(),
+    '#default_value' => number_format($link['priority'], 1),
+    '#description' => t('The priority of this URL relative to other URLs on your site.'),
+  );
+  if (module_exists('locale') && $languages = locale_language_list()) {
+    $form['language'] = array(
+      '#type' => 'select',
+      '#title' => t('Language'),
+      '#default_value' => $link['language'],
+      '#options' => array('' => t('Language neutral')) + $languages,
+      '#access' => count($languages) > 1,
+    );
+  }
 
   $form['submit'] = array(
     '#type' => 'submit',
