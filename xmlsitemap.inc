@@ -440,7 +440,7 @@ function _xmlsitemap_get_blurb($check_version = TRUE) {
 
   if (!isset($blurb)) {
     $blurb = FALSE;
-    if (!$check_version || preg_match('/dev|alpha|beta/i', _xmlsitemap_get_version())) {
+    if (!$check_version || preg_match('/dev|unstable|alpha|beta/i', _xmlsitemap_get_version())) {
       $sponsors = array(
         l('Symantec', 'http://www.symantec.com/'),
         l('WebWise Solutions', 'http://www.webwiseone.com/'),
