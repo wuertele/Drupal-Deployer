@@ -97,8 +97,8 @@ function hook_xmlsitemap_link_alter(&$link) {
  *   An array of a query object, keyed by SQL keyword (SELECT, FROM, WHERE, etc).
  * @param $args
  *   An array of arguments to be passed to db_query() with $query.
- * @param $langauge
- *   The language object being used during sitemap generation.
+ * @param $language
+ *   The language object being used for sitemap generation.
  */
 function hook_xmlsitemap_query_alter(&$query, &$args, $language) {
   $query['WHERE'] .= " AND x.language = '%s'";
