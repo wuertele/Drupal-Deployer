@@ -29,17 +29,17 @@ function xmlsitemap_settings_form() {
   );
   $form['xmlsitemap']['xmlsitemap_xsl'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Include a stylesheet in the sitemaps.'),
+    '#title' => t('Include a stylesheet in the sitemaps for humans.'),
     '#default_value' => xmlsitemap_var('xsl'),
-    '#description' => t('Using the stylesheet will make it easier for actual people to view your XML sitemap since it will not be raw XML output.')
+    '#description' => t('Using the stylesheet will add formatting and tables with sorting to make it easier to view the XML sitemap data instead of viewing raw XML output. Search engines will ignore any formatting.')
   );
   $form['xmlsitemap']['xmlsitemap_languages'] = array(
     '#type' => 'checkboxes',
     '#title' => t('Generate sitemaps for the following languages'),
-    '#options' => module_exists('locale') ? locale_language_list() : array(language_default('language') => language_default('name')),
+    '#options' => array(language_default('language') => language_default('name')),
     '#default_value' => xmlsitemap_var('languages'),
     '#process' => array('expand_checkboxes', '_xmlsitemap_process_language_checkboxes'),
-    '#description' => module_exists('i18n') ? t("If the XML sitemap internationalization module is enabled, the each language's sitemap will respect the <a href=\"@i18n-settings\">content selection mode</a>.", array('@i18n-settings' => url('admin/settings/language/i18n'))) : '',
+    '#description' => !module_exists('xmlsitemap_i18n') ? t('To enable multilingual features, enable the XML sitemap internationalization module.') : '',
   );
 
   $form['advanced'] = array(
