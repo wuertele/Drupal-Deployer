@@ -608,13 +608,37 @@ function xmlsitemap_get_chunk_file($chunk = 0, $language, $compressed = FALSE) {
 }
 
 /**
- * Implementation of hook_form_FORM_ID_alter().
+ * Implementation of hook_form_alter().
  *
- * Set the regeneration needed flag if languages are changed.
+ * Set the regeneration needed flag if settings are changed.
  */
-function xmlsitemap_form_locale_languages_overview_form_alter(&$form, $form_state) {
-  //module_load_include('inc', 'xmlsitemap', 'xmlsitemap.admin');
-  //array_unshift($form['#submit'], 'xmlsitemap_form_submit_flag_regenerate');
+function xmlsitemap_form_alter(&$form, $form_state, $form_id) {
+  $forms = array(
+    'locale_languages_overview_form', // Language settings
+    'xmlsitemap_settings_form', // XML sitemap settings
+  );
+  if (in_array($form_id, $forms)) {
+    array_unshift($form['#submit'], 'xmlsitemap_form_submit_flag_regenerate');
+  }
+}
+
+/**
+ * Submit handler; Set the regenerate needed flag if variables have changed.
+ *
+ * This function needs to be called before system_settings_form_submit() or any
+ * calls to variable_set().
+ */
+function xmlsitemap_form_submit_flag_regenerate($form, $form_state) {
+  foreach ($form_state['values'] as $variable => $value) {
+    $stored_value = variable_get($variable, 'not_a_variable');
+    if (is_array($value) && isset($form_state['values']['array_filter'])) {
+      $value = array_keys(array_filter($value));
+    }
+    if ($stored_value != 'not_a_variable' && $stored_value != $value) {
+      variable_set('xmlsitemap_regenerate_needed', TRUE);
+      return;
+    }
+  }
 }
 
 /**
@@ -624,6 +648,7 @@ function xmlsitemap_form_locale_languages_overview_form_alter(&$form, $form_stat
  */
 function xmlsitemap_form_xmlsitemap_settings_form_alter(&$form, $form_state) {
   if (module_exists('vertical_tabs')) {
+    module_load_include('inc', 'xmlsitemap');
     _xmlsitemap_add_vertical_tabs($form);
   }
 }
@@ -824,71 +849,6 @@ function xmlsitemap_write_record($table, &$object, $update = array()) {
   }
 
   return $return;
-}
-
-// @todo Remove when http://drupal.org/project/500044 is fixed.
-function _xmlsitemap_add_vertical_tabs(&$form, $fieldsets = NULL) {
-  // The javascript to add to the page.
-  $settings = array();
-  // Iterate through the form, finding fieldsets.
-  foreach (element_children($form) as $delta => $key) {
-    // We need to make sure that the element we have is a fieldset
-    // and the user has access to this field.
-    if ((!isset($fieldsets) || in_array($key, $fieldsets)) &&
-      (isset($form[$key]['#type']) && $form[$key]['#type'] == 'fieldset') &&
-      (!isset($form[$key]['#access']) || $form[$key]['#access'] != FALSE)) {
-      // Add the JavaScript.
-      $settings[$key] = array(
-        'name' => $form[$key]['#title'],
-        'weight' => (isset($form[$key]['#weight']) ? $form[$key]['#weight'] : 0) + (0.01 * $delta),
-        'callback' => (isset($form[$key]['#summary_callback']) ? $form[$key]['#summary_callback'] : $key),
-        'args' => (isset($form[$key]['#summary_arguments']) ? $form[$key]['#summary_arguments'] : array()),
-      );
-      // Add a class to identify the fieldset.
-      if (isset($form[$key]['#attributes']['class'])) {
-        $form[$key]['#attributes']['class'] .= ' vertical-tabs-fieldset vertical-tabs-'. $key;
-      }
-      else {
-        $form[$key]['#attributes']['class'] = 'vertical-tabs-fieldset vertical-tabs-'. $key;
-      }
-    }
-  }
-
-  // The JavaScript and CSS specific for this form.
-  if (!empty($settings)) {
-    $js = $css = array();
-
-    // Add Garland specific theming.
-    if ($GLOBALS['theme'] == 'garland') {
-      $garland_stylesheets = variable_get('color_garland_stylesheets', array());
-      if (count($garland_stylesheets) == 0 || !module_exists('color')) {
-        $css[] = drupal_get_path('module', 'vertical_tabs') .'/garland/vertical_tabs.garland.css';
-      }
-      else {
-        foreach ($garland_stylesheets as $path) {
-          if (strstr($path, 'vertical_tabs.garland.css')) {
-            $css[] = $path;
-          }
-        }
-      }
-    }
-
-    // User sort orders by the "weight" key.
-    uasort($settings, '_user_sort');
-
-    $form['vertical_tabs'] = array(
-      '#vertical_tabs_settings' => $settings,
-      '#vertical_tabs_js' => $js,
-      '#vertical_tabs_css' => $css,
-      '#form_id' => $form['form_id']['#value'],
-      '#type' => 'markup',
-      '#value' => '',
-      '#theme' => 'vertical_tabs',
-      '#attributes' => array('class' => 'vertical-tabs clear-block'),
-    );
-
-    return TRUE;
-  }
 }
 
 function xmlsitemap_process_form_link_options($form, &$form_state) {
