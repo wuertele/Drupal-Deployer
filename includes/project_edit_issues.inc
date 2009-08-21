@@ -87,6 +87,8 @@ function project_issue_project_edit_form(&$form_state, $node) {
   $weight = 0;
   $default_component_options[0] = t('<none> (user must select)');
   $form['component']['#tree'] = TRUE;
+  $number_components = count($node->project_issue['components']);
+  $delta = max(20, $number_components + 10);
   foreach ($node->project_issue['components'] as $component) {
     $default_component_options[$component] = $component;
     $form['component'][$component]['name'] = array(
@@ -97,7 +99,7 @@ function project_issue_project_edit_form(&$form_state, $node) {
     $form['component'][$component]['weight'] = array(
       '#type' => 'weight',
       '#default_value' => $weight,
-      '#delta' => 15,
+      '#delta' => $delta,
       '#attributes' => array('class' => 'project-issue-component-weight'),
     );
     // For the delete links, we just need the offset of the component as
@@ -119,7 +121,7 @@ function project_issue_project_edit_form(&$form_state, $node) {
   $form['component_add']['weight'] = array(
     '#type' => 'weight',
     '#default_value' => $weight,
-    '#delta' => 15,
+    '#delta' => $delta,
     '#attributes' => array('class' => 'project-issue-component-weight'),
   );
   $form['default_component'] = array(
