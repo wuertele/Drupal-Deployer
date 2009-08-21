@@ -9,7 +9,8 @@
 function xmlsitemap_i18n_xmlsitemap_query_alter(array &$query, array &$args, $language) {
   // Get languages to simplify query building.
   $mode = variable_get('i18n_selection_mode', 'simple');
-  $current = i18n_get_lang();
+  //$current = i18n_get_lang();
+  $current = $language->language;
   $default = i18n_default_language();
 
   if ($mode == 'mixed' && $current == $default) {
@@ -28,6 +29,7 @@ function xmlsitemap_i18n_xmlsitemap_query_alter(array &$query, array &$args, $la
       $query['WHERE'] .= " AND x.language IN ('%s', '%s', '')";
       $args[] = $current;
       $args[] = $default;
+      break;
     case 'default':
       // Only default language and language neutral.
       $query['WHERE'] .= " AND x.language IN ('%s', '')";
@@ -35,7 +37,7 @@ function xmlsitemap_i18n_xmlsitemap_query_alter(array &$query, array &$args, $la
       break;
     case 'strict':
       // Only current language (for nodes), simple for all other types.
-      $query['WHERE'] .= " AND ((x.type = 'node' AND x.language = '%s') OR (x.type <> 'node' AND x.language IN ('%s', ''))";
+      $query['WHERE'] .= " AND ((x.type = 'node' AND x.language = '%s') OR (x.type <> 'node' AND x.language IN ('%s', '')))";
       $args[] = $current;
       $args[] = $current;
       break;

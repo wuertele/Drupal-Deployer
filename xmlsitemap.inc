@@ -284,7 +284,7 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
   drupal_alter('xmlsitemap_query', $data, $language);
 
   $sql = implode($query, ' ');
-  $url_options = xmlsitemap_get_url_options(array('language' => $language, 'alias' => TRUE));
+  $url_options = xmlsitemap_get_url_options(array('alias' => TRUE));
   $offset = max($chunk - 1, 0) * xmlsitemap_get_chunk_size();
   $limit = xmlsitemap_get_chunk_size();
   $query = db_query_range($sql, $args, $offset, $limit);
