@@ -39,6 +39,7 @@ function xmlsitemap_settings_form() {
     '#options' => module_exists('locale') ? locale_language_list() : array(language_default('language') => language_default('name')),
     '#default_value' => xmlsitemap_var('languages'),
     '#process' => array('expand_checkboxes', '_xmlsitemap_process_language_checkboxes'),
+    '#description' => module_exists('i18n') ? t("If the XML sitemap internationalization module is enabled, the each language's sitemap will respect the <a href=\"@i18n-settings\">content selection mode</a>.", array('@i18n-settings' => url('admin/settings/language/i18n'))) : '',
   );
 
   $form['advanced'] = array(
@@ -250,6 +251,7 @@ function xmlsitemap_rebuild_confirm() {
   }
 
   $form['warning'] = array(
+    '#type' => 'markup',
     '#value' => t('If you have just installed the module, this can be helpful to import all your site\'s content into the sitemap. Otherwise, this should be considered a last-resort method. <strong>This will result in the loss of all your custom inclusion/exclusion and priorty values.</strong>'),
   );
 

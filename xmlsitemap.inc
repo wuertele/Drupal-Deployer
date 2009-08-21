@@ -91,9 +91,6 @@ function _xmlsitemap_regenerate_before() {
 
   // Clear all cached sitemap files.
   xmlsitemap_clear_cache();
-
-  // Save custom data into a temporary table so it can be re-loaded later.
-  //db_query_temporary("SELECT type, id, priority, changefreq, changecount FROM {xmlsitemap}", 'xmlsitemap_temp');
 }
 
 function _xmlsitemap_get_memory_usage($start = FALSE) {
@@ -266,8 +263,15 @@ function xmlsitemap_generate_chunk_header($type, $handle, &$status, $language) {
  *   A language object for the sitemap chunk.
  */
 function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
+  static $languages;
+
+  if (!isset($languages)) {
+    $languages = language_list();
+    $languages[''] = NULL;
+  }
+
   $query = array(
-    'SELECT'   => 'SELECT x.loc, x.lastmod, x.changefreq, x.changecount, x.priority',
+    'SELECT'   => 'SELECT x.loc, x.lastmod, x.changefreq, x.changecount, x.priority, x.language',
     'FROM'     => 'FROM {xmlsitemap} x',
     'WHERE'    => 'WHERE x.access = 1 AND x.status = 1',
     'ORDER BY' => 'ORDER BY x.loc',
@@ -277,7 +281,7 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
   // Allow other modules to alter the sitemap query SQL and arguments.
   $data = &$query;
   $data['__drupal_alter_by_ref'] = array(&$args);
-  drupal_alter('xmlsitemap_query_alter', $data, $language);
+  drupal_alter('xmlsitemap_query', $data, $language);
 
   $sql = implode($query, ' ');
   $url_options = xmlsitemap_get_url_options(array('language' => $language, 'alias' => TRUE));
@@ -285,9 +289,12 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
   $limit = xmlsitemap_get_chunk_size();
   $query = db_query_range($sql, $args, $offset, $limit);
 
+  // Add the XML header and XSL if desired.
   xmlsitemap_generate_chunk_header('urlset', $handle, $status, $language);
+
   while ($link = db_fetch_array($query)) {
-    $link['alias'] = xmlsitemap_get_path_alias($link['loc'], $language->language);
+    $link['alias'] = xmlsitemap_get_path_alias($link['loc'], $link['language']);
+    $url_options['language'] = $languages[$link['language']];
     $link_output = '<url><loc>' . url($link['alias'], $url_options) . '</loc>';
     if ($link['lastmod']) {
       $link_output .= '<lastmod>' . gmdate(DATE_W3C, $link['lastmod']) . '</lastmod>';
@@ -308,6 +315,8 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
     $link_output .= '</url>' . PHP_EOL;
     $status &= (bool) fwrite($handle, $link_output);
   }
+
+  // Close the XML file.
   $status &= (bool) fwrite($handle, '</urlset>');
 
   return $status;
@@ -326,14 +335,19 @@ function xmlsitemap_generate_index($handle, &$status, $language) {
   $url_options = xmlsitemap_get_url_options(array('language' => $language, 'alias' => TRUE));
   $chunk_count = xmlsitemap_get_chunk_count(TRUE);
 
+  // Add the XML header and XSL if desired.
   xmlsitemap_generate_chunk_header('sitemapindex', $handle, $status, $language);
+
   for ($i = 1; $i <= $chunk_count; $i++) {
-    $status &= (bool) fwrite($handle, '<sitemap>');
-    $status &= (bool) fwrite($handle, '<loc>' . url('sitemap-' . $i . '.xml', $url_options) . '</loc>');
+    $output = '<sitemap>';
+    $output .= '<loc>' . url('sitemap-' . $i . '.xml', $url_options) . '</loc>';
     // @todo Use the actual lastmod value of the chunk file.
-    $status &= (bool) fwrite($handle, '<lastmod>' . gmdate(DATE_W3C, REQUEST_TIME) . '</lastmod>');
-    $status &= (bool) fwrite($handle, '</sitemap>' . "\n");
+    $output .= '<lastmod>' . gmdate(DATE_W3C, REQUEST_TIME) . '</lastmod>';
+    $output .= '</sitemap>' . PHP_EOL;
+    $status &= (bool) fwrite($handle, $output);
   }
+
+  // Close the XML file.
   $status &= (bool) fwrite($handle, '</sitemapindex>');
 
   return $status;
@@ -350,11 +364,19 @@ function xmlsitemap_rebuild_batch($form_state) {
     'file' => drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap.inc',
   );
 
+  //if ($form_state['values']['temporary_tables']) {
+  //  $batch['operations'][] = array('xmlsitemap_rebuild_batch_backup', array());
+  //}
+
   // Fetch all the sitemap links and save them to the {xmlsitemap} table.
   foreach ($form_state['values']['modules'] as $module) {
     $batch['operations'][] = array('xmlsitemap_rebuild_batch_clear', array($module));
     $batch['operations'][] = array('xmlsitemap_rebuild_batch_fetch', array($module));
   }
+
+  //if ($form_state['values']['temporary_tables']) {
+  //  $batch['operations'][] = array('xmlsitemap_rebuild_batch_restore', array($module));
+  //}
 
   // Generate all the sitemap pages.
   $batch['operations'][] = array('_xmlsitemap_regenerate_before', array());
