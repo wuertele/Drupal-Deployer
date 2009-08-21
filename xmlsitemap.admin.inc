@@ -153,16 +153,18 @@ function _xmlsitemap_process_language_checkboxes($element) {
 function xmlsitemap_settings_list($item_title, $items, &$form_item, $item_type = '') {
   $header = array(
     $item_title,
-    t('Included'),
-    t('Default priority'),
+    t('Inclusion'),
+    t('Priority'),
   );
   $rows = array();
+  $priorities = xmlsitemap_get_priority_options(NULL, FALSE);
+  $statuses = xmlsitemap_get_status_options(NULL);
 
   foreach ($items as $item) {
     $rows[] = array(
       l($item['name'], $item['link'], array('query' => drupal_get_destination())),
-      $item['status'] ? t('Yes') : t('No'),
-      $item['priority'] == 'default' ? t('Default') : t(number_format($item['priority'], 1)),
+      $statuses[$item['status'] ? 1 : 0],
+      $priorities[number_format($item['priority'], 1)],
     );
   }
 
@@ -398,34 +400,40 @@ function xmlsitemap_add_form_link_options(&$form, $link) {
  *
  * @param $default
  *   Include a 'default' option.
+ * @param $guides
+ *   Add helpful indicators for the highest, middle and lowest values.
  * @return
  *   An array of options.
- *
- * @see _xmlsitemap_translation_strings()
  */
-function xmlsitemap_get_priority_options($default = NULL) {
+function xmlsitemap_get_priority_options($default = NULL, $guides = TRUE) {
   $options = array();
+  $priorities = array(
+    '1.0' => t('1.0'),
+    '0.9' => t('0.9'),
+    '0.8' => t('0.8'),
+    '0.7' => t('0.7'),
+    '0.6' => t('0.6'),
+    '0.5' => t('0.5'),
+    '0.4' => t('0.4'),
+    '0.3' => t('0.3'),
+    '0.2' => t('0.2'),
+    '0.1' => t('0.1'),
+    '0.0' => t('0.0'),
+  );
 
   if (isset($default)) {
-    if ($default === TRUE) {
-      $options['default'] = t('Default');
-    }
-    elseif (is_numeric($default)) {
-      $options['default'] = t('Default (@value)', array('@value' => number_format($default, 1)));
-    }
+    $default = number_format($default, 1);
+    $options['default'] = t('Default (@value)', array('@value' => $priorities[$default]));
   }
 
-  foreach (range(1, 0, 0.1) as $option) {
-    $option = number_format($option, 1);
-    // Sorry, we pass a variable through t() since we have provided all the
-    // possible values in _xmlsitemap_translation_strings().
-    $options[$option] = t($option);
-  }
+  // Add the rest of the options.
+  $options += $priorities;
 
-  // Add some helpful indicators for the highest, middle, and lowest values.
-  $options['1.0'] .= ' ' . t('(highest)');
-  $options['0.5'] .= ' ' . t('(normal)');
-  $options['0.0'] .= ' ' . t('(lowest)');
+  if ($guides) {
+    $options['1.0'] .= ' ' . t('(highest)');
+    $options['0.5'] .= ' ' . t('(normal)');
+    $options['0.0'] .= ' ' . t('(lowest)');
+  }
 
   return $options;
 }
@@ -442,20 +450,17 @@ function xmlsitemap_get_priority_options($default = NULL) {
  */
 function xmlsitemap_get_status_options($default = NULL) {
   $options = array();
-
-  if (isset($default)) {
-    //if ($default === TRUE) {
-    //  $options['default'] = t('Default');
-    //}
-    //else {
-      $options['default'] = t('Default (@value)', array('@value' => $default ? t('included') : t('excluded')));
-    //}
-  }
-
-  $options += array(
+  $statuses = array(
     1 => t('Included'),
     0 => t('Excluded'),
   );
+
+  if (isset($default)) {
+    $default = $default ? 1 : 0;
+    $options['default'] = t('Default (@value)', array('@value' => drupal_strtolower($statuses[$default])));
+  }
+
+  $options += $statuses;
 
   return $options;
 }
