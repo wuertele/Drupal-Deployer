@@ -78,29 +78,28 @@ function xmlsitemap_node_node_type($op, $info) {
 /**
  * Implementation of hook_form_FORM_ID_alter().
  *
- * Show a list of content types and their status/priorities at
- * admin/settings/xmlsitemap.
+ * Show a summary of content types on the XML sitemap settings page.
  */
 function xmlsitemap_node_form_xmlsitemap_settings_form_alter(&$form, $form_state) {
-  $form['node'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Content types'),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#weight' => 30,
-    '#access' => user_access('administer content types'),
+  $type = array(
+    'type' => 'node',
+    'title' => t('Content types'),
+    'item_title' => t('Content type'),
+    'access' => user_access('administer content types'),
   );
 
   $node_types = node_get_types('names');
   foreach ($node_types as $node_type => $node_type_name) {
     $node_types[$node_type] = array(
-      'name' => check_plain(drupal_ucfirst($node_type_name)), // Or use t()?
+      'name' => drupal_ucfirst($node_type_name),
       'link' => 'admin/content/node-type/' . str_replace('_', '-', $node_type),
       'status' => variable_get('xmlsitemap_node_status_' . $node_type, 1),
       'priority' => variable_get('xmlsitemap_node_priority_' . $node_type, 0.5),
     );
   }
-  xmlsitemap_settings_list(t('Content type'), $node_types, $form['node']);
+
+  xmlsitemap_add_form_type_summary($form, $type, $node_types);
+  $form['node']['#weight'] = 30;
 }
 
 /**

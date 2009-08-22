@@ -138,46 +138,57 @@ function _xmlsitemap_process_language_checkboxes($element) {
 /**
  * Create a list of items that can be included in the sitemap.
  *
- * @param $item_type
- *   A translated string of the item type.
+ * @param $form
+ *   An array with the form to add the type summary.
+ * @param $type
+ *   An array of details about the type with the following key/value pairs:
+ *     type: The {xmlsitemap}.type value
+ *     title: The title of the type (usually plural form)
+ *     item_title: The title of each individual item of this type (singular)
+ *     access: An optional boolean that if TRUE will create links to each
+ *             item's edit page as specified by the link key in $items.
  * @param $items
  *   An array of items with the following keys:
  *     'name': The translated name of the item.
- *     'link': The path to edit the item.
- *     'status': The item's sitemap status.
- *     'priority': The items default sitemap priority.
- * @param $form_item
- *   The form item to add the list to.
+ *     'link': The path to edit the item. If $type['access'] is not TRUE, just
+               the item's name will be shown instead of a link.
+ *     'status': The item's default inclusion status.
+ *     'priority': The items default priority.
  */
-function xmlsitemap_settings_list($item_title, $items, &$form_item, $item_type = '') {
+function xmlsitemap_add_form_type_summary(&$form, $type, $items) {
+  $form[$type['type']] = array(
+    '#type' => 'fieldset',
+    '#title' => $type['title'],
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+
   $header = array(
-    $item_title,
+    $type['item_title'],
     t('Inclusion'),
     t('Priority'),
   );
-  $rows = array();
   $priorities = xmlsitemap_get_priority_options(NULL, FALSE);
   $statuses = xmlsitemap_get_status_options(NULL);
 
+  $rows = array();
   foreach ($items as $item) {
     $rows[] = array(
-      l($item['name'], $item['link'], array('query' => drupal_get_destination())),
+      !empty($type['access']) ? l($item['name'], $item['link'], array('query' => drupal_get_destination())) : check_plain($item['name']),
       $statuses[$item['status'] ? 1 : 0],
       $priorities[number_format($item['priority'], 1)],
     );
   }
 
-  $form_item['list'] = array(
+  $form[$type['type']]['list'] = array(
     '#value' => theme('table', $header, $rows),
   );
 
-  //if ($item_type) {
-  //  $count = db_result(db_query("SELECT COUNT(id) FROM {xmlsitemap} WHERE type = '%s' AND access = 1 AND status = 1", $item_type));
-  //  $form_item['count'] = array(
-  //    '#type' => 'item',
-  //    '#value' => format_plural($count, 'There is @count @type link in the sitemap.', 'There are @count @type links in the sitemap', array('@type' => drupal_strtolower($item_title))),
-  //  );
-  //}
+  //$count = db_result(db_query("SELECT COUNT(id) FROM {xmlsitemap} WHERE type = '%s' AND access = 1 AND status = 1", $type['type']));
+  //$form[$type['type']]['count'] = array(
+  //  '#type' => 'item',
+  //  '#value' => format_plural($count, 'There is 1 @type link in the XML sitemap.', 'There are @count @type links in the XML sitemap.', array('@type' => drupal_strtolower($type['type']))),
+  //);
 }
 
 /**
@@ -284,7 +295,7 @@ function xmlsitemap_add_form_type_options(&$form, $module, $options) {
     '#type' => 'fieldset',
     '#title' => t('XML sitemap'),
     '#collapsible' => TRUE,
-    '#collapsed' => !$link['status_override'] && !$link['priority_override'],
+    '#collapsed' => TRUE,
     '#access' => user_access('administer xmlsitemap'),
   );
   $form['xmlsitemap']['xmlsitemap_' . $module . '_status'] = array(
@@ -309,7 +320,7 @@ function xmlsitemap_add_form_link_options(&$form, $link) {
     '#tree' => TRUE,
     '#title' => t('XML sitemap'),
     '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
+    '#collapsed' => !$link['status_override'] && !$link['priority_override'],
     '#access' => user_access('administer xmlsitemap'),
   );
 
