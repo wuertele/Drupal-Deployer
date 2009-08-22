@@ -86,6 +86,12 @@ function xmlsitemap_settings_form() {
     '#description' => t('This is the base URL for links generated in the sitemap.'),
     '#required' => TRUE,
   );
+  $form['advanced']['xmlsitemap_developer_mode'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable developer mode'),
+    '#default_value' => xmlsitemap_var('developer_mode'),
+    '#description' => t('Exposes additional settings intended for development.'),
+  );
 
   $form['frontpage'] = array(
     '#type' => 'fieldset',
@@ -133,6 +139,109 @@ function _xmlsitemap_process_language_checkboxes($element) {
     }
   }
   return $element;
+}
+
+/**
+ * Form validator; Check the sitemap files directory.
+ *
+ * @see xmlsitemap_settings_form()
+ */
+function xmlsitemap_settings_form_validate($form, &$form_state) {
+  // Check if the xmlsitemap files directory has changed.
+  $path_new = file_create_path($form_state['values']['xmlsitemap_path']);
+  $path_old = file_create_path(xmlsitemap_var('path'));
+  if ($path_new != $path_old && file_check_directory($path_new, FILE_CREATE_DIRECTORY, 'xmlsitemap_path')) {
+    // If creating the new directory was successful, remove the old directory.
+    xmlsitemap_clear_cache(TRUE, $path_old);
+  }
+
+  // Check that the chunk size will not create more than 1000 chunks.
+  $chunk_size = $form_state['values']['xmlsitemap_chunk_size'];
+  if ($chunk_size != 'auto' && $chunk_size != 50000 && (xmlsitemap_get_link_count() / $chunk_size) > 1000) {
+    form_set_error('xmlsitemap_chunk_size', t('The sitemap page link count of @size will create more than 1,000 sitemap pages. Please increase the link count.', array('@size' => $chunk_size)));
+  }
+
+  $base_url = &$form_state['values']['xmlsitemap_base_url'];
+  $base_url = rtrim($base_url, '/');
+  if ($base_url != '' && !valid_url($base_url, TRUE)) {
+    form_set_error('xmlsitemap_base_url', t('Invalid base URL.'));
+  }
+}
+
+/**
+ * Submit handler;
+ *
+ * @see xmlsitemap_settings_form()
+ */
+function xmlsitemap_settings_form_submit($form, $form_state) {
+  // Save any changes to the frontpage link.
+  xmlsitemap_save_link(array('type' => 'frontpage', 'id' => 0, 'loc' => ''));
+}
+
+/**
+ * Menu callback; Confirm rebuilding of the sitemap.
+ *
+ * @see xmlsitemap_rebuild_confirm_submit()
+ */
+function xmlsitemap_rebuild_confirm() {
+  if (!$_POST && !xmlsitemap_var('rebuild_needed')) {
+    if (!xmlsitemap_var('regenerate_needed')) {
+      drupal_set_message(t('Your sitemap is up to date and does not need to be rebuilt.'), 'warning');
+    }
+    else {
+      drupal_set_message(t('A rebuild is not necessary. If you are just wanting to regenerate the XML sitemap files, you can <a href="@link-cron">run cron manually</a>.', array('@link-cron' => url('admin/reports/status/run-cron'))), 'warning');
+    }
+  }
+
+  // Show only the modules that implement the 6.x-2.x hooks.
+  $modules = module_implements('xmlsitemap_links_clear', TRUE);
+  
+  $form['modules'] = array(
+    '#type' => 'select',
+    '#title' => t("Select which modules' links you would like to rebuild"),
+    '#description' => t('If no modules are selected, the sitemap files will just be regenerated.'),
+    '#multiple' => TRUE,
+    '#options' => drupal_map_assoc($modules),
+    '#default_value' => xmlsitemap_var('rebuild_needed') || !xmlsitemap_var('developer_mode') ? $modules : array(),
+    '#access' => xmlsitemap_var('developer_mode'),
+  );
+  $form['save_custom_data'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Save and restore any custom inclusion and priority links.'),
+    '#default_value' => TRUE,
+    '#access' => xmlsitemap_var('developer_mode'),
+  );
+
+  // See if we can use temporary tables.
+  db_query_temporary("SELECT 1", 'xmlsitemap_temp_test');
+  if (!@db_result(db_query("SELECT 1 FROM {xmlsitemap_temp_test}"))) {
+    $form['save_custom_data']['#disabled'] = TRUE;
+    $form['save_custom_data']['#description'] = t('<strong>Because your database does not support temporary tables, this data cannot be saved and will be lost during the rebuild.</strong>');
+  }
+
+  return confirm_form(
+    $form,
+    t('Are you sure you want to rebuild the sitemap?'),
+    'admin/settings/xmlsitemap',
+    '',
+    t('Rebuild sitemap'),
+    t('Cancel')
+  );
+}
+
+/**
+ * Submit handler; Starts the sitemap rebuild batch.
+ *
+ * @see xmlsitemap_rebuild_confirm()
+ * @see xmlsitemap_rebuild_batch()
+ */
+function xmlsitemap_rebuild_confirm_submit($form, &$form_state) {
+  // Set the rebuild flag incase something fails during the rebuild.
+  variable_set('xmlsitemap_rebuild_needed', TRUE);
+
+  module_load_include('inc', 'xmlsitemap');
+  batch_set(xmlsitemap_rebuild_batch($form_state));
+  $form_state['redirect'] = 'admin/settings/xmlsitemap';
 }
 
 /**
@@ -184,105 +293,12 @@ function xmlsitemap_add_form_type_summary(&$form, $type, $items) {
     '#value' => theme('table', $header, $rows),
   );
 
-  //$count = db_result(db_query("SELECT COUNT(id) FROM {xmlsitemap} WHERE type = '%s' AND access = 1 AND status = 1", $type['type']));
-  //$form[$type['type']]['count'] = array(
-  //  '#type' => 'item',
-  //  '#value' => format_plural($count, 'There is 1 @type link in the XML sitemap.', 'There are @count @type links in the XML sitemap.', array('@type' => drupal_strtolower($type['type']))),
-  //);
-}
-
-/**
- * Form validator; Check the sitemap files directory.
- *
- * @see xmlsitemap_settings_form()
- */
-function xmlsitemap_settings_form_validate($form, &$form_state) {
-  // Check if the xmlsitemap files directory has changed.
-  $path_new = file_create_path($form_state['values']['xmlsitemap_path']);
-  $path_old = file_create_path(xmlsitemap_var('path'));
-  if ($path_new != $path_old && file_check_directory($path_new, FILE_CREATE_DIRECTORY, 'xmlsitemap_path')) {
-    // If creating the new directory was successful, remove the old directory.
-    xmlsitemap_clear_cache(TRUE, $path_old);
-  }
-
-  // Check that the chunk size will not create more than 1000 chunks.
-  $chunk_size = $form_state['values']['xmlsitemap_chunk_size'];
-  if ($chunk_size != 'auto' && $chunk_size != 50000 && (xmlsitemap_get_link_count() / $chunk_size) > 1000) {
-    form_set_error('xmlsitemap_chunk_size', t('The sitemap page link count of @size will create more than 1,000 sitemap pages. Please increase the link count.', array('@size' => $chunk_size)));
-  }
-
-  $base_url = &$form_state['values']['xmlsitemap_base_url'];
-  $base_url = rtrim($base_url, '/');
-  if ($base_url != '' && !valid_url($base_url, TRUE)) {
-    form_set_error('xmlsitemap_base_url', t('Invalid base URL.'));
-  }
-}
-
-/**
- * Submit handler;
- *
- * @see xmlsitemap_settings_form()
- */
-function xmlsitemap_settings_form_submit($form, $form_state) {
-  // Save any changes to the frontpage link.
-  xmlsitemap_save_link(array('type' => 'frontpage', 'id' => 0, 'loc' => ''));
-}
-
-/**
- * Menu callback; Confirm rebuilding of the sitemap.
- *
- * @see xmlsitemap_rebuild_confirm_submit()
- */
-function xmlsitemap_rebuild_confirm() {
-  if (!$_POST && !xmlsitemap_var('rebuild_needed')) {
-    if (!xmlsitemap_var('regenerate_needed')) {
-      drupal_set_message(t('Your sitemap is up to date and does not need to be rebuilt.'), 'warning');
-    }
-    else {
-      drupal_set_message(t('A rebuild is not necessary. If you are just wanting to re-create the sitemap files, you can <a href="@link-cron">run cron manually</a>.', array('@link-cron' => url('admin/reports/status/run-cron'))), 'warning');
-    }
-  }
-
-  $form['warning'] = array(
-    '#type' => 'markup',
-    '#value' => t('If you have just installed the module, this can be helpful to import all your site\'s content into the sitemap. Otherwise, this should be considered a last-resort method. <strong>This will result in the loss of all your custom inclusion/exclusion and priorty values.</strong>'),
+  $count = db_result(db_query("SELECT COUNT(id) FROM {xmlsitemap} WHERE type = '%s' AND access = 1 AND status = 1", $type['type']));
+  $form[$type['type']]['count'] = array(
+    '#type' => 'item',
+    '#value' => format_plural($count, 'There is 1 @type link in the XML sitemap.', 'There are @count @type links in the XML sitemap.', array('@type' => drupal_strtolower($type['type']))),
+    '#access' => xmlsitemap_var('developer_mode'),
   );
-
-  // Show only the modules that implement the 6.x-2.x hooks.
-  $modules = module_implements('xmlsitemap_links_clear', TRUE);
-
-  $form['modules'] = array(
-    '#type' => 'select',
-    '#title' => t("Select which modules' links you would like to rebuild"),
-    '#description' => t('If no modules are selected, the sitemap files will just be regenerated.'),
-    '#multiple' => TRUE,
-    '#options' => drupal_map_assoc($modules),
-    '#default_value' => xmlsitemap_var('rebuild_needed') ? $modules : array(),
-  );
-
-  return confirm_form(
-    $form,
-    t('Are you sure you want to rebuild the sitemap?'),
-    'admin/settings/xmlsitemap',
-    t("This action rebuilds your site's XML sitemap, and may be a lengthy process. This will also re-create the XML sitemap files."),
-    t('Rebuild sitemap'),
-    t('Cancel')
-  );
-}
-
-/**
- * Submit handler; Starts the sitemap rebuild batch.
- *
- * @see xmlsitemap_rebuild_confirm()
- * @see xmlsitemap_rebuild_batch()
- */
-function xmlsitemap_rebuild_confirm_submit($form, &$form_state) {
-  // Set the rebuild flag incase something fails during the rebuild.
-  variable_set('xmlsitemap_rebuild_needed', TRUE);
-
-  module_load_include('inc', 'xmlsitemap');
-  batch_set(xmlsitemap_rebuild_batch($form_state));
-  $form_state['redirect'] = 'admin/settings/xmlsitemap';
 }
 
 /**

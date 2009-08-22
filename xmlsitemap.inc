@@ -364,7 +364,7 @@ function xmlsitemap_rebuild_batch($form_state) {
     'file' => drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap.inc',
   );
 
-  //if ($form_state['values']['temporary_tables']) {
+  //if ($form_state['values']['save_custom_data']) {
   //  $batch['operations'][] = array('xmlsitemap_rebuild_batch_backup', array());
   //}
 
@@ -374,7 +374,7 @@ function xmlsitemap_rebuild_batch($form_state) {
     $batch['operations'][] = array('xmlsitemap_rebuild_batch_fetch', array($module));
   }
 
-  //if ($form_state['values']['temporary_tables']) {
+  //if ($form_state['values']['save_custom_data']) {
   //  $batch['operations'][] = array('xmlsitemap_rebuild_batch_restore', array($module));
   //}
 
