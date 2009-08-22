@@ -276,13 +276,15 @@ function xmlsitemap_rebuild_confirm_submit($form, &$form_state) {
 
 /**
  * Add the link type XML sitemap options to the link type's form.
+ *
+ * @todo Abstract the submission and link updating for this submit?
  */
 function xmlsitemap_add_form_type_options(&$form, $module, $options) {
   $form['xmlsitemap'] = array(
     '#type' => 'fieldset',
     '#title' => t('XML sitemap'),
     '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
+    '#collapsed' => !$link['status_override'] && !$link['priority_override'],
     '#access' => user_access('administer xmlsitemap'),
   );
   $form['xmlsitemap']['xmlsitemap_' . $module . '_status'] = array(
