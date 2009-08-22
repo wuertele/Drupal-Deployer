@@ -88,7 +88,7 @@ function xmlsitemap_settings_form() {
   );
   $form['advanced']['xmlsitemap_developer_mode'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Enable developer mode'),
+    '#title' => t('Enable developer mode.'),
     '#default_value' => xmlsitemap_var('developer_mode'),
     '#description' => t('Exposes additional settings intended for development.'),
   );
