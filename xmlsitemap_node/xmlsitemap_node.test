@@ -16,7 +16,7 @@ class XMLSitemapNodeTestHelper extends XMLSitemapTestHelper {
     $this->checkFilesDirectory();
 
     $this->admin_user = $this->drupalCreateUser(array('administer nodes', 'administer content types', 'administer xmlsitemap'));
-    //$this->normal_user = $this->drupalCreateUser(array('create page content', 'access content'));
+    $this->normal_user = $this->drupalCreateUser(array('create page content', 'edit any page content', 'access content'));
   }
 
   //function addNodes($count) {
@@ -66,34 +66,46 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
       'group' => 'XML sitemap',
     );
   }
-
-  /**
-   * Test that unpublishing a node removes it from the sitemap.
-   */
-  function testUnpublishedNode() {
+  
+  function testNodeSettings() {
+    $node = $this->drupalCreateNode(array('status' => FALSE, 'uid' => $this->normal_user->uid));
+    $this->assertNodeLinkValues($node, array('access' => 0, 'status' => 1, 'priority' => 0.5, 'status_override' => 0, 'priority_override' => 0));
+    
+    $this->drupalLogin($this->normal_user);
+    $this->drupalGet('node/' . $node->nid . '/edit');
+    $this->assertNoField('xmlsitemap[status]');
+    $this->assertNoField('xmlsitemap[priority]');
+    
+    $edit = array(
+      'title' => 'Test node title',
+      'body' => 'Test node body',
+    );
+    $this->drupalPost('node/' . $node->nid . '/edit', $edit, t('Save'));
+    $this->assertText('Page Test node title has been updated.');
+    $this->assertNodeLinkValues($node, array('access' => 0, 'status' => 1, 'priority' => 0.5, 'status_override' => 0, 'priority_override' => 0));
+    
     $this->drupalLogin($this->admin_user);
-
-    // Test message shown?
-    //$this->drupalGet('node/add/story');
-
-    // Create an unpublished node.
-    $node = $this->drupalCreateNode(array('status' => FALSE));
-    $this->assertNodeNotInSitemap($node);
-
-    // Test message not shown.
-
-    // Publish the node.
-    $this->drupalPost('node/' . $node->nid . '/edit', array('status' => TRUE), t('Save'));
-    $this->assertNodeInSitemap($node);
-
-    // Test message shown.
-
-    // Unpublish the node again.
-    $this->drupalPost('node/' . $node->nid . '/edit', array('status' => FALSE), t('Save'));
-    $this->assertNodeNotInSitemap($node);
-
-    // Test that the message is shown.
-    //$this->drupalGet('node/' . $node->nid . '/edit');
+    $this->drupalGet('node/' . $node->nid . '/edit');
+    $this->assertField('xmlsitemap[status]');
+    $this->assertField('xmlsitemap[priority]');
+    
+    $edit = array(
+      'xmlsitemap[status]' => 0,
+      'xmlsitemap[priority]' => 0.9,
+      'status' => TRUE,
+    );
+    $this->drupalPost('node/' . $node->nid . '/edit', $edit, t('Save'));
+    $this->assertText('Page Test node title has been updated.');
+    $this->assertNodeLinkValues($node, array('access' => 1, 'status' => 0, 'priority' => 0.9, 'status_override' => 1, 'priority_override' => 1));
+    
+    $edit = array(
+      'xmlsitemap[status]' => 'default',
+      'xmlsitemap[priority]' => 'default',
+      'status' => FALSE,
+    );
+    $this->drupalPost('node/' . $node->nid . '/edit', $edit, t('Save'));
+    $this->assertText('Page Test node title has been updated.');
+    $this->assertNodeLinkValues($node, array('access' => 0, 'status' => 1, 'priority' => 0.5, 'status_override' => 0, 'priority_override' => 0));
   }
 
   /**
