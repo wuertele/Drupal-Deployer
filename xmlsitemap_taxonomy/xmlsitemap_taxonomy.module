@@ -154,32 +154,35 @@ function xmlsitemap_taxonomy_taxonomy_form_vocabulary_submit($form, $form_state)
 
 /**
  * Implementation of hook_form_FORM_ID_alter().
- *
- * @todo Implement individual term status and priority.
  */
 function xmlsitemap_taxonomy_form_taxonomy_form_term_alter(&$form, $form_state) {
-  if ($form['#term']['tid']) {
-    $term = xmlsitemap_taxonomy_taxonomy_term_load($form['#term']['tid']);
-  }
-  else {
-    $term = (object) $form['#term'];
-  }
-  $term->vid = $form['vid']['#value'];
-  $link = xmlsitemap_taxonomy_create_link($term);
+  // Because the same form is used for deletion in confirm_form, we must check
+  // if the normal editing form elements are present. Hopefully this is fixed
+  // in Drupal 7.
+  if (isset($form['identification'])) {
+    if ($form['#term']['tid']) {
+      $term = xmlsitemap_taxonomy_taxonomy_term_load($form['#term']['tid']);
+    }
+    else {
+      $term = (object) $form['#term'];
+    }
+    $term->vid = $form['vid']['#value'];
+    $link = xmlsitemap_taxonomy_create_link($term);
 
-  // Add the link options.
-  module_load_include('inc', 'xmlsitemap', 'xmlsitemap.admin');
-  xmlsitemap_add_form_link_options($form, $link);
+    // Add the link options.
+    module_load_include('inc', 'xmlsitemap', 'xmlsitemap.admin');
+    xmlsitemap_add_form_link_options($form, $link);
 
-  $form['xmlsitemap']['#access'] |= user_access('administer taxonomy');
-  if (user_access('administer taxonomy')) {
-    $form['xmlsitemap']['priority']['#description'] .= ' ' . t('The default priority for this vocabulary can be changed <a href="@link-type">here</a>.', array('@link-type' => url('admin/content/taxonomy/edit/vocabulary/' . $term->vid, array('query' => drupal_get_destination()))));
-  }
+    $form['xmlsitemap']['#access'] |= user_access('administer taxonomy');
+    if (user_access('administer taxonomy')) {
+      $form['xmlsitemap']['priority']['#description'] .= ' ' . t('The default priority for this vocabulary can be changed <a href="@link-type">here</a>.', array('@link-type' => url('admin/content/taxonomy/edit/vocabulary/' . $term->vid, array('query' => drupal_get_destination()))));
+    }
 
-  // The submit and delete buttons need to be weighted down.
-  $form['submit'] += array('#weight' => 50);
-  if (isset($form['delete'])) {
-    $form['delete'] += array('#weight' => 51);
+    // The submit and delete buttons need to be weighted down.
+    $form['submit'] += array('#weight' => 50);
+    if (isset($form['delete'])) {
+      $form['delete'] += array('#weight' => 51);
+    }
   }
 }
 
