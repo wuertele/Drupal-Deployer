@@ -45,6 +45,7 @@ function xmlsitemap_output_chunk($chunk = 0) {
     'Etag: ' . $etag,
     'Expires: Sun, 20 May 1984 00:00:00 GMT',
     'Cache-Control: must-revalidate',
+    'X-Robots-Tag: noindex, follow',
   );
 
   // Transfer the file as output.
@@ -115,5 +116,6 @@ function xmlsitemap_output_xsl() {
 
   // Output the XSL content.
   drupal_set_header('Content-type: application/xml; charset=utf-8');
+  drupal_set_header('X-Robots-Tag: noindex, follow');
   echo $xsl_content;
 }
