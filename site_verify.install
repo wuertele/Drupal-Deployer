@@ -60,8 +60,9 @@ function site_verify_install() {
   // Add tables.
   drupal_install_schema('site_verify');
 
-  // Import data from XML sitemap engines.
+  // Import data from deprecated modules.
   site_verify_import_xmlsitemap();
+  site_verify_import_ghs();
 }
 
 /**
@@ -90,6 +91,7 @@ function site_verify_update_2() {
 function site_verify_update_3() {
   $ret = array();
   site_verify_import_xmlsitemap($ret);
+  site_verify_import_ghs($ret);
   return $ret;
 }
 
@@ -100,23 +102,35 @@ function site_verify_import_xmlsitemap(&$ret = array()) {
   if (!db_result(db_query("SELECT 1 FROM {site_verify} WHERE engine = 'google'"))) {
     if ($google_file = db_escape_string(variable_get('xmlsitemap_engines_google_verify', ''))) {
       $ret[] = update_sql("INSERT INTO {site_verify} (engine, file) VALUES ('google', '$google_file')");
+      variable_del('xmlsitemap_engines_google_verify');
     }
-    variable_del('xmlsitemap_engines_google_verify');
   }
   if (!db_result(db_query("SELECT 1 FROM {site_verify} WHERE engine = 'bing'"))) {
     if ($bing_file = db_escape_string(variable_get('xmlsitemap_engines_bing_verify', ''))) {
       $bing_content = db_escape_string(variable_get('xmlsitemap_engines_bing_verify_string', ''));
       $ret[] = update_sql("INSERT INTO {site_verify} (engine, file, file_contents) VALUES ('bing', '$bing_file', '$bing_content')");
+      variable_del('xmlsitemap_engines_bing_verify');
+      variable_del('xmlsitemap_engines_bing_verify_string');
     }
-    variable_del('xmlsitemap_engines_bing_verify');
-    variable_del('xmlsitemap_engines_bing_verify_string');
   }
   if (!db_result(db_query("SELECT 1 FROM {site_verify} WHERE engine = 'yahoo'"))) {
     if ($yahoo_file = db_escape_string(variable_get('xmlsitemap_engines_yahoo_verify', ''))) {
       $yahoo_content = db_escape_string(variable_get('xmlsitemap_engines_yahoo_verify_string', ''));
       $ret[] = update_sql("INSERT INTO {site_verify} (engine, file, file_contents) VALUES ('yahoo', '$yahoo_file', '$yahoo_content')");
+      variable_del('xmlsitemap_engines_yahoo_verify');
+      variable_del('xmlsitemap_engines_yahoo_verify_string');
     }
-    variable_del('xmlsitemap_engines_yahoo_verify');
-    variable_del('xmlsitemap_engines_yahoo_verify_string');
+  }
+}
+
+/**
+ * Import data from Google Apps Verification.
+ */
+function site_verify_import_ghs(&$ret = array()) {
+  if (!db_result(db_query("SELECT 1 FROM {site_verify} WHERE engine = 'google' AND file <> 'googlehostedservice.html'"))) {
+    if ($google_content = db_escape_string(variable_get('ghs_string_verify', ''))) {
+      $ret[] = update_sql("INSERT INTO {site_verify} (engine, file, file_contents) VALUES ('google', 'googlehostedservice.html', '$google_content')");
+      variable_del('ghs_string_verify');
+    }
   }
 }
