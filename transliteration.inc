@@ -150,16 +150,16 @@ function transliteration_process($string, $unknown = '?', $langcode = NULL) {
         if ($n <= 0xdf) {
           $ord = ($n - 192) * 64 + (ord($sequence[1]) - 128);
         }
-        else if ($n <= 0xef) {
+        elseif ($n <= 0xef) {
           $ord = ($n - 224) * 4096 + (ord($sequence[1]) - 128) * 64 + (ord($sequence[2]) - 128);
         }
-        else if ($n <= 0xf7) {
+        elseif ($n <= 0xf7) {
           $ord = ($n - 240) * 262144 + (ord($sequence[1]) - 128) * 4096 + (ord($sequence[2]) - 128) * 64 + (ord($sequence[3]) - 128);
         }
-        else if ($n <= 0xfb) {
+        elseif ($n <= 0xfb) {
           $ord = ($n - 248) * 16777216 + (ord($sequence[1]) - 128) * 262144 + (ord($sequence[2]) - 128) * 4096 + (ord($sequence[3]) - 128) * 64 + (ord($sequence[4]) - 128);
         }
-        else if ($n <= 0xfd) {
+        elseif ($n <= 0xfd) {
           $ord = ($n - 252) * 1073741824 + (ord($sequence[1]) - 128) * 16777216 + (ord($sequence[2]) - 128) * 262144 + (ord($sequence[3]) - 128) * 4096 + (ord($sequence[4]) - 128) * 64 + (ord($sequence[5]) - 128);
         }
         $result .= _transliteration_replace($ord, $unknown, $langcode);
