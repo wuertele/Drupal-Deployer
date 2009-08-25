@@ -386,12 +386,17 @@ function fckeditor_file_download($file) {
     $global_profile = fckeditor_profile_load("FCKeditor Global Profile");
 
     //Assume that files inside of fckeditor directory belong to the FCKeditor. If private directory is set, let the decision about protection to the user.
-    $private_dir = isset($global_profile->settings['private_dir']) ? $global_profile->settings['private_dir'] : "/";
+    $private_dir = isset($global_profile->settings['private_dir']) ? trim($global_profile->settings['private_dir'], '\/') : '';
+    $private_dir = preg_quote($private_dir, '#');
+    $private_dir = strtr($private_dir, array('%u' => '(\d+)'));
+    $private_dir = trim($private_dir, '\/');
+
+    $regex = '#^'. preg_quote(file_directory_path() .'/', '#') . $private_dir .'#';
 
     //If path to the file points to the FCKeditor private directory, allow downloading
-    if (strpos($path, file_directory_path() ."/". trim($private_dir, "/\\")) === 0) {
+    if (preg_match($regex, $path)) {
       $ctype = ($info = @getimagesize($path)) ? $info['mime'] : (function_exists('mime_content_type') ? mime_content_type($path) : 'application/x-download');
-      return array('Content-type: '. $ctype);
+      return array('Content-Type: '. $ctype);
     }
   }
 }
