@@ -72,7 +72,7 @@ function Toggle(textareaID, TextTextarea, TextRTE, xss_check)
   }
 
   var textArea = $('#'+textareaID);
-  var textAreaContainer = $('#'+textareaID).parents('.resizable-textarea');
+  var textAreaContainer = textArea.parents('.resizable-textarea');
   var editorFrame = $('#'+textareaID+'___Frame');
   var editorInstance = FCKeditorAPI.GetInstance(textareaID);
   var text;
@@ -90,7 +90,6 @@ function Toggle(textareaID, TextTextarea, TextRTE, xss_check)
 
     // check if we have to take care of teasers
     var teaser = FCKeditor_TeaserInfo(textareaID);
-
     if (teaser) {
       var t = text.indexOf('<!--break-->');
       if (t != -1) {
@@ -110,8 +109,6 @@ function Toggle(textareaID, TextTextarea, TextRTE, xss_check)
       }
 
       teaser.buttonContainer.show();
-    } else {
-      text = textArea.val();
     }
     textArea.val(text);
 
@@ -138,6 +135,8 @@ function Toggle(textareaID, TextTextarea, TextRTE, xss_check)
       teaser.buttonContainer.hide();
       teaser.textareaContainer.hide();
       teaser.checkboxContainer.show();
+    } else {
+      text = textArea.val();
     }
 
     editorInstance.SetData(text, true);
@@ -145,7 +144,7 @@ function Toggle(textareaID, TextTextarea, TextRTE, xss_check)
     // Switch the DIVs display.
     textArea.hide();
     textAreaContainer.show();
-    $(editorInstance.LinkedField).parent().children(".grippie").hide();
+    textArea.parent().children('.grippie').hide();
     editorFrame.show();
     $('#img_assist-link-' + textareaID).hide();
     $(".img_assist-button").hide();
