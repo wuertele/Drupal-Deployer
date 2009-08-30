@@ -387,6 +387,19 @@ function search_files_directories_directory_add_form() {
 }
 
 /**
+ * validates uniqueness of directory
+ */
+function search_files_directories_directory_add_form_validate($form, $form_state) {
+  $directory_path = $form_state['values']['directory_path'];
+  $directory_path = preg_replace('/\/*$/', '', $directory_path);
+  $sql = "SELECT * FROM {search_files_directories_directories} WHERE filepath = '%s'";
+  $result = db_query($sql, $directory_path);
+  while ($row = db_fetch_object($result)) {
+    form_set_error("search_files_directories", t('Directory Path already in list'));
+  }
+}
+
+/**
  * adds a row to the search_files directories table with  the
  * information provided by the search_files_directory_add_form
  */
