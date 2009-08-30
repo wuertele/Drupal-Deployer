@@ -59,6 +59,26 @@ function search_files_update_6202() {
   return $ret;
 }
 
+function search_files_update_6203() {
+  $ret = array();
+
+  /* add PostgreSQL support for concat() with three args, inspired by http://drupal.org/node/83974
+   * taken from modules/system/system.install which already does the same trick for concat() with two args
+   */
+  if ($GLOBALS['db_type'] == 'pgsql') {
+    if (!db_result(db_query("SELECT COUNT(*) FROM pg_proc WHERE proname = 'concat' AND pronargs = 3"))) {
+      db_query("
+        CREATE OR REPLACE FUNCTION concat(text, text, text)
+        RETURNS text AS
+        'SELECT $1 || $2 || $3;'
+        LANGUAGE 'sql';
+      ");
+    }
+  }
+
+  return $ret;
+}
+
 /* rename table if it exists, otherwise skip silently */
 function search_files_db_rename_table_ifexists(&$ret, $table, $new_name) {
   if (db_table_exists($table)) {
