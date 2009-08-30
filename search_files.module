@@ -487,3 +487,19 @@ function search_files_settings() {
   return '';
 }
 
+/**
+ * search_files_update_totals($type)
+ * marks all words of $type dirty, then updates search totals
+ *
+ * @param (string) $type
+ */
+function search_files_update_totals($type) {
+    $result = db_query("SELECT data FROM search_dataset WHERE type = '%s';", $type);
+    while ($obj = db_fetch_object($result)) {
+      foreach (explode(" ", $obj->data) as $word) {
+        search_dirty($word);
+      }
+    }
+    search_update_totals();
+}
+
