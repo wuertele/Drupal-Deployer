@@ -388,7 +388,7 @@ function fckeditor_file_download($file) {
     //Assume that files inside of fckeditor directory belong to the FCKeditor. If private directory is set, let the decision about protection to the user.
     $private_dir = isset($global_profile->settings['private_dir']) ? trim($global_profile->settings['private_dir'], '\/') : '';
     $private_dir = preg_quote($private_dir, '#');
-    $private_dir = strtr($private_dir, array('%u' => '(\d+)'));
+    $private_dir = strtr($private_dir, array('%u' => '(\d+)', '%n' => '([\x80-\xF7 \w@.-]+)')); // regex for %n taken from user_validate_name() in user.module
     $private_dir = trim($private_dir, '\/');
 
     $regex = '#^'. preg_quote(file_directory_path() .'/', '#') . $private_dir .'#';
@@ -684,7 +684,7 @@ function fckeditor_process_textarea($element) {
         if (variable_get('file_downloads', '') == FILE_DOWNLOADS_PRIVATE) {
           $private_dir = isset($global_profile->settings['private_dir']) ? trim($global_profile->settings['private_dir'], '\/') : '';
           if (!empty($private_dir)) {
-            $private_dir = strtr($private_dir, array('%u' => $user->uid));
+            $private_dir = strtr($private_dir, array('%u' => $user->uid, '%n' => $user->name));
             $_SESSION['FCKeditor']['UserFilesPath'] = url('system/files') .'/'. $private_dir .'/';
             $_SESSION['FCKeditor']['UserFilesAbsolutePath'] = realpath(file_directory_path()) . DIRECTORY_SEPARATOR . $private_dir . DIRECTORY_SEPARATOR;
           }
