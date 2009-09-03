@@ -430,8 +430,8 @@ function mvf_widget_process($element, $edit, $form_state, $form) {
     // Empty "To" value is stored as equal to the "From" value. 
     // We hide it and present empty field like it's really empty.
     $element[$to_field]['#default_value'] = ($element[$from_field]['#default_value'] == $default_value2) ? '' : $default_value2;
-    // Requirement check depends on field setting.
-    $element[$to_field]['#required'] = ($field['required'] && $field['tovalue'] == 'required');
+    // "To" value requirement check depends on field setting.
+    $element[$to_field]['#required'] = ($element['#required'] && $field['tovalue'] == 'required');
     // Adapt titles to make it clear which is the "From" and which
     // is the "To" 
     $element[$from_field]['#title'] = t('From');
@@ -488,21 +488,27 @@ function mvf_validate_field_value($field, $delta, $item) {
   if ($field['tovalue']) {
     // "To" should be greater than "From".    
     if (is_numeric($value2) && is_numeric($value) && $value2 <= $value) {
-      $errors['value2'][] = t('%name: The "To" value must be greater than the "From" value.', array('%name' => $widget_label));
+      $errors['value2'][] = t('%name: the "To" value must be greater than the "From" value.', array('%name' => $widget_label));
     }
     // If the "To" value is filled in, the "From" one should be filled in too.
     if (is_numeric($value2) && !is_numeric($value)) {
-      $errors['value'][] = t('%name: The "From" value must be filled in.', array('%name' => $widget_label));
+      $errors['value'][] = t('%name: the "From" value must be filled in.', array('%name' => $widget_label));
     }
+    // If the "From" value is filled in, "To" one should be too, if it's required.
+    // We need this check to validate additional (optional) rows in case of multiple values MVF.
+    if (is_numeric($value) && !is_numeric($value2) && $field['tovalue'] == 'required') {
+      $errors['value2'][] = t('%name: the "To" value must be filled in.', array('%name' => $widget_label));
+    }
+    
   }
 
   // Validate units
   if (empty($unit)) {
     if ($field['required']) {
-      $errors['unit'][] = t('%name: Unit is required.', array('%name' => $widget_label));
+      $errors['unit'][] = t('%name: unit is required.', array('%name' => $widget_label));
     }
     else if (is_numeric($value) || is_numeric($value2)) {
-      $errors['unit'][] = t('%name: Unit is required when an value is specified.', array('%name' => $widget_label));
+      $errors['unit'][] = t('%name: unit is required when an value is specified.', array('%name' => $widget_label));
     }
   }
   else {
@@ -522,11 +528,11 @@ function mvf_validate_field_value($field, $delta, $item) {
     }
     if (!isset($allowed_units[$unit])) {
       if (!$field['required']) {
-        $errors['unit'][] = t('%name: The unit %unit is not allowed.', array('%name' => $widget_label, '%unit' => $unit));
+        $errors['unit'][] = t('%name: the unit %unit is not allowed.', array('%name' => $widget_label, '%unit' => $unit));
       }
     }
     else if (!is_numeric($value) && $value_required) {
-      $errors[] = t('%name: A valid value is required when a unit is specified.', array('%name' => $widget_label));
+      $errors[] = t('%name: a valid value is required when a unit is specified.', array('%name' => $widget_label));
     }
   }
   
