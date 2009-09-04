@@ -17,7 +17,7 @@ function currency_units_define_units() {
     $unit_id = 'currency_'. strtolower($id);
     $items[$unit_id] = array(
       'category_id' => 'currency',
-      'category' => 'World Currencies',
+      'category' => t('World Currencies'),
       'shortname' => $id,
       'fullname' => $currency['name'],
       'symbol' => $currency['symbol'],
@@ -25,48 +25,4 @@ function currency_units_define_units() {
     );
   }
   return $items;
-}
-
-/**
- * Convert currencies using Currency API
- * 
- */
-function _currency_units_convert_currency($currency_from, $currency_to, $amount, $options = array()) {
-  $result = currency_api_convert($currency_from, $currency_to, $amount);
-  return $result;
-}
-
-/**
- * Implementation of hook_units_converter_info()
- * 
- * TODO: More converter properties ?
- */
-function currency_units_units_converter_info() {
-  return array(
-    'currency_yahoo' => array(
-      'name'     => 'Yahoo Finance',
-      'category' => 'currency',
-      'callback' => '_currency_units_convert_currency',
-    ),      
-  );
-}
-
-/**
- * Implementation of hook_units_conversions()
- */
-function currency_units_units_conversions() {
-  $currencies = currency_api_get_list();
-  $conversions = array();
-  // Build conversion matrix
-  foreach ($currencies as $from => $from_cur) {
-    $conversions[$from] = array();
-    foreach ($currencies as $to => $to_cur) {
-      // Don't convert to itself
-      if ($from != $to) {
-        // Add currency converter to the array of converters for from-to pair
-        $conversions[$from][$to][] = 'currency_yahoo';
-      }
-    }
-  }
-  return $conversions;
 }

@@ -17,66 +17,10 @@ function units_menu() {
     'page callback' => 'drupal_get_form',
     'page arguments' => array('units_admin_settings'),
     'access arguments' => array('administer site configuration'),
+    'file' => 'units.admin.inc',
   );
   return $items;
 }
-
-/**
- * Units configuration form
- */
-function units_admin_settings() {
-  $form = array();
-  $description = t('Configure site-wide list of enabled units. Modules that integrate with Units module may use this list.
-  <br/>If nothing is selected in ALL categories, all units will be enabled.'); 
-  $form['description'] = array(
-    '#value' => $description,
-  );
-  $units = units_get_units();
-  $categories = array();
-  foreach($units as $id => $unit) {
-    $categories[$unit['category_id']] = check_plain($unit['category']);
-  }
-  foreach($categories as $cat_id => $desc) {
-    $form['category_' .$cat_id] = array(
-      '#type' => 'fieldset',
-      '#title' => $desc,
-      '#collapsible' => TRUE,
-      '#collapsed' => TRUE,
-    );
-    foreach($units as $id => $unit) {
-      if ($unit['category_id'] == $cat_id) {
-        $form['category_' .$cat_id]['enable_'. $id] = array(
-          '#type' => 'checkbox',
-          '#title' => $unit['fullname'],
-          '#default_value' => in_array($id, units_get_enabled_units()) ? 1 : 0,
-        );
-      }
-    }
-  }
-  $form['save'] = array(
-    '#type' => 'submit',
-    '#value' => t('Save'),
-    '#submit' => array('units_admin_settings_submit'),
-  );
-  return $form;
-}
-
-/**
- * Submit callback for units admin settings form. 
- */
-function units_admin_settings_submit($form, &$form_state) {
-  $units = units_get_units();
-  $enabled = array();
-  foreach ($units as $id => $unit) {
-    if (isset($form_state['values']['enable_'. $id]) && $form_state['values']['enable_'. $id] == 1) {
-      $enabled[] = $id;
-    }
-  }
-  variable_set('units_enabled_units', $enabled);
-  drupal_set_message(t('Enabled units list has been saved.'));
-  $form_state['redirect'] = 'admin/content/units';  
-}
-
 
 /**
  *  Check if provided unit is enabled.
@@ -142,114 +86,9 @@ function units_get_unit_names($full = NULL) {
 }
 
 /**
- * Provide information about implemented unit converters.
- */
-function units_get_conversions($from = NULL, $to = NULL) {
-  static $conversions;
-  if (!isset($conversions)) {
-    $conversions = array();
-    
-    // Build global conversion matrix
-    $global_conversions = module_invoke_all('units_conversions');
-    
-    foreach ($global_conversions as $from_unit => $to_units) {
-      // Validate from-unit against supported unit types.
-      if (units_validate($from_unit)) {
-        $conversions[$from_unit] = array();
-        foreach ($to_units as $to_unit => $from_to_converters) {
-          // Validate to-unit against supported unit types.
-          if (units_validate($to_unit)) {
-            $conversions[$from_unit][$to_unit] = $from_to_converters;
-          }
-        }
-      }
-    }
-    // Allow modules to alter conversions matrix via hook_units_conversions_alter()
-    drupal_alter('units_conversions', $conversions);
-  }
-  if ($from) {
-    if ($to) {
-      return $conversions[$from][$to];
-    }
-    return $conversions[$from];
-  }
-  return $conversions;
-}
-
-/**
- * Return convert callback name for pair of units.
- */
-function units_get_conversion($from, $to) {
-  $units = units_get_units();
-  $converters = units_get_conversions($from, $to);    
-  // Currently we select last item in converters array
-  // TODO: Implement selection of conversion provider
-  $converter = array_pop($converters);
-  return $converter;
-}
-
-/**
- * Return array of implemented converters
- */
-function units_get_converters($converter_id = NULL) {
-  static $converters;
-  if (!isset($converters)) {
-    $converters = module_invoke_all('units_converter_info');
-  }
-  if ($converter_id) {
-    return $converters[$converter_id];
-  }
-  return $converters;
-}
-
-/**
- * Convert values between units. 
- */
-function units_convert($value, $from, $to, $options = array()) {
-  $converter = units_get_converter($from, $to);
-  $result = $converter($value, $from, $to, $options);
-  units_log('convert', $result);
-  // @todo: future integrations go here
-  return $result;
-}
-
-/**
  * Return symbol of unit
  */
 function units_get_symbol($unit_id) {
   $units = units_get_units();
   return isset($units[$unit_id]['symbol']) ? $units[$unit_id]['symbol'] : ''; 
-}
-
-/**
- * Log conversions
- * 
- * TODO: implement watchdog logging
- */
-function units_log($op, $result) {
-  if ($op == 'convert') {
-    // Possible log options: "errors"
-    $log_level = variable_get('units_log_conversions', 'error');
-    if ($log_level == 'error' && !$result['status']) {
-      // Error: log to watchdog  
-    }
-    else if ($log_level == 'all') {
-      // Success: log to watchdog
-    }
-  }
-}
-
-/**
- * Validate unit and optional amount. Return 0 for no errors, or error text. 
- */
-function units_validate($unit_id, $amount = 1) {
-  $units = units_get_units();
-  if (!isset($units[$unit_id])) {
-    return FALSE;
-  }
-  if (!isset($units[$unit_id]['validation callback'])) {
-    return TRUE;
-  }
-  // TODO: Invoke validation callbacks and return error messages
-  return TRUE;
 }

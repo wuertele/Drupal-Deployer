@@ -1,9 +1,6 @@
 $Id$
 
 Units module provides following API functions:
-
-1) Main hooks and functions to use. These are considered to be stable part of
-   the API.
  
   Hooks:
   ======
@@ -20,7 +17,13 @@ Units module provides following API functions:
     
     For simplicity, unit category descriptions are stored in units themselves. 
     As there are probably not that many units needed for single site, it won't
-    be big penalty.    
+    be big penalty.
+    
+    All unit properties should be safe for output (i.e. all special 
+    characters should be encoded). Units module does not filter them and
+    integration modules such as MVF will assume they are safe.
+    Translation of unit properties also should be done in module implementing
+    hook_define_units(). 
 
     Structure of unit definition:
     'id' => array('property1' => 'value1', 'property2' => 'value2', ...)
@@ -29,10 +32,10 @@ Units module provides following API functions:
     
     'currency_usd' => array(
       // Short name ( ~ 1 word if possible).  
-      'shortname' = 'USD',
+      'shortname' => 'USD',
        
       // Full name, e.g. several words describing unit.
-      'fullname' = 'U.S. Dollar',
+      'fullname' => t('U.S. Dollar'),
 
       // Symbol of unit, or abbreviation.
       'symbol' => '$',
@@ -43,7 +46,7 @@ Units module provides following API functions:
       
       // Name of the category of unit. Serves for grouping up similar unit 
       // types e.g. in UI.
-      'category' => 'World Currencies',
+      'category' => t('World Currencies'),
       
       // Decimals. The number of digits to the right of the decimal point.
       // Note: this is just recommended value. It's not enforced in Units 
@@ -82,67 +85,4 @@ Units module provides following API functions:
   
   units_get_symbol($id)
   
-    Returns symbol for unit, if one exists, or empty string otherwise.  
-  
-  
-2) Functions and hooks that are half-implemented, or not implemented yet. 
-   These functions may be changed or removed in future. 
-   It is undecided yet, if Units should support additional features such as 
-   unit conversions or validation.
-  
-   
-  hook_units_conversions()
-    
-    Allows modules to describe possible conversions between units. This hook should return
-    conversion matrix (2 dimensional array) of the following structure:
-     
-    $conversions['from_unit']['to_unit'] = array('converter1_id', 'converter2_id', ...);
-    
-    Converter IDs are defined by hook_units_converter_info(). Multiple converters 
-    per from-to pair are supported so in the future it will be possible to choose 
-    preferred conversion provider
-  
-    
-  hook_units_conversions_alter(&$conversions)
-  
-    Allow modules to alter global conversion matrix after it was built.
-  
-    
-  hook_units_converter_info()
-  
-    Allows modules to define unit converters. Should return array of converter 
-    definitions, keyed by Converter ID (machine-readable name). To prevent 
-    naming collisions, it's better to prefix ID with converter category or 
-    module name.
-    Example converter definition (from Currency Units module):
-    
-      'currency_yahoo' => array(
-        // Human readable name
-        'name'     => 'Yahoo Finance',     
-        
-        // Category of converter, used for grouping up converters e.e. in UI
-        'category' => 'currency',
-        
-        // Converter function name, that will be called          
-        'callback' => '_currency_units_convert_currency',
-      );      
-    
-    Converter function should be like this: 
-    foo_convert($unit_from, $unit_to, $amount, $options = array())
-      
-    Additional conversion options will be added in the future, probably. 
-  
-    
-  units_validate($unit, $amount = NULL)
-  
-    Validates unit and optional amount using several methods: first, unit is
-    checked against list of supported units. Then, if unit has one or more 
-    validation callbacks they will be called one by another.
-  
-    
-  units_convert($value, $from, $to, $options = array())
-  
-    Converts $value from $from unit type to $to unit type, using $options. 
-    Currently options are not implemented and are subject for discussing. 
-    First candidate for putting in $options is conversion provider selection 
-    facility (to be implemented... )
+    Returns symbol for unit, if one exists, or empty string otherwise.
