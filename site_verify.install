@@ -99,26 +99,13 @@ function site_verify_update_3() {
  * Import data from XML sitemap engines.
  */
 function site_verify_import_xmlsitemap(&$ret = array()) {
-  if (!db_result(db_query("SELECT 1 FROM {site_verify} WHERE engine = 'google'"))) {
-    if ($google_file = db_escape_string(variable_get('xmlsitemap_engines_google_verify', ''))) {
-      $ret[] = update_sql("INSERT INTO {site_verify} (engine, file) VALUES ('google', '$google_file')");
-      variable_del('xmlsitemap_engines_google_verify');
-    }
-  }
-  if (!db_result(db_query("SELECT 1 FROM {site_verify} WHERE engine = 'bing'"))) {
-    if ($bing_file = db_escape_string(variable_get('xmlsitemap_engines_bing_verify', ''))) {
-      $bing_content = db_escape_string(variable_get('xmlsitemap_engines_bing_verify_string', ''));
-      $ret[] = update_sql("INSERT INTO {site_verify} (engine, file, file_contents) VALUES ('bing', '$bing_file', '$bing_content')");
-      variable_del('xmlsitemap_engines_bing_verify');
-      variable_del('xmlsitemap_engines_bing_verify_string');
-    }
-  }
-  if (!db_result(db_query("SELECT 1 FROM {site_verify} WHERE engine = 'yahoo'"))) {
-    if ($yahoo_file = db_escape_string(variable_get('xmlsitemap_engines_yahoo_verify', ''))) {
-      $yahoo_content = db_escape_string(variable_get('xmlsitemap_engines_yahoo_verify_string', ''));
-      $ret[] = update_sql("INSERT INTO {site_verify} (engine, file, file_contents) VALUES ('yahoo', '$yahoo_file', '$yahoo_content')");
-      variable_del('xmlsitemap_engines_yahoo_verify');
-      variable_del('xmlsitemap_engines_yahoo_verify_string');
+  $engines = array('google', 'bing', 'yahoo');
+  foreach ($engines as $engine) {
+    if ($file = db_escape_string(variable_get('xmlsitemap_engines_' . $engine . '_verify', ''))) {
+      if (!db_result(db_query("SELECT 1 FROM {site_verify} WHERE engine = '%s' AND file <> '$file'", $engine))) {
+        $file_content = db_escape_string(variable_get('xmlsitemap_engines_' . $engine . '_verify_string', ''));
+        $ret[] = update_sql("INSERT INTO {site_verify} (engine, file, file_contents) VALUES ('$engine', '$file', '$file_content')");
+      }
     }
   }
 }
