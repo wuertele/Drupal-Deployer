@@ -273,7 +273,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   $form['security'] = array(
     '#type' => 'fieldset',
     '#title' => t('Security'),
-    '#description' => '<p>'. t("When Drupal saves user data input through a textarea, it's saved in the database in unmodified form. That's why all untrusted textarea input should be run through an input format filter before outputting it to the screen.") .'</p>'.'<p>'. t("Drupal will not, however, filter data for content editors editing a textarea. Normally, there is no security risk because the unmodified code is displayed as text and will not be rendered as HTML. But with FCKeditor installed, this is not the case, and content editors are subject to having raw, untrusted code running inside their browsers.") .'</p>'.'<p>'. t("To address this issue, you should select a security filters below to prevent FCKeditor from rendering malicious code. Note that if a textarea's input format is set to \"Full HTML\" (or if the input format of the node doesn't include the filter), FCKeditor will properly ignore the setting below and will not run the code through the security filter.") .'</p>'.'<p>'. t("If any textareas on your site are accessible to unwanted users, we recommend checking the \"HTML Filter\". You may have other modules installed that provide other kinds of security filters and you may use those as long as you trust them to properly filter out malicious code. Note that not all the filters below are security filters and will provide no protection.") .'</p>',
+    '#description' => '<p>'. t('The FCKeditor security system protects you from executing malicious code that is already in your database. In plain text areas database content is harmless because it is not executed, but the FCKeditor WYSIWYG editor evaluates HTML like a web browser and content needs to be filtered before it is loaded.') .'</p>',
     '#collapsible' => TRUE,
     '#collapsed' => TRUE
   );
@@ -318,7 +318,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
       '2' => t('Always run security filters for FCKeditor.'),
       '1' => t('Run security filters only when FCKeditor is set to start automatically.'),
     ),
-    '#description' => t('There are two ways of starting FCKeditor: automatically and manually (via toggle or in a popup). If you decide to apply security filters only when FCKeditor starts automatically, you\'ll not be protected when toggling manually from plain textarea to FCKeditor or when using FCKeditor in a popup mode. So choose this option only, if you can detect various attacks (mainly XSS) by yourself just by looking at the HTML code.'),
+    '#description' => t('There are two ways of starting FCKeditor: automatically and manually (via toggle or in a popup). If you decide to apply security filters only when FCKeditor starts automatically, you will not be protected when toggling manually from plain text area to FCKeditor or when using FCKeditor in a popup mode. So choose this option only, if you can detect various attacks (mainly XSS) by yourself just by looking at the HTML code.'),
   );
 
   $form['fckeditor_exclude_settings'] = array(
