@@ -2,6 +2,11 @@
 // $Id$
 
 /**
+ * @file
+ * The Node Export pages include.
+ */
+
+/**
  * Menu callback to configure module settings.
  */
 function node_export_settings() {
@@ -112,7 +117,7 @@ function node_export_node_export($original_node, $return_code = FALSE, $iteratio
       // Let other modules do special fixing up.
       // The function signature is: hook_export_node_alter(&$node, $original_node, $method)
       // Where $method is 'export'
-      drupal_alter("node_export_node", $node, $original_node, "export");
+      drupal_alter('node_export_node', $node, $original_node, 'export');
       $node_code = node_export_node_encode($node, $iteration);
       return ($return_code ? $node_code : drupal_get_form('node_export_form', $node_code));
     }
@@ -169,7 +174,7 @@ function node_export_node_import() {
 function node_export_import_types_check($import) {
   $types_exist = TRUE;
   if (is_array($import)) {
-    foreach($import as $new_node) {
+    foreach ($import as $new_node) {
       if (node_get_types('name', $new_node) == FALSE) {
         $types_exist = $new_node->type;
       }
@@ -245,7 +250,7 @@ function node_export_node_check($node) {
 function node_export_node_prepopulate($original_node) {
   if (node_export_is_permitted($original_node->type)) {
     $node = node_export_node_clone($original_node, "prepopulate");
-    return str_replace('admin/content/import', 'node/add/' . $node->type, drupal_get_form($node->type . '_node_form', $node));
+    return str_replace('admin/content/import', 'node/add/'. $node->type, drupal_get_form($node->type .'_node_form', $node));
   }
 }
 
@@ -302,16 +307,16 @@ function node_export_node_clone($original_node, $mode) {
     // Let other modules do special fixing up.
     // The function signature is: hook_export_node_alter(&$node, $original_node, $method)
     // Where $method is either 'prepopulate' or 'save-edit'.
-    drupal_alter("node_export_node", $node, $original_node, $mode);
+    drupal_alter('node_export_node', $node, $original_node, $mode);
 
     return $node;
 
 }
 
 /**
- *  build node code string recursively
+ *  Build node code string recursively
  */
-function node_export_node_encode($var, $iteration = 0){
+function node_export_node_encode($var, $iteration = 0) {
   $tab = '';
   for ($i = 0; $i < $iteration; $i++) {
     $tab = $tab ."  ";
@@ -325,13 +330,14 @@ function node_export_node_encode($var, $iteration = 0){
     $empty = empty($var);
     $code = "array(". ($empty ? '' : "\n");
     foreach ($var as $key => $value) {
-      $out = $tab ."  '". $key ."' => ".node_export_node_encode($value, $iteration).",\n";
+      $out = $tab ."  '". $key ."' => ". node_export_node_encode($value, $iteration) .",\n";
       drupal_alter('node_export_node_encode', $out, $tab, $key, $value, $iteration);
       $code .= $out;
     }
     $code .= ($empty ? '' : $tab) .")";
     return $code;
-  } else {
+  }
+  else {
     if (is_string($var)) {
       return "'". addslashes($var) ."'";
     }
@@ -348,16 +354,16 @@ function node_export_node_encode($var, $iteration = 0){
 }
 
 /**
- *  eval and return decoded string
+ *  Evaluate and return decoded string.
  */
 function node_export_node_decode($string) {
-  $array = eval('return '.$string.';');
+  $array = eval('return '. $string .';');
   $return = node_export_node_decode_objects($array);
   return $return;
 }
 
 /**
- *  recursively convert arrays back to objects
+ * Recursively convert arrays back to objects.
  */
 function node_export_node_decode_objects($array) {
   foreach ($array as $k => $v) {

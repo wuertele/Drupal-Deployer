@@ -2,10 +2,15 @@
 // $Id$
 
 /**
-* Field handler to present a export node link.
-*
-* Closely modeled after views/modules/node/views_handler_field_node_link_edit.inc
-*/
+ * @file
+ * The Node Export views field handler.
+ */
+
+/**
+ * Field handler to present a export node link.
+ *
+ * Closely modeled after views/modules/node/views_handler_field_node_link_edit.inc
+ */
 class views_handler_field_node_link_export extends views_handler_field_node_link {
   function construct() {
     parent::construct();
