@@ -299,7 +299,7 @@ function FCKeditor_TeaserInfo(taid) {
 /**
  * Creates a screen wide popup window containing an FCKeditor
  */
-function FCKeditor_OpenPopup(popupUrl, jsID, textareaID) {
+function FCKeditor_OpenPopup(popupUrl, jsID, textareaID, width) {
   popupUrl = popupUrl + '?var='+ jsID + '&el=' + textareaID;
 
   var teaser = FCKeditor_TeaserInfo(textareaID);
@@ -307,7 +307,13 @@ function FCKeditor_OpenPopup(popupUrl, jsID, textareaID) {
     popupUrl = popupUrl + '&teaser=' + teaser.textarea.attr('id');
   }
 
-  window.open(popupUrl, null, 'toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=no,resizable=1,dependent=yes');
+  var percentPos = width.indexOf('%');
+  if (percentPos != -1) {
+    width = width.substr(0, percentPos);
+    width = width / 100 * screen.width;
+  }
+
+  window.open(popupUrl, null, 'width=' + width + ',toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=no,resizable=1,dependent=yes');
 }
 
 // Probably JsMin was used to compress the code.
