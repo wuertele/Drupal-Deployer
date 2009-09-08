@@ -184,7 +184,10 @@ function FCKeditor_OnComplete(editorInstance) {
     teaser.checkboxContainer.show();
   }
 
-  $(editorInstance.LinkedField).parent().children(".grippie").hide();
+  // jQuery's hide() does not work when the field is not visible, for instance because it is in a collapsed field set
+  $(editorInstance.LinkedField).parent().children('.grippie').each(function() {
+    this.style.display = 'none';
+  });
 
   // very ugly hack to circumvent FCKeditor from re-updating textareas on submission. We do that ourselves
   // FCKeditor will happily update the fake textarea while we will use the proper one
