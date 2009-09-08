@@ -201,9 +201,23 @@ function mollom_node_admin_overview_submit($form, &$form_state) {
  * Display a reports page.
  */
 function mollom_reports_page() {
-  $form['statistics'] = array(
+  $form['chart'] = array(
     '#type' => 'item',
+    '#title' => t('Statistics'),
     '#value' => '<embed src="http://mollom.com/statistics.swf?key='. check_plain(variable_get('mollom_public_key', '')) .'" quality="high" width="100%" height="430" name="Mollom" align="middle" play="true" loop="false" allowScriptAccess="sameDomain" type="application/x-shockwave-flash" pluginspage="http://www.adobe.com/go/getflashplayer"></embed>',
   );
+  if (module_exists('dblog')) {
+    $logs = array();
+    $query = db_query_range("SELECT message, variables FROM {watchdog} WHERE type = 'mollom' AND severity <= %d ORDER BY wid DESC", WATCHDOG_WARNING, 0, 10);
+    while ($log = db_fetch_object($query)) {
+      $logs[] = t($log->message, unserialize($log->variables));
+    }
+    $form['watchdog'] = array(
+      '#type' => 'item',
+      '#title' => t('Recent Mollom messages'),
+      '#value' => $logs ? theme('item_list', $logs) : t('None'),
+    );
+  }
+  dpm($form);
   return drupal_render($form);
 }
