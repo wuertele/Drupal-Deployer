@@ -32,7 +32,7 @@ function hook_node_export_access_alter(&$access, $node) {
  *   'export' for exports, and 'prepopulate' or 'save-edit' for imports
  *   depending on the method used.
  */
-function hook_node_export_node_alter(&$node, $original_node, 'export') {
+function hook_node_export_node_alter(&$node, $original_node, $method) {
   // no example code
 }
 
