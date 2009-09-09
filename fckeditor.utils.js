@@ -9,6 +9,13 @@ var fckTeaser = { lookup : {}, lookupSetup : false, cache : {} };
  * Drupal behavior that adds FCKeditors to textareas
  */
 Drupal.behaviors.fckeditor = function(context) {
+  // make sure the textarea behavior is run first, to get a correctly sized grippie
+  // the textarea behavior requires the teaser behavior, so load that one as well
+  if (Drupal.behaviors.teaser && Drupal.behaviors.textarea) {
+    Drupal.behaviors.teaser(context);
+    Drupal.behaviors.textarea(context);
+  }
+  
   $('textarea.fckeditor:not(.fckeditor-processed)', context).each(function() {
     var textarea = $(this).addClass('fckeditor-processed');
 
