@@ -274,7 +274,7 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
     'SELECT'   => 'SELECT x.loc, x.lastmod, x.changefreq, x.changecount, x.priority, x.language',
     'FROM'     => 'FROM {xmlsitemap} x',
     'WHERE'    => 'WHERE x.access = 1 AND x.status = 1',
-    'ORDER BY' => 'ORDER BY x.loc',
+    'ORDER BY' => 'ORDER BY x.language, x.loc',
   );
   $args = array();
 
@@ -293,8 +293,8 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
   xmlsitemap_generate_chunk_header('urlset', $handle, $status, $language);
 
   while ($link = db_fetch_array($query)) {
-    $link['alias'] = xmlsitemap_get_path_alias($link['loc'], $link['language']);
-    $url_options['language'] = $languages[$link['language']];
+    $link['alias'] = xmlsitemap_get_path_alias($link['loc'], $language->language);
+    $url_options['language'] = $language;
     $link_output = '<url><loc>' . url($link['alias'], $url_options) . '</loc>';
     if ($link['lastmod']) {
       $link_output .= '<lastmod>' . gmdate(DATE_W3C, $link['lastmod']) . '</lastmod>';
