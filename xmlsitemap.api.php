@@ -100,7 +100,7 @@ function hook_xmlsitemap_link_alter(&$link) {
  * @param $language
  *   The language object being used for sitemap generation.
  */
-function hook_xmlsitemap_query_alter(&$query, &$args, $language) {
+function hook_xmlsitemap_query_alter(array &$query, array &$args, stdClass $language) {
   $query['WHERE'] .= " AND x.language = '%s'";
   $args[] = $language->language;
 }
