@@ -682,17 +682,17 @@ function mollom_validate_analysis(&$mollom_state, $form_state, &$edit) {
       // Keep track of the response so we can use it later to save the data in the database:
       $GLOBALS['mollom_response'] = $result;
 
-      watchdog('mollom', 'Ham: %message', array('%message' => $data['post_body']));
+      watchdog('mollom', 'Ham: %message<br />Session: %session', array('%message' => $data['post_body'], '%session' => $result['session_id']));
     }
     elseif ($result['spam'] == MOLLOM_ANALYSIS_SPAM) {
       form_set_error('mollom', t('Your submission has triggered the spam filter and will not be accepted.'));
-      watchdog('mollom', 'Spam: %message', array('%message' => $data['post_body']));
+      watchdog('mollom', 'Spam: %message<br />Session: %session', array('%message' => $data['post_body'], '%session' => $result['session_id']));
     }
     else {
       if (empty($mollom_state['#passed_captcha'])) {
         // A captcha will be generated.
         form_set_error('mollom', t("We're sorry, but the spam filter thinks your submission could be spam. Please complete the CAPTCHA."));
-        watchdog('mollom', 'Unsure: %message', array('%message' => $data['post_body']));
+        watchdog('mollom', 'Unsure: %message<br />Session: %session', array('%message' => $data['post_body'], '%session' => $result['session_id']));
         $mollom_state['#require_captcha'] = TRUE;
       }
     }
