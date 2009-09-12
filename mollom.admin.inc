@@ -218,6 +218,5 @@ function mollom_reports_page() {
       '#value' => $logs ? theme('item_list', $logs) : t('None'),
     );
   }
-  dpm($form);
   return drupal_render($form);
 }
