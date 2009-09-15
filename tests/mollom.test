@@ -36,7 +36,6 @@ class MollomWebTestCase extends DrupalWebTestCase {
     // Delete any previously set Mollom servers to make sure we are using
     // the default ones.
     variable_del('mollom_servers');
-    //variable_set('mollom_servers', array('http://127.0.0.1:8080'));
 
     // Call the mollom.verifyKey function directly and check that the key
     // is valid.
@@ -210,6 +209,50 @@ class MollomFallbackTestCase extends MollomWebTestCase {
    */
   function _testSubmissionFallbackText() {
     return t("The spam filter installed on this site is currently unavailable. Per site policy, we are unable to accept new submissions until that problem is resolved. Please try resubmitting the form in a couple of minutes.");
+  }
+}
+
+class MollomServerListRecoveryTestCase extends MollomWebTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => t('Server list recovery'),
+      'description' => t('Check that the module can recover from an invalid server list.'),
+      'group' => t('Mollom'),
+    );
+  }
+
+  function setUp() {
+    parent::setUp('mollom');
+    $this->mollomKeySetup();
+  }
+
+  /**
+   * Make sure the server list is reset when the Mollom servers are unavailable or incorrect.
+   */
+  function testServerListRecovery() {
+    $list = array(
+      array(
+	    'http://not-a-valid-server-1',
+        'http://not-a-valid-server-2',
+	   ),
+      array(
+        'not-a-valid-server-url-1', // the lack of the http://-schema results in different error codes
+        'not-a-valid-server-url-2',
+	   ),
+	);
+
+    foreach ($list as $servers) {
+      // Call mollom.verifyKey with an invalid server list.  The expected behavior 
+      // is that the first call fails, but that the second call succeeds because 
+      // the server list is automatically reset or recovered by the Mollom module.
+      variable_set('mollom_servers', $servers);
+
+      $key_is_valid = mollom('mollom.verifyKey');
+      $this->assertIdentical($key_is_valid, NETWORK_ERROR, t('The Mollom servers could not be contacted'));
+
+      $key_is_valid = mollom('mollom.verifyKey');
+      $this->assertIdentical($key_is_valid, TRUE, t('The Mollom servers could be contacted.'));
+    }
   }
 }
 
