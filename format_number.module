@@ -73,7 +73,7 @@ function format_number_get_decimal_point_options() {
   return array(
     "\x2E" => t('full stop (.)'),
     "\x2C" => t('comma (,)'),
-    "\xD9\xAB" => t('arabic decimal separator (٫)'),
+    "\xD9\xAB" => t('arabic decimal separator (?)'),
   );
 }
 
@@ -89,9 +89,9 @@ function format_number_get_thousands_separator_options() {
     "\x2C" => t('comma (,)'),
     "\x27" => t("apostrophe (')"),
     "\xC2\xA0" => t('no-break space ( )'),
-    "\xEF\xBC\x8C" => t('full width comma (，)'),
-    "\xD9\xAC" => t('arabic thousands separator (٬)'),
-    "\xE1\x8B\x88" => t('ethiopic syllable wa (ወ)'),
+    "\xEF\xBC\x8C" => t('full width comma (,)'),
+    "\xD9\xAC" => t('arabic thousands separator (?)'),
+    "\xE1\x8B\x88" => t('ethiopic syllable wa (?)'),
   );
 }
 
@@ -175,6 +175,30 @@ function format_number($number, $decimals = 0) {
   // number_format() can only deal with one chararcter symbols, so that
   // we tell him to use the placeholders X and Z that we replace later.
   return str_replace(array('X', 'Z'), array($format_options['decimal_point'], $format_options['thousands_sep']), number_format($number, $decimals, 'X', 'Z'));
+}
+
+/**
+ * Formats numbers to a specified number of significant figures.
+ *
+ * @param number $number
+ *   The number to format.
+ * @param integer $significant_figures
+ *   The number of significant figures to round and format the number to.
+ * @return string
+ *   The rounded and formatted number.
+ */
+function format_number_significant_figures($number, $significant_figures) {
+  // Compute the number of decimal places we need to round and format the
+  // number to (may be negative).
+  $decimals = floor($significant_figures - log10(abs($number)));
+  // Round as a regular number.
+  $number = round($number, $decimals);
+  // We do not want decimals if the resulting number is zero.
+  if ($number == 0) {
+    $decimals = 0;
+  }
+  // Leave the formatting to format_number().
+  return format_number($number, $decimals);
 }
 
 /**

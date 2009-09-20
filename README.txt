@@ -67,6 +67,18 @@ PHP API
 function format_number($number, $decimals = 0) {}
 
 /**
+ * Formats numbers to a specified number of significant figures.
+ *
+ * @param number $number
+ *   The number to format.
+ * @param integer $significant_figures
+ *   The number of significant figures to round and format the number to.
+ * @return string
+ *   The rounded and formatted number.
+ */
+function format_number_significant_figures($number, $significant_figures) {}
+
+/**
  * Parse a formatted number.
  *
  * This function implements lenient parsing when possible, and only falls
