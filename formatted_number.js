@@ -13,33 +13,33 @@
  *                      maxlength error during FAPI validation.
  */
 Drupal.behaviors.formatted_number = function(context) {
-  $("input.formatted-number:not(.formatted-number-processed)", context).each(function() {
+  $('input.formatted-number:not(.formatted-number-processed)', context).each(function() {
     // Make sure this element is not processed more than once.
-    $(this).addClass("formatted-number-processed");
+    $(this).addClass('formatted-number-processed');
 
     // Number of decimal places for this element.
-    var decimals = $(this).attr("decimals");
+    var decimals = $(this).attr('decimals');
     decimals = (decimals == undefined ? -1 : Math.max(-1, parseInt(decimals)));
 
     // The element is properly formatted on page load.
     Drupal.formatted_number.formatElement(this, decimals);
 
     // Bind element events.
-    $(this).bind("focus", function() {
+    $(this).bind('focus', function() {
       Drupal.formatted_number.clearThousandsSep(this);
-    }).bind("blur", function() {
+    }).bind('blur', function() {
       Drupal.formatted_number.formatElement(this, decimals);
     });
 
-    $(this).parents("form:not(.formatted-number-processed)").each(function() {
+    $(this).parents('form:not(.formatted-number-processed)').each(function() {
       // Make sure this form is not processed more than once.
-      $(this).addClass("formatted-number-processed");
+      $(this).addClass('formatted-number-processed');
 
       // Clear thousands separators before submitting. This is not strictly necessary
       // because input is always validated on the server, but it prevents from getting
       // "field cannot be longer than max" errors issued by FAPI.
-      $(this).bind("submit", function() {
-        $("input.formatted-number", this).each(function() {
+      $(this).bind('submit', function() {
+        $('input.formatted-number', this).each(function() {
           Drupal.formatted_number.clearThousandsSep(this);
         });
       });
@@ -62,10 +62,10 @@ Drupal.formatted_number.clearThousandsSep = function(element) {
   var number = $(element).val();
   if (number.length > 0 && Drupal.settings.format_number.thousands_sep.length > 0) {
     var thsep = Drupal.settings.format_number.thousands_sep;
-    if (thsep == "\u00A0") {
-      thsep += " ";
+    if (thsep == '\u00A0') {
+      thsep += ' ';
     }
-    number = number.replace(new RegExp("["+ thsep +"]", "g"), "");
+    number = number.replace(new RegExp('['+ thsep +']', 'g'), '');
     $(element).val(number);
   }
 };
@@ -82,7 +82,7 @@ Drupal.formatted_number.formatElement = function(element, decimals) {
   var number = $(element).val();
   if (number.length > 0) {
     number = Drupal.parseNumber(number, false);
-    if (typeof(number) == "number") {
+    if (typeof(number) == 'number') {
       number = Drupal.formatNumber(number, decimals);
     }
     $(element).val(number);
