@@ -40,6 +40,9 @@ function viewreference_theme() {
     'viewreference_formatter_default' => array(
       'arguments' => array('element'),
     ),
+    'viewreference_formatter_full' => array(
+      'arguments' => array('element'),
+    ),
     'viewreference_formatter_plain' => array(
       'arguments' => array('element'),
     ),
@@ -188,7 +191,12 @@ function viewreference_content_is_empty($item, $field) {
 function viewreference_field_formatter_info() {
   return array(
     'default' => array(
-      'label' => t('Full view'),
+      'label' => t('Default (view)'),
+      'field types' => array('viewreference'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+    'full' => array(
+      'label' => t('Full (title and view)'),
       'field types' => array('viewreference'),
       'multiple values' => CONTENT_HANDLE_CORE,
     ),
@@ -207,7 +215,6 @@ function viewreference_field_formatter_info() {
 
 /**
  * Theme function for 'default' viewreference field formatter.
- *
  */
 function theme_viewreference_formatter_default($element) {
   $output = '';
@@ -215,6 +222,22 @@ function theme_viewreference_formatter_default($element) {
     $view = db_fetch_object(db_query("SELECT name, position FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
     $args = viewreference_get_element_args($element);
     $view_object = views_get_view($view->name);
+    $output .= $view_object->preview($view->position, $args);
+  }
+  return $output;
+}
+
+/**
+ * Theme function for 'full' viewreference field formatter.
+ */
+function theme_viewreference_formatter_full($element) {
+  $output = '';
+  if (!empty($element['#item']['view_id']) && is_numeric($element['#item']['view_id'])) {
+    $view = db_fetch_object(db_query("SELECT name, position FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
+    $args = viewreference_get_element_args($element);
+    $view_object = views_get_view($view->name);
+    $title = $view_object->get_title() ? $view_object->get_title() : $view->title;
+    $output .= '<h3 class="title viewreference-title">'. check_plain($title) .'</h3>';
     $output .= $view_object->preview($view->position, $args);
   }
   return $output;
@@ -229,7 +252,7 @@ function theme_viewreference_formatter_plain($element) {
     $view = db_fetch_object(db_query("SELECT name, title FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
     $view_object = views_get_view($view->name);
     $title = $view_object->get_title() ? $view_object->get_title() : $view->title;
-    $output .= check_plain($view->title);
+    $output .= check_plain($title);
   }
   return $output;
 }
