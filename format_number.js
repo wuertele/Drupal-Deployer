@@ -1,5 +1,7 @@
 // $Id$
 
+(function ($) {
+
 /**
  * Format a number with (site default or user defined) thousands separator
  * and decimal point.
@@ -127,3 +129,5 @@ Drupal.parseNumber = function(number, required) {
   // string into a pure javascript number (integer or float).
   return number.replace(/^([0-9]*\.?[0-9]+)?.*$/, "$1") * (is_negative ? -1 : 1);
 }
+
+})(jQuery);
