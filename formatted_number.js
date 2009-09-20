@@ -1,5 +1,7 @@
 // $Id$
 
+(function ($) {
+
 /**
  * Formatted number behavior.
  *
@@ -66,7 +68,7 @@ Drupal.formatted_number.clearThousandsSep = function(element) {
     number = number.replace(new RegExp("["+ thsep +"]", "g"), "");
     $(element).val(number);
   }
-}
+};
 
 /**
  * Format the number in the given element with site/user defined options.
@@ -85,4 +87,6 @@ Drupal.formatted_number.formatElement = function(element, decimals) {
     }
     $(element).val(number);
   }
-}
+};
+
+})(jQuery);
