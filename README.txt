@@ -119,10 +119,12 @@ JAVASCRIPT API
  *   The number being formatted.
  * @param int decimals
  *   Number of decimal digits. Use -1 for any number of decimals.
+ * @param boolean truncate
+ *   TRUE to trucate the decimal part (default). FALSE to round the result.
  * @return string
  *   The formatted number.
  */
-Drupal.formatNumber = function(number, decimals) {}
+Drupal.formatNumber = function(number, decimals, truncate) {}
 
 /**
  * Parse a number with (site default or user defined) thousands separator

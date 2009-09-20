@@ -10,15 +10,26 @@
  *   The number being formatted.
  * @param int decimals
  *   Number of decimal digits. Use -1 for any number of decimals.
+ * @param boolean truncate
+ *   TRUE to trucate the decimal part (default). FALSE to round the result.
  * @return string
  *   The formatted number.
  */
-Drupal.formatNumber = function(number, decimals) {
+Drupal.formatNumber = function(number, decimals, truncate) {
   if (typeof(number) != "number") {
     number = 0;
   }
   if (typeof(decimals) != "number") {
     decimals = 0;
+  }
+  if (typeof(truncate) == "undefined") {
+    truncate = true;
+  }
+
+  // Round the number to the specified number of decimals if requested to.
+  // Otherwise, the decimal part will be trucated.
+  if (decimals > 0 && !truncate) {
+    number = Math.round(number * Math.pow(10, decimals)) / Math.pow(10, decimals);
   }
 
   // Obtain the sign and separate integer/decimal parts.
