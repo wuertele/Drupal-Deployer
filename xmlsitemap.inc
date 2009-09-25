@@ -233,7 +233,9 @@ function xmlsitemap_generate_chunk_header($type, $handle, &$status, $language) {
 
   // Add the stylesheet link.
   if (xmlsitemap_var('xsl')) {
-    $output .= '<?xml-stylesheet type="text/xsl" href="'. url('sitemap.xsl', array('language' => $language)) .'"?>' . PHP_EOL;
+    // @todo Use 'base_url' => xmlsitemap_var('base_url')?
+    $xsl_url = url('sitemap.xsl', array('language' => $language));
+    $output .= '<?xml-stylesheet type="text/xsl" href="' . $xsl_url . '"?>' . PHP_EOL;
   }
 
   $output .= '<' . $type . ' xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . PHP_EOL;
@@ -300,8 +302,9 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
       $link_output .= '<lastmod>' . gmdate(DATE_W3C, $link['lastmod']) . '</lastmod>';
       // If the link has a lastmod value, update the changefreq so that links
       // with a short changefreq but updated two years ago show decay.
-      //xmlsitemap_recalculate_changefreq($link);
-      $link['changefreq'] = (REQUEST_TIME - $link['lastmod'] + $link['changefreq']) / 2;
+      // We use abs() here just incase items were created on this same cron run
+      // because lastmod would be greater than REQUEST_TIME.
+      $link['changefreq'] = (abs(REQUEST_TIME - $link['lastmod']) + $link['changefreq']) / 2;
     }
     if ($link['changefreq']) {
       $link_output .= '<changefreq>' . xmlsitemap_get_changefreq($link['changefreq']) . '</changefreq>';
