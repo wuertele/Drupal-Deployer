@@ -233,8 +233,7 @@ function xmlsitemap_generate_chunk_header($type, $handle, &$status, $language) {
 
   // Add the stylesheet link.
   if (xmlsitemap_var('xsl')) {
-    // @todo Use 'base_url' => xmlsitemap_var('base_url')?
-    $xsl_url = url('sitemap.xsl', array('language' => $language));
+    $xsl_url = url('sitemap.xsl', array('language' => $language, 'base_url' => xmlsitemap_var('base_url')));
     $output .= '<?xml-stylesheet type="text/xsl" href="' . $xsl_url . '"?>' . PHP_EOL;
   }
 
