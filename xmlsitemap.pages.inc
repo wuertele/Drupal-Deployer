@@ -16,16 +16,25 @@
 function xmlsitemap_output_chunk($chunk = 0) {
   global $language;
 
-  $file = xmlsitemap_get_chunk_file($chunk, $language);
-
-  if (!file_exists($file) || (isset($_GET['refresh']) && user_access('administer xmlsitemap'))) {
+  // @todo Remove this from the final version?
+  if (isset($_GET['refresh']) && user_access('administer xmlsitemap')) {
     module_load_include('inc', 'xmlsitemap');
-    if (!xmlsitemap_generate($chunk, $language)) {
-      return drupal_not_found();
-    }
+    xmlsitemap_generate($chunk, $language);
   }
 
-  $last_modified = gmdate('D, d M Y H:i:s', filemtime($file)) . ' GMT';
+  $file = xmlsitemap_get_chunk_file($chunk, $language);
+  xmlsitemap_output_file($file);
+}
+
+/**
+ * Output the contents of a file to the browser and check caching headers.
+ */
+function xmlsitemap_output_file($file, array $headers = array()) {
+  if (!file_exists($file) || !is_readable($file)) {
+    return drupal_not_found();
+  }
+
+  $last_modified = gmdate(DATE_RFC1123, filemtime($file));
   $etag = '"' . md5($last_modified) . '"';
 
   // See if the client has provided the required HTTP headers.
@@ -38,7 +47,7 @@ function xmlsitemap_output_chunk($chunk = 0) {
     exit;
   }
 
-  $headers = array(
+  $headers += array(
     'Content-type: text/xml; charset=utf-8',
     //'Content-length: ' . filesize($file),
     'Last-modified: ' . $last_modified,
@@ -66,7 +75,7 @@ function xmlsitemap_file_transfer($source, $headers) {
     // To prevent HTTP header injection, we delete new lines that are
     // not followed by a space or a tab.
     // See http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
-    //$header = preg_replace('/\r?\n(?!\t| )/', '', $header);
+    $header = preg_replace('/\r?\n(?!\t| )/', '', $header);
     drupal_set_header($header);
   }
 
