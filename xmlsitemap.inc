@@ -505,7 +505,7 @@ function _xmlsitemap_get_version() {
   $file = db_fetch_object(db_query("SELECT filename, name, type, status, schema_version FROM {system} WHERE type = 'module' AND name = 'xmlsitemap'"));
   $info = drupal_parse_info_file(drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap.info');
   drupal_alter('system_info', $info, $file);
-  return $info['version'];
+  return (isset($info['version']) ? $info['version'] : '');
 }
 
 /**
