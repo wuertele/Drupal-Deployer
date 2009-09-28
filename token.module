@@ -189,11 +189,17 @@ function token_include() {
  * @param trailing
  *    Character(s) to append to the token key before searching for
  *    matches. Defaults to a close-bracket.
+ * @param flush
+ *    A flag indicating whether or not to flush the token cache.
+ *    Useful for processes that need to slog through huge numbers
+ *    of tokens in a single execution cycle. Flushing it will
+ *    keep them from burning through memory.
+ *    The default is FALSE.
  * @return The modified version of $original, with all substitutions
  *   made.
  */
-function token_replace($original, $type = 'global', $object = NULL, $leading = '[', $trailing = ']', $options = array()) {
-  $full = token_get_values($type, $object, FALSE, $options);
+function token_replace($original, $type = 'global', $object = NULL, $leading = '[', $trailing = ']', $options = array(), $flush = FALSE) {
+  $full = token_get_values($type, $object, $flush, $options);
   return _token_replace_tokens($original, $full->tokens, $full->values, $leading, $trailing);
 }
 
@@ -218,14 +224,20 @@ function token_replace($original, $type = 'global', $object = NULL, $leading = '
  * @param trailing
  *    Character(s) to append to the token key before searching for
  *    matches. Defaults to a close-bracket.
+ * @param flush
+ *    A flag indicating whether or not to flush the token cache.
+ *    Useful for processes that need to slog through huge numbers
+ *    of tokens in a single execution cycle. Flushing it will
+ *    keep them from burning through memory.
+ *    The default is FALSE.
  * @return The modified version of $original, with all substitutions
  *   made.
  */
-function token_replace_multiple($original, $types = array('global' => NULL), $leading = '[', $trailing = ']', $options = array()) {
+function token_replace_multiple($original, $types = array('global' => NULL), $leading = '[', $trailing = ']', $options = array(), $flush = FALSE) {
   $full = new stdClass();
   $full->tokens = $full->values = array();
   foreach ($types as $type => $object) {
-    $temp = token_get_values($type, $object, FALSE, $options);
+    $temp = token_get_values($type, $object, $flush, $options);
     $full->tokens = array_merge($full->tokens, $temp->tokens);
     $full->values = array_merge($full->values, $temp->values);
   }
@@ -251,6 +263,12 @@ function _token_replace_tokens($original, $tokens, $values, $leading, $trailing)
  * @param object
  *   Optionally, the object to use for building substitution values.
  *   A node, comment, user, etc.
+ * @param flush
+ *   A flag indicating whether or not to flush the token cache.
+ *   Useful for processes that need to slog through huge numbers
+ *   of tokens in a single execution cycle. Flushing it will
+ *   keep them from burning through memory.
+ *   The default is FALSE.
  * @return
  *   A keyed array containing the substitution tokens and the substition
  *   values for the passed-in type and object.
