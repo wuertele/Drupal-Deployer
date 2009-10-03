@@ -492,7 +492,7 @@ function xmlsitemap_save_link(array $link) {
   $existing = db_fetch_array(db_query_range("SELECT loc, access, status, lastmod, priority, changefreq, changecount, language FROM {xmlsitemap} WHERE type = '%s' AND id = %d", $link['type'], $link['id'], 0, 1));
 
   // Check if this is a changed link and set the regenerate flag if necessary.
-  if (!variable_get('xmlsitemap_regenerate_needed', TRUE)) {
+  if (!variable_get('xmlsitemap_regenerate_needed', FALSE)) {
     _xmlsitemap_check_changed_link($link, $existing, TRUE);
   }
 
@@ -727,13 +727,13 @@ function xmlsitemap_switch_user($new_user = NULL) {
     elseif (!$new_user = user_load(array('uid' => $new_user))) {
       return FALSE;
     }
-  
+
     // Backup the original user object.
     if (!isset($user_original)) {
       $user_original = $user;
       session_save_session(FALSE);
     }
-    
+
     $user = $new_user;
   }
   elseif (is_object($new_user) && $user->uid != $new_user->uid) {
@@ -742,7 +742,7 @@ function xmlsitemap_switch_user($new_user = NULL) {
       $user_original = $user;
       session_save_session(FALSE);
     }
-    
+
     $user = $new_user;
   }
   else {

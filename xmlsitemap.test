@@ -135,6 +135,16 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
     $this->assertFalse($link);
     return $link;
   }
+
+  protected function assertFlag($variable, $assert_value = TRUE, $reset_if_true = TRUE) {
+    $value = xmlsitemap_var($variable);
+
+    if ($reset_if_true && $value) {
+      variable_set('xmlsitemap_' . $variable, FALSE);
+    }
+
+    return $assert_value ? $this->assertTrue($value, "xmlsitemap_$variable is TRUE") : $this->assertFalse($value, "xmlsitemap_$variable is FALSE");
+  }
 }
 
 class XMLSitemapUnitTest extends XMLSitemapTestHelper {
@@ -148,6 +158,17 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
 
   function setUp() {
     parent::setUp('xmlsitemap');
+  }
+
+  function testAssertFlag() {
+    variable_set('xmlsitemap_rebuild_needed', TRUE);
+    $this->assertTrue(xmlsitemap_var('rebuild_needed'));
+    $this->assertTrue($this->assertFlag('rebuild_needed', TRUE, FALSE));
+    $this->assertTrue(xmlsitemap_var('rebuild_needed'));
+    $this->assertTrue($this->assertFlag('rebuild_needed', TRUE, TRUE));
+    $this->assertFalse(xmlsitemap_var('rebuild_needed'));
+    $this->assertTrue($this->assertFlag('rebuild_needed', FALSE, FALSE));
+    $this->assertFalse(xmlsitemap_var('rebuild_needed'));
   }
 
   /**
@@ -325,59 +346,51 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
    * Tests for xmlsitemap_save_link().
    */
   function testSaveLink() {
-    $this->assertFalse(xmlsitemap_var('regenerate_needed'));
+    $this->assertFlag('regenerate_needed', FALSE);
 
     $link = array('type' => 'testing', 'id' => 1, 'loc' => 'testing', 'status' => 1);
     xmlsitemap_save_link($link);
-    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
-    variable_set('xmlsitemap_regenerate_needed', FALSE);
+    $this->assertFlag('regenerate_needed', TRUE);
 
     $link['status'] = 0;
     xmlsitemap_save_link($link);
-    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
-    variable_set('xmlsitemap_regenerate_needed', FALSE);
+    $this->assertFlag('regenerate_needed', TRUE);
 
     $link['priority'] = 0.5;
     $link['loc'] = 'new_location';
     $link['status'] = 1;
     xmlsitemap_save_link($link);
-    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
-    variable_set('xmlsitemap_regenerate_needed', FALSE);
+    $this->assertFlag('regenerate_needed', TRUE);
 
     $link['priority'] = 0.0;
     xmlsitemap_save_link($link);
-    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
-    variable_set('xmlsitemap_regenerate_needed', FALSE);
+    $this->assertFlag('regenerate_needed', TRUE);
 
     $link['priority'] = 0.1;
     xmlsitemap_save_link($link);
-    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
-    variable_set('xmlsitemap_regenerate_needed', FALSE);
+    $this->assertFlag('regenerate_needed', TRUE);
 
     $link['priority'] = 1.0;
     xmlsitemap_save_link($link);
-    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
-    variable_set('xmlsitemap_regenerate_needed', FALSE);
+    $this->assertFlag('regenerate_needed', TRUE);
 
     $link['priority'] = 1;
     xmlsitemap_save_link($link);
-    $this->assertFalse(xmlsitemap_var('regenerate_needed'));
+    $this->assertFlag('regenerate_needed', FALSE);
 
     $link['priority'] = 0;
     xmlsitemap_save_link($link);
-    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
-    variable_set('xmlsitemap_regenerate_needed', FALSE);
+    $this->assertFlag('regenerate_needed', TRUE);
 
     $link['priority'] = 0.5;
     xmlsitemap_save_link($link);
-    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
-    variable_set('xmlsitemap_regenerate_needed', FALSE);
+    $this->assertFlag('regenerate_needed', TRUE);
 
     $link['priority'] = 0.5;
     $link['priority_override'] = 0;
     $link['status'] = 1;
     xmlsitemap_save_link($link);
-    $this->assertFalse(xmlsitemap_var('regenerate_needed'));
+    $this->assertFlag('regenerate_needed', FALSE);
   }
 
   /**
@@ -389,7 +402,6 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
     $link2 = $this->addSitemapLink(array('loc' => 'testing1', 'status' => 1));
     $link3 = $this->addSitemapLink(array('status' => 0));
     variable_set('xmlsitemap_regenerate_needed', FALSE);
-    $this->assertFalse(xmlsitemap_var('regenerate_needed'));
 
     // Test delete multiple links.
     // Test that the regenerate flag is set when visible links are deleted.
@@ -398,13 +410,12 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
     $this->assertFalse(xmlsitemap_load_link(array('type' => $link1['type'], 'id' => $link1['id'])));
     $this->assertFalse(xmlsitemap_load_link(array('type' => $link2['type'], 'id' => $link2['id'])));
     $this->assertTrue(xmlsitemap_load_link(array('type' => $link3['type'], 'id' => $link3['id'])));
-    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
-    variable_set('xmlsitemap_regenerate_needed', FALSE);
+    $this->assertFlag('regenerate_needed', TRUE);
 
     $num = xmlsitemap_delete_link(array('type' => $link3['type'], 'id' => $link3['id']));
     $this->assertEqual($num, 1);
     $this->assertFalse(xmlsitemap_load_link(array('type' => $link3['type'], 'id' => $link3['id'])));
-    $this->assertFalse(xmlsitemap_var('regenerate_needed'));
+    $this->assertFlag('regenerate_needed', FALSE);
   }
 
   /**
@@ -416,28 +427,25 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
     $link2 = $this->addSitemapLink(array('loc' => 'testing1'));
     $link3 = $this->addSitemapLink(array('loc' => 'testing2'));
     variable_set('xmlsitemap_regenerate_needed', FALSE);
-    $this->assertFalse(xmlsitemap_var('regenerate_needed'));
 
     $return = xmlsitemap_update_links(array('status' => FALSE), array('loc' => 'testing1'));
     $this->assertEqual($return, 2);
     $this->assertNotInSitemap(array('type' => $link1['type'], 'id' => $link1['id']));
     $this->assertNotInSitemap(array('type' => $link2['type'], 'id' => $link2['id']));
     $this->assertInSitemap(array('type' => $link3['type'], 'id' => $link3['id']));
-    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
-    variable_set('xmlsitemap_regenerate_needed', FALSE);
+    $this->assertFlag('regenerate_needed', TRUE);
 
     $return = xmlsitemap_update_links(array('loc' => 'testing2', 'status' => NULL), array('loc' => 'testing1', 'status' => FALSE));
     $this->assertEqual($return, 2);
-    $this->assertFalse(xmlsitemap_var('regenerate_needed'));
+    $this->assertFlag('regenerate_needed', FALSE);
 
     $return = xmlsitemap_update_links(array('priority' => 0.5), array('priority' => NULL));
     $this->assertEqual($return, 3);
-    $this->assertTrue(xmlsitemap_var('regenerate_needed'));
-    variable_set('xmlsitemap_regenerate_needed', FALSE);
+    $this->assertFlag('regenerate_needed', TRUE);
 
     $return = xmlsitemap_update_links(array('status' => NULL), array('priority' => 1.1));
     $this->assertEqual($return, 0);
-    $this->assertFalse(xmlsitemap_var('regenerate_needed'));
+    $this->assertFlag('regenerate_needed', FALSE);
   }
 }
 
