@@ -278,17 +278,41 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
     $original_user = $user;
     $new_user = $this->drupalCreateUser();
 
-    xmlsitemap_switch_user($new_user);
-    $this->assertEqual($user->uid, $new_user->uid, t('Switched to new user.'));
+    // Switch to a new valid user.
+    $this->assertEqual(xmlsitemap_switch_user($new_user), TRUE);
+    $this->assertEqual($user->uid, $new_user->uid);
 
-    xmlsitemap_switch_user();
-    $this->assertEqual($user->uid, $original_user->uid, t('Restored original user.'));
+    // Switch again to the anonymous user.
+    $this->assertEqual(xmlsitemap_switch_user(0), TRUE);
+    $this->assertEqual($user->uid, 0);
 
-    xmlsitemap_switch_user(0);
-    $this->assertEqual($user->uid, 0, t('Switched to anonymous user.'));
+    // Switch again to the new user.
+    $this->assertEqual(xmlsitemap_switch_user($new_user->uid), TRUE);
+    $this->assertEqual($user->uid, $new_user->uid);
 
-    xmlsitemap_restore_user();
-    $this->assertEqual($user->uid, $original_user->uid, t('Restored original user.'));
+    // Test that after two switches the original user was restored.
+    $this->assertEqual(xmlsitemap_restore_user(), TRUE);
+    $this->assertEqual($user->uid, $original_user->uid);
+
+    // Attempt to switch to the same user.
+    $this->assertEqual(xmlsitemap_switch_user($original_user->uid), FALSE);
+    $this->assertEqual($user->uid, $original_user->uid);
+    $this->assertEqual(xmlsitemap_restore_user(), FALSE);
+    $this->assertEqual($user->uid, $original_user->uid);
+
+    // Attempt to switch to an invalid user ID.
+    $invalid_uid = db_result(db_query("SELECT MAX(uid) FROM {users}")) + 100;
+    $this->assertEqual(xmlsitemap_switch_user($invalid_uid), FALSE);
+    $this->assertEqual($user->uid, $original_user->uid);
+    $this->assertEqual(xmlsitemap_restore_user(), FALSE);
+    $this->assertEqual($user->uid, $original_user->uid);
+
+    // Attempt user switching when the original user is anonymous.
+    $user = drupal_anonymous_user();
+    $this->assertEqual(xmlsitemap_switch_user(0), FALSE);
+    $this->assertEqual($user->uid, 0);
+    $this->assertEqual(xmlsitemap_restore_user(), FALSE);
+    $this->assertEqual($user->uid, 0);
   }
 
   //function testWriteRecord() {

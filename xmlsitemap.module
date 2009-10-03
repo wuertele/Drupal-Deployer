@@ -712,28 +712,41 @@ function xmlsitemap_switch_user($new_user = NULL) {
     if (isset($user_original)) {
       // Restore the original user.
       $user = $user_original;
-      unset($user_original);
+      $user_original = NULL;
       session_save_session(TRUE);
     }
+    else {
+      return FALSE;
+    }
   }
-  else {
-    // Backup the user the first time this is called.
+  elseif (is_numeric($new_user) && $user->uid != $new_user) {
+    // Get the full user object.
+    if (!$new_user) {
+      $new_user = drupal_anonymous_user();
+    }
+    elseif (!$new_user = user_load(array('uid' => $new_user))) {
+      return FALSE;
+    }
+  
+    // Backup the original user object.
     if (!isset($user_original)) {
       $user_original = $user;
       session_save_session(FALSE);
     }
-
-    if (is_numeric($new_user) && $user->uid != $new_user) {
-      if (!$new_user) {
-        $user = drupal_anonymous_user();
-      }
-      else {
-        $user = user_load(array('uid' => $new_user));
-      }
+    
+    $user = $new_user;
+  }
+  elseif (is_object($new_user) && $user->uid != $new_user->uid) {
+    // Backup the original user object.
+    if (!isset($user_original)) {
+      $user_original = $user;
+      session_save_session(FALSE);
     }
-    else {
-      $user = is_object($new_user) ? $new_user : (object) $new_user;
-    }
+    
+    $user = $new_user;
+  }
+  else {
+    return FALSE;
   }
 
   return $user;
