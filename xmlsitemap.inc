@@ -294,7 +294,7 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
   xmlsitemap_generate_chunk_header('urlset', $handle, $status, $language);
 
   while ($link = db_fetch_array($query)) {
-    $url_options['language'] = $language;
+    $url_options['language'] = $link['language'] ? $languages[$link['language']] : $language;
     $link['alias'] = xmlsitemap_get_path_alias($link['loc'], $url_options['language']->language);
     $link_output = '<url><loc>' . url($link['alias'], $url_options) . '</loc>';
     if ($link['lastmod']) {

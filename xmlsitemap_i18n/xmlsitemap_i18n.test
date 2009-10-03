@@ -38,11 +38,14 @@ class XMLSitemapI18nTest extends XMLSitemapTestHelper {
     locale(NULL, NULL, TRUE);
   }
 
-  function assertLanguageSitemap($language, array $links_included = array(), array $links_excluded = array()) {
+  protected function assertLanguageSitemap($language, array $links_included = array(), array $links_excluded = array()) {
     $languages = language_list();
     $languages[''] = NULL;
+
     $sitemap_url = url('sitemap.xml', array('absolute' => TRUE, 'language' => $languages[$language]));
     $this->drupalGet($sitemap_url);
+
+    // Test for included links.
     foreach ($links_included as $link) {
       if (isset($link->xmlsitemap)) {
         $link = $link->xmlsitemap;
@@ -50,9 +53,12 @@ class XMLSitemapI18nTest extends XMLSitemapTestHelper {
       elseif (isset($link['xmlsitemap'])) {
         $link = $link['xmlsitemap'];
       }
+      $link['language'] = $link['language'] ? $link['language'] : $language;
       $link_url = url($link['loc'], array('absolute' => TRUE, 'language' => $languages[$link['language']]));
       $this->assertRaw($link_url, 'Link ' . $link_url . ' found.');
     }
+
+    // Test for exlucded links.
     foreach ($links_excluded as $link) {
       if (isset($link->xmlsitemap)) {
         $link = $link->xmlsitemap;
@@ -60,6 +66,7 @@ class XMLSitemapI18nTest extends XMLSitemapTestHelper {
       elseif (isset($link['xmlsitemap'])) {
         $link = $link['xmlsitemap'];
       }
+      $link['language'] = $link['language'] ? $link['language'] : $language;
       $link_url = url($link['loc'], array('absolute' => TRUE, 'language' => $languages[$link['language']]));
       $this->assertNoRaw($link_url, 'Link ' . $link_url . ' not found.');
     }
