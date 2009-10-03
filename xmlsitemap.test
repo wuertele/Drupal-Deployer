@@ -495,6 +495,7 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
     $this->admin_user = $this->drupalCreateUser(array('access content', 'administer site configuration', 'administer xmlsitemap'));
     $this->drupalLogin($this->admin_user);
     $this->checkFilesDirectory();
+    $this->regenerateSitemap();
   }
 
   /**
@@ -516,10 +517,6 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
    * Test that the sitemap will not be genereated before the lifetime expires.
    */
   function testMinimumLifetime() {
-    // Ensure the sitemap has been generated already.
-    $this->regenerateSitemap();
-    //$this->drupalGet('sitemap.xml');
-
     $edit = array('xmlsitemap_minimum_lifetime' => 300);
     $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
     $this->assertText(t('The configuration options have been saved.'));
@@ -548,6 +545,11 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
    * Test base URL functionality.
    */
   function testBaseURL() {
+    // Enable developer mode for the base_url setting.
+    $edit = array('xmlsitemap_developer_mode' => TRUE);
+    $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
+    $this->assertText(t('The configuration options have been saved.'));
+
     $edit = array('xmlsitemap_base_url' => '');
     $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
     $this->assertText(t('Base URL field is required.'));
@@ -564,6 +566,7 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
     $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
     $this->assertText(t('The configuration options have been saved.'));
 
+    $this->regenerateSitemap();
     $this->drupalGet('sitemap.xml');
     $this->assertRaw('<loc>http://example.com/</loc>');
   }
