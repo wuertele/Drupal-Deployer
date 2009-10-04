@@ -88,31 +88,31 @@ function site_verify_edit_form(&$form_state, $record = array(), $engine = NULL) 
         '#title' => t('Verification META tag'),
         '#default_value' => $record['meta'],
         '#description' => t('This is the full meta tag provided for verification. This value will be inserted in the <a href="@front-page">front page</a>.', array('@front-page' => url())),
-        '#element_validate' => $engine['meta_validate'],
-        '#access' => $engine['meta'],
+        '#element_validate' => $record['engine']['meta_validate'],
+        '#access' => $record['engine']['meta'],
       );
 
       $form['file_upload'] = array(
         '#type' => 'file',
         '#title' => t('Upload an existing verification file'),
         '#description' => t('If you have been provided with an actual file, you can simply upload the file.'),
-        '#access' => $engine['file'],
+        '#access' => $record['engine']['file'],
       );
       $form['file'] = array(
         '#type' => 'textfield',
         '#title' => t('Verification file'),
         '#default_value' => $record['file'],
         '#description' => t('The name of the HTML verification file you were asked to upload.'),
-        '#element_validate' => $engine['file_validate'],
-        '#access' => $engine['file'],
+        '#element_validate' => $record['engine']['file_validate'],
+        '#access' => $record['engine']['file'],
       );
       $form['file_contents'] = array(
         '#type' => 'textarea',
         '#title' => t('Verification file contents'),
         '#default_value' => $record['file_contents'],
-        '#element_validate' => $engine['file_contents_validate'],
+        '#element_validate' => $record['engine']['file_contents_validate'],
         '#wysiwyg' => FALSE,
-        '#access' => $engine['file_contents'],
+        '#access' => $record['engine']['file_contents'],
       );
       if (!variable_get('clean_url', 0)) {
         drupal_set_message(t('Using verification files will not work if <a href="@clean-urls">clean URLs</a> are disabled.', array('@clean-urls' => url('admin/settings/clean-url'))), 'error', FALSE);
@@ -128,6 +128,7 @@ function site_verify_edit_form(&$form_state, $record = array(), $engine = NULL) 
       );
       $form['#attributes'] = array('enctype' => 'multipart/form-data');
       $form['#validate'][] = 'site_verify_validate_upload';
+      $form['#validate'][] = 'site_verify_edit_form_validate';
       break;
   }
 
@@ -155,8 +156,16 @@ function site_verify_validate_upload(&$form, &$form_state) {
       if ($form['file_contents']['#access']) {
         $form_state['values']['file_contents'] = $contents;
       }
-      drupal_set_message(t('The verification file <a href="@filename">@filename</a> was successfully imported.', array('@filename' => $file->filename)));
+      //drupal_set_message(t('The verification file <a href="@filename">@filename</a> was successfully imported.', array('@filename' => $file->filename)));
     }
+  }
+}
+
+function site_verify_edit_form_validate(&$form, &$form_state) {
+  //$form_state['values']['file'] = drupal_strtolower($form_state['values']['file']);
+  $existing_file_svid = db_result(db_query("SELECT svid FROM {site_verify} WHERE LOWER(file) = LOWER('%s') AND svid <> %d", $form_state['values']['file'], $form_state['values']['svid']));
+  if ($existing_file_svid) {
+    form_set_error('file', t('The file %filename is already being used in another verification.', array('%filename' => $form_state['values']['file'])));
   }
 }
 
@@ -179,7 +188,7 @@ function site_verify_edit_form_submit(&$form, &$form_state) {
       drupal_write_record('site_verify', $form_state['values']);
     }
 
-    drupal_set_message(t('Site verification for @engine saved.', array('@engine' => $form['engine_name']['#value'])));
+    drupal_set_message(t('Site verification saved.'));
     $form_state['storage'] = $form_state['rebuild'] = FALSE;
     $form_state['redirect'] = 'admin/build/site-verify';
 
