@@ -32,21 +32,21 @@ function amazon_schema() {
     'fields' => array(
       'asin' => array('type' => 'varchar', 'length' => 64, 'not null' => TRUE),
       'title' => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE),
-      'detailpageurl' => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE),
+      'detailpageurl' => array('type' => 'varchar', 'length' => 255),
       'salesrank' => array('type' => 'int', 'unsigned' => TRUE),
-      'brand' => array('type' => 'varchar', 'length' => 64, 'not null' => TRUE),
-      'publisher' => array('type' => 'varchar', 'length' => 64, 'not null' => TRUE),
-      'manufacturer' => array('type' => 'varchar', 'length' => 64, 'not null' => TRUE),
+      'brand' => array('type' => 'varchar', 'length' => 64),
+      'publisher' => array('type' => 'varchar', 'length' => 64),
+      'manufacturer' => array('type' => 'varchar', 'length' => 64),
       'mpn' => array('type' => 'varchar', 'length' => 128),
-      'studio' => array('type' => 'varchar', 'length' => 64, 'not null' => TRUE),
-      'label' => array('type' => 'varchar', 'length' => 64, 'not null' => TRUE),
-      'binding' => array('type' => 'varchar', 'length' => 64, 'not null' => TRUE),
-      'releasedate' => array('type' => 'varchar', 'length' => 64, 'not null' => TRUE),
+      'studio' => array('type' => 'varchar', 'length' => 64),
+      'label' => array('type' => 'varchar', 'length' => 64),
+      'binding' => array('type' => 'varchar', 'length' => 64),
+      'releasedate' => array('type' => 'varchar', 'length' => 64),
       'listpriceamount' => array('type' => 'float', 'unsigned' => TRUE),
       'listpricecurrencycode' => array('type' => 'varchar', 'length' => 32),
       'listpriceformattedprice' => array('type' => 'varchar', 'length' => 32),
-      'productgroup' => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE),
-      'producttypename' => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE),
+      'productgroup' => array('type' => 'varchar', 'length' => 255),
+      'producttypename' => array('type' => 'varchar', 'length' => 255),
       'timestamp' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
     ),
     'primary key' => array('asin'),
@@ -148,6 +148,34 @@ function amazon_update_6004() {
   return $ret;
 }
 
+function amazon_update_6005() {
+  $ret = array();
+  // Many extraneous ASINs have been left in this table because there was no
+  // delete. We will truncate here, and they'll be rebuilt automatically.
+  $result = db_query('TRUNCATE {amazon_item}');
+  db_change_field($ret, 'amazon_item', 'detailpageurl', 'detailpageurl',
+    array('type' => 'varchar', 'length' => 255));
+  db_change_field($ret, 'amazon_item', 'brand', 'brand',
+    array('type' => 'varchar', 'length' => 64));
+  db_change_field($ret, 'amazon_item', 'publisher', 'publisher',
+    array('type' => 'varchar', 'length' => 64));
+  db_change_field($ret, 'amazon_item', 'manufacturer', 'manufacturer',
+    array('type' => 'varchar', 'length' => 64));
+  db_change_field($ret, 'amazon_item', 'studio', 'studio',
+    array('type' => 'varchar', 'length' => 64));
+  db_change_field($ret, 'amazon_item', 'label', 'label',
+    array('type' => 'varchar', 'length' => 64));
+  db_change_field($ret, 'amazon_item', 'binding', 'binding',
+    array('type' => 'varchar', 'length' => 64));
+  db_change_field($ret, 'amazon_item', 'releasedate', 'releasedate',
+    array('type' => 'varchar', 'length' => 64));
+  db_change_field($ret, 'amazon_item', 'productgroup', 'productgroup',
+    array('type' => 'varchar', 'length' => 255));
+  db_change_field($ret, 'amazon_item', 'producttypename', 'producttypename',
+    array('type' => 'varchar', 'length' => 255));
+
+  return $ret;
+}
 
 function amazon_uninstall() {
   drupal_uninstall_schema('amazon');
