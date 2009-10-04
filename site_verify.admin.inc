@@ -22,110 +22,124 @@ function site_verify_list() {
     );
   }
 
-  foreach ($engines as $engine => $details) {
-    if (empty($details['used']) || $engine == 'custom') {
-      $rows[] = array(
-        $details['name'],
-        '',
-        l('Add', 'admin/build/site-verify/add/' . $engine),
-        '',
-      );
-    }
+  if (!$rows) {
+    $rows[] = array(array('data' => t('No active verifications. <a href="@add">Add one?</a>', array('@add' => url('admin/build/site-verify/add'))), 'colspan' => 4));
+  }
+  else {
+    $rows[] = array(array('data' => l(t('Add verification'), 'admin/build/site-verify/add'), 'colspan' => 4));
   }
 
   $output = theme('table', $headers, $rows);
   return $output;
 }
 
-function site_verify_edit_form($form_state, $record = NULL) {
-  $engines = site_verify_get_engines();
-
-  if (is_string($record)) {
-    if (array_key_exists($record, $engines)) {
-      $record = array('engine' => $record);
+function site_verify_edit_form(&$form_state, $record = array(), $engine = NULL) {
+  if (!isset($form_state['storage']['step'])) {
+    if ($record) {
+      $engine = site_verify_engine_load($record['engine']);
     }
-    else {
-      return drupal_not_found();
-    }
+    $form_state['storage']['step'] = $engine ? 2 : 1;
+    $form_state['storage']['engine'] = $engine;
   }
+  else {
+    $engine = $form_state['storage']['engine'];
+  }
+  
+  switch ($form_state['storage']['step']) {
+    case 1:
+      $engines = site_verify_get_engines();
+      foreach ($engines as $index => $engine) {
+        $engines[$index] = $engine['name'];
+      }
+      $form['engine'] = array(
+        '#type' => 'select',
+        '#title' => t('Search engine'),
+        '#options' => $engines,
+      );
+      $form['next'] = array(
+        '#type' => 'submit',
+        '#value' => t('Next'),
+      );      
+      break;
+    case 2:
+      $record += array(
+        'svid' => NULL,
+        'file' => '',
+        'file_contents' => t('This is a verification page.'),
+        'meta' => '',
+      );
 
-  $record += array(
-    'svid' => NULL,
-    'file' => '',
-    'file_contents' => t('This is a verification page.'),
-    'meta' => '',
-  );
+      $form['#engine'] = $engine;
+      $form['svid'] = array(
+        '#type' => 'value',
+        '#value' => $record['svid'],
+      );
+      $form['engine'] = array(
+        '#type' => 'value',
+        '#value' => $engine['key'],
+      );
+      $form['engine_name'] = array(
+        '#type' => 'item',
+        '#title' => t('Search engine'),
+        '#value' => $engine['name'],
+      );
+      $form['meta'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Verification META tag'),
+        '#default_value' => $record['meta'],
+        '#description' => t('This is the full meta tag provided for verification. This value will be inserted in the <a href="@front-page">front page</a>.', array('@front-page' => url())),
+        '#element_validate' => $engine['meta_validate'],
+        '#access' => $engine['meta'],
+      );
 
-  $engine = site_verify_get_engine($record['engine']);
+      $form['file_upload'] = array(
+        '#type' => 'file',
+        '#title' => t('Upload an existing verification file'),
+        '#description' => t('If you have been provided with an actual file, you can simply upload the file.'),
+        '#access' => $engine['file'],
+      );
+      $form['file'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Verification file'),
+        '#default_value' => $record['file'],
+        '#description' => t('The name of the HTML verification file you were asked to upload.'),
+        '#element_validate' => $engine['file_validate'],
+        '#access' => $engine['file'],
+      );
+      $form['file_contents'] = array(
+        '#type' => 'textarea',
+        '#title' => t('Verification file contents'),
+        '#default_value' => $record['file_contents'],
+        '#element_validate' => $engine['file_contents_validate'],
+        '#wysiwyg' => FALSE,
+        '#access' => $engine['file_contents'],
+      );
+      if (!variable_get('clean_url', 0)) {
+        drupal_set_message(t('Using verification files will not work if <a href="@clean-urls">clean URLs</a> are disabled.', array('@clean-urls' => url('admin/settings/clean-url'))), 'error', FALSE);
+        $form['file']['#disabled'] = TRUE;
+        $form['file_contents']['#disabled'] = TRUE;
+        $form['file_upload']['#disabled'] = TRUE;
+      }
 
-  $form['svid'] = array(
-    '#type' => 'value',
-    '#value' => $record['svid'],
-  );
-  $form['engine'] = array(
-    '#type' => 'value',
-    '#value' => $record['engine'],
-  );
-  $form['engine_name'] = array(
-    '#type' => 'item',
-    '#title' => t('Search engine'),
-    '#value' => $engine['name'],
-  );
-  $form['meta'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Verification META tag'),
-    '#default_value' => $record['meta'],
-    '#description' => t('This is the full meta tag provided for verification. This value will be inserted in the <a href="@front-page">front page</a>.', array('@front-page' => url())),
-    '#element_validate' => $engine['meta_validate'],
-    '#access' => $engine['meta'],
-  );
-
-  $form['file_upload'] = array(
-    '#type' => 'file',
-    '#title' => t('Upload an existing verification file'),
-    '#description' => t('If you have been provided with an actual file, you can simply upload the file.'),
-    '#access' => $engine['file'],
-  );
-  $form['file'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Verification file'),
-    '#default_value' => $record['file'],
-    '#description' => t('The name of the HTML verification file you were asked to upload.'),
-    '#element_validate' => $engine['file_validate'],
-    '#access' => $engine['file'],
-  );
-  $form['file_contents'] = array(
-    '#type' => 'textarea',
-    '#title' => t('Verification file contents'),
-    '#default_value' => $record['file_contents'],
-    '#element_validate' => $engine['file_contents_validate'],
-    '#wysiwyg' => FALSE,
-    '#access' => $engine['file_contents'],
-  );
-
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Save'),
-    '#weight' => 10,
-  );
+      $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Save'),
+        '#weight' => 10,
+      );
+      $form['#attributes'] = array('enctype' => 'multipart/form-data');
+      //$form['#redirect'] = 'admin/build/site-verify';
+      break;
+  }
+  
   $form['cancel'] = array(
     '#value' => l(t('Cancel'), 'admin/build/site-verify'),
     '#weight' => 11,
   );
 
-  if (!variable_get('clean_url', 0)) {
-    drupal_set_message(t('Using verification files will not work if <a href="@clean-urls">clean URLs</a> are disabled.', array('@clean-urls' => url('admin/settings/clean-url'))), 'error', FALSE);
-    $form['file']['#disabled'] = TRUE;
-    $form['file_contents']['#disabled'] = TRUE;
-    $form['file_upload']['#disabled'] = TRUE;
-  }
-
-  $form['#attributes'] = array('enctype' => 'multipart/form-data');
-  $form['#redirect'] = 'admin/build/site-verify';
   return $form;
 }
 
-function site_verify_edit_form_validate($form, &$form_state) {
+function site_verify_edit_form_validate(&$form, &$form_state) {
   // Import the uploaded verification file.
   if ($file = file_save_upload('file_upload', array(), FALSE, FILE_EXISTS_REPLACE)) {
     $contents = @file_get_contents($file->filepath);
@@ -143,20 +157,33 @@ function site_verify_edit_form_validate($form, &$form_state) {
   }
 }
 
-function site_verify_edit_form_submit($form, $form_state) {
-  if ($form_state['values']['svid']) {
-    drupal_write_record('site_verify', $form_state['values'], array('svid'));
+function site_verify_edit_form_submit(&$form, &$form_state) {
+  if ($form_state['storage']['step'] == 1) {
+    // Build a form object to use with customization.
+    $form_state['storage']['engine'] = site_verify_engine_load($form_state['values']['engine']);
+    $form_state['storage']['step']++;
+    $form_state['rebuild'] = TRUE;
   }
   else {
-    drupal_write_record('site_verify', $form_state['values']);
-  }
+    if ($form_state['values']['svid']) {
+      drupal_write_record('site_verify', $form_state['values'], array('svid'));
+    }
+    else {
+      drupal_write_record('site_verify', $form_state['values']);
+    }
 
-  // The menu needs to be rebuilt if the page URL has changed or reset.
-  variable_set('menu_rebuild_needed', TRUE);
+    // The menu needs to be rebuilt if the page URL has changed or reset.
+    variable_set('menu_rebuild_needed', TRUE);
+    
+    drupal_set_message(t('Site verification for @engine saved.', array('@engine' => $form['engine_name']['#value'])));
+    
+    $form_state['storage'] = $form_state['rebuild'] = FALSE;
+    $form_state['redirect'] = 'admin/build/site-verify';
+  }
 }
 
 function site_verify_delete_form($form_state, $record) {
-  $record['engine_details'] = site_verify_get_engine($record['engine']);
+  $record['engine_details'] = site_verify_engine_load($record['engine']);
 
   $form['record'] = array(
     '#type' => 'value',
