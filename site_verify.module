@@ -78,13 +78,32 @@ function site_verify_init() {
 /**
  * Menu load callback; loads a site verification record.
  *
+ * This also loads the engine details if the record was found.
+ *
  * @param $svid
  *   A site verification ID.
  * @return
- *   An object of the site verification record, or FALSE if not found.
+ *   An array of the site verification record, or FALSE if not found.
  */
 function site_verify_load($svid) {
-  return db_fetch_array(db_query("SELECT svid, engine, file, file_contents, meta FROM {site_verify} WHERE svid = %d", $svid));
+  $record = db_fetch_array(db_query("SELECT svid, engine, file, file_contents, meta FROM {site_verify} WHERE svid = %d", $svid));
+  if ($record) {
+    $record['engine'] = site_verify_engine_load($record['engine']);
+  }
+  return $record;
+}
+
+/**
+ * Menu load callback; loads engine details.
+ *
+ * @param $engine
+ *   A string with the engine shortname.
+ * @return
+ *   An arary of the engine details, or FALSE if not found.
+ */
+function site_verify_engine_load($engine) {
+  $engines = site_verify_get_engines();
+  return isset($engines[$engine]) ? $engines[$engine] : FALSE;
 }
 
 /**
@@ -165,18 +184,7 @@ function site_verify_get_engines() {
   return $engines;
 }
 
-function site_verify_engine_load($engine) {
-  $engines = site_verify_get_engines();
-  return isset($engines[$engine]) ? $engines[$engine] : FALSE;
-}
-
-function site_verify_get_engine($engine) {
-  $engines = site_verify_get_engines();
-  return isset($engines[$engine]) ? $engines[$engine] : FALSE;
-}
-
 function site_verify_output($svid) {
-  // $verification = site_verify_load($svid);
   $output = db_result(db_query("SELECT file_contents FROM {site_verify} WHERE svid = %d", $svid));
   if (empty($output)) {
     drupal_set_title(t('Verification page'));

@@ -35,54 +35,54 @@ function site_verify_list() {
 
 function site_verify_edit_form(&$form_state, $record = array(), $engine = NULL) {
   if (!isset($form_state['storage']['step'])) {
-    if ($record) {
-      $engine = site_verify_engine_load($record['engine']);
-    }
-    $form_state['storage']['step'] = $engine ? 2 : 1;
-    $form_state['storage']['engine'] = $engine;
+    $record += array(
+      'svid' => NULL,
+      'file' => '',
+      'file_contents' => t('This is a verification page.'),
+      'meta' => '',
+      'engine' => $engine,
+    );
+    $form_state['storage']['record'] = $record;
+    $form_state['storage']['step'] = $record['engine'] ? 2 : 1;
   }
   else {
-    $engine = $form_state['storage']['engine'];
+    $record = $form_state['storage']['record'];
   }
-  
+
   switch ($form_state['storage']['step']) {
     case 1:
       $engines = site_verify_get_engines();
-      foreach ($engines as $index => $engine) {
-        $engines[$index] = $engine['name'];
+      $options = array();
+      foreach ($engines as $engine) {
+        $options[$engine['key']] = $engine['name'];
       }
       $form['engine'] = array(
         '#type' => 'select',
         '#title' => t('Search engine'),
-        '#options' => $engines,
+        '#options' => $options,
       );
       $form['next'] = array(
         '#type' => 'submit',
         '#value' => t('Next'),
-      );      
+      );
       break;
     case 2:
-      $record += array(
-        'svid' => NULL,
-        'file' => '',
-        'file_contents' => t('This is a verification page.'),
-        'meta' => '',
-      );
 
-      $form['#engine'] = $engine;
       $form['svid'] = array(
         '#type' => 'value',
         '#value' => $record['svid'],
       );
       $form['engine'] = array(
         '#type' => 'value',
-        '#value' => $engine['key'],
+        '#value' => $record['engine']['key'],
       );
       $form['engine_name'] = array(
         '#type' => 'item',
         '#title' => t('Search engine'),
-        '#value' => $engine['name'],
+        '#value' => $record['engine']['name'],
       );
+      $form['#engine'] = $record['engine'];
+
       $form['meta'] = array(
         '#type' => 'textfield',
         '#title' => t('Verification META tag'),
@@ -127,10 +127,10 @@ function site_verify_edit_form(&$form_state, $record = array(), $engine = NULL) 
         '#weight' => 10,
       );
       $form['#attributes'] = array('enctype' => 'multipart/form-data');
-      //$form['#redirect'] = 'admin/build/site-verify';
+      $form['#validate'][] = 'site_verify_validate_upload';
       break;
   }
-  
+
   $form['cancel'] = array(
     '#value' => l(t('Cancel'), 'admin/build/site-verify'),
     '#weight' => 11,
@@ -139,7 +139,10 @@ function site_verify_edit_form(&$form_state, $record = array(), $engine = NULL) 
   return $form;
 }
 
-function site_verify_edit_form_validate(&$form, &$form_state) {
+/**
+ * Validation callback; save the uploaded file into the existing form fields.
+ */
+function site_verify_validate_upload(&$form, &$form_state) {
   // Import the uploaded verification file.
   if ($file = file_save_upload('file_upload', array(), FALSE, FILE_EXISTS_REPLACE)) {
     $contents = @file_get_contents($file->filepath);
@@ -157,14 +160,18 @@ function site_verify_edit_form_validate(&$form, &$form_state) {
   }
 }
 
+/**
+ * Submission callback; send form to the next step or save the verification.
+ */
 function site_verify_edit_form_submit(&$form, &$form_state) {
   if ($form_state['storage']['step'] == 1) {
-    // Build a form object to use with customization.
-    $form_state['storage']['engine'] = site_verify_engine_load($form_state['values']['engine']);
+    // Send the form to step 2 (verification details).
+    $form_state['storage']['record']['engine'] = site_verify_engine_load($form_state['values']['engine']);
     $form_state['storage']['step']++;
     $form_state['rebuild'] = TRUE;
   }
   else {
+    // Save the verification to the database.
     if ($form_state['values']['svid']) {
       drupal_write_record('site_verify', $form_state['values'], array('svid'));
     }
@@ -172,19 +179,16 @@ function site_verify_edit_form_submit(&$form, &$form_state) {
       drupal_write_record('site_verify', $form_state['values']);
     }
 
-    // The menu needs to be rebuilt if the page URL has changed or reset.
-    variable_set('menu_rebuild_needed', TRUE);
-    
     drupal_set_message(t('Site verification for @engine saved.', array('@engine' => $form['engine_name']['#value'])));
-    
     $form_state['storage'] = $form_state['rebuild'] = FALSE;
     $form_state['redirect'] = 'admin/build/site-verify';
+
+    // The menu needs to be rebuilt if the page URL has changed or reset.
+    variable_set('menu_rebuild_needed', TRUE);
   }
 }
 
 function site_verify_delete_form($form_state, $record) {
-  $record['engine_details'] = site_verify_engine_load($record['engine']);
-
   $form['record'] = array(
     '#type' => 'value',
     '#value' => $record,
@@ -192,7 +196,7 @@ function site_verify_delete_form($form_state, $record) {
 
   return confirm_form(
     $form,
-    t('Are you sure you want to delete the site verification for %engine?', array('%engine' => $record['engine_details']['name'])),
+    t('Are you sure you want to delete the site verification for %engine?', array('%engine' => $record['engine']['name'])),
     'admin/build/site-verify',
     t('This action cannot be undone.'),
     t('Delete'),
@@ -203,8 +207,8 @@ function site_verify_delete_form($form_state, $record) {
 function site_verify_delete_form_submit($form, &$form_state) {
   $record = $form_state['values']['record'];
   db_query("DELETE FROM {site_verify} WHERE svid = %d", $record['svid']);
-  drupal_set_message(t('Verification for %engine has been deleted.', array('%engine' => $record['engine_details']['name'])));
-  watchdog('site_verify', 'Verification for %engine deleted.', array('%engine' => $record['engine_details']['name']), WATCHDOG_NOTICE);
+  drupal_set_message(t('Verification for %engine has been deleted.', array('%engine' => $record['engine']['name'])));
+  watchdog('site_verify', 'Verification for %engine deleted.', array('%engine' => $record['engine']['name']), WATCHDOG_NOTICE);
   $form_state['redirect'] = 'admin/build/site-verify';
 }
 
