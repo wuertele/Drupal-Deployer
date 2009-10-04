@@ -168,12 +168,6 @@ function DoFCKeditorUpdateId(editorInstance) {
  * editor instance is completely loaded and available for API interactions.
  */
 function FCKeditor_OnComplete(editorInstance) {
-  // work around for FCKeditor bug #3053
-  if (jQuery.browser.safari) {
-    var theBigFrame = $('#' + editorInstance.Name + '___Frame');
-    theBigFrame.height(theBigFrame.height() + 1);
-  }
-
   // Enable the switch button. It is disabled at startup, waiting the editor to be loaded.
   $('#switch_' + editorInstance.Name).show();
   editorInstance.Events.AttachEvent('OnAfterLinkedFieldUpdate', FCKeditor_OnAfterLinkedFieldUpdate);
