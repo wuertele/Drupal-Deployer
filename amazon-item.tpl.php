@@ -1,4 +1,4 @@
 <div class="<?php print $classes; ?>">
-<?php print $smallimage; ?>
-<div><strong><?php print l($title, $detailpageurl); ?></strong></div>
+<?php if (!empty($smallimage)) { print $smallimage; } ?>
+<div><strong><?php print l($title, $detailpageurl, array('html' => TRUE)); ?></strong></div>
 </div>
