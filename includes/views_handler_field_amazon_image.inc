@@ -1,4 +1,13 @@
 <?php
+// $Id $
+/**
+ * @file
+ * Provide views handler so that Amazon Image can be displayed in the various
+ * ways that are available.
+ *
+ * @author rfay
+ *
+ */
 
 class views_handler_field_amazon_image extends views_handler_field {
   function options(&$options) {
@@ -22,6 +31,7 @@ class views_handler_field_amazon_image extends views_handler_field {
         'table' => 'amazon_item', 'field' => 'detailpageurl', 'value' => 'amazon_item_detailpageurl'
       );
     }
+    $this->additional_fields[] = 'asin';
   }
 
   function ensure_my_table() {
@@ -64,6 +74,18 @@ class views_handler_field_amazon_image extends views_handler_field {
       ),
       '#default_value' => !empty($this->options['link_format']) ? $this->options['link_format'] : 'plain',
     );
+    if (module_exists('amazon_store')) {
+      $form['link_format']['#options']['amazon_store'] = t("A link to the product's Amazon Store page (Amazon Store Module)");
+    }
+    $form['presentation_format'] = array(
+      '#title' => t('Presentation format'),
+      '#type' => 'select',
+      '#options' => array(
+        'markup' => t('HTML img markup'),
+        'plain_url' => t('Plain URL to image'),
+      ),
+      '#default_value' => !empty($this->options['presentation_format']) ? $this->options['presentation_format'] : 'markup',
+    );
     if ($this->view->base_table == 'node') {
       $form['link_format']['#options']['node'] = t('A link to the node the product is associated with');
     }
@@ -74,8 +96,13 @@ class views_handler_field_amazon_image extends views_handler_field {
       'height' => $values->{$this->table_alias . '_height'},
       'width' => $values->{$this->table_alias . '_width'},
     );
-    $image = theme('image', $values->{$this->table_alias . '_url'}, NULL, NULL, $attributes, FALSE);
 
+    // Choose presentation style
+    if ($this->options['presentation_format'] == 'markup') {
+      $image = theme('image', $values->{$this->table_alias . '_url'}, NULL, NULL, $attributes, FALSE);
+    } else {
+      $image = $values->{$this->table_alias . '_url'};
+    }
     switch($this->options['link_format']) {
       case 'plain':
         return $image;
@@ -89,6 +116,10 @@ class views_handler_field_amazon_image extends views_handler_field {
           $urlfield = $this->relationship .'_'. $urlfield;
         }
         return l($image, $values->{$urlfield}, array('html' => TRUE));
+        break;
+      case 'amazon_store':
+        $asin = $values->{$this->aliases['asin']};
+        return l($image, 'amazon_store/item/' . $asin, array('html' => TRUE));
         break;
     }
   }
