@@ -92,6 +92,10 @@ class views_handler_field_amazon_image extends views_handler_field {
   }
 
   function render($values) {
+    // We may not have a URL. It's not guaranteed that Amazon will give us one.
+    if (empty($values->{$this->table_alias . '_url'})) {
+      return;
+    }
     $attributes = array(
       'height' => $values->{$this->table_alias . '_height'},
       'width' => $values->{$this->table_alias . '_width'},
@@ -111,11 +115,12 @@ class views_handler_field_amazon_image extends views_handler_field {
         return l($image, 'node/'. $values->nid, array('html' => TRUE));
         break;
       case 'amazon':
-        $urlfield = $this->additional_fields['detailpageurl']['value'];
-        if (!empty($this->relationship)) {
-          $urlfield = $this->relationship .'_'. $urlfield;
+        if (!empty($values->{$this->aliases['detailpageurl']})) {
+          $urlfield = $values->{$this->aliases['detailpageurl']};
+          return l($image, $urlfield, array('html' => TRUE));
+        } else {
+          return $image;
         }
-        return l($image, $values->{$urlfield}, array('html' => TRUE));
         break;
       case 'amazon_store':
         $asin = $values->{$this->aliases['asin']};
