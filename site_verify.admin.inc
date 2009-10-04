@@ -6,24 +6,27 @@ function site_verify_list() {
 
   $headers = array(
     t('Engine'),
-    t('Verification'),
+    t('Meta tag'),
+    t('File'),
     array('data' => t('Operations'), 'colspan' => 2),
   );
   $rows = array();
 
   $query = db_query("SELECT svid, engine, file, meta FROM {site_verify}");
   while ($record = db_fetch_object($query)) {
-    $engines[$record->engine]['used'] = TRUE;
-    $rows[] = array(
+    $row_key = $engines[$record->engine]['key'] . $record->svid;
+    $rows[$row_key] = array(
       $engines[$record->engine]['name'],
-      t('Yes'),
+      $record->meta ? '<span title="' . check_plain(truncate_utf8($record->meta, 48)) . '">' . t('Yes') . '</spam>' : t('No'),
+      $record->file ? l($record->file, $record->file) : t('None'),
       l('Edit', 'admin/build/site-verify/edit/' . $record->svid),
       l('Delete', 'admin/build/site-verify/delete/' . $record->svid),
     );
   }
+  ksort($rows);
 
   if (!$rows) {
-    $rows[] = array(array('data' => t('No active verifications. <a href="@add">Add one?</a>', array('@add' => url('admin/build/site-verify/add'))), 'colspan' => 4));
+    $rows[] = array(array('data' => t('No active verifications. <a href="@add">Add one?</a>', array('@add' => url('admin/build/site-verify/add'))), 'colspan' => 5));
   }
 
   $output = theme('table', $headers, $rows);
