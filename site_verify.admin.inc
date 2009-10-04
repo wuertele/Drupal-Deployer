@@ -25,9 +25,6 @@ function site_verify_list() {
   if (!$rows) {
     $rows[] = array(array('data' => t('No active verifications. <a href="@add">Add one?</a>', array('@add' => url('admin/build/site-verify/add'))), 'colspan' => 4));
   }
-  else {
-    $rows[] = array(array('data' => l(t('Add verification'), 'admin/build/site-verify/add'), 'colspan' => 4));
-  }
 
   $output = theme('table', $headers, $rows);
   return $output;
