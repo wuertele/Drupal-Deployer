@@ -559,7 +559,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
 
   $form['css'] = array(
     '#type' => 'fieldset',
-    '#title' => t('CSS'),
+    '#title' => t('Style and template files'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE
   );
@@ -604,6 +604,27 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#size' => 40,
     '#maxlength' => 255,
     '#description' => t('Enter path to XML file with predefined styles (Example: "/fckstyles.xml"). Be sure to select "define path to fckstyles.xml" above.<br />Available placeholders:<br /><strong>%h</strong> - host name (!host).<br /><strong>%t</strong> - path to theme (!theme).<br /><strong>%m</strong> - path to FCKeditor module (!module).', array('!host' => base_path(), '!theme' => base_path() . path_to_theme() .'/', '!module' => drupal_get_path('module', 'fckeditor')))
+  );
+
+  $form['css']['templatefile_mode'] = array(
+    '#type' => 'select',
+    '#title' => t('Predefined templates'),
+    '#default_value' => !empty($profile->settings['templatefile_mode']) ? $profile->settings['templatefile_mode'] : 'default',
+    '#options' => array(
+      'default' => t('FCKeditor default'),
+      'theme' => t('Use theme fcktemplates.xml'),
+      'self' => t('Define path to fcktemplates.xml'),
+    ),
+    '#description' => t('Define the location of "fcktemplates.xml" file. It is used by the "Templates" dropdown list available in the default toolbar. Copy "!fcktemplates.xml" inside your theme directory ("!theme") and adjust it to your needs.', array('!fcktemplates.xml' => fckeditor_path(TRUE) .'/fcktemplates.xml', '!theme' => path_to_theme() .'/fcktemplates.xml'))
+  );
+
+  $form['css']['templatefile_path'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Predefined templates path'),
+    '#default_value' => !empty($profile->settings['templatefile_path']) ? $profile->settings['templatefile_path'] : '',
+    '#size' => 40,
+    '#maxlength' => 255,
+    '#description' => t('Enter path to XML file with predefined styles (Example: "/fcktemplates.xml"). Be sure to select "define path to fcktemplates.xml" above.<br />Available placeholders:<br /><strong>%h</strong> - host name (!host).<br /><strong>%t</strong> - path to theme (!theme).<br /><strong>%m</strong> - path to FCKeditor module (!module).', array('!host' => base_path(), '!theme' => base_path() . path_to_theme() .'/', '!module' => drupal_get_path('module', 'fckeditor')))
   );
 
   $form['fckeditor_upload_settings'] = array(
@@ -778,6 +799,18 @@ function fckeditor_admin_profile_form_validate($form, &$form_state) {
     }
     elseif (substr($edit['styles_path'], 0, 1) == "'" && substr($edit['styles_path'], -1) == "'") {
       form_set_error('styles_path', t('Enter valid path, do not surround it with quotes.'));
+    }
+  }
+
+  if (!empty($edit['templatefile_path'])) {
+    if ($edit['templatefile_mode'] != 'self') {
+      form_set_error('templatefile_path', t('Path to predefined styles is not empty. Please set the "Predefined styles" option to "define path to fckstyles.xml" mode.'));
+    }
+    elseif (FALSE !== strpos($edit['templatefile_path'], '"')) {
+      form_set_error('templatefile_path', t('Double quotes are not allowed in path.'));
+    }
+    elseif (substr($edit['templatefile_path'], 0, 1) == "'" && substr($edit['styles_path'], -1) == "'") {
+      form_set_error('templatefile_path', t('Enter valid path, do not surround it with quotes.'));
     }
   }
 

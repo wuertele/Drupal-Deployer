@@ -791,6 +791,19 @@ function fckeditor_process_textarea($element) {
       $conf['styles_path'] = str_replace("%h%t", "%t", $conf['styles_path']);
       $js .=  $js_id .".Config['StylesXmlPath'] = \"". str_replace(array('%h', '%t', '%m'), array($host, $host . $themepath, $module_drupal_path), $conf['styles_path']) ."\";\n";
     }
+
+    // add custom xml templae if it exists
+    if (!empty($conf['templatefile_mode']) && $conf['templatefile_mode'] == 'theme') {
+      if (file_exists($themepath .'fcktemplates.xml')) {
+        $styles_xml_path = $host . $themepath .'fcktemplates.xml';
+        $js .= $js_id .".Config['TemplatesXmlPath'] = \"". $styles_xml_path ."\";\n";
+      }
+    }
+    elseif (!empty($conf['templatefile_mode']) && $conf['templatefile_mode'] == 'self') {
+      $conf['templatefile_path'] = str_replace("%h%t", "%t", $conf['templatefile_path']);
+      $js .=  $js_id .".Config['TemplatesXmlPath'] = \"". str_replace(array('%h', '%t', '%m'), array($host, $host . $themepath, $module_drupal_path), $conf['templatefile_path']) ."\";\n";
+    }
+
     // add custom stylesheet if configured
     // lets hope it exists but we'll leave that to the site admin
     $cssfiles = array($module_full_path .'/fckeditor.css');
