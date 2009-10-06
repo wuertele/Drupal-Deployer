@@ -49,4 +49,4 @@ USAGE
    a) click the 'Export' tab on a node page or,
    b) use the Content page (admin/content/node) to filter the nodes you wish to
       export and then choose 'Export nodes' under the 'Update options'.
-2. To import nodes go to 'Import' (admin/content/import).
+2. To import nodes go to 'Node Export: Import' (admin/content/import).
