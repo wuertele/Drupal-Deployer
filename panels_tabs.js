@@ -64,13 +64,17 @@ if (Drupal.jsEnabled) {
 
     // Update all links on load (automatically find the name of the tabset!).
     var currentURI = "" + window.location;
-    var fragment = currentURI.substr(currentURI.indexOf('#'));
-    var id = $('a[@href*="'+ fragment +'"]')
-    .parent() // the parent li
-    .parent() // the parent ul
-    .parent() // the parent div (the actual tabset div!)
-    .attr('id')
-    .substr("tabs-".length);
-    updateLinks(id, fragment);
+    var poundIdx = currentURI.indexOf('#');
+    if (poundIdx > -1) { // Ensure a fragment is set.
+      var fragment = currentURI.substr(poundIdx);
+      var tabsetDiv = $('a[@href*="'+ fragment +'"]')
+      .parent() // the parent li
+      .parent() // the parent ul
+      .parent(); // the parent div (the actual tabset div!)
+      if (tabsetDiv.length > 0) { // Ensure the set fragment is associated with a tabset div.
+        var id = tabsetDiv.attr('id').substr("tabs-".length);
+        updateLinks(id, fragment);
+      }
+    }
   });
 }
