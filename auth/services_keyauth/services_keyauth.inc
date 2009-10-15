@@ -86,9 +86,6 @@ function _services_keyauth_alter_methods(&$methods) {
     // set method defaults
     switch ($method['#method']) {
       case 'system.connect':
-      case 'search.nodes':
-      case 'search.content':
-      case 'search.users':
         $method['#key'] = FALSE;
         $method['#auth'] = FALSE;
         break;
