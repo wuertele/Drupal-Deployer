@@ -56,16 +56,21 @@ function _mollom_feedback_options() {
  * This function reports a comment as feedback and deletes it.
  */
 function mollom_report_comment($form_state, $cid) {
-  if ($comment = _comment_load($cid)) {
-    $form['cid'] = array('#type' => 'value', '#value' => $cid);
-    $form['feedback'] = _mollom_feedback_options();
-
-    return confirm_form($form,
-      t('Are you sure you want to delete the comment and report it?'),
-      isset($_GET['destination']) ? $_GET['destination'] : 'node/'. $comment->nid,
-      t('This action cannot be undone.'),
-      t('Delete'), t('Cancel'));
+  $comment = _comment_load($cid);
+  if (!$comment) {
+    return drupal_access_denied();
   }
+
+  $form['cid'] = array('#type' => 'value', '#value' => $cid);
+  $form['feedback'] = _mollom_feedback_options();
+
+  return confirm_form($form,
+    t('Are you sure you want to delete the comment and report it?'),
+    isset($_GET['destination']) ? $_GET['destination'] : 'node/'. $comment->nid,
+    t('This action cannot be undone.'),
+    t('Delete'),
+    t('Cancel')
+  );
 }
 
 /**
@@ -97,17 +102,16 @@ function mollom_report_comment_submit($form, &$form_state) {
 /**
  * This function deletes a node and optionally sends feedback to Mollom.
  */
-function mollom_report_node($form_state, $nid) {
-  if ($node = node_load($nid)) {
-    $form['nid'] = array('#type' => 'value', '#value' => $node->nid);
-    $form['feedback'] = _mollom_feedback_options();
+function mollom_report_node($form_state, $node) {
+  $form['nid'] = array('#type' => 'value', '#value' => $node->nid);
+  $form['feedback'] = _mollom_feedback_options();
 
-    return confirm_form($form,
-      t('Are you sure you want to delete %title and report it?', array('%title' => $node->title)),
-      isset($_GET['destination']) ? $_GET['destination'] : 'node/'. $node->nid,
-      t('This action cannot be undone.'),
-      t('Delete'), t('Cancel'));
-  }
+  return confirm_form($form,
+    t('Are you sure you want to delete %title and report it?', array('%title' => $node->title)),
+    isset($_GET['destination']) ? $_GET['destination'] : 'node/'. $node->nid,
+    t('This action cannot be undone.'),
+    t('Delete'), t('Cancel')
+  );
 }
 
 /**
@@ -128,6 +132,34 @@ function mollom_report_node_submit($form, &$form_state) {
       // clear the cache and print a status message.
       node_delete($node->nid);
     }
+  }
+
+  $form_state['redirect'] = '<front>';
+}
+
+/**
+ * This function reports a contact form message as inappropriate.
+ */
+function mollom_report_contact($form_state, $session) {
+  $form['session'] = array('#type' => 'value', '#value' => $session);
+  $form['feedback'] = _mollom_feedback_options();
+
+  return confirm_form($form,
+    t('Are you sure you want to report the e-mail message as inappropriate?'),
+    isset($_GET['destination']) ? $_GET['destination'] : '',
+    t('This action cannot be undone.'),
+    t('Report as inappropriate'),
+    t('Cancel')
+  );
+}
+
+/**
+ * This function reports a contact form message as inappropriate.
+ */
+function mollom_report_contact_submit($form, &$form_state) {
+  if ($form_state['values']['feedback']) {
+    mollom('mollom.sendFeedback', array('session_id' => $form_state['values']['session'], 'feedback' => $form_state['values']['feedback']));
+    drupal_set_message(t('The e-mail has been reported as inappropriate.'));
   }
 
   $form_state['redirect'] = '<front>';
