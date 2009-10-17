@@ -60,6 +60,12 @@ function amazon_views_handlers() {
       'views_handler_filter_amazon_node_module' => array(
         'parent' => 'views_handler_filter_in_operator',
       ),
+      'views_handler_field_amazon_date' => array(
+        'parent' => 'views_handler_field_date',
+      ),
+      'views_handler_filter_string_compare' => array(
+        'parent' => 'views_handler_filter',
+      ),
     ),
   );
 }
@@ -122,8 +128,7 @@ function amazon_views_data() {
   _amazon_make_simple_text_field($data, 'amazon_item', 'productgroup', 'Product group', 'The Amazon grouping the product is categorized in.');
   _amazon_make_simple_text_field($data, 'amazon_item', 'producttypename', 'Product type name', 'The Amazon internal product-type code for the product.');
 
-  // We probably want to convert this to a real date field.
-  _amazon_make_simple_text_field($data, 'amazon_item', 'releasedate', 'Release date', 'The release date of the product.');
+  _amazon_make_simple_date_field($data, 'amazon_item', 'releasedate', 'Release date', 'The release date of the product.');
   _amazon_make_simple_text_field($data, 'amazon_item', 'listpriceformattedprice', 'List price', 'The current list price of the item. (Unformatted)');
   unset($data['amazon_item']['listpriceformattedprice']['argument']);
 
@@ -202,6 +207,22 @@ function _amazon_make_simple_text_field(&$data, $table, $column, $title, $help =
      ),
     'argument' => array('handler' => 'views_handler_argument_string'),
     'filter' => array('handler' => 'views_handler_filter_string'),
+    'sort' => array('handler' => 'views_handler_sort'),
+  );
+}
+
+function _amazon_make_simple_date_field(&$data, $table, $column, $title, $help = '') {
+  $data[$table][$column] = array(
+    'title' => t($title), // The item it appears as on the UI,
+    'help' => t($help), // The help that appears on the UI,
+     // Information for displaying a title as a field
+    'field' => array(
+      'field' => $column, // the real field
+      'handler' => 'views_handler_field_amazon_date',
+      'click sortable' => TRUE,
+     ),
+    'filter' => array('handler' => 'views_handler_filter_string_compare'),
+     // Amazon date is sortable, so we can just use the standard handler.
     'sort' => array('handler' => 'views_handler_sort'),
   );
 }

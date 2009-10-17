@@ -31,7 +31,7 @@ function amazon_media_views_data() {
   _amazon_make_simple_text_field($data, 'amazon_book', 'deweydecimalnumber', 'Dewey decimal number');
   _amazon_make_simple_number_field($data, 'amazon_book', 'edition', 'Edition', 'The edition of an Amazon book product.');
   _amazon_make_simple_number_field($data, 'amazon_book', 'numberofpages', 'Pages', 'The number of pages in an Amazon book product.');
-  _amazon_make_simple_text_field($data, 'amazon_book', 'publicationdate', 'Publication date');
+  _amazon_make_simple_date_field($data, 'amazon_book', 'publicationdate', 'Publication date', 'The publication date of the item');
 
   // Define the base group of this table. Fields that don't
   // have a group defined will go into this field by default.
@@ -44,7 +44,7 @@ function amazon_media_views_data() {
     ),
   );
 
-  _amazon_make_simple_text_field($data, 'amazon_dvd', 'theatricalreleasedate', 'Theatrical release date', 'The theatrical release date of an Amazon video product.');
+  _amazon_make_simple_date_field($data, 'amazon_dvd', 'theatricalreleasedate', 'Theatrical release date', 'The theatrical release date of an Amazon video product.');
   _amazon_make_simple_text_field($data, 'amazon_dvd', 'aspectratio', 'Aspect ratio', 'The aspect ratio of an Amazon video product.');
   _amazon_make_simple_text_field($data, 'amazon_dvd', 'audiencerating', 'Audience rating', 'The Audience rating of an Amazon video product (G, PG, etc).');
   _amazon_make_simple_number_field($data, 'amazon_dvd', 'regioncode', 'Region code', 'The region code of an Amazon DVD product.');
