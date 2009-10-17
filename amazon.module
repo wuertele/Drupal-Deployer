@@ -240,6 +240,18 @@ function amazon_http_request($operation, $parameters = array(), $locale = NULL) 
   }
 }
 
+/**
+ * Look up an item using database or web.
+ * The default is to look in the database for existing data, and then to do the
+ * web search if that fails. $force_lookup==TRUE forces going to Amazon's
+ * API.
+ * @param $item_ids
+ *   An array of ASIN strings or a single ASIN as a string.
+ * @param $force_lookup
+ *   If TRUE, skip the database lookup and just go to the Amazon API lookup.
+ * @return array
+ *   Array of "cleaned" XML item descriptions, keyed on ASIN.
+ */
 function amazon_item_lookup($item_ids = array(), $force_lookup = FALSE) {
   if (empty($item_ids)) {
     return array();
@@ -262,6 +274,13 @@ function amazon_item_lookup($item_ids = array(), $force_lookup = FALSE) {
   return $items + $items_from_web;
 }
 
+/**
+ * Use Amazon API to look up an array of ASINs.
+ * @param $item_ids
+ *   Array of ASIN strings to look up.
+ * @return array
+ *   Array of cleaned XML structures keyed by ASIN.
+ */
 function amazon_item_lookup_from_web($item_ids = array()) {
   $amazon_limit = 10;  // Amazon will accept no more than 10 items
   $asins = array();
@@ -310,6 +329,13 @@ function _amazon_item_batch_lookup_from_web($item_ids = array()) {
   return array();
 }
 
+/**
+ * Look up ASINs in database and return arrays of information keyed by ASIN.
+ * @param $item_ids
+ *   An array of string ASINs.
+ * @return array
+ *   Array of Amazon 'cleaned' data structures keyed by ASIN.
+ */
 function amazon_item_lookup_from_db($item_ids = array()) {
   if (!empty($item_ids)) {
     $sql  = "SELECT * FROM {amazon_item} ai WHERE ai.asin IN (";
@@ -327,6 +353,11 @@ function amazon_item_lookup_from_db($item_ids = array()) {
   return array();
 }
 
+/**
+ * Load participant, image, editorial_review data into database.
+ * @param $item
+ *   Amazon data structure.
+ */
 function _amazon_load_child_data(&$item) {
   $result = db_query("SELECT type, participant FROM {amazon_item_participant} WHERE asin = '%s'", $item['asin']);
   while ($participant = db_fetch_array($result)) {
@@ -348,6 +379,14 @@ function _amazon_load_child_data(&$item) {
   }
 }
 
+/**
+ * Take the Amazon XML item and turn it into our own private 'cleaned'
+ * data structure.
+ * @param $xml
+ *   XML structure as returned from Amazon API call.
+ * @return
+ *   'Cleaned' XML structure for local use.
+ */
 function amazon_item_clean_xml($xml) {
   $metadata = amazon_data_cache();
   $item = array();
@@ -420,7 +459,18 @@ function amazon_item_clean_xml($xml) {
   return $item;
 }
 
+/**
+ * Insert 'cleaned' amazon item into database.
+ * @param $item
+ *   'Cleaned' amazon structure.
+ * @return
+ *   No return value.
+ */
 function amazon_item_insert($item) {
+  // We have boatloads of data to insert in here, so we're going to
+  // cheat and blow away the old entries first.
+  amazon_item_delete($item['asin']);
+
   $metadata = amazon_data_cache();
 
   $item['timestamp'] = time();
@@ -463,18 +513,28 @@ function amazon_item_insert($item) {
   module_invoke_all('amazon_item_insert', $item);
 }
 
+/**
+ * Save 'cleaned' Amazon item into database.
+ * @param $item
+ *   'Cleaned' amazon item to insert.
+ * @param $force_save
+ *   if TRUE, save even though the caching is turned off in admin interface.
+ * @return no return.
+ */
 function amazon_item_save($item, $force_save = FALSE) {
   // Only save if the user has turned on local persistence.
   if (variable_get('amazon_cache', TRUE) || $force_save) {
-    // We have boatloads of data to insert in here, so we're going to
-    // cheat and blow away the old entries and re-insert them in 'silent'
-    // mode.
-    amazon_item_delete($item['asin']);
     amazon_item_insert($item, TRUE);
   }
 }
 
-function amazon_item_delete($asin, $silent = FALSE) {
+/**
+ * Delete all vestiges of Amazon item.
+ * @param $asin
+ *   ASIN to be deleted.
+ * @return No return.
+ */
+function amazon_item_delete($asin) {
   module_invoke_all('amazon_item_delete', $asin);
   db_query("DELETE FROM {amazon_item} WHERE asin = '%s'", $asin);
   db_query("DELETE FROM {amazon_item_participant} WHERE asin = '%s'", $asin);
