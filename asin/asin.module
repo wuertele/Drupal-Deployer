@@ -94,11 +94,13 @@ function asin_field($op, &$node, $field, &$items, $teaser, $page) {
       break;
 
     case 'validate':
+      // Trim ASINs to help the user out.
+      _asin_trim_items($items);
       $results = _asin_load_items($items);
       foreach ($items as $delta => $item) {
         if (is_array($item)) {
           if (!empty($item['asin']) && empty($results[$item['asin']])) {
-            form_set_error($field['field_name'] .']['. $delta .'][asin', t('%name : No Amazon product with the ID %id could be located.', array('%name' => t($field['widget']['label']), '%id' => $item['asin'])));
+            form_set_error($field['field_name'] .']['. $delta .'][asin', t('%name : No Amazon product with the ASIN "%id" could be located.', array('%name' => t($field['widget']['label']), '%id' => $item['asin'])));
           }
         }
       }
@@ -106,6 +108,7 @@ function asin_field($op, &$node, $field, &$items, $teaser, $page) {
       break;
 
     case 'load':
+      _asin_trim_items($items);
       $results = _asin_load_items($items);
       foreach ($items as $delta => $item) {
         if (!empty($item['asin'])) {
@@ -127,11 +130,16 @@ function asin_field($op, &$node, $field, &$items, $teaser, $page) {
   }
 }
 
+function _asin_trim_items(&$items) {
+  foreach ($items as $delta => $item) {
+    $items[$delta]['asin'] = trim($items[$delta]['asin']);
+  }
+}
 function _asin_load_items($items) {
   $asins = array();
   foreach ($items as $delta => $item) {
     if (!empty($item['asin'])) {
-      $asins[] = $item['asin'];
+      $asins[] = trim($item['asin']);
     }
   }
   return amazon_item_lookup($asins);
@@ -317,6 +325,7 @@ function asin_text_process($element, $edit, $form_state, $form) {
   $delta = $element['#delta'];
 
   $asin_key = $element['#columns'][0];
+  $element['#value'][$asin_key] = trim($element['#value'][$asin_key]);
   $element[$asin_key] = array(
     '#type' => 'textfield',
     '#title' => $element['#title'],
