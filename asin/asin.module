@@ -188,9 +188,11 @@ function asin_field_formatter_info() {
  * general use and product listings.
  */
 function theme_asin_formatter_default($element) {
-  if ($asin = $element['#item']['asin']) {
-    $asins = amazon_item_lookup(array($asin));
-    return theme('amazon_item', $asins[$asin]);
+  $asin = trim($element['#item']['asin']);
+  $asins = array();
+  if (!empty($asin)) {
+    $asins = amazon_item_lookup("$asin");
+    return theme('amazon_item', $asins["$asin"]);
   }
 }
 
@@ -199,9 +201,10 @@ function theme_asin_formatter_default($element) {
  * product hilighting and display.
  */
 function theme_asin_formatter_thumbnail($element) {
-  if ($asin = $element['#item']['asin']) {
-    $asins = amazon_item_lookup(array($asin));
-    return theme('amazon_item', $asins[$asin], 'thumbnail');
+  $asin = trim($element['#item']['asin']);
+  if (!empty($asin)) {
+    $asins = amazon_item_lookup("$asin");
+    return theme('amazon_item', $asins["$asin"], 'thumbnail');
   }
 }
 
@@ -210,9 +213,10 @@ function theme_asin_formatter_thumbnail($element) {
  * product hilighting and display.
  */
 function theme_asin_formatter_details($element) {
-  if ($asin = $element['#item']['asin']) {
+  $asin = trim($element['#item']['asin']);
+  if (!empty($asin)) {
     $asins = amazon_item_lookup(array($asin));
-    return theme('amazon_item', $asins[$asin], 'details');
+    return theme('amazon_item', $asins["$asin"], 'details');
   }
 }
 
@@ -221,8 +225,12 @@ function theme_asin_formatter_details($element) {
  * quick title lists, etc.
  */
 function theme_asin_formatter_inline($element) {
-  if ($asin = $element['#item']['asin']) {
-    $asins = amazon_item_lookup(array($asin));
+  if ($asin = trim($element['#item']['asin'])) {
+    $asins = amazon_item_lookup("$asin");
+    if (empty($asins[$asin])) { // DEBUG
+      drupal_set_message("<pre>\$asins[$asin]=" . print_r($asins["$asin"], TRUE) .  "</pre>");
+      drupal_set_message("asin='$asin'; asins=".print_r($asins,TRUE));
+    }
     return theme('amazon_inline_item', $asins[$asin]);
   }
 }

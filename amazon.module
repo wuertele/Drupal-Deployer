@@ -82,11 +82,14 @@ function amazon_theme() {
     ),
     'amazon_inline_item' => array(
       'arguments' => array('item' => array()),
-      'file' => 'amazon.theme.inc',
+      'template' => 'amazon-inline-item',
+      // Re-use the existing infrastructure.
+      'preprocess functions' => 'amazon_preprocess_amazon_item',
     ),
   );
   return $templates;
 }
+
 
 function amazon_preprocess_amazon_item(&$variables) {
 
@@ -104,6 +107,7 @@ function amazon_preprocess_amazon_item(&$variables) {
   $variables['detailpageurl'] = check_url($item['detailpageurl']);
   $variables['classes'] = _amazon_item_classes($item) . ' amazon-item-' . check_plain($variables['style']);
   $variables['editorialreview'] = isset($item['editorialreviews']) ? check_markup($item['editorialreviews'][0]['content']) : '';
+  $variables['invalid_asin'] = isset($item['invalid_asin']);
 
   if (!empty($variables['theatricalreleasedate'])) {
     $date = explode('-', $variables['theatricalreleasedate']);
@@ -271,7 +275,8 @@ function amazon_item_lookup($item_ids = array(), $force_lookup = FALSE) {
     }
   }
   $items_from_web = amazon_item_lookup_from_web($items_to_fetch);
-  return $items + $items_from_web;
+  $full_set = $items + $items_from_web;
+  return $full_set;
 }
 
 /**
@@ -313,17 +318,24 @@ function _amazon_item_batch_lookup_from_web($item_ids = array()) {
     $results = amazon_http_request('ItemLookup', $params);
     if (!empty($results->Items->Request->Errors)) {
       foreach($results->Items->Request->Errors->Error as $error) {
-        watchdog('amazon','Error retrieving Amazon item %code, message: %message.', array('%code' => (string)$error->Code, '%message' => (string)$error->Message));
+        $code = (string)$error->Code;
+        $message = (string)$error->Message;
+        $matches = array();
+        // Find and extract the failing ASIN, so we can mark it in the db.
+        if (preg_match('/^([^ ]+) is not a valid value for ItemId/', $message, $matches)) {
+          $error_asin = $matches[1];
+          $query = "update {amazon_item} set invalid_asin = TRUE where asin = '%s'";
+          db_query($query, $error_asin);
+        }
+        watchdog('amazon','Error retrieving Amazon item %code, message: %message.', array('%code' => $code, '%message' => $message), WATCHDOG_WARNING);
       }
-      return array();
     }
     $items = array();
     foreach($results->Items->Item as $xml) {
       $item = amazon_item_clean_xml($xml);
       amazon_item_save($item);
-      $items[$item['asin']] = $item;
+      $items["{$item['asin']}"] = $item;
     }
-
     return $items;
   }
   return array();
@@ -346,7 +358,7 @@ function amazon_item_lookup_from_db($item_ids = array()) {
     while ($item = db_fetch_array($results)) {
       _amazon_load_child_data($item);
       $item += module_invoke_all('amazon_item_load', $item);
-      $items[$item['asin']] = $item;
+      $items["{$item['asin']}"] = $item;
     }
     return $items;
   }

@@ -130,6 +130,7 @@ function amazon_views_data() {
 
   _amazon_make_simple_date_field($data, 'amazon_item', 'releasedate', 'Release date', 'The release date of the product.');
   _amazon_make_simple_text_field($data, 'amazon_item', 'listpriceformattedprice', 'List price', 'The current list price of the item. (Unformatted)');
+  _amazon_make_simple_text_field($data, 'amazon_item', 'invalid_asin', 'Invalid ASIN', 'If nonzero, the ASIN is invalid or discontinued by Amazon');
   unset($data['amazon_item']['listpriceformattedprice']['argument']);
 
   // Define the base group of this table. Fields that don't

@@ -47,6 +47,7 @@ function amazon_schema() {
       'listpriceformattedprice' => array('type' => 'varchar', 'length' => 32),
       'productgroup' => array('type' => 'varchar', 'length' => 255),
       'producttypename' => array('type' => 'varchar', 'length' => 255),
+      'invalid_asin' => array('type' => 'boolean'),
       'timestamp' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
     ),
     'primary key' => array('asin'),
@@ -150,9 +151,6 @@ function amazon_update_6004() {
 
 function amazon_update_6005() {
   $ret = array();
-  // Many extraneous ASINs have been left in this table because there was no
-  // delete. We will truncate here, and they'll be rebuilt automatically.
-  // $result = db_query('TRUNCATE {amazon_item}'); //causes too much pain right now.
   db_change_field($ret, 'amazon_item', 'detailpageurl', 'detailpageurl',
     array('type' => 'text'));
   db_change_field($ret, 'amazon_item', 'brand', 'brand',
@@ -177,6 +175,12 @@ function amazon_update_6005() {
   return $ret;
 }
 
+function amazon_update_6006() {
+  $ret = array();
+  db_add_column($ret, 'amazon_item', 'invalid_asin', 'boolean',
+    array('default' => FALSE));
+  return $ret;
+}
 function amazon_uninstall() {
   drupal_uninstall_schema('amazon');
 }

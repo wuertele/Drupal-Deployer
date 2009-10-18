@@ -1,5 +1,5 @@
 <div class="<?php print $classes; ?>">
-<?php print $smallimage; ?>
+<?php if (!empty($smallimage)) { print $smallimage; } ?>
 <div><strong><?php print l($title, $detailpageurl); ?></strong></div>
 <div><strong><?php print t('Publisher'); ?>:</strong> <?php print $publisher; ?></div>
 <div><strong><?php print t('Operating System'); ?>:</strong> <?php print $operatingsystem; ?></div>
