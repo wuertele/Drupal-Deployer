@@ -86,6 +86,12 @@ function amazon_theme() {
       // Re-use the existing infrastructure.
       'preprocess functions' => 'amazon_preprocess_amazon_item',
     ),
+    // Allows use of whatever is provided in preprocessed $variables.
+    'amazon_detail' => array(
+      'arguments' => array('item' => array(), 'detail' => NULL),
+      'template' => 'amazon-item-detail',
+      'preprocess functions' => array('amazon_preprocess_amazon_item'),
+    ),
   );
   return $templates;
 }
@@ -105,7 +111,6 @@ function amazon_preprocess_amazon_item(&$variables) {
 
   $variables['type'] = _amazon_clean_type($item['producttypename']);
   $variables['detailpageurl'] = check_url($item['detailpageurl']);
-  $variables['classes'] = _amazon_item_classes($item) . ' amazon-item-' . check_plain($variables['style']);
   $variables['editorialreview'] = isset($item['editorialreviews']) ? check_markup($item['editorialreviews'][0]['content']) : '';
   $variables['invalid_asin'] = isset($item['invalid_asin']);
 
@@ -155,18 +160,25 @@ function amazon_preprocess_amazon_item(&$variables) {
   if (isset($item['imagesets'])) {
     foreach($item['imagesets'] as $key => $image) {
       $variables[$key] = theme('image', $image['url'], t('Image of') . ' ' . check_plain($item['title']), check_plain($item['title']), array('height' => $image['height'], 'width' => $image['width']), FALSE);
+      $variables["{$key}url"] = check_url($image['url']);
+      $variables["{$key}height"] = check_plain($image['height']);
+      $variables["{$key}width"] = check_plain($image['width']);
     }
   }
   $variables['image'] = !empty($variables['mediumimage']) ? $variables['mediumimage'] : '';
 
-  // A set of more specific templates to use when displaying items.
-  $variables['template_files'][] = 'amazon-item-' . $variables['style'];
-  $variables['template_files'][] = 'amazon-item-' . strtolower($variables['type']);
-  $variables['template_files'][] = 'amazon-item-' . strtolower($variables['type']) .'-'. $variables['style'];
+  if (!empty($variables['style'])) {
+    $variables['classes'] = _amazon_item_classes($item) . ' amazon-item-' . check_plain($variables['style']);
 
-  if (!empty($item['view']) && !empty($item['view']->name)) {
-    $vars['template_files'][] = 'amazon-item-view-' . $item['view']->name;
-    $variables['template_files'][] = 'amazon-item-' . strtolower($variables['type']) . '-view-' . $item['view']->name;
+    // A set of more specific templates to use when displaying items.
+    $variables['template_files'][] = 'amazon-item-' . $variables['style'];
+    $variables['template_files'][] = 'amazon-item-' . strtolower($variables['type']);
+    $variables['template_files'][] = 'amazon-item-' . strtolower($variables['type']) .'-'. $variables['style'];
+
+    if (!empty($item['view']) && !empty($item['view']->name)) {
+      $vars['template_files'][] = 'amazon-item-view-' . $item['view']->name;
+      $variables['template_files'][] = 'amazon-item-' . strtolower($variables['type']) . '-view-' . $item['view']->name;
+    }
   }
 
 }
