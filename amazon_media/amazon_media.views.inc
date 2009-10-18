@@ -82,7 +82,7 @@ function amazon_media_views_data() {
   _amazon_make_simple_text_field($data, 'amazon_software', 'operatingsystem', 'Operating system', 'The operating systems required by an Amazon software product.');
   _amazon_make_simple_text_field($data, 'amazon_software', 'hardwareplatform', 'Hardware platform', 'The hardware platform required by an Amazon software product.');
   _amazon_make_simple_text_field($data, 'amazon_software', 'platform', 'Platform', 'The platform required by an Amazon software product.');
-  _amazon_make_simple_text_field($data, 'amazon_software', 'genre', 'Genre', 'The grenre of an Amazon software product.');
+  _amazon_make_simple_text_field($data, 'amazon_software', 'genre', 'Genre', 'The genre of an Amazon software product.');
 
   return $data;
 }
