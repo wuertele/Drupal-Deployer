@@ -240,6 +240,11 @@ function _amazon_examples_views_default_views() {
   $handler->override_option('cache', array(
     'type' => 'none',
   ));
+  $handler->override_option('header', 'This is an example view that you can experiment with. 
+
+If you see no results, it\'s because you have to create some nodes first. Go to Create Content-&gt;Amazon Example and create a node or two. Try using these ASINs: 0596515804, 1430209895, 0470429038.');
+  $handler->override_option('header_format', '1');
+  $handler->override_option('header_empty', 1);
   $handler->override_option('use_ajax', TRUE);
   $handler->override_option('use_pager', '1');
   $handler->override_option('style_plugin', 'table');
