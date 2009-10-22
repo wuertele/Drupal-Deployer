@@ -28,12 +28,12 @@ function seochecklist_admin_settings() {
 
     $form['group_' . $group_id] = array(
       '#type' => 'fieldset',
-      '#title' => check_plain(t($data->name)),
+      '#title' => t($data->name),
       '#collapsible' => TRUE,
-      '#description' => check_plain(t($data->description)),
+      '#description' => t($data->description),
     );
 
-    $res = db_query("SELECT download, enable, configure, module, option_checked, date_changed, id, name FROM {seo_checklist} WHERE group_id = %d ORDER BY order_id", $group_id);
+    $res = db_query("SELECT download, enable, configure, module, completed, id, name FROM {seo_checklist} WHERE group_id = %d ORDER BY order_id", $group_id);
     while ($row = db_fetch_object($res)) {
       // Service links.
       $links = array();
@@ -43,17 +43,16 @@ function seochecklist_admin_settings() {
       if ($row->enable) {
         $links[] = l(t('Enable'), $row->enable);
       }
-      if ($row->configure && (!$row->module || module_exists(strtolower($row->module)))) {
+      if ($row->configure && (!$row->module || module_exists($row->module))) {
         $links[] = l(t('Configure'), $row->configure);
       }
-      if ($row->option_checked) {
-        $links[] = t('Date completed: %date', array('%date' => format_date(strtotime($row->date_changed), 'small')));
+      if ($row->completed) {
+        $links[] = t('Date completed: %date', array('%date' => format_date($row->completed, 'small')));
       }
       $form['group_' . $group_id]['seochecklist_nodetypes_' . intval($row->id)] = array(
         '#type' => 'checkbox',
-        '#return_value' => intval($row->id),
         '#title' => t($row->name),
-        '#default_value' => ($row->option_checked) ? 1 : 0,
+        '#default_value' => $row->completed,
         '#prefix' => '<div class="seochecklist_item">',
         '#suffix' => '<div class="seochecklist_links">' . join(', ', $links) . '</div></div>',
       );
@@ -99,42 +98,31 @@ function seochecklist_admin_settings() {
  */
 function seochecklist_admin_settings_submit($form, &$form_state) {
   // Saving checked modules.
-  if($form_state['values']['op'] == t('Save')) {
-    $checked[] = array(0);
-    foreach($form_state['values'] as $key => $value) {
+  if ($form_state['values']['op'] == t('Save')) {
+    foreach ($form_state['values'] as $key => $value) {
       if (preg_match('/seochecklist_nodetypes/', $key)) {
         $key = explode('_', $key);
         $key = $key[2];
-        // Module $value is checked.
-        $existing = db_result(db_query("SELECT option_checked FROM {seo_checklist} WHERE id= %d", $key));
-        if ($existing) {
-          db_query("UPDATE {seo_checklist} SET date_changed = '%s', option_checked = %d WHERE id = %d", date("Y-m-d H:i:s"), $value, $key);
+        $current = (bool) db_result(db_query("SELECT completed FROM {seo_checklist} WHERE id = %d", $key));
+        if ($current != $value) {
+          // If the checkbox changed states, update the record.
+          db_query("UPDATE {seo_checklist} SET completed = %d WHERE id = %d", ($value ? time() : 0), $key);
         }
-        else {
-          db_query("update {seo_checklist} set option_checked = %d WHERE id = %d", $value, $key);
-        }
-        $checked[] = $value;
       }
     }
+
     // Special values not in database.
     variable_set('seo_checklist_link', $form_state['values']['seo_checklist_link']);
     variable_set('seo_checklist_thanks', $form_state['values']['seo_checklist_thanks']);
     variable_set('seo_checklist_podcast', $form_state['values']['seo_checklist_podcast']);
-
-    // Store zero for all unchecked items.
-
-    db_query("UPDATE {seo_checklist} SET option_checked = 0 WHERE id NOT IN (" . db_placeholders($checked) . ")", $checked);
   }
 
   // Check for already installed modules.
-  if($form_state['values']['op'] == t('Check for already Installed Modules')) {
-    $result=db_query("SELECT * FROM {seo_checklist} WHERE module != ''");
-    while ($data = db_fetch_object($result)) {
-      if(module_exists(strtolower($data->module))) {
-        db_query("UPDATE {seo_checklist} SET option_checked = %d, date_changed = '%s' where id = %d", $data->id, date('Y-m-d H:i:s'), $data->id);
-      }
-      else {
-        db_query("UPDATE {seo_checklist} SET option_checked = %d where id = %d", 0, $data->id);
+  if ($form_state['values']['op'] == t('Check for already installed modules')) {
+    $query = db_query("SELECT id, module FROM {seo_checklist} WHERE module <> '' AND completed = 0");
+    while ($task = db_fetch_object($query)) {
+      if (module_exists($task->module)) {
+        db_query("UPDATE {seo_checklist} SET completed = %d WHERE id = %d", time(), $task->id);
       }
     }
   }

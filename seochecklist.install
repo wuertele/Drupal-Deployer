@@ -77,27 +77,12 @@ function seochecklist_schema() {
         'description' => 'module',
         'default' => ''
       ),
-      'option_checked' => array(
+      'completed' => array(
         'type' => 'int',
-        'size' => 'tiny',
+        'unsigned' => TRUE,
         'not null' => TRUE,
-        'description' => 'option checked',
         'default' => 0,
-        'disp-width' => '1'
-      ),
-      'date_changed' => array(
-        'type' => 'datetime',
-        'not null' => TRUE,
-        'description' => 'date changed',
-        'default' => '0000-00-00 00:00:00'
-      ),
-      'checked_module' => array(
-        'type' => 'int',
-        'size' => 'tiny',
-        'not null' => TRUE,
-        'description' => 'checked module',
-        'default' => 0,
-        'disp-width' => '1'
+        'description' => 'UNIX timestamp of when this task was completed, or 0 if the task has not yet been completed.',
       ),
       'download' => array(
         'type' => 'varchar',
@@ -295,5 +280,36 @@ function seochecklist_update_6003() {
   $ret[] = update_sql("UPDATE {seo_checklist} SET name = 'Login to Bing - <a href=''http://www.bing.com/webmaster/''>http://www.bing.com/webmaster/</a>', order_id = 17 WHERE id = 42");
   $ret[] = update_sql("UPDATE {seo_checklist} SET name = 'Authenticate your site with Bing', order_id = 19 WHERE id = 43");
   $ret[] = update_sql("UPDATE {seo_checklist} SET name = 'Submit your XML Sitemap to Bing - <a href=''http://www.bing.com/webmaster/WebmasterAddSitesPage.aspx''>http://webmaster.live.com/webmaster/WebmasterAddSitesPage.aspx</a>', order_id = 21 WHERE id = 28");
+  return $ret;
+}
+
+/**
+ * Convert the date_changed and option_checked fields into one UNIX completed
+ * field.
+ */
+function seochecklist_update_6004() {
+  $ret = array();
+
+  db_add_field($ret, 'seo_checklist', 'completed', array(
+    'type' => 'int',
+    'unsigned' => TRUE,
+    'not null' => TRUE,
+    'default' => 0,
+    'description' => 'UNIX timestamp of when this task was completed.',
+  ));
+
+  $query = db_query("SELECT id, date_changed FROM {seo_checklist} WHERE option_checked <> 0");
+  while ($record = db_fetch_object($query)) {
+    $record->changed = strtotime($record->date_changed);
+    if (!$record->changed) {
+      $record->changed = time();
+    }
+    $ret[] = update_sql("UPDATE {seo_checklist} SET completed = {$record->changed} WHERE id = {$record->id}");
+  }
+
+  db_drop_field($ret, 'seo_checklist', 'date_changed');
+  db_drop_field($ret, 'seo_checklist', 'option_checked');
+  db_drop_field($ret, 'seo_checklist', 'checked_module');
+
   return $ret;
 }
