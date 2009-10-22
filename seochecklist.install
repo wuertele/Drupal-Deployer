@@ -102,6 +102,13 @@ function seochecklist_schema() {
         'default' => 0,
         'description' => 'UNIX timestamp of when this task was completed, or 0 if the task has not yet been completed.',
       ),
+      'uid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'The {user}.uid of the account that completed this task.',
+      ),
     ),
     'primary key' => array('id'),
   );
@@ -118,7 +125,7 @@ function seochecklist_install() {
 
   // Page title tasks
   db_query("INSERT INTO {seo_group} VALUES (1, 'Page Titles', 'The single most important thing you can do for on-site SEO.')");
-  db_query("INSERT INTO {seo_checklist} $task_fields VALUES (41, 1, 'Token (required for other modules to function)', 'Token', 'http://drupal.org/project/token', 'admin/build/modules', '', 1)");
+  db_query("INSERT INTO {seo_checklist} $task_fields VALUES (41, 1, 'Token (required for other modules to function)', 'token', 'http://drupal.org/project/token', 'admin/build/modules', '', 1)");
   db_query("INSERT INTO {seo_checklist} $task_fields VALUES (1, 1, 'Page Title Module', 'page_title', 'http://drupal.org/project/page_title', 'admin/build/modules', 'admin/content/page_title', 2)");
 
   // URL tasks
@@ -180,7 +187,7 @@ function seochecklist_install() {
   // Spam tasks
   db_query("INSERT INTO {seo_group} VALUES (9, 'Protect your site from Spam', 'If your site will get heavy use from visitors creating accounts, commenting and/or creating content then consider these. NOTE: Most sites just need Mollom. The other modules are here in case Mollom does not work for you for some reason.')");
   db_query("INSERT INTO {seo_checklist} $task_fields VALUES (40, 9, 'HIGHLY RECOMMENDED: Sign up for Mollom\'s free service and get Mollom code - <a href=\"http://mollom.com/user/register\"> http://mollom.com/user/register</a>', '', '', '', '', 0)");
-  db_query("INSERT INTO {seo_checklist} $task_fields VALUES (39, 9, 'HIGHLY RECOMMENDED: Mollom Module', 'Mollom', 'http://drupal.org/project/mollom', 'admin/build/modules', 'admin/settings/mollom', 1)");
+  db_query("INSERT INTO {seo_checklist} $task_fields VALUES (39, 9, 'HIGHLY RECOMMENDED: Mollom Module', 'mollom', 'http://drupal.org/project/mollom', 'admin/build/modules', 'admin/settings/mollom', 1)");
   db_query("INSERT INTO {seo_checklist} $task_fields VALUES (33, 9, 'Captcha Module', 'captcha', 'http://drupal.org/project/captcha', 'admin/build/modules', 'admin/user/captcha', 2)");
   db_query("INSERT INTO {seo_checklist} $task_fields VALUES (34, 9, 'Akismet Module', 'akismet', 'http://drupal.org/project/akismet', 'admin/build/modules', 'admin/settings/akismet', 3)");
   db_query("INSERT INTO {seo_checklist} $task_fields VALUES (36, 9, 'Spam Module', 'spam', 'http://drupal.org/project/spam', 'admin/build/modules', 'admin/settings/spam', 4)");
@@ -274,10 +281,18 @@ function seochecklist_update_6204() {
 }
 
 /**
- * Remove the {seo_checklist}.subgroup_id field.
+ * Remove the {seo_checklist}.subgroup_id field and add {seo_checklist}.uid.
  */
 function seochecklist_update_6205() {
   $ret = array();
   db_drop_field($ret, 'seo_checklist', 'subgroup_id');
+  db_add_field($ret, 'seo_checklist', 'uid', array(
+    'type' => 'int',
+    'unsigned' => TRUE,
+    'not null' => TRUE,
+    'default' => 0,
+    'description' => 'The {user}.uid of the account that completed this task.',
+  ));
+  $ret[] = update_sql("UPDATE {seo_checklist} SET module = LOWER(module)");
   return $ret;
 }

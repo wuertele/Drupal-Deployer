@@ -5,7 +5,7 @@
  * Define the settings form.
  */
 function seochecklist_admin_settings() {
-  drupal_add_css(drupal_get_path('module', 'seochecklist') . '/seochecklist.css');
+  global $user;
 
   $form['save_above'] = array(
     '#type' => 'submit',
@@ -33,28 +33,34 @@ function seochecklist_admin_settings() {
       '#description' => t($data->description),
     );
 
-    $res = db_query("SELECT download, enable, configure, module, completed, id, name FROM {seo_checklist} WHERE group_id = %d ORDER BY order_id", $group_id);
+    $res = db_query("SELECT download, enable, configure, module, completed, id, name, uid FROM {seo_checklist} WHERE group_id = %d ORDER BY order_id", $group_id);
     while ($row = db_fetch_object($res)) {
-      // Service links.
-      $links = array();
-      if ($row->download) {
-        $links[] = l(t('Download'), $row->download, array('attributes' => array('target' => '_blank')));
-      }
-      if ($row->enable) {
-        $links[] = l(t('Enable'), $row->enable);
-      }
-      if ($row->configure && (!$row->module || module_exists($row->module))) {
-        $links[] = l(t('Configure'), $row->configure);
-      }
+      $row->links = array();
+
       if ($row->completed) {
-        $links[] = t('Date completed: %date', array('%date' => format_date($row->completed, 'small')));
+        // Show when and who completed this task.
+        $row->links[] = t('Completed on %date by !username', array('%date' => format_date($row->completed, 'small'), '!username' => theme('username', user_load($row->uid))));
       }
+      else {
+        // Show non-completed sub-tasks.
+        if ($row->download) {
+          $row->links[] = l(t('Download'), $row->download, array('attributes' => array('target' => '_blank')));
+        }
+        if ($row->enable) {
+          $row->links[] = l(t('Enable'), $row->enable);
+        }
+      }
+
+      if ($row->configure && (!$row->module || module_exists($row->module))) {
+        // Show the link to configure if this isn't a module or module is enabled.
+        $row->links[] = l(t('Configure'), $row->configure);
+      }
+
       $form['group_' . $group_id]['seochecklist_nodetypes_' . intval($row->id)] = array(
         '#type' => 'checkbox',
         '#title' => t($row->name),
-        '#default_value' => $row->completed,
-        '#prefix' => '<div class="seochecklist_item">',
-        '#suffix' => '<div class="seochecklist_links">' . join(', ', $links) . '</div></div>',
+        '#default_value' => $row->completed || ($row->module && module_exists($row->module)),
+        '#description' => join(' | ', $row->links),
       );
       if (strpos($row->name, 'Clean URLs') === 0) {
         $form['group_' . $group_id]['seochecklist_nodetypes_' . intval($row->id)]['#disabled'] = !variable_get('clean_url', 0);
@@ -98,6 +104,8 @@ function seochecklist_admin_settings() {
  * Submit callback for seochecklist_admin_settings().
  */
 function seochecklist_admin_settings_submit($form, &$form_state) {
+  global $user;
+
   // Saving checked modules.
   if ($form_state['values']['op'] == t('Save')) {
     foreach ($form_state['values'] as $key => $value) {
@@ -107,7 +115,7 @@ function seochecklist_admin_settings_submit($form, &$form_state) {
         $current = (bool) db_result(db_query("SELECT completed FROM {seo_checklist} WHERE id = %d", $key));
         if ($current != $value) {
           // If the checkbox changed states, update the record.
-          db_query("UPDATE {seo_checklist} SET completed = %d WHERE id = %d", ($value ? time() : 0), $key);
+          db_query("UPDATE {seo_checklist} SET completed = %d, uid = %d WHERE id = %d", ($value ? time() : 0), $user->uid, $key);
         }
       }
     }
