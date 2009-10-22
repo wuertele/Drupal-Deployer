@@ -31,41 +31,49 @@ function htmlpurifier_uninstall() {
 }
 
 /**
- * Checks the version of HTML Purifier and fatally errors out if there's a
- * problem.
+ * Implementation of hook_requirements().
+ *
+ * Checks the version of HTML Purifier on install and issues an error if there is a problem
  */
-function _htmlpurifier_version_check() {
+function htmlpurifier_requirements($phase) {
   // This version of HTML Purifier is required
   static $req_version = '4.0.0';
+  $requirements = array();
   
   // Can't use drupal_get_path, since module may not have been installed.
   $module_path = dirname(__FILE__);
   $s = DIRECTORY_SEPARATOR;
   if (!file_exists("$module_path/library/HTMLPurifier.auto.php")) {
-    echo "<strong>Fatal error:</strong> Could not find HTML Purifier
-          installation in $module_path{$s}library. Please copy contents
+    $requirements['htmlpurifier'] = array (
+      'severity' => REQUIREMENT_ERROR,
+      'description' => t("Could not find HTML Purifier
+          installation in @path. Please copy contents
           of the library folder in the HTML Purifier tarball or zip
           to this folder or ensure HTMLPurifier.auto.php exists.
           You can download HTML Purifier at
-          <a href=\"http://htmlpurifier.org/download.html\">htmlpurifier.org</a>.
-          After you have done so, reload this page.";
-    exit;
+          <a href=\"http://htmlpurifier.org/download.html\">htmlpurifier.org</a>.", array('@path' => "$module_path{$s}library")
+      ),
+    );
   }
-  
-  require_once "$module_path/library/HTMLPurifier.auto.php";
-  if (!defined('HTMLPurifier::VERSION') || version_compare($old = HTMLPurifier::VERSION, $req_version, '<')) {
-    echo "<strong>Fatal error:</strong> HTML Purifier $old is not compatible
-          with this module: HTML Purifier <strong>$req_version</strong> or later is required.
+  else {
+    require_once "$module_path/library/HTMLPurifier.auto.php";
+    if (!defined('HTMLPurifier::VERSION') || version_compare($old = HTMLPurifier::VERSION, $req_version, '<')) {
+
+      $requirements['htmlpurifier'] = array (
+        'severity' => REQUIREMENT_ERROR,
+        'description' => t("HTML Purifier @old is not compatible
+          with this module: HTML Purifier <strong>@required</strong> or later is required.
           If the required version is a dev version, you will need to
           <a href=\"http://htmlpurifier.org/download.html#Subversion\">check
           code out of Subversion</a> or
           <a href=\"http://htmlpurifier.org/download.html#NightlyBuilds\">download a nightly</a>
-          to use this module. Once you have done so, reload this page.";
-    exit;
+          to use this module.", array('@old' => $old, '@required' => $req_version)
+        ),
+      );
+    }
   }
   
-  // Everything looks ok!
-  return true;
+  return $requirements;
 }
 
 // -- Update functions ------------------------------------------------------ //
