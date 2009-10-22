@@ -68,7 +68,7 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
           't' => t('Yes'),
           'f' => t('No')
         ),
-        '#description' => t('Whether or not to show the disable/enable rich text editor toggle below the textarea. Works only if FCKeditor is not running a popup window (see below).'),
+        '#description' => t('Whether or not to show the disable/enable rich text editor toggle below the textarea. Works only if FCKeditor is not running in a popup window (see below).'),
       );
 
       if (user_access('administer fckeditor')) {
@@ -125,7 +125,7 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
         '#type' => 'textfield',
         '#title' => t('Width'),
         '#default_value' => isset($user->fckeditor_width) ? $user->fckeditor_width : (isset($profile->settings['width']) ? $profile->settings['width'] : '100%'),
-        '#description' => t('Width in pixels or percent. Example: 400 or 100%.'),
+        '#description' => t('Width in pixels or percent.'). ' '. t('Example'). ': 400 '. t('or') .' 100%.',
         '#size' => 40,
         '#maxlength' => 128,
       );
@@ -163,7 +163,7 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
     }
 
     if (isset($edit['fckeditor_width']) && !preg_match('/^\d+%?$/', $edit['fckeditor_width'])) {
-      form_set_error('fckeditor_width', t('Enter valid width. Example: 400 or 100%.'));
+      form_set_error('width', t('Enter valid width.') .' '. t('Example'). ': 400 '. t('or') .' 100%.');
     }
   }
 
