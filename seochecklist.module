@@ -7,12 +7,20 @@
  */
 
 /**
+ * Implementation of hook_help().
+ */
+function seochecklist_help($path, $arg) {
+  if ($path == 'admin/settings/seochecklist') {
+    return '<p><strong>' . t("Check off each SEO-related task as you complete it. Do not forget to click <em>Save</em>!") . '</strong></p>';
+  }
+}
+
+/**
  * Implementation of hook_perm().
  */
 function seochecklist_perm() {
   return array('access seochecklist content');
 }
-
 
 /**
  * Implementation of hook_menu().
@@ -37,17 +45,14 @@ function seochecklist_menu() {
  */
 function seochecklist_admin_settings() {
   drupal_add_css(drupal_get_path('module', 'seochecklist') .'/css/seochecklist.css');
-  $form['save'] = array(
+
+  $form['save_above'] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
   );
-  $form['frm_Check_title'] = array(
-    '#type' => 'item',
-    '#value' => '<strong>' . t('Check off each SEO-related task as you complete it. Don\'t forget to click "Save".') . '</strong>',
-    );
   $form['frm_Check_existing'] = array(
     '#type' => 'submit',
-    '#value' => t('Check for already Installed Modules'),
+    '#value' => t('Check for already installed modules'),
   );
 
   // Fetch modules and groups from database.
@@ -119,9 +124,10 @@ function seochecklist_admin_settings() {
     '#default_value' => variable_get('seo_checklist_podcast', 0),
   );
 
-  $form['save1'] = array(
+  $form['save'] = array(
     '#type' => 'submit',
-    '#value' => t('Save')
+    '#value' => t('Save'),
+    '#weight' => 100,
   );
 
   return $form;
@@ -155,7 +161,7 @@ function seochecklist_admin_settings_submit($form, &$form_state) {
     variable_set('seo_checklist_podcast', intval($form_state['values']['Bottom_code_podcast']));
 
     // Store zero for all unchecked items.
-    
+
     db_query("UPDATE {seo_checklist} SET option_checked = 0 WHERE id NOT IN (" . db_placeholders($checked) . ")", $checked);
   }
 
@@ -180,5 +186,16 @@ function seochecklist_footer($main = 0) {
   if (variable_get('seo_checklist_link', 0)) {
     $file_contents = '<div align="center"><a href="http://www.volacci.com/" target="_blank">Drupal SEO</a></div>';
     return $file_contents;
+  }
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter().
+ *
+ * Add vertical tabs to the checklist page.
+ */
+function seochecklist_form_seochecklist_admin_settings_alter(&$form, $form_state) {
+  if (module_exists('vertical_tabs') && function_exists('vertical_tabs_add_vertical_tabs')) {
+    vertical_tabs_add_vertical_tabs($form);
   }
 }
