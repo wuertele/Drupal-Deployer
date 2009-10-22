@@ -56,8 +56,9 @@ function seochecklist_admin_settings() {
         '#prefix' => '<div class="seochecklist_item">',
         '#suffix' => '<div class="seochecklist_links">' . join(', ', $links) . '</div></div>',
       );
-      if (substr($row->name, 0, 10) == 'Clean URLs') {
-        $form['group_' . $group_id]['seochecklist_nodetypes_' . intval($row->id)]['#default_value'] = variable_get('clean_url', 0);
+      if (strpos($row->name, 'Clean URLs') === 0) {
+        $form['group_' . $group_id]['seochecklist_nodetypes_' . intval($row->id)]['#disabled'] = !variable_get('clean_url', 0);
+        $form['group_' . $group_id]['seochecklist_nodetypes_' . intval($row->id)]['#default_value'] |= variable_get('clean_url', 0);
       }
     }
   }
