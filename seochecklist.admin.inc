@@ -11,10 +11,6 @@ function seochecklist_admin_settings() {
     '#type' => 'submit',
     '#value' => t('Save'),
   );
-  $form['check_existing'] = array(
-    '#type' => 'submit',
-    '#value' => t('Check for already installed modules'),
-  );
 
   // Fetch modules and groups from database.
   $query = "SELECT id, name, description FROM {seo_group} ORDER BY id";
@@ -106,33 +102,20 @@ function seochecklist_admin_settings() {
 function seochecklist_admin_settings_submit($form, &$form_state) {
   global $user;
 
-  // Saving checked modules.
-  if ($form_state['values']['op'] == t('Save')) {
-    foreach ($form_state['values'] as $key => $value) {
-      if (preg_match('/seochecklist_nodetypes/', $key)) {
-        $key = explode('_', $key);
-        $key = $key[2];
-        $current = (bool) db_result(db_query("SELECT completed FROM {seo_checklist} WHERE id = %d", $key));
-        if ($current != $value) {
-          // If the checkbox changed states, update the record.
-          db_query("UPDATE {seo_checklist} SET completed = %d, uid = %d WHERE id = %d", ($value ? time() : 0), $user->uid, $key);
-        }
-      }
-    }
-
-    // Special values not in database.
-    variable_set('seo_checklist_link', $form_state['values']['seo_checklist_link']);
-    variable_set('seo_checklist_thanks', $form_state['values']['seo_checklist_thanks']);
-    variable_set('seo_checklist_podcast', $form_state['values']['seo_checklist_podcast']);
-  }
-
-  // Check for already installed modules.
-  if ($form_state['values']['op'] == t('Check for already installed modules')) {
-    $query = db_query("SELECT id, module FROM {seo_checklist} WHERE module <> '' AND completed = 0");
-    while ($task = db_fetch_object($query)) {
-      if (module_exists($task->module)) {
-        db_query("UPDATE {seo_checklist} SET completed = %d WHERE id = %d", time(), $task->id);
+  foreach ($form_state['values'] as $key => $value) {
+    if (preg_match('/seochecklist_nodetypes/', $key)) {
+      $key = explode('_', $key);
+      $key = $key[2];
+      $current = (bool) db_result(db_query("SELECT completed FROM {seo_checklist} WHERE id = %d", $key));
+      if ($current != $value) {
+        // If the checkbox changed states, update the record.
+        db_query("UPDATE {seo_checklist} SET completed = %d, uid = %d WHERE id = %d", ($value ? time() : 0), $user->uid, $key);
       }
     }
   }
+
+  // Special values not in database.
+  variable_set('seo_checklist_link', $form_state['values']['seo_checklist_link']);
+  variable_set('seo_checklist_thanks', $form_state['values']['seo_checklist_thanks']);
+  variable_set('seo_checklist_podcast', $form_state['values']['seo_checklist_podcast']);
 }
