@@ -125,7 +125,7 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
         '#type' => 'textfield',
         '#title' => t('Width'),
         '#default_value' => isset($user->fckeditor_width) ? $user->fckeditor_width : (isset($profile->settings['width']) ? $profile->settings['width'] : '100%'),
-        '#description' => t('Width in pixels or percent.'). ' '. t('Example'). ': 400 '. t('or') .' 100%.',
+        '#description' => t('Width in pixels or percent.') .' '. t('Example') .': 400 '. t('or') .' 100%.',
         '#size' => 40,
         '#maxlength' => 128,
       );
@@ -163,7 +163,7 @@ function fckeditor_user_delegate($type, $edit, &$user, $category = NULL) {
     }
 
     if (isset($edit['fckeditor_width']) && !preg_match('/^\d+%?$/', $edit['fckeditor_width'])) {
-      form_set_error('width', t('Enter valid width.') .' '. t('Example'). ': 400 '. t('or') .' 100%.');
+      form_set_error('width', t('Enter valid width.') .' '. t('Example') .': 400 '. t('or') .' 100%.');
     }
   }
 

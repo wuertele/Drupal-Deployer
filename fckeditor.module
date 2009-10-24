@@ -161,7 +161,7 @@ function fckeditor_process_form(&$form) {
   $fckeditor_filters = array();
 
   // Iterate over element children; resetting array keys to access last index.
-  if ($children = array_values(element_children($form))) {
+  if (($children = array_values(element_children($form)))) {
     foreach ($children as $index => $item) {
       $element = &$form[$item];
 
@@ -376,7 +376,7 @@ function fckeditor_init() {
  * FCKeditor does not implement any kind of potection on private files.
  */
 function fckeditor_file_download($file) {
-  if ($path = file_create_path($file)) {
+  if (($path = file_create_path($file))) {
     $result = db_query("SELECT f.* FROM {files} f WHERE filepath = '%s'", $path);
     if (db_fetch_object($result)) {
         return NULL;
@@ -770,12 +770,13 @@ function fckeditor_process_textarea($element) {
 
     if (!empty($conf['js_conf'])) {
       $lines = preg_split("/[\n\r]+/", $conf['js_conf']);
-      foreach ($lines as $l)
-      if ($l && strlen($l) > 5) {
-        $eqpos = strpos($l, "=");
-        if (FALSE !== $eqpos) {
-          $option = str_replace("FCKConfig.", "", substr($l, 0, $eqpos));
-          $js .= "\n". $js_id .".Config['". trim($option) ."'] =". substr($l, $eqpos + 1);
+      foreach ($lines as $l) {
+        if (strlen($l) > 5) {
+          $eqpos = strpos($l, '=');
+          if (FALSE !== $eqpos) {
+            $option = str_replace('FCKConfig.', '', substr($l, 0, $eqpos));
+            $js .= "\n". $js_id .".Config['". trim($option) ."'] =". substr($l, $eqpos + 1);
+          }
         }
       }
     }

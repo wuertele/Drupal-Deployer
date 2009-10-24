@@ -55,7 +55,7 @@ function fckeditor_help_delegate($path, $arg) {
       $output = 
         '<p>'. t('The FCKeditor module allows Drupal to replace textarea fields with a rich text or !wysiwyg editor. This editor brings many of the powerful functionalities of known desktop editors like Word to the web. It\'s relatively lightweight and doesn\'t require any kind of installation on the client computer.',
           array(
-            '!wysiwyg' => '<acronym title="'.t('What You See Is What You Get').'">'.t('WYSIWYG').'</acronym>',
+            '!wysiwyg' => '<acronym title="'. t('What You See Is What You Get') .'">'. t('WYSIWYG') .'</acronym>',
           )) .'</p>'.
         '<p>'. t('More information about the editor is located at the !fckeditorlink. A small user guide is located at !userguidelink.',
           array(
@@ -73,7 +73,7 @@ function fckeditor_help_delegate($path, $arg) {
     case 'admin/help#fckeditor':
       $output  = '<p>'. t('The FCKeditor module allows Drupal to replace textarea fields with a rich text or !wysiwyg editor. This editor brings many of the powerful functionalities of known desktop editors like Word to the web. It\'s relatively lightweight and doesn\'t require any kind of installation on the client computer.',
           array(
-            '!wysiwyg' => '<acronym title="'.t('What You See Is What You Get').'">'.t('WYSIWYG').'</acronym>',
+            '!wysiwyg' => '<acronym title="'. t('What You See Is What You Get') .'">'. t('WYSIWYG') .'</acronym>',
           )) .'</p>';
       $output .= '<p>'. t('More information about the editor is located at the !fckeditorlink. A small user guide is located at !userguidelink.',
           array(
@@ -90,7 +90,7 @@ function fckeditor_help_delegate($path, $arg) {
       $output .= '<li>'. t('Enable the module as usual from Drupal\'s admin pages.') .'</li>';
       $output .= '<li>'. t('Grant permissions for use of FCKeditor in !adminpath. See the @sectionname section how to enable the file browser feature.',
         array(
-          '!adminpath' => l(t('Administer').' > '.t('User management').' > '.t('Permissions'), 'admin/user/permissions'),
+          '!adminpath' => l(t('Administer') .' > '. t('User management') .' > '. t('Permissions'), 'admin/user/permissions'),
           '@sectionname' => t('How to enable the built-in file browser'),
         )) .'</li>';
       $output .= '<li>'. t('Under !adminpath, adjust the fckeditor profiles. In each profile you can choose which textareas will be replaced by FCKeditor, select default toolbar and configure some more advanced settings.',

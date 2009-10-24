@@ -400,7 +400,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
           '!helppagelink' => l(t('help page'), 'admin/help/fckeditor', array('fragment' => 'fieldinclexcl')),
         )) .
       ' <ul>' .
-      '<li>'. t('Path structure'). ': <strong>content_type@path.element_id</strong></li>'.
+      '<li>'. t('Path structure') .': <strong>content_type@path.element_id</strong></li>'.
       '<li>'. t('The following wildcards are available: *, ?') .'</li>'.
       '<li>'. t('Content type is optional. You may even specify only path or field id') .'</li>'.
       '<li>'. t('Examples') .':<ul>'.
@@ -503,7 +503,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#type' => 'textfield',
     '#title' => t('Width'),
     '#default_value' => !empty($profile->settings['width']) ? $profile->settings['width'] : '100%',
-    '#description' => t('Width in pixels or percent.'). ' '. t('Example'). ': 400 '. t('or') .' 100%.',
+    '#description' => t('Width in pixels or percent.') .' '. t('Example') .': 400 '. t('or') .' 100%.',
     '#size' => 40,
     '#maxlength' => 128,
   );
@@ -540,7 +540,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#default_value' => !empty($profile->settings['enter_mode']) ? $profile->settings['enter_mode'] : 'p',
     '#options' => array(
       'p' => '<p>',
-      'br' => '<br>',
+      'br' => '<br />',
       'div' => '<div>'
     ),
     '#description' => t('Set which tag FCKeditor should use when [Enter] key is pressed.')
@@ -552,7 +552,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#default_value' => !empty($profile->settings['shift_enter_mode']) ? $profile->settings['shift_enter_mode'] : 'br',
     '#options' => array(
       'p' => '<p>',
-      'br' => '<br>',
+      'br' => '<br />',
       'div' => '<div>'
     ),
     '#description' => t('Set which tag FCKeditor should use when [Shift] + [Enter] is pressed.')
@@ -564,7 +564,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#default_value' => !empty($profile->settings['font_format']) ? $profile->settings['font_format'] : 'p;div;pre;address;h1;h2;h3;h4;h5;h6',
     '#size' => 40,
     '#maxlength' => 250,
-    '#description' => t('Semicolon separated list of HTML font formats.'). ' '. t('Allowed values are'). ': p;div;pre;address;h1;h2;h3;h4;h5;h6',
+    '#description' => t('Semicolon separated list of HTML font formats.') .' '. t('Allowed values are') .': p;div;pre;address;h1;h2;h3;h4;h5;h6',
   );
 
   $form['output']['format_source'] = array(
@@ -614,7 +614,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
       'none' => t('FCKeditor default')
     ),
     '#description' =>
-      t('Defines the CSS to be used in the editor area.'). '<br />'.
+      t('Defines the CSS to be used in the editor area.') .'<br />'.
       t('Use theme CSS') .': '. t('load style.css from current site theme.') .'<br/>'.
       t('Define CSS') .': '. t('enter path for CSS file below.') .'<br />'.
       t('FCKeditor default') .': '. t('uses default CSS from editor.')
@@ -633,8 +633,8 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
           '%cssexample2' => '/themes/garland/style.css,http://example.com/style.css',
           '%defcss' => 'Define css',
         )) .'<br />'.
-      t('Available placeholders'). ':<br />'.
-      '<strong>%h</strong> - '. t('host name (%host)', array('%host' => base_path())). '<br />'.
+      t('Available placeholders') .':<br />'.
+      '<strong>%h</strong> - '. t('host name (%host)', array('%host' => base_path())) .'<br />'.
       '<strong>%t</strong> - '. t('path to theme (%theme)', array('%theme' => base_path() . path_to_theme() .'/'))
   );
 
@@ -791,7 +791,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#size' => 40,
     '#maxlength' => 255,
     '#description' =>
-      t('The path to the local directory (in the server) which points to the path defined above. If empty, FCKeditor will try to discover the right path.'). '<br />'.
+      t('The path to the local directory (in the server) which points to the path defined above. If empty, FCKeditor will try to discover the right path.') .'<br />'.
       t('Available placeholders') .':<br/>'.
       '<strong>%d</strong> - '. t('server path to document root (%root)', array('%root' => $_SERVER['DOCUMENT_ROOT'])) .'<br />'.
       '<strong>%b</strong> - '. t('base URL path of the Drupal installation (%base)', array('%base' => base_path())) .'<br/>'.
@@ -840,7 +840,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
         array(
           '%fckeditor_config' => drupal_get_path('module', 'fckeditor') .'/fckeditor.config.js',
           '!docslink' => l(t('FCKeditor documentation'), 'http://docs.fckeditor.net/FCKeditor_2.x/Developers_Guide/Configuration/Configuration_Options'),
-        )).
+        )) .
       "<pre>LinkDlgHideTarget = true;\nLinkDlgHideAdvanced = true;\nImageDlgHideLink = true;\nImageDlgHideAdvanced = true;\nFlashDlgHideAdvanced = true;</pre>".
       '<strong>'. t('Warning') .'</strong>: '.
       t('If you do something wrong here, FCKeditor may fail to load.'),
@@ -897,7 +897,7 @@ function fckeditor_admin_profile_form_validate($form, &$form_state) {
   }
 
   if (!preg_match('/^\d+%?$/', $edit['width'])) {
-    form_set_error('width', t('Enter valid width.') .' '. t('Example'). ': 400 '. t('or') .' 100%.');
+    form_set_error('width', t('Enter valid width.') .' '. t('Example') .': 400 '. t('or') .' 100%.');
   }
 
   if (!empty($edit['css_path'])) {
@@ -1072,7 +1072,7 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
           '!helppagelink' => l(t('help page'), 'admin/help/fckeditor', array('fragment' => 'fieldinclexcl')),
         )) .
       ' <ul>' .
-      '<li>'. t('Path structure'). ': <strong>content_type@path.element_id</strong></li>'.
+      '<li>'. t('Path structure') .': <strong>content_type@path.element_id</strong></li>'.
       '<li>'. t('The following wildcards are available: *, ?') .'</li>'.
       '<li>'. t('Content type is optional. You may even specify only path or field id') .'</li>'.
       '<li>'. t('Examples') .':<ul>'.
@@ -1122,7 +1122,7 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
         )) .'<br />'.
       t('Available placeholders') .':<br />'.
       '<strong>%b</strong> - '. t('base URL path of the Drupal installation (%base)', array('%base' => base_path())) .'<br />'.
-      '<strong>%m</strong> - '. t('base URL path where FCKeditor module is stored (%files)', array('%files' => base_path() . $module_drupal_path)). '<br />'.
+      '<strong>%m</strong> - '. t('base URL path where FCKeditor module is stored (%files)', array('%files' => base_path() . $module_drupal_path)) .'<br />'.
       t('Current path: %path', array('%path' => fckeditor_path(FALSE))),
     '#required' => TRUE,
   );
