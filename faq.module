@@ -386,6 +386,9 @@ function faq_page($tid = 0, $faq_display = '', $category_display = '') {
   if (!empty($category_display)) {
     $use_categories = TRUE;
   }
+  else {
+    $category_display = variable_get('faq_category_display', 'categories_inline');
+  }
   if (!module_exists("taxonomy")) {
     $use_categories = FALSE;
   }
@@ -393,7 +396,7 @@ function faq_page($tid = 0, $faq_display = '', $category_display = '') {
   $faq_path = drupal_get_path('module', 'faq') .'/includes';
 
   // Non-categorized questions and answers.
-  if (!$use_categories) {
+  if (!$use_categories || ($category_display == 'none' && empty($tid))) {
     if (!empty($tid)) {
       drupal_not_found();
       return;
@@ -442,9 +445,6 @@ function faq_page($tid = 0, $faq_display = '', $category_display = '') {
 
   // Categorize questions.
   else {
-    if (empty($category_display)) {
-      $category_display = variable_get('faq_category_display', 'categories_inline');
-    }
     $hide_child_terms = variable_get('faq_hide_child_terms', FALSE);
 
 
@@ -471,10 +471,12 @@ function faq_page($tid = 0, $faq_display = '', $category_display = '') {
     $list_style = variable_get('faq_category_listing', 'ul');
     $vocabularies = taxonomy_get_vocabularies('faq');
     $vocab_omit = variable_get('faq_omit_vocabulary', array());
-    $vocabularies = array_diff_key($vocabularies, $vocab_omit);
     $items = array();
     $vocab_items = array();
     foreach ($vocabularies as $vid => $vobj) {
+      if ($vocab_omit[$vid] != 0) {
+        continue;
+      }
 
       if ($category_display == "new_page") {
         $vocab_items = _get_indented_faq_terms($vid, 0);

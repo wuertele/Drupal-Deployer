@@ -179,6 +179,7 @@ function faq_categories_settings_form() {
     '#default_value' => variable_get('faq_use_categories', FALSE),
   );
 
+  $category_options['none'] = t("Don't display");
   $category_options['categories_inline'] = t('Categories inline');
   $category_options['hide_qa'] = t('Clicking on category opens/hides questions and answers under category');
   $category_options['new_page'] = t('Clicking on category opens the questions/answers in a new page');
