@@ -44,16 +44,9 @@ function faq_general_settings_form() {
     '#description' => t('Your FAQ description.  This will be placed at the top of the page, above the questions and can serve as an introductory text.'),
     '#rows' => 5,
   );
-  $form['body_filter']['faq_description_format'] = filter_form(variable_get('faq_description_format', ''));
+  $form['body_filter']['faq_description_format'] = filter_form(variable_get('faq_description_format', ''), NULL, array('faq_description_format'));
 
-  $form['update'] = array(
-    '#type' => 'submit',
-    '#value' => t('Save configuration'),
-    '#weight' => 3,
-    '#submit' => array('faq_general_settings_form_submit'),
-  );
-
-  return $form;
+  return system_settings_form($form);
 }
 
 /**
@@ -438,26 +431,6 @@ function faq_weight_settings_form($form_state, $category = NULL) {
 
   return $form;
 }
-
-/**
- * Function saves the options set by the user in the FAQ Settings - General tab.
- *
- * @param $form
- *   Array, containing the form structure.
- * @param &$form_state
- *   $form_state['values'] stores the submitted values from the form.
- */
-function faq_general_settings_form_submit($form, &$form_state) {
-  if ($form_state['values']['op'] == t('Save configuration')) {
-
-    variable_set('faq_title', $form_state['values']['faq_title']);
-    variable_set('faq_description', $form_state['values']['faq_description']);
-    variable_set('faq_description_format', $form_state['values']['format']);
-
-    drupal_set_message(t('Configuration has been updated.'));
-  }
-}
-
 
 /**
  * Function set the rebuild of the form in the FAQ Settings - Weight tab.
