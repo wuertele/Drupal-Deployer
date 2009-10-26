@@ -288,7 +288,7 @@ function faq_categories_settings_form() {
  * @return
  *   The form code, before being converted to HTML format.
  */
-function faq_weight_settings_form($form_state) {
+function faq_weight_settings_form($form_state, $category = NULL) {
   $order = $date_order = '';
 
   drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
@@ -298,7 +298,7 @@ function faq_weight_settings_form($form_state) {
   if (!$use_categories) {
     $step = "order";
   }
-  elseif (!isset($form_state['values'])) {
+  elseif (!isset($form_state['values']) && empty($category)) {
     $step = "categories";
   }
   else {
@@ -348,7 +348,6 @@ function faq_weight_settings_form($form_state) {
     }
 
     $options = array();
-    $category = 0;
     if (!empty($form_state['values']['faq_category'])) {
       $category = $form_state['values']['faq_category'];
     }

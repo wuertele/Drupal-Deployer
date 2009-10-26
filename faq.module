@@ -33,7 +33,7 @@ function faq_help($path, $arg) {
  * Implementation of hook_perm().
  */
 function faq_perm() {
-  return array('administer faq', 'view faq page', 'edit own faq', 'edit faq', 'create faq');
+  return array('administer faq', 'view faq page', 'edit own faq', 'edit faq', 'create faq', 'administer faq weight');
 }
 
 
@@ -77,6 +77,28 @@ function faq_menu() {
     'access arguments' => array('view faq page'),
     'weight' => 1,
   );
+
+  $items['faq/list'] = array(
+    'title' => 'List',
+    'page callback' => 'faq_page',
+    'access callback' => 'user_access',
+    'access arguments' => array('view faq page'),
+    'weight' => -10,
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+
+  $items['faq/weight'] = array(
+    'title' => 'Weight',
+    'description' => 'Allows the user to configure the order of questions and answers on a FAQ page.',
+    'file' => 'faq.admin.inc',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('faq_weight_settings_form'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer faq weight'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -8,
+  );
+
   $items['faq/%'] = array(
     'title' => 'Frequently Asked Questions',
     'page callback' => 'faq_page',
@@ -84,6 +106,28 @@ function faq_menu() {
     'access callback' => 'user_access',
     'access arguments' => array('view faq page'),
     'type' => MENU_CALLBACK,
+  );
+
+  $items['faq/%/list'] = array(
+    'title' => 'List',
+    'page callback' => 'faq_page',
+    'page arguments' => array(1),
+    'access callback' => 'user_access',
+    'access arguments' => array('view faq page'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+
+  $items['faq/%/weight'] = array(
+    'title' => 'Weight',
+    'description' => 'Allows the user to configure the order of questions and answers on a FAQ page.',
+    'file' => 'faq.admin.inc',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('faq_weight_settings_form', 1),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer faq weight'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -8,
   );
 
   $items['admin/settings/faq'] = array(
@@ -127,18 +171,6 @@ function faq_menu() {
     'type' => MENU_LOCAL_TASK,
     'weight' => -8,
   );
-  $items['admin/settings/faq/weight'] = array(
-    'title' => 'Weight',
-    'description' => 'Allows the user to configure the order of questions and answers on a FAQ page.',
-    'file' => 'faq.admin.inc',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('faq_weight_settings_form'),
-    'access callback' => 'user_access',
-    'access arguments' => array('administer faq'),
-    'type' => MENU_LOCAL_TASK,
-    'weight' => -8,
-  );
-
   return $items;
 }
 
@@ -295,10 +327,10 @@ function faq_view($node, $teaser = FALSE, $page = FALSE) {
   $node->detailed_question = check_markup($node->detailed_question, $node->format, FALSE);
   $content = $node->content['body']['#value'];
 
-  $question_length = variable_get('faq_question_length', 'short');
-  if (!empty($node->detailed_question) && $question_length == 'both') {
+  if (variable_get('faq_display', 'questions_top') == 'hide_answer' && !empty($node->detailed_question) && variable_get('faq_question_length', 'short') == 'both') {
     $node->content['body']['#value'] = '<div class="faq-detailed-question">'. $node->detailed_question .'</div>'. $content;
   }
+
   return $node;
 }
 
@@ -1071,6 +1103,10 @@ function faq_view_question(&$data, $node, $path = NULL, $anchor = NULL) {
     else {
       $question = l($node->title, "node/$node->nid", array("attributes" => array("name" => "$anchor", "id" => "$anchor")));
     }
+  }
+
+  if (variable_get('faq_display', 'questions_top') != 'hide_answer' && !empty($node->detailed_question) && variable_get('faq_question_length', 'short') == 'both') {
+    $question .= '<div class="faq-detailed-question">'. $node->detailed_question .'</div>';
   }
   $data['question'] = $question;
 }
