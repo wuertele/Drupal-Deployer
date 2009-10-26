@@ -221,7 +221,9 @@ if (Drupal.jsEnabled) {
     $('div.faq-dd-hide-answer').hide();
     $('div.faq-dt-hide-answer').click(function() {
       $(this).toggleClass('faq-qa-visible');
-      $(this).next('div.faq-dd-hide-answer').slideToggle();
+      $(this).next('div.faq-dd-hide-answer').slideToggle('fast', function() {
+        $(this).parent().toggleClass('expanded');
+      });
       return false;
     });
 
@@ -230,7 +232,9 @@ if (Drupal.jsEnabled) {
     $('div.faq-qa-hide').hide();
     $('div.faq-qa-header .faq-header').click(function() {
       $(this).toggleClass('faq-category-qa-visible');
-      $(this).parent().next('div.faq-qa-hide').slideToggle();
+      $(this).parent().next('div.faq-qa-hide').slideToggle('fast', function() {
+        $(this).parent().toggleClass('expanded');
+      });
       return false;
     });
 

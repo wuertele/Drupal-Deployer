@@ -116,6 +116,7 @@ else {
   <div class="faq-dl-hide-answer">
   <?php if (count($nodes)): ?>
     <?php foreach ($nodes as $i => $node): ?>
+      <div class="faq-question-answer">
       <div class="faq-question faq-dt-hide-answer">
       <?php print $node['question']; ?>
       </div> <!-- Close div: faq-question faq-dt-hide-answer -->
@@ -126,6 +127,7 @@ else {
         <?php print $node['links']; ?>
       <?php endif; ?>
       </div> <!-- Close div: faq-answer faq-dd-hide-answer -->
+      </div> <!-- Close div: faq-question-answer -->
     <?php endforeach; ?>
   <?php endif; ?>
   </div> <!-- Close div: faq-dl-hide-answer -->
