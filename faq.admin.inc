@@ -254,9 +254,9 @@ function faq_categories_settings_form() {
       $vocab_options[$vid] = $vobj->name;
     }
     $form['faq_category_advanced']['faq_omit_vocabulary'] = array(
-      '#type' => 'select',
+      '#type' => 'checkboxes',
       '#title' => t('Omit vocabulary'),
-      '#description' => t('Terms from these vocabularies will be excluded from the FAQ pages.'),
+      '#description' => t('Terms from these vocabularies will be <em>excluded</em> from the FAQ pages.'),
       '#default_value' => variable_get('faq_omit_vocabulary', 0),
       '#options' => $vocab_options,
       '#multiple' => TRUE,
