@@ -375,7 +375,7 @@ function faq_weight_settings_form($form_state, $category = NULL) {
 
 
     while ($node = db_fetch_object($result)) {
-      $title = (drupal_strlen($node->title) <= 64) ? $node->title : substr_replace($node->title, "...", 63);
+      $title = (drupal_strlen($node->title) <= 64) ? $node->title : drupal_substr($node->title, 0, 63) . "...";
       $options[$node->nid] = $title;
       $order .= "$node->nid,";
     }
