@@ -394,6 +394,10 @@ function faq_page($tid = 0, $faq_display = '', $category_display = '') {
 
   // Non-categorized questions and answers.
   if (!$use_categories) {
+    if (!empty($tid)) {
+      drupal_not_found();
+      return;
+    }
     $default_sorting = variable_get('faq_default_sorting', 'DESC');
     $default_weight = 0;
     if ($default_sorting != 'DESC') {
@@ -445,18 +449,24 @@ function faq_page($tid = 0, $faq_display = '', $category_display = '') {
 
 
     // If we're viewing a specific category/term.
-    if (!empty($tid) && $term = taxonomy_get_term($tid)) {
-      $title = variable_get('faq_title', 'Frequently Asked Questions');
-      if (arg(0) == 'faq' && is_numeric(arg(1))) {
-        drupal_set_title(check_plain($title . ($title ? ' - ' : '') . faq_tt("taxonomy:term:$term->tid:name", $term->name)));
+    if (!empty($tid)) {
+      if ($term = taxonomy_get_term($tid)) {
+        $title = variable_get('faq_title', 'Frequently Asked Questions');
+        if (arg(0) == 'faq' && is_numeric(arg(1))) {
+          drupal_set_title(check_plain($title . ($title ? ' - ' : '') . faq_tt("taxonomy:term:$term->tid:name", $term->name)));
+        }
+        if ($category_display == 'hide_qa') {
+          drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
+        }
+        _display_faq_by_category($faq_display, $category_display, $term, 0, $output, $output_answers);
+        $output = '<div class="content"><div class="faq">'. $output;
+        $output .= $output_answers .'</div></div>';
+        return $output;
       }
-      if ($category_display == 'hide_qa') {
-        drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
+      else {
+        drupal_not_found();
+        return;
       }
-      _display_faq_by_category($faq_display, $category_display, $term, 0, $output, $output_answers);
-      $output = '<div class="content"><div class="faq">'. $output;
-      $output .= $output_answers .'</div></div>';
-      return $output;
     }
 
 
