@@ -62,7 +62,7 @@ function fckeditor_admin_main() {
       )), 'warning');
   }
   else {
-    $result = db_query_range('SELECT name FROM {fckeditor_settings} WHERE name <> "FCKeditor Global Profile"', 0, 1);
+    $result = db_query_range("SELECT name FROM {fckeditor_settings} WHERE name <> 'FCKeditor Global Profile'", 0, 1);
     $has_profiles = FALSE;
     //find profile other than Global
     if (($obj = db_fetch_object($result))) {
@@ -70,7 +70,7 @@ function fckeditor_admin_main() {
     }
 
     //find roles with profiles
-    $result = db_query('SELECT rid FROM {fckeditor_role}');
+    $result = db_query("SELECT rid FROM {fckeditor_role}");
     $rids = array();
     while (($obj = db_fetch_object($result))) {
         $rids[] = $obj->rid;
@@ -174,12 +174,12 @@ function fckeditor_admin_profile_clone_form_submit($form, &$form_state) {
   $edit =& $form_state['values'];
   drupal_set_message(t('Your FCKeditor profile has been created.'));
   $settings = fckeditor_admin_values_to_settings($edit);
-  db_query('INSERT INTO {fckeditor_settings} (name, settings) VALUES ("%s", "%s")', $edit['name'], $settings);
+  db_query("INSERT INTO {fckeditor_settings} (name, settings) VALUES ('%s', '%s')", $edit['name'], $settings);
   fckeditor_rebuild_selectors($edit['name']);
   if (!empty($edit['rids'])) {
     foreach (array_keys($edit['rids']) as $rid) {
       if ($edit['rids'][$rid]!=0) {
-        db_query('INSERT INTO {fckeditor_role} (name, rid) VALUES ("%s", %d)', $edit['name'], $rid);
+        db_query("INSERT INTO {fckeditor_role} (name, rid) VALUES ('%s', %d)", $edit['name'], $rid);
       }
     }
   }
@@ -220,7 +220,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   }
 
   if (empty($profile->name)) {
-    $result = db_query('SELECT DISTINCT(rid) FROM {fckeditor_role}');
+    $result = db_query("SELECT DISTINCT(rid) FROM {fckeditor_role}");
     while (($data = db_fetch_object($result))) {
       if ((empty($profile->rids) || !in_array($data->rid, array_keys((array) $profile->rids))) && !form_get_errors()) {
         unset($roles[$data->rid]);
@@ -959,8 +959,8 @@ function fckeditor_admin_profile_form_submit($form, &$form_state) {
   $edit =& $form_state['values'];
 
   if (isset($edit['_profile'])) {
-    db_query('DELETE FROM {fckeditor_settings} WHERE name = "%s"', $edit['_profile']->name);
-    db_query('DELETE FROM {fckeditor_role} WHERE name = "%s"', $edit['_profile']->name);
+    db_query("DELETE FROM {fckeditor_settings} WHERE name = '%s'", $edit['_profile']->name);
+    db_query("DELETE FROM {fckeditor_role} WHERE name = '%s'", $edit['_profile']->name);
     drupal_set_message(t('Your FCKeditor profile has been updated.'));
   }
   else {
@@ -968,12 +968,12 @@ function fckeditor_admin_profile_form_submit($form, &$form_state) {
   }
 
   $settings = fckeditor_admin_values_to_settings($edit);
-  db_query('INSERT INTO {fckeditor_settings} (name, settings) VALUES ("%s", "%s")', $edit['name'], $settings);
+  db_query("INSERT INTO {fckeditor_settings} (name, settings) VALUES ('%s', '%s')", $edit['name'], $settings);
   fckeditor_rebuild_selectors($edit['name']);
   if (!empty($edit['rids'])) {
     foreach (array_keys($edit['rids']) as $rid) {
       if ($edit['rids'][$rid]!=0) {
-        db_query('INSERT INTO {fckeditor_role} (name, rid) VALUES ("%s", %d)', $edit['name'], $rid);
+        db_query("INSERT INTO {fckeditor_role} (name, rid) VALUES ('%s', %d)", $edit['name'], $rid);
       }
     }
   }
@@ -1204,8 +1204,8 @@ function fckeditor_admin_global_profile_form_submit($form, &$form_state) {
   }
 
   if (isset($edit['_profile'])) {
-    db_query('DELETE FROM {fckeditor_settings} WHERE name = "%s"', $edit['_profile']->name);
-    db_query('DELETE FROM {fckeditor_role} WHERE name = "%s"', $edit['_profile']->name);
+    db_query("DELETE FROM {fckeditor_settings} WHERE name = '%s'", $edit['_profile']->name);
+    db_query("DELETE FROM {fckeditor_role} WHERE name = '%s'", $edit['_profile']->name);
   }
 
   //strip whitespaces
@@ -1229,7 +1229,7 @@ function fckeditor_admin_global_profile_form_submit($form, &$form_state) {
   $edit['fckeditor_local_path'] = trim(rtrim($edit['fckeditor_local_path'], '/'));
 
   $settings = fckeditor_admin_values_to_settings($edit);
-  db_query('INSERT INTO {fckeditor_settings} (name, settings) VALUES ("%s", "%s")', $edit['name'], $settings);
+  db_query("INSERT INTO {fckeditor_settings} (name, settings) VALUES ('%s', '%s')", $edit['name'], $settings);
   fckeditor_rebuild_selectors($edit['name']);
 
   drupal_set_message(t('FCKeditor global profile has been saved.'));
@@ -1309,10 +1309,10 @@ function fckeditor_admin_profile_delete_form_submit($form, &$form_state) {
  */
 function fckeditor_rebuild_selectors($name = NULL) {
   if ($name == NULL) {
-    $result = db_query('SELECT * FROM {fckeditor_settings}');
+    $result = db_query("SELECT * FROM {fckeditor_settings}");
   }
   else {
-    $result = db_query('SELECT * FROM {fckeditor_settings} WHERE name = "%s"', $name);
+    $result = db_query("SELECT * FROM {fckeditor_settings} WHERE name = '%s'", $name);
   }
 
   while (($data = db_fetch_object($result))) {
@@ -1338,7 +1338,7 @@ function fckeditor_rebuild_selectors($name = NULL) {
         }
       }
 
-      db_query('UPDATE {fckeditor_settings} SET settings="%s" WHERE name="%s"', serialize($settings), $data->name);
+      db_query("UPDATE {fckeditor_settings} SET settings='%s' WHERE name='%s'", serialize($settings), $data->name);
     }
   }
 }
@@ -1411,6 +1411,6 @@ function fckeditor_rule_to_string($rule) {
  * Remove a profile from the database.
  */
 function fckeditor_profile_delete($name) {
-  db_query('DELETE FROM {fckeditor_settings} WHERE name = "%s"', $name);
-  db_query('DELETE FROM {fckeditor_role} WHERE name = "%s"', $name);
+  db_query("DELETE FROM {fckeditor_settings} WHERE name = '%s'", $name);
+  db_query("DELETE FROM {fckeditor_role} WHERE name = '%s'", $name);
 }
