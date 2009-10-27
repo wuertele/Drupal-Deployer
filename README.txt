@@ -31,8 +31,8 @@ See http://drupal.org/getting-started/5/install-contrib for instructions on
 how to install or update Drupal modules.
 
 Once Path Redirect is installed and enabled, you can add redirections at
-admin/build/redirects and check your site's redirection settigns at
-admin/build/redirects/settings.
+admin/build/path-redirect and check your site's redirection settigns at
+admin/build/path-redirect/settings.
 
 
 FREQUENTLY ASKED QUESTIONS
@@ -57,7 +57,7 @@ HOW CAN YOU CONTRIBUTE?
   http://drupalmodules.com/module/path-redirect
 
 - Help translate this module on launchpad.net.
-  http://project.davereid.net/translate/projects/path_redirect
+  http://localize.drupal.org/translate/projects/path_redirect
 
 - Report any bugs, feature requests, etc. in the issue tracker.
   http://drupal.org/project/issues/path_redirect
