@@ -50,25 +50,25 @@ function path_redirect_menu() {
     'title' => 'Add redirect',
     'description' => 'Add a new URL redirect.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('path_redirect_edit'),
+    'page arguments' => array('path_redirect_edit_form'),
     'access arguments' => array('administer redirects'),
     'type' => MENU_LOCAL_TASK,
     'file' => 'path_redirect.admin.inc',
   );
-  $items['admin/build/path-redirect/edit'] = array(
-    'title' => 'Edit',
+  $items['admin/build/path-redirect/edit/%path_redirect'] = array(
+    'title' => 'Edit redirect',
     'description' => 'Edit an existing URL redirect.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('path_redirect_edit'),
+    'page arguments' => array('path_redirect_edit_form', 4),
     'access arguments' => array('administer redirects'),
     'type' => MENU_CALLBACK,
     'file' => 'path_redirect.admin.inc',
   );
-  $items['admin/build/path-redirect/delete'] = array(
+  $items['admin/build/path-redirect/delete/%path_redirect'] = array(
     'title' => 'Delete redirect',
     'description' => 'Delete an existing URL redirect.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('path_redirect_delete_confirm'),
+    'page arguments' => array('path_redirect_delete_form', 4),
     'access arguments' => array('administer redirects'),
     'type' => MENU_CALLBACK,
     'file' => 'path_redirect.admin.inc',
@@ -183,7 +183,7 @@ function _path_redirect_check() {
   $args[':language'] = $language->language;
   $sort[] = 'language DESC';
 
-  $r = path_redirect_load($where, $args, $sort);
+  $r = path_redirect_load_query($where, $args, $sort);
 
   if ($r) {
     // Update the last used timestamp so that unused redirects can be purged.
@@ -238,7 +238,8 @@ function path_redirect_node_presave($node) {
     $old_alias = drupal_get_path_alias($node_path, ($node->language ? $node->language : ''));
     if ($old_alias != $node_path && $node->path != $old_alias) {
       // If the user is manually changing the path alias, add a redirect from the old alias to the node.
-      path_redirect_save(array('path' => $old_alias, 'redirect' => $node_path));
+      $redirect = array('path' => $old_alias, 'redirect' => $node_path);
+      path_redirect_save($redirect);
     }
   }
 }
@@ -248,35 +249,64 @@ function path_redirect_node_presave($node) {
  */
 function path_redirect_node_delete($node) {
   // When a node is deleted, also delete the redirects to it (they will result in a 404).
-  path_redirect_delete(array('redirect' => 'node/'. $node->nid));
+  path_redirect_delete_by_path('node/'. $node->nid);
 }
 
 /**
  * Save an URL redirect to the database.
  */
-function path_redirect_save($edit) {
+function path_redirect_save($redirect) {
   // Merge default values.
-  $edit += array(
+  $redirect += array(
+    'rid' => NULL,
+    'query' => '',
+    'fragment' => '',
+    'language' => '',
     'type' => path_redirect_var('default_status'),
     'last_used' => REQUEST_TIME,
   );
 
   // Remove beginning and trailing slashes from path.
   // @todo Move to validation.
-  $edit['path'] = preg_replace('/^\/|\/\?|\/$/', '', $edit['path']);
+  $redirect['path'] = trim($redirect['path'], '\/?');
 
-  if (empty($edit['rid'])) {
-    return drupal_write_record('path_redirect', $edit);
+  if (empty($redirect['rid'])) {
+    return drupal_write_record('path_redirect', $redirect);
   }
   else {
-    return drupal_write_record('path_redirect', $edit, 'rid');
+    return drupal_write_record('path_redirect', $redirect, array('rid'));
   }
+}
+
+function path_redirect_load($rid) {
+  return db_fetch_array(db_query_range("SELECT * FROM {path_redirect} WHERE rid = %d", $rid, 0, 1));
+}
+
+function path_redirect_load_by_path($path, $language = '') {
+  return db_fetch_array(db_query_range("SELECT * FROM {path_redirect} WHERE path = '%s', AND language IN ('%s', '') ORDER BY language DESC", $path, $language, 0, 1));
+}
+
+function path_redirect_delete($redirect, $deprecated = FALSE) {
+  // @todo Remove legacy path_redirect_delete support for pathauto.
+  if (is_string($redirect) && is_string($deprecated)) {
+    return db_query("DELETE FROM {path_redirect} WHERE path = '%s' AND redirect = '%s'", $redirect, $deprecated);
+  }
+
+  db_query("DELETE FROM {path_redirect} WHERE rid = %d", $redirect['rid']);
+  return db_affected_rows();
+}
+
+function path_redirect_delete_by_path($path) {
+  db_query_range("DELETE FROM {path_redirect} WHERE path = '%s'", $path, $language);
+  return db_affected_rows();
 }
 
 /**
  * Retrieve a specific URL redirect from the database.
+ *
+ * @todo Replace this with custom query or path_redirect_load_by_path().
  */
-function path_redirect_load($where = array(), $args = array(), $sort = array()) {
+function path_redirect_load_query($where = array(), $args = array(), $sort = array()) {
   if (is_numeric($where)) {
     $where = array('rid' => $where);
   }
@@ -294,32 +324,6 @@ function path_redirect_load($where = array(), $args = array(), $sort = array()) 
       $sql .= ' ORDER BY '. implode(' ,', $sort);
     }
     return db_fetch_object(db_query_range($sql, $args, 0, 1));
-  }
-}
-
-/**
- * Delete a specific URL redirect from the database.
- */
-function path_redirect_delete($where = array(), $args = array()) {
-  if (is_numeric($where)) {
-    $where = array('rid' => $where);
-  }
-
-  // @todo Remove legacy path_redirect_delete support for pathauto.
-  if (is_string($where) && is_string($args)) {
-    $where = array('path' => $where, 'redirect' => $args);
-    $args = array();
-  }
-
-  foreach ($where as $key => $value) {
-    if (is_string($value)) {
-      $args[] = $value;
-      $where[$key] = $key .' = '. (is_numeric($value) ? '%d' : "'%s'");
-    }
-  }
-
-  if ($where && $args) {
-    return db_query("DELETE FROM {path_redirect} WHERE ". implode(' AND ', $where), $args);
   }
 }
 
