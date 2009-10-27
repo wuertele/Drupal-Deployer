@@ -345,82 +345,54 @@ function faq_weight_settings_form($form_state, $category = NULL) {
     if (!empty($form_state['values']['faq_category'])) {
       $category = $form_state['values']['faq_category'];
     }
+
+    // Uncategorized ordering.
     if (empty($category)) {
       $category = 0;
+      // Descending.
       if ($default_sorting == 'DESC') {
         $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d' WHERE n.type='faq' AND n.status = 1 ORDER BY weight ASC, n.sticky DESC, n.created DESC", "n", "nid"), $default_weight, $category);
-        $date_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d 'WHERE n.type='faq' AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $default_weight, $category);
       }
+      // Ascending.
       else {
         $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d' WHERE n.type='faq' AND n.status = 1 ORDER BY weight ASC, n.sticky DESC, n.created ASC", "n", "nid"), $default_weight, $category);
-        $date_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d 'WHERE n.type='faq' AND n.status = 1 ORDER BY n.sticky DESC, n.created ASC", "n", "nid"), $default_weight, $category);
       }
     }
+    // Categorized ordering.
     else {
+      // Descending.
       if ($default_sorting == 'DESC') {
         $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d' WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight ASC, n.sticky DESC, n.created DESC", "n", "nid"), $default_weight, $category, $category);
-        $date_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d' WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created DESC", "n", "nid"), $default_weight, $category, $category);
       }
+      // Ascending.
       else {
         $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d' WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY weight ASC, n.sticky DESC, n.created ASC", "n", "nid"), $default_weight, $category, $category);
-        $date_result = db_query(db_rewrite_sql("SELECT n.nid, n.title, if((w.weight IS NULL), %d, w.weight) as weight, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON (n.nid = tn.nid AND n.vid = tn.vid) LEFT JOIN {faq_weights} w ON n.nid = w.nid AND w.tid = '%d' WHERE n.type='faq' AND n.status = 1 AND tn.tid = '%d' ORDER BY n.sticky DESC, n.created ASC", "n", "nid"), $default_weight, $category, $category);
       }
     }
 
 
     while ($node = db_fetch_object($result)) {
-      $title = (drupal_strlen($node->title) <= 64) ? $node->title : drupal_substr($node->title, 0, 63) . "...";
-      $options[$node->nid] = $title;
-      $order .= "$node->nid,";
+      $options[$node->nid] = $node->title;
     }
-    $order = rtrim($order, ",");
 
-    while ($node = db_fetch_object($date_result)) {
-      $date_options[$node->nid] = $node->title;
-      $date_order .= "$node->nid,";
-    }
-    $date_order = rtrim($date_order, ",");
-
-    $form['weight']['faq_node_order'] = array(
-      '#type' => 'hidden',
-      '#default_value' => $order,
-    );
-    $form['weight']['faq_node_date_order'] = array(
-      '#type' => 'hidden',
-      '#default_value' => $date_order,
-    );
     $form['weight']['faq_category'] = array(
       '#type' => 'value',
       '#value' => $category,
     );
 
-    // Can't generate these links using l() - it doesn't allow an empty
-    // fragment.
-    $asc = '<a href="#" onclick="faq_order_by_date(\'ASC\');">'. t('ascending') .'</a>';
-    $desc = '<a href="#" onclick="faq_order_by_date(\'DESC\');">'. t('descending') .'</a>';
+    // Show table ordering form.
+    $form['order_no_cats']['#tree'] = TRUE;
+    $form['order_no_cats']['#theme'] = 'faq_draggable_question_order_table';
 
-    $form['weight']['order_no_cats'] = array(
-      '#type' => 'select',
-      '#title' => t('Question Order'),
-      '#description' => t("This determines the order of the questions and answers on the FAQ page.  Just select one or more questions and use the arrows to change their position in the list.  You can also order the list by the question creation date !desc or !asc.", array('!desc' => $desc, '!asc' => $asc)),
-      '#options' => $options,
-      '#multiple' => TRUE,
-      '#size' => min(20, count($options)),
-    );
+    $i = 0;
+    foreach ($options as $nid => $title) {
+      $form['order_no_cats'][$i]['nid'] = array('#type' => 'hidden', '#value' => $nid);
+      $form['order_no_cats'][$i]['title'] = array('#value' => $title);
+      $form['order_no_cats'][$i]['sort'] = array('#type' => 'weight', '#delta' => count($options), '#default_value' => $i);
+      $i++;
+    }
 
-    $form['weight']['move_up'] = array(
-      '#type' => 'markup',
-      '#value' => '<input type="button" onclick="faq_move_selected_item_up();"
-      value="&uarr;" class="faq-arrow"/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;',
-    );
-
-    $form['weight']['move_down'] = array(
-      '#type' => 'markup',
-      '#value' => '<input type="button" onclick="faq_move_selected_item_down();"
-      value="&darr;" class="faq-arrow"/><br />',
-    );
-
-    $form['update']['attach'] = array(
+    $form['submit'] = array(
       '#type' => 'submit',
       '#value' => t('Save order'),
       '#weight' => 3,
@@ -458,21 +430,11 @@ function faq_weight_settings_choose_cat_form_submit($form, &$form_state) {
 function faq_weight_settings_reorder_form_submit($form, &$form_state) {
   if ($form_state['values']['op'] == t('Save order')) {
 
-    $order = explode(",", $form_state['values']['faq_node_order']);
-    switch ($GLOBALS['db_type']) {
-      case 'mysql':
-      case 'mysqli':
-        foreach ($order as $index => $nid) {
-          $result = db_query("REPLACE INTO {faq_weights} (tid, nid, weight) VALUES('%d', '%d', '%d')", $form_state['values']['faq_category'], $nid, $index);
-        }
-        break;
-
-      case 'pgsql':
-        foreach ($order as $index => $nid) {
-          $result = db_query("DELETE FROM {faq_weights} WHERE tid = '%d' AND nid = '%d'", $form_state['values']['faq_category'], $nid);
-          $result = db_query("INSERT INTO {faq_weights} (tid, nid, weight) VALUES('%d', '%d', '%d')", $form_state['values']['faq_category'], $nid, $index);
-        }
-        break;
+    foreach ($form_state['values']['order_no_cats'] as $i => $faq) {
+      $nid = $faq['nid'];
+      $index = $faq['sort'];
+      $result = db_query("DELETE FROM {faq_weights} WHERE tid = %d AND nid = %d", $form_state['values']['faq_category'], $nid);
+      $result = db_query("INSERT INTO {faq_weights} (tid, nid, weight) VALUES(%d, %d, %d)", $form_state['values']['faq_category'], $nid, $index);
     }
 
     drupal_set_message(t('Configuration has been updated.'));

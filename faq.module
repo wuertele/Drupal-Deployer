@@ -624,63 +624,66 @@ function _display_faq_by_category($faq_display, $category_display, $term, $displ
 function faq_theme() {
   $path = drupal_get_path('module', 'faq') .'/includes';
   return array(
+    'faq_draggable_question_order_table' => array(
+      'arguments' => array('form' => NULL),
+     ),
     'faq_questions_top' => array(
       'path' => $path,
       'file' => 'faq.questions_top.inc',
       'template' => 'faq-questions-top',
       'arguments' => array('data' => NULL),
-      ),
+    ),
     'faq_category_questions_top' => array(
       'path' => $path,
       'file' => 'faq.questions_top.inc',
       'template' => 'faq-category-questions-top',
       'arguments' => array('data' => NULL, 'display_header' => 0, 'category_display' => NULL, 'term' => NULL, 'class' => NULL, 'parent_term' => NULL),
-      ),
+    ),
     'faq_category_questions_top_answers' => array(
       'path' => $path,
       'file' => 'faq.questions_top.inc',
       'template' => 'faq-category-questions-top-answers',
       'arguments' => array('data' => NULL, 'display_header' => 0, 'category_display' => NULL, 'term' => NULL, 'class' => NULL, 'parent_term' => NULL),
-      ),
+    ),
     'faq_hide_answer' => array(
       'path' => $path,
       'file' => 'faq.hide_answer.inc',
       'template' => 'faq-hide-answer',
       'arguments' => array('data' => NULL),
-      ),
+    ),
     'faq_category_hide_answer' => array(
       'path' => $path,
       'file' => 'faq.hide_answer.inc',
       'template' => 'faq-category-hide-answer',
       'arguments' => array('data' => NULL, 'display_header' => 0, 'category_display' => NULL, 'term' => NULL, 'class' => NULL, 'parent_term' => NULL),
-      ),
+    ),
     'faq_questions_inline' => array(
       'path' => $path,
       'file' => 'faq.questions_inline.inc',
       'template' => 'faq-questions-inline',
       'arguments' => array('data' => NULL),
-      ),
+    ),
     'faq_category_questions_inline' => array(
       'path' => $path,
       'file' => 'faq.questions_inline.inc',
       'template' => 'faq-category-questions-inline',
       'arguments' => array('data' => NULL, 'display_header' => 0, 'category_display' => NULL, 'term' => NULL, 'class' => NULL, 'parent_term' => NULL),
-      ),
+    ),
     'faq_new_page' => array(
       'path' => $path,
       'file' => 'faq.new_page.inc',
       'template' => 'faq-new-page',
       'arguments' => array('data' => NULL),
-      ),
+    ),
     'faq_category_new_page' => array(
       'path' => $path,
       'file' => 'faq.new_page.inc',
       'template' => 'faq-category-new-page',
       'arguments' => array('data' => NULL, 'display_header' => 0, 'category_display' => NULL, 'term' => NULL, 'class' => NULL, 'parent_term' => NULL),
-      ),
+    ),
     'faq_page' => array(
       'arguments' => array('content' => '', 'answers' => '', 'description' => NULL),
-      ),
+    ),
   );
 }
 
@@ -1434,5 +1437,26 @@ function theme_faq_page($content = '', $answers = '', $description = NULL) {
   }
   $output .= $content;
   $output .= $answers ."</div></div>\n";
+  return $output;
+}
+
+/**
+ * Theme function for question ordering drag and drop table.
+ */
+function theme_faq_draggable_question_order_table($form) {
+  drupal_add_tabledrag('question-sort', 'order', 'sibling', 'sort');
+  $header = array('', 'Question', '', 'Sort');
+  foreach (element_children($form) as $key) {
+    // Add class to group weight fields for drag and drop.
+    $form[$key]['sort']['#attributes']['class'] = 'sort';
+
+    $row = array('');
+    $row[] = drupal_render($form[$key]['title']);
+    $row[] = drupal_render($form[$key]['nid']);
+    $row[] = drupal_render($form[$key]['sort']);
+    $rows[] = array('data' => $row, 'class' => 'draggable');
+  }
+  $output = theme('table', $header, $rows, array('id' => 'question-sort'));
+  $output .= drupal_render($form);
   return $output;
 }
