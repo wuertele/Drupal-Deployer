@@ -102,7 +102,7 @@ function filefield_filefield_paths_update($oid, $field_name) {
     // Flag files for update.
     if (isset($node->$field_name)) {
       foreach ($node->$field_name as &$file) {
-        if (empty($file['filepath'])) {
+        if (!is_array($file) || empty($file['filepath'])) {
           continue;
         }
 

@@ -48,11 +48,12 @@ function image_filefield_paths_form_submit(&$form_state, &$ffp) {
  */
 function image_filefield_paths_get_fields(&$node, &$ffp) {
   if ($node->type == 'image') {
-    $info = array();
+    $info = $origname = array();
 
-    $result = db_query('SELECT * FROM {image} WHERE nid = %d', $node->nid);
+    $result = db_query('SELECT i.*, f.origname FROM {image} i JOIN {files} f ON i.fid = f.fid  WHERE i.nid = %d', $node->nid);
     while ($data = db_fetch_object($result)) {
       $info[$data->image_size] = $data->fid;
+      $origname[$data->image_size] = $data->origname;
     }
 
     foreach ($node->images as $name => &$file) {
@@ -64,11 +65,12 @@ function image_filefield_paths_get_fields(&$node, &$ffp) {
             'filepath' => &$file,
             'filename' => $file_info['basename'],
             'fid' => $info[$name],
-            'type' => $name
+            'type' => $name,
+            'origname' => $origname[$name],
           ),
           'module' => 'image',
           'name' => 'image',
-          'new' => $node->new_file
+          'new' => $node->new_file || $node->rebuild_images,
         );
 
         $ffp['#types']['image'] = TRUE;
@@ -98,10 +100,12 @@ function image_filefield_paths_update($oid, $field_name) {
   if (empty($field_name)) {
     $node = node_load($oid);
 
-    // Flag files for update.
-    $node->new_file = TRUE;
+    if (isset($node->images)) {
+      // Flag files for update.
+      $node->new_file = TRUE;
 
-    // Process Node.
-    filefield_paths_nodeapi($node, 'update', NULL, NULL);
+      // Process Node.
+      filefield_paths_nodeapi($node, 'update', NULL, NULL);
+    }
   }
 }
