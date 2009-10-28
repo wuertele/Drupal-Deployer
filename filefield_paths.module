@@ -215,6 +215,17 @@ function filefield_paths_form_alter(&$form, $form_state, $form_id) {
         '#weight' => 10
       );
 
+      // Active updating.
+      $field_data['form_path']['active_updating'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Active updating'),
+        '#default_value' => variable_get("ffp_{$field_data['type']}_{$field_name}", 0),
+        '#description' => t('Actively move and rename previously uploaded files as required') .'.'.
+          '<br /> <strong style="color: #FF0000;">'. t('Warning') .':</strong> '.
+          t('This feature should only be used on developmental servers or with extreme caution') .'.',
+        '#weight' => 11
+      );
+
       if (!in_array('filefield_paths_form_submit', $form['#submit'])) {
         $form['#submit'][] = 'filefield_paths_form_submit';
       }
@@ -289,6 +300,8 @@ function filefield_paths_form_submit($form, &$form_state) {
         $retroactive_update = TRUE;
         filefield_paths_batch_update(arg(5), $field_name, arg(3));
       }
+
+      variable_set("ffp_{$field_data['type']}_{$field_name}", $form_state['values']['ffp_'. $field_name]['active_updating']);
     }
 
     if ($retroactive_update) {
@@ -389,7 +402,7 @@ function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
         // Invoke hook_filefield_paths_process_file().
         foreach (module_implements('filefield_paths_process_file') as $module) {
           $function = $module .'_filefield_paths_process_file';
-          $function($file['new'], $file, $ffp['#settings'][$file['name']], $node, $update);
+          $function(($file['new'] || variable_get("ffp_{$node->type}_{$file['name']}", 0)), $file, $ffp['#settings'][$file['name']], $node, $update);
         }
       }
 
