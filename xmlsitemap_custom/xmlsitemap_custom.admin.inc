@@ -69,15 +69,14 @@ function xmlsitemap_custom_edit_link_form($form_state, $link = array()) {
     '#default_value' => number_format($link['priority'], 1),
     '#description' => t('The priority of this URL relative to other URLs on your site.'),
   );
-  if (module_exists('locale') && $languages = locale_language_list()) {
-    $form['language'] = array(
-      '#type' => 'select',
-      '#title' => t('Language'),
-      '#default_value' => $link['language'],
-      '#options' => array('' => t('Language neutral')) + $languages,
-      '#access' => count($languages) > 1,
-    );
-  }
+  $languages = module_exists('locale') ? locale_language_list() : array();
+  $form['language'] = array(
+    '#type' => 'select',
+    '#title' => t('Language'),
+    '#default_value' => $link['language'],
+    '#options' => array('' => t('Language neutral')) + $languages,
+    '#access' => $languages,
+  );
 
   $form['submit'] = array(
     '#type' => 'submit',
@@ -94,10 +93,11 @@ function xmlsitemap_custom_edit_link_form($form_state, $link = array()) {
   return $form;
 }
 
-function xmlsitemap_custom_edit_link_form_validate($form, &$form_state) {
+function xmlsitemap_custom_edit_link_form_validate(&$form, &$form_state) {
   $link = &$form_state['values'];
-  $link['loc'] = trim($link['loc']);
 
+  // Make sure we trim and normalize the path first.
+  $link['loc'] = trim($link['loc']);
   $normal_path = drupal_get_normal_path($link['loc']);
   if ($link['loc'] != $normal_path) {
     drupal_set_message(t('The sitemap system stores system paths only, but will use the URL alias in the sitemap output. The custom link %link has been stored as %normal_path.', array('%link' => $link['loc'], '%normal_path' => $normal_path)));
@@ -105,31 +105,32 @@ function xmlsitemap_custom_edit_link_form_validate($form, &$form_state) {
   }
 
   // Test anonymous user access to the custom link paths.
-  $menu_item = NULL;
   xmlsitemap_switch_user(0);
   $menu_item = menu_get_item($link['loc']);
   xmlsitemap_restore_user();
 
   // Since the menu item access results are cached, manually check the current path.
-  if (strpos($link['loc'], 'admin/settings/xmlsitemap/custom') === 0 && !user_access('administer xmlsitemap', drupal_anonymous_user())) {
+  if ($menu_item && strpos($link['loc'], 'admin/settings/xmlsitemap/custom') === 0 && !user_access('administer xmlsitemap', drupal_anonymous_user())) {
     $menu_item['access'] = FALSE;
   }
 
-  if (db_result(db_query_range("SELECT 1 FROM {xmlsitemap} WHERE loc = '%s' AND status = 1 AND type <> 'custom'", $link['loc'], 0, 1))) {
+  if (db_result(db_query_range("SELECT 1 FROM {xmlsitemap} WHERE type <> 'custom' AND loc = '%s' AND status = 1 AND access = 1 AND language IN ('%s', '')", $link['loc'], $link['language'], 0, 1))) {
     form_set_error('loc', t('There is already an existing link in the sitemap with the path %link.', array('%link' => $link['loc'])));
   }
-  elseif (empty($menu_item['access'])) {
+  elseif (empty($menu_item['access']) && !is_readable('./' . $link['loc'])) {
+    // @todo Harden this file exists check to make sure we can't link to files
+    // like .htaccess.
     form_set_error('loc', t('The custom link %link is either invalid or it cannot be accessed by anonymous users.', array('%link' => $link['loc'])));
   }
 }
 
-function xmlsitemap_custom_edit_link_form_submit($form, $form_state) {
+function xmlsitemap_custom_edit_link_form_submit(&$form, &$form_state) {
   $link = $form_state['values'];
   xmlsitemap_save_link($link);
   drupal_set_message(t('The custom link for %loc was saved.', array('%loc' => $link['loc'])));
 }
 
-function xmlsitemap_custom_delete_link_form($form_state, $link) {
+function xmlsitemap_custom_delete_link_form($form_state, array $link) {
   $form['link'] = array(
     '#type' => 'value',
     '#value' => $link,
