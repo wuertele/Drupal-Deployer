@@ -9,7 +9,7 @@
  * Implementation of file_aliases_hook_process().
  */
 function file_aliases_filefield_process(&$node, &$file, &$path, &$alias, &$count) {
-  $count[$file['name']] = isset($count[$file['name']]) ? $count[$file['name']]++ : 1;
+  $count[$file['name']] = isset($count[$file['name']]) ? $count[$file['name']] + 1 : 1;
   $target = &$node->content[$file['name']]['field']['items'][$count[$file['name']] - 1]['#item'];
 
   $target['origpath'] = $file['field']['filepath'];

@@ -45,7 +45,9 @@ function file_aliases_filefield_paths_field_settings() {
         'file_alias' => array(
           '#type' => 'textfield',
           '#title' => t('File alias'),
-          '#default_value' => file_directory_path() .'/[filefield-onlyname-original].[filefield-extension-original]',
+          '#default_value' => ((variable_get('file_downloads', FILE_DOWNLOADS_PUBLIC) == FILE_DOWNLOADS_PUBLIC) ? file_directory_path() : 'system/files') .'/[filefield-onlyname-original].[filefield-extension-original]',
+          '#maxlength' => 512,
+          '#size' => 128,
         ),
 
         'file_alias_display' => array(
@@ -88,9 +90,11 @@ function file_aliases_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
           $filefield_paths_alias = 'filefield_paths/alias/'. $file['field']['fid'];
           if (($alias = drupal_get_path_alias($filefield_paths_alias)) != $filefield_paths_alias) {
             // Calculate relative path.
-            $path = (variable_get('file_downloads', FILE_DOWNLOADS_PUBLIC) == FILE_DOWNLOADS_PUBLIC) ? '' : base_path();
-            foreach (explode('/', file_directory_path()) as $dir) {
-              $path .= '../';
+            $path = (variable_get('file_downloads', FILE_DOWNLOADS_PUBLIC) == FILE_DOWNLOADS_PUBLIC) ? '' : '../../';
+            if (empty($path)) {
+              foreach (explode('/', file_directory_path()) as $dir) {
+                $path .= '../';
+              }
             }
 
             // Invoke file_aliases_hook_process().
@@ -124,6 +128,14 @@ function file_aliases_load_fid($fid) {
     header('Cache-Control: public');
     readfile($result->filepath);
   }
+}
+
+function file_aliases_file_download($filepath) {
+  $fileinfo = pathinfo(drupal_get_path_alias($_GET['q']));
+  return array(
+    'Cache-Control: public',
+    'Content-Disposition: attachment; filename="'. $fileinfo['basename'] .'"'
+  );
 }
 
 function _file_aliases_display_alias($type, $field, $refresh = FALSE) {
