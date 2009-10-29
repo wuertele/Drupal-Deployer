@@ -63,6 +63,10 @@ Optional:
 MORE INFORMATION
 ----------------
 
+- A very handy companion for this module is the Drupal 6 Search Engine
+  Optimization book by Ben Finklea. For more information and to purchase, go to
+  http://www.drupalseobook.com/.
+
 - To issue any bug reports, feature or support requests, see the module issue
   queue at http://drupal.org/project/issues/seo_checklist.
 

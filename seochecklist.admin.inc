@@ -52,6 +52,10 @@ function seochecklist_admin_settings() {
         $row->links[] = l(t('Configure'), $row->configure);
       }
 
+      if (variable_get('seo_checklist_book_references', 1) && $page = seochecklist_get_book_references($row->id)) {
+        $row->links[] = t('SEO book page @page', array('@page' => $page));
+      }
+
       $form['group_' . $group_id]['seochecklist_nodetypes_' . intval($row->id)] = array(
         '#type' => 'checkbox',
         '#title' => t($row->name),
@@ -65,32 +69,37 @@ function seochecklist_admin_settings() {
     }
   }
 
-  $form['bottom_code'] = array(
+  $form['extras'] = array(
     '#type' => 'fieldset',
     '#title' => t('Extras'),
     '#collapsible' => TRUE,
   );
-  $form['bottom_code']['seo_checklist_link'] = array(
+  $form['extras']['seo_checklist_link'] = array(
     '#type' => 'checkbox',
     '#title' => t("Link to Volacci to thank them for this awesome module. <strong>Don't forget to click Save!</strong>"),
     '#description' => t("A small link will appear at the very bottom of your website. You can disable it at any time by un-checking this box. We really appreciate it!!!"),
     '#default_value' => variable_get('seo_checklist_link', 0),
   );
-  $form['bottom_code']['seo_checklist_thanks'] = array(
+  $form['extras']['seo_checklist_thanks'] = array(
     '#type' => 'checkbox',
     '#title' => t("Link to us then send us feedback on the Drupal 6 SEO Checklist module or just say \"Thanks!\" and we will link to you from our website. Send your feedback and link information to !email. (If you don't know why you should link with other websites, read this: !link.)", array('!email' => l('seochecklist@volacci.com', 'mailto:seochecklist@volacci.com'), '!link' => l('Why links help SEO', 'http://www.volacci.com/why-links-help-seo'))),
     '#default_value' => variable_get('seo_checklist_thanks', 0),
   );
-  $form['bottom_code']['seo_checklist_podcast'] = array(
+  $form['extras']['seo_checklist_podcast'] = array(
     '#type' => 'checkbox',
     '#title' => t("Listen to the Volacci Drupal SEO Podcast for more tips and tricks about Drupal SEO: !link", array('!link' => l('http://www.volacci.com/podcast', 'http://www.volacci.com/podcast'))),
     '#default_value' => variable_get('seo_checklist_podcast', 0),
+  );
+  $form['extras']['seo_checklist_book_references'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Include page number references from the <a href="@book-link">Drupal 6 SEO Book</a> by Ben Finklea.', array('@book-link' => 'http://www.drupalseobook.com/')),
+    '#default_value' => variable_get('seo_checklist_book_references', 1),
   );
 
   $form['save'] = array(
     '#type' => 'submit',
     '#value' => t('Save'),
-    '#weight' => 10,
+    '#weight' => 100,
   );
 
   return $form;
@@ -118,4 +127,5 @@ function seochecklist_admin_settings_submit($form, &$form_state) {
   variable_set('seo_checklist_link', $form_state['values']['seo_checklist_link']);
   variable_set('seo_checklist_thanks', $form_state['values']['seo_checklist_thanks']);
   variable_set('seo_checklist_podcast', $form_state['values']['seo_checklist_podcast']);
+  variable_set('seo_checklist_book_references', $form_state['values']['seo_checklist_book_references']);
 }
