@@ -250,6 +250,7 @@ function path_redirect_node_presave($node) {
 function path_redirect_node_delete($node) {
   // When a node is deleted, also delete the redirects to it (they will result in a 404).
   path_redirect_delete_by_path('node/'. $node->nid);
+  path_redirect_delete_by_path('node/'. $node->nid . '/%%');
 }
 
 /**
@@ -296,8 +297,11 @@ function path_redirect_delete($redirect, $deprecated = FALSE) {
   return db_affected_rows();
 }
 
+/**
+ * Delete any redirects to a certain path.
+ */
 function path_redirect_delete_by_path($path) {
-  db_query_range("DELETE FROM {path_redirect} WHERE path = '%s'", $path, $language);
+  db_query("DELETE FROM {path_redirect} WHERE redirect = '%s'", $path);
   return db_affected_rows();
 }
 
