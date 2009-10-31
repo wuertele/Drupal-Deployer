@@ -316,6 +316,13 @@ function page_title_get_title() {
       $title = check_plain(strip_tags($term_title));
     }
   }
+  // If we're looking at a taxonomy term page, get the term title
+  elseif (arg(0) == 'forum' && is_numeric(arg(1)) && module_exists('forum')) {
+    $term = taxonomy_get_term(arg(1));
+    if (variable_get('page_title_vocab_'. $term->vid .'_showfield', 0) && ($term_title = page_title_load_title($term->tid, 'term'))) {
+      $title = check_plain(strip_tags($term_title));
+    }
+  }
 
   // If nothing above set a title, give the legacy function a chance to act
   if (empty($title)) {
@@ -413,11 +420,21 @@ function page_title_page_get_title() {
       // Node (either node or comment reply)
       if ((arg(0) == 'node' && is_numeric(arg(1)))  ||  (arg(0) == 'comment' && arg(1) == 'reply' && is_numeric(arg(2)) && module_exists('comment')) ) {
         $types['node'] = menu_get_object();
+        // If the node has any taxonomy, grab the first time and pass it over to be passed as a token.
+        // TODO: Handle multiple terms? Only pass specific terms per content type?
+        if (!empty($types['node']->taxonomy)) {
+          $types['taxonomy'] = current($types['node']->taxonomy);
+        }
         $page_title_pattern = variable_get('page_title_type_'. $types['node']->type, '');
       }
       // Term
       elseif (arg(0) == 'taxonomy' && arg(1) == 'term' && is_numeric(arg(2)) && module_exists('taxonomy')) {
         $types['taxonomy'] = taxonomy_get_term(arg(2));
+        $page_title_pattern = variable_get('page_title_vocab_'. $types['taxonomy']->vid, '');
+      }
+      // Forum
+      elseif (arg(0) == 'forum' && is_numeric(arg(1)) && module_exists('forum')) {
+        $types['taxonomy'] = taxonomy_get_term(arg(1));
         $page_title_pattern = variable_get('page_title_vocab_'. $types['taxonomy']->vid, '');
       }
       // User
