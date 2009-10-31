@@ -54,3 +54,20 @@ function hook_node_export_node_encode_alter(&$out, $tab, $key, $value, $iteratio
   // Start with something like this, and work on it:
   $out = $tab ."  '". $key ."' => ". node_export_node_encode($value, $iteration) .",\n";
 }
+
+/**
+ * Manipulate node array before bulk export or import.
+ *
+ * The purpose of this is to allow a module to check nodes in the array for
+ * two or more nodes that must retain a relationship, and to add/remove other
+ * data to the array to assist with maintaining dependencies, relationships, 
+ * references, and additional data required by the nodes.
+ *
+ * @param &$nodes
+ *   The node array to alter.
+ * @param $op
+ *   'import', 'after import', or 'export'.
+ */
+function hook_node_export_node_bulk_alter(&$nodes, $op) {
+  // no example code
+}

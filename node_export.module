@@ -137,18 +137,32 @@ function node_export_node_operations() {
 /**
  * Callback for 'node_export' node operation.
  */
-function node_export_node_bulk($nodes) {
-  module_load_include('inc', 'node_export', 'node_export.pages');
-  $node_codes = array();
-  foreach ($nodes as $nid) {
-    $node_codes[] = node_export_node_export(node_load($nid), TRUE, 1);
+function node_export_node_bulk($nids, $return_code = FALSE) {
+
+  $nodes = array();
+  foreach ($nids as $nid) {
+    $nodes[] = node_load($nid);
   }
+
+  // Let other modules do special fixing up.
+  // The function signature is: hook_node_export_node_bulk_alter(&$nodes, $op).
+  // Where $op is 'export'.
+  drupal_alter('node_export_node_bulk', $nodes, 'export');
+
+  $node_codes = array();
+  foreach ($nodes as $node) {
+    $node_codes[] = node_export_node_export($node, TRUE, 1);
+  }
+
   $node_code = "array(\n  ". implode(",\n  ", $node_codes) .",\n)";
+  if ($return_code) {
+    return $node_code;
+  }
   if (variable_get('node_export_bulk_code', 'copy') == 'copy') {
     drupal_set_message(drupal_get_form('node_export_form', $node_code));
   }
   else {
-    node_export_get_file($nodes, $node_code, TRUE);
+    node_export_get_file($nids, $node_code, TRUE);
   }
 }
 
@@ -376,7 +390,7 @@ function node_export_node_export($original_node, $return_code = FALSE, $iteratio
       $node->menu = node_export_get_menu($original_node);
 
       // Let other modules do special fixing up.
-      // The function signature is: hook_export_node_alter(&$node, $original_node, $method)
+      // The function signature is: hook_node_export_node_alter(&$node, $original_node, $method)
       // Where $method is 'export'
       drupal_alter('node_export_node', $node, $original_node, 'export');
       $node_code = node_export_node_encode($node, $iteration);
@@ -452,6 +466,73 @@ function node_export_theme() {
 }
 
 /**
+ * Import Function
+ *
+ * @param $node_code
+ *   The string of node code.
+ * @param $method
+ *   If set will override the variable table settings
+ * @param $redirect
+ *   Whether to allow redirects
+ * @param $msg_func
+ *   Function used to output status message
+ * @param $msg_t
+ *   Function used to translate
+ * @return
+ *   FALSE is the types check failed
+ *   Returns the HTML of a node form if required to prepopulate
+ *   Otherwise returns nothing, and may redirect.
+ */
+function node_export_import($node_code, $method = NULL, $redirect = TRUE, $msg_func = 'drupal_set_message', $msg_t = 't') {
+  $import = node_export_node_decode($node_code);
+  $types_exist = node_export_import_types_check($import);
+  if ($types_exist) {
+    $count = 0;
+    if (is_array($import)) {
+      // This is a bulk import.
+      $total = count($import);
+      // Let other modules do special fixing up.
+      // The function signature is: hook_node_export_node_bulk_alter(&$nodes, $op).
+      // Where $op is 'import'.
+      drupal_alter('node_export_node_bulk', $import, 'import');
+      $new_nodes = array();
+      foreach ($import as $new_node) {
+        $new_nid = node_export_node_save($new_node);
+        $new_node->nid = $new_nid;
+        $new_nodes[] = $new_node;
+        $msg_func($msg_t("Imported node !nid: !node", array('!nid' => $new_nid, '!node' => l($new_node->title, 'node/'. $new_nid))));
+        $count++;
+      }
+      drupal_alter('node_export_node_bulk', $new_nodes, 'after import');
+      $msg_func($msg_t("!count of !total nodes were imported.  Some values may have been reset depending on Node Export's configuration", array('!total' => $total, '!count' => $count)));
+      if ($redirect) {
+        drupal_goto('admin/content/node');
+      }
+    }
+    else {
+      // We are importing a single node.
+      $total = 1;
+      $method = !is_null($method) ? $method : variable_get('node_export_method', 'prepopulate');
+
+      if ($method == 'save-edit') {
+        $new_nid = node_export_node_save($node);
+        $msg_func($msg_t("Imported node !nid: !node", array('!nid' => $new_nid, '!node' => l($new_node->title, 'node/'. $new_nid))));
+        $count++;
+        $msg_func($msg_t("!count of !total nodes were imported.  Some values may have been reset depending on Node Export's configuration", array('!total' => $total, '!count' => $count)));
+        if ($redirect) {
+          drupal_goto('node/'. $new_nid .'/edit');
+        }
+      }
+      else if ($method == 'prepopulate') {
+        include_once(drupal_get_path('module', 'node') .'/node.pages.inc');
+        return node_export_node_prepopulate($node);
+      }
+    }
+  }
+  return FALSE;
+}
+
+/**
  *  Import Form
  */
 function node_export_import_form($form_state) {
@@ -471,19 +552,13 @@ function node_export_import_form($form_state) {
   }
 
   if (isset($node_code)) {
-    $import = node_export_node_decode($node_code);
-    $types_exist = node_export_import_types_check($import);
-    if ($types_exist) {
-      if (is_array($import)) {
-        foreach ($import as $new_node) {
-          $new_nid = node_export_node_save($new_node);
-          drupal_set_message(t("Imported !node", array('!node' => l($new_node->title, 'node/'. $new_nid))));
-        }
-        drupal_goto('admin/content/node');
-      }
-      else {
-        return node_export_node_check($import);
-      }
+    $result = node_export_import($node_code);
+    if ($result === FALSE) {
+      // There was a problem with types?
+      drupal_set_message(t('Problem found with the import file. Check the node types exist.'), 'error');
+    }
+    else if (!empty($result)) {
+      return $result;
     }
   }
 
@@ -569,28 +644,6 @@ function node_export_import_form_submit($form, &$form_state) {
 }
 
 /**
- *  Menu callback: prompt the user to confirm the operation
- *  @return
- *    A prepopulate form (if required).
- */
-function node_export_node_check($node) {
-
-  $method = variable_get('node_export_method', 'prepopulate');
-
-  switch ($method) {
-    case 'save-edit':
-      $new_nid = node_export_node_save($node);
-      drupal_goto('node/'. $new_nid .'/edit');
-      break;
-    case 'prepopulate':
-    default:
-      include_once(drupal_get_path('module', 'node') .'/node.pages.inc');
-      return node_export_node_prepopulate($node);
-      break;
-  }
-}
-
-/**
  *  Exports a node - prepopulate a node editing form
  *  @return
  *    A prepopulate form.
@@ -635,7 +688,6 @@ function node_export_node_clone($original_node, $mode) {
 
     $node->nid = NULL;
     $node->vid = NULL;
-
     $node->name = $user->name;
     $node->uid = $user->uid;
 
@@ -665,7 +717,7 @@ function node_export_node_clone($original_node, $mode) {
       }
     }
     // Let other modules do special fixing up.
-    // The function signature is: hook_export_node_alter(&$node, $original_node, $method)
+    // The function signature is: hook_node_export_node_alter(&$node, $original_node, $method)
     // Where $method is either 'prepopulate' or 'save-edit'.
     drupal_alter('node_export_node', $node, $original_node, $mode);
 
