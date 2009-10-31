@@ -1,4 +1,11 @@
 <?php
+// $Id$
+
+/**
+ * @file
+ * Tempalte file for the admin settings form. Displays configuration in a neat table
+ */
+
 $rows = array();
 
 foreach (element_children($form['pattern']) as $key) {

@@ -156,7 +156,22 @@ function page_title_form_alter(&$form, $form_state, $form_id) {
       );
     }
   }
-  // Check we're editing a user profile and also check that the user settings's have 'show field' enabled
+  // Check we're editing a forum container or forum "forum" and also check that the terms vocabulary's 'show field' is enabled
+  elseif ($form_id == 'forum_form_forum' || $form_id == 'forum_form_container') {
+    $key = 'page_title_vocab_'. $form['vid']['#value'] .'_showfield';
+    if (variable_get($key, 0)) {
+      $form['page_title'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Page title'),
+        '#description' => t('Optionally specify a different title to appear in the &lt;title&gt; tag of the page.'),
+        '#default_value' => page_title_load_title($form['tid']['#value'], 'term'),
+        '#size' => 60,
+        '#maxlength' => 255,
+        '#weight' => -20,
+      );
+    }
+  }
+   // Check we're editing a user profile and also check that the user settings's have 'show field' enabled
   elseif ($form_id == 'user_profile_form') {
     if (variable_get('page_title_user_showfield', 0)) {
       $form['account']['page_title'] = array(
@@ -198,6 +213,23 @@ function page_title_form_alter(&$form, $form_state, $form_id) {
 
     $form['#submit'][] = 'page_title_node_type_form_submit';
   }
+  elseif ($form_id == 'forum_admin_settings') {
+    $form['page_title'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Page title'),
+      '#description' => t('Optionally specify a different title to appear in the &lt;title&gt; tag of the page.'),
+      '#default_value' => variable_get('page_title_forum_root_title', ''),
+      '#size' => 60,
+      '#maxlength' => 255,
+      '#weight' => -1,
+    );
+    $form['#submit'][] = 'page_title_forum_admin_settings_form_submit';
+  }
+}
+
+
+function page_title_forum_admin_settings_form_submit($form, &$form_state) {
+  variable_set('page_title_forum_root_title', $form_state['values']['page_title']);
 }
 
 
@@ -316,11 +348,18 @@ function page_title_get_title() {
       $title = check_plain(strip_tags($term_title));
     }
   }
-  // If we're looking at a taxonomy term page, get the term title
-  elseif (arg(0) == 'forum' && is_numeric(arg(1)) && module_exists('forum')) {
-    $term = taxonomy_get_term(arg(1));
-    if (variable_get('page_title_vocab_'. $term->vid .'_showfield', 0) && ($term_title = page_title_load_title($term->tid, 'term'))) {
-      $title = check_plain(strip_tags($term_title));
+  // If we're looking at a forum page determin if is a container/forum or the forum root
+  elseif (arg(0) == 'forum' && module_exists('forum')) {
+    // If there is a number then its a container or forum
+    if (is_numeric(arg(1))) {
+      $term = taxonomy_get_term(arg(1));
+      if (variable_get('page_title_vocab_'. $term->vid .'_showfield', 0) && ($term_title = page_title_load_title($term->tid, 'term'))) {
+        $title = check_plain(strip_tags($term_title));
+      }
+    }
+    // If not then it's the forum root.
+    else {
+      $title = variable_get('page_title_forum_root_title', '');
     }
   }
 
