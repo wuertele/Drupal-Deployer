@@ -96,7 +96,7 @@ function xmlsitemap_requirements($phase) {
  * @return
  *   TRUE if there is a warning or error requirement, or FALSE otherwise.
  */
-function xmlsitemap_check_status($return = FALSE) {
+function xmlsitemap_check_status() {
   $severity = REQUIREMENT_OK;
 
   foreach (module_implements('requirements') as $module) {
@@ -105,11 +105,6 @@ function xmlsitemap_check_status($return = FALSE) {
       $requirements = module_invoke($module, 'requirements', 'runtime');
       $severity = max($severity, drupal_requirements_severity($requirements));
     }
-  }
-
-  if (!$return && $severity == REQUIREMENT_ERROR && user_access('administer site configuration')) {
-    $t = get_t();
-    drupal_set_message($t('One or more problems were detected with your XML sitemap configuration. Please check the <a href="@status-report">status report</a> for more information.', array('@status-report' => url('admin/reports/status'))), 'error', FALSE);
   }
 
   return $severity == REQUIREMENT_ERROR;
