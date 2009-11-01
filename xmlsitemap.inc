@@ -507,34 +507,3 @@ function _xmlsitemap_get_version() {
   drupal_alter('system_info', $info, $file);
   return (isset($info['version']) ? $info['version'] : '');
 }
-
-/**
- * Check the status of all hook_requirements() from xmlsitemap modules.
- *
- * @param $return_only
- *   If TRUE, will return the result, otherwise it will show a message.
- * @return
- *   TRUE if there is a warning or error requirement, or FALSE otherwise.
- */
-function xmlsitemap_check_status($return_only = FALSE) {
-  // Load .install files
-  include_once './includes/install.inc';
-  drupal_load_updates();
-  $warnings = FALSE;
-
-  foreach (module_implements('requirements') as $module) {
-    if (strpos($module, 'xmlsitemap') !== FALSE) {
-      $requirements = module_invoke($module, 'requirements', 'runtime');
-      if (drupal_requirements_severity($requirements) >= REQUIREMENT_WARNING) {
-        $warnings = TRUE;
-        break;
-      }
-    }
-  }
-
-  if ($warnings && !$return_only && user_access('administer site configuration')) {
-    drupal_set_message(t('One or more problems were detected with your sitemap configuration. Please check the <a href="@status-report">status report</a> for more information.', array('@status-report' => url('admin/reports/status'))), 'warning', FALSE);
-  }
-
-  return $warnings;
-}

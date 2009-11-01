@@ -60,20 +60,59 @@ function xmlsitemap_requirements($phase) {
         $requirements['xmlsitemap_chunk_count']['description'] .= ' ' . t('Please increase the number of links per page.');
       }
     }
+
+    // Check when the cached files were last generated.
+    $generated_last = xmlsitemap_var('generated_last');
+    $generated_ago = REQUEST_TIME - $generated_last;
     $requirements['xmlsitemap_generated'] = array(
       'title' => $t('XML sitemap'),
-      'value' => xmlsitemap_var('generated_last') ? $t('Last generated on !date (!interval ago).', array('!date' => format_date(xmlsitemap_var('generated_last'), 'small'), '!interval' => format_interval(REQUEST_TIME - xmlsitemap_var('generated_last')))) : $t('Cached files have not been generated yet.'),
+      'value' => $generated_last ? $t('Last generated on !date (!interval ago).', array('!date' => format_date($generated_last, 'small'), '!interval' => format_interval($generated_ago))) : $t('Cached files have not been generated yet.'),
+      'severity' => REQUIREMENT_OK,
     );
     if (xmlsitemap_var('rebuild_needed')) {
       $requirements['xmlsitemap_generated']['severity'] = REQUIREMENT_ERROR;
       $requirements['xmlsitemap_generated']['description'] = $t('The XML sitemap data is out of sync and needs to be <a href="@link-rebuild">completely rebuilt<a>.', array('@link-rebuild' => url('admin/settings/xmlsitemap/rebuild')));
     }
-    elseif (xmlsitemap_var('regenerate_needed') && (REQUEST_TIME - xmlsitemap_var('generated_last')) > variable_get('cron_threshold_warning', 172800)) {
-      $requirements['xmlsitemap_generated']['severity'] = REQUIREMENT_WARNING;
-      $requirements['xmlsitemap_generated']['description'] = $t('The XML cached files are out of date and need to be regenerated. You can <a href="@link-cron">run cron manually</a> to regenerate the sitemap files.', array('@link-cron' => url('admin/reports/status/run-cron')));
+    elseif (xmlsitemap_var('regenerate_needed')) {
+      if ($generated_ago >= variable_get('cron_threshold_error', 1209600)) {
+        $requirements['xmlsitemap_generated']['severity'] = REQUIREMENT_ERROR;
+      }
+      elseif ($generated_ago >= variable_get('cron_threshold_warning', 172800)) {
+        $requirements['xmlsitemap_generated']['severity'] = REQUIREMENT_WARNING;
+      }
+      if ($requirements['xmlsitemap_generated']['severity']) {
+        $requirements['xmlsitemap_generated']['description'] = $t('The XML cached files are out of date and need to be regenerated. You can <a href="@link-cron">run cron manually</a> to regenerate the sitemap files.', array('@link-cron' => url('admin/reports/status/run-cron')));
+      }
     }
   }
   return $requirements;
+}
+
+/**
+ * Check the status of all hook_requirements() from xmlsitemap modules.
+ *
+ * @param $return_only
+ *   If TRUE, will return the result, otherwise it will show a message.
+ * @return
+ *   TRUE if there is a warning or error requirement, or FALSE otherwise.
+ */
+function xmlsitemap_check_status($return = FALSE) {
+  $severity = REQUIREMENT_OK;
+
+  foreach (module_implements('requirements') as $module) {
+    if (strpos($module, 'xmlsitemap') !== FALSE) {
+      module_load_install($module);
+      $requirements = module_invoke($module, 'requirements', 'runtime');
+      $severity = max($severity, drupal_requirements_severity($requirements));
+    }
+  }
+
+  if (!$return && $severity == REQUIREMENT_ERROR && user_access('administer site configuration')) {
+    $t = get_t();
+    drupal_set_message($t('One or more problems were detected with your XML sitemap configuration. Please check the <a href="@status-report">status report</a> for more information.', array('@status-report' => url('admin/reports/status'))), 'error', FALSE);
+  }
+
+  return $severity == REQUIREMENT_ERROR;
 }
 
 /**
