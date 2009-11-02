@@ -626,7 +626,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     '#default_value' => !empty($profile->settings['css_path']) ? $profile->settings['css_path'] : "",
     '#size' => 40,
     '#maxlength' => 255,
-    '#description' => 
+    '#description' =>
       t('Enter path to CSS file (Example: %cssexample1) or a list of CSS files separated by a comma (Example: %cssexample2). Make sure to select %defcss above.',
         array(
           '%cssexample1' => 'css/editor.css',
@@ -668,7 +668,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
         array(
           '@type' => t('styles'),
           '%example' => '/fckstyles.xml',
-          '%setting' => t('Define path to fckstyles.xml'), 
+          '%setting' => t('Define path to fckstyles.xml'),
         )) .'<br />'.
       t('Available placeholders') .':<br />'.
       '<strong>%h</strong> - '. t('host name (%host)', array('%host' => base_path())) .'<br />'.
@@ -1321,19 +1321,22 @@ function fckeditor_rebuild_selectors($name = NULL) {
 
       foreach (array('excl', 'simple_incl') as $var) {
         $settings[$var .'_regex'] = '';
-        $rules = preg_split('/[\s,]+/', $settings[$var]);
-        $regex = array();
 
-        if (!empty($rules)) {
-          foreach ($rules as $rule) {
-            if (!empty($rule)) {
-              $rule = fckeditor_parse_rule($rule);
-              $regex[] = '(?:'. fckeditor_rule_to_regex($rule) .')';
+        if (!empty($settings[$var])) {
+          $rules = preg_split('/[\s,]+/', $settings[$var]);
+          $regex = array();
+
+          if (!empty($rules)) {
+            foreach ($rules as $rule) {
+              if (!empty($rule)) {
+                $rule = fckeditor_parse_rule($rule);
+                $regex[] = '(?:'. fckeditor_rule_to_regex($rule) .')';
+              }
             }
-          }
 
-          if (!empty($regex)) {
-            $settings[$var .'_regex'] = '#'. implode('|', $regex) .'#';
+            if (!empty($regex)) {
+              $settings[$var .'_regex'] = '#'. implode('|', $regex) .'#';
+            }
           }
         }
       }
