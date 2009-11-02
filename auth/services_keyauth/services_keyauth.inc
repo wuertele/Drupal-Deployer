@@ -11,7 +11,7 @@ function _services_keyauth_security_settings() {
     '#type'           => 'checkbox',
     '#title'          => t('Use keys'),
     '#default_value'  => variable_get('services_use_key', TRUE),
-    '#description'    => t('When enabled all method calls need to provide a validation token to autheciate themselves with the server.'),
+    '#description'    => t('When enabled all method calls need to provide a validation token to authenticate themselves with the server.'),
   );
   $form['services_key_expiry'] = array(
     '#type'           => 'textfield',
@@ -25,7 +25,7 @@ function _services_keyauth_security_settings() {
     '#type'           => 'checkbox',
     '#title'          => t('Use sessid'),
     '#default_value'  => variable_get('services_use_sessid', TRUE),
-    '#description'    => t('When enabled, all method calls must include a valid sessid. Only disable this setting if the application will user browser-based cookies.')
+    '#description'    => t('When enabled, all method calls must include a valid sessid. Only disable this setting if the application will use browser-based cookies.')
   );
   return $form;
 }
