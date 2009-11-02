@@ -37,15 +37,19 @@ function fckeditor_admin_main() {
   $editor_path = fckeditor_path(TRUE);
   $fckconfig_file = $editor_path .'/fckconfig.js';
   if (!file_exists($fckconfig_file)) {
-    drupal_set_message(t('The FCKeditor component appears to be not installed correctly, because %checkfile could not be found.') .'<br/>'. t('Please go to the !fckeditorlink to download the latest version. After that you must extract the files to %fckeditorpath and make sure that the directory %fckeditorsubdir and the file %fckeditorfile exist. Refer to the !readme for more information.',
-      array(
-        '%checkfile' => $fckconfig_file,
-        '!fckeditorlink' => l(t('FCKeditor homepage'), 'http://www.fckeditor.net/download'),
-        '!readme' => l(t('readme.txt'), 'admin/help/fckeditor'),
-        '%fckeditorpath' => $editor_path,
-        '%fckeditorsubdir' => $editor_path .'/editor',
-        '%fckeditorfile' => $editor_path .'/fckeditor.js',
-      )), 'error');
+    drupal_set_message(
+      t('The FCKeditor component appears to be not installed correctly, because %checkfile could not be found.',
+        array(
+          '%checkfile' => $fckconfig_file,
+        )) .'<br/>'.
+      t('Please go to the !fckeditorlink to download the latest version. After that you must extract the files to %fckeditorpath and make sure that the directory %fckeditorsubdir and the file %fckeditorfile exist. Refer to the !readme for more information.',
+        array(
+          '!fckeditorlink' => l(t('FCKeditor homepage'), 'http://www.fckeditor.net/download'),
+          '!readme' => l(t('readme.txt'), 'admin/help/fckeditor'),
+          '%fckeditorpath' => $editor_path,
+          '%fckeditorsubdir' => $editor_path .'/editor',
+          '%fckeditorfile' => $editor_path .'/fckeditor.js',
+        )), 'error');
     drupal_set_message(t('If you have FCKeditor already installed please edit !editgloballink and update FCKeditor path.',
       array(
         '!editgloballink' => l(t('FCKeditor Global Profile'), 'admin/settings/fckeditor/editg'),
