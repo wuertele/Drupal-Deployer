@@ -239,39 +239,29 @@ function path_redirect_settings_form() {
     '#title' => t('Display a warning message to users when they are redirected.'),
     '#default_value' => path_redirect_var('redirect_warning'),
   );
-
   $form['path_redirect_allow_bypass'] = array(
     '#type' => 'checkbox',
     '#title' => t('Allow users to bypass redirects by adding %code to the URL.', array('%code' => variable_get('clean_url', 0) ? '?redirect=no' : '&redirect=no')),
     '#default_value' => path_redirect_var('allow_bypass'),
   );
-
   $form['path_redirect_auto_redirect'] = array(
     '#type' => 'checkbox',
     '#title' => t('Automatically create redirects when URL aliases are changed.'),
     '#default_value' => path_redirect_var('auto_redirect'),
     '#access' => module_exists('path'),
   );
-
   $form['path_redirect_purge_inactive'] = array(
     '#type' => 'select',
     '#title' => t('Discard redirects that have not been accessed for'),
     '#default_value' => path_redirect_var('purge_inactive'),
     '#options' => array(0 => t('Never (do not discard)')) + drupal_map_assoc(array(604800, 1209600, 2419200, 4838400, 7257600, 9676800, 31536000), 'format_interval'),
   );
-
-  $status_options = array();
-  $status_descriptions = array();
-  foreach (path_redirect_status_codes() as $code => $details) {
-    $status_options[$code] = $details['title'];
-    $status_descriptions[] = $details['title'] .': '. $details['description'];
-  }
   $form['path_redirect_default_status'] = array(
     '#type' => 'select',
     '#title' => t('Default redirect status'),
-    '#description' => theme('item_list', $status_descriptions) . t('You can find more information about HTTP redirect status codes at <a href="@link">@link</a>.', array('@link' => 'http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3')),
+    '#description' => t('You can find more information about HTTP redirect status codes at <a href="@status-codes">@status-codes</a>.', array('@status-codes' => 'http://en.wikipedia.org/wiki/List_of_HTTP_status_codes#3xx_Redirection')),
     '#default_value' => path_redirect_var('default_status'),
-    '#options' => $status_options,
+    '#options' => path_redirect_status_code_options(),
   );
 
   return system_settings_form($form);
