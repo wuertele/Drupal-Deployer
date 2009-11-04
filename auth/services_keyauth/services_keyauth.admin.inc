@@ -81,7 +81,7 @@ function services_keyauth_admin_keys_form() {
   
   $methods = services_get_all();
   foreach ($methods as $method) {
-    $form_methods[$method['#method']] = $method['#method'];
+    $form_methods[$method['method']] = $method['method'];
   }
 
   $form['method_access'] = array(

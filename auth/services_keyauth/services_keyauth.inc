@@ -84,33 +84,33 @@ function _services_keyauth_alter_methods(&$methods) {
 
   foreach ($methods as $key => &$method) {
     // set method defaults
-    switch ($method['#method']) {
+    switch ($method['method']) {
       case 'system.connect':
-        $method['#key'] = FALSE;
-        $method['#auth'] = FALSE;
+        $method['key'] = FALSE;
+        $method['auth'] = FALSE;
         break;
       default:
-        $method['#key'] = TRUE;
-        $method['#auth'] = TRUE;
+        $method['key'] = TRUE;
+        $method['auth'] = TRUE;
     }
     
-    if ($method['#auth'] && variable_get('services_use_sessid', TRUE)) {
-      array_unshift($method['#args'], $arg_sessid);
+    if ($method['auth'] && variable_get('services_use_sessid', TRUE)) {
+      array_unshift($method['args'], $arg_sessid);
     }
 
-    if ($method['#key'] && variable_get('services_use_key', TRUE)) {
-      array_unshift($method['#args'], $arg_nonce);
-      array_unshift($method['#args'], $arg_domain_time_stamp);
-      array_unshift($method['#args'], $arg_domain_name);
-      array_unshift($method['#args'], $arg_api_key);
+    if ($method['key'] && variable_get('services_use_key', TRUE)) {
+      array_unshift($method['args'], $arg_nonce);
+      array_unshift($method['args'], $arg_domain_time_stamp);
+      array_unshift($method['args'], $arg_domain_name);
+      array_unshift($method['args'], $arg_api_key);
     }
   }
 }
 
 function _services_keyauth_alter_browse_form(&$form, $method) {
 
-  foreach ($method['#args'] as $key => $arg) {
-    switch ($arg['#name']) {
+  foreach ($method['args'] as $key => $arg) {
+    switch ($arg['name']) {
       case 'hash':
         $form['arg'][$key] = array(
           '#title'          => 'Hash',
@@ -141,7 +141,7 @@ function _services_keyauth_alter_browse_form(&$form, $method) {
 }
 
 function _services_keyauth_authenticate_call($method, $method_name, &$args) {
-  if ($method['#key'] && variable_get('services_use_key', TRUE)) {
+  if ($method['key'] && variable_get('services_use_key', TRUE)) {
     $hash = array_shift($args);
     $domain = array_shift($args);
     $timestamp = array_shift($args);
@@ -179,7 +179,7 @@ function _services_keyauth_authenticate_call($method, $method_name, &$args) {
 
   // Add additonal processing for methods requiring session
   $session_backup = NULL;
-  if ($method['#auth'] && variable_get('services_use_sessid', TRUE)) {
+  if ($method['auth'] && variable_get('services_use_sessid', TRUE)) {
     $sessid = array_shift($args);
     if (empty($sessid)) {
       return t('Invalid sessid.');
@@ -189,7 +189,7 @@ function _services_keyauth_authenticate_call($method, $method_name, &$args) {
 }
 
 function _services_keyauth_alter_browse_form_submit($method, &$args) {
-  if ($method['#key'] && variable_get('services_use_key', TRUE)) {
+  if ($method['key'] && variable_get('services_use_key', TRUE)) {
     $args_stripped = $args;
   
     for ($i = 1; $i <= 4; $i++) {
