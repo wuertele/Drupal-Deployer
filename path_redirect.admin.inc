@@ -145,7 +145,7 @@ function path_redirect_edit_form(&$form_state, $redirect = array()) {
   $form['advanced']['type'] = array(
     '#type' => 'select',
     '#title' => t('Redirect status'),
-    '#description' => theme('item_list', path_redirect_status_code_descriptions()) . t('You can find more information about HTTP redirect status codes at <a href="@link">@link</a>.', array('@link' => 'http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.3')),
+    '#description' => t('You can find more information about HTTP redirect status codes at <a href="@status-codes">@status-codes</a>.', array('@status-codes' => 'http://en.wikipedia.org/wiki/List_of_HTTP_status_codes#3xx_Redirection')),
     '#default_value' => $redirect['type'],
     '#options' => path_redirect_status_code_options(),
   );
@@ -286,18 +286,6 @@ function path_redirect_status_code_options() {
     304 => t('304 Not Modified'),
     305 => t('305 Use Proxy'),
     307 => t('307 Temporary Redirect'),
-  );
-}
-
-function path_redirect_status_code_descriptions() {
-  return array(
-    300 => t('!300: The request is ambiguous and needs clarification as to which resource was requested.', array('!300' => t('300 Multiple Choices'))),
-    301 => t('!301: The resource has permanently moved elsewhere, the response indicates where it has gone to. <strong>Recommended.</strong>', array('!301' => t('301 Moved Permanently'))),
-    302 => t("!302: The resource has temporarily moved elsewhere, the response indicates where it is at present. <strong>This is Drupal's default redirect type.</strong>", array('!302' => t('302 Found'))),
-    303 => t('!303: A preferred alternative source should be used at present.', array('!303' => t('303 See Other'))),
-    304 => t("!304: The server has identified from the request information that the client's copy of the information is up-to-date and the requested information does not need to be sent again.", array('!304' => t('304 Not Modified'))),
-    5305 => t('!305: The request must be sent through the indicated proxy server.', array('!305' => t('305 Use Proxy'))),
-    307 => t('!307: The resource has temporarily moved elsewhere, the response indicates where it is at present. Client should still use this URL.', array('!307' => t('307 Temporary Redirect'))),
   );
 }
 
