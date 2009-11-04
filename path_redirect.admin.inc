@@ -162,43 +162,6 @@ function path_redirect_edit_form(&$form_state, $redirect = array()) {
   return $form;
 }
 
-function path_redirect_validate_redirect(&$redirect, $form_parents = '') {
-  if (strpos($redirect['path'], '#') !== FALSE) {
-    // Check that the "from" path is valid and contains no # fragment
-    form_set_error($form_parents . 'path', t('The <strong>from</strong> path cannot use a fragment anchor.'));
-  }
-
-  //if (!valid_url($form_state['values']['path'])) {
-  //  //Make sure "from" has the form of a local Drupal path
-  //  form_set_error('path', t('The redirect <strong>from</strong> path does not appear valid. This must be a local Drupal path.'));
-  //}
-
-  if ($existing = path_redirect_load_by_path($redirect['path'], $redirect['language'])) {
-    if ($redirect['rid'] != $existing['rid']) {
-      // The "from" path should not conflict with another redirect
-      form_set_error($form_parents . 'path', t('The <strong>from</strong> path %source is already being redirected. Do you want to <a href="@edit-page">edit the existing redirect</a>?', array('%source' => $redirect['path'], '@edit-page' => url('admin/build/path-redirect/edit/'. $existing['rid']))));
-    }
-  }
-
-  if ($pid = db_result(db_query("SELECT pid FROM {url_alias} WHERE dst = '%s'", $redirect['path']))) {
-    // A redirect's 'from' cannot match any values from url_alias, it will cause an infinite loop.
-    form_set_error($form_parents . 'path', t('You cannot add an existing alias as a redirect as it will not work. You must <a href="@alias-delete">delete the alias</a> first.', array('@alias-delete' => url('admin/build/path/delete/' . $pid, array('query' => drupal_get_destination())))));
-  }
-
-  if (menu_get_item($redirect['path'])) {
-    form_set_error($form_parents . 'path', t('You cannot create a redirect from a currently valid path.'));
-  }
-
-  if (!valid_url($redirect['redirect']) && !valid_url($redirect['redirect'], TRUE) && $redirect['redirect'] != '<front>') {
-    form_set_error($form_parents . 'redirect', t('The redirect <strong>to</strong> path does not appear valid.'));
-  }
-
-  // check that there there are no redirect loops
-  if (url($redirect['path']) == url($redirect['redirect'])) {
-    form_set_error($form_parents . 'redirect', t('You are attempting to redirect the page to itself. This will result in an infinite loop.'));
-  }
-}
-
 function path_redirect_edit_form_validate($form, &$form_state) {
   path_redirect_validate_redirect($form_state['values']);
 }
