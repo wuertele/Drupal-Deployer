@@ -200,12 +200,8 @@ function path_redirect_validate_redirect(&$redirect, $form_parents = '') {
     form_set_error($form_parents . 'redirect', t('The redirect <strong>to</strong> path does not appear valid.'));
   }
 
-  if ($redirect['redirect'] == '<front>') {
-    $redirect['redirect'] = variable_get('site_frontpage', 'node');
-  }
-
   // check that there there are no redirect loops
-  if ($redirect['path'] === $redirect['redirect']) {
+  if (url($redirect['path']) == url($redirect['redirect'])) {
     form_set_error($form_parents . 'redirect', t('You are attempting to redirect the page to itself. This will result in an infinite loop.'));
   }
 }

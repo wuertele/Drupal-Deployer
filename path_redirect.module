@@ -130,33 +130,33 @@ function path_redirect_menu() {
 function path_redirect_init() {
   if ($redirect = _path_redirect_load_current_page_redirect()) {
     // Create the absolute redirection URL.
-    $redirect->url_options = array(
-      'query' => $redirect->query,
-      'fragment' => $redirect->fragment,
+    $redirect['url_options'] = array(
+      'query' => $redirect['query'],
+      'fragment' => $redirect['fragment'],
       'absolute' => TRUE,
     );
-    $redirect->location = url($redirect->redirect, $redirect->url_options);
+    $redirect['location'] = url($redirect['redirect'], $redirect['url_options']);
 
     // Update the last used timestamp so that unused redirects can be purged.
-    db_query("UPDATE {path_redirect} SET last_used = %d WHERE rid = %d", REQUEST_TIME, $redirect->rid);
+    db_query("UPDATE {path_redirect} SET last_used = %d WHERE rid = %d", REQUEST_TIME, $redirect['rid']);
 
-    if (url($redirect->redirect) == url($_GET['q'])) {
+    if (url($redirect['redirect']) == url($_GET['q'])) {
       // Prevent infinite loop redirection.
-      watchdog('path_redirect', 'Redirect to <code>%redirect</code> is causing an infinite loop; redirect cancelled.', array('%redirect' => $redirect->location), WATCHDOG_WARNING, l(t('Edit'), 'admin/build/path-redirect/edit/'. $redirect->rid));
+      watchdog('path_redirect', 'Redirect to <code>%redirect</code> is causing an infinite loop; redirect cancelled.', array('%redirect' => $redirect['location']), WATCHDOG_WARNING, l(t('Edit'), 'admin/build/path-redirect/edit/'. $redirect['rid']));
     }
     elseif (path_redirect_var('allow_bypass') && isset($_GET['redirect']) && $_GET['redirect'] === 'no') {
       // If the user has requested not to be redirected, show a message.
-      drupal_set_message(t('This page has been moved to <a href="@redirect">@redirect</a>.', array('@redirect' => $redirect->location)));
+      drupal_set_message(t('This page has been moved to <a href="@redirect">@redirect</a>.', array('@redirect' => $redirect['location'])));
     }
     elseif (path_redirect_var('redirect_warning')) {
       // Show a message and automatically redirect after 10 seconds.
-      drupal_set_message(t('This page has been moved to <a href="@redirect">@redirect</a>. You will be automatically redirected in 10 seconds.', array('@redirect' => $redirect->location)), 'error');
-      drupal_set_html_head('<meta http-equiv="refresh" content="10;url="' . $redirect->location . '" />');
+      drupal_set_message(t('This page has been moved to <a href="@redirect">@redirect</a>. You will be automatically redirected in 10 seconds.', array('@redirect' => $redirect['location'])), 'error');
+      drupal_set_html_head('<meta http-equiv="refresh" content="10;url="' . $redirect['location'] . '" />');
     }
     else {
       // Perform the redirect.
       unset($_REQUEST['destination']);
-      drupal_goto($redirect->redirect, $redirect->query, $redirect->fragment, $redirect->type);
+      drupal_goto($redirect['redirect'], $redirect['query'], $redirect['fragment'], $redirect['type']);
     }
   }
 }
@@ -274,7 +274,7 @@ function _path_redirect_load_current_page_redirect() {
     // Remove ($language->language .'/') via preg_replace?
     $path = _path_redirect_split_path($path);
     $sql = "SELECT * FROM {path_redirect} WHERE (path = '%s' OR path = '%s') AND language IN ('%s', '') ORDER BY path DESC, language DESC";
-    return db_fetch_object(db_query_range($sql, $_GET['q'], $_GET['q'] . '?' . $path['query'], $language->language, 0, 1));
+    return db_fetch_array(db_query_range($sql, $_GET['q'], $_GET['q'] . '?' . $path['query'], $language->language, 0, 1));
   }
   else {
     return path_redirect_load_by_path($_GET['q'], $language->language);
