@@ -229,8 +229,12 @@ function path_redirect_save($redirect) {
     'last_used' => REQUEST_TIME,
   );
 
+  // Allow spaces in "from" path
+  // @todo Move to validation?
+  $redirect['path'] = str_replace('+', ' ', $redirect['path']);
+
   // Remove beginning and trailing slashes from path.
-  // @todo Move to validation.
+  // @todo Move to validation?
   $redirect['path'] = trim($redirect['path'], '\/?');
 
   if (empty($redirect['rid'])) {
@@ -239,6 +243,9 @@ function path_redirect_save($redirect) {
   else {
     return drupal_write_record('path_redirect', $redirect, array('rid'));
   }
+
+  // Clear the page cache for this path.
+  cache_clear_all(url($redirect['path'], array('absolute' => TRUE, 'language' => $redirect['language'])), 'cache_page', TRUE);
 }
 
 function path_redirect_load($rid) {
@@ -246,7 +253,12 @@ function path_redirect_load($rid) {
 }
 
 function path_redirect_load_by_path($path, $language = '') {
-  return db_fetch_array(db_query_range("SELECT * FROM {path_redirect} WHERE path = '%s' AND language IN ('%s', '') ORDER BY language DESC", $path, $language, 0, 1));
+  if (is_string($language)) {
+    return db_fetch_array(db_query_range("SELECT * FROM {path_redirect} WHERE path = '%s' AND language IN ('%s', '') ORDER BY language DESC", $path, $language, 0, 1));
+  }
+  else {
+    return db_fetch_array(db_query_range("SELECT * FROM {path_redirect} WHERE path = '%s'", $path, 0, 1));
+  }
 }
 
 function _path_redirect_load_current_page_redirect() {

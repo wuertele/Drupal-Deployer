@@ -46,7 +46,7 @@ function path_redirect_admin() {
   }
 
   if (empty($rows)) {
-    $rows[] = array(array('data' => t('No redirects available.'), 'colspan' => $multilanguage ? 5 : 4));
+    $rows[] = array(array('data' => t('No redirects available.'), 'colspan' => $multilanguage ? 6 : 5));
   }
 
   $output = theme('table', $header, $rows, array('class' => 'path-redirects'));
@@ -169,33 +169,35 @@ function path_redirect_edit_form(&$form_state, $redirect = array()) {
   return $form;
 }
 
-function path_redirect_edit_form_validate($form, &$form_state) {
-  $redirect = &$form_state['values'];
-
+function path_redirect_validate_redirect(&$redirect, $form_parents = '') {
   if (strpos($redirect['path'], '#') !== FALSE) {
     // Check that the "from" path is valid and contains no # fragment
-    form_set_error('path', t('You cannot redirect from a fragment anchor.'));
+    form_set_error($form_parents . 'path', t('The <strong>from</strong> path cannot use a fragment anchor.'));
   }
-  //elseif (!valid_url($form_state['values']['path'])) {
+
+  //if (!valid_url($form_state['values']['path'])) {
   //  //Make sure "from" has the form of a local Drupal path
   //  form_set_error('path', t('The redirect <strong>from</strong> path does not appear valid. This must be a local Drupal path.'));
   //}
-  elseif ($existing = path_redirect_load_by_path($redirect['path'], $redirect['language'])){
-    if ($redirect['rid'] != $existing['rid'] && $redirect['language'] != $existing['language']) {
+
+  if ($existing = path_redirect_load_by_path($redirect['path'], $redirect['language'])) {
+    if ($redirect['rid'] != $existing['rid']) {
       // The "from" path should not conflict with another redirect
-      form_set_error('path', t('The <strong>from</strong> path you entered is already redirected. You can <a href="@edit-page">edit this redirect</a> instead.', array('@edit-page' => url('admin/build/path-redirect/edit/'. $result->rid))));
+      form_set_error($form_parents . 'path', t('The <strong>from</strong> path %source is already being redirected. Do you want to <a href="@edit-page">edit the existing redirect</a>?', array('%source' => $redirect['path'], '@edit-page' => url('admin/build/path-redirect/edit/'. $existing['rid']))));
     }
   }
-  elseif ($pid = db_result(db_query("SELECT pid FROM {url_alias} WHERE dst = '%s'", array(':dst' => $redirect['path'])))) {
+
+  if ($pid = db_result(db_query("SELECT pid FROM {url_alias} WHERE dst = '%s'", $redirect['path']))) {
     // A redirect's 'from' cannot match any values from url_alias, it will cause an infinite loop.
-    form_set_error('path', t('You cannot add an existing alias as a redirect as it will not work. You must <a href="@alias-delete">delete the alias</a> first.', array('@alias-delete' => url('admin/build/path/delete/' . $pid, array('query' => drupal_get_destination())))));
+    form_set_error($form_parents . 'path', t('You cannot add an existing alias as a redirect as it will not work. You must <a href="@alias-delete">delete the alias</a> first.', array('@alias-delete' => url('admin/build/path/delete/' . $pid, array('query' => drupal_get_destination())))));
   }
-  elseif (menu_get_item($redirect['path'])) {
-    form_set_error('path', t('You cannot create a redirect from a currently valid path.'));
+
+  if (menu_get_item($redirect['path'])) {
+    form_set_error($form_parents . 'path', t('You cannot create a redirect from a currently valid path.'));
   }
 
   if (!valid_url($redirect['redirect']) && !valid_url($redirect['redirect'], TRUE) && $redirect['redirect'] != '<front>') {
-    form_set_error('redirect', t('The redirect <strong>to</strong> path does not appear valid.'));
+    form_set_error($form_parents . 'redirect', t('The redirect <strong>to</strong> path does not appear valid.'));
   }
 
   if ($redirect['redirect'] == '<front>') {
@@ -204,11 +206,12 @@ function path_redirect_edit_form_validate($form, &$form_state) {
 
   // check that there there are no redirect loops
   if ($redirect['path'] === $redirect['redirect']) {
-    form_set_error('redirect', t('You are attempting to redirect the page to itself. This will result in an infinite loop.'));
+    form_set_error($form_parents . 'redirect', t('You are attempting to redirect the page to itself. This will result in an infinite loop.'));
   }
+}
 
-  // Allow spaces in "from" path
-  $redirect['path'] = str_replace('+', ' ', $redirect['path']);
+function path_redirect_edit_form_validate($form, &$form_state) {
+  path_redirect_validate_redirect($form_state['values']);
 }
 
 function path_redirect_edit_form_submit($form, &$form_state) {
@@ -296,7 +299,7 @@ function path_redirect_status_codes() {
     ),
     301 => array(
       'title' => t('301 Moved Permanently'),
-      'description' => t('Moved Permanently. The resource has permanently moved elsewhere, the response indicates where it has gone to. <strong>Recommended.</strong>'),
+      'description' => t('The resource has permanently moved elsewhere, the response indicates where it has gone to. <strong>Recommended.</strong>'),
     ),
     302 => array(
       'title' => t('302 Found'),
@@ -304,7 +307,7 @@ function path_redirect_status_codes() {
     ),
     303 => array(
       'title' => t('303 See Other'),
-      'description' => t('See Other/Redirect. A preferred alternative source should be used at present.'),
+      'description' => t('A preferred alternative source should be used at present.'),
     ),
     304 => array(
       'title' => t('304 Not Modified'),
@@ -321,31 +324,20 @@ function path_redirect_status_codes() {
   );
 }
 
-/*
- * Extract part of the current Drupal path from a certain 'argument' onward.
- *
- * @todo Replace with drupal_get_path_segment in Drupal 7.
- */
-function path_redirect_get_path_segment($index = 0) {
-  $path = trim($_GET['q']);
-  $path = explode('/', $path, $index + 1);
-  $path = (count($path) > $index ? end($path) : '');
-  return $path;
-}
-
 /**
  * Autocompletion callback for the add/edit redirect form. Returns a list of
  * current 404s on the site.
  */
 function path_redirect_js_autocomplete_404() {
-  $string = path_redirect_get_path_segment(3);
+  $args = func_get_args();
+  $string = implode('/', $args);
   $matches = array();
 
   // Get a list of 404s, sorted by the number of times each 404 was processed.
   $paths = db_query("SELECT message, COUNT(message) AS count FROM {watchdog} WHERE type = 'page not found' AND LOWER(message) LIKE '%%%s%%' GROUP BY message ORDER BY count DESC", drupal_strtolower($string));
   while ($path = db_result($paths)) {
     // If the 404 is now a valid path or already has a redirect, discard it.
-    if (!menu_get_item($path) && !path_redirect_load(array('path' => $path))) {
+    if (!menu_get_item($path) && !path_redirect_load_by_path($path, FALSE)) {
       $matches[$path] = check_plain($path);
     }
   }
