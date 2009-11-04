@@ -1,10 +1,6 @@
 <?php
 // $Id$
 
-if (!defined('REQUEST_TIME')) {
-  define('REQUEST_TIME', time());
-}
-
 /**
  * Implementation of hook_help().
  */
@@ -138,7 +134,7 @@ function path_redirect_init() {
     $redirect['location'] = url($redirect['redirect'], $redirect['url_options']);
 
     // Update the last used timestamp so that unused redirects can be purged.
-    db_query("UPDATE {path_redirect} SET last_used = %d WHERE rid = %d", REQUEST_TIME, $redirect['rid']);
+    db_query("UPDATE {path_redirect} SET last_used = %d WHERE rid = %d", time(), $redirect['rid']);
 
     if (url($redirect['redirect']) == url($_GET['q'])) {
       // Prevent infinite loop redirection.
@@ -167,7 +163,7 @@ function path_redirect_init() {
 function path_redirect_cron() {
   // Purge inactive redirects from the database.
   if ($purge = path_redirect_var('purge_inactive')) {
-    db_query("DELETE FROM {path_redirect} WHERE last_used < %d", array(':timestamp' => REQUEST_TIME - $purge));
+    db_query("DELETE FROM {path_redirect} WHERE last_used < %d", array(':timestamp' => time() - $purge));
     if ($count = db_affected_rows()) {
       watchdog('path_redirect', format_plural($count, 'Removed 1 inactive redirect from the database.', 'Removed @count inactive redirects from the database.'));
     }
@@ -226,7 +222,7 @@ function path_redirect_save($redirect) {
     'fragment' => '',
     'language' => '',
     'type' => path_redirect_var('default_status'),
-    'last_used' => REQUEST_TIME,
+    'last_used' => time(),
   );
 
   // Allow spaces in "from" path

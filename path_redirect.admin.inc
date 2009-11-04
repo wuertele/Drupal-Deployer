@@ -435,7 +435,7 @@ function path_redirect_export_form_submit($form, $form_state) {
   $type = $form_state['values']['type'];
   $function = 'path_redirect_export_'. $type;
 
-  $filename = variable_get('site_name', 'Drupal') .' redirects '. format_date(REQUEST_TIME, 'custom', 'Y m d');
+  $filename = variable_get('site_name', 'Drupal') .' redirects '. format_date(time(), 'custom', 'Y m d');
   $filename = preg_replace(array('/^\W+|\W+$/', '/\W+/'), array('', '-'), drupal_strtolower($filename));
   $filename .= '.'. $type;
   drupal_set_header('Content-Disposition: attachment; filename='. $filename);
