@@ -121,14 +121,16 @@ function site_verify_edit_form(&$form_state, $record = array(), $engine = NULL) 
         $form['file_upload']['#disabled'] = TRUE;
       }
 
+      if ($record['engine']['file']) {
+        $form['#validate'][] = 'site_verify_validate_file';
+        $form['#attributes'] = array('enctype' => 'multipart/form-data');
+      }
+
       $form['submit'] = array(
         '#type' => 'submit',
         '#value' => t('Save'),
         '#weight' => 10,
       );
-      $form['#attributes'] = array('enctype' => 'multipart/form-data');
-      $form['#validate'][] = 'site_verify_validate_upload';
-      $form['#validate'][] = 'site_verify_edit_form_validate';
       break;
   }
 
@@ -141,9 +143,9 @@ function site_verify_edit_form(&$form_state, $record = array(), $engine = NULL) 
 }
 
 /**
- * Validation callback; save the uploaded file into the existing form fields.
+ * Validation callback; save the uploaded file and check file name uniqueness.
  */
-function site_verify_validate_upload(&$form, &$form_state) {
+function site_verify_validate_file(&$form, &$form_state) {
   // Import the uploaded verification file.
   if ($file = file_save_upload('file_upload', array(), FALSE, FILE_EXISTS_REPLACE)) {
     $contents = @file_get_contents($file->filepath);
@@ -153,18 +155,13 @@ function site_verify_validate_upload(&$form, &$form_state) {
     }
     else {
       $form_state['values']['file'] = $file->filename;
-      if ($form['file_contents']['#access']) {
-        $form_state['values']['file_contents'] = $contents;
-      }
+      $form_state['values']['file_contents'] = $contents;
       //drupal_set_message(t('The verification file <a href="@filename">@filename</a> was successfully imported.', array('@filename' => $file->filename)));
     }
   }
-}
 
-function site_verify_edit_form_validate(&$form, &$form_state) {
-  //$form_state['values']['file'] = drupal_strtolower($form_state['values']['file']);
-  $existing_file_svid = db_result(db_query("SELECT svid FROM {site_verify} WHERE LOWER(file) = LOWER('%s') AND svid <> %d", $form_state['values']['file'], $form_state['values']['svid']));
-  if ($existing_file_svid) {
+  $existing_file = db_result(db_query("SELECT svid FROM {site_verify} WHERE LOWER(file) = LOWER('%s') AND svid <> %d", $form_state['values']['file'], $form_state['values']['svid']));
+  if ($existing_file) {
     form_set_error('file', t('The file %filename is already being used in another verification.', array('%filename' => $form_state['values']['file'])));
   }
 }
