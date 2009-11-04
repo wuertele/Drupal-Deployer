@@ -289,6 +289,7 @@ function path_redirect_load($rid) {
 }
 
 function path_redirect_load_by_path($path, $language = '') {
+  path_redirect_init_path($path);
   if (is_string($language)) {
     return db_fetch_array(db_query_range("SELECT * FROM {path_redirect} WHERE path = '%s' AND language IN ('%s', '') ORDER BY language DESC", $path, $language, 0, 1));
   }
@@ -300,6 +301,9 @@ function path_redirect_load_by_path($path, $language = '') {
 function _path_redirect_load_current_page_redirect() {
   global $language;
 
+  $page = $_GET['q'];
+  path_redirect_init_path($page);
+
   $query = $_GET;
   unset($query['q']);
 
@@ -307,13 +311,12 @@ function _path_redirect_load_current_page_redirect() {
   if ($query) {
     $path = urldecode(request_uri());
     $path = drupal_substr($path, drupal_strlen(base_path()));
-    // Remove ($language->language .'/') via preg_replace?
     $path = _path_redirect_split_path($path);
     $sql = "SELECT * FROM {path_redirect} WHERE (path = '%s' OR path = '%s') AND language IN ('%s', '') ORDER BY path DESC, language DESC";
-    return db_fetch_array(db_query_range($sql, $_GET['q'], $_GET['q'] . '?' . $path['query'], $language->language, 0, 1));
+    return db_fetch_array(db_query_range($sql, $page, $page . '?' . $path['query'], $language->language, 0, 1));
   }
   else {
-    return path_redirect_load_by_path($_GET['q'], $language->language);
+    return path_redirect_load_by_path($page, $language->language);
   }
 }
 
@@ -327,10 +330,17 @@ function path_redirect_delete($redirect, $deprecated = FALSE) {
   return db_affected_rows();
 }
 
+function path_redirect_init_path(&$path) {
+  if ($path == variable_get('site_frontpage', 'node')) {
+    $path = '<front>';
+  }
+}
+
 /**
  * Delete any redirects to a certain path.
  */
 function path_redirect_delete_by_path($path) {
+  path_redirect_init_path($path);
   db_query("DELETE FROM {path_redirect} WHERE redirect = '%s'", $path);
   return db_affected_rows();
 }
@@ -339,7 +349,6 @@ function path_redirect_delete_by_path($path) {
  * Internal function to split a path string into path, query and fragment.
  */
 function _path_redirect_split_path($path) {
-  //$path = strtr($path, array('<front>' => variable_get('site_frontpage', 'node')));
   if (variable_get('clean_url', 0) && strpos($path, '?q=') === 0) {
     $path = preg_replace('/^\?q=/', '', $path, 1);
   }
