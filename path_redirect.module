@@ -128,66 +128,14 @@ function path_redirect_menu() {
  * Implementation of hook_init().
  */
 function path_redirect_init() {
-  _path_redirect_check();
-}
-
-/**
- * Implementation of hook_cron().
- */
-function path_redirect_cron() {
-  // Purge inactive redirects from the database.
-  if ($purge = path_redirect_var('purge_inactive')) {
-    db_query("DELETE FROM {path_redirect} WHERE last_used < %d", array(':timestamp' => REQUEST_TIME - $purge));
-    if ($count = db_affected_rows()) {
-      watchdog('path_redirect', format_plural($count, 'Removed 1 inactive redirect from the database.', 'Removed @count inactive redirects from the database.'));
-    }
-  }
-}
-
-/**
- * If a redirect is found for the current path, perform the redirect.
- */
-function _path_redirect_check() {
-  global $language;
-
-  $where = array();
-  $args = array();
-  //$where = array("path = '%s'");
-  //$args = array(':path' => $_GET['q']);
-  $sort = array();
-
-  // Add query arguments.
-  $query = $_GET;
-  unset($query['q']); // Use array_diff or array_diff_assoc?
-  if ($query) {
-    $path = urldecode(request_uri());
-    $path = drupal_substr($path, drupal_strlen(base_path()));
-    // Remove ($language->language .'/') via preg_replace?
-    $path = _path_redirect_split_path($path);
-    $where[] = "(path = '%s' OR path = '%s')";
-    $args[':path'] = $_GET['q'];
-    $args[':path_query'] = $_GET['q'] .'?'. $path['query'];
-    $sort[] = 'path DESC';
-    //$where[] = "(path_query = '%s' OR path_query = '')";
-    //$args[':path_query'] = $path['query'];
-    //$sort[] = 'path_query DESC';
-  }
-  else {
-    $where[] = "path = '%s'";
-    $args[':path'] = $_GET['q'];
-    //$where[] = "path_query = ''";
-  }
-
-  // Add language arguments.
-  $where[] = "(language = '%s' OR language = '')";
-  $args[':language'] = $language->language;
-  $sort[] = 'language DESC';
-
-  $redirect = path_redirect_load_query($where, $args, $sort);
-
-  if ($redirect) {
+  if ($redirect = _path_redirect_load_current_page_redirect()) {
     // Create the absolute redirection URL.
-    $redirect->location = url($redirect->redirect, array('query' => $redirect->query, 'fragment' => $redirect->fragment, 'absolute' => TRUE));
+    $redirect->url_options = array(
+      'query' => $redirect->query,
+      'fragment' => $redirect->fragment,
+      'absolute' => TRUE,
+    );
+    $redirect->location = url($redirect->redirect, $redirect->url_options);
 
     // Update the last used timestamp so that unused redirects can be purged.
     db_query("UPDATE {path_redirect} SET last_used = %d WHERE rid = %d", REQUEST_TIME, $redirect->rid);
@@ -209,6 +157,19 @@ function _path_redirect_check() {
       // Perform the redirect.
       unset($_REQUEST['destination']);
       drupal_goto($redirect->redirect, $redirect->query, $redirect->fragment, $redirect->type);
+    }
+  }
+}
+
+/**
+ * Implementation of hook_cron().
+ */
+function path_redirect_cron() {
+  // Purge inactive redirects from the database.
+  if ($purge = path_redirect_var('purge_inactive')) {
+    db_query("DELETE FROM {path_redirect} WHERE last_used < %d", array(':timestamp' => REQUEST_TIME - $purge));
+    if ($count = db_affected_rows()) {
+      watchdog('path_redirect', format_plural($count, 'Removed 1 inactive redirect from the database.', 'Removed @count inactive redirects from the database.'));
     }
   }
 }
@@ -288,6 +249,26 @@ function path_redirect_load_by_path($path, $language = '') {
   return db_fetch_array(db_query_range("SELECT * FROM {path_redirect} WHERE path = '%s' AND language IN ('%s', '') ORDER BY language DESC", $path, $language, 0, 1));
 }
 
+function _path_redirect_load_current_page_redirect() {
+  global $language;
+
+  $query = $_GET;
+  unset($query['q']);
+
+  // Check if this is a query-specific redirect.
+  if ($query) {
+    $path = urldecode(request_uri());
+    $path = drupal_substr($path, drupal_strlen(base_path()));
+    // Remove ($language->language .'/') via preg_replace?
+    $path = _path_redirect_split_path($path);
+    $sql = "SELECT * FROM {path_redirect} WHERE (path = '%s' OR path = '%s') AND language IN ('%s', '') ORDER BY path DESC, language DESC";
+    return db_fetch_object(db_query_range($sql, $_GET['q'], $_GET['q'] . '?' . $path['query'], $language->language, 0, 1));
+  }
+  else {
+    return path_redirect_load_by_path($_GET['q'], $language->language);
+  }
+}
+
 function path_redirect_delete($redirect, $deprecated = FALSE) {
   // @todo Remove legacy path_redirect_delete support for pathauto.
   if (is_string($redirect) && is_string($deprecated)) {
@@ -304,32 +285,6 @@ function path_redirect_delete($redirect, $deprecated = FALSE) {
 function path_redirect_delete_by_path($path) {
   db_query("DELETE FROM {path_redirect} WHERE redirect = '%s'", $path);
   return db_affected_rows();
-}
-
-/**
- * Retrieve a specific URL redirect from the database.
- *
- * @todo Replace this with custom query or path_redirect_load_by_path().
- */
-function path_redirect_load_query($where = array(), $args = array(), $sort = array()) {
-  if (is_numeric($where)) {
-    $where = array('rid' => $where);
-  }
-
-  foreach ($where as $key => $value) {
-    if (is_string($key)) {
-      $args[] = $value;
-      $where[$key] = $key .' = '. (is_numeric($value) ? '%d' : "'%s'");
-    }
-  }
-
-  if ($where && $args) {
-    $sql = "SELECT * FROM {path_redirect} WHERE ". implode(' AND ', $where);
-    if ($sort) {
-      $sql .= ' ORDER BY '. implode(' ,', $sort);
-    }
-    return db_fetch_object(db_query_range($sql, $args, 0, 1));
-  }
 }
 
 /**
@@ -381,7 +336,7 @@ function path_redirect_var($name, $default = NULL) {
 
   // @todo Remove when stable.
   if (!isset($defaults[$name])) {
-    trigger_error(t('Default variable for %variable not found.', array('%variable' => $name)));
+    trigger_error("Default variable for $name not found.");
   }
 
   return variable_get($name, isset($default) || !isset($defaults[$name]) ? $default : $defaults[$name]);
