@@ -395,6 +395,12 @@ function faq_page($tid = 0, $faq_display = '', $category_display = '') {
 
   $faq_path = drupal_get_path('module', 'faq') .'/includes';
 
+  if ($category_display == 'hide_qa' || $faq_display == 'hide_answer') {
+    drupal_add_js(array('faq' => array('faq_hide_qa_accordion' => variable_get('faq_hide_qa_accordion', FALSE))), 'setting');
+    drupal_add_js(array('faq' => array('faq_category_hide_qa_accordion' => variable_get('faq_category_hide_qa_accordion', FALSE))), 'setting');
+    drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
+  }
+
   // Non-categorized questions and answers.
   if (!$use_categories || ($category_display == 'none' && empty($tid))) {
     if (!empty($tid)) {
@@ -455,9 +461,6 @@ function faq_page($tid = 0, $faq_display = '', $category_display = '') {
         if (arg(0) == 'faq' && is_numeric(arg(1))) {
           drupal_set_title(check_plain($title . ($title ? ' - ' : '') . faq_tt("taxonomy:term:$term->tid:name", $term->name)));
         }
-        if ($category_display == 'hide_qa') {
-          drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
-        }
         _display_faq_by_category($faq_display, $category_display, $term, 0, $output, $output_answers);
         return theme('faq_page', $output, $output_answers);
       }
@@ -496,9 +499,6 @@ function faq_page($tid = 0, $faq_display = '', $category_display = '') {
           switch ($category_display) {
 
             case 'hide_qa':
-              drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
-
-
             case 'categories_inline':
               if (taxonomy_term_count_nodes($term->tid, 'faq')) {
                 _display_faq_by_category($faq_display, $category_display, $term, 1, $output, $output_answers);

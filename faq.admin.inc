@@ -57,6 +57,8 @@ function faq_general_settings_form() {
  */
 function faq_questions_settings_form() {
 
+  drupal_add_js(array('faq' => array('faq_hide_qa_accordion' => variable_get('faq_hide_qa_accordion', FALSE))), 'setting');
+  drupal_add_js(array('faq' => array('faq_category_hide_qa_accordion' => variable_get('faq_category_hide_qa_accordion', FALSE))), 'setting');
   drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
 
   $display_options['questions_inline'] = t('Questions inline');
@@ -115,6 +117,13 @@ function faq_questions_settings_form() {
     '#default_value' => variable_get('faq_question_length', 'short'),
   );
 
+  $form['faq_questions_misc']['faq_hide_qa_accordion'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use accordion effect for "opens/hides answer under question" layout'),
+    '#description' => t('This enables an "accordion" style effect where when a question is clicked, the answer appears beneath, and is then hidden when another question is opened.'),
+    '#default_value' => variable_get('faq_hide_qa_accordion', FALSE),
+  );
+
   $form['faq_questions_misc']['faq_use_teaser'] = array(
     '#type' => 'checkbox',
     '#title' => t('Use answer teaser'),
@@ -164,6 +173,8 @@ function faq_categories_settings_form() {
   if (!module_exists("taxonomy")) {
     drupal_set_message(t('Categorization of questions will not work without the "taxonomy" module being enabled.'), 'error');
   }
+  drupal_add_js(array('faq' => array('faq_hide_qa_accordion' => variable_get('faq_hide_qa_accordion', FALSE))), 'setting');
+  drupal_add_js(array('faq' => array('faq_category_hide_qa_accordion' => variable_get('faq_category_hide_qa_accordion', FALSE))), 'setting');
   drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
 
   // Set up a hidden variable.
@@ -204,6 +215,13 @@ function faq_categories_settings_form() {
     '#title' => t('Categories listing style'),
     '#description' => t("This allows to select how the categories listing is presented.  It only applies to the 'Clicking on category opens the questions/answers in a new page' layout.  An ordered listing would number the categories, whereas an unordered list will have a bullet to the left of each category."),
     '#default_value' => variable_get('faq_category_listing', 'ul'),
+  );
+
+  $form['faq_category_misc']['faq_category_hide_qa_accordion'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use accordion effect for "opens/hides questions and answers under category" layout'),
+    '#description' => t('This enables an "accordion" style effect where when a category is clicked, the questions appears beneath, and is then hidden when another category is opened.'),
+    '#default_value' => variable_get('faq_category_hide_qa_accordion', FALSE),
   );
 
   $form['faq_category_misc']['faq_count'] = array(
@@ -285,6 +303,8 @@ function faq_categories_settings_form() {
 function faq_weight_settings_form($form_state, $category = NULL) {
   $order = $date_order = '';
 
+  drupal_add_js(array('faq' => array('faq_hide_qa_accordion' => variable_get('faq_hide_qa_accordion', FALSE))), 'setting');
+  drupal_add_js(array('faq' => array('faq_category_hide_qa_accordion' => variable_get('faq_category_hide_qa_accordion', FALSE))), 'setting');
   drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
   drupal_add_css(drupal_get_path('module', 'faq') .'/faq.css');
 

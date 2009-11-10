@@ -13,8 +13,6 @@
  *   Array reference of arguments given to the theme() function.
  */
 function template_preprocess_faq_hide_answer(&$variables) {
-  drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
-
   $data = $variables['data'];
   $this_page = $_GET['q'];
 
@@ -41,8 +39,6 @@ function template_preprocess_faq_hide_answer(&$variables) {
  *   Array reference of arguments given to the theme() function.
  */
 function template_preprocess_faq_category_hide_answer(&$variables) {
-  drupal_add_js(drupal_get_path('module', 'faq') .'/faq.js', 'module');
-
   $data = $variables['data'];
   $category_display = $variables['category_display'];
   $term = $variables['term'];

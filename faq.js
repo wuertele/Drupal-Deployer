@@ -12,7 +12,7 @@ function teaser_handler(event) {
 }
 
 function faq_display_handler(event) {
-  // enable / disable "questions_inline" and "questions_top" only settings
+  // Enable / disable "questions_inline" and "questions_top" only settings.
   if ($("input[name=faq_display]:checked").val() == "questions_inline" || $("input[name=faq_display]:checked").val() == "questions_top") {
     $("input[name=faq_back_to_top]").removeAttr("disabled");
   }
@@ -20,7 +20,15 @@ function faq_display_handler(event) {
     $("input[name=faq_back_to_top]").attr("disabled", "disabled");
   }
 
-  // enable / disable "new_page" only settings
+  // Enable / disable "hide_answer" only settings.
+  if ($("input[name=faq_display]:checked").val() != "hide_answer") {
+    $("input[name=faq_hide_qa_accordion]").attr("disabled", "disabled");
+  }
+  else {
+    $("input[name=faq_hide_qa_accordion]").removeAttr("disabled");
+  }
+
+  // Enable / disable "new_page" only settings.
   if ($("input[name=faq_display]:checked").val() != "new_page") {
     $("input[name=faq_use_teaser]").removeAttr("disabled");
     $("input[name=faq_more_link]").removeAttr("disabled");
@@ -33,7 +41,7 @@ function faq_display_handler(event) {
   }
   teaser_handler(event);
 
-  // enable / disable "new_page" and "questions_top" only settings
+  // Enable / disable "new_page" and "questions_top" only settings.
   if ($("input[name=faq_display]:checked").val() == "new_page" ||
     $("input[name=faq_display]:checked").val() == "questions_top") {
     $("select[name=faq_question_listing]").removeAttr("disabled");
@@ -42,10 +50,10 @@ function faq_display_handler(event) {
     $("select[name=faq_question_listing]").attr("disabled", "disabled");
   }
 
-  // enable / disable "questions_inline" only settings
+  // Enable / disable "questions_inline" only settings.
   if ($("input[name=faq_display]:checked").val() == "questions_inline") {
     $("input[name=faq_qa_mark]").removeAttr("disabled");
-    // enable / disable label settings according to "qa_mark" setting
+    // Enable / disable label settings according to "qa_mark" setting.
     if ($("input[name=faq_qa_mark]:checked").val() == 1) {
       $("input[name=faq_question_label]").removeAttr("disabled");
       $("input[name=faq_answer_label]").removeAttr("disabled");
@@ -64,7 +72,7 @@ function faq_display_handler(event) {
 
 function qa_mark_handler(event) {
   if ($("input[name=faq_display]:checked").val() == "questions_inline") {
-    // enable / disable label settings according to "qa_mark" setting
+    // Enable / disable label settings according to "qa_mark" setting.
     if ($("input[name=faq_qa_mark]:checked").val() == 1) {
       $("input[name=faq_question_label]").removeAttr("disabled");
       $("input[name=faq_answer_label]").removeAttr("disabled");
@@ -110,6 +118,14 @@ function categories_handler(event) {
     $("input[name=faq_group_questions_top]").attr("disabled", "disabled");
   }
 
+  // Enable / disable "hide_qa" only settings.
+  if ($("input[name=faq_category_display]:checked").val() != "hide_qa") {
+    $("input[name=faq_category_hide_qa_accordion]").attr("disabled", "disabled");
+  }
+  else {
+    $("input[name=faq_category_hide_qa_accordion]").removeAttr("disabled");
+  }
+
   $("input[name=faq_category_display]:checked").val() == "categories_inline" ?
     $("input[name=faq_hide_child_terms]").attr("disabled", "disabled"):
     $("input[name=faq_hide_child_terms]").removeAttr("disabled");
@@ -125,30 +141,54 @@ function categories_handler(event) {
 
 if (Drupal.jsEnabled) {
   $(document).ready(function () {
-    // hide/show answer to question
-    $('div.faq-dd-hide-answer').hide();
+    // Hide/show answer for a question.
+    var faq_hide_qa_accordion = Drupal.settings.faq.faq_hide_qa_accordion;
+    if (faq_hide_qa_accordion) {
+      $('div.faq-dd-hide-answer').addClass("collapsible collapsed");
+    }
+    else {
+      $('div.faq-dd-hide-answer').hide();
+    }
     $('div.faq-dt-hide-answer').click(function() {
       $(this).toggleClass('faq-qa-visible');
-      $(this).next('div.faq-dd-hide-answer').slideToggle('fast', function() {
-        $(this).parent().toggleClass('expanded');
-      });
+      if (faq_hide_qa_accordion) {
+        $('div.faq-dd-hide-answer').not($(this).next('div.faq-dd-hide-answer')).addClass("collapsed");
+        $(this).next('div.faq-dd-hide-answer').toggleClass("collapsed");
+      }
+      else {
+        $(this).next('div.faq-dd-hide-answer').slideToggle('fast', function() {
+          $(this).parent().toggleClass('expanded');
+        });
+      }
       return false;
     });
 
 
-    // hide/show q/a for a category
-    $('div.faq-qa-hide').hide();
+    // Hide/show q/a for a category.
+    var faq_category_hide_qa_accordion = Drupal.settings.faq.faq_category_hide_qa_accordion;
+    if (faq_category_hide_qa_accordion) {
+      $('div.faq-qa-hide').addClass("collapsible collapsed");
+    }
+    else {
+      $('div.faq-qa-hide').hide();
+    }
     $('div.faq-qa-header .faq-header').click(function() {
       $(this).toggleClass('faq-category-qa-visible');
-      $(this).parent().next('div.faq-qa-hide').slideToggle('fast', function() {
-        $(this).parent().toggleClass('expanded');
-      });
+      if (faq_category_hide_qa_accordion) {
+        $('div.faq-qa-hide').not($(this).parent().next('div.faq-qa-hide')).addClass("collapsed");
+        $(this).parent().next('div.faq-qa-hide').toggleClass("collapsed");
+      }
+      else {
+        $(this).parent().next('div.faq-qa-hide').slideToggle('fast', function() {
+          $(this).parent().toggleClass('expanded');
+        });
+      }
       return false;
     });
 
 
 
-    // handle faq_category_settings_form
+    // Handle faq_category_settings_form.
     faq_display_handler();
     questions_top_handler();
     categories_handler();
