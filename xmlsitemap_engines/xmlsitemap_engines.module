@@ -66,28 +66,37 @@ function xmlsitemap_engines_submit_access() {
 /**
  * Submit the sitemaps to all the specified search engines.
  */
-function xmlsitemap_engines_submit_sitemaps() {
+function xmlsitemap_engines_submit_engines() {
   $sitemaps = xmlsitemap_get_sitemaps();
   $engines = xmlsitemap_engines_var('engines');
   foreach ($engines as $engine) {
-    foreach ($sitemaps as $sitemap) {
-      $url = xmlsitemap_engines_prepare_url(xmlsitemap_engines_get_engines($engine, 'url'), $sitemap);
-      $request = drupal_http_request($url);
-      watchdog('xmlsitemap', 'Submitted the sitemap to %url and received response @code.', array('%url' => $url, '@code' => $request->code));
-    }
+    $engine_url = xmlsitemap_engines_get_engines($engine, 'url');
+    xmlsitemap_engines_submit_sitemaps($engine_url, $sitemaps);
   }
 
   $custom_urls = xmlsitemap_engines_var('custom_urls');
   $custom_urls = preg_split('/[\r\n]+/', $custom_urls, -1, PREG_SPLIT_NO_EMPTY);
   foreach ($custom_urls as $custom_url) {
-    foreach ($sitemaps as $sitemap) {
-      $url = xmlsitemap_engines_prepare_url($custom_url, $sitemap);
-      $request = drupal_http_request($url);
-      watchdog('xmlsitemap', 'Submitted the sitemap to %url and received response @code.', array('%url' => $url, '@code' => $request->code));
-    }
+    xmlsitemap_engines_submit_sitemaps($custom_url, $sitemaps);
   }
 
   variable_set('xmlsitemap_engines_submit_last', REQUEST_TIME);
+}
+
+/**
+ * Submit the sitemaps to a specific URL.
+ *
+ * @param $url
+ *   The URL for sitemap submission.
+ * @param $sitemaps
+ *   An array of URLs of the sitemaps to submit.
+ */
+function xmlsitemap_engines_submit_sitemaps($url, $sitemaps = array()) {
+  foreach ($sitemaps as $sitemap) {
+    $url = xmlsitemap_engines_prepare_url($url, $sitemap);
+    $request = drupal_http_request($url);
+    watchdog('xmlsitemap', 'Submitted the sitemap to %url and received response @code.', array('%url' => $url, '@code' => $request->code));
+  }
 }
 
 /**
@@ -95,7 +104,7 @@ function xmlsitemap_engines_submit_sitemaps() {
  */
 function xmlsitemap_engines_cron() {
   if (xmlsitemap_engines_submit_access()) {
-    xmlsitemap_engines_submit_sitemaps();
+    xmlsitemap_engines_submit_engines();
   }
 }
 
