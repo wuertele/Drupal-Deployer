@@ -8,7 +8,9 @@ function xmlsitemap_engines_help($path, $arg) {
   $output = '';
   switch ($path) {
     case 'admin/settings/xmlsitemap/engines':
-      $output .= t('In order to verify site ownership with the search engines listed below, it is highly recommended to download and install the <a href="@site-verify">Site verification module</a>.', array('@site-verify' => 'http://drupal.org/project/site_verify'));
+      if (!module_exists('site_verify')) {
+        $output .= t('In order to verify site ownership with the search engines listed below, it is highly recommended to download and install the <a href="@site-verify">Site verification module</a>.', array('@site-verify' => 'http://drupal.org/project/site_verify'));
+      }
       break;
   }
 
@@ -27,20 +29,44 @@ function xmlsitemap_engines_menu() {
     'type' => MENU_LOCAL_TASK,
     'file' => 'xmlsitemap_engines.admin.inc',
   );
+  //$items['admin/settings/xmlsitemap/engines/submit'] = array(
+  //  'page callback' => 'xmlsitemap_engines_submit',
+  //  'access callback' => 'xmlsitemap_engines_submit_access',
+  //  'type' => MENU_CALLBACK,
+  //);
 
   return $items;
 }
 
-/**
- * Implementation of hook_cron().
- */
-function xmlsitemap_engines_cron() {
-  if (variable_get('site_offline', 0)
-      || (xmlsitemap_engines_var('submit_updated') && xmlsitemap_var('generated_last') < xmlsitemap_engines_var('submit_last'))
-      || (REQUEST_TIME - xmlsitemap_engines_var('submit_last')) < xmlsitemap_engines_var('minimum_lifetime')) {
-    return;
+function xmlsitemap_engines_submit_access() {
+  // Cannot submit when site is offline since search engines cannot access the
+  // site's content.
+  if (variable_get('site_offline', 0)) {
+    return FALSE;
   }
 
+  // Allow manual submissions to run.
+  //if ($_GET['q'] == 'admin/settings/xmlsitemap/engines/submit' && user_access('administer xmlsitemap')) {
+  //  return TRUE;
+  //}
+
+  // If sitemap data has not been updated since last submission, skip.
+  if (xmlsitemap_engines_var('submit_updated') && xmlsitemap_var('generated_last') < xmlsitemap_engines_var('submit_last')) {
+    return FALSE;
+  }
+
+  // Check that the minimum submission lifetime has been met.
+  if ((REQUEST_TIME - xmlsitemap_engines_var('submit_last')) < xmlsitemap_engines_var('minimum_lifetime')) {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/**
+ * Submit the sitemaps to all the specified search engines.
+ */
+function xmlsitemap_engines_submit_sitemaps() {
   $sitemaps = xmlsitemap_get_sitemaps();
   $engines = xmlsitemap_engines_var('engines');
   foreach ($engines as $engine) {
@@ -62,6 +88,15 @@ function xmlsitemap_engines_cron() {
   }
 
   variable_set('xmlsitemap_engines_submit_last', REQUEST_TIME);
+}
+
+/**
+ * Implementation of hook_cron().
+ */
+function xmlsitemap_engines_cron() {
+  if (xmlsitemap_engines_submit_access()) {
+    xmlsitemap_engines_submit_sitemaps();
+  }
 }
 
 /**

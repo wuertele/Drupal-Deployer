@@ -24,7 +24,8 @@ function xmlsitemap_engines_settings_form($form_state) {
     '#type' => 'select',
     '#title' => t('Do not submit more often than every'),
     '#options' => /*array(0 => t('No minimum')) +*/ drupal_map_assoc(array(300, 900, 1800, 3600, 10800, 21600, 32400, 43200, 86400, 172800, 259200, 604800, 604800 * 2, 604800 * 4), 'format_interval'),
-    '#default_value' => xmlsitemap_engines_var('minimum_lifetime')
+    '#default_value' => xmlsitemap_engines_var('minimum_lifetime'),
+    //'#description' => t('The sitemap will only be submitted if it has been updated since the last submission.'),
   );
   $form['xmlsitemap_engines_submit_updated'] = array(
     '#type' => 'checkbox',
