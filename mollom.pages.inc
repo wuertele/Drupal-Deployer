@@ -17,15 +17,15 @@ function mollom_captcha_js($type, $session_id) {
   if ($type == 'audio') {
     $response = mollom('mollom.getAudioCaptcha', array('author_ip' => ip_address(), 'session_id' => $session_id));
     if ($response) {
-      $output  = '<a href="http://mollom.com" id="mollom-captcha"><embed src="'. check_plain($response['url']) .'" autostart="true" width="120" height="30" /></a>';
-      $output .= ' (<a href="#" id="mollom-image-captcha">'. t('use image CAPTCHA') .'</a>)';
+      $output  = '<a href="http://mollom.com" class="mollom-captcha"><embed src="'. check_plain($response['url']) .'" autostart="true" width="120" height="30" /></a>';
+      $output .= ' (<a href="#" class="mollom-image-captcha">'. t('use image CAPTCHA') .'</a>)';
     }
   }
   elseif ($type == 'image') {
     $response = mollom('mollom.getImageCaptcha', array('author_ip' => ip_address(), 'session_id' => $session_id));
     if ($response) {
-      $output = '<a href="http://mollom.com" id="mollom-captcha"><img src="'. check_plain(url($response['url'])) .'" alt="Mollom CAPTCHA" /></a>';
-      $output .= ' (<a href="#" id="mollom-audio-captcha">'. t('play audio CAPTCHA') .'</a>)';
+      $output = '<a href="http://mollom.com" class="mollom-captcha"><img src="'. check_plain(url($response['url'])) .'" alt="Mollom CAPTCHA" /></a>';
+      $output .= ' (<a href="#" class="mollom-audio-captcha">'. t('play audio CAPTCHA') .'</a>)';
     }
   }
 
