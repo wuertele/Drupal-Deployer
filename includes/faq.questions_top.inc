@@ -32,7 +32,7 @@ function template_preprocess_faq_questions_top(&$variables) {
   $key = 0;
   foreach ($data as $node) {
     $anchor = "n". $node->nid;
-    $questions[$key] = l($node->question, $this_page, array('fragment' => $anchor));
+    $questions[$key] = l($node->title, $this_page, array('fragment' => $anchor));
     faq_view_question($answers[$key], $node, '', $anchor);
     faq_view_answer($answers[$key], $node, $back_to_top, $teaser, $links);
     $key++;
@@ -160,7 +160,7 @@ function template_preprocess_faq_category_questions_top(&$variables) {
       faq_view_answer($node_var, $node, $back_to_top, $teaser, $links);
     }
     $nodes[] = $node_var;
-    $questions[] = l($node->question, $this_page, array('fragment' => $anchor));
+    $questions[] = l($node->title, $this_page, array('fragment' => $anchor));
   }
   $variables['question_count'] = $count;
   $variables['use_teaser'] = $teaser;
