@@ -17,15 +17,15 @@ function mollom_captcha_js($type, $session_id) {
   if ($type == 'audio') {
     $response = mollom('mollom.getAudioCaptcha', array('author_ip' => ip_address(), 'session_id' => $session_id));
     if ($response) {
-      $output  = '<a href="http://mollom.com" class="mollom-captcha"><embed src="'. check_plain($response['url']) .'" autostart="true" width="120" height="30" /></a>';
-      $output .= ' (<a href="#" class="mollom-image-captcha">'. t('use image CAPTCHA') .'</a>)';
+      $output = '<a href="http://mollom.com" class="mollom-captcha"><embed src="' . check_plain($response['url']) . '" autostart="true" width="120" height="30" /></a>';
+      $output .= ' (<a href="#" class="mollom-image-captcha">' . t('use image CAPTCHA') . '</a>)';
     }
   }
   elseif ($type == 'image') {
     $response = mollom('mollom.getImageCaptcha', array('author_ip' => ip_address(), 'session_id' => $session_id));
     if ($response) {
-      $output = '<a href="http://mollom.com" class="mollom-captcha"><img src="'. check_plain(url($response['url'])) .'" alt="Mollom CAPTCHA" /></a>';
-      $output .= ' (<a href="#" class="mollom-audio-captcha">'. t('play audio CAPTCHA') .'</a>)';
+      $output = '<a href="http://mollom.com" class="mollom-captcha"><img src="' . check_plain(url($response['url'])) . '" alt="Mollom CAPTCHA" /></a>';
+      $output .= ' (<a href="#" class="mollom-audio-captcha">' . t('play audio CAPTCHA') . '</a>)';
     }
   }
 
@@ -66,7 +66,7 @@ function mollom_report_comment($form_state, $cid) {
 
   return confirm_form($form,
     t('Are you sure you want to delete the comment and report it?'),
-    isset($_GET['destination']) ? $_GET['destination'] : 'node/'. $comment->nid,
+    isset($_GET['destination']) ? $_GET['destination'] : 'node/' . $comment->nid,
     t('This action cannot be undone.'),
     t('Delete'),
     t('Cancel')
@@ -80,7 +80,7 @@ function mollom_report_comment_submit($form, &$form_state) {
   if ($form_state['values']['confirm']) {
     if ($comment = _comment_load($form_state['values']['cid'])) {
       // Load the Mollom session data:
-      $data = mollom_get_data('comment-'. $comment->cid);
+      $data = mollom_get_data('comment-' . $comment->cid);
 
       // Provide feedback to Mollom if available:
       if (isset($data) && isset($data->session) && isset($form_state['values']['feedback']) && $form_state['values']['feedback'] != 'none') {
@@ -108,7 +108,7 @@ function mollom_report_node($form_state, $node) {
 
   return confirm_form($form,
     t('Are you sure you want to delete %title and report it?', array('%title' => $node->title)),
-    isset($_GET['destination']) ? $_GET['destination'] : 'node/'. $node->nid,
+    isset($_GET['destination']) ? $_GET['destination'] : 'node/' . $node->nid,
     t('This action cannot be undone.'),
     t('Delete'), t('Cancel')
   );
@@ -121,7 +121,7 @@ function mollom_report_node_submit($form, &$form_state) {
   if ($form_state['values']['confirm']) {
     if ($node = node_load($form_state['values']['nid'])) {
       // Load the Mollom session data:
-      $data = mollom_get_data('node-'. $node->nid);
+      $data = mollom_get_data('node-' . $node->nid);
 
       // Provide feedback to Mollom if available:
       if (isset($data) && isset($data->session) && isset($form_state['values']['feedback']) && $form_state['values']['feedback'] != 'none') {
@@ -164,3 +164,4 @@ function mollom_report_contact_submit($form, &$form_state) {
 
   $form_state['redirect'] = '<front>';
 }
+
