@@ -5,15 +5,13 @@ Drupal.verticalTabs = Drupal.verticalTabs || {};
 Drupal.verticalTabs.xmlsitemap = function() {
   var vals = [];
 
-  // Inclusion select field
-  var status = $('#edit-xmlsitemap-status').val();
-  var status_text = $("#edit-xmlsitemap-status option[value='" + status + "']").text();
-  vals.push(Drupal.t('Inclusion: @value', { '@value': status_text }));
+  // Inclusion select field.
+  var status = $('#edit-xmlsitemap-status option:selected, #edit-xmlsitemap-node-status option:selected').text();
+  vals.push(Drupal.t('Inclusion: @value', { '@value': status }));
 
-  // Priority select field
-  var priority = $('#edit-xmlsitemap-priority').val();
-  var priority_text = $("#edit-xmlsitemap-priority option[value='" + priority + "']").text();
-  vals.push(Drupal.t('Priority: @value', { '@value': priority_text }));
+  // Priority select field.
+  var priority = $('#edit-xmlsitemap-priority option:selected, #edit-xmlsitemap-node-priority option:selected').text();
+  vals.push(Drupal.t('Priority: @value', { '@value': priority }));
 
   return vals.join('<br />');
 }

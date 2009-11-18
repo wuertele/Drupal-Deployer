@@ -315,8 +315,9 @@ function xmlsitemap_add_form_type_options(&$form, $module, $options) {
     '#access' => user_access('administer xmlsitemap'),
   );
   $form['xmlsitemap']['xmlsitemap_' . $module . '_status'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Include in the sitemap'),
+    '#type' => 'select',
+    '#title' => t('Inclusion'),
+    '#options' => xmlsitemap_get_status_options(),
     '#default_value' => $options['status'],
   );
   $form['xmlsitemap']['xmlsitemap_' . $module . '_priority'] = array(
