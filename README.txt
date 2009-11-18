@@ -7,6 +7,7 @@ CONTENTS OF THIS FILE
   * Known Issues
     - No FAQs appear after module upgrade
     - <p> tags appear in FAQ question text
+    - Clicking on category links takes user to front page
 
 
 INTRODUCTION
@@ -72,4 +73,12 @@ accommodate longer question texts. The p-tags come from the WYSIWYG editor used
 and not the FAQ module. This is because TinyMCE, and other WYSIWYG editors,
 attach themselves to all textareas on a given page.  Details on how to prevent
 this can be found at http://drupal.org/node/294708
+
+Clicking on category links takes user to front page
+---------------------------------------------------
+Reported for Drupal 5, unconfirmed for Drupal 6.
+Instead of being taken to the categorized faq page, the front page is displayed
+when the user clicks on a faq category. This is something to do with the
+pathauto module and can be easily fixed by doing a bulk update of paths for the
+faq vocabulary.
 
