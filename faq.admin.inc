@@ -156,7 +156,7 @@ function faq_questions_settings_form() {
     '#type' => 'select',
     '#title' => t('Default Sorting for Non-Weighted FAQs'),
     '#options' => array('DESC' => t('Date Descending'), 'ASC' => t('Date Ascending')),
-    '#description' => t("This controls the default weighting behaviour for new FAQ nodes which haven't been assigned a weight."),
+    '#description' => t("This controls the default ordering behaviour for new FAQ nodes which haven't been assigned a position."),
     '#default_value' => variable_get('faq_default_sorting', 'DESC'),
   );
 
@@ -293,14 +293,14 @@ function faq_categories_settings_form() {
 }
 
 /**
- * Define the elements for the FAQ Settings page - weight tab.
+ * Define the elements for the FAQ Settings page - order tab.
  *
  * @param $form_state
  *   Store the submitted form values.
  * @return
  *   The form code, before being converted to HTML format.
  */
-function faq_weight_settings_form($form_state, $category = NULL) {
+function faq_order_settings_form($form_state, $category = NULL) {
   $order = $date_order = '';
 
   drupal_add_js(array('faq' => array('faq_hide_qa_accordion' => variable_get('faq_hide_qa_accordion', FALSE))), 'setting');
@@ -347,7 +347,7 @@ function faq_weight_settings_form($form_state, $category = NULL) {
         $form['choose_cat']['search'] = array(
           '#type' => 'submit',
           '#value' => t('Search'),
-          '#submit' => array('faq_weight_settings_choose_cat_form_submit'),
+          '#submit' => array('faq_order_settings_choose_cat_form_submit'),
         );
       }
     }
@@ -417,7 +417,7 @@ function faq_weight_settings_form($form_state, $category = NULL) {
       '#value' => t('Save order'),
       '#weight' => 3,
       '#attributes' => array('onclick' => 'faq_update_order();'),
-      '#submit' => array('faq_weight_settings_reorder_form_submit'),
+      '#submit' => array('faq_order_settings_reorder_form_submit'),
     );
   }
 
@@ -435,7 +435,7 @@ function faq_weight_settings_form($form_state, $category = NULL) {
  *   'redirect' key: when it is set to TRUE, the form will be rebuilt from
  *   scratch and displayed on screen.
  */
-function faq_weight_settings_choose_cat_form_submit($form, &$form_state) {
+function faq_order_settings_choose_cat_form_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
 }
 
@@ -447,7 +447,7 @@ function faq_weight_settings_choose_cat_form_submit($form, &$form_state) {
  * @param &$form_state
  *   $form_state['values'] stores the submitted values from the form.
  */
-function faq_weight_settings_reorder_form_submit($form, &$form_state) {
+function faq_order_settings_reorder_form_submit($form, &$form_state) {
   if ($form_state['values']['op'] == t('Save order')) {
 
     foreach ($form_state['values']['order_no_cats'] as $i => $faq) {
