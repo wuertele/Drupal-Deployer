@@ -7,54 +7,83 @@
  */
 
 /**
- * Define the default test keys. These keys will only work in test mode, so
- * consult the Mollom API documentation for details. Do NOT use production keys
- * for testing!
+ * Defines Mollom testing keys.
+ *
+ * These keys will only work in test mode, so consult the Mollom API
+ * documentation for details. Do NOT use PRODUCTION keys for testing!
  */
 define('MOLLOM_TEST_PUBLIC_KEY', '9cc3d2e43971de758ecddad61a3d12ec');
 define('MOLLOM_TEST_PRIVATE_KEY', '603a8d11099f17faaab49139bfc7d00a');
 
 /**
+ * Indicates that Mollom testing keys are reseller keys.
+ *
  * If the above keys are reseller keys, make sure to change this value to TRUE.
  * If you set this to TRUE and you are testing with non-reseller keys, the
  * tests will fail due to unprivileged API access.
  */
 define('MOLLOM_TEST_RESELLER_KEY', FALSE);
 
+/**
+ * Common base test class for Mollom tests.
+ */
 class MollomWebTestCase extends DrupalWebTestCase {
-  // The Mollom administrator user account.
+  /**
+   * The Mollom administrator user account.
+   */
   protected $admin_user;
 
-  // A normal web user account.
+  /**
+   * A normal web user account.
+   */
   protected $web_user;
 
-  // The text the user should see when they are blocked from submitting a form because the Mollom servers are unreachable.
+  /**
+   * The text the user should see when they are blocked from submitting a form
+   * because the Mollom servers are unreachable.
+   */
   protected $fallback_message = 'The spam filter installed on this site is currently unavailable. Per site policy, we are unable to accept new submissions until that problem is resolved. Please try resubmitting the form in a couple of minutes.';
 
-  // The text the user should see if there submission was determinted to be spam.
+  /**
+   * The text the user should see if there submission was determinted to be spam.
+   */
   protected $spam_message = 'Your submission has triggered the spam filter and will not be accepted.';
 
-  // The text the user should see if they did not fill out the CAPTCHA correctly.
+  /**
+   * The text the user should see if they did not fill out the CAPTCHA correctly.
+   */
   protected $incorrect_message = 'The CAPTCHA was not completed correctly. Please complete this new CAPTCHA and try again.';
 
-  // The text the user should see if the textual analysis was unsure about the content.
+  /**
+   * The text the user should see if the textual analysis was unsure about the
+   * content.
+   */
   protected $unsure_message = 'We\'re sorry, but the spam filter thinks your submission could be spam. Please complete the CAPTCHA.';
 
-  // The public key used during testing.
+  /**
+   * The public key used during testing.
+   */
   protected $public_key = '';
 
-  // The private key used during testing.
+  /**
+   * The private key used during testing.
+   */
   protected $private_key = '';
 
-  // A boolean that is TRUE if the above keys are for a reseller account.
+  /**
+   * A boolean that is TRUE if the above keys are for a reseller account.
+   */
   protected $is_reseller = FALSE;
 
   /**
-   * Set up the administrator user object and the testing keys.
-   *
-   * Tests should call this function from the setUp() function.
+   * Set up an administrative user account and testing keys.
    */
-  function setUpMollom() {
+  function setUp() {
+    // Call parent::setUp() allowing Mollom test cases to pass further modules.
+    $modules = func_get_args();
+    $modules[] = 'mollom';
+    call_user_func_array(array('parent', 'setUp'), $modules);
+
     $this->admin_user = $this->drupalCreateUser(array('administer mollom'));
     $this->setKeys();
     $this->assertValidKeys();
@@ -255,15 +284,10 @@ class MollomWebTestCase extends DrupalWebTestCase {
 class MollomAccessTestCase extends MollomWebTestCase {
   public static function getInfo() {
     return array(
-      'name' => t('Mollom access checking'),
-      'description' => t('Confirm that there is a working key pair and that this status is correctly indicated on the module settings page for appropriate users.'),
-      'group' => t('Mollom'),
+      'name' => 'Mollom access checking',
+      'description' => 'Confirm that there is a working key pair and that this status is correctly indicated on the module settings page for appropriate users.',
+      'group' => 'Mollom',
     );
-  }
-
-  function setUp() {
-    parent::setUp('mollom');
-    $this->setUpMollom();
   }
 
   /**
@@ -314,15 +338,14 @@ class MollomAccessTestCase extends MollomWebTestCase {
 class MollomFallbackTestCase extends MollomWebTestCase {
   public static function getInfo() {
     return array(
-      'name' => t('Fallback behavior'),
-      'description' => t('Check that the module uses the correct fallback mechanism when one or more of the specified Mollom servers are not available.'),
-      'group' => t('Mollom'),
+      'name' => 'Fallback behavior',
+      'description' => 'Check that the module uses the correct fallback mechanism when one or more of the specified Mollom servers are not available.',
+      'group' => 'Mollom',
     );
   }
 
   function setUp() {
-    parent::setUp('mollom');
-    $this->setUpMollom();
+    parent::setUp();
     // Enable Mollom for the request password form.
     variable_set('mollom_user_pass', MOLLOM_MODE_CAPTCHA);
   }
@@ -343,7 +366,7 @@ class MollomFallbackTestCase extends MollomWebTestCase {
     variable_set('mollom_servers', array('http://fake-host'));
 
     // Check the password request form.
-    // TODO: Test this more rigorously once we can hijack drupal_mail().
+    // @todo Test mail sending with assertMail() now that it is available.
     $this->drupalGet('user/password');
     $this->assertNoCaptchaField();
     $this->assertText($this->fallback_message);
@@ -362,7 +385,7 @@ class MollomFallbackTestCase extends MollomWebTestCase {
 
     // Configure Mollom to use a non-existent server as that should trigger
     // the fallback mechanism.
-    variable_set('mollom_servers', array('http://fake1.mollom.com'));
+    variable_set('mollom_servers', array('http://fake-host'));
 
     // Check the password request form.
     $this->drupalGet('user/password');
@@ -374,7 +397,7 @@ class MollomFallbackTestCase extends MollomWebTestCase {
    * Make sure that spam protection is still active even when some of the
    * Mollom servers are unavailable.
    *
-   * @todo Test this more rigorously once we can hijack drupal_mail().
+   * @todo @todo Test mail sending with assertMail() now that it is available.
    */
   function testFailoverMechanism() {
     // Set the fallback strategy to 'blocking mode', so that if the failover
@@ -405,15 +428,10 @@ class MollomFallbackTestCase extends MollomWebTestCase {
 class MollomServerListRecoveryTestCase extends MollomWebTestCase {
   public static function getInfo() {
     return array(
-      'name' => t('Server list recovery'),
-      'description' => t('Check that the module can recover from an invalid server list.'),
-      'group' => t('Mollom'),
+      'name' => 'Server list recovery',
+      'description' => 'Check that the module can recover from an invalid server list.',
+      'group' => 'Mollom',
     );
-  }
-
-  function setUp() {
-    parent::setUp('mollom');
-    $this->setUpMollom();
   }
 
   /**
@@ -425,8 +443,9 @@ class MollomServerListRecoveryTestCase extends MollomWebTestCase {
         'http://not-a-valid-server-1',
         'http://not-a-valid-server-2',
       ),
+      // The lack of the http://-schema results in different error codes
       array(
-        'not-a-valid-server-url-1', // the lack of the http://-schema results in different error codes
+        'not-a-valid-server-url-1',
         'not-a-valid-server-url-2',
       ),
     );
@@ -449,20 +468,16 @@ class MollomServerListRecoveryTestCase extends MollomWebTestCase {
 class MollomUserFormsTestCase extends MollomWebTestCase {
   public static function getInfo() {
     return array(
-      'name' => t('User registration and password protection'),
-      'description' => t('Check that the user registration and password request forms can be protected.'),
-      'group' => t('Mollom'),
+      'name' => 'User registration and password protection',
+      'description' => 'Check that the user registration and password request forms can be protected.',
+      'group' => 'Mollom',
     );
-  }
-
-  function setUp() {
-    parent::setUp('mollom');
-    $this->setUpMollom();
   }
 
   /**
    * Make sure that the request password form is protected correctly.
-   * TODO: Test this more rigorously once we can hijack drupal_mail().
+   *
+   * @todo @todo Test mail sending with assertMail() now that it is available.
    */
   function testProtectRequestPassword() {
     // We first enable Mollom for the request password form.
@@ -516,15 +531,15 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
 
   public static function getInfo() {
     return array(
-      'name' => t('Comment submission protection'),
-      'description' => t('Check that the comment submission form can be protected.'),
-      'group' => t('Mollom'),
+      'name' => 'Comment submission protection',
+      'description' => 'Check that the comment submission form can be protected.',
+      'group' => 'Mollom',
     );
   }
 
   function setUp() {
-    parent::setUp('mollom', 'comment');
-    $this->setUpMollom();
+    parent::setUp('comment');
+
     $this->web_user = $this->drupalCreateUser(array('access comments', 'post comments', 'post comments without approval', 'create story content'));
     $this->node = $this->drupalCreateNode(array('type' => 'story', 'uid' => $this->web_user->uid));
     variable_set('comment_preview_story', COMMENT_PREVIEW_OPTIONAL);
@@ -663,15 +678,15 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
 class MollomContactFormTestCase extends MollomWebTestCase {
   public static function getInfo() {
     return array(
-      'name' => t('Contact form protection'),
-      'description' => t('Check that the contact form can be protected.'),
-      'group' => t('Mollom'),
+      'name' => 'Contact form protection',
+      'description' => 'Check that the contact form can be protected.',
+      'group' => 'Mollom',
     );
   }
 
   function setUp() {
-    parent::setUp('mollom', 'contact');
-    $this->setUpMollom();
+    parent::setUp('contact');
+
     $this->web_user = $this->drupalCreateUser(array('access site-wide contact form', 'access user profiles'));
     $this->drupalLogin($this->web_user);
   }
@@ -679,7 +694,7 @@ class MollomContactFormTestCase extends MollomWebTestCase {
   /**
    * Make sure that the user contact form is protected correctly.
    *
-   * @todo Test this more rigorously once we can hijack drupal_mail().
+   * @todo @todo Test mail sending with assertMail() now that it is available.
    */
   function testProtectContactUserForm() {
     // Enable Mollom for the contact form.
@@ -705,7 +720,7 @@ class MollomContactFormTestCase extends MollomWebTestCase {
   /**
    * Make sure that the site-wide contact form is protected correctly.
    *
-   * @todo Test this more rigorously once we can hijack drupal_mail().
+   * @todo @todo Test mail sending with assertMail() now that it is available.
    */
   function testProtectContactSiteForm() {
     // Enable Mollom for the contact form.
@@ -735,15 +750,10 @@ class MollomContactFormTestCase extends MollomWebTestCase {
 class MollomResellerTestCase extends MollomWebTestCase {
   public static function getInfo() {
     return array(
-      'name' => t('Key provisioning for Mollom reseller'),
-      'description' => t('Check that the reseller APIs are working properly.'),
-      'group' => t('Mollom'),
+      'name' => 'Key provisioning for Mollom reseller',
+      'description' => 'Check that the reseller APIs are working properly.',
+      'group' => 'Mollom',
     );
-  }
-
-  function setUp() {
-    parent::setUp('mollom');
-    $this->setKeys();
   }
 
   /**

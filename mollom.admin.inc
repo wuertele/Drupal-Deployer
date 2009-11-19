@@ -17,9 +17,13 @@ function mollom_admin_settings() {
       // When a user visits the Mollom administration page, automatically
       // clear the server list.  This causes the client to fetch a fresh
       // server list from the server.
+      // @todo Add a timeout interval. Also consider hook_enable() together with
+      //   hook_cron().
       variable_del('mollom_servers');
 
       // Verify the key and output a status message.
+      // @todo This must be a form #validate handler; the form must not be
+      //   submitted if validation fails.
       _mollom_verify_key();
     }
 
