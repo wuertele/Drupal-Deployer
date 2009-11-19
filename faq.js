@@ -139,68 +139,65 @@ function categories_handler(event) {
   child_term_handler();
 }
 
-if (Drupal.jsEnabled) {
-  $(document).ready(function () {
-    // Hide/show answer for a question.
-    var faq_hide_qa_accordion = Drupal.settings.faq.faq_hide_qa_accordion;
+Drupal.behaviors.initFaqModule = function (context) {
+  // Hide/show answer for a question.
+  var faq_hide_qa_accordion = Drupal.settings.faq.faq_hide_qa_accordion;
+  if (faq_hide_qa_accordion) {
+    $('div.faq-dd-hide-answer').addClass("collapsible collapsed");
+  }
+  else {
+    $('div.faq-dd-hide-answer').hide();
+  }
+  $('div.faq-dt-hide-answer').click(function() {
+    $(this).toggleClass('faq-qa-visible');
     if (faq_hide_qa_accordion) {
-      $('div.faq-dd-hide-answer').addClass("collapsible collapsed");
+      $('div.faq-dd-hide-answer').not($(this).next('div.faq-dd-hide-answer')).addClass("collapsed");
+      $(this).next('div.faq-dd-hide-answer').toggleClass("collapsed");
     }
     else {
-      $('div.faq-dd-hide-answer').hide();
+      $(this).next('div.faq-dd-hide-answer').slideToggle('fast', function() {
+        $(this).parent().toggleClass('expanded');
+      });
     }
-    $('div.faq-dt-hide-answer').click(function() {
-      $(this).toggleClass('faq-qa-visible');
-      if (faq_hide_qa_accordion) {
-        $('div.faq-dd-hide-answer').not($(this).next('div.faq-dd-hide-answer')).addClass("collapsed");
-        $(this).next('div.faq-dd-hide-answer').toggleClass("collapsed");
-      }
-      else {
-        $(this).next('div.faq-dd-hide-answer').slideToggle('fast', function() {
-          $(this).parent().toggleClass('expanded');
-        });
-      }
-      return false;
-    });
-
-
-    // Hide/show q/a for a category.
-    var faq_category_hide_qa_accordion = Drupal.settings.faq.faq_category_hide_qa_accordion;
-    if (faq_category_hide_qa_accordion) {
-      $('div.faq-qa-hide').addClass("collapsible collapsed");
-    }
-    else {
-      $('div.faq-qa-hide').hide();
-    }
-    $('div.faq-qa-header .faq-header').click(function() {
-      $(this).toggleClass('faq-category-qa-visible');
-      if (faq_category_hide_qa_accordion) {
-        $('div.faq-qa-hide').not($(this).parent().next('div.faq-qa-hide')).addClass("collapsed");
-        $(this).parent().next('div.faq-qa-hide').toggleClass("collapsed");
-      }
-      else {
-        $(this).parent().next('div.faq-qa-hide').slideToggle('fast', function() {
-          $(this).parent().toggleClass('expanded');
-        });
-      }
-      return false;
-    });
-
-
-
-    // Handle faq_category_settings_form.
-    faq_display_handler();
-    questions_top_handler();
-    categories_handler();
-    teaser_handler();
-    $("input[name=faq_display]").bind("click", faq_display_handler);
-    $("input[name=faq_qa_mark]").bind("click", qa_mark_handler);
-    $("input[name=faq_use_teaser]").bind("click", teaser_handler);
-    $("input[name=faq_category_display]").bind("click", categories_handler);
-    $("input[name=faq_hide_child_terms]").bind("click", child_term_handler);
-
-
+    return false;
   });
+
+
+  // Hide/show q/a for a category.
+  var faq_category_hide_qa_accordion = Drupal.settings.faq.faq_category_hide_qa_accordion;
+  if (faq_category_hide_qa_accordion) {
+    $('div.faq-qa-hide').addClass("collapsible collapsed");
+  }
+  else {
+    $('div.faq-qa-hide').hide();
+  }
+  $('div.faq-qa-header .faq-header').click(function() {
+    $(this).toggleClass('faq-category-qa-visible');
+    if (faq_category_hide_qa_accordion) {
+      $('div.faq-qa-hide').not($(this).parent().next('div.faq-qa-hide')).addClass("collapsed");
+      $(this).parent().next('div.faq-qa-hide').toggleClass("collapsed");
+    }
+    else {
+      $(this).parent().next('div.faq-qa-hide').slideToggle('fast', function() {
+        $(this).parent().toggleClass('expanded');
+      });
+    }
+    return false;
+  });
+
+
+
+  // Handle faq_category_settings_form.
+  faq_display_handler();
+  questions_top_handler();
+  categories_handler();
+  teaser_handler();
+  $("input[name=faq_display]").bind("click", faq_display_handler);
+  $("input[name=faq_qa_mark]").bind("click", qa_mark_handler);
+  $("input[name=faq_use_teaser]").bind("click", teaser_handler);
+  $("input[name=faq_category_display]").bind("click", categories_handler);
+  $("input[name=faq_hide_child_terms]").bind("click", child_term_handler);
+
 }
 
 
