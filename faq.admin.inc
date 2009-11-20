@@ -462,6 +462,19 @@ function faq_order_settings_reorder_form_submit($form, &$form_state) {
       $index = $faq['sort'];
       $result = db_query("DELETE FROM {faq_weights} WHERE tid = %d AND nid = %d", $form_state['values']['faq_category'], $nid);
       $result = db_query("INSERT INTO {faq_weights} (tid, nid, weight) VALUES(%d, %d, %d)", $form_state['values']['faq_category'], $nid, $index);
+
+      // If node translation module enabled, update order of the translation
+      // node counterparts.
+      if (module_exists('translation')) {
+        $node = node_load($nid);
+        if ($node->tnid) {
+          $translations = translation_node_get_translations($node->tnid);
+          foreach ($translations as $language => $tnode) {
+            $result = db_query("DELETE FROM {faq_weights} WHERE tid = %d AND nid = %d", $form_state['values']['faq_category'], $tnode->nid);
+            $result = db_query("INSERT INTO {faq_weights} (tid, nid, weight) VALUES(%d, %d, %d)", $form_state['values']['faq_category'], $tnode->nid, $index);
+          }
+        }
+      }
     }
 
     drupal_set_message(t('Configuration has been updated.'));
