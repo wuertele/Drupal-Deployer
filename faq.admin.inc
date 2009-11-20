@@ -124,6 +124,13 @@ function faq_questions_settings_form() {
     '#default_value' => variable_get('faq_hide_qa_accordion', FALSE),
   );
 
+  $form['faq_questions_misc']['faq_show_expand_all'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show "expand / collapse all" links for collapsed questions'),
+    '#description' => t('The links will only be displayed if using the "opens/hides answer under question" or "opens/hides questions and answers under category" layouts.'),
+    '#default_value' => variable_get('faq_show_expand_all', FALSE),
+  );
+
   $form['faq_questions_misc']['faq_use_teaser'] = array(
     '#type' => 'checkbox',
     '#title' => t('Use answer teaser'),

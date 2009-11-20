@@ -186,6 +186,37 @@ Drupal.behaviors.initFaqModule = function (context) {
   });
 
 
+  // Show expand all link. 
+  if (!faq_hide_qa_accordion && !faq_category_hide_qa_accordion) {
+    $('#faq-expand-all').show();
+    $('#faq-expand-all a.faq-expand-all-link').show();
+
+    // Add collapse link click event.
+    $('#faq-expand-all a.faq-collapse-all-link').click(function () {
+      $(this).hide();
+      $('#faq-expand-all a.faq-expand-all-link').show();
+      $('div.faq-qa-hide').slideUp('slow', function() {
+        $(this).removeClass('expanded');
+      });
+      $('div.faq-dd-hide-answer').slideUp('slow', function() {
+        $(this).removeClass('expanded');
+      });
+    });
+
+    // Add expand link click event.
+    $('#faq-expand-all a.faq-expand-all-link').click(function () {
+      $(this).hide();
+      $('#faq-expand-all a.faq-collapse-all-link').show();
+      $('div.faq-qa-hide').slideDown('slow', function() {
+        $(this).addClass('expanded');
+      });
+      $('div.faq-dd-hide-answer').slideDown('slow', function() {
+        $(this).addClass('expanded');
+      });
+    });
+  }
+
+
 
   // Handle faq_category_settings_form.
   faq_display_handler();
