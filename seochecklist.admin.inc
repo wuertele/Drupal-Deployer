@@ -1,6 +1,11 @@
 <?php
 // $Id$
 
+/**
+ * @file
+ * Administrative page callbacks for the seochecklist module.
+ */
+
 define('SEOCHECKLIST_BOOK_PURCHASE', 'http://www.packtpub.com/drupal-6-search-engine-optimization-seo/mid/170909568gh3?utm_source=volacci.com%2F&utm_medium=affiliate&utm_content=authorsite&utm_campaign=mdb_000690');
 
 /**
@@ -135,5 +140,5 @@ function seochecklist_admin_settings_submit($form, &$form_state) {
   variable_set('seo_checklist_podcast', $form_state['values']['seo_checklist_podcast']);
   variable_set('seo_checklist_book_references', $form_state['values']['seo_checklist_book_references']);
 
-  drupal_set_message(format_plural($count, t('Updated @count task successfully.'), t('Updated @count tasks successfully.')));
+  drupal_set_message(format_plural($count, 'Updated @count task successfully.', 'Updated @count tasks successfully.'));
 }
