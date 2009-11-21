@@ -1,6 +1,8 @@
 <?php
 // $Id$
 
+define('SEOCHECKLIST_BOOK_PURCHASE', 'http://www.packtpub.com/drupal-6-search-engine-optimization-seo/mid/170909568gh3?utm_source=volacci.com%2F&utm_medium=affiliate&utm_content=authorsite&utm_campaign=mdb_000690');
+
 /**
  * Define the settings form.
  */
@@ -53,18 +55,18 @@ function seochecklist_admin_settings() {
       }
 
       if (variable_get('seo_checklist_book_references', 1) && $page = seochecklist_get_book_references($row->id)) {
-        $row->links[] = t('SEO book page @page', array('@page' => $page));
+        $row->links[] = t('See <a href="@book-purchase">Drupal 6 SEO</a> p. @page', array('@page' => $page, '@book-purchase' => SEOCHECKLIST_BOOK_PURCHASE));
       }
 
-      $form['group_' . $group_id]['seochecklist_nodetypes_' . intval($row->id)] = array(
+      $task = $form['group_' . $group_id]['seochecklist_task_' . $row->id] = array(
         '#type' => 'checkbox',
         '#title' => t($row->name),
         '#default_value' => $row->completed || ($row->module && module_exists($row->module)),
         '#description' => join(' | ', $row->links),
       );
       if (strpos($row->name, 'Clean URLs') === 0) {
-        $form['group_' . $group_id]['seochecklist_nodetypes_' . intval($row->id)]['#disabled'] = !variable_get('clean_url', 0);
-        $form['group_' . $group_id]['seochecklist_nodetypes_' . intval($row->id)]['#default_value'] |= variable_get('clean_url', 0);
+        $task['#disabled'] = !variable_get('clean_url', 0);
+        $task['#default_value'] |= variable_get('clean_url', 0);
       }
     }
   }
@@ -76,24 +78,26 @@ function seochecklist_admin_settings() {
   );
   $form['extras']['seo_checklist_link'] = array(
     '#type' => 'checkbox',
-    '#title' => t("Link to Volacci to thank them for this awesome module. <strong>Don't forget to click Save!</strong>"),
-    '#description' => t("A small link will appear at the very bottom of your website. You can disable it at any time by un-checking this box. We really appreciate it!!!"),
+    '#title' => t('Link to Volacci to thank them for this awesome module.'),
     '#default_value' => variable_get('seo_checklist_link', 0),
+    '#description' => t('A small link will appear at the very bottom of your website. You can disable it at any time by un-checking this box. We really appreciate it!'),
   );
   $form['extras']['seo_checklist_thanks'] = array(
     '#type' => 'checkbox',
-    '#title' => t("Link to us then send us feedback on the Drupal 6 SEO Checklist module or just say \"Thanks!\" and we will link to you from our website. Send your feedback and link information to !email. (If you don't know why you should link with other websites, read this: !link.)", array('!email' => l('seochecklist@volacci.com', 'mailto:seochecklist@volacci.com'), '!link' => l('Why links help SEO', 'http://www.volacci.com/why-links-help-seo'))),
+    '#title' => t('Send us feedback on the Drupal 6 SEO Checklist module or just say <em>Thanks!</em> and we will link to you from our website. Send your feedback and link information to <a href="mailto:@email">@email</a>.', array('@email' => 'seochecklist@volacci.com')),
     '#default_value' => variable_get('seo_checklist_thanks', 0),
+    '#description' => t('If you do not know why you should link with other websites, read the following article: <a href="@link">Why links help SEO</a>.', array('@link' => 'http://www.volacci.com/why-links-help-seo')),
   );
   $form['extras']['seo_checklist_podcast'] = array(
     '#type' => 'checkbox',
-    '#title' => t("Listen to the Volacci Drupal SEO Podcast for more tips and tricks about Drupal SEO: !link", array('!link' => l('http://www.volacci.com/podcast', 'http://www.volacci.com/podcast'))),
+    '#title' => t('Listen to the <a href="@podcast">Volacci Drupal SEO Podcast</a> for more tips and tricks about Drupal SEO.', array('@podcast' => 'http://www.volacci.com/podcast')),
     '#default_value' => variable_get('seo_checklist_podcast', 0),
   );
   $form['extras']['seo_checklist_book_references'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Include page number references from the <a href="@book-link">Drupal 6 SEO Book</a> by Ben Finklea.', array('@book-link' => 'http://www.drupalseobook.com/')),
+    '#title' => t('Include page number references from the <a href="@book">Drupal 6 SEO Book</a> by Ben Finklea.', array('@book' => 'http://www.drupalseobook.com/')),
     '#default_value' => variable_get('seo_checklist_book_references', 1),
+    '#description' => t('<a href="@book-purchase">Purchase from Packt Publishing</a>', array('@book-purchase' => SEOCHECKLIST_BOOK_PURCHASE)),
   );
 
   $form['save'] = array(
@@ -111,14 +115,16 @@ function seochecklist_admin_settings() {
 function seochecklist_admin_settings_submit($form, &$form_state) {
   global $user;
 
+  $count = 0;
   foreach ($form_state['values'] as $key => $value) {
-    if (preg_match('/seochecklist_nodetypes/', $key)) {
+    if (preg_match('/seochecklist_task_/', $key)) {
       $key = explode('_', $key);
       $key = $key[2];
       $current = (bool) db_result(db_query("SELECT completed FROM {seo_checklist} WHERE id = %d", $key));
       if ($current != $value) {
         // If the checkbox changed states, update the record.
         db_query("UPDATE {seo_checklist} SET completed = %d, uid = %d WHERE id = %d", ($value ? time() : 0), $user->uid, $key);
+        $count++;
       }
     }
   }
@@ -128,4 +134,6 @@ function seochecklist_admin_settings_submit($form, &$form_state) {
   variable_set('seo_checklist_thanks', $form_state['values']['seo_checklist_thanks']);
   variable_set('seo_checklist_podcast', $form_state['values']['seo_checklist_podcast']);
   variable_set('seo_checklist_book_references', $form_state['values']['seo_checklist_book_references']);
+
+  drupal_set_message(format_plural($count, t('Updated @count task successfully.'), t('Updated @count tasks successfully.')));
 }
