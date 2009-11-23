@@ -440,7 +440,7 @@ function page_title_page_get_title() {
       // Append the pattern for pages with a pager on them
       $page_title_pattern .= isset($_REQUEST['page']) ? variable_get('page_title_pager_pattern', '') : '';
 
-      // Allow hook_page_title_pattern_alter() to modify the pattern
+      // Allow hook_page_title_pattern_alter() to modify the pattern. In this case we can use drupal_alter as we have no tokens to alter.
       drupal_alter('page_title_pattern', $page_title_pattern);
 
       // Applu the token patterns using the one-level replacer (frontpage is only "global" scope)
@@ -495,8 +495,12 @@ function page_title_page_get_title() {
       // Append the pattern for pages with a pager on them
       $page_title_pattern .= isset($_REQUEST['page']) ? variable_get('page_title_pager_pattern', '') : '';
 
-      // Allow hook_page_title_pattern_alter() to modify the pattern
-      drupal_alter('page_title_pattern', $page_title_pattern);
+      // Allow hook_page_title_pattern_alter() to modify the pattern - we cant use drupal_alter as it only supports single arguments (or arrays). We need to pass 2 variables.
+      $data = array(&$page_title_pattern, &$types);
+      foreach (module_implements('page_title_pattern_alter') as $module) {
+        $function = $module .'_page_title_pattern_alter';
+        call_user_func_array($function, $data);
+      }
 
       // Apply token patternsi by resetting the token cache first and then using token_replace_multiple to insert token values
       token_get_values('global', NULL, TRUE);
