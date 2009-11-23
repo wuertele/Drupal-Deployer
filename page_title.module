@@ -228,6 +228,9 @@ function page_title_form_alter(&$form, $form_state, $form_id) {
 }
 
 
+/**
+ * Submit handler for the page title element added to the forum_admin_settings form in the hook_form_alter() above.
+ */
 function page_title_forum_admin_settings_form_submit($form, &$form_state) {
   variable_set('page_title_forum_root_title', $form_state['values']['page_title']);
 }
@@ -472,9 +475,12 @@ function page_title_page_get_title() {
         $page_title_pattern = variable_get('page_title_vocab_'. $types['taxonomy']->vid, '');
       }
       // Forum
-      elseif (arg(0) == 'forum' && is_numeric(arg(1)) && module_exists('forum')) {
-        $types['taxonomy'] = taxonomy_get_term(arg(1));
-        $page_title_pattern = variable_get('page_title_vocab_'. $types['taxonomy']->vid, '');
+      elseif (arg(0) == 'forum' && module_exists('forum')) {
+        if (is_numeric(arg(1))) {
+          $types['taxonomy'] = taxonomy_get_term(arg(1));
+        }
+        $forum_vid = variable_get('forum_nav_vocabulary', '');
+        $page_title_pattern = variable_get('page_title_vocab_'. $forum_vid, '');
       }
       // User
       elseif (arg(0) == 'user' && is_numeric(arg(1))) {
