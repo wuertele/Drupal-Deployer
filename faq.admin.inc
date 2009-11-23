@@ -161,7 +161,7 @@ function faq_questions_settings_form() {
 
   $form['faq_questions_misc']['faq_default_sorting'] = array(
     '#type' => 'select',
-    '#title' => t('Default Sorting for Non-Weighted FAQs'),
+    '#title' => t('Default sorting for unordered FAQs'),
     '#options' => array('DESC' => t('Date Descending'), 'ASC' => t('Date Ascending')),
     '#description' => t("This controls the default ordering behaviour for new FAQ nodes which haven't been assigned a position."),
     '#default_value' => variable_get('faq_default_sorting', 'DESC'),
