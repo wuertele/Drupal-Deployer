@@ -443,7 +443,8 @@ function page_title_page_get_title() {
       // Allow hook_page_title_pattern_alter() to modify the pattern. In this case we can use drupal_alter as we have no tokens to alter.
       drupal_alter('page_title_pattern', $page_title_pattern);
 
-      // Applu the token patterns using the one-level replacer (frontpage is only "global" scope)
+      // Apply the token patterns using the one-level replacer (frontpage is only "global" scope). Need to flush the token cache first.
+      token_get_values('global', NULL, TRUE);
       $title = token_replace($page_title_pattern);
     }
     // Otherwise this is a non-frontpage page title.
@@ -502,7 +503,7 @@ function page_title_page_get_title() {
         call_user_func_array($function, $data);
       }
 
-      // Apply token patternsi by resetting the token cache first and then using token_replace_multiple to insert token values
+      // Apply token patterns by resetting the token cache first and then using token_replace_multiple to insert token values
       token_get_values('global', NULL, TRUE);
       $title = token_replace_multiple($page_title_pattern, $types);
     }
