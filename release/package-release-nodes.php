@@ -519,7 +519,7 @@ function package_release_contrib($nid, $uri, $version, $tag, $dir) {
 
           // See the stage_one_make_file() function for an explanation of this
           // variable.
-          $build_run_key = md5(time());
+          $build_run_key = md5(uniqid(mt_rand(), true)) . md5(uniqid(mt_rand(), true));
 
           // Generate the stage one make file for this distribution.
           $distro_id = "$id-$distro";
