@@ -302,8 +302,9 @@ function project_project_set_breadcrumb($node = NULL, $extra = NULL) {
 
   if (!empty($node->nid) && project_use_taxonomy()) {
     $result = db_query(db_rewrite_sql('SELECT t.tid, t.* FROM {term_data} t INNER JOIN {term_hierarchy} h ON t.tid = h.tid INNER JOIN {term_node} r ON t.tid = r.tid WHERE h.parent = %d AND t.vid = %d AND r.vid = %d', 't', 'tid'), 0, _project_get_vid(), $node->vid);
-    $term = db_fetch_object($result);
-    $breadcrumb[] = l($term->name, 'project/'. $term->name);
+    if ($term = db_fetch_object($result)) {
+      $breadcrumb[] = l($term->name, 'project/'. $term->name);
+    }
   }
 
   if (is_array($extra)) {
