@@ -61,8 +61,9 @@ function site_verify_install() {
   drupal_install_schema('site_verify');
 
   // Import data from deprecated modules.
-  site_verify_import_xmlsitemap();
-  site_verify_import_ghs();
+  $ret = array();
+  site_verify_import_xmlsitemap($ret);
+  site_verify_import_ghs($ret);
 }
 
 /**
@@ -71,9 +72,6 @@ function site_verify_install() {
 function site_verify_uninstall() {
   // Remove tables.
   drupal_uninstall_schema('site_verify');
-
-  // Remove variables.
-  //drupal_load('module', 'site_verify');
 }
 
 function site_verify_update_1() {
@@ -98,7 +96,7 @@ function site_verify_update_3() {
 /**
  * Import data from XML sitemap engines.
  */
-function site_verify_import_xmlsitemap(&$ret = array()) {
+function site_verify_import_xmlsitemap(&$ret) {
   $engines = array('google', 'bing', 'yahoo');
   foreach ($engines as $engine) {
     if ($file = db_escape_string(variable_get('xmlsitemap_engines_' . $engine . '_verify', ''))) {
@@ -113,7 +111,7 @@ function site_verify_import_xmlsitemap(&$ret = array()) {
 /**
  * Import data from Google Apps Verification.
  */
-function site_verify_import_ghs(&$ret = array()) {
+function site_verify_import_ghs(&$ret) {
   if (!db_result(db_query("SELECT 1 FROM {site_verify} WHERE engine = 'google' AND file <> 'googlehostedservice.html'"))) {
     if ($google_content = db_escape_string(variable_get('ghs_string_verify', ''))) {
       $ret[] = update_sql("INSERT INTO {site_verify} (engine, file, file_contents) VALUES ('google', 'googlehostedservice.html', '$google_content')");
