@@ -143,6 +143,7 @@ function project_release_views_data() {
   // @TODO:  version_minor
   // @TODO:  version_patch
   // @TODO:  version_extra
+  // @TODO:  version_extra_weight
 
   $data['project_release_file']['table']['group']  = t('Project release');
   $data['project_release_file']['table']['join'] = array(
