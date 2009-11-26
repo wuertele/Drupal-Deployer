@@ -43,7 +43,7 @@ function project_release_settings_form() {
       $terms[$term->tid] = check_plain($term->name);
     }
     $vocab = taxonomy_vocabulary_load(_project_release_get_api_vid());
-    $tids = variable_get('project_release_active_compatibility_tids', '');
+    $tids = variable_get('project_release_active_compatibility_tids', array());
     $form['project_release_active_compatibility_tids'] = array(
       '#type' => 'checkboxes',
       '#title' => t('Active @vocab terms', array('@vocab' => $vocab->name)),
