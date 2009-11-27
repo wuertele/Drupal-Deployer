@@ -20,6 +20,17 @@ function path_redirect_help($path, $arg) {
 }
 
 /**
+ * Implement hook_theme().
+ */
+function path_redirect_theme() {
+  return array(
+    'path_redirect_admin_list_by_path' => array(
+      'arguments' => array('source' => NULL, 'language' => NULL),
+    ),
+  );
+}
+
+/**
  * Implement hook_perm().
  */
 function path_redirect_perm() {
@@ -208,48 +219,6 @@ function path_redirect_form_alter(&$form, $form_state, $form_id) {
 }
 
 /**
- * Implement hook_theme().
- */
-function path_redirect_theme() {
-  return array(
-    'path_redirect_admin_list_by_path' => array(
-      'arguments' => array('source' => NULL, 'language' => NULL),
-    ),
-  );
-}
-
-/**
- * Show a table listing of redirects pointing to a path.
- */
-function theme_path_redirect_admin_list_by_path($source, $language) {
-  $header = array(
-    array('data' => t('From'), 'field' => 'path', 'sort' => 'asc'),
-    array('data' => t('Type'), 'field' => 'type'),
-    array('data' => t('Operations'), 'colspan' => '2'),
-  );
-  $rows = array();
-  $redirects = path_redirect_load_multiple_by_redirect($source);
-  foreach ($redirects as $rid => $redirect) {
-    $rows[] = array(
-      'data' => array(
-        $redirect['path'],
-        $redirect['type'],
-        l(t('Edit'), 'admin/build/path-redirect/edit/'. $rid, array('query' => drupal_get_destination())),
-        l(t('Delete'), 'admin/build/path-redirect/delete/'. $rid, array('query' => drupal_get_destination())),
-      ),
-    );
-  }
-  if (empty($rows)) {
-    $rows[] = array(array(
-      'data' => t('No redirects found.'),
-      'colspan' => 4,
-      'class' => 'path-redirect-none',
-    ));
-  }
-  return theme('table', $header, $rows, array('class' => 'path-redirects'));
-}
-
-/**
  * Implement hook_nodeapi().
  */
 function path_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
@@ -394,10 +363,24 @@ function path_redirect_save($redirect) {
   cache_clear_all(url($redirect['path'], array('absolute' => TRUE, 'language' => $redirect['language'])), 'cache_page', TRUE);
 }
 
+/**
+ * Load a redirect by ID.
+ *
+ * @param $rid
+ *   An integer with the redirect ID.
+ */
 function path_redirect_load($rid) {
   return db_fetch_array(db_query_range("SELECT * FROM {path_redirect} WHERE rid = %d", $rid, 0, 1));
 }
 
+/**
+ * Load a redirect by incoming path and language.
+ *
+ * @param $path
+ *   The incoming path.
+ * @param $language
+ *   An optional language code.
+ */
 function path_redirect_load_by_path($path, $language = '') {
   path_redirect_init_path($path);
   if (is_string($language)) {
@@ -408,6 +391,12 @@ function path_redirect_load_by_path($path, $language = '') {
   }
 }
 
+/**
+ * Loads all redirects that point to a certain redirect path.
+ *
+ * @param $path
+ *   The redirect path.
+ */
 function path_redirect_load_multiple_by_redirect($path) {
   $query = db_query("SELECT * FROM {path_redirect} WHERE redirect = '%s'", $path);
   $redirects = array();
@@ -417,6 +406,13 @@ function path_redirect_load_multiple_by_redirect($path) {
   return $redirects;
 }
 
+/**
+ * Loads the redirect for the current page request.
+ *
+ * @return
+ *   An array with the redirect if the current page should be redirected, or
+ *   FALSE otherwise.
+ */
 function _path_redirect_load_current_page_redirect() {
   global $language;
 
@@ -439,6 +435,12 @@ function _path_redirect_load_current_page_redirect() {
   }
 }
 
+/**
+ * Delete a redirect.
+ *
+ * @param $redirect
+ *   An array with the redirect data.
+ */
 function path_redirect_delete($redirect, $deprecated = FALSE) {
   // @todo Remove legacy path_redirect_delete support for pathauto.
   if (is_string($redirect) && is_string($deprecated)) {
@@ -452,19 +454,22 @@ function path_redirect_delete($redirect, $deprecated = FALSE) {
   return db_affected_rows();
 }
 
-function path_redirect_init_path(&$path) {
-  if ($path == variable_get('site_frontpage', 'node')) {
-    $path = '<front>';
-  }
-}
-
 /**
- * Delete any redirects to a certain path.
+ * Delete any redirects that point to a certain redirect path.
+ *
+ * @param $path
+ *   The redirect path.
  */
 function path_redirect_delete_by_path($path) {
   path_redirect_init_path($path);
   db_query("DELETE FROM {path_redirect} WHERE redirect = '%s'", $path);
   return db_affected_rows();
+}
+
+function path_redirect_init_path(&$path) {
+  if ($path == variable_get('site_frontpage', 'node')) {
+    $path = '<front>';
+  }
 }
 
 /**
@@ -485,6 +490,37 @@ function _path_redirect_split_path($path) {
     'fragment' => isset($parsed['fragment']) ? $parsed['fragment'] : NULL,
   );
   return $result;
+}
+
+/**
+ * Show a table listing of redirects pointing to a path.
+ */
+function theme_path_redirect_admin_list_by_path($source, $language) {
+  $header = array(
+    array('data' => t('From'), 'field' => 'path', 'sort' => 'asc'),
+    array('data' => t('Type'), 'field' => 'type'),
+    array('data' => t('Operations'), 'colspan' => '2'),
+  );
+  $rows = array();
+  $redirects = path_redirect_load_multiple_by_redirect($source);
+  foreach ($redirects as $rid => $redirect) {
+    $rows[] = array(
+      'data' => array(
+        $redirect['path'],
+        $redirect['type'],
+        l(t('Edit'), 'admin/build/path-redirect/edit/'. $rid, array('query' => drupal_get_destination())),
+        l(t('Delete'), 'admin/build/path-redirect/delete/'. $rid, array('query' => drupal_get_destination())),
+      ),
+    );
+  }
+  if (empty($rows)) {
+    $rows[] = array(array(
+      'data' => t('No redirects found.'),
+      'colspan' => 4,
+      'class' => 'path-redirect-none',
+    ));
+  }
+  return theme('table', $header, $rows, array('class' => 'path-redirects'));
 }
 
 /**
