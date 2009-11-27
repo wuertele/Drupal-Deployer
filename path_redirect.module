@@ -2,7 +2,7 @@
 // $Id$
 
 /**
- * Implementation of hook_help().
+ * Implement hook_help().
  */
 function path_redirect_help($path, $arg) {
   $output = '';
@@ -20,7 +20,7 @@ function path_redirect_help($path, $arg) {
 }
 
 /**
- * Implementation of hook_perm().
+ * Implement hook_perm().
  */
 function path_redirect_perm() {
   return array(
@@ -29,7 +29,7 @@ function path_redirect_perm() {
 }
 
 /**
- * Implementation of hook_menu().
+ * Implement hook_menu().
  */
 function path_redirect_menu() {
   $items['admin/build/path-redirect'] = array(
@@ -43,7 +43,7 @@ function path_redirect_menu() {
     'title' => 'List',
     'description' => 'List all URL redirects.',
     'type' => MENU_DEFAULT_LOCAL_TASK,
-    'weight' => -3,
+    'weight' => -10,
   );
   $items['admin/build/path-redirect/add'] = array(
     'title' => 'Add redirect',
@@ -79,6 +79,7 @@ function path_redirect_menu() {
     'page arguments' => array('path_redirect_settings_form'),
     'access arguments' => array('administer redirects'),
     'type' => MENU_LOCAL_TASK,
+    'weight' => 10,
     'file' => 'path_redirect.admin.inc',
   );
   //$items['admin/build/path-redirect/import'] = array(
@@ -124,7 +125,7 @@ function path_redirect_menu() {
 }
 
 /**
- * Implementation of hook_init().
+ * Implement hook_init().
  */
 function path_redirect_init() {
   if ($redirect = _path_redirect_load_current_page_redirect()) {
@@ -161,7 +162,7 @@ function path_redirect_init() {
 }
 
 /**
- * Implementation of hook_cron().
+ * Implement hook_cron().
  */
 function path_redirect_cron() {
   // Purge inactive redirects from the database.
@@ -175,6 +176,8 @@ function path_redirect_cron() {
 
 /**
  * Implement hook_form_alter().
+ *
+ * Add a summary of redirects pointing to a node on its edit form.
  */
 function path_redirect_form_alter(&$form, $form_state, $form_id) {
   if (substr($form_id, -10) == '_node_form' && isset($form['#node']->nid) && user_access('administer redirects')) {
@@ -247,13 +250,12 @@ function theme_path_redirect_admin_list_by_path($source, $language) {
 }
 
 /**
- * Implementation of hook_nodeapi().
- * @todo Remove in Drupal 7.
+ * Implement hook_nodeapi().
  */
 function path_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
   switch ($op) {
     case 'presave':
-      path_redirect_node_presave($node);
+      path_redirect_check_alias_changed('node/' . $node->nid, $node->path, $node->language);
       break;
     case 'delete':
       // When a node is deleted, also delete the redirects to it (they will result in a 404).
@@ -264,19 +266,32 @@ function path_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 }
 
 /**
- * Implementation of hook_node_presave().
+ * Creates a redirect if an URL alias is being changed.
  *
- * Creates automatic redirects when URL aliases are manually changed.
+ * @todo Move to hook_path_update() in Drupal 7?
+ *
+ * @param $path
+ *   The base (normal) path.
+ * @param $new_alias
+ *   The new alias for the path.
+ * @param $language
+ *   The language of the alias being created.
+ * @return
+ *   TRUE if a redirect was created, or FALSE otherwise.
  */
-function path_redirect_node_presave($node) {
-  if (path_redirect_var('auto_redirect') && !empty($node->path)) {
-    $node_path = 'node/'. $node->nid;
-    $old_alias = drupal_get_path_alias($node_path, ($node->language ? $node->language : ''));
-    if ($old_alias != $node_path && $node->path != $old_alias) {
-      // If the user is manually changing the path alias, add a redirect from the old alias to the node.
-      $redirect = array('path' => $old_alias, 'redirect' => $node_path);
-      path_redirect_save($redirect);
-    }
+function path_redirect_check_alias_changed($path, $new_alias, $language = '') {
+  if (!path_redirect_var('auto_redirect') || empty($new_alias)) {
+    return FALSE;
+  }
+
+  $old_alias = drupal_get_path_alias($path, $language);
+  if ($old_alias != $base_path && $old_alias != $new_alias) {
+    // If the user is manually changing the path alias, add a redirect from the old alias to the node.
+    $redirect = array(
+      'path' => $old_alias,
+      'redirect' => $new_alias,
+    );
+    return path_redirect_save($redirect);
   }
 }
 
