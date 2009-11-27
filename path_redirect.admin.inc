@@ -27,13 +27,11 @@ function path_redirect_admin() {
 
   $redirects = pager_query('SELECT rid, path, redirect, query, fragment, language, type FROM {path_redirect}'. tablesort_sql($header), $limit);
   while ($redirect = db_fetch_object($redirects)) {
-    $redirect->url = url($redirect->redirect, array('query' => $redirect->query, 'fragment' => $redirect->fragment, 'absolute' => TRUE, 'alias' => TRUE));
+    $redirect->redirect_url = url($redirect->redirect, array('query' => $redirect->query, 'fragment' => $redirect->fragment, 'absolute' => TRUE, 'alias' => TRUE));
     $row = array(
       'data' => array(
-        // @todo: Revise the following messy, confusing line.
-        l($redirect->path, preg_replace('/[\?\&].*/', '', $redirect->path), array('query' => strstr($redirect->path, '?') ? preg_replace('/.*\?/', '', $redirect->path) : NULL, 'language' => $redirect->language ? $languages[$redirect->language] : NULL)),
-        // @todo: Fix sorting on the redirect field
-        l($redirect->url, $redirect->url, array('external' => TRUE)),
+        l($redirect->path, $redirect->path, parse_url($redirect->path)),
+        l($redirect->redirect_url, $redirect->redirect_url, array('external' => TRUE)),
         $redirect->type,
         l(t('Edit'), 'admin/build/path-redirect/edit/'. $redirect->rid),
         l(t('Delete'), 'admin/build/path-redirect/delete/'. $redirect->rid),
