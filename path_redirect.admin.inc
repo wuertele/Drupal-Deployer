@@ -28,9 +28,11 @@ function path_redirect_list_redirects() {
   $redirects = pager_query('SELECT rid, path, redirect, query, fragment, language, type FROM {path_redirect}'. tablesort_sql($header), $limit);
   while ($redirect = db_fetch_object($redirects)) {
     $redirect->redirect_url = url($redirect->redirect, array('query' => $redirect->query, 'fragment' => $redirect->fragment, 'absolute' => TRUE, 'alias' => TRUE));
+    $redirect->path_url = $redirect->path;
+    $redirect->path = parse_url($redirect->path);
     $row = array(
       'data' => array(
-        l($redirect->path, $redirect->path, parse_url($redirect->path)),
+        l($redirect->path_url, $redirect->path['path'], $redirect->path),
         l($redirect->redirect_url, $redirect->redirect_url, array('external' => TRUE)),
         $redirect->type,
         l(t('Edit'), 'admin/build/path-redirect/edit/'. $redirect->rid),
