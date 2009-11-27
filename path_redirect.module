@@ -171,6 +171,79 @@ function path_redirect_cron() {
 }
 
 /**
+ * Implement hook_form_alter().
+ */
+function path_redirect_form_alter(&$form, $form_state, $form_id) {
+  if (substr($form_id, -10) == '_node_form' && isset($form['#node']->nid) && user_access('administer redirects')) {
+    $node = $form['#node'];
+    $redirect = array(
+      'dst' => 'node/' . $form['#node']->nid,
+      'language' => $form['#node']->language,
+    );
+    $form['path_redirect'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('URL redirects'),
+      '#description' => t('The following are a list of URL redirects that point to this location.'),
+      '#collapsed' => TRUE,
+      '#weight' => 30,
+    );
+    $form['path_redirect']['table'] = array(
+      '#type' => 'markup',
+      '#value' => theme('path_redirect_admin_list_by_path', $redirect['dst'], $redirect['location']),
+    );
+    $form['path_redirect']['add'] = array(
+      '#type' => 'markup',
+      '#value' => '<p>' . l(t('Add new redirect'), 'admin/build/path-redirect/add', array('query' => drupal_get_destination() . '&' . drupal_query_string_encode($redirect))) . '</p>',
+    );
+    if (module_exists('vertical_tabs')) {
+      drupal_add_js(drupal_get_path('module', 'path_redirect') . '/path_redirect.vertical_tabs.node_form.js');
+    }
+  }
+}
+
+/**
+ * Implement hook_theme().
+ */
+function path_redirect_theme() {
+  return array(
+    'path_redirect_admin_list_by_path' => array(
+      'arguments' => array('source' => NULL, 'language' => NULL),
+    ),
+  );
+}
+
+/**
+ * Show a table listing of redirects pointing to a path.
+ */
+function theme_path_redirect_admin_list_by_path($source, $language) {
+  $header = array(
+    array('data' => t('From'), 'field' => 'path', 'sort' => 'asc'),
+    array('data' => t('Type'), 'field' => 'type'),
+    array('data' => t('Operations'), 'colspan' => '2'),
+  );
+  $rows = array();
+  $redirects = path_redirect_load_all_by_path($source);
+  foreach ($redirects as $rid => $redirect) {
+    $rows[] = array(
+      'data' => array(
+        $redirect['path'],
+        $redirect['type'],
+        l(t('Edit'), 'admin/build/path-redirect/edit/'. $rid, array('query' => drupal_get_destination())),
+        l(t('Delete'), 'admin/build/path-redirect/delete/'. $rid, array('query' => drupal_get_destination())),
+      ),
+    );
+  }
+  if (empty($rows)) {
+    $rows[] = array(array(
+      'data' => t('No redirects found.'),
+      'colspan' => 4,
+      'class' => 'path-redirect-none',
+    ));
+  }
+  return theme('table', $header, $rows, array('class' => 'path-redirects'));
+}
+
+/**
  * Implementation of hook_nodeapi().
  * @todo Remove in Drupal 7.
  */
@@ -315,6 +388,15 @@ function path_redirect_load_by_path($path, $language = '') {
   else {
     return db_fetch_array(db_query_range("SELECT * FROM {path_redirect} WHERE path = '%s'", $path, 0, 1));
   }
+}
+
+function path_redirect_load_all_by_path($path) {
+  $query = db_query("SELECT * FROM {path_redirect} WHERE redirect = '%s'", $path);
+  $redirects = array();
+  while ($redirect = db_fetch_array($query)) {
+    $redirects[$redirect['rid']] = $redirect;
+  }
+  return $redirects;
 }
 
 function _path_redirect_load_current_page_redirect() {
