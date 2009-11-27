@@ -35,8 +35,8 @@ function path_redirect_admin() {
         // @todo: Fix sorting on the redirect field
         l($redirect, $redirect, array('external' => TRUE)),
         $r->type,
-        l(t('Edit'), 'admin/build/path-redirect/edit/'. $r->rid, array('query' => drupal_get_destination())),
-        l(t('Delete'), 'admin/build/path-redirect/delete/'. $r->rid, array('query' => drupal_get_destination())),
+        l(t('Edit'), 'admin/build/path-redirect/edit/'. $r->rid),
+        l(t('Delete'), 'admin/build/path-redirect/delete/'. $r->rid),
       ),
     );
     if ($multilanguage) {
@@ -63,7 +63,7 @@ function path_redirect_edit_form(&$form_state, $redirect = array()) {
     'redirect' => isset($_GET['dst']) ? urldecode($_GET['dst']) : '',
     'query' => NULL,
     'fragment' => NULL,
-    'language' => isset($_GET['language']) ? urldecode($_GET['language']) : '',
+    'language' => isset($_GET['language']) ? urldecode($_GET['language']) : NULL,
     'type' => path_redirect_var('default_status'),
   );
 
