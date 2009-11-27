@@ -10,7 +10,7 @@
  * Render a list of redirects for the main admin page.
  */
 function path_redirect_admin() {
-  $multilanguage = (module_exists('locale') || db_result(db_query("SELECT rid FROM {path_redirect} WHERE language <> ''")));
+  $multilanguage = module_exists('locale');
   $languages = language_list();
 
   $header = array(
@@ -26,21 +26,21 @@ function path_redirect_admin() {
   $limit = 50;
 
   $redirects = pager_query('SELECT rid, path, redirect, query, fragment, language, type FROM {path_redirect}'. tablesort_sql($header), $limit);
-  while ($r = db_fetch_object($redirects)) {
-    $redirect = url($r->redirect, array('query' => $r->query, 'fragment' => $r->fragment, 'absolute' => TRUE, 'alias' => TRUE));
+  while ($redirect = db_fetch_object($redirects)) {
+    $redirect->url = url($redirect->redirect, array('query' => $redirect->query, 'fragment' => $redirect->fragment, 'absolute' => TRUE, 'alias' => TRUE));
     $row = array(
       'data' => array(
         // @todo: Revise the following messy, confusing line.
-        l($r->path, preg_replace('/[\?\&].*/', '', $r->path), array('query' => strstr($r->path, '?') ? preg_replace('/.*\?/', '', $r->path) : NULL, 'language' => $r->language ? $languages[$r->language] : NULL)),
+        l($redirect->path, preg_replace('/[\?\&].*/', '', $redirect->path), array('query' => strstr($redirect->path, '?') ? preg_replace('/.*\?/', '', $redirect->path) : NULL, 'language' => $redirect->language ? $languages[$redirect->language] : NULL)),
         // @todo: Fix sorting on the redirect field
-        l($redirect, $redirect, array('external' => TRUE)),
-        $r->type,
-        l(t('Edit'), 'admin/build/path-redirect/edit/'. $r->rid),
-        l(t('Delete'), 'admin/build/path-redirect/delete/'. $r->rid),
+        l($redirect->url, $redirect->url, array('external' => TRUE)),
+        $redirect->type,
+        l(t('Edit'), 'admin/build/path-redirect/edit/'. $redirect->rid),
+        l(t('Delete'), 'admin/build/path-redirect/delete/'. $redirect->rid),
       ),
     );
     if ($multilanguage) {
-      array_splice($row['data'], 3, 0, module_invoke('locale', 'language_name', $r->language));
+      array_splice($row['data'], 3, 0, module_invoke('locale', 'language_name', $redirect->language));
     }
     $rows[] = $row;
   }
