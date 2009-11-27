@@ -9,7 +9,7 @@
 /**
  * Render a list of redirects for the main admin page.
  */
-function path_redirect_admin() {
+function path_redirect_list_redirects() {
   $multilanguage = module_exists('locale');
   $languages = language_list();
 
