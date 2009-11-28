@@ -163,7 +163,7 @@ function transliteration_process($string, $unknown = '?', $source_langcode = NUL
 }
 
 /**
- * Load the transliteration database and replace a Unicode character.
+ * Replace a Unicode character using the transliteration database.
  *
  * @param $ord
  *   A ordinal Unicode character code.
