@@ -123,6 +123,7 @@ if (!empty($fatal_err)) {
 }
 
 putenv("CVSROOT=$cvs_root");
+putenv("TERM=vt100");  // drush requires a terminal.
 $script_name = $argv[0];
 
 // Find what kind of packaging we need to do
