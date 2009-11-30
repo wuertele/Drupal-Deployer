@@ -3,6 +3,18 @@
 (function ($) {
 
 /**
+ * Create our own namespace in the global Drupal object.
+ */
+Drupal.numericElement = Drupal.numericElement || {};
+
+/**
+ * Attach Drupal behavior to numeric input elements.
+ */
+Drupal.behaviors.numericElement = function(context) {
+  Drupal.numericElement.attach(context);
+};
+
+/**
  * Format a number with (site default or user defined) thousands separator
  * and decimal point.
  *
@@ -74,7 +86,7 @@ Drupal.formatNumber = function(number, decimals, truncate) {
   }
 
   return number;
-}
+};
 
 /**
  * Parse a number with (site default or user defined) thousands separator
@@ -128,6 +140,86 @@ Drupal.parseNumber = function(number, required) {
   // This should also restore back the sign (if necessary) and convert the
   // string into a pure javascript number (integer or float).
   return number.replace(/^([0-9]*\.?[0-9]+)?.*$/, '$1') * (is_negative ? -1 : 1);
-}
+};
+
+/**
+ * Attach Drupal behavior to numeric input elements.
+ *
+ * Numeric elements are processed during the following events:
+ * - on page load     : All numeric elements are formatted with site/user defined options.
+ * - on element focus : Thousands separator are removed, if any.
+ * - on element blur  : Numeric elements are formatted again with site/user defined options.
+ * - on form submit   : Thousands separator are removed to prevent from triggering
+ *                      maxlength error during Forms API validation.
+ */
+Drupal.numericElement.attach = function(context) {
+  $('input.form-numeric:not(.form-numeric-processed)', context).addClass('form-numeric-processed').each(function() {
+    var $element = $(this);
+
+    // Number of decimal places for this element.
+    var decimals = $element.attr('decimals');
+    decimals = (decimals == undefined ? -1 : Math.max(-1, parseInt(decimals)));
+
+    // The element is properly formatted on page load.
+    Drupal.numericElement.formatElement($element, decimals);
+
+    // Bind element events.
+    $element.bind('focus', function() {
+      Drupal.numericElement.clearThousandsSep($element);
+    }).bind('blur', function() {
+      Drupal.numericElement.formatElement($element, decimals);
+    });
+
+    // Bind submit event callback to the form.
+    $element.parents('form:not(.form-numeric-processed)').addClass('form-numeric-processed').each(function() {
+      // Clear thousands separators before submitting. This is not strictly
+      // necessary because input is always validated on the server, but it
+      // prevents from getting "field cannot be longer than max" errors issued
+      // by Forms API.
+      $(this).bind('submit', function() {
+        $('input.form-numeric', this).each(function() {
+          Drupal.numericElement.clearThousandsSep($(this));
+        });
+      });
+    });
+  });
+};
+
+/**
+ * Clear thousands separators from the given input element.
+ *
+ * @param $element
+ *   The input element.
+ */
+Drupal.numericElement.clearThousandsSep = function($element) {
+  var number = $element.val();
+  if (number.length > 0 && Drupal.settings.format_number.thousands_sep.length > 0) {
+    var thsep = Drupal.settings.format_number.thousands_sep;
+    if (thsep == '\u00A0') {
+      thsep += ' ';
+    }
+    number = number.replace(new RegExp('['+ thsep +']', 'g'), '');
+    $element.val(number);
+  }
+};
+
+/**
+ * Format the number in the given element with site/user defined options.
+ *
+ * @param $element
+ *   The input element.
+ * @param decimals
+ *   Number of decimal digits.
+ */
+Drupal.numericElement.formatElement = function($element, decimals) {
+  var number = $element.val();
+  if (number.length > 0) {
+    number = Drupal.parseNumber(number, false);
+    if (typeof(number) == 'number') {
+      number = Drupal.formatNumber(number, decimals);
+    }
+    $element.val(number);
+  }
+};
 
 })(jQuery);

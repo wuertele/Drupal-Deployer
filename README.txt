@@ -11,6 +11,7 @@ CONTENTS
 * INSTALLATION
 * PHP API
 * JAVASCRIPT API
+* FORMS API NUMERIC ELEMENT
 
 
 OVERVIEW
@@ -21,6 +22,10 @@ defined) with configurable decimal point and thousand separators.
 
 The function <code>format_number($number, $decimals = 0)</code> can be used by
 other contributed or custom modules to display numbers accordingly.
+
+This module also provides the 'numericfield' Forms API element, which is a right
+aligned text input element that allows the user enter numbers using the
+configured thousands separator and decimal point (site default or user defined).
 
 External references:
 - http://www.php.net/number_format
@@ -153,3 +158,62 @@ Drupal.formatNumber = function(number, decimals, truncate) {}
  *   A valid number.
  */
 Drupal.parseNumber = function(number, required) {}
+
+
+FORMS API NUMERIC ELEMENT
+=========================
+
+The 'numericfield' Forms API element provides a right aligned text input
+element that allows the user enter numbers using the configured thousands
+separator and decimal point (site default or user defined).
+
+
+Example:
+
+$form['my_number'] = array(
+  '#type' => 'numericfield',
+  '#title' => t('My number'),
+  '#precision' => 10,
+  '#decimals' => 2,
+  '#minimum' => 0,
+  '#maximum' => 123456.99,
+  '#default_value' => $my_number,
+);
+
+
+Specific Forms API attributes for elements of #type 'numericfield':
+
+- #precision:
+  Integer that indicates the total number of digits available to store the
+  number, including the digits to the right of the decimal point.
+  Defaults to 12.
+
+- #decimals
+  Integer that indicates the number of available digits to the right of
+  the decimal point.
+  Defaults to 0. Maximum allowed number of decimal digits: 8.
+
+- #minimum
+- #maximum
+  Minimum and maximum possible values that are allowed on input.
+
+
+Other Forms API supported attributes for elements of #type 'numericfield':
+
+- #title
+- #description
+- #attributes
+- #field_prefix
+- #field_suffix
+- #prefix
+- #suffix
+
+
+Theme function used to render the form element:
+
+- theme_numericfield($element)
+
+
+CSS Class attached to numeric form elements:
+
+- form-numeric (defined in format_number.css).
