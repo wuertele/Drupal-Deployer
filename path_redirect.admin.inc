@@ -10,8 +10,12 @@
  * Render a list of redirects for the main admin page.
  */
 function path_redirect_list_redirects() {
+  // Get filtered keys if present and add the filter form.
+  $keys = func_get_args();
+  $keys = implode('/', $keys);
+  $output = drupal_get_form('path_redirect_filter_form', $keys);
+
   $multilanguage = module_exists('locale');
-  $languages = language_list();
 
   $header = array(
     array('data' => t('From'), 'field' => 'path', 'sort' => 'asc'),
@@ -22,10 +26,20 @@ function path_redirect_list_redirects() {
   if ($multilanguage) {
     array_splice($header, 3, 0, array(array('data' => t('Language'), 'field' => 'language')));
   }
-  $rows = array();
-  $limit = 50;
 
-  $redirects = pager_query('SELECT rid, path, redirect, query, fragment, language, type FROM {path_redirect}'. tablesort_sql($header), $limit);
+  if ($keys) {
+    // Replace wildcards with MySQL/PostgreSQL wildcards.
+    $keys = preg_replace('!\*+!', '%', $keys);
+    $sql = "SELECT * FROM {path_redirect} WHERE path LIKE '%%%s%%' OR redirect LIKE '%%%s%%' OR query LIKE '%%%s%%' OR fragment LIKE '%%%s%%'";
+  }
+  else {
+    $sql = 'SELECT * FROM {path_redirect}';
+  }
+  $sql .= tablesort_sql($header);
+  $redirects = pager_query($sql, 50, 0, NULL, $keys, $keys, $keys, $keys);
+
+  $rows = array();
+  $destination = drupal_get_destination();
   while ($redirect = db_fetch_object($redirects)) {
     $redirect->redirect_url = url($redirect->redirect, array('query' => $redirect->query, 'fragment' => $redirect->fragment, 'absolute' => TRUE, 'alias' => TRUE));
     $redirect->path_url = $redirect->path;
@@ -35,8 +49,8 @@ function path_redirect_list_redirects() {
         l($redirect->path_url, $redirect->path['path'], $redirect->path),
         l($redirect->redirect_url, $redirect->redirect_url, array('external' => TRUE)),
         $redirect->type,
-        l(t('Edit'), 'admin/build/path-redirect/edit/'. $redirect->rid),
-        l(t('Delete'), 'admin/build/path-redirect/delete/'. $redirect->rid),
+        l(t('Edit'), 'admin/build/path-redirect/edit/'. $redirect->rid, array('query' => $destination)),
+        l(t('Delete'), 'admin/build/path-redirect/delete/'. $redirect->rid, array('query' => $destination)),
       ),
     );
     if ($multilanguage) {
@@ -46,13 +60,66 @@ function path_redirect_list_redirects() {
   }
 
   if (empty($rows)) {
-    $rows[] = array(array('data' => t('No redirects available.'), 'colspan' => $multilanguage ? 6 : 5));
+    $empty_message = $keys ? t('No URL redirects found.') : t('No URL redirects available. <a href="@link">Add redirect</a>.', array('@link' => url('admin/build/path-redirect/add'))) ;
+    $rows[] = array(array('data' => $empty_message, 'colspan' => $multilanguage ? 6 : 5));
   }
 
-  $output = theme('table', $header, $rows, array('class' => 'path-redirects'));
-  $output .= theme('pager', NULL, $limit);
+  $output .= theme('table', $header, $rows);
+  $output .= theme('pager', NULL, 50, 0);
 
   return $output;
+}
+
+/**
+ * Return a form to filter URL redirects.
+ *
+ * @ingroup forms
+ * @see path_redirect_filter_form_submit()
+ */
+function path_redirect_filter_form(&$form_state, $keys = '') {
+  $form['#attributes'] = array('class' => 'search-form');
+  $form['basic'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Filter redirects')
+  );
+  $form['basic']['inline'] = array(
+    '#prefix' => '<div class="container-inline">',
+    '#suffix' => '</div>',
+  );
+  $form['basic']['inline']['filter'] = array(
+    '#type' => 'textfield',
+    '#title' => '',
+    '#default_value' => $keys,
+    '#maxlength' => 128,
+    '#size' => 25,
+  );
+  $form['basic']['inline']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Filter'),
+    '#submit' => array('path_redirect_filter_form_submit_filter'),
+    );
+  if ($keys) {
+    $form['basic']['inline']['reset'] = array(
+      '#type' => 'submit',
+      '#value' => t('Reset'),
+      '#submit' => array('path_redirect_filter_form_submit_reset'),
+    );
+  }
+  return $form;
+}
+
+/**
+ * Process filter form submission when the Filter button is pressed.
+ */
+function path_redirect_filter_form_submit_filter($form, &$form_state) {
+  $form_state['redirect'] = 'admin/build/path-redirect/list/'. trim($form_state['values']['filter']);
+}
+
+/**
+ * Process filter form submission when the Reset button is pressed.
+ */
+function path_redirect_filter_form_submit_reset($form, &$form_state) {
+  $form_state['redirect'] = 'admin/build/path-redirect/list';
 }
 
 function path_redirect_edit_form(&$form_state, $redirect = array()) {
@@ -89,7 +156,7 @@ function path_redirect_edit_form(&$form_state, $redirect = array()) {
     '#prefix' => '<div class="container-inline">',
     '#suffix' => '</div>',
     '#title' => t('To'),
-    '#description' => '<div style="display:block">'. t('Enter an interal Drupal path, path alias, or complete external URL (like http://example.com/) to redirect to. Use %front to redirect to the front page. Enter (optional) queries after "?" and (optional) anchor after "#". Most redirects will not contain queries or fragment anchors.', array('%front' => '<front>')) .'</div>',
+    '#description' => '<div style="display:block">' . t('Enter an internal Drupal path, path alias, or complete external URL (like http://example.com/) to redirect to. Use %front to redirect to the front page. Enter (optional) queries after "?" and (optional) anchor after "#". Most redirects will not contain queries or fragment anchors.', array('%front' => '<front>')) . '</div>',
   );
 
   $form['redirect']['redirect'] = array(
@@ -130,7 +197,7 @@ function path_redirect_edit_form(&$form_state, $redirect = array()) {
   $form['language'] = array(
     '#type' => 'select',
     '#title' => t('Language'),
-    '#options' => array('' => t('Language neutral')) + $languages,
+    '#options' => array('' => t('All languages')) + $languages,
     '#default_value' => $redirect['language'],
     '#description' => t('A redirect set for a specific language will always be used when requesting this page in that language, and takes precedence over redirects set for <em>All languages</em>.'),
     '#access' => $languages,
