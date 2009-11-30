@@ -197,6 +197,22 @@ $handler->override_option('fields', array(
     'relationship' => 'none',
   ),
 ));
+$handler->override_option('sorts', array(
+  'update_status' => array(
+    'order' => 'DESC',
+    'id' => 'update_status',
+    'table' => 'project_release_nodes',
+    'field' => 'update_status',
+    'relationship' => 'none',
+  ),
+  'title' => array(
+    'order' => 'ASC',
+    'id' => 'title',
+    'table' => 'node',
+    'field' => 'title',
+    'relationship' => 'pid',
+  ),
+));
 $handler->override_option('arguments', array(
   'nid' => array(
     'default_action' => 'not found',
@@ -297,21 +313,5 @@ $handler->override_option('style_options', array(
       'separator' => '',
     ),
   ),
-  'default' => 'title',
+  'default' => '-1',
 ));
-$handler = $view->new_display('page', 'Page', 'page_1');
-$handler->override_option('path', 'node/%/package-items');
-$handler->override_option('menu', array(
-  'type' => 'tab',
-  'title' => 'Package items',
-  'description' => '',
-  'weight' => '0',
-  'name' => 'navigation',
-));
-$handler->override_option('tab_options', array(
-  'type' => 'none',
-  'title' => '',
-  'description' => '',
-  'weight' => 0,
-));
-
