@@ -226,7 +226,7 @@ function path_redirect_delete_form($form_state, $redirect) {
 }
 
 function path_redirect_delete_form_submit($form, &$form_state) {
-  path_redirect_delete($form_state['values']['redirect']['rid']);
+  path_redirect_delete($form_state['values']['redirect']);
   drupal_set_message(t('The redirect has been deleted.'));
   $form_state['redirect'] = 'admin/build/path-redirect';
 }
@@ -404,7 +404,7 @@ function path_redirect_import_xml($file) {
  * Form builder;
  */
 function path_redirect_export_form() {
-  if (!db_result(db_query("SELECT COUNT(*) FROM {path_redirect}"))) {
+  if (!db_result(db_query_range("SELECT 1 FROM {path_redirect}", 0, 1))) {
     drupal_set_message(t('No redirects available.'));
     return;
   }
@@ -441,9 +441,10 @@ function path_redirect_export_form_submit($form, $form_state) {
   $filename = variable_get('site_name', 'Drupal') .' redirects '. format_date(time(), 'custom', 'Y m d');
   $filename = preg_replace(array('/^\W+|\W+$/', '/\W+/'), array('', '-'), drupal_strtolower($filename));
   $filename .= '.'. $type;
-  drupal_set_header('Content-Disposition: attachment; filename='. $filename);
 
-  echo $function();
+  $contents = $function();
+  drupal_set_header('Content-Disposition: attachment; filename='. $filename);
+  echo $contents;
   drupal_page_footer();
   exit();
 }
@@ -486,9 +487,7 @@ function path_redirect_export_xml() {
 }
 
 /**
- * Disables the XML import/export options
- *
- * @todo Remove in Drupal 7.
+ * Disables the XML import/export options.
  */
 function _path_redirect_process_import_export_options($element) {
   if (!extension_loaded('simplexml')) {
