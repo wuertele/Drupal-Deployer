@@ -279,14 +279,16 @@ function faq_categories_settings_form() {
     foreach ($vocabularies as $vid => $vobj) {
       $vocab_options[$vid] = $vobj->name;
     }
-    $form['faq_category_advanced']['faq_omit_vocabulary'] = array(
-      '#type' => 'checkboxes',
-      '#title' => t('Omit vocabulary'),
-      '#description' => t('Terms from these vocabularies will be <em>excluded</em> from the FAQ pages.'),
-      '#default_value' => variable_get('faq_omit_vocabulary', 0),
-      '#options' => $vocab_options,
-      '#multiple' => TRUE,
-    );
+    if (!empty($vocab_options)) {
+      $form['faq_category_advanced']['faq_omit_vocabulary'] = array(
+        '#type' => 'checkboxes',
+        '#title' => t('Omit vocabulary'),
+        '#description' => t('Terms from these vocabularies will be <em>excluded</em> from the FAQ pages.'),
+        '#default_value' => variable_get('faq_omit_vocabulary', 0),
+        '#options' => $vocab_options,
+        '#multiple' => TRUE,
+      );
+    }
 
     $form['faq_category_advanced']['faq_enable_term_links'] = array(
       '#type' => 'checkbox',
@@ -455,7 +457,7 @@ function faq_order_settings_choose_cat_form_submit($form, &$form_state) {
  *   $form_state['values'] stores the submitted values from the form.
  */
 function faq_order_settings_reorder_form_submit($form, &$form_state) {
-  if ($form_state['values']['op'] == t('Save order')) {
+  if ($form_state['values']['op'] == t('Save order') && !empty($form_state['values']['order_no_cats'])) {
 
     foreach ($form_state['values']['order_no_cats'] as $i => $faq) {
       $nid = $faq['nid'];
@@ -469,9 +471,11 @@ function faq_order_settings_reorder_form_submit($form, &$form_state) {
         $node = node_load($nid);
         if ($node->tnid) {
           $translations = translation_node_get_translations($node->tnid);
-          foreach ($translations as $language => $tnode) {
-            $result = db_query("DELETE FROM {faq_weights} WHERE tid = %d AND nid = %d", $form_state['values']['faq_category'], $tnode->nid);
-            $result = db_query("INSERT INTO {faq_weights} (tid, nid, weight) VALUES(%d, %d, %d)", $form_state['values']['faq_category'], $tnode->nid, $index);
+          if (!empty($translations)) {
+            foreach ($translations as $language => $tnode) {
+              $result = db_query("DELETE FROM {faq_weights} WHERE tid = %d AND nid = %d", $form_state['values']['faq_category'], $tnode->nid);
+              $result = db_query("INSERT INTO {faq_weights} (tid, nid, weight) VALUES(%d, %d, %d)", $form_state['values']['faq_category'], $tnode->nid, $index);
+            }
           }
         }
       }
