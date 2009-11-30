@@ -49,8 +49,8 @@ function path_redirect_list_redirects() {
         l($redirect->path_url, $redirect->path['path'], $redirect->path),
         l($redirect->redirect_url, $redirect->redirect_url, array('external' => TRUE)),
         $redirect->type,
-        l(t('Edit'), 'admin/build/path-redirect/edit/'. $redirect->rid, array('query' => $destination)),
-        l(t('Delete'), 'admin/build/path-redirect/delete/'. $redirect->rid, array('query' => $destination)),
+        l(t('Edit'), 'admin/build/path-redirect/edit/' . $redirect->rid, array('query' => $destination)),
+        l(t('Delete'), 'admin/build/path-redirect/delete/' . $redirect->rid, array('query' => $destination)),
       ),
     );
     if ($multilanguage) {
@@ -80,7 +80,7 @@ function path_redirect_filter_form(&$form_state, $keys = '') {
   $form['#attributes'] = array('class' => 'search-form');
   $form['basic'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Filter redirects')
+    '#title' => t('Filter redirects'),
   );
   $form['basic']['inline'] = array(
     '#prefix' => '<div class="container-inline">',
@@ -97,7 +97,7 @@ function path_redirect_filter_form(&$form_state, $keys = '') {
     '#type' => 'submit',
     '#value' => t('Filter'),
     '#submit' => array('path_redirect_filter_form_submit_filter'),
-    );
+  );
   if ($keys) {
     $form['basic']['inline']['reset'] = array(
       '#type' => 'submit',
