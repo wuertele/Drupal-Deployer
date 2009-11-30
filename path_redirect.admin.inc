@@ -128,9 +128,7 @@ function path_redirect_edit_form(&$form_state, $redirect = array()) {
     'rid' => NULL,
     'path' => isset($_GET['src']) ? urldecode($_GET['src']) : '',
     'redirect' => isset($_GET['dst']) ? urldecode($_GET['dst']) : '',
-    'query' => NULL,
-    'fragment' => NULL,
-    'language' => isset($_GET['language']) ? urldecode($_GET['language']) : NULL,
+    'language' => isset($_GET['language']) ? urldecode($_GET['language']) : '',
     'type' => path_redirect_var('default_status'),
   );
 
@@ -150,47 +148,14 @@ function path_redirect_edit_form(&$form_state, $redirect = array()) {
     '#field_prefix' => url('', array('absolute' => TRUE)) . (variable_get('clean_url', 0) ? '' : '?q='),
     '#autocomplete_path' => db_table_exists('watchdog') ? 'js/path_redirect/autocomplete_404' : '',
   );
-
   $form['redirect'] = array(
-    '#type' => 'item',
-    '#prefix' => '<div class="container-inline">',
-    '#suffix' => '</div>',
+    '#type' => 'textfield',
     '#title' => t('To'),
-    '#description' => '<div style="display:block">' . t('Enter an internal Drupal path, path alias, or complete external URL (like http://example.com/) to redirect to. Use %front to redirect to the front page. Enter (optional) queries after "?" and (optional) anchor after "#". Most redirects will not contain queries or fragment anchors.', array('%front' => '<front>')) . '</div>',
-  );
-
-  $form['redirect']['redirect'] = array(
-    '#type' => 'textfield',
-    '#size' => 30,
-    '#maxlength' => 255,
-    '#default_value' => $redirect['redirect'],
-    //'#required' => TRUE,
-  );
-
-  $form['redirect'][] = array(
-    '#value' => '?',
-  );
-
-  $form['redirect']['query'] = array(
-    '#type' => 'textfield',
-    '#size' => 12,
-    '#maxlength' => 255,
-    '#default_value' => $redirect['query'],
-  );
-
-  $form['redirect'][] = array(
-    '#value' => '#',
-  );
-
-  $form['redirect']['fragment'] = array(
-    '#type' => 'textfield',
-    '#size' => 12,
-    '#maxlength' => 50,
-    '#default_value' => $redirect['fragment'],
-  );
-
-  $form[] = array(
-    '#value' => "<p> </p>", // little bit of extra space
+    '#maxlength' => 560,
+    '#default_value' => substr(url($redirect['redirect'], array_filter($redirect)), strlen(base_path())),
+    '#required' => TRUE,
+    '#description' => t('Enter an internal Drupal path, path alias, or complete external URL (like http://example.com/) to redirect to. Use %front to redirect to the front page.', array('%front' => '<front>')),
+    '#element_validate' => array('path_redirect_validate_redirect_field'),
   );
 
   $languages = module_exists('locale') ? locale_language_list('name') : array();
@@ -227,6 +192,14 @@ function path_redirect_edit_form(&$form_state, $redirect = array()) {
   );
 
   return $form;
+}
+
+function path_redirect_validate_redirect_field($element, &$form_state) {
+  $parsed = parse_url($element['#value']) + array('query' => '', 'fragment' => '', 'path' => '');
+  $form_state['values']['query'] = $parsed['query'];
+  $form_state['values']['fragment'] = $parsed['fragment'];
+  $form_state['values']['redirect'] = (isset($parsed['scheme']) ? $parsed['scheme'] . '://'. $parsed['host'] : '') . $parsed['path'];
+  return $element;
 }
 
 function path_redirect_edit_form_validate($form, &$form_state) {
