@@ -77,7 +77,7 @@ $handler->override_option('fields', array(
     'relationship' => 'pid',
   ),
   'version' => array(
-    'label' => 'Included release',
+    'label' => 'Version',
     'alter' => array(
       'alter_text' => 0,
       'text' => '',
@@ -107,7 +107,7 @@ $handler->override_option('fields', array(
     'relationship' => 'none',
   ),
   'version_1' => array(
-    'label' => 'Recommended release',
+    'label' => 'Recommended',
     'alter' => array(
       'alter_text' => 0,
       'text' => '',
@@ -137,7 +137,7 @@ $handler->override_option('fields', array(
     'relationship' => 'recommended_release',
   ),
   'update_status' => array(
-    'label' => 'Update status',
+    'label' => 'Status',
     'alter' => array(
       'alter_text' => 0,
       'text' => '',
