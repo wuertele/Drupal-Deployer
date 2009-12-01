@@ -18,7 +18,7 @@ function path_redirect_list_redirects() {
   $multilanguage = module_exists('locale');
 
   $header = array(
-    array('data' => t('From'), 'field' => 'path', 'sort' => 'asc'),
+    array('data' => t('From'), 'field' => 'source', 'sort' => 'asc'),
     array('data' => t('To'), 'field' => 'redirect'),
     array('data' => t('Type'), 'field' => 'type'),
     array('data' => t('Operations'), 'colspan' => '2'),
@@ -30,7 +30,7 @@ function path_redirect_list_redirects() {
   if ($keys) {
     // Replace wildcards with MySQL/PostgreSQL wildcards.
     $keys = preg_replace('!\*+!', '%', $keys);
-    $sql = "SELECT * FROM {path_redirect} WHERE path LIKE '%%%s%%' OR redirect LIKE '%%%s%%' OR query LIKE '%%%s%%' OR fragment LIKE '%%%s%%'";
+    $sql = "SELECT * FROM {path_redirect} WHERE source LIKE '%%%s%%' OR redirect LIKE '%%%s%%' OR query LIKE '%%%s%%' OR fragment LIKE '%%%s%%'";
   }
   else {
     $sql = 'SELECT * FROM {path_redirect}';
@@ -42,11 +42,11 @@ function path_redirect_list_redirects() {
   $destination = drupal_get_destination();
   while ($redirect = db_fetch_object($redirects)) {
     $redirect->redirect_url = url($redirect->redirect, array('query' => $redirect->query, 'fragment' => $redirect->fragment, 'absolute' => TRUE, 'alias' => TRUE));
-    $redirect->path_url = $redirect->path;
-    $redirect->path = parse_url($redirect->path);
+    $redirect->source_url = $redirect->source;
+    $redirect->source = parse_url($redirect->source);
     $row = array(
       'data' => array(
-        l($redirect->path_url, $redirect->path['path'], $redirect->path),
+        l($redirect->source_url, $redirect->source['path'], $redirect->source),
         l($redirect->redirect_url, $redirect->redirect_url, array('external' => TRUE)),
         $redirect->type,
         l(t('Edit'), 'admin/build/path-redirect/edit/' . $redirect->rid, array('query' => $destination)),
@@ -126,8 +126,8 @@ function path_redirect_edit_form(&$form_state, $redirect = array()) {
   // Merge default values.
   $redirect += array(
     'rid' => NULL,
-    'path' => isset($_GET['src']) ? urldecode($_GET['src']) : '',
-    'redirect' => isset($_GET['dst']) ? urldecode($_GET['dst']) : '',
+    'source' => isset($_GET['source']) ? urldecode($_GET['source']) : '',
+    'redirect' => isset($_GET['redirect']) ? urldecode($_GET['redirect']) : '',
     'language' => isset($_GET['language']) ? urldecode($_GET['language']) : '',
     'type' => path_redirect_var('default_status'),
   );
@@ -137,22 +137,23 @@ function path_redirect_edit_form(&$form_state, $redirect = array()) {
     '#value' => $redirect['rid'],
   );
 
-  $form['path'] = array(
+  $form['source'] = array(
     '#type' => 'textfield',
     '#title' => t('From'),
     '#description' => t("Enter an interal Drupal path or path alias to redirect (e.g. %example1 or %example2). Fragment anchors (e.g. %anchor) are <strong>not</strong> allowed.", array('%example1' => 'node/123', '%example2' => 'taxonomy/term/123', '%anchor' => '#anchor')),
     '#size' => 42,
     '#maxlength' => 255,
-    '#default_value' => $redirect['path'],
+    '#default_value' => $redirect['source'],
     '#required' => TRUE,
     '#field_prefix' => url('', array('absolute' => TRUE)) . (variable_get('clean_url', 0) ? '' : '?q='),
     '#autocomplete_path' => db_table_exists('watchdog') ? 'js/path_redirect/autocomplete_404' : '',
+    '#element_validate' => array('path_redirect_validate_source_field'),
   );
   $form['redirect'] = array(
     '#type' => 'textfield',
     '#title' => t('To'),
     '#maxlength' => 560,
-    '#default_value' => substr(url($redirect['redirect'], array_filter($redirect)), strlen(base_path())),
+    '#default_value' => menu_path_is_external($redirect['redirect']) ? url($redirect['redirect'], array_filter($redirect) + array('external' => TRUE)) : substr(url($redirect['redirect'], array_filter($redirect) + array('alias' => TRUE)), strlen(base_path())),
     '#required' => TRUE,
     '#description' => t('Enter an internal Drupal path, path alias, or complete external URL (like http://example.com/) to redirect to. Use %front to redirect to the front page.', array('%front' => '<front>')),
     '#element_validate' => array('path_redirect_validate_redirect_field'),
@@ -187,19 +188,10 @@ function path_redirect_edit_form(&$form_state, $redirect = array()) {
     '#value' => t('Save'),
   );
   $form['cancel'] = array(
-    '#value' => l(t('Cancel'),
-    'admin/build/path-redirect'),
+    '#value' => l(t('Cancel'), isset($_REQUEST['destination']) ? $_REQUEST['destination'] : 'admin/build/path-redirect'),
   );
 
   return $form;
-}
-
-function path_redirect_validate_redirect_field($element, &$form_state) {
-  $parsed = parse_url($element['#value']) + array('query' => '', 'fragment' => '', 'path' => '');
-  $form_state['values']['query'] = $parsed['query'];
-  $form_state['values']['fragment'] = $parsed['fragment'];
-  $form_state['values']['redirect'] = (isset($parsed['scheme']) ? $parsed['scheme'] . '://'. $parsed['host'] : '') . $parsed['path'];
-  return $element;
 }
 
 function path_redirect_edit_form_validate($form, &$form_state) {
@@ -220,7 +212,7 @@ function path_redirect_delete_form($form_state, $redirect) {
 
   return confirm_form(
     $form,
-    t('Are you sure you want to delete the redirect from %path to %redirect?', array('%path' => $redirect['path'], '%redirect' => $redirect['redirect'])),
+    t('Are you sure you want to delete the redirect from %source to %redirect?', array('%source' => $redirect['source'], '%redirect' => $redirect['redirect'])),
     isset($_GET['destination']) ? $_GET['destination'] : 'admin/build/path-redirect'
   );
 }
@@ -295,7 +287,7 @@ function path_redirect_js_autocomplete_404() {
   $paths = db_query("SELECT message, COUNT(message) AS count FROM {watchdog} WHERE type = 'page not found' AND LOWER(message) LIKE '%%%s%%' GROUP BY message ORDER BY count DESC", drupal_strtolower($string));
   while ($path = db_result($paths)) {
     // If the 404 is now a valid path or already has a redirect, discard it.
-    if (!menu_get_item($path) && !path_redirect_load_by_path($path, FALSE)) {
+    if (!menu_get_item($path) && !path_redirect_load_by_path($path)) {
       $matches[$path] = check_plain($path);
     }
   }
@@ -456,7 +448,7 @@ function path_redirect_export_form_submit($form, $form_state) {
  */
 function path_redirect_export_csv() {
   drupal_set_header('Content-Type: text/csv; charset=utf-8');
-  $fields = array('path', 'redirect', 'query', 'fragment', 'language', 'type', 'last_used');
+  $fields = array('source', 'redirect', 'query', 'fragment', 'language', 'type', 'last_used');
   $redirects = db_query("SELECT ". implode(', ', $fields) ." FROM {path_redirect}");
   $export = implode("\t", $fields) . PHP_EOL;
   while ($redirect = db_fetch_array($redirects)) {
@@ -474,7 +466,7 @@ function path_redirect_export_xml() {
   drupal_set_header('Content-Type: text/xml; charset=utf-8');
   //$export = simplexml_load_string();
   $export = new SimpleXMLElement("<?xml version=\"1.0\" encoding=\"utf-8\"?><redirects />");
-  $redirects = db_query("SELECT path, redirect, query, fragment, language, type, last_used FROM {path_redirect}");
+  $redirects = db_query("SELECT source, redirect, query, fragment, language, type, last_used FROM {path_redirect}");
   while ($redirect = db_fetch_object($redirects)) {
     $export_item = $export->addChild('redirect');
     foreach ($redirect as $key => $value) {
