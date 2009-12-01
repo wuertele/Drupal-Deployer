@@ -667,3 +667,29 @@ function project_release_views_handlers() {
   );
 }
 
+/**
+ * Implement hook_views_plugins().
+ */
+function project_release_views_plugins() {
+  $path = drupal_get_path('module', 'project_release') . '/views/plugins';
+  $views_path = drupal_get_path('module', 'views');
+  return array(
+    'style' => array(
+      'project_release_table' => array(
+        'title' => t('Project release table'),
+        'help' => t('Table with colored rows depending on release update status.'),
+        'handler' => 'project_release_table_plugin_style',
+        'parent' => 'table',
+        'path' => $path,
+        'theme' => 'views_view_table',
+        'theme file' => 'theme.inc',
+        'theme path' => "$views_path/theme",
+        'uses row plugin' => FALSE,
+        'uses fields' => TRUE,
+        'uses options' => TRUE,
+        'type' => 'normal',
+      ),
+    ),
+  );
+}
+

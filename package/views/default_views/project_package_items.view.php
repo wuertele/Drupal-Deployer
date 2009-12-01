@@ -202,7 +202,7 @@ $handler->override_option('cache', array(
   'type' => 'none',
 ));
 $handler->override_option('items_per_page', 0);
-$handler->override_option('style_plugin', 'table');
+$handler->override_option('style_plugin', 'project_release_table');
 $handler->override_option('style_options', array(
   'grouping' => '',
   'override' => 1,
