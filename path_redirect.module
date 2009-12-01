@@ -24,8 +24,9 @@ function path_redirect_help($path, $arg) {
  */
 function path_redirect_theme() {
   return array(
-    'path_redirect_admin_list_by_path' => array(
-      'arguments' => array('redirect' => NULL, 'language' => NULL),
+    'path_redirect_list_redirects' => array(
+      'arguments' => array('rids' => NULL, 'conditions' => array(), 'empty_message' => NULL),
+      'file' => 'path_redirect.admin.inc',
     ),
   );
 }
@@ -221,7 +222,7 @@ function path_redirect_form_alter(&$form, $form_state, $form_id) {
     );
     $form['path_redirect']['table'] = array(
       '#type' => 'markup',
-      '#value' => theme('path_redirect_admin_list_by_path', $redirect['redirect'], $redirect['language']),
+      '#value' => theme('path_redirect_list_redirects', NULL, array('redirect' => $redirect['redirect'])),
     );
     $form['path_redirect']['add'] = array(
       '#type' => 'markup',
@@ -243,8 +244,8 @@ function path_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       break;
     case 'delete':
       // When a node is deleted, also delete the redirects to it (they will result in a 404).
-      path_redirect_delete_multiple(array(), array('source' => 'node/'. $node->nid));
-      path_redirect_delete_multiple(array(), array('source' => 'node/'. $node->nid . '/%%'));
+      path_redirect_delete_multiple(NULL, array('source' => 'node/'. $node->nid));
+      path_redirect_delete_multiple(NULL, array('source' => 'node/'. $node->nid . '/%%'));
       break;
   }
 }
@@ -287,9 +288,9 @@ function path_redirect_taxonomy($op, $type, $array = NULL) {
     // Delete any redirects to valid taxonomy paths.
     $term = (object) $array;
     $term->path = taxonomy_term_path($term);
-    path_redirect_delete_multiple(array(), array('source' => $term->path));
+    path_redirect_delete_multiple(NULL, array('source' => $term->path));
     if ($term->path != 'taxonomy/term/' . $term->tid) {
-      path_redirect_delete_multiple(array(), array('source' => 'taxonomy/term/' . $term->tid));
+      path_redirect_delete_multiple(NULL, array('source' => 'taxonomy/term/' . $term->tid));
     }
   }
 }
@@ -300,8 +301,8 @@ function path_redirect_taxonomy($op, $type, $array = NULL) {
 function path_redirect_user($op, &$edit, &$account, $category = NULL) {
   if ($op == 'delete') {
     // Delete any redirects to valid user paths.
-    path_redirect_delete_multiple(array(), array('source' => 'user/'. $account->uid));
-    path_redirect_delete_multiple(array(), array('source' => 'user/'. $account->uid . '/%%'));
+    path_redirect_delete_multiple(NULL, array('source' => 'user/'. $account->uid));
+    path_redirect_delete_multiple(NULL, array('source' => 'user/'. $account->uid . '/%%'));
   }
 }
 
@@ -454,7 +455,11 @@ function path_redirect_load_by_path($path, $language = '', $query = array()) {
   }
 }
 
-function path_redirect_load_multiple($rids = array(), $conditions = array()) {
+function path_redirect_load_multiple($rids = NULL, $conditions = array()) {
+  if (isset($rids) && empty($rids)) {
+    return array();
+  }
+
   $args = _path_redirect_build_conditions($rids, $conditions);
   $sql = "SELECT * FROM {path_redirect} WHERE " . implode(' AND ', $conditions);
 
@@ -529,19 +534,28 @@ function path_redirect_delete($redirect, $deprecated = FALSE) {
     return db_query("DELETE FROM {path_redirect} WHERE source = '%s' AND redirect = '%s'", $redirect['source'], $redirect['redirect']);
   }
 
-  path_redirect_refresh_redirects($redirect);
   db_query("DELETE FROM {path_redirect} WHERE rid = %d", $redirect['rid']);
-  path_redirect_refresh_redirects();
-  return db_affected_rows();
+
+  $deleted = db_affected_rows();
+  if ($deleted) {
+    path_redirect_refresh_redirects($redirect);
+  }
+  return $deleted();
 }
 
-function path_redirect_delete_multiple(array $rids = array(), $conditions = array()) {
+function path_redirect_delete_multiple($rids = NULL, $conditions = array()) {
+  if (isset($rids) && empty($rids)) {
+    return 0;
+  }
 
-  path_redirect_refresh_redirects();
   $args = _path_redirect_build_conditions($rids, $conditions);
   $sql = 'DELETE FROM {path_redirect} WHERE ' . implode(' AND ', $conditions);
   db_query($sql, $args);
-  return db_affected_rows();
+  $deleted = db_affected_rows();
+  if ($deleted) {
+    path_redirect_refresh_redirects();
+  }
+  return $deleted;
 }
 
 function path_redirect_get_path($path = NULL) {
@@ -638,41 +652,6 @@ function path_redirect_get_query_array($query) {
     }
   }
   return $result;
-}
-
-/**
- * Show a table listing of redirects pointing to a path.
- */
-function theme_path_redirect_admin_list_by_path($redirect, $language) {
-  $header = array(
-    array('data' => t('From'), 'field' => 'source', 'sort' => 'asc'),
-    array('data' => t('Type'), 'field' => 'type'),
-    array('data' => t('Operations'), 'colspan' => '2'),
-  );
-
-  $rows = array();
-  $redirects = path_redirect_load_multiple(array(), array('redirect' => $redirect));
-  foreach ($redirects as $rid => $redirect) {
-    $redirect['source_url'] = path_redirect_build_url($redirect['source'], $redirect['source_query']);
-    $rows[] = array(
-      'data' => array(
-        l($redirect['source_url'], $redirect['source'], array('query' => $redirect['source_query'])),
-        $redirect['type'],
-        l(t('Edit'), 'admin/build/path-redirect/edit/' . $rid, array('query' => drupal_get_destination())),
-        l(t('Delete'), 'admin/build/path-redirect/delete/' . $rid, array('query' => drupal_get_destination())),
-      ),
-    );
-  }
-
-  if (empty($rows)) {
-    $rows[] = array(array(
-      'data' => t('No redirects found.'),
-      'colspan' => 4,
-      'class' => 'path-redirect-none',
-    ));
-  }
-
-  return theme('table', $header, $rows, array('class' => 'path-redirects'));
 }
 
 function path_redirect_variables() {

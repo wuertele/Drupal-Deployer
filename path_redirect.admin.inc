@@ -6,6 +6,67 @@
  * Administrative page callbacks for the path_redirect module.
  */
 
+function _path_redirect_list_redirects_header() {
+  $header = array(
+    'source' => array('data' => t('From'), 'field' => 'source', 'sort' => 'asc'),
+    'redirect' => array('data' => t('To'), 'field' => 'redirect'),
+    'type' => array('data' => t('Type'), 'field' => 'type'),
+    'language' => array('data' => t('Language'), 'field' => 'language'),
+    'operations' => array('data' => t('Operations'), 'colspan' => '2'),
+  );
+  return $header;
+}
+
+function theme_path_redirect_list_redirects($rids = NULL, $conditions = array(), $empty_message = NULL) {
+  $header = _path_redirect_list_redirects_header();
+
+  if (!module_exists('locale')) {
+    unset($header['language']);
+  }
+  //if (!user_access('administer redirects')) {
+  //  unset($header['opertations']);
+  //}
+  foreach (array_keys($conditions) as $field) {
+    unset($header[$field]);
+  }
+
+  $redirects = path_redirect_load_multiple($rids, $conditions);
+  $destination = drupal_get_destination();
+  $rows = array();
+  foreach($redirects as $rid => $redirect) {
+    $row = array('data' => array());
+    if (isset($header['source'])) {
+      $source_url = path_redirect_build_url($redirect['source'], $redirect['source_query']);
+      $row['data'][] = l($source_url, $redirect['source'], array('query' => $redirect['source_query'], 'alias' => TRUE));
+    }
+    if (isset($header['redirect'])) {
+      $redirect_url = path_redirect_build_url($redirect['redirect'], $redirect['query'], $redirect['fragment'], TRUE);
+      $row['data'][] = l($redirect_url, $redirect['redirect'], array('query' => $redirect['query'], 'fragment' => $redirect['fragment']));
+    }
+    if (isset($header['type'])) {
+      $row['data'][] = $redirect['type'];
+    }
+    if (isset($header['language'])) {
+      $row['data'][] = module_invoke('locale', 'language_name', $redirect['language']);
+    }
+    if (isset($header['operations'])) {
+      $row['data'][] = l(t('Edit'), 'admin/build/path-redirect/edit/' . $rid, array('query' => $destination));
+      $row['data'][] = l(t('Delete'), 'admin/build/path-redirect/delete/' . $rid, array('query' => $destination));
+    }
+    $rows[] = $row;
+  }
+
+  if (empty($rows)) {
+    $rows[] = array(array(
+      'data' => isset($empty_message) ? $empty_messsage : t('No URL redirects found.'),
+      'colspan' =>  isset($header['operations']) ? count($header) + 1 : count($header),
+      'class' => array('path-redirect-none'),
+    ));
+  }
+
+  return theme('table', $header, $rows, array('class' => 'path-redirects'));
+}
+
 /**
  * Render a list of redirects for the main admin page.
  */
@@ -15,18 +76,6 @@ function path_redirect_list_redirects() {
   $keys = implode('/', $keys);
   $output = drupal_get_form('path_redirect_filter_form', $keys);
 
-  $multilanguage = module_exists('locale');
-
-  $header = array(
-    array('data' => t('From'), 'field' => 'source', 'sort' => 'asc'),
-    array('data' => t('To'), 'field' => 'redirect'),
-    array('data' => t('Type'), 'field' => 'type'),
-    array('data' => t('Operations'), 'colspan' => '2'),
-  );
-  if ($multilanguage) {
-    array_splice($header, 3, 0, array(array('data' => t('Language'), 'field' => 'language')));
-  }
-
   if ($keys) {
     // Replace wildcards with MySQL/PostgreSQL wildcards.
     $keys = preg_replace('!\*+!', '%', $keys);
@@ -35,40 +84,14 @@ function path_redirect_list_redirects() {
   else {
     $sql = 'SELECT rid FROM {path_redirect}';
   }
-  $sql .= tablesort_sql($header);
+  $sql .= tablesort_sql(_path_redirect_list_redirects_header());
   $query = pager_query($sql, 50, 0, NULL, $keys, $keys, $keys, $keys);
   $rids = array();
   while ($rid = db_result($query)) {
     $rids[] = $rid;
   }
 
-  $redirects = path_redirect_load_multiple($rids);
-  $destination = drupal_get_destination();
-  $rows = array();
-  foreach($redirects as $rid => $redirect) {
-    $redirect['source_url'] = path_redirect_build_url($redirect['source'], $redirect['source_query']);
-    $redirect['redirect_url'] = path_redirect_build_url($redirect['redirect'], $redirect['query'], $redirect['fragment'], TRUE);
-    $row = array(
-      'data' => array(
-        l($redirect['source_url'], $redirect['source'], array('query' => $redirect['source_query'], 'alias' => TRUE)),
-        l($redirect['redirect_url'], $redirect['redirect'], array('query' => $redirect['query'], 'fragment' => $redirect['fragment'])),
-        $redirect['type'],
-        l(t('Edit'), 'admin/build/path-redirect/edit/' . $rid, array('query' => $destination)),
-        l(t('Delete'), 'admin/build/path-redirect/delete/' . $rid, array('query' => $destination)),
-      ),
-    );
-    if ($multilanguage) {
-      array_splice($row['data'], 3, 0, module_invoke('locale', 'language_name', $redirect['language']));
-    }
-    $rows[] = $row;
-  }
-
-  if (empty($rows)) {
-    $empty_message = $keys ? t('No URL redirects found.') : t('No URL redirects available. <a href="@link">Add redirect</a>.', array('@link' => url('admin/build/path-redirect/add'))) ;
-    $rows[] = array(array('data' => $empty_message, 'colspan' => $multilanguage ? 6 : 5));
-  }
-
-  $output .= theme('table', $header, $rows);
+  $output .= theme('path_redirect_list_redirects', $rids, array(), $keys ? t('No URL redirects found.') : t('No URL redirects available. <a href="@link">Add redirect</a>.', array('@link' => url('admin/build/path-redirect/add'))));
   $output .= theme('pager', NULL, 50, 0);
 
   return $output;
