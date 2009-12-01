@@ -428,18 +428,32 @@ function format_number_numericfield_process($element, $edit, $form_state, $form)
   $element['#size'] = $element_maxlength + 1;
   $element['#maxlength'] = $element_maxlength;
 
-  // Format the default value.
-  $default_value = (isset($element['#value']) ? $element['#value'] : '');
-  if (is_numeric($default_value)) {
-    $default_value = format_number($default_value, $element_decimals);
+  // Format the element value. A valid PHP number is expected. It may come from
+  // user defined form or from element value callback. In any case, our element
+  // validation callback will generate a valid PHP number, or flag an error. Our
+  // goal now is generate a number formatted with site or user defined options,
+  // if value is a valid PHP number.
+  $value = (!empty($element['#value']) && is_string($element['#value']) ? $element['#value'] : '');
+  if (is_numeric($value)) {
+    $value = format_number($value, $element_decimals);
   }
-  $element['#default_value'] = $default_value;
+  $element['#value'] = $value;
 
   // Pass decimal places to the client-side javascript using HTML attribute.
-  $element['#attributes'] = array('decimals' => $element_decimals);
+  if (isset($element['#attributes']) && is_array($element['#attributes'])) {
+    $element['#attributes']['decimals'] = $element_decimals;
+  }
+  else {
+    $element['#attributes'] = array('decimals' => $element_decimals);
+  }
 
   // Attach a validation callback to the form element.
-  $element['#element_validate'] = array('format_number_numericfield_validate');
+  if (isset($element['#element_validate']) && is_array($element['#element_validate'])) {
+    array_shift($element['#element_validate'], 'format_number_numericfield_validate');
+  }
+  else {
+    $element['#element_validate'] = array('format_number_numericfield_validate');
+  }
 
   return $element;
 }
@@ -461,7 +475,14 @@ function format_number_numericfield_process($element, $edit, $form_state, $form)
 function form_type_numericfield_value($element, $edit = FALSE) {
   if ($edit !== FALSE) {
     // Equate $edit to the form value to ensure it's marked for validation.
-    return trim(str_replace(array("\r", "\n"), '', $edit));
+    $value = trim(str_replace(array("\r", "\n"), '', $edit));
+    // If input is not empty, we want a valid PHP number now.
+    // If input cannot be parsed as a valid PHP number, our element validation
+    // callback will take care of it.
+    if ($value != '' && ($parsed = parse_formatted_number($value)) !== FALSE) {
+      $value = $parsed;
+    }
+    return $value;
   }
 }
 
