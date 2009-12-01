@@ -413,20 +413,27 @@ function format_number_numericfield_process($element, $edit, $form_state, $form)
     $element_minimum = format_number_compute_boundary('lower', $element_precision, $element_decimals);
   }
 
-  // Compute size and maxlength for the input element.
-  $element_maxlength = $element_precision;
-  if ($element_decimals > 0) {
-    $element_maxlength++;
+  // Compute size and maxlength for the input element, but still allow the
+  // user specify these values in the form definition.
+  if (empty($element['#size']) || empty($element['#maxlength'])) {
+    $element_maxlength = $element_precision;
+    if ($element_decimals > 0) {
+      $element_maxlength++;
+    }
+    if (isset($element_minimum) && $element_minimum < 0) {
+      $element_maxlength++;
+    }
+    $thousands_sep = format_number_get_options('thousands_sep');
+    if (!empty($thousands_sep)) {
+      $element_maxlength += (ceil(($element_precision - $element_decimals) / 3) - 1);
+    }
+    if (empty($element['#size'])) {
+      $element['#size'] = $element_maxlength + 1;
+    }
+    if (empty($element['#maxlength'])) {
+      $element['#maxlength'] = $element_maxlength;
+    }
   }
-  if (isset($element_minimum) && $element_minimum < 0) {
-    $element_maxlength++;
-  }
-  $thousands_sep = format_number_get_options('thousands_sep');
-  if (!empty($thousands_sep)) {
-    $element_maxlength += ceil($element_precision / 3);
-  }
-  $element['#size'] = $element_maxlength + 1;
-  $element['#maxlength'] = $element_maxlength;
 
   // Format the element value. A valid PHP number is expected. It may come from
   // user defined form or from element value callback. In any case, our element
