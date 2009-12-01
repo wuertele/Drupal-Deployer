@@ -44,7 +44,7 @@ function _services_resource_controller_as_service($resource, $name, $controller,
     'method' => $resource . '_resource.' . $name,
   ));
 
-  if (!empty($file) && !empty($method['file'])) {
+  if (!empty($file) && empty($method['file'])) {
     $method['file'] = $file;
   }
 
