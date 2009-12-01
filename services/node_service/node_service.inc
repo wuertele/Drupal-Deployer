@@ -96,6 +96,17 @@ function node_service_save($edit) {
   module_load_include('inc', 'node', 'node.pages');
   $nid = NULL;
   $edit = (array) $edit;
+  
+  // The translation module relies on two $_GET variables in order to
+  // function properly. In order to properly save translated nodes, we will
+  // have to set these by hand when we detect this situation. Summarizing 
+  // our feelings about having to implement this hack is left as an
+  // exercise for the reader.
+  if (!empty($edit['tnid']) && !empty($edit['language'])) {
+    $_GET['language'] = $edit['language'];
+    $_GET['translation'] = $edit['tnid'];
+  }
+  
   if ($edit['nid']) {
     $node = node_load($edit['nid']);
     if ($node->nid) {
@@ -132,6 +143,14 @@ function node_service_save($edit) {
     // Fetch $nid out of $form_state
     $nid = $form_state['nid'];
   }
+  
+  // Now unset those $_GET params so they're not hanging around causing trouble
+  // for anyone else.
+  if (isset($_GET['language'])) {
+    unset($_GET['language']);
+    unset($_GET['translation']);
+  }
+  
   if ($errors = form_get_errors()) {
     return services_error(implode("\n", $errors), 401);
   }
