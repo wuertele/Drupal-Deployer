@@ -171,11 +171,11 @@ function path_redirect_goto($redirect = NULL) {
       // Prevent infinite loop redirection.
       watchdog('path_redirect', 'Redirect to <code>%redirect</code> is causing an infinite loop; redirect cancelled.', array('%redirect' => $redirect['location']), WATCHDOG_WARNING, l(t('Edit'), 'admin/build/path-redirect/edit/'. $redirect['rid']));
     }
-    elseif (path_redirect_var('allow_bypass') && isset($_GET['redirect']) && $_GET['redirect'] === 'no') {
+    elseif (variable_get('path_redirect_allow_bypass', 0) && isset($_GET['redirect']) && $_GET['redirect'] === 'no') {
       // If the user has requested not to be redirected, show a message.
       drupal_set_message(t('This page has been moved to <a href="@redirect">@redirect</a>.', array('@redirect' => $redirect['location'])));
     }
-    elseif (path_redirect_var('redirect_warning')) {
+    elseif (variable_get('path_redirect_redirect_warning', 0)) {
       // Show a message and automatically redirect after 10 seconds.
       drupal_set_message(t('This page has been moved to <a href="@redirect">@redirect</a>. You will be automatically redirected in 10 seconds.', array('@redirect' => $redirect['location'])), 'error');
       drupal_set_html_head('<meta http-equiv="refresh" content="10;url=' . $redirect['location'] . '" />');
@@ -196,7 +196,7 @@ function path_redirect_goto($redirect = NULL) {
  */
 function path_redirect_cron() {
   // Purge inactive redirects from the database.
-  if ($purge = path_redirect_var('purge_inactive')) {
+  if ($purge = variable_get('path_redirect_purge_inactive', 0)) {
     db_query("DELETE FROM {path_redirect} WHERE last_used < %d", time() - $purge);
     if ($count = db_affected_rows()) {
       watchdog('path_redirect', format_plural($count, 'Removed 1 inactive redirect from the database.', 'Removed @count inactive redirects from the database.'));
@@ -269,7 +269,7 @@ function path_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
  *   TRUE if a redirect was created, or FALSE otherwise.
  */
 function path_redirect_check_alias_changed($path, $new_alias, $language = '') {
-  if (!path_redirect_var('auto_redirect') || empty($new_alias)) {
+  if (!variable_get('path_redirect_auto_redirect', 1) || empty($new_alias)) {
     return FALSE;
   }
 
@@ -383,7 +383,7 @@ function path_redirect_save($redirect) {
     'query' => '',
     'fragment' => '',
     'language' => '',
-    'type' => path_redirect_var('default_status'),
+    'type' => variable_get('path_redirect_default_status', 301),
     'last_used' => time(),
   );
 
@@ -598,9 +598,6 @@ function theme_path_redirect_admin_list_by_path($redirect, $language) {
   return theme('table', $header, $rows, array('class' => 'path-redirects'));
 }
 
-/**
- * Internal default variables for template_var().
- */
 function path_redirect_variables() {
   return array(
     'path_redirect_redirect_warning' => 0,
@@ -608,26 +605,6 @@ function path_redirect_variables() {
     'path_redirect_auto_redirect' => 1,
     'path_redirect_purge_inactive' => 0,
     'path_redirect_default_status' => 301,
-    // Unused variables set to NULL so they will still be uninstalled.
     'path_redirect_nodeapi_enabled' => NULL,
   );
-}
-
-/**
- * Internal implementation of variable_get().
- */
-function path_redirect_var($name, $default = NULL) {
-  static $defaults = NULL;
-  if (!isset($defaults)) {
-    $defaults = path_redirect_variables();
-  }
-
-  $name = 'path_redirect_' . $name;
-
-  // @todo Remove when stable.
-  if (!isset($defaults[$name])) {
-    trigger_error("Default variable for $name not found.");
-  }
-
-  return variable_get($name, isset($default) || !isset($defaults[$name]) ? $default : $defaults[$name]);
 }
