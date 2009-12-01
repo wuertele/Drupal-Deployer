@@ -6,24 +6,45 @@
  * Tests for the path_redirect module.
  */
 
-/**
- * @todo Add the following test conditions:
- * - Case insensitive
- * - Different URL schemas (e.g. ical://)
- * - Page cache of path cleared when redirect saved
- */
+class PathRedirectTestHelper extends DrupalWebTestCase {
+  function setUp() {
+    $modules = func_get_args();
+    $modules[] = 'path_redirect';
+    call_user_func_array(array('parent', 'setUp'), $modules);
+  }
 
-class PathRedirectUnitTest extends DrupalWebTestCase {
+  protected function assertRedirect($request, $redirect, $code = FALSE) {
+    $this->drupalGet($request);
+    if ($code) {
+      $this->assertResponse($code);
+    }
+    $this->assertEqual($this->getUrl(), url($redirect, array('absolute' => TRUE)), t('Redirected from %request to %redirect.', array('%request' => $request, '%redirect' => $redirect)));
+  }
+}
+
+class PathRedirectUnitTest extends PathRedirectTestHelper {
   public static function getInfo() {
     return array(
-      'name' => t('Path redirect functionality'),
-      'description' => t('Test basic redirection.'),
-      'group' => t('Path redirect'),
+      'name' => 'Path redirect unit tests',
+      'description' => 'Test basic functionality.',
+      'group' => 'Path redirect',
     );
   }
 
-  function setUp() {
-    parent::setUp('path_redirect');
+  function testCompareArray() {
+    $haystack = array('a' => 'aa', 'b' => 'bb', 'c' => array('c1' => 'cc1', 'c2' => 'cc2'));
+    $cases = array(
+      array('query' => array('a' => 'aa', 'b' => 'invalid'), 'result' => FALSE),
+      array('query' => array('b' => 'bb', 'b' => 'bb'), 'result' => TRUE),
+      array('query' => array('b' => 'bb', 'c' => 'invalid'), 'result' => FALSE),
+      array('query' => array('b' => 'bb', 'c' => array()), 'result' => TRUE),
+      array('query' => array('b' => 'bb', 'c' => array('invalid')), 'result' => FALSE),
+      array('query' => array('b' => 'bb', 'c' => array('c2' => 'invalid')), 'result' => FALSE),
+      array('query' => array('b' => 'bb', 'c' => array('c2' => 'cc2')), 'result' => TRUE),
+    );
+    foreach ($cases as $index => $case) {
+      $this->assertEqual($case['result'], path_redirect_compare_array($case['query'], $haystack));
+    }
   }
 
   function testRedirects() {
@@ -42,17 +63,10 @@ class PathRedirectUnitTest extends DrupalWebTestCase {
   }
 
   function testNoCleanURLs() {
-    variable_set('clean_url', 0);
+    $clean_url = (bool) variable_get('clean_url', 0);
+    variable_set('clean_url', !$clean_url);
     $this->testRedirects();
-    variable_set('clean_url', 1);
-  }
-
-  private function assertRedirect($request, $redirect, $code = FALSE) {
-    $this->drupalGet($request);
-    if ($code) {
-      $this->assertResponse($code);
-    }
-    $this->assertEqual($this->getUrl(), url($redirect, array('absolute' => TRUE)), t('Redirected from %request to %redirect.', array('%request' => $request, '%redirect' => $redirect)));
+    variable_set('clean_url', (int) $clean_url);
   }
 }
 
