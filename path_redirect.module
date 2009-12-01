@@ -150,7 +150,7 @@ function path_redirect_goto($redirect = NULL) {
     $path = path_redirect_get_path();
     $language = $GLOBALS['language']->language;
     $query = path_redirect_get_query();
-    $redirect = path_redirect_load_by_path($path, $language, $query);
+    $redirect = path_redirect_load_by_source($path, $language, $query);
   }
   elseif (is_numeric($redirect)) {
     $redirect = path_redirect_load($redirect);
@@ -352,7 +352,7 @@ function path_redirect_validate_redirect_field($element, &$form_state) {
  * Validate a redirection.
  */
 function path_redirect_validate_redirect($redirect, $form_parents = '') {
-  if ($existing = path_redirect_load_by_path($redirect['source'], $redirect['language'])) {
+  if ($existing = path_redirect_load_by_source($redirect['source'], $redirect['language'])) {
     if ($redirect['rid'] != $existing['rid']) {
       // The "from" path should not conflict with another redirect
       form_set_error($form_parents . 'source', t('The source path %source is already being redirected. Do you want to <a href="@edit-page">edit the existing redirect</a>?', array('%source' => $redirect['source'], '@edit-page' => url('admin/build/path-redirect/edit/'. $existing['rid']))));
@@ -408,17 +408,14 @@ function path_redirect_save($redirect) {
  *   An integer with the redirect ID.
  */
 function path_redirect_load($rid) {
-  $redirect = db_fetch_array(db_query_range("SELECT * FROM {path_redirect} WHERE rid = %d", $rid, 0, 1));
-  if ($redirect) {
-    path_redirect_post_load_redirect($redirect);
-  }
-  return $redirect;
+  $redirect = path_redirect_load_multiple(array($rid));
+  return $redirect ? reset($redirect) : FALSE;
 }
 
 /**
  * Load a redirect by incoming path and language.
  *
- * @param $path
+ * @param $source
  *   The incoming path.
  * @param $language
  *   An optional language code. If not provided this will examine all language-
@@ -426,33 +423,28 @@ function path_redirect_load($rid) {
  * @param $query
  *   An optional query string to match.
  */
-function path_redirect_load_by_path($path, $language = '', $query = array()) {
-  if ($query) {
-    $rid_query = db_query("SELECT rid FROM {path_redirect} WHERE (source = '%s' OR source LIKE '%s') AND language IN ('%s', '') ORDER BY language DESC, source DESC, rid DESC", $path, $path . '?%%', $language);
-  }
-  else {
-    $rid_query = db_query("SELECT rid FROM {path_redirect} WHERE source = '%s' AND language IN ('%s', '') ORDER BY language DESC, source DESC, rid DESC", $path, $language);
-  }
-
+function path_redirect_load_by_source($source, $language = '', $query = array()) {
+  $where = $query ? "(source = '%s' OR source LIKE '%s')" : "source = '%s'";
+  $args = ($query ? array($source, $source . '?%%') : array($source)) + array($language);
+  $rid_query = db_query("SELECT rid FROM {path_redirect} WHERE $where AND language IN ('%s', '') ORDER BY language DESC, source DESC, rid DESC", $args);
   $rids = array();
   while ($rid = db_result($rid_query)) {
     $rids[] = $rid;
   }
 
-  if ($rids) {
-    // If there is a query on this path, check paths first.
-    if ($query) {
-      $redirects = path_redirect_load_multiple($rids);
-      foreach ($redirects as $rid => $redirect) {
-        if (path_redirect_compare_array($redirect['source_query'], $query)) {
-          return $redirect;
-        }
+  if ($query) {
+    $redirects = path_redirect_load_multiple($rids);
+    foreach ($redirects as $rid => $redirect) {
+      if (path_redirect_compare_array($redirect['source_query'], $query)) {
+        return $redirect;
       }
     }
-    else {
-      return path_redirect_load(current($rids));
-    }
   }
+  elseif ($rids) {
+    return path_redirect_load(current($rids));
+  }
+
+  return FALSE;
 }
 
 function path_redirect_load_multiple($rids = NULL, $conditions = array()) {
@@ -462,14 +454,13 @@ function path_redirect_load_multiple($rids = NULL, $conditions = array()) {
 
   $args = _path_redirect_build_conditions($rids, $conditions);
   $sql = "SELECT * FROM {path_redirect} WHERE " . implode(' AND ', $conditions);
-
   $query = db_query($sql, $args);
+
   $redirects = array();
   while ($redirect = db_fetch_array($query)) {
-    path_redirect_post_load_redirect($redirect);
     $redirects[$redirect['rid']] = $redirect;
   }
-
+  $redirects = array_map('path_redirect_post_load_redirect', $redirects);
   return $redirects;
 }
 
@@ -480,16 +471,25 @@ function _path_redirect_build_conditions($rids, &$conditions) {
   }
 
   $args = array();
+  if ($rids) {
+    $conditions += array('rid' => array());
+    $conditions['rid'] = array_merge($rids, (array) $conditions['rid']);
+  }
   if ($conditions) {
     foreach ($conditions as $field => $value) {
-      $type = db_type_placeholder($schema['fields'][$field]['type']);
-      $conditions[$field] = "$field = $type";
-      $args[] = $value;
+      //if ($field == 'langauge' && !is_array($value)) {
+      //  $value = array($value, '');
+      //}
+      $type = $schema['fields'][$field]['type'];
+      if (is_array($value)) {
+        $conditions[$field] = "$field IN (" . db_placeholders($value, $type) . ')';
+        $args = array_merge($args, $value);
+      }
+      else {
+        $conditions[$field] = "$field = " . dB_type_placeholder($type);
+        $args[] = $value;
+      }
     }
-  }
-  if ($rids) {
-    $conditions[] = 'rid IN (' . db_placeholders($rids) . ')';
-    $args = array_merge($args, $rids);
   }
 
   return $args;
@@ -502,6 +502,7 @@ function path_redirect_post_load_redirect(array &$redirect) {
     $redirect['source'] = $parsed['path'];
   }
   $redirect['query'] = path_redirect_get_query_array($redirect['query']);
+  return $redirect;
 }
 
 function path_redirect_refresh_redirects($redirect = NULL) {
@@ -525,29 +526,19 @@ function path_redirect_refresh_redirects($redirect = NULL) {
  * @param $redirect
  *   An array with the redirect data.
  */
-function path_redirect_delete($redirect, $deprecated = FALSE) {
+function path_redirect_delete($rid, $deprecated = FALSE) {
   // @todo Remove legacy path_redirect_delete support for pathauto.
-  if (is_string($redirect) && is_string($deprecated)) {
-    return db_query("DELETE FROM {path_redirect} WHERE source = '%s' AND redirect = '%s'", $redirect, $deprecated);
+  if (is_string($rid) && is_string($deprecated)) {
+    return path_redirect_delete_multiple(NULL, array('source' => $rid, 'redirect' => $deprecated));
   }
-  elseif (is_array($redirect) && !isset($redirect['rid'])) {
-    return db_query("DELETE FROM {path_redirect} WHERE source = '%s' AND redirect = '%s'", $redirect['source'], $redirect['redirect']);
+  elseif (is_array($rid) && !isset($rid['rid'])) {
+    $rid = $rid['rid'];
   }
 
-  db_query("DELETE FROM {path_redirect} WHERE rid = %d", $redirect['rid']);
-
-  $deleted = db_affected_rows();
-  if ($deleted) {
-    path_redirect_refresh_redirects($redirect);
-  }
-  return $deleted();
+  return path_redirect_delete_multiple(array($rid));
 }
 
 function path_redirect_delete_multiple($rids = NULL, $conditions = array()) {
-  if (isset($rids) && empty($rids)) {
-    return 0;
-  }
-
   $args = _path_redirect_build_conditions($rids, $conditions);
   $sql = 'DELETE FROM {path_redirect} WHERE ' . implode(' AND ', $conditions);
   db_query($sql, $args);

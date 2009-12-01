@@ -248,7 +248,7 @@ function path_redirect_delete_form($form_state, $redirect) {
 }
 
 function path_redirect_delete_form_submit($form, &$form_state) {
-  path_redirect_delete($form_state['values']['redirect']);
+  path_redirect_delete($form_state['values']['redirect']['rid']);
   drupal_set_message(t('The redirect has been deleted.'));
   $form_state['redirect'] = 'admin/build/path-redirect';
 }
