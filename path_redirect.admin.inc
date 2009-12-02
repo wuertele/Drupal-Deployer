@@ -17,7 +17,7 @@ function _path_redirect_list_redirects_header() {
   return $header;
 }
 
-function theme_path_redirect_list_redirects($rids = NULL, $conditions = array(), $empty_message = NULL) {
+function theme_path_redirect_list_redirects($rids = NULL, $conditions = array()) {
   $header = _path_redirect_list_redirects_header();
 
   if (!module_exists('locale')) {
@@ -58,13 +58,13 @@ function theme_path_redirect_list_redirects($rids = NULL, $conditions = array(),
 
   if (empty($rows)) {
     $rows[] = array(array(
-      'data' => isset($empty_message) ? $empty_messsage : t('No URL redirects found.'),
+      'data' => t('No URL redirects available.'),
       'colspan' =>  isset($header['operations']) ? count($header) + 1 : count($header),
-      'class' => array('path-redirect-none'),
+      'class' => 'empty',
     ));
   }
 
-  return theme('table', $header, $rows, array('class' => 'path-redirects'));
+  return theme('table', $header, $rows);
 }
 
 /**
@@ -91,6 +91,7 @@ function path_redirect_list_redirects() {
     $rids[] = $rid;
   }
 
+  $output .= path_redirect_local_actions();
   $output .= theme('path_redirect_list_redirects', $rids, array(), $keys ? t('No URL redirects found.') : t('No URL redirects available. <a href="@link">Add redirect</a>.', array('@link' => url('admin/build/path-redirect/add'))));
   $output .= theme('pager', NULL, 50, 0);
 

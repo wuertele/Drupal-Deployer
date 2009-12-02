@@ -25,7 +25,7 @@ function path_redirect_help($path, $arg) {
 function path_redirect_theme() {
   return array(
     'path_redirect_list_redirects' => array(
-      'arguments' => array('rids' => NULL, 'conditions' => array(), 'empty_message' => NULL),
+      'arguments' => array('rids' => NULL, 'conditions' => array()),
       'file' => 'path_redirect.admin.inc',
     ),
   );
@@ -225,13 +225,23 @@ function path_redirect_form_alter(&$form, $form_state, $form_id) {
       '#value' => theme('path_redirect_list_redirects', NULL, array('redirect' => $redirect['redirect'])),
     );
     $form['path_redirect']['add'] = array(
-      '#type' => 'markup',
-      '#value' => '<p>' . l(t('Add new redirect'), 'admin/build/path-redirect/add', array('query' => drupal_get_destination() . '&' . drupal_query_string_encode($redirect))) . '</p>',
+      '#value' => path_redirect_local_actions($redirect),
     );
     if (module_exists('vertical_tabs')) {
       drupal_add_js(drupal_get_path('module', 'path_redirect') . '/path_redirect.js');
     }
   }
+}
+
+function path_redirect_local_actions($redirect = array()) {
+  $links = array(
+    'add' => array(
+      'title' => $redirect ? t('Add redirect to this location') : t('Add redirect'),
+      'href' => 'admin/config/search/path-redirect/add',
+      'query' => drupal_get_destination() . ($redirect ? '&' . drupal_query_string_encode($redirect) : ''),
+    ),
+  );
+  return theme('links', $links, array('class' => 'item-list action-links'));
 }
 
 /**
