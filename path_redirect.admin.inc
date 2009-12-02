@@ -122,9 +122,9 @@ function path_redirect_list_redirects($query = array(), $tableselect = FALSE) {
 /**
  * Render a list of redirects for the main admin page.
  */
-function path_redirect_admin_redirects($form_state) {
-  if (isset($form_state['values']['operation']) && $form_state['values']['operation'] == 'delete') {
-    return path_redirect_multiple_delete_confirm($form, $form_state, array_filter($form_state['values']['rids']));
+function path_redirect_admin_redirects(&$form_state) {
+  if (isset($form_state['values']['operation']) && empty($form_state['values']['confirm'])) {
+    return path_redirect_admin_redirects_update_confirm($form_state, $form_state['values']['operation'], array_filter($form_state['values']['rids']));
   }
 
   // Get filter key.
@@ -148,8 +148,8 @@ function path_redirect_admin_redirects($form_state) {
     '#access' => user_access('administer redirects') && module_exists('elements'),
   );
   $options = array();
-  foreach (module_invoke_all('path_redirect_operations') as $operation => $array) {
-    $options[$operation] = $array['label'];
+  foreach (module_invoke_all('path_redirect_operations') as $key => $operation) {
+    $options[$key] = $operation['action'];
   }
   $form['options']['operation'] = array(
     '#type' => 'select',
@@ -181,19 +181,6 @@ function path_redirect_filter_query(&$query, $keys = '') {
     $query['conditions'][] = "(source LIKE '%%%s%%' OR redirect LIKE '%%%s%%' OR query LIKE '%%%s%%' OR fragment LIKE '%%%s%%')";
     $query['args'] = array_merge($query['args'], array($wildcard, $wildcard, $wildcard, $wildcard));
   }
-}
-
-/**
- * Implement hook_path_redirect_operations().
- */
-function path_redirect_path_redirect_operations() {
-  $operations = array(
-    'delete' => array(
-      'label' => t('Delete'),
-      'callback' => NULL,
-    ),
-  );
-  return $operations;
 }
 
 /**
@@ -246,6 +233,85 @@ function path_redirect_filter_form_submit_filter($form, &$form_state) {
  */
 function path_redirect_filter_form_submit_reset($form, &$form_state) {
   $form_state['redirect'] = 'admin/build/path-redirect';
+}
+
+/**
+ * Validate node_admin_nodes form submissions.
+ *
+ * Check if any nodes have been selected to perform the chosen
+ * 'Update option' on.
+ */
+function path_redirect_admin_redirects_update_validate($form, &$form_state) {
+  // Error if there are no items to select.
+  if (!is_array($form_state['values']['rids']) || !count(array_filter($form_state['values']['rids']))) {
+    form_set_error('', t('No redirects selected.'));
+  }
+}
+
+/**
+ * Process path_redirect_admin_redirects form submissions.
+ *
+ * Execute the chosen 'Update option' on the selected redirects.
+ */
+function path_redirect_admin_redirects_update_submit($form, &$form_state) {
+  $operations = module_invoke_all('path_redirect_operations');
+  $operation = $operations[$form_state['values']['operation']];
+
+  // Filter out unchecked redirects
+  $rids = array_filter($form_state['values']['rids']);
+
+  if (!empty($operation['confirm']) && empty($form_state['values']['confirm'])) {
+    // We need to rebuild the form to go to a second step. For example, to
+    // show the confirmation form for the deletion of redirects.
+    $form_state['rebuild'] = TRUE;
+  }
+  else {
+    $function = $operation['callback'];
+
+    // Add in callback arguments if present.
+    if (isset($operation['callback arguments'])) {
+      $args = array_merge(array($rids), $operation['callback arguments']);
+    }
+    else {
+      $args = array($rids);
+    }
+    call_user_func_array($function, $args);
+    path_redirect_refresh_redirects();
+
+    $count = count($form_state['values']['rids']);
+    watchdog('path_redirect', '@action @count redirects.', array('@action' => $operation['action_past'], '@count' => $count));
+    drupal_set_message(format_plural(count($rids), '@action @count redirect.', '@action @count redirects.', array('@action' => $operation['action_past'], '@count' => $count)));
+    //$form_state['redirect'] = 'admin/config/search/path-redirect';
+  }
+}
+
+function path_redirect_admin_redirects_update_confirm(&$form_state, $operation, $rids) {
+  $operations = module_invoke_all('path_redirect_operations');
+  $operation = $operations[$form_state['values']['operation']];
+
+  $form['rids'] = array('#prefix' => '<ul>', '#suffix' => '</ul>', '#tree' => TRUE);
+  $redirects = path_redirect_load_multiple($rids);
+  foreach ($rids as $rid) {
+    $redirect = $redirects[$rid];
+    $form['rids'][$rid] = array(
+      '#type' => 'hidden',
+      '#value' => $rid,
+      '#prefix' => '<li>',
+      '#suffix' => path_redirect_build_url($redirect['source'], $redirect['source_query']) . "</li>\n",
+    );
+  }
+  $form['operation'] = array('#type' => 'hidden', '#value' => $form_state['values']['operation']);
+  $form['#submit'][] = 'path_redirect_admin_redirects_update_submit';
+  $confirm_question = format_plural(count($rids), 'Are you sure you want to @action this redirect?', 'Are you sure you want to @action these redirects?', array('@action' => drupal_strtolower($operation['action'])));
+
+  return confirm_form(
+    $form,
+    $confirm_question,
+    'admin/config/search/path-redirect', // @todo This does not redirect back to filtered page.
+    t('This action cannot be undone.'),
+    $operation['action'],
+    t('Cancel')
+  );
 }
 
 function path_redirect_edit_form(&$form_state, $redirect = array()) {
