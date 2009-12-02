@@ -6,7 +6,16 @@
  * Administrative page callbacks for the path_redirect module.
  */
 
-function _path_redirect_list_redirects_header() {
+function theme_path_redirect_list_redirects($query = array(), $tableselect = FALSE) {
+  // Initialize the query array.
+  $query += array(
+    'rids' => NULL,
+    'conditions' => array(),
+    'args' => array(),
+    'limit' => 0,
+  );
+  $query['args'] = _path_redirect_build_conditions($query['rids'], $query['conditions'], $query['args']);
+
   $header = array(
     'source' => array('data' => t('From'), 'field' => 'source', 'sort' => 'asc'),
     'redirect' => array('data' => t('To'), 'field' => 'redirect'),
@@ -15,26 +24,43 @@ function _path_redirect_list_redirects_header() {
     'last_used' => array('data' => t('Last used'), 'field' => 'last_used'),
     'operations' => array('data' => t('Operations')),
   );
-  return $header;
-}
 
-function theme_path_redirect_list_redirects($rids = NULL, $conditions = array(), $tableselect = FALSE) {
-  $header = _path_redirect_list_redirects_header();
-
+  // Do not include the language column if locale is disabled.
   if (!module_exists('locale')) {
     unset($header['language']);
   }
-  //if (!user_access('administer redirects')) {
-  //  unset($header['opertations']);
-  //}
-  foreach (array_keys($conditions) as $field) {
-    unset($header[$field]);
+
+  // Remove any columns that are present in equal conditions.
+  foreach (array_keys($query['conditions']) as $field) {
+    if (is_string($field) && isset($header[$field])) {
+      unset($header[$field]);
+    }
   }
 
-  $redirects = path_redirect_load_multiple($rids, $conditions);
+  // Cannot re-use path_redirect_load_multiple() since we need to perform table
+  // sorting here.
+  $sql = 'SELECT * FROM {path_redirect}';
+  if ($query['conditions']) {
+    $sql .= ' WHERE ' . implode(' AND ', $query['conditions']);
+  }
+  $sql .= tablesort_sql($header);
+
+  if ($query['limit']) {
+    $query = pager_query($sql, $query['limit'], 0, NULL, $query['args']);
+  }
+  else {
+    $query = db_query($sql, $query['args']);
+  }
+
+  $redirects = array();
+  while ($redirect = db_fetch_array($query)) {
+    $redirects[$redirect['rid']] = $redirect;
+  }
+  $redirects = array_map('path_redirect_post_load_redirect', $redirects);
+
   $destination = drupal_get_destination();
   $rows = array();
-  foreach($redirects as $rid => $redirect) {
+  foreach ($redirects as $rid => $redirect) {
     $row = array();
     if (isset($header['source'])) {
       $source_url = path_redirect_build_url($redirect['source'], $redirect['source_query']);
@@ -65,9 +91,9 @@ function theme_path_redirect_list_redirects($rids = NULL, $conditions = array(),
         'href' => 'admin/build/path-redirect/delete/' . $rid,
         'query' => $destination,
       );
-      $row['operations'] = theme('links', $operations,array('class' => 'links inline'));
+      $row['operations'] = theme('links', $operations, array('class' => 'links inline'));
     }
-    $rows[$rid] = $row;
+    $rows[(string) $rid] = $row;
   }
 
   if (empty($rows)) {
@@ -96,18 +122,22 @@ function theme_path_redirect_list_redirects($rids = NULL, $conditions = array(),
 /**
  * Render a list of redirects for the main admin page.
  */
-function path_redirect_admin_redirects() {
-  // Get filtered keys if present and add the filter form.
+function path_redirect_admin_redirects($form_state) {
+  if (isset($form_state['values']['operation']) && $form_state['values']['operation'] == 'delete') {
+    return path_redirect_multiple_delete_confirm($form, $form_state, array_filter($form_state['values']['rids']));
+  }
+
+  // Get filter key.
   $keys = func_get_args();
-  array_shift($keys);
+  array_shift($keys); // Offset the $form_state parameter.
   $keys = implode('/', $keys);
 
+  // Add the local actions and filter form.
   $form['actions'] = array(
     '#type' => 'markup',
     '#markup' => path_redirect_local_actions(),
   );
   $form['filter'] = path_redirect_filter_form($keys);
-
 
   // Build the 'Update options' form.
   $form['options'] = array(
@@ -133,31 +163,37 @@ function path_redirect_admin_redirects() {
     '#submit' => array('path_redirect_admin_redirects_update_submit'),
   );
 
-  if ($keys) {
-    // Replace wildcards with MySQL/PostgreSQL wildcards.
-    $keys = preg_replace('!\*+!', '%', $keys);
-    $sql = "SELECT rid FROM {path_redirect} WHERE source LIKE '%%%s%%' OR redirect LIKE '%%%s%%' OR query LIKE '%%%s%%' OR fragment LIKE '%%%s%%'";
-  }
-  else {
-    $sql = 'SELECT rid FROM {path_redirect}';
-  }
-  $sql .= tablesort_sql(_path_redirect_list_redirects_header());
-  $query = pager_query($sql, 50, 0, NULL, $keys, $keys, $keys, $keys);
-  $rids = array();
-  while ($rid = db_result($query)) {
-    $rids[] = $rid;
-  }
+  $query = array('conditions' => array(), 'args' => array(), 'limit' => 50);
+  path_redirect_filter_query($query, $keys);
 
-  /*$form['rids'] = array(
-    '#type' => 'markup',
-    '#value' => theme('path_redirect_list_redirects', $rids),
-  );*/
-  $form['rids'] = theme('path_redirect_list_redirects', $rids, array(), TRUE);
+  $form['rids'] = theme('path_redirect_list_redirects', $query, TRUE);
   $form['pager'] = array(
     '#type' => 'markup',
     '#value' => theme('pager', NULL, 50, 0),
   );
   return $form;
+}
+
+function path_redirect_filter_query(&$query, $keys = '') {
+  if ($keys) {
+    // Replace wildcards with MySQL/PostgreSQL wildcards.
+    $wildcard = preg_replace('!\*+!', '%', $keys);
+    $query['conditions'][] = "(source LIKE '%%%s%%' OR redirect LIKE '%%%s%%' OR query LIKE '%%%s%%' OR fragment LIKE '%%%s%%')";
+    $query['args'] = array_merge($query['args'], array($wildcard, $wildcard, $wildcard, $wildcard));
+  }
+}
+
+/**
+ * Implement hook_path_redirect_operations().
+ */
+function path_redirect_path_redirect_operations() {
+  $operations = array(
+    'delete' => array(
+      'label' => t('Delete'),
+      'callback' => NULL,
+    ),
+  );
+  return $operations;
 }
 
 /**
@@ -380,7 +416,7 @@ function path_redirect_js_autocomplete_404() {
   $paths = db_query("SELECT message, COUNT(message) AS count FROM {watchdog} WHERE type = 'page not found' AND LOWER(message) LIKE '%%%s%%' GROUP BY message ORDER BY count DESC", drupal_strtolower($string));
   while ($path = db_result($paths)) {
     // If the 404 is now a valid path or already has a redirect, discard it.
-    if (!menu_get_item($path) && !path_redirect_load_by_path($path)) {
+    if (!menu_get_item($path) && !path_redirect_load_by_source($path)) {
       $matches[$path] = check_plain($path);
     }
   }
