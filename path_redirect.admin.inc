@@ -6,7 +6,7 @@
  * Administrative page callbacks for the path_redirect module.
  */
 
-function theme_path_redirect_list_redirects($query = array(), $tableselect = FALSE) {
+function path_redirect_list_redirects($query = array(), $tableselect = FALSE) {
   // Initialize the query array.
   $query += array(
     'rids' => NULL,
@@ -166,7 +166,7 @@ function path_redirect_admin_redirects($form_state) {
   $query = array('conditions' => array(), 'args' => array(), 'limit' => 50);
   path_redirect_filter_query($query, $keys);
 
-  $form['rids'] = theme('path_redirect_list_redirects', $query, TRUE);
+  $form['rids'] = path_redirect_list_redirects($query, TRUE);
   $form['pager'] = array(
     '#type' => 'markup',
     '#value' => theme('pager', NULL, 50, 0),
