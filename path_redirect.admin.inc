@@ -16,6 +16,9 @@ function path_redirect_list_redirects($query = array(), $tableselect = FALSE) {
   );
   $query['args'] = _path_redirect_build_conditions($query['rids'], $query['conditions'], $query['args']);
 
+  // Check if this will be a tableselect element.
+  $tableselect &= user_access('administer redirects') && module_exists('elements');
+
   $header = array(
     'source' => array('data' => t('From'), 'field' => 'source', 'sort' => 'asc'),
     'redirect' => array('data' => t('To'), 'field' => 'redirect'),
@@ -60,7 +63,6 @@ function path_redirect_list_redirects($query = array(), $tableselect = FALSE) {
 
   $destination = drupal_get_destination();
   $rows = array();
-  $weight = 0;
   foreach ($redirects as $rid => $redirect) {
     $row = array();
     if (isset($header['source'])) {
@@ -94,26 +96,26 @@ function path_redirect_list_redirects($query = array(), $tableselect = FALSE) {
       );
       $row['operations'] = theme('links', $operations, array('class' => 'links inline'));
     }
-    $row['#weight'] = $weight++;
-    $rows[$rid] = $row;
+    $rows[(string) $rid] = $row;
   }
 
-  if (empty($rows)) {
-    $rows[] = array(array(
-      'data' => t('No URL redirects available.'),
-      'colspan' => count($header),
-      'class' => 'empty',
-    ));
-  }
 
-  if (user_access('administer redirects') && module_exists('elements') && $tableselect) {
+  if ($tableselect) {
     return array(
       '#type' => 'tableselect',
       '#header' => $header,
       '#options' => $rows,
+      '#empty' => t('No URL redirects available.'),
     );
   }
   else {
+    if (empty($rows)) {
+      $rows[] = array(array(
+        'data' => t('No URL redirects available.'),
+        'colspan' => count($header),
+        'class' => 'empty',
+      ));
+    }
     return array(
       '#type' => 'markup',
       '#value' => theme('table', $header, $rows),
