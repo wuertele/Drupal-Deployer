@@ -60,6 +60,7 @@ function path_redirect_list_redirects($query = array(), $tableselect = FALSE) {
 
   $destination = drupal_get_destination();
   $rows = array();
+  $weight = 0;
   foreach ($redirects as $rid => $redirect) {
     $row = array();
     if (isset($header['source'])) {
@@ -93,7 +94,8 @@ function path_redirect_list_redirects($query = array(), $tableselect = FALSE) {
       );
       $row['operations'] = theme('links', $operations, array('class' => 'links inline'));
     }
-    $rows[(string) $rid] = $row;
+    $row['#weight'] = $weight++;
+    $rows[$rid] = $row;
   }
 
   if (empty($rows)) {
