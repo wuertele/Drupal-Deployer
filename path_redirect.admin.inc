@@ -11,14 +11,14 @@ function _path_redirect_list_redirects_header() {
     'source' => array('data' => t('From'), 'field' => 'source', 'sort' => 'asc'),
     'redirect' => array('data' => t('To'), 'field' => 'redirect'),
     'type' => array('data' => t('Type'), 'field' => 'type'),
-    'last_used' => array('data' => t('Last used'), 'field' => 'last_used'),
     'language' => array('data' => t('Language'), 'field' => 'language'),
+    'last_used' => array('data' => t('Last used'), 'field' => 'last_used'),
     'operations' => array('data' => t('Operations')),
   );
   return $header;
 }
 
-function theme_path_redirect_list_redirects($rids = NULL, $conditions = array()) {
+function theme_path_redirect_list_redirects($rids = NULL, $conditions = array(), $tableselect = FALSE) {
   $header = _path_redirect_list_redirects_header();
 
   if (!module_exists('locale')) {
@@ -35,23 +35,23 @@ function theme_path_redirect_list_redirects($rids = NULL, $conditions = array())
   $destination = drupal_get_destination();
   $rows = array();
   foreach($redirects as $rid => $redirect) {
-    $row = array('data' => array());
+    $row = array();
     if (isset($header['source'])) {
       $source_url = path_redirect_build_url($redirect['source'], $redirect['source_query']);
-      $row['data']['source'] = l($source_url, $redirect['source'], array('query' => $redirect['source_query'], 'alias' => TRUE));
+      $row['source'] = l($source_url, $redirect['source'], array('query' => $redirect['source_query'], 'alias' => TRUE));
     }
     if (isset($header['redirect'])) {
       $redirect_url = path_redirect_build_url($redirect['redirect'], $redirect['query'], $redirect['fragment'], TRUE);
-      $row['data']['redirect'] = l($redirect_url, $redirect['redirect'], array('query' => $redirect['query'], 'fragment' => $redirect['fragment']));
+      $row['redirect'] = l($redirect_url, $redirect['redirect'], array('query' => $redirect['query'], 'fragment' => $redirect['fragment']));
     }
     if (isset($header['type'])) {
-      $row['data']['type'] = $redirect['type'];
-    }
-    if (isset($header['last_used'])) {
-      $row['data']['last_used'] = format_date($redirect['last_used'], 'short');
+      $row['type'] = $redirect['type'];
     }
     if (isset($header['language'])) {
-      $row['data']['language'] = module_invoke('locale', 'language_name', $redirect['language']);
+      $row['language'] = module_invoke('locale', 'language_name', $redirect['language']);
+    }
+    if (isset($header['last_used'])) {
+      $row['last_used'] = format_date($redirect['last_used'], 'short');
     }
     if (isset($header['operations'])) {
       $operations = array();
@@ -65,7 +65,7 @@ function theme_path_redirect_list_redirects($rids = NULL, $conditions = array())
         'href' => 'admin/build/path-redirect/delete/' . $rid,
         'query' => $destination,
       );
-      $row['data']['operations'] = theme('links', $operations,array('class' => 'links inline'));
+      $row['operations'] = theme('links', $operations,array('class' => 'links inline'));
     }
     $rows[$rid] = $row;
   }
@@ -73,12 +73,24 @@ function theme_path_redirect_list_redirects($rids = NULL, $conditions = array())
   if (empty($rows)) {
     $rows[] = array(array(
       'data' => t('No URL redirects available.'),
-      'colspan' =>  isset($header['operations']) ? count($header) + 1 : count($header),
+      'colspan' => count($header),
       'class' => 'empty',
     ));
   }
 
-  return theme('table', $header, $rows);
+  if (user_access('administer redirects') && module_exists('elements') && $tableselect) {
+    return array(
+      '#type' => 'tableselect',
+      '#header' => $header,
+      '#options' => $rows,
+    );
+  }
+  else {
+    return array(
+      '#type' => 'markup',
+      '#value' => theme('table', $header, $rows),
+    );
+  }
 }
 
 /**
@@ -96,6 +108,31 @@ function path_redirect_admin_redirects() {
   );
   $form['filter'] = path_redirect_filter_form($keys);
 
+
+  // Build the 'Update options' form.
+  $form['options'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Update options'),
+    '#prefix' => '<div class="container-inline">',
+    '#suffix' => '</div>',
+    '#access' => user_access('administer redirects') && module_exists('elements'),
+  );
+  $options = array();
+  foreach (module_invoke_all('path_redirect_operations') as $operation => $array) {
+    $options[$operation] = $array['label'];
+  }
+  $form['options']['operation'] = array(
+    '#type' => 'select',
+    '#options' => $options,
+    '#default_value' => 'delete',
+  );
+  $form['options']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Update'),
+    '#validate' => array('path_redirect_admin_redirects_update_validate'),
+    '#submit' => array('path_redirect_admin_redirects_update_submit'),
+  );
+
   if ($keys) {
     // Replace wildcards with MySQL/PostgreSQL wildcards.
     $keys = preg_replace('!\*+!', '%', $keys);
@@ -111,10 +148,11 @@ function path_redirect_admin_redirects() {
     $rids[] = $rid;
   }
 
-  $form['rids'] = array(
+  /*$form['rids'] = array(
     '#type' => 'markup',
     '#value' => theme('path_redirect_list_redirects', $rids),
-  );
+  );*/
+  $form['rids'] = theme('path_redirect_list_redirects', $rids, array(), TRUE);
   $form['pager'] = array(
     '#type' => 'markup',
     '#value' => theme('pager', NULL, 50, 0),
