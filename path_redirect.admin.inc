@@ -6,19 +6,18 @@
  * Administrative page callbacks for the path_redirect module.
  */
 
-function path_redirect_list_redirects($query = array(), $tableselect = FALSE) {
+function path_redirect_list_redirects($query = array(), $conditions = array(), $tableselect = FALSE) {
   // Initialize the query array.
   $query += array(
-    'rids' => NULL,
     'conditions' => array(),
     'args' => array(),
     'limit' => 0,
   );
-  $query['args'] = _path_redirect_build_conditions($query['rids'], $query['conditions'], $query['args']);
 
   // Check if this will be a tableselect element.
   $tableselect &= user_access('administer redirects') && module_exists('elements');
 
+  // Set up the header.
   $header = array(
     'source' => array('data' => t('From'), 'field' => 'source', 'sort' => 'asc'),
     'redirect' => array('data' => t('To'), 'field' => 'redirect'),
@@ -33,21 +32,18 @@ function path_redirect_list_redirects($query = array(), $tableselect = FALSE) {
     unset($header['language']);
   }
 
-  // Remove any columns that are present in equal conditions.
-  foreach (array_keys($query['conditions']) as $field) {
-    if (is_string($field) && isset($header[$field])) {
-      unset($header[$field]);
-    }
+  // Remove any columns that are present in conditions.
+  _path_redirect_build_conditions($query, NULL, $conditions);
+  foreach ($conditions as $field => $value) {
+    unset($header[$field]);
   }
 
-  // Cannot re-use path_redirect_load_multiple() since we need to perform table
-  // sorting here.
+  // Build the SQL query.
   $sql = 'SELECT * FROM {path_redirect}';
   if ($query['conditions']) {
-    $sql .= ' WHERE ' . implode(' AND ', $query['conditions']);
+    $sql .= ' WHERE (' . implode(') AND (', $query['conditions']). ')';
   }
   $sql .= tablesort_sql($header);
-
   if ($query['limit']) {
     $query = pager_query($sql, $query['limit'], 0, NULL, $query['args']);
   }
@@ -55,6 +51,8 @@ function path_redirect_list_redirects($query = array(), $tableselect = FALSE) {
     $query = db_query($sql, $query['args']);
   }
 
+  // Load the redirects. We cannot use path_redirect_load_multiple() since
+  // we want to preserve the sorting order.
   $redirects = array();
   while ($redirect = db_fetch_array($query)) {
     $redirects[$redirect['rid']] = $redirect;
@@ -102,7 +100,6 @@ function path_redirect_list_redirects($query = array(), $tableselect = FALSE) {
     }
     $rows[(string) $rid] = $row;
   }
-
 
   if ($tableselect) {
     return array(
@@ -171,10 +168,11 @@ function path_redirect_admin_redirects(&$form_state) {
     '#submit' => array('path_redirect_admin_redirects_update_submit'),
   );
 
+  // Apply the filter conditions.
   $query = array('conditions' => array(), 'args' => array(), 'limit' => 50);
   path_redirect_filter_query($query, $keys);
 
-  $form['rids'] = path_redirect_list_redirects($query, TRUE);
+  $form['rids'] = path_redirect_list_redirects($query, array(), TRUE);
   $form['pager'] = array(
     '#type' => 'markup',
     '#value' => theme('pager', NULL, 50, 0),
@@ -217,13 +215,13 @@ function path_redirect_filter_form($keys = '') {
   $form['basic']['inline']['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Filter'),
-    '#submit' => array('path_redirect_filter_form_submit_filter'),
+    '#submit' => array('path_redirect_filter_form_submit'),
   );
   if ($keys) {
     $form['basic']['inline']['reset'] = array(
       '#type' => 'submit',
       '#value' => t('Reset'),
-      '#submit' => array('path_redirect_filter_form_submit_reset'),
+      '#submit' => array('path_redirect_filter_form_reset'),
     );
   }
   return $form;
@@ -232,14 +230,14 @@ function path_redirect_filter_form($keys = '') {
 /**
  * Process filter form submission when the Filter button is pressed.
  */
-function path_redirect_filter_form_submit_filter($form, &$form_state) {
+function path_redirect_filter_form_submit($form, &$form_state) {
   $form_state['redirect'] = 'admin/build/path-redirect/list/'. trim($form_state['values']['filter']);
 }
 
 /**
  * Process filter form submission when the Reset button is pressed.
  */
-function path_redirect_filter_form_submit_reset($form, &$form_state) {
+function path_redirect_filter_form_reset($form, &$form_state) {
   $form_state['redirect'] = 'admin/build/path-redirect';
 }
 
@@ -284,7 +282,7 @@ function path_redirect_admin_redirects_update_submit($form, &$form_state) {
       $args = array($rids);
     }
     call_user_func_array($function, $args);
-    path_redirect_refresh_redirects();
+    path_redirect_clear_cache();
 
     $count = count($form_state['values']['rids']);
     watchdog('path_redirect', '@action @count redirects.', array('@action' => $operation['action_past'], '@count' => $count));
@@ -397,8 +395,66 @@ function path_redirect_edit_form(&$form_state, $redirect = array()) {
   return $form;
 }
 
+/**
+ * Validate a redirect's source path (from) field.
+ */
+function path_redirect_validate_source_field($element, &$form_state) {
+  // Check that the path contains no URL fragment.
+  if (strpos($element['#value'], '#') !== FALSE) {
+    form_error($element, t('The source path cannot contain an URL fragment anchor.'));
+  }
+
+  //if (!valid_url($element['#value'])) {
+  //  //Make sure "from" has the form of a local Drupal path
+  //  form_serror($element, t('The source path does not appear valid. This must be a local Drupal path.'));
+  //}
+
+  // @todo Split into source and source_query here.
+
+  // A redirect's 'from' cannot match any values from url_alias, it will cause an infinite loop.
+  if ($pid = db_result(db_query("SELECT pid FROM {url_alias} WHERE dst = '%s'", $element['#value']))) {
+    form_error($element, t('You cannot add an existing alias as a redirect as it will not work. You must <a href="@alias-delete">delete the alias</a> first.', array('@alias-delete' => url('admin/build/path/delete/' . $pid, array('query' => drupal_get_destination())))));
+  }
+
+  // Cannot create redirects for valid paths.
+  $menu_item = menu_get_item($element['#value']);
+  if ($menu_item && $menu_item['page_callback'] != 'path_redirect_goto') {
+    form_error($element, t('The source path %path is a currently valid path. You cannot override existing paths. You can however, create URL aliases for them.', array('%path' => $element['#value'])));
+  }
+
+  return $element;
+}
+
+/**
+ * Validate a redirect's redirect path (to) field.
+ */
+function path_redirect_validate_redirect_field($element, &$form_state) {
+  // Split this field into path, query, and fragment.
+  $parsed = parse_url($element['#value']) + array('query' => '', 'fragment' => '', 'path' => '');
+  $form_state['values']['query'] = $parsed['query'];
+  $form_state['values']['fragment'] = $parsed['fragment'];
+  $form_state['values']['redirect'] = (isset($parsed['scheme']) ? $parsed['scheme'] . '://'. $parsed['host'] : '') . $parsed['path'];
+  return $element;
+}
+
 function path_redirect_edit_form_validate($form, &$form_state) {
-  path_redirect_validate_redirect($form_state['values']);
+  $redirect = &$form_state['values'];
+
+  if ($existing = path_redirect_load_by_source($redirect['source'], $redirect['language'])) {
+    if ($redirect['rid'] != $existing['rid']) {
+      // The "from" path should not conflict with another redirect
+      form_set_error($form_parents . 'source', t('The source path %source is already being redirected. Do you want to <a href="@edit-page">edit the existing redirect</a>?', array('%source' => $redirect['source'], '@edit-page' => url('admin/build/path-redirect/edit/'. $existing['rid']))));
+    }
+  }
+
+  if (!valid_url($redirect['redirect']) && !valid_url($redirect['redirect'], TRUE) && $redirect['redirect'] != '<front>') {
+    form_set_error($form_parents . 'redirect', t('The redirect <strong>to</strong> path does not appear valid.'));
+  }
+
+  // check that there there are no redirect loops
+  if (url($redirect['source']) == url($redirect['redirect'])) {
+    form_set_error($form_parents . 'redirect', t('You are attempting to redirect the page to itself. This will result in an infinite loop.'));
+  }
 }
 
 function path_redirect_edit_form_submit($form, &$form_state) {
@@ -416,7 +472,7 @@ function path_redirect_delete_form($form_state, $redirect) {
   return confirm_form(
     $form,
     t('Are you sure you want to delete the redirect from %source to %redirect?', array('%source' => $redirect['source'], '%redirect' => $redirect['redirect'])),
-    isset($_GET['destination']) ? $_GET['destination'] : 'admin/build/path-redirect'
+    isset($_REQUEST['destination']) ? $_REQUEST['destination'] : 'admin/build/path-redirect'
   );
 }
 
