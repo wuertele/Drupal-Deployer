@@ -51,9 +51,9 @@ function search_service_content($keys, $simple = FALSE) {
 
   // invoke the search hook to generate results
   $results = array();
-  $search_hooks = variable_get('search_service_options', 'node');
+  $search_hooks = variable_get('search_service_options', array('node' => 'node'));
 
-  watchdog('search_service', t('search.content invoked for !keys using hooks !hooks', array('!keys' => $keys, '!hooks' => implode($search_hooks, ', '))));
+  watchdog('search_service', t('search.content invoked for !keys using hooks !hooks', array('!keys' => $keys, '!hooks' => implode(', ', $search_hooks))));
 
   // run through only select hook_search() as defined in /admin/settings/search_service
   foreach ($search_hooks as $hook) {
