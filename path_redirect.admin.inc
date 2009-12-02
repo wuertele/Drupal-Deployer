@@ -11,8 +11,9 @@ function _path_redirect_list_redirects_header() {
     'source' => array('data' => t('From'), 'field' => 'source', 'sort' => 'asc'),
     'redirect' => array('data' => t('To'), 'field' => 'redirect'),
     'type' => array('data' => t('Type'), 'field' => 'type'),
+    'last_used' => array('data' => t('Last used'), 'field' => 'last_used'),
     'language' => array('data' => t('Language'), 'field' => 'language'),
-    'operations' => array('data' => t('Operations'), 'colspan' => '2'),
+    'operations' => array('data' => t('Operations')),
   );
   return $header;
 }
@@ -37,23 +38,36 @@ function theme_path_redirect_list_redirects($rids = NULL, $conditions = array())
     $row = array('data' => array());
     if (isset($header['source'])) {
       $source_url = path_redirect_build_url($redirect['source'], $redirect['source_query']);
-      $row['data'][] = l($source_url, $redirect['source'], array('query' => $redirect['source_query'], 'alias' => TRUE));
+      $row['data']['source'] = l($source_url, $redirect['source'], array('query' => $redirect['source_query'], 'alias' => TRUE));
     }
     if (isset($header['redirect'])) {
       $redirect_url = path_redirect_build_url($redirect['redirect'], $redirect['query'], $redirect['fragment'], TRUE);
-      $row['data'][] = l($redirect_url, $redirect['redirect'], array('query' => $redirect['query'], 'fragment' => $redirect['fragment']));
+      $row['data']['redirect'] = l($redirect_url, $redirect['redirect'], array('query' => $redirect['query'], 'fragment' => $redirect['fragment']));
     }
     if (isset($header['type'])) {
-      $row['data'][] = $redirect['type'];
+      $row['data']['type'] = $redirect['type'];
+    }
+    if (isset($header['last_used'])) {
+      $row['data']['last_used'] = format_date($redirect['last_used'], 'short');
     }
     if (isset($header['language'])) {
-      $row['data'][] = module_invoke('locale', 'language_name', $redirect['language']);
+      $row['data']['language'] = module_invoke('locale', 'language_name', $redirect['language']);
     }
     if (isset($header['operations'])) {
-      $row['data'][] = l(t('Edit'), 'admin/build/path-redirect/edit/' . $rid, array('query' => $destination));
-      $row['data'][] = l(t('Delete'), 'admin/build/path-redirect/delete/' . $rid, array('query' => $destination));
+      $operations = array();
+      $operations['edit'] = array(
+        'title' => t('Edit'),
+        'href' => 'admin/build/path-redirect/edit/' . $rid,
+        'query' => $destination,
+      );
+      $operations['delete'] = array(
+        'title' => t('Delete'),
+        'href' => 'admin/build/path-redirect/delete/' . $rid,
+        'query' => $destination,
+      );
+      $row['data']['operations'] = theme('links', $operations,array('class' => 'links inline'));
     }
-    $rows[] = $row;
+    $rows[$rid] = $row;
   }
 
   if (empty($rows)) {
@@ -70,13 +84,17 @@ function theme_path_redirect_list_redirects($rids = NULL, $conditions = array())
 /**
  * Render a list of redirects for the main admin page.
  */
-function path_redirect_list_redirects() {
+function path_redirect_admin_redirects() {
   // Get filtered keys if present and add the filter form.
   $keys = func_get_args();
+  array_shift($keys);
   $keys = implode('/', $keys);
 
-  $output = path_redirect_local_actions();
-  $output .= drupal_get_form('path_redirect_filter_form', $keys);
+  $form['actions'] = array(
+    '#type' => 'markup',
+    '#markup' => path_redirect_local_actions(),
+  );
+  $form['filter'] = path_redirect_filter_form($keys);
 
   if ($keys) {
     // Replace wildcards with MySQL/PostgreSQL wildcards.
@@ -93,10 +111,15 @@ function path_redirect_list_redirects() {
     $rids[] = $rid;
   }
 
-  $output .= theme('path_redirect_list_redirects', $rids, array(), $keys ? t('No URL redirects found.') : t('No URL redirects available. <a href="@link">Add redirect</a>.', array('@link' => url('admin/build/path-redirect/add'))));
-  $output .= theme('pager', NULL, 50, 0);
-
-  return $output;
+  $form['rids'] = array(
+    '#type' => 'markup',
+    '#value' => theme('path_redirect_list_redirects', $rids),
+  );
+  $form['pager'] = array(
+    '#type' => 'markup',
+    '#value' => theme('pager', NULL, 50, 0),
+  );
+  return $form;
 }
 
 /**
@@ -105,7 +128,7 @@ function path_redirect_list_redirects() {
  * @ingroup forms
  * @see path_redirect_filter_form_submit()
  */
-function path_redirect_filter_form(&$form_state, $keys = '') {
+function path_redirect_filter_form($keys = '') {
   $form['#attributes'] = array('class' => 'search-form');
   $form['basic'] = array(
     '#type' => 'fieldset',
@@ -148,7 +171,7 @@ function path_redirect_filter_form_submit_filter($form, &$form_state) {
  * Process filter form submission when the Reset button is pressed.
  */
 function path_redirect_filter_form_submit_reset($form, &$form_state) {
-  $form_state['redirect'] = 'admin/build/path-redirect/list';
+  $form_state['redirect'] = 'admin/build/path-redirect';
 }
 
 function path_redirect_edit_form(&$form_state, $redirect = array()) {
