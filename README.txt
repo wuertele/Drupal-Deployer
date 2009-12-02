@@ -59,10 +59,12 @@ Properties tableselect
 #multiple
   Determines whether multiple values can be selected. Displays checkboxes when TRUE, radios when FALSE.
     Default: TRUE
-#advanced_select
+#js_select
   Whether to provide advanced selection behaviour (SELECT ALL checkbox, SHIFT-select).
     Default: TRUE - when #multiple is TRUE.
     When #multiple is FALSE, always FALSE.
 #default_value
   Provide an array of id => x pairs for the ids that should be selected by default when #multiple is TRUE.
   Provide the id as a scalar for the id that should be selected by default when #multiple is FALSE.
+#empty
+  The message to show in a table row if there are no rows to display.
