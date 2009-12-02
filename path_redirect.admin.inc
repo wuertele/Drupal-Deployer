@@ -74,7 +74,9 @@ function path_redirect_list_redirects() {
   // Get filtered keys if present and add the filter form.
   $keys = func_get_args();
   $keys = implode('/', $keys);
-  $output = drupal_get_form('path_redirect_filter_form', $keys);
+
+  $output = path_redirect_local_actions();
+  $output .= drupal_get_form('path_redirect_filter_form', $keys);
 
   if ($keys) {
     // Replace wildcards with MySQL/PostgreSQL wildcards.
@@ -91,7 +93,6 @@ function path_redirect_list_redirects() {
     $rids[] = $rid;
   }
 
-  $output .= path_redirect_local_actions();
   $output .= theme('path_redirect_list_redirects', $rids, array(), $keys ? t('No URL redirects found.') : t('No URL redirects available. <a href="@link">Add redirect</a>.', array('@link' => url('admin/build/path-redirect/add'))));
   $output .= theme('pager', NULL, 50, 0);
 
