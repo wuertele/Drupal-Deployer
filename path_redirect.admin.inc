@@ -135,7 +135,7 @@ function path_redirect_admin_redirects($form_state) {
   // Add the local actions and filter form.
   $form['actions'] = array(
     '#type' => 'markup',
-    '#markup' => path_redirect_local_actions(),
+    '#value' => path_redirect_local_actions(),
   );
   $form['filter'] = path_redirect_filter_form($keys);
 
