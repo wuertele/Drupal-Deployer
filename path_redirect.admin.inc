@@ -93,7 +93,7 @@ function path_redirect_list_redirects($query = array(), $conditions = array(), $
         'href' => 'admin/build/path-redirect/delete/' . $rid,
         'query' => $destination,
       );
-      $row['operations'] = theme('links', $operations, array('class' => 'links inline'));
+      $row['operations'] = theme('links', $operations, array('class' => 'links inline nowrap'));
     }
     if ($tableselect) {
       $row['#weight'] = $weight++;
