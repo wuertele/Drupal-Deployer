@@ -20,6 +20,14 @@ $handler->override_option('relationships', array(
     'field' => 'supported_releases_rel',
     'relationship' => 'none',
   ),
+  'version_api_tid' => array(
+    'label' => 'API compatibility term',
+    'required' => 1,
+    'id' => 'version_api_tid',
+    'table' => 'project_release_nodes',
+    'field' => 'version_api_tid',
+    'relationship' => 'none',
+  ),
 ));
 $handler->override_option('fields', array(
   'version' => array(
@@ -181,6 +189,13 @@ $handler->override_option('fields', array(
   ),
 ));
 $handler->override_option('sorts', array(
+  'weight' => array(
+    'order' => 'ASC',
+    'id' => 'weight',
+    'table' => 'term_data',
+    'field' => 'weight',
+    'relationship' => 'version_api_tid',
+  ),
   'version_major' => array(
     'order' => 'DESC',
     'id' => 'version_major',
