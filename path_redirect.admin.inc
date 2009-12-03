@@ -359,15 +359,11 @@ function path_redirect_edit_form(&$form_state, $redirect = array()) {
     '#description' => t('Enter an internal Drupal path, path alias, or complete external URL (like http://example.com/) to redirect to. Use %front to redirect to the front page.', array('%front' => '<front>')),
     '#element_validate' => array('path_redirect_validate_redirect_field'),
   );
-
-  $languages = module_exists('locale') ? locale_language_list('name') : array();
+  // This will be a hidden value unless locale module is enabled.
   $form['language'] = array(
-    '#type' => 'select',
-    '#title' => t('Language'),
-    '#options' => array('' => t('All languages')) + $languages,
-    '#default_value' => $redirect['language'],
-    '#description' => t('A redirect set for a specific language will always be used when requesting this page in that language, and takes precedence over redirects set for <em>All languages</em>.'),
-    '#access' => $languages,
+    '#type' => 'value',
+    '#value' => $redirect['language'],
+    '#process' => array(),
   );
 
   $form['advanced'] = array(
@@ -393,6 +389,20 @@ function path_redirect_edit_form(&$form_state, $redirect = array()) {
   );
 
   return $form;
+}
+
+/**
+ * Implement hook_form_FORM_ID_alter().
+ */
+function locale_form_path_redirect_edit_form_alter(&$form, &$form_state) {
+  $form['language'] = array(
+    '#type' => 'select',
+    '#title' => t('Language'),
+    '#options' => array('' => t('All languages')) + locale_language_list('name'),
+    '#default_value' => $form['language']['#value'],
+    '#weight' => -10,
+    '#description' => t('A redirect set for a specific language will always be used when requesting this page in that language, and takes precedence over redirects set for <em>All languages</em>.'),
+  );
 }
 
 /**
