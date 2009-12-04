@@ -1,6 +1,12 @@
 <?php
 // $Id$
 
+/**
+ * @author Services Dev Team
+ * @file
+ *  CRUD resource funcionality for nodes.
+ */
+
 class NodeResourceFeedModel implements ResourceTimeFeedModel {
   protected $nodes = NULL;
 
@@ -69,7 +75,7 @@ class NodeResourceFeedModelItem implements ResourceTimeFeedModelItem {
    *  The node url
    */
   public function getUrl() {
-    return url('node/' . $this->node->nid, array('absolute' => TRUE));
+    return url('node/'. $this->node->nid, array('absolute' => TRUE));
   }
 
   /**
