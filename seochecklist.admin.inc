@@ -111,6 +111,14 @@ function seochecklist_admin_settings() {
     '#weight' => 100,
   );
 
+  if (module_exists('vertical_tabs')) {
+    $form['#pre_render'][] = 'vertical_tabs_form_pre_render';
+    $form['save_above']['#attributes']['class'] = 'js-hide';
+  }
+  else {
+    drupal_set_message(t('Your SEO Checklist interface (in addition to your content and content type edit pages) will be greatly enhanced by installing the <a href="@vertical-tabs">Vertical Tabs module</a>.', array('@vertical-tabs' => 'http://drupal.org/project/vertical_tabs')), 'status', FALSE);
+  }
+
   return $form;
 }
 
