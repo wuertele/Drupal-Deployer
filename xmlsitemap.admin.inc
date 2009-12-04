@@ -113,7 +113,8 @@ function xmlsitemap_settings_form() {
     '#options' => xmlsitemap_get_changefreq_options(),
     '#default_value' => xmlsitemap_var('frontpage_changefreq'),
   );
-
+  
+  $form['#pre_render'][] = 'vertical_tabs_form_pre_render';
   $form['#validate'][] = 'xmlsitemap_settings_form_validate';
   $form['#submit'][] = 'xmlsitemap_settings_form_submit';
   $form['array_filter'] = array('#type' => 'value', '#value' => TRUE);
