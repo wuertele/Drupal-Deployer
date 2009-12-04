@@ -1,5 +1,6 @@
 <?php
 // $Id$
+
 /**
  * @author Services Dev Team
  * @file
@@ -101,7 +102,7 @@ function file_service_save($file) {
   }
 
   //The filepath that ends up in the node must contain the filename
-  $file->filepath .= '/' . $file->filename;
+  $file->filepath .= '/'. $file->filename;
 
   // Write the file
   if (!file_save_data(base64_decode($file->file), $file->filepath)) {

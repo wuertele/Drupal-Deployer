@@ -1,5 +1,6 @@
 <?php
 // $Id$
+
 /**
  * @author Services Dev Team
  * @file
@@ -126,8 +127,8 @@ function user_service_logout() {
  */
 function user_service_save($account) {
   // if uid is present then update, otherwise insert
-  $update = user_load($account['uid']);	
-  $account = isset($update->uid) ? user_save($update,$account) : user_save('', $account);  
+  $update = user_load($account['uid']);
+  $account = isset($update->uid) ? user_save($update, $account) : user_save('', $account);
   if (!$account) {
     return services_error(t('Error on saving the user.'), 500);
   }
