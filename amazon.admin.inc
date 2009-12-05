@@ -62,28 +62,8 @@ function amazon_settings_form($form_state) {
 }
 
 function amazon_storage_settings_form() {
-  $form['amazon_explain'] = array(
-    '#type' => 'markup',
-    '#value' => t("Storing Amazon product information in the Drupal database can speed up the display of commonly viewed products. In addition, stored product data can be included in content displayed by the Views module. On some sites, though, this functionality is unecessary and can be disabled."),
-  );
 
-  $form['amazon_cache'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Store Amazon data locally'),
-    '#default_value' => variable_get('amazon_cache', TRUE),
-  );
-
-  if (!variable_get('amazon_cache', TRUE)) {
-    $form['details']['#prefix'] = '<div id="amazon-storage-details" class="js-hide">';
-  }
-  else {
-    $form['details']['#prefix'] = '<div id="amazon-storage-details">';
-  }
-
-  $form['details']['#suffix'] = '</div>';
-
-  $period = array(0 => t('Never'));
-  $period += drupal_map_assoc(array(43200, 86400, 604800), 'format_interval');
+  $period = drupal_map_assoc(array(3600, 7200, 14400, 21600, 43200, 86400), 'format_interval');
   $form['details']['amazon_refresh_schedule'] = array(
     '#type' => 'select',
     '#title' => t('Amazon refresh schedule'),
@@ -141,7 +121,7 @@ function amazon_test_form_submit($form, &$form_state) {
   if (is_array($items)) {
     $item = array_pop($items);
     amazon_item_delete($item['asin']);
-    amazon_item_save($item);
+    amazon_item_insert($item);
 
     // We could probably be sneaky and put the Amazon data in here directly,
     // but SimpleXML objects can't be serialized, and setting rebuild = TRUE

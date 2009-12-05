@@ -302,6 +302,7 @@ function amazon_item_lookup_from_web($item_ids = array()) {
   $amazon_limit = 10;  // Amazon will accept no more than 10 items
   $asins = array();
   $results = array();
+  $item_ids = array_filter($item_ids);  // Remove any empty items.
   foreach ($item_ids as $asin) {
     if (!empty($asin)) {
       $asins[] = $asin;
@@ -347,7 +348,7 @@ function _amazon_item_batch_lookup_from_web($item_ids = array()) {
     $items = array();
     foreach($results->Items->Item as $xml) {
       $item = amazon_item_clean_xml($xml);
-      amazon_item_save($item);
+      amazon_item_insert($item);
       $items["{$item['asin']}"] = $item;
     }
     return $items;
@@ -540,21 +541,6 @@ function amazon_item_insert($item) {
 }
 
 /**
- * Save 'cleaned' Amazon item into database.
- * @param $item
- *   'Cleaned' amazon item to insert.
- * @param $force_save
- *   if TRUE, save even though the caching is turned off in admin interface.
- * @return no return.
- */
-function amazon_item_save($item, $force_save = FALSE) {
-  // Only save if the user has turned on local persistence.
-  if (variable_get('amazon_cache', TRUE) || $force_save) {
-    amazon_item_insert($item, TRUE);
-  }
-}
-
-/**
  * Delete all vestiges of Amazon item.
  * @param $asin
  *   ASIN to be deleted.
@@ -683,12 +669,12 @@ function amazon_cron() {
   if (!empty($asins)) {
     if ($items = amazon_item_lookup_from_web($asins)) {
       foreach ($items as $item) {
-        amazon_item_save($item);
+        amazon_item_insert($item);
       }
-      watchdog('Amazon', 'Amazon items were updated.');
+      watchdog('amazon', 'Amazon items were updated.');
     }
     else {
-      watchdog('Amazon', 'Amazon items could not be updated.');
+      watchdog('amazon', 'Amazon items could not be updated.');
     }
   }
 }
