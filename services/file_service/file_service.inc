@@ -2,7 +2,6 @@
 // $Id$
 
 /**
- * @author Services Dev Team
  * @file
  *  Link general file functionalities to services module.
  */

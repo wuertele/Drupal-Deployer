@@ -1,7 +1,6 @@
 <?php
 // $Id$
 /**
- * @author Services Dev Team
  * @file
  *  Browser thru all services and servers.
  */
@@ -59,6 +58,9 @@ function services_admin_browse_index() {
   return $output;
 }
 
+/**
+ * Callback for 'admin/build/services/browse/%services_method'
+ */
 function services_admin_browse_method($method) {
   global $_services_admin_browse_test_submit_result;
 

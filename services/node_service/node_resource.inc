@@ -2,9 +2,8 @@
 // $Id$
 
 /**
- * @author Services Dev Team
  * @file
- *  CRUD resource funcionality for nodes.
+ *  CRUD resource functionality for nodes.
  */
 
 function _node_resource_retrieve($nid) {

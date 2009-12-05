@@ -1,7 +1,6 @@
 <?php
 // $Id$
 /**
- * @author Services Dev Team
  * @file
  *  Link general views functionalities to services module.
  */

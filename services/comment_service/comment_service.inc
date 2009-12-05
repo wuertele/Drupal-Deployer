@@ -2,7 +2,6 @@
 // $Id$
 
 /**
- * @author Services Dev Team
  * @file
  *  Link commenting functionality to services module.
  */

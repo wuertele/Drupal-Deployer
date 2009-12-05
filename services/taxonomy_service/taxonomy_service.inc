@@ -1,7 +1,6 @@
 <?php
 // $Id$
 /**
- * @author Services Dev Team
  * @file
  *  Link general taxonomy functionalities to services module.
  */
