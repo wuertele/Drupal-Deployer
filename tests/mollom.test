@@ -84,9 +84,55 @@ class MollomWebTestCase extends DrupalWebTestCase {
     $modules[] = 'mollom';
     call_user_func_array(array('parent', 'setUp'), $modules);
 
-    $this->admin_user = $this->drupalCreateUser(array('administer mollom'));
+    $this->admin_user = $this->drupalCreateUser(array(
+      'administer mollom',
+      'access administration pages',
+      'administer content types',
+      'administer comments',
+    ));
     $this->setKeys();
     $this->assertValidKeys();
+  }
+
+  function tearDown() {
+    // Capture any (remaining) watchdog messages.
+    $this->assertMollomWatchdogMessages();
+    parent::tearDown();
+  }
+
+  /**
+   * Assert any watchdog messages based on their severity.
+   *
+   * This function can be (repeatedly) invoked to assert new watchdog messages.
+   * All watchdog messages with a higher severity than WATCHDOG_NOTICE are
+   * considered as fails.
+   *
+   * @param $no_fail_expected
+   *   (optional) Boolean whether a failing watchdog message is expected.
+   *   Defaults to TRUE (no fail expected). If FALSE is passed, the logic for
+   *   assertion mesages is flipped.
+   *
+   * @todo Add this to D7 core.
+   */
+  protected function assertMollomWatchdogMessages($no_fail_expected = TRUE) {
+    static $seen_ids = array();
+
+    if (!module_exists('dblog')) {
+      return;
+    }
+    module_load_include('inc', 'dblog', 'dblog.admin');
+
+    $where = ($seen_ids ? 'AND wid NOT IN (' . db_placeholders($seen_ids) . ')' : '');
+    $result = db_query("SELECT * FROM {watchdog} WHERE type = 'mollom' $where ORDER BY timestamp ASC", $seen_ids);
+    while ($row = db_fetch_object($result)) {
+      if ($no_fail_expected ? $row->severity >= WATCHDOG_NOTICE : $row->severity < WATCHDOG_NOTICE) {
+        $this->pass(_dblog_format_message($row), t('Watchdog'));
+      }
+      else {
+        $this->fail(_dblog_format_message($row), t('Watchdog'));
+      }
+      $seen_ids[] = $row->wid;
+    }
   }
 
   /**
@@ -127,17 +173,89 @@ class MollomWebTestCase extends DrupalWebTestCase {
   }
 
   /**
+   * Configure Mollom protection for a given form.
+   *
+   * @param $form_id
+   *   The form id to configure.
+   * @param $fields
+   *   (optional) A list of form elements to enable for text analysis.
+   */
+  protected function setProtection($form_id, $fields = NULL) {
+    // Determine whether the form is already protected.
+    $exists = db_result(db_query_range("SELECT 1 FROM {mollom_form} WHERE form_id = '%s'", $form_id, 0, 1));
+    // Add a new form.
+    if (!$exists) {
+      $this->drupalGet('admin/settings/mollom');
+      $this->clickLink(t('Add form'));
+      $edit = array(
+        'mollom[form_id]' => $form_id,
+      );
+      $this->drupalPost(NULL, $edit, t('Next'));
+    }
+    // Edit an existing form.
+    else {
+      $this->drupalGet('admin/settings/mollom/manage/' . $form_id);
+    }
+
+    $edit = array();
+    // Explicitly enable the passed fields, if $fields were passed.
+    if (isset($fields)) {
+      foreach ($fields as $field) {
+        $edit['mollom[fields][' . $field . ']'] = TRUE;
+      }
+    }
+    $form_info = mollom_get_form_info($form_id);
+    foreach (array_keys($form_info['elements']) as $field) {
+      // Due to SimpleTest's form handling of checkboxes, we need to disable all
+      // remaining checkboxes manually.
+      if (isset($fields)) {
+        if (!isset($edit[$field])) {
+          $edit['mollom[fields][' . $field . ']'] = FALSE;
+        }
+      }
+      // If no $fields were passed, enable all elements exposed by the
+      // implementation.
+      else {
+        $edit['mollom[fields][' . $field . ']'] = TRUE;
+      }
+    }
+    $this->drupalPost(NULL, $edit, t('Save'));
+    if (!$exists) {
+      $this->assertText(t('The form protection has been added.'));
+    }
+    else {
+      $this->assertText(t('The form protection has been updated.'));
+    }
+  }
+
+  /**
+   * Remove Mollom protection for a given form.
+   *
+   * @param $form_id
+   *   The form id to configure.
+   */
+  protected function delProtection($form_id) {
+    // Determine whether the form is protected.
+    $exists = db_result(db_query_range("SELECT 1 FROM {mollom_form} WHERE form_id = '%s'", $form_id, 0, 1));
+    if ($exists) {
+      $this->drupalGet('admin/settings/mollom/unprotect/' . $form_id);
+      $this->assertText(t('Mollom will no longer protect this form from spam.'), t('Unprotect confirmation form found.'));
+      $this->drupalPost(NULL, array(), t('Confirm'));
+    }
+  }
+
+  /**
    * Test that the CAPTCHA field is found on the current page.
    */
   protected function assertCaptchaField() {
-    $this->assertFieldByID('edit-mollom-captcha', '', 'CAPTCHA field found on ' . $this->getUrl());
+    $this->assertFieldByXPath('//input[@type="text"][@name="mollom[captcha]"]', '', 'CAPTCHA field found.');
   }
 
   /**
    * Test that the CAPTCHA field is not found on the current page.
    */
   protected function assertNoCaptchaField() {
-    $this->assertNoFieldByID('edit-mollom-captcha', '', 'CAPTCHA field not found on ' . $this->getUrl());
+    $this->assertNoFieldByXPath('//input[@type="text"][@name="mollom[captcha]"]', '', 'CAPTCHA field not found.');
   }
 
   /**
@@ -279,6 +397,41 @@ class MollomWebTestCase extends DrupalWebTestCase {
     }
     return $value;
   }
+
+  /**
+   * Retrieve submitted XML-RPC values from testing server implementation.
+   *
+   * @see mollom_test.module
+   */
+  protected function getServerRecord() {
+    $storage = variable_get('mollom_test_check_content', array());
+    $return = array_shift($storage);
+    variable_set('mollom_test_check_content', $storage);
+    return $return;
+  }
+
+  /**
+   * Helper function for assertEqual().
+   *
+   * Check to see if two values are equal. And provide a meaningful response.
+   *
+   * @param $name
+   *   A name or identifier to use in the assertion message.
+   * @param $first
+   *   The first value to check.
+   * @param $second
+   *   The second value to check.
+   * @return
+   *   TRUE if the assertion succeeded, FALSE otherwise.
+   */
+  function _assertEqual($name, $first, $second) {
+    $message = strtr("@name: '@first' is equal to '@second'.", array(
+      '@name' => $name,
+      '@first' => $first,
+      '@second' => $second,
+    ));
+    $this->assertEqual($first, $second, $message);
+  }
 }
 
 class MollomAccessTestCase extends MollomWebTestCase {
@@ -294,10 +447,10 @@ class MollomAccessTestCase extends MollomWebTestCase {
    * Configure both a valid and an invalid key pair and make sure both
    * success and failure are reported on the Mollom settings page.
    */
-  function testKeyPairs() {
+  function XtestKeyPairs() {
     // Check that a success message is shown.
     $this->drupalLogin($this->admin_user);
-    $this->drupalGet('admin/settings/mollom');
+    $this->drupalGet('admin/settings/mollom/settings');
     $this->assertText(t('We contacted the Mollom servers to verify your keys: the Mollom services are operating correctly. We are now blocking spam.'));
 
     // Set up invalid test keys and check that an error message is shown.
@@ -305,10 +458,10 @@ class MollomAccessTestCase extends MollomWebTestCase {
       'mollom_public_key' => 'invalid-public-key',
       'mollom_private_key' => 'invalid-private-key',
     );
-    $this->drupalPost('admin/settings/mollom', $edit, t('Save configuration'));
+    $this->drupalPost(NULL, $edit, t('Save configuration'));
     $this->assertText(t('The configuration options have been saved.'));
 
-    $this->drupalGet('admin/settings/mollom');
+    $this->drupalGet('admin/settings/mollom/settings');
     $this->assertRaw(t('"messages error"'), t('The Mollom settings page reports that the Mollom keys are invalid.'));
   }
 
@@ -317,7 +470,7 @@ class MollomAccessTestCase extends MollomWebTestCase {
    * 'administer mollom' permission but not those without
    * it.
    */
-  function testAdminAccessRights() {
+  function XtestAdminAccessRights() {
     // Check access for a user that only has access to the 'administer
     // site configuration' permission. This user should have access to
     // the Mollom settings page.
@@ -326,12 +479,62 @@ class MollomAccessTestCase extends MollomWebTestCase {
     $this->assertResponse(200);
 
     // Check access for a user that has everything except the 'administer
-    // site configuration' permission. This user should not have access
-    // to the Mollom settings page.
+    // mollom' permission. This user should not have access to the Mollom
+    // settings page.
     $this->web_user = $this->drupalCreateUser(array_diff(module_invoke_all('perm'), array('administer mollom')));
     $this->drupalLogin($this->web_user);
     $this->drupalGet('admin/settings/mollom');
     $this->assertResponse(403);
+  }
+
+  /**
+   * Tests 'bypass access' property of registered forms.
+   */
+  function testBypassAccess() {
+    $node = $this->drupalCreateNode(array('body' => 'node body', 'type' => 'story'));
+
+    // Create a regular user and post a comment.
+    $this->web_user = $this->drupalCreateUser(array('post comments', 'post comments without approval'));
+    $this->drupalLogin($this->web_user);
+    $edit = array(
+      'comment' => 'ham',
+    );
+    $this->drupalPost('comment/reply/' . $node->nid, $edit, t('Preview'));
+    $this->assertMollomWatchdogMessages();
+
+    $this->drupalPost(NULL, array(), t('Save'));
+    $this->assertMollomWatchdogMessages();
+    $this->assertText('node body');
+    $this->assertText($edit['comment']);
+
+    // Ensure a user having one of the permissions to bypass access can post
+    // spam without triggering the spam protection.
+    $this->drupalLogin($this->admin_user);
+    $this->drupalGet('node/' . $node->nid);
+    $this->clickLink('edit');
+
+    $this->drupalPost(NULL, array('subject' => '', 'comment' => 'spam'), t('Preview'));
+    $this->assertMollomWatchdogMessages();
+    $this->assertNoText($this->spam_message);
+
+    $this->drupalPost(NULL, array(), t('Save'));
+    $this->assertMollomWatchdogMessages();
+    $this->assertNoText($this->spam_message);
+    $this->assertText('node body');
+
+    // Log in back the regular user and try to edit the comment containing spam.
+    $this->drupalLogin($this->web_user);
+    $this->drupalGet('node/' . $node->nid);
+    $this->clickLink('edit');
+
+    $this->drupalPost(NULL, array(), t('Preview'));
+    $this->assertMollomWatchdogMessages();
+    $this->assertText($this->spam_message);
+
+    $this->drupalPost(NULL, array(), t('Save'));
+    $this->assertMollomWatchdogMessages();
+    $this->assertText($this->spam_message);
+    $this->assertNoText('node body');
   }
 }
 
@@ -345,9 +548,8 @@ class MollomFallbackTestCase extends MollomWebTestCase {
   }
 
   function setUp() {
-    parent::setUp();
-    // Enable Mollom for the request password form.
-    variable_set('mollom_user_pass', MOLLOM_MODE_CAPTCHA);
+    // Enable testing server implementation.
+    parent::setUp('mollom_test');
   }
 
   /**
@@ -355,11 +557,14 @@ class MollomFallbackTestCase extends MollomWebTestCase {
    * the Mollom servers are unreachable.
    */
   function testFallbackMechanismBlock() {
-    // Set the fallback strategy to 'blocking mode'.
+    // Enable Mollom for the request password form.
     $this->drupalLogin($this->admin_user);
-    $this->drupalPost('admin/settings/mollom', array('mollom_fallback' => MOLLOM_FALLBACK_BLOCK), t('Save configuration'));
+    $this->setProtection('user_pass');
+    // Set the fallback strategy to 'blocking mode'.
+    $this->drupalPost('admin/settings/mollom/settings', array('mollom_fallback' => MOLLOM_FALLBACK_BLOCK), t('Save configuration'));
     $this->assertText('The configuration options have been saved.');
     $this->drupalLogout();
+    $this->assertMollomWatchdogMessages();
 
     // Configure Mollom to use a non-existent server as that should trigger
     // the fallback mechanism.
@@ -370,6 +575,7 @@ class MollomFallbackTestCase extends MollomWebTestCase {
     $this->drupalGet('user/password');
     $this->assertNoCaptchaField();
     $this->assertText($this->fallback_message);
+    $this->assertMollomWatchdogMessages(FALSE);
   }
 
   /**
@@ -377,9 +583,11 @@ class MollomFallbackTestCase extends MollomWebTestCase {
    * the Mollom servers are unreachable.
    */
   function testFallbackMechanismAccept() {
-    // Set the fallback strategy to 'accept mode'.
+    // Enable Mollom for the request password form.
     $this->drupalLogin($this->admin_user);
-    $this->drupalPost('admin/settings/mollom', array('mollom_fallback' => MOLLOM_FALLBACK_ACCEPT), t('Save configuration'));
+    $this->setProtection('user_pass');
+    // Set the fallback strategy to 'accept mode'.
+    $this->drupalPost('admin/settings/mollom/settings', array('mollom_fallback' => MOLLOM_FALLBACK_ACCEPT), t('Save configuration'));
     $this->assertText('The configuration options have been saved.');
     $this->drupalLogout();
 
@@ -397,7 +605,7 @@ class MollomFallbackTestCase extends MollomWebTestCase {
    * Make sure that spam protection is still active even when some of the
    * Mollom servers are unavailable.
    *
-   * @todo @todo Test mail sending with assertMail() now that it is available.
+   * @todo Test mail sending with assertMail() now that it is available.
    */
   function testFailoverMechanism() {
     // Set the fallback strategy to 'blocking mode', so that if the failover
@@ -409,10 +617,10 @@ class MollomFallbackTestCase extends MollomWebTestCase {
     variable_set('mollom_servers', array(
       'http://fake-host-1',
       'http://fake-host-2',
+      $GLOBALS['base_url'] . '/xmlrpc.php?version=',
       'http://xmlrpc1.mollom.com', // The real server.
       'http://fake-host-3',
-      )
-    );
+    ));
 
     // Validate that the request password form has a CAPTCHA text field and
     // that a user is not blocked from submitting it.
@@ -458,9 +666,11 @@ class MollomServerListRecoveryTestCase extends MollomWebTestCase {
 
       $key_is_valid = mollom('mollom.verifyKey');
       $this->assertIdentical($key_is_valid, NETWORK_ERROR, t('The Mollom servers could not be contacted'));
+      $this->assertMollomWatchdogMessages(FALSE);
 
       $key_is_valid = mollom('mollom.verifyKey');
       $this->assertIdentical($key_is_valid, TRUE, t('The Mollom servers could be contacted.'));
+      $this->assertMollomWatchdogMessages();
     }
   }
 }
@@ -477,11 +687,13 @@ class MollomUserFormsTestCase extends MollomWebTestCase {
   /**
    * Make sure that the request password form is protected correctly.
    *
-   * @todo @todo Test mail sending with assertMail() now that it is available.
+   * @todo Test mail sending with assertMail() now that it is available.
    */
   function testProtectRequestPassword() {
     // We first enable Mollom for the request password form.
-    variable_set('mollom_user_pass', MOLLOM_MODE_CAPTCHA);
+    $this->drupalLogin($this->admin_user);
+    $this->setProtection('user_pass');
+    $this->drupalLogout();
 
     // Create a new user.
     $this->web_user = $this->drupalCreateUser();
@@ -502,7 +714,9 @@ class MollomUserFormsTestCase extends MollomWebTestCase {
    */
   function testProtectRegisterUser() {
     // We first enable Mollom for the user registration form.
-    variable_set('mollom_user_register', MOLLOM_MODE_CAPTCHA);
+    $this->drupalLogin($this->admin_user);
+    $this->setProtection('user_register');
+    $this->drupalLogout();
 
     // Validate that the user registration form has a CAPTCHA text field.
     $this->drupalGet('user/register');
@@ -543,7 +757,6 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
     $this->web_user = $this->drupalCreateUser(array('access comments', 'post comments', 'post comments without approval', 'create story content'));
     $this->node = $this->drupalCreateNode(array('type' => 'story', 'uid' => $this->web_user->uid));
     variable_set('comment_preview_story', COMMENT_PREVIEW_OPTIONAL);
-    $this->drupalLogin($this->web_user);
   }
 
   /**
@@ -551,9 +764,12 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
    */
   function testUnprotectedCommentForm() {
     // Disable Mollom for comments.
-    variable_set('mollom_comment_form', MOLLOM_MODE_DISABLED);
+    $this->drupalLogin($this->admin_user);
+    $this->delProtection('comment_form');
+    $this->drupalLogout();
 
     // Request the comment reply form. There should be no CAPTCHA.
+    $this->drupalLogin($this->web_user);
     $this->drupalGet('comment/reply/'. $this->node->nid);
     $this->assertNoCaptchaField();
 
@@ -563,7 +779,7 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
 
     // Save the comment and make sure it appears.
     $this->drupalPost(NULL, array(), t('Save'));
-    $this->assertRaw('<p>spam</p>', t('A comment that is known to be ham appears on the screen after it is submitted.'));
+    $this->assertRaw('<p>spam</p>', t('A comment that is known to be spam appears on the screen after it is submitted.'));
   }
 
   /**
@@ -571,9 +787,12 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
    */
   function testCaptchaProtectedCommentForm() {
     // Enable Mollom CAPTCHA protection for comments.
-    variable_set('mollom_comment_form', MOLLOM_MODE_CAPTCHA);
+    $this->drupalLogin($this->admin_user);
+    $this->setProtection('comment_form', array());
+    $this->drupalLogout();
 
     // Request the comment reply form. There should be a CAPTCHA form.
+    $this->drupalLogin($this->web_user);
     $this->drupalGet('comment/reply/'. $this->node->nid);
     $this->assertCaptchaField();
 
@@ -599,9 +818,12 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
    */
   function testTextAnalysisProtectedCommentForm() {
     // Enable Mollom text-classification for comments.
-    variable_set('mollom_comment_form', MOLLOM_MODE_ANALYSIS);
+    $this->drupalLogin($this->admin_user);
+    $this->setProtection('comment_form');
+    $this->drupalLogout();
 
     // Request the comment reply form.  Initially, there should be no CAPTCHA.
+    $this->drupalLogin($this->web_user);
     $this->drupalGet('comment/reply/'. $this->node->nid);
     $this->assertNoCaptchaField();
 
@@ -688,18 +910,20 @@ class MollomContactFormTestCase extends MollomWebTestCase {
     parent::setUp('contact');
 
     $this->web_user = $this->drupalCreateUser(array('access site-wide contact form', 'access user profiles'));
-    $this->drupalLogin($this->web_user);
   }
 
   /**
    * Make sure that the user contact form is protected correctly.
    *
-   * @todo @todo Test mail sending with assertMail() now that it is available.
+   * @todo Test mail sending with assertMail() now that it is available.
    */
   function testProtectContactUserForm() {
     // Enable Mollom for the contact form.
-    variable_set('mollom_contact_mail_user', MOLLOM_MODE_ANALYSIS);
+    $this->drupalLogin($this->admin_user);
+    $this->setProtection('contact_mail_user');
+    $this->drupalLogout();
 
+    $this->drupalLogin($this->web_user);
     $url = 'user/' . $this->admin_user->uid . '/contact';
     $button = t('Send e-mail');
     $success = t('The message has been sent.');
@@ -720,13 +944,16 @@ class MollomContactFormTestCase extends MollomWebTestCase {
   /**
    * Make sure that the site-wide contact form is protected correctly.
    *
-   * @todo @todo Test mail sending with assertMail() now that it is available.
+   * @todo Test mail sending with assertMail() now that it is available.
    */
   function testProtectContactSiteForm() {
     // Enable Mollom for the contact form.
-    variable_set('mollom_contact_mail_page', MOLLOM_MODE_ANALYSIS);
+    $this->drupalLogin($this->admin_user);
+    $this->setProtection('contact_mail_page');
+    $this->drupalLogout();
 
     // Add some fields to the contact form so that it is active.
+    $this->drupalLogin($this->web_user);
     db_query("INSERT INTO {contact} (category, recipients, reply) VALUES ('%s', '%s', '%s')", 'test category', $this->web_user->mail, 'test auto-reply');
 
     $url = 'contact';
@@ -810,3 +1037,184 @@ class MollomResellerTestCase extends MollomWebTestCase {
     $this->assertEqual(count($sites), 0, t('All Mollom sites have been deleted.'));
   }
 }
+
+/**
+ * Tests form value processing.
+ */
+class MollomDataTestCase extends MollomWebTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => 'Data processing',
+      'description' => 'Verify that form registry information is properly transformed into data that is sent to Mollom servers.',
+      'group' => 'Mollom',
+    );
+  }
+
+  function setUp() {
+    // Enable testing server implementation.
+    parent::setUp('mollom_test');
+    // Re-route Mollom communication to this testing site.
+    variable_set('mollom_servers', array($GLOBALS['base_url'] . '/xmlrpc.php?version='));
+  }
+
+  /**
+   * Test mollom_form_get_values().
+   */
+  function testFormGetValues() {
+    global $user;
+
+    // Form registry information.
+    $form_info = array(
+      'elements' => array(
+        'subject' => 'Subject',
+        'message' => 'Message',
+        'parent][child' => 'Some nested element',
+      ),
+      'mapping' => array(
+        'post_title' => 'subject',
+        'author_name' => 'name',
+        'author_mail' => 'mail',
+      ),
+    );
+    // Fields configured via Mollom admin UI based on $form_info['elements'].
+    $fields = array(
+      'subject',
+      'message',
+      'parent][child',
+    );
+    // Submitted form values.
+    $values = array(
+      'subject' => 'Foo',
+      'message' => 'Bar',
+      'parent' => array(
+        'child' => 'Beer',
+      ),
+      'name' => 'Drupaler',
+    );
+    $data = mollom_form_get_values($values, $fields, $form_info['mapping']);
+
+    $this->_assertEqual('post_title', $data['post_title'], $values['subject']);
+    $this->_assertEqual('post_body', $data['post_body'], $values['message'] . "\n" . $values['parent']['child']);
+    $this->_assertEqual('author_name', $data['author_name'], $values['name']);
+    $this->_assertEqual('author_mail', $data['author_mail'], $user->mail);
+    $this->_assertEqual('author_url', $data['author_url'], NULL);
+    $this->_assertEqual('author_openid', $data['author_openid'], _mollom_get_openid($user));
+    $this->_assertEqual('author_id', $data['author_id'], $user->uid);
+    $this->_assertEqual('author_ip', $data['author_ip'], ip_address());
+  }
+
+  /**
+   * Test submitted post and author information.
+   */
+  function testAnalysis() {
+    // Verify that comment form is protected.
+    $this->drupalLogin($this->admin_user);
+    $this->drupalGet('admin/settings/mollom');
+    $this->assertText(t('Comment form'));
+    $this->drupalGet('admin/settings/mollom/manage/comment_form');
+
+    // Make comment preview optional.
+    $edit = array(
+      'comment_preview' => 0,
+    );
+    $this->drupalPost('admin/content/node-type/story', $edit, t('Save content type'));
+
+    // Create a node we can comment on.
+    $node = $this->drupalCreateNode(array('type' => 'story', 'promote' => 1));
+    $this->drupalGet('');
+    $this->assertText($node->title);
+
+    // Log in regular user and post a comment.
+    $this->drupalLogout();
+    $this->web_user = $this->drupalCreateUser(array('post comments without approval'));
+    $this->drupalLogin($this->web_user);
+    $this->drupalGet('');
+    $this->clickLink(t('Add new comment'));
+    $edit = array(
+      'subject' => $this->randomString(),
+      'comment' => $this->randomString(),
+    );
+    $this->drupalPost(NULL, $edit, t('Save'));
+    $comment = db_fetch_object(db_query("SELECT * FROM {comments} WHERE subject = '%s'", $edit['subject']));
+
+    // Verify that submitted data equals post data.
+    $data = $this->getServerRecord();
+    $this->_assertEqual('post_title', $data['post_title'], $edit['subject']);
+    $this->_assertEqual('post_body', $data['post_body'], $edit['comment']);
+    $this->_assertEqual('author_name', $data['author_name'], $this->web_user->name);
+    $this->_assertEqual('author_mail', $data['author_mail'], $this->web_user->mail);
+    $this->_assertEqual('author_id', $data['author_id'], $this->web_user->uid);
+
+    // Log in admin user and edit comment.
+    /*
+    $this->drupalLogout();
+    $this->drupalLogin($this->admin_user);
+    $this->drupalGet('comment/edit/' . $comment->cid);
+    // Post without modification.
+    $this->drupalPost(NULL, array(), t('Save'));
+
+    // Verify that submitted data equals post data.
+    $data = $this->getServerRecord();
+    $this->_assertEqual('post_title', $data['post_title'], $edit['subject']);
+    $this->_assertEqual('post_body', $data['post_body'], $edit['comment']);
+    $this->_assertEqual('author_name', $data['author_name'], $this->web_user->name);
+    $this->_assertEqual('author_mail', $data['author_mail'], $this->web_user->mail);
+    #$this->_assertEqual('author_id', $data['author_id'], $this->web_user->uid);
+    */
+  }
+}
+
+/**
+ * Tests report to Mollom functionality.
+ */
+class MollomReportTestCase extends MollomWebTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => 'Reporting functionality',
+      'description' => 'Verify that session data is properly stored and content can be reported to Mollom.',
+      'group' => 'Mollom',
+    );
+  }
+
+  function setUp() {
+    parent::setUp('comment');
+
+    $this->web_user = $this->drupalCreateUser(array('access comments', 'post comments', 'post comments without approval', 'create story content'));
+  }
+
+  /**
+   * Tests reporting comments.
+   */
+  function testReportComment() {
+    $this->node = $this->drupalCreateNode(array('type' => 'story'));
+    variable_set('comment_preview_story', COMMENT_PREVIEW_OPTIONAL);
+
+    // Post a comment.
+    $this->drupalLogin($this->web_user);
+    $edit = array(
+      'comment' => 'ham',
+    );
+    $this->drupalPost('comment/reply/' . $this->node->nid, $edit, t('Save'));
+    $this->assertMollomWatchdogMessages();
+    $this->comment = db_fetch_object(db_query("SELECT * FROM {comments} WHERE comment = '%s' AND nid = %d", array($edit['comment'], $this->node->nid)));
+    $this->assertTrue($this->comment, t('Comment was found in the database.'));
+    $this->assertTrue(mollom_data_load('comment', $this->comment->cid), t('Mollom session data was recorded.'));
+
+    // Log in comment administrator and verify that we can report to Mollom.
+    $this->drupalLogin($this->admin_user);
+    $this->drupalGet('node/' . $this->node->nid);
+    $this->assertText($edit['comment'], t('Comment found.'));
+    $this->clickLink('report to Mollom');
+    $edit = array(
+      'feedback' => 'spam',
+    );
+    $this->drupalPost(NULL, $edit, t('Delete'));
+    $this->assertMollomWatchdogMessages();
+    $this->assertText(t('The comment has been deleted.'));
+
+    // Verify that the comment and Mollom session data has been deleted.
+    $this->assertFalse(_comment_load($this->comment->cid), t('Comment was deleted.'));
+    $this->assertFalse(mollom_data_load('comment', $this->comment->cid), t('Mollom session data for comment was deleted.'));
+  }
+}
+

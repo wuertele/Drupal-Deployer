@@ -1,0 +1,60 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Testing functionality for Mollom module.
+ */
+
+/**
+ * Implements hook_xmlrpc().
+ */
+function mollom_test_xmlrpc() {
+  return array(
+    // $data contains a variable amount of properties, so we cannot specify a
+    // signature.
+    'mollom.checkContent' => 'mollom_test_check_content',
+    'mollom.getImageCaptcha' => 'mollom_test_get_captcha',
+    'mollom.checkCaptcha' => 'mollom_test_check_captcha',
+ );
+}
+
+/**
+ * XML-RPC callback for mollom.checkContent to perform textual analysis.
+ */
+function mollom_test_check_content($data) {
+  $storage = variable_get(__FUNCTION__, array());
+  $storage[] = $data;
+  variable_set(__FUNCTION__, $storage);
+
+  return array(
+    'session_id' => isset($data['session_id']) ? $data['session_id'] : session_id(),
+    'spam' => MOLLOM_ANALYSIS_HAM,
+  );
+}
+
+/**
+ * XML-RPC callback for mollom.getImageCaptcha to fetch a CATPCHA image.
+ */
+function mollom_test_get_captcha($data) {
+  $storage = variable_get(__FUNCTION__, array());
+  $storage[] = $data;
+  variable_set(__FUNCTION__, $storage);
+
+  return array(
+    'session_id' => isset($data['session_id']) ? $data['session_id'] : session_id(),
+    'url' => $GLOBALS['base_url'] . '/' . drupal_get_path('module', 'mollom') . '/images/powered-by-mollom-2.gif',
+  );
+}
+
+/**
+ * XML-RPC callback for mollom.checkCaptcha to valie a CAPTCHA response.
+ */
+function mollom_test_check_captcha($data) {
+  $storage = variable_get(__FUNCTION__, array());
+  $storage[] = $data;
+  variable_set(__FUNCTION__, $storage);
+
+  return TRUE;
+}
+
