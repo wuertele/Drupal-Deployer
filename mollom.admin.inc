@@ -53,6 +53,12 @@ function mollom_admin_form_options() {
   while ($form_id = db_result($result)) {
     unset($form_info[$form_id]);
   }
+  // If all registered forms are configured already, output a message, and
+  // redirect the user back to overview.
+  if (empty($form_info)) {
+    drupal_set_message(t('All available forms are protected already.'));
+    drupal_goto('admin/settings/mollom');
+  }
 
   // Load module information.
   $modules = module_implements('mollom_form_info');
@@ -152,10 +158,18 @@ function mollom_admin_configure_form(&$form_state, $mollom_form = NULL) {
  * Form submit handler for 'Next' button on Mollom form configuration form.
  */
 function mollom_admin_configure_form_next_submit($form, &$form_state) {
-  $mollom_form = $form_state['values']['mollom'];
+  $form_id = $form_state['values']['mollom']['form_id'];
 
   // Load form information into $form_state for configuration.
-  $form_state['storage']['mollom_form'] = mollom_form_load($mollom_form['form_id']);
+  $mollom_form = mollom_get_form_info($form_id);
+  // Enable all fields for textual analysis by default.
+  if (!empty($mollom_form['mode']) && !empty($mollom_form['elements'])) {
+    $mollom_form['fields'] = array_keys($mollom_form['elements']);
+  }
+  else {
+    $mollom_form['fields'] = array();
+  }
+  $form_state['storage']['mollom_form'] = $mollom_form;
 
   $form_state['storage']['step'] = 'configure';
 }

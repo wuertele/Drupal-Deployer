@@ -447,7 +447,7 @@ class MollomAccessTestCase extends MollomWebTestCase {
    * Configure both a valid and an invalid key pair and make sure both
    * success and failure are reported on the Mollom settings page.
    */
-  function XtestKeyPairs() {
+  function testKeyPairs() {
     // Check that a success message is shown.
     $this->drupalLogin($this->admin_user);
     $this->drupalGet('admin/settings/mollom/settings');
@@ -460,8 +460,7 @@ class MollomAccessTestCase extends MollomWebTestCase {
     );
     $this->drupalPost(NULL, $edit, t('Save configuration'));
     $this->assertText(t('The configuration options have been saved.'));
-
-    $this->drupalGet('admin/settings/mollom/settings');
+    $this->assertMollomWatchdogMessages(FALSE);
     $this->assertRaw(t('"messages error"'), t('The Mollom settings page reports that the Mollom keys are invalid.'));
   }
 
@@ -470,7 +469,7 @@ class MollomAccessTestCase extends MollomWebTestCase {
    * 'administer mollom' permission but not those without
    * it.
    */
-  function XtestAdminAccessRights() {
+  function testAdminAccessRights() {
     // Check access for a user that only has access to the 'administer
     // site configuration' permission. This user should have access to
     // the Mollom settings page.
@@ -672,6 +671,102 @@ class MollomServerListRecoveryTestCase extends MollomWebTestCase {
       $this->assertIdentical($key_is_valid, TRUE, t('The Mollom servers could be contacted.'));
       $this->assertMollomWatchdogMessages();
     }
+  }
+}
+
+/**
+ * Tests Mollom form configuration functionality.
+ */
+class MollomFormConfigurationTestCase extends MollomWebTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => 'Form configuration functionality',
+      'description' => 'Verify that forms can be properly protected and unprotected.',
+      'group' => 'Mollom',
+    );
+  }
+
+  function setUp() {
+    parent::setUp();
+    $this->drupalLogin($this->admin_user);
+  }
+
+  /**
+   * Tests configuration of forms.
+   */
+  function testFormConfiguration() {
+    // @todo Figure out why we need to reset the static cache here.
+    mollom_get_form_info(NULL, TRUE);
+    $form_info = mollom_get_form_info();
+
+    // Verify that all registered forms specifying a default mode are
+    // auto-protected after installation.
+    // @todo During Drupal installation, modules are installed in an arbitrary
+    //   order, so module_list() only returns modules that were installed before
+    //   this module. They seem to be ordered alphabetically, so registered
+    //   forms for Contact and Node modules are not contained yet. We'd either
+    //   have to install Mollom module manually, or we simply comment out these
+    //   assertions until D7. :P
+    /*
+    $this->drupalGet('admin/settings/mollom');
+    foreach ($form_info as $form_id => $info) {
+      if (!empty($info['mode'])) {
+        $this->assertText($info['title']);
+      }
+    }
+    */
+
+    // Unprotect user_register form.
+    $this->drupalPost('admin/settings/mollom/unprotect/user_register', array(), t('Confirm'));
+    $this->assertNoText($form_info['user_register']['title']);
+    $this->assertFalse(mollom_form_load('user_register'), t('Form configuration no longer exists.'));
+
+    // Re-protect user_register form.
+    $this->drupalGet('admin/settings/mollom/add');
+    $this->assertNoText(t('All available forms are protected already.'));
+    $edit = array(
+      'mollom[form_id]' => 'user_register',
+    );
+    $this->drupalPost(NULL, $edit, t('Next'));
+    $this->assertText($form_info['user_register']['title']);
+    $this->assertText(t('No fields are available.'));
+    $this->drupalPost(NULL, array(), t('Save'));
+
+    // Verify that user_register form was protected.
+    $this->assertText(t('The form protection has been added.'));
+    $this->assertText($form_info['user_register']['title']);
+    $this->assertTrue(mollom_form_load('user_register'), t('Form configuration exists.'));
+
+    // Iterate over all unconfigured forms and protect them.
+    foreach ($form_info as $form_id => $info) {
+      if (!mollom_form_load($form_id)) {
+        $edit = array(
+          'mollom[form_id]' => $form_id,
+        );
+        $this->drupalPost('admin/settings/mollom/add', $edit, t('Next'));
+        $this->assertText($info['title']);
+        if (isset($info['mode'])) {
+          // Verify that CAPTCHA-only forms contain no configurable fields.
+          if ($info['mode'] == MOLLOM_MODE_CAPTCHA) {
+            $this->assertText(t('No fields are available.'));
+          }
+          // Verify that forms specifying textual analysis as default mode have
+          // all possible elements preselected.
+          elseif ($info['mode'] == MOLLOM_MODE_ANALYSIS && !empty($info['elements'])) {
+            foreach ($info['elements'] as $field => $label) {
+              $this->assertFieldByName("mollom[fields][$field]", TRUE);
+            }
+          }
+        }
+        $this->drupalPost(NULL, array(), t('Save'));
+        $this->assertText(t('The form protection has been added.'));
+      }
+    }
+
+    // Verify that trying to add a form redirects to the overview.
+    $this->drupalGet('admin/settings/mollom/add');
+    $this->assertText(t('All available forms are protected already.'));
+    $this->assertText(t('Operations'));
   }
 }
 
@@ -1082,7 +1177,8 @@ class MollomDataTestCase extends MollomWebTestCase {
       'message',
       'parent][child',
     );
-    // Submitted form values.
+
+    // Verify submitted form values for an anonymous/arbitrary user.
     $values = array(
       'subject' => 'Foo',
       'message' => 'Bar',
@@ -1090,16 +1186,35 @@ class MollomDataTestCase extends MollomWebTestCase {
         'child' => 'Beer',
       ),
       'name' => 'Drupaler',
+      'mail' => 'drupaler@example.com',
     );
     $data = mollom_form_get_values($values, $fields, $form_info['mapping']);
 
     $this->_assertEqual('post_title', $data['post_title'], $values['subject']);
     $this->_assertEqual('post_body', $data['post_body'], $values['message'] . "\n" . $values['parent']['child']);
     $this->_assertEqual('author_name', $data['author_name'], $values['name']);
-    $this->_assertEqual('author_mail', $data['author_mail'], $user->mail);
-    $this->_assertEqual('author_url', $data['author_url'], NULL);
-    $this->_assertEqual('author_openid', $data['author_openid'], _mollom_get_openid($user));
-    $this->_assertEqual('author_id', $data['author_id'], $user->uid);
+    $this->_assertEqual('author_mail', $data['author_mail'], $values['mail']);
+    $this->assertFalse(isset($data['author_url']), t('author_url: Undefined.'));
+    $this->assertFalse(isset($data['author_openid']), t('author_openid: Undefined.'));
+    $this->assertFalse(isset($data['author_id']), t('author_id: Undefined.'));
+    $this->_assertEqual('author_ip', $data['author_ip'], ip_address());
+
+    // Verify submitted form values for an registered user.
+    $values = array(
+      'subject' => 'Foo',
+      'message' => 'Bar',
+      'name' => $this->admin_user->name,
+    );
+    $data = mollom_form_get_values($values, $fields, $form_info['mapping']);
+
+    $this->_assertEqual('post_title', $data['post_title'], $values['subject']);
+    $this->_assertEqual('post_body', $data['post_body'], $values['message']);
+    $this->_assertEqual('author_name', $data['author_name'], $this->admin_user->name);
+    $this->_assertEqual('author_mail', $data['author_mail'], $this->admin_user->mail);
+    $this->assertFalse(isset($data['author_url']), t('author_url: Undefined.'));
+    // @todo Test this.
+    $this->assertFalse(isset($data['author_openid']), t('author_openid: Undefined.'));
+    $this->_assertEqual('author_id', $data['author_id'], $this->admin_user->uid);
     $this->_assertEqual('author_ip', $data['author_ip'], ip_address());
   }
 

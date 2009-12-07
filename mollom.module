@@ -449,12 +449,19 @@ function mollom_get_mode($form_id) {
  * @param $form_id
  *   (optional) The form id to return information for. If omitted, information
  *   for all registered forms is returned.
+ * @param $reset
+ *   (optional) Boolean whether to reset the static cache and do nothing. Only
+ *   used for tests.
  */
-function mollom_get_form_info($form_id = NULL) {
+function mollom_get_form_info($form_id = NULL, $reset = FALSE) {
   static $form_info;
 
+  if ($reset) {
+    $form_info = NULL;
+    return;
+  }
+
   if (!isset($form_info)) {
-    module_load_include('inc', 'mollom', 'mollom.form');
     $form_info = array();
     foreach (module_implements('mollom_form_info') as $module) {
       $function = $module . '_mollom_form_info';
@@ -623,31 +630,76 @@ function mollom_form_get_values($form_values, $fields, $mapping) {
     }
   }
 
+  // Mollom's XML-RPC methods only accept data properties that are defined. We
+  // also do not want to send more than we have to, so we need to build an
+  // exact data structure.
+  // @see hook_mollom_form_info()
   $data = array();
-  // Add the post body.
-  $data += array(
-    'post_body' => !empty($post_body) ? $post_body : NULL,
-  );
-  // Add data of mapped fields.
-  $data += $mapping;
-
-  // Add user data.
-  $data += array(
-    'author_name' => isset($user->name) ? $user->name : NULL,
-    'author_mail' => isset($user->mail) ? $user->mail : NULL,
-    'author_url' => NULL,
-    'author_id' => $user->uid ? $user->uid : NULL,
-    'author_ip' => ip_address(),
-  );
-  if (isset($data['author_id'])) {
-    // Automatically inherit OpenID identifiers if we have a user id.
-    $account = user_load(array('uid' => $data['author_id']));
-    $data['author_openid'] = _mollom_get_openid($account);
+  // Post title.
+  if (!empty($mapping['post_title'])) {
+    $data['post_title'] = $mapping['post_title'];
+  }
+  // Post body.
+  if (!empty($post_body)) {
+    $data['post_body'] = $post_body;
   }
 
-  // @todo Someone should've told me that Mollom's SAX parser bails out on
-  //   unknown properties :P 06/12/2009 sun
-  unset($data['post_id']);
+  // User name.
+  if (!empty($mapping['author_name'])) {
+    $data['author_name'] = $mapping['author_name'];
+    // Try to inherit user from author name.
+    $account = user_load(array('name' => $data['author_name']));
+  }
+  elseif (!empty($user->name)) {
+    $data['author_name'] = $user->name;
+  }
+
+  // User e-mail.
+  if (!empty($mapping['author_mail'])) {
+    $data['author_mail'] = $mapping['author_mail'];
+  }
+  elseif (!empty($data['author_name'])) {
+    if ($account && !empty($account->mail)) {
+      $data['author_mail'] = $account->mail;
+    }
+  }
+  elseif (!empty($user->mail)) {
+    $data['author_mail'] = $user->mail;
+  }
+
+  // User homepage.
+  if (!empty($mapping['author_url'])) {
+    $data['author_url'] = $mapping['author_url'];
+  }
+
+  // User ID.
+  if (!empty($mapping['author_id'])) {
+    $data['author_id'] = $mapping['author_id'];
+  }
+  elseif (!empty($data['author_name'])) {
+    if ($account && !empty($account->uid)) {
+      $data['author_id'] = $account->uid;
+    }
+  }
+  elseif (!empty($user->uid)) {
+    $data['author_id'] = $user->uid;
+  }
+
+  // User OpenID.
+  if (!empty($mapping['author_openid'])) {
+    $data['author_openid'] = $mapping['author_openid'];
+  }
+  elseif (!empty($data['author_id'])) {
+    if ($account && !empty($account->uid)) {
+      $data['author_openid'] = _mollom_get_openid($account);
+    }
+  }
+  elseif (!empty($user->uid)) {
+    $data['author_openid'] = _mollom_get_openid($user);
+  }
+
+  // User IP.
+  $data['author_ip'] = ip_address();
 
   return $data;
 }
