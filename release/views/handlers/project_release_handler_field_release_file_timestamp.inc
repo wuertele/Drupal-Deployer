@@ -31,12 +31,14 @@ class project_release_handler_field_release_file_timestamp extends views_handler
     foreach ($values as $result) {
       $nids[] = $result->{$this->field_alias};
     }
-    $function = $this->options['file_order'];
-    $placeholders = db_placeholders($nids);
-    $sql = "SELECT $function(f.timestamp) as timestamp, prf.nid FROM {project_release_file} prf INNER JOIN {files} f ON prf.fid = f.fid WHERE prf.nid IN ($placeholders) GROUP BY prf.nid";
-    $query = db_query($sql, $nids);
-    while ($file = db_fetch_object($query)) {
-      $this->items[$file->nid] = $file->timestamp;
+    if (!empty($nids)) {
+      $function = $this->options['file_order'];
+      $placeholders = db_placeholders($nids);
+      $sql = "SELECT $function(f.timestamp) as timestamp, prf.nid FROM {project_release_file} prf INNER JOIN {files} f ON prf.fid = f.fid WHERE prf.nid IN ($placeholders) GROUP BY prf.nid";
+      $query = db_query($sql, $nids);
+      while ($file = db_fetch_object($query)) {
+        $this->items[$file->nid] = $file->timestamp;
+      }
     }
   }
 
