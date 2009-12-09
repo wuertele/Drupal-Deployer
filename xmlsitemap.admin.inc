@@ -20,6 +20,7 @@ function xmlsitemap_settings_form() {
     '#title' => t('Settings'),
     '#collapsible' => TRUE,
     '#collapsed' => FALSE,
+    '#group' => 'xmlsitemap_settings',
   );
   $form['xmlsitemap']['xmlsitemap_minimum_lifetime'] = array(
     '#type' => 'select',
@@ -48,6 +49,7 @@ function xmlsitemap_settings_form() {
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
     '#weight' => 10,
+    '#group' => 'xmlsitemap_settings',
   );
   //$form['advanced']['xmlsitemap_gz'] = array(
   //  '#type' => 'checkbox',
@@ -100,6 +102,7 @@ function xmlsitemap_settings_form() {
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
     '#weight' => 20,
+    '#group' => 'xmlsitemap_settings',
   );
   $form['frontpage']['xmlsitemap_frontpage_priority'] = array(
     '#type' => 'select',
@@ -271,6 +274,7 @@ function xmlsitemap_add_form_type_summary(&$form, $type, $items) {
     '#title' => $type['title'],
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
+    '#group' => 'xmlsitemap_settings',
   );
 
   $header = array(
@@ -314,6 +318,7 @@ function xmlsitemap_add_form_type_options(&$form, $module, $options) {
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
     '#access' => user_access('administer xmlsitemap'),
+    '#group' => 'additional_settings',
   );
   $form['xmlsitemap']['xmlsitemap_' . $module . '_status'] = array(
     '#type' => 'select',
@@ -340,6 +345,7 @@ function xmlsitemap_add_form_link_options(&$form, $link) {
     '#collapsible' => TRUE,
     '#collapsed' => !$link['status_override'] && !$link['priority_override'],
     '#access' => user_access('administer xmlsitemap'),
+    '#group' => 'additional_settings',
     '#attached' => array(
       'js' => array(
         'vertical-tabs' => drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap.js',
