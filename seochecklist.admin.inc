@@ -34,6 +34,7 @@ function seochecklist_admin_settings() {
       '#title' => t($data->name),
       '#collapsible' => TRUE,
       '#description' => t($data->description),
+      '#group' => 'seochecklist',
     );
 
     $res = db_query("SELECT download, enable, configure, module, completed, id, name, uid FROM {seo_checklist} WHERE group_id = %d ORDER BY order_id", $group_id);
@@ -80,6 +81,7 @@ function seochecklist_admin_settings() {
     '#type' => 'fieldset',
     '#title' => t('Extras'),
     '#collapsible' => TRUE,
+    '#group' => 'seochecklist',
   );
   $form['extras']['seo_checklist_link'] = array(
     '#type' => 'checkbox',
