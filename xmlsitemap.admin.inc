@@ -113,7 +113,7 @@ function xmlsitemap_settings_form() {
     '#options' => xmlsitemap_get_changefreq_options(),
     '#default_value' => xmlsitemap_var('frontpage_changefreq'),
   );
-  
+
   $form['#pre_render'][] = 'vertical_tabs_form_pre_render';
   $form['#validate'][] = 'xmlsitemap_settings_form_validate';
   $form['#submit'][] = 'xmlsitemap_settings_form_submit';
@@ -340,6 +340,11 @@ function xmlsitemap_add_form_link_options(&$form, $link) {
     '#collapsible' => TRUE,
     '#collapsed' => !$link['status_override'] && !$link['priority_override'],
     '#access' => user_access('administer xmlsitemap'),
+    '#attached' => array(
+      'js' => array(
+        'vertical-tabs' => drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap.js',
+      ),
+    ),
   );
 
   // Show a warning if the link is not accessible and will not be included in
