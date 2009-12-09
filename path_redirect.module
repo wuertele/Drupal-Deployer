@@ -188,9 +188,10 @@ function path_redirect_form_alter(&$form, $form_state, $form_id) {
       '#collapsed' => TRUE,
       '#access' => user_access('administer redirects'),
       '#weight' => 30,
+      '#group' => 'additional_settings',
       '#attached' => array(
         'js' => array(
-          'vertical_tabs' => drupal_get_path('module', 'path_redirect') . '/path_redirect.js',
+          'vertical-tabs' => drupal_get_path('module', 'path_redirect') . '/path_redirect.js',
         ),
       ),
     );
@@ -219,7 +220,9 @@ function path_redirect_local_actions($redirect = array()) {
 function path_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
   switch ($op) {
     case 'presave':
-      path_redirect_check_alias_changed('node/' . $node->nid, $node->path, $node->language);
+      if (!empty($node->path)) {
+        path_redirect_check_alias_changed('node/' . $node->nid, $node->path, $node->language);
+      }
       break;
     case 'delete':
       // When a node is deleted, also delete the redirects to it (they will result in a 404).
