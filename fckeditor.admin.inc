@@ -44,7 +44,7 @@ function fckeditor_admin_main() {
         )) .'<br/>'.
       t('Please go to the !fckeditorlink to download the latest version. After that you must extract the files to %fckeditorpath and make sure that the directory %fckeditorsubdir and the file %fckeditorfile exist. Refer to the !readme for more information.',
         array(
-          '!fckeditorlink' => l(t('FCKeditor homepage'), 'http://www.fckeditor.net/download'),
+          '!fckeditorlink' => l(t('FCKeditor homepage'), 'http://ckeditor.com/download'),
           '!readme' => l(t('readme.txt'), 'admin/help/fckeditor'),
           '%fckeditorpath' => $editor_path,
           '%fckeditorsubdir' => $editor_path .'/editor',
@@ -843,7 +843,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
       t('To change FCKeditor configuration globally, you should modify the config file: %fckeditor_config. Sometimes it is required to change the FCKeditor configuration for a single profile only. Use this box to define settings that are unique for this profile. Available options are listed in the !docslink. Add the following code snippet to disable some advanced tabs in dialog windows of FCKeditor.',
         array(
           '%fckeditor_config' => drupal_get_path('module', 'fckeditor') .'/fckeditor.config.js',
-          '!docslink' => l(t('FCKeditor documentation'), 'http://docs.fckeditor.net/FCKeditor_2.x/Developers_Guide/Configuration/Configuration_Options'),
+          '!docslink' => l(t('FCKeditor documentation'), 'http://docs.cksource.com/FCKeditor_2.x/Developers_Guide/Configuration/Configuration_Options'),
         )) .
       "<pre>LinkDlgHideTarget = true;\nLinkDlgHideAdvanced = true;\nImageDlgHideLink = true;\nImageDlgHideAdvanced = true;\nFlashDlgHideAdvanced = true;</pre>".
       '<strong>'. t('Warning') .'</strong>: '.
@@ -1122,7 +1122,7 @@ function fckeditor_admin_global_profile_form($form_state, $mode = 'add') {
     '#description' =>
       t('Path to FCKeditor (the HTML editor, downloaded from !fckeditorlink) relative to the document root.',
         array(
-          '!fckeditorlink' => l('www.fckeditor.net', 'http://www.fckeditor.net/download'),
+          '!fckeditorlink' => l('http://ckeditor.com', 'http://ckeditor.com/download'),
         )) .'<br />'.
       t('Available placeholders') .':<br />'.
       '<strong>%b</strong> - '. t('base URL path of the Drupal installation (%base)', array('%base' => base_path())) .'<br />'.

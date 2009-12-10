@@ -29,7 +29,10 @@ doesn't require any kind of installation on the client computer.
 Required components
 -------------------
 To use FCKeditor in Drupal, you will need to download the FCKeditor
-http://www.fckeditor.net/
+http://ckeditor.com/download
+Make sure you download FCKeditor, not CKEditor. If you would like to
+use CKEditor with Drupal, please visit
+http://drupal.org/project/ckeditor
 
 More information and licence
 ----------------------------
@@ -40,14 +43,14 @@ Licensed under the terms of the GNU Lesser General Public License:
     http://www.opensource.org/licenses/lgpl-license.php
 
 For further information visit:
-    http://www.fckeditor.net/
+    http://ckeditor.com
     http://drupal.fckeditor.net
 
 Requirements
 ------------
   - Drupal 6.x
   - PHP 4.3.0 or greater
-  - FCKeditor 2.5.x or greater (http://www.fckeditor.net/)
+  - FCKeditor 2.5.x or greater (http://ckeditor.com/download)
 
 Configuration
 -------------------
@@ -56,7 +59,7 @@ Note: this instruction assumes that you install FCKeditor in
 
    1. Unzip the files in the sites/all/modules directory. It should now
       contain a fckeditor directory.
-   2. Download FCKeditor from http://www.fckeditor.net/download. Unzip the
+   2. Download FCKeditor from http://ckeditor.com/download. Unzip the
       contents of the fckeditor directory in the
       sites/all/modules/fckeditor/fckeditor directory.
    3. Enable the module as usual from Drupal's admin pages.
@@ -234,7 +237,7 @@ This instruction assumes that you are upgrading FCKeditor module [M] and FCKedit
 Instructions specific for module upgrades are tagged with [M], steps that must be taken when upgrading FCKeditor (the editor) are marked with [E].
 
    1. [M] Download the latest version of FCKeditor module from http://drupal.org/project/fckeditor (it is advised to read release notes before going further).
-   2. [E] Download the latest version of FCKeditor from http://www.fckeditor.net/download (it is advised to read "what's new" before going further: http://www.fckeditor.net/whatsnew).
+   2. [E] Download the latest version of FCKeditor from http://ckeditor.com/download (it is advised to read "what's new" before going further: http://ckeditor.com/whatsnew).
    3. [M] Back up your database.
    4. [EM] Place the site in "Off-line" mode, to let the database updates run without interruption and avoid displaying errors to end users of the site.
    5. [E] If you have used the FCKeditor built-in file browser, make a backup of sites/all/modules/fckeditor/fckeditor/editor/filemanager/connectors/php/config.php
@@ -280,9 +283,9 @@ Credits
  - FCKeditor for Drupal 5.x originally written by:
      Ontwerpwerk (www.ontwerpwerk.nl)
 
- - FCKeditor for Drupal 6.x is currently maintained by FCKeditor team and Jorrit Schippers.
-     http://www.fckeditor.net/
+ - FCKeditor for Drupal 6.x is currently maintained by CKSource team and Jorrit Schippers.
+     http://cksource.com
 
  - FCKeditor - The text editor for internet
-     Copyright (C) 2003-2008 Frederico Caldeira Knabben
-     http://www.fckeditor.net/
+     Copyright (C) 2003-2009 Frederico Caldeira Knabben
+     http://ckeditor.com

@@ -59,8 +59,8 @@ function fckeditor_help_delegate($path, $arg) {
           )) .'</p>'.
         '<p>'. t('More information about the editor is located at the !fckeditorlink. A small user guide is located at !userguidelink.',
           array(
-            '!fckeditorlink' => l(t('FCKeditor homepage'), 'http://www.fckeditor.net'),
-            '!userguidelink' => l(t('FCKeditor userguide'), 'http://docs.fckeditor.net/FCKeditor/Users_Guide'),
+            '!fckeditorlink' => l(t('FCKeditor homepage'), 'http://ckeditor.com'),
+            '!userguidelink' => l(t('FCKeditor userguide'), 'http://docs.cksource.com/FCKeditor_2.x/Users_Guide'),
           )) .'</p>'.
         '<p>'. t('Profiles can be defined based on user roles. A FCKeditor profile can define which pages receive this FCKeditor capability, what buttons or themes are enabled for the editor, how the editor is displayed, and a few other editor functions. It is possible also to define the Global Profile that will hold values that will be appended to all other profiles.') .'</p>'.
         '<p>'. t('Lastly, only users with the %accesspermission !permissionlink will be able to use FCKeditor.',
@@ -77,14 +77,14 @@ function fckeditor_help_delegate($path, $arg) {
           )) .'</p>';
       $output .= '<p>'. t('More information about the editor is located at the !fckeditorlink. A small user guide is located at !userguidelink.',
           array(
-            '!fckeditorlink' => l(t('FCKeditor homepage'), 'http://www.fckeditor.net'),
-            '!userguidelink' => l(t('FCKeditor userguide'), 'http://docs.fckeditor.net/FCKeditor/Users_Guide'),
+            '!fckeditorlink' => l(t('FCKeditor homepage'), 'http://ckeditor.com'),
+            '!userguidelink' => l(t('FCKeditor userguide'), 'http://docs.cksource.com/FCKeditor_2.x/Users_Guide'),
           )) .'</p>';
       $output .= '<h3>'. t('Configuration') .'</h3>';
       $output .= '<ol>';
       $output .= '<li>'. t('Go to the !fckeditorlink and download the latest version of FCKeditor. Then uncompress the contents of the fckeditor directory of the downloaded file to %fckeditordir.',
         array(
-          '!fckeditorlink' => l(t('FCKeditor homepage'), 'http://www.fckeditor.net/download'),
+          '!fckeditorlink' => l(t('FCKeditor homepage'), 'http://ckeditor.com/download'),
           '%fckeditordir' => base_path() . drupal_get_path('module', 'fckeditor') .'/fckeditor/',
         )) .'</li>';
       $output .= '<li>'. t('Enable the module as usual from Drupal\'s admin pages.') .'</li>';
