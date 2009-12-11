@@ -71,37 +71,33 @@ function upload_filefield_paths_get_fields(&$node, &$ffp) {
 /**
  * Implementation of hook_filefield_paths_batch_update().
  */
-function upload_filefield_paths_batch_update($field_name, $type_name, &$objects) {
-  if (empty($field_name)) {
-    $result = db_query(
-      "SELECT u.nid FROM {upload} u LEFT JOIN {node} n ON u.nid = n.nid WHERE n.type = '%s'", $type_name
-    );
+function upload_filefield_paths_batch_update($field, $type, &$objects) {
+  $result = db_query(
+    "SELECT u.nid FROM {upload} u LEFT JOIN {node} n ON u.nid = n.nid WHERE n.type = '%s'", $type
+  );
 
-    // Build array of Node IDs.
-    while ($node = db_fetch_object($result)) {
-      $objects[] = $node->nid;
-    }
+  // Build array of Node IDs.
+  while ($node = db_fetch_object($result)) {
+    $objects[] = $node->nid;
   }
 }
 
 /**
  * Implementation of hook_filefield_paths_update().
  */
-function upload_filefield_paths_update($oid, $field_name) {
-  if (empty($field_name)) {
-    $node = node_load($oid);
+function upload_filefield_paths_update($oid, $field) {
+  $node = node_load($oid);
 
-    // Flag files for update.
-    if (isset($node->files)) {
-      foreach ($node->files as &$file) {
-        $file->new = TRUE;
-      }
+  // Flag files for update.
+  if (isset($node->files)) {
+    foreach ($node->files as &$file) {
+      $file->new = TRUE;
     }
-
-    // Set Form ID.
-    $node->form_id = $node->type .'_node_form';
-
-    // Process Node.
-    filefield_paths_nodeapi($node, 'update', NULL, NULL);
   }
+
+  // Set Form ID.
+  $node->form_id = $node->type . '_node_form';
+
+  // Process Node.
+  filefield_paths_nodeapi($node, 'update', NULL, NULL);
 }

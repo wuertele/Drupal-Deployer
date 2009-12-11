@@ -67,41 +67,37 @@ function comment_upload_filefield_paths_get_fields(&$node, &$ffp) {
 /**
  * Implementation of hook_filefield_paths_batch_update().
  */
-function comment_upload_filefield_paths_batch_update($field_name, $type_name, &$objects) {
-  if (empty($field_name)) {
-    $result = db_query(
-      "SELECT DISTINCT(cu.cid) FROM {comment_upload} cu LEFT JOIN {node} n
-      ON cu.nid = n.nid WHERE n.type = '%s'", $type_name
-    );
+function comment_upload_filefield_paths_batch_update($field, $type, &$objects) {
+  $result = db_query(
+    "SELECT DISTINCT(cu.cid) FROM {comment_upload} cu LEFT JOIN {node} n
+    ON cu.nid = n.nid WHERE n.type = '%s'", $type
+  );
 
-    // Build array of Comment IDs.
-    while ($comment = db_fetch_object($result)) {
-      $objects[] = $comment->cid;
-    }
+  // Build array of Comment IDs.
+  while ($comment = db_fetch_object($result)) {
+    $objects[] = $comment->cid;
   }
 }
 
 /**
  * Implementation of hook_filefield_paths_update().
  */
-function comment_upload_filefield_paths_update($oid, $field_name) {
-  if (empty($field_name)) {
-    $comment = _comment_load($oid);
-    comment_invoke_comment($comment, 'view');
+function comment_upload_filefield_paths_update($oid, $field) {
+  $comment = _comment_load($oid);
+  comment_invoke_comment($comment, 'view');
 
-    // Flag files for update.
-    if (isset($comment->files)) {
-      foreach ($comment->files as &$file) {
-        $file['new'] = TRUE;
-      }
+  // Flag files for update.
+  if (isset($comment->files)) {
+    foreach ($comment->files as &$file) {
+      $file['new'] = TRUE;
     }
-
-    // Set Form ID.
-    $comment->form_id = 'comment_form';
-
-    // Process Comment.
-    filefield_paths_comment((array) $comment, 'update');
   }
+
+  // Set Form ID.
+  $comment->form_id = 'comment_form';
+
+  // Process Comment.
+  filefield_paths_comment((array) $comment, 'update');
 }
 
 /**

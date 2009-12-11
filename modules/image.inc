@@ -82,30 +82,26 @@ function image_filefield_paths_get_fields(&$node, &$ffp) {
 /**
  * Implementation of hook_filefield_paths_batch_update().
  */
-function image_filefield_paths_batch_update($field_name, $type_name, &$objects) {
-  if (empty($field_name) && empty($field_name)) {
-    $result = db_query("SELECT nid FROM {node} WHERE type = '%s'", 'image');
+function image_filefield_paths_batch_update($field, $type, &$objects) {
+  $result = db_query("SELECT nid FROM {node} WHERE type = '%s'", 'image');
 
-    // Build array of Node IDs.
-    while ($node = db_fetch_object($result)) {
-      $objects[] = $node->nid;
-    }
+  // Build array of Node IDs.
+  while ($node = db_fetch_object($result)) {
+    $objects[] = $node->nid;
   }
 }
 
 /**
  * Implementation of hook_filefield_paths_update().
  */
-function image_filefield_paths_update($oid, $field_name) {
-  if (empty($field_name)) {
-    $node = node_load($oid);
+function image_filefield_paths_update($oid, $field) {
+  $node = node_load($oid);
 
-    if (isset($node->images)) {
-      // Flag files for update.
-      $node->new_file = TRUE;
+  if (isset($node->images)) {
+    // Flag files for update.
+    $node->new_file = TRUE;
 
-      // Process Node.
-      filefield_paths_nodeapi($node, 'update', NULL, NULL);
-    }
+    // Process Node.
+    filefield_paths_nodeapi($node, 'update', NULL, NULL);
   }
 }
