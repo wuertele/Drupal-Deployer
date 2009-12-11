@@ -90,8 +90,9 @@ function _services_keyauth_alter_methods(&$methods) {
         $method['auth'] = FALSE;
         break;
       default:
-        $method['key'] = TRUE;
-        $method['auth'] = TRUE;
+        $method['key'] = isset($method['key']) ? FALSE : TRUE;
+        $method['auth'] = isset($method['auth']) ? FALSE : TRUE;
+        break;
     }
 
     if ($method['auth'] && variable_get('services_use_sessid', TRUE)) {
