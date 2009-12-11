@@ -223,6 +223,9 @@ function services_get_server_info($server_info = NULL) {
 function services_error($message, $code = 0, $exception = NULL) {
   $server_info = services_get_server_info();
 
+  // Allow external modules to log this error
+  module_invoke_all('services_error', $message, $code, $exception);
+
   // Look for custom error handling function.
   // Should be defined in each server module.
   if ($server_info && module_hook($server_info->module, 'server_error')) {
@@ -350,6 +353,9 @@ function services_auth_invoke_custom($module, $method, &$arg1 = NULL, &$arg2 = N
  * @return mixed
  */
 function services_method_call($method_name, $args = array(), $browsing = FALSE) {
+  // Allow external modules to log the results of this service call
+  module_invoke_all('services_method_call', $method_name, $args, $browsing);
+
   if (is_array($method_name) && isset($method_name['callback'])) {
     $method = $method_name;
   }
@@ -417,6 +423,9 @@ function services_method_call($method_name, $args = array(), $browsing = FALSE) 
   if ($server_info) {
     chdir($server_root);
   }
+
+  // Allow external modules to log the results of this service call
+  module_invoke_all('services_method_call_results', $method_name, $args, $browsing, $result);
 
   return $result;
 }
