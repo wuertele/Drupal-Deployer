@@ -81,7 +81,7 @@ function mollom_report_form_submit($form, &$form_state) {
     }
 
     // Send feedback to Mollom, if we have session data.
-    if (isset($data) && isset($data->session) && isset($form_state['values']['feedback']) && $form_state['values']['feedback'] != 'none') {
+    if (isset($data->session) && isset($form_state['values']['feedback']) && $form_state['values']['feedback'] != 'none') {
       // @todo Check the actual reponse.
       mollom('mollom.sendFeedback', array(
         'session_id' => $data->session,
@@ -103,7 +103,7 @@ function mollom_report_form_submit($form, &$form_state) {
         break;
       }
     }
-  
+
     $form_state['redirect'] = '<front>';
   }
 }
@@ -126,4 +126,3 @@ function _mollom_feedback_options() {
     '#description' => t("Mollom is a web service that helps you moderate your site's content: see <a href=\"http://mollom.com\">http://mollom.com</a> for more information. By sending feedback to Mollom, you teach Mollom about the content you like and dislike, allowing Mollom to do a better job helping you moderate your site's content. If you want to report multiple posts at once, you can use Mollom's bulk operations on the content and comment administration pages."),
   );
 }
-
