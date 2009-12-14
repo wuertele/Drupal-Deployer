@@ -609,8 +609,14 @@ function mollom_form_get_values($form_values, $fields, $mapping) {
       continue;
     }
     // Only add form element values that are not empty.
-    if (isset($value) && strlen($value)) {
-      $post_body[$field] = $value;
+    if (isset($value)) {
+      if (is_string($value) && drupal_strlen($value)) {
+        $post_body[$field] = $value;
+      }
+      // Recurse into nested values (e.g. multiple value fields).
+      elseif (!empty($value)) {
+        $post_body[$field] = implode("\n", $value);
+      }
     }
   }
   $post_body = implode("\n", $post_body);
@@ -659,7 +665,7 @@ function mollom_form_get_values($form_values, $fields, $mapping) {
     $data['author_mail'] = $mapping['author_mail'];
   }
   elseif (!empty($data['author_name'])) {
-    if ($account && !empty($account->mail)) {
+    if (!empty($account->mail)) {
       $data['author_mail'] = $account->mail;
     }
   }
@@ -677,7 +683,7 @@ function mollom_form_get_values($form_values, $fields, $mapping) {
     $data['author_id'] = $mapping['author_id'];
   }
   elseif (!empty($data['author_name'])) {
-    if ($account && !empty($account->uid)) {
+    if (!empty($account->uid)) {
       $data['author_id'] = $account->uid;
     }
   }
@@ -690,7 +696,7 @@ function mollom_form_get_values($form_values, $fields, $mapping) {
     $data['author_openid'] = $mapping['author_openid'];
   }
   elseif (!empty($data['author_id'])) {
-    if ($account && !empty($account->uid)) {
+    if (!empty($account->uid)) {
       $data['author_openid'] = _mollom_get_openid($account);
     }
   }

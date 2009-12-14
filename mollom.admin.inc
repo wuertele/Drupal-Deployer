@@ -130,11 +130,31 @@ function mollom_admin_configure_form(&$form_state, $mollom_form = NULL) {
         '#title' => t('Form'),
         '#value' => $mollom_form['title'],
       );
+      // Form elements defined by hook_mollom_form_info() use the
+      // 'parent][child' syntax, which Form API also uses internally for
+      // form_set_error(), and which allows us to recurse into nested fields
+      // during processing of submitted form values. However, since we are using
+      // those keys also as internal values to configure the fields to use for
+      // textual analysis, we need to encode them. Otherwise, a nested field key
+      // would result in the following checkbox attribute:
+      //   '#name' => 'mollom[fields][parent][child]'
+      // This would lead to a form validation error, because it is a valid key.
+      // By encoding them, we prevent this from happening:
+      //   '#name' => 'mollom[fields][parent%5D%5Bchild]'
+      // @todo Use PHP5 functions in D7 (e.g. array_combine()).
+      $elements = array();
+      foreach ($mollom_form['elements'] as $key => $value) {
+        $elements[rawurlencode($key)] = $value;
+      }
+      $fields = array();
+      foreach ($mollom_form['fields'] as $value) {
+        $fields[] = rawurlencode($value);
+      }
       $form['mollom']['fields'] = array(
         '#type' => 'checkboxes',
         '#title' => t('Fields to analyze'),
-        '#options' => $mollom_form['elements'],
-        '#default_value' => $mollom_form['fields'],
+        '#options' => $elements,
+        '#default_value' => $fields,
         '#description' => t('If no fields are selected, the form will be protected by a CAPTCHA.'),
       );
       if (empty($form['mollom']['fields']['#options'])) {
@@ -185,7 +205,11 @@ function mollom_admin_configure_form_submit($form, &$form_state) {
   $form_state['storage']['mollom_form'] = $mollom_form;
 
   // Prepare selected fields for storage.
-  $mollom_form['fields'] = array_keys(array_filter($mollom_form['fields']));
+  $fields = array();
+  foreach (array_keys(array_filter($mollom_form['fields'])) as $field) {
+    $fields[] = rawurldecode($field);
+  }
+  $mollom_form['fields'] = $fields;
   // Determine form protection to use; use CAPTCHA-only protection if no fields
   // were selected, otherwise text analysis.
   $mollom_form['mode'] = (!empty($mollom_form['fields']) ? MOLLOM_MODE_ANALYSIS : MOLLOM_MODE_CAPTCHA);
