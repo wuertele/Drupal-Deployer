@@ -251,9 +251,13 @@ function amazon_http_request($operation, $parameters = array(), $locale = NULL) 
     $xml = new SimpleXMLElement($results->data);
     return $xml;
   }
-  else {
+  if ($results->code == '403') {
+    $xml = new SimpleXMLElement($results->data);
+    watchdog('amazon', "Access denied accessing Amazon's AWS service: %code, %message", array('%code' => (string)$xml->Error->Code, '%message' => (string)$xml->Error->Message));
     return FALSE;
   }
+  watchdog('amazon', "Error accessing Amazon AWS web service. result code=%code, error=%error", array('%code' => $results->code, '%error' => $results->error));
+  return FALSE;
 }
 
 /**
@@ -346,10 +350,12 @@ function _amazon_item_batch_lookup_from_web($item_ids = array()) {
       }
     }
     $items = array();
-    foreach($results->Items->Item as $xml) {
-      $item = amazon_item_clean_xml($xml);
-      amazon_item_insert($item);
-      $items["{$item['asin']}"] = $item;
+    if (!empty($results->Items->Item)) {
+      foreach($results->Items->Item as $xml) {
+        $item = amazon_item_clean_xml($xml);
+        amazon_item_insert($item);
+        $items["{$item['asin']}"] = $item;
+      }
     }
     return $items;
   }

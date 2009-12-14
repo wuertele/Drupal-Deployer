@@ -118,7 +118,7 @@ function amazon_test_form($form_state) {
 
 function amazon_test_form_submit($form, &$form_state) {
   $items = amazon_item_lookup($form_state['values']['asin'], TRUE);
-  if (is_array($items)) {
+  if (!empty($items) && is_array($items)) {
     $item = array_pop($items);
     amazon_item_delete($item['asin']);
     amazon_item_insert($item);
@@ -128,5 +128,7 @@ function amazon_test_form_submit($form, &$form_state) {
     // causes a serialization operation. Whoops.
     $form_state['amazon_item'] = $item;
     $form_state['rebuild'] = TRUE;
+  } else {
+    drupal_set_message(t("Test failed for this ASIN. Please check the !link for messages.", array('!link' => l(t("error log"), 'admin/reports/dblog'))));
   }
 }
