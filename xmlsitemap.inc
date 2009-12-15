@@ -319,7 +319,7 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
   }
 
   // Close the XML file.
-  $status &= (bool) fwrite($handle, '</urlset>');
+  $status &= (bool) fwrite($handle, '</urlset>' . PHP_EOL);
 
   return $status;
 }
