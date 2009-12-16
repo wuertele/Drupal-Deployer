@@ -85,6 +85,7 @@ function xmlsitemap_settings_form() {
     '#type' => 'textfield',
     '#title' => t('Base URL'),
     '#default_value' => xmlsitemap_var('base_url'),
+    '#size' => 30,
     '#description' => t('This is the base URL for links generated in the sitemap.'),
     '#required' => TRUE,
   );
@@ -316,6 +317,7 @@ function xmlsitemap_add_form_type_options(&$form, $module, $options) {
   $form['xmlsitemap'] = array(
     '#type' => 'fieldset',
     '#title' => t('XML sitemap'),
+    '#description' => t('Changing these type settings will affect any items of this type that have either inclusion or priority set to default.'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
     '#access' => user_access('administer xmlsitemap'),
