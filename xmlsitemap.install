@@ -34,10 +34,10 @@ function xmlsitemap_requirements($phase) {
 
   if ($phase == 'runtime') {
     $directory = file_create_path(xmlsitemap_var('path'));
-    if (!file_check_directory($directory, FILE_CREATE_DIRECTORY)) {
+    if (!file_check_directory($directory, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS)) {
       $requirements['xmlsitemap_directory'] = array(
         'title' => $t('XML sitemap cache directory'),
-        'value' => $t('Not found or writable'),
+        'value' => $t('Not found or not writable'),
         'severity' => REQUIREMENT_ERROR,
         'description' => $directory,
       );
@@ -135,8 +135,13 @@ function xmlsitemap_install() {
   db_query("INSERT INTO {xmlsitemap} (type, id, loc, priority, changefreq) VALUES ('frontpage', 0, '', %f, %d)", xmlsitemap_var('frontpage_priority'), xmlsitemap_var('frontpage_changefreq'));
 
   // @todo Does the sitemap show up on first install or is it a 404 page?
-  //variable_set('xmlsitemap_regenerate_needed', TRUE);
-  //xmlsitemap_cron();
+}
+
+/**
+ * Implementation of hook_enable().
+ */
+function xmlsitemap_enable() {
+  variable_set('xmlsitemap_regenerate_needed', TRUE);
 }
 
 /**

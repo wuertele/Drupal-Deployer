@@ -191,7 +191,7 @@ function xmlsitemap_generate($chunk = 0, $language = NULL) {
   $file = xmlsitemap_get_chunk_file($chunk, $language);
 
   if (!$handle = fopen($file, 'wb')) {
-    watchdog('xmlsitemap', 'Could not open file @file for writing.', array('@file' => $file), WATCHDOG_ERROR);
+    trigger_error(t('Could not open file @file for writing.', array('@file' => $file)));
     return FALSE;
   }
 
@@ -205,7 +205,7 @@ function xmlsitemap_generate($chunk = 0, $language = NULL) {
   fclose($handle);
 
   if (!$status) {
-    watchdog('xmlsitemap', 'Unknown error occurred while writing to file @file.', array('@file' => $file), WATCHDOG_ERROR);
+    trigger_error(t('Unknown error occurred while writing to file @file.', array('@file' => $file)));
   }
   elseif (xmlsitemap_var('gz')) {
     $file_gz = xmlsitemap_get_chunk_file($chunk, $language, TRUE);
@@ -358,7 +358,7 @@ function xmlsitemap_generate_index($handle, &$status, $language) {
 /**
  * Batch information callback.
  */
-function xmlsitemap_rebuild_batch($form_state) {
+function xmlsitemap_rebuild_batch($modules = array(), $save_custom = FALSE) {
   $batch = array(
     'operations' => array(),
     'finished' => 'xmlsitemap_rebuild_batch_finished',
@@ -366,17 +366,17 @@ function xmlsitemap_rebuild_batch($form_state) {
     'file' => drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap.inc',
   );
 
-  //if ($form_state['values']['save_custom_data']) {
+  //if ($save_custom) {
   //  $batch['operations'][] = array('xmlsitemap_rebuild_batch_backup', array());
   //}
 
   // Fetch all the sitemap links and save them to the {xmlsitemap} table.
-  foreach ($form_state['values']['modules'] as $module) {
+  foreach ($modules as $module) {
     $batch['operations'][] = array('xmlsitemap_rebuild_batch_clear', array($module));
     $batch['operations'][] = array('xmlsitemap_rebuild_batch_fetch', array($module));
   }
 
-  //if ($form_state['values']['save_custom_data']) {
+  //if ($save_custom) {
   //  $batch['operations'][] = array('xmlsitemap_rebuild_batch_restore', array($module));
   //}
 
