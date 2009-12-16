@@ -9,7 +9,7 @@
 /**
  * Admin settings form.
  */
-function xmlsitemap_engines_settings_form($form_state) {
+function xmlsitemap_engines_settings_form() {
   $form['#engines'] = xmlsitemap_engines_get_engines();
   $form['xmlsitemap_engines_engines'] = array(
     '#type' => 'checkboxes',
@@ -48,7 +48,7 @@ function xmlsitemap_engines_settings_form($form_state) {
   return system_settings_form($form);
 }
 
-function xmlsitemap_engines_settings_form_validate(&$form, $form_state) {
+function xmlsitemap_engines_settings_form_validate($form, &$form_state) {
   $custom_urls = &$form_state['values']['xmlsitemap_engines_custom_urls'];
   $custom_urls = preg_split('/[\r\n]+/', $custom_urls, -1, PREG_SPLIT_NO_EMPTY);
   foreach ($custom_urls as $custom_url) {
