@@ -216,12 +216,6 @@ function xmlsitemap_rebuild_form() {
     '#default_value' => TRUE,
   );
 
-  // See if we can use temporary tables.
-  if (!xmlsitemap_can_use_temporary_tables()) {
-    $form['save_custom']['#disabled'] = TRUE;
-    $form['save_custom']['#description'] = t('<strong>Because your database does not support temporary tables, this data cannot be saved and will be lost during the rebuild.</strong>');
-  }
-
   return confirm_form(
     $form,
     t('Are you sure you want to rebuild the sitemap?'),
