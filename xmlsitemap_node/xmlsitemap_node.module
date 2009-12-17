@@ -212,10 +212,31 @@ function xmlsitemap_node_xmlsitemap_links_batch_info() {
 }
 
 /**
- * Implementation of hook_xmlsitemap_links_clear().
+ * Implements hook_xmlsitemap_link_info().
  */
-function xmlsitemap_node_xmlsitemap_links_clear() {
-  db_query("DELETE FROM {xmlsitemap} WHERE type = 'node'");
+function xmlsitemap_node_xmlsitemap_link_info() {
+  return array(
+    'node' => array(
+      'purge' => TRUE,
+      'table' => 'node',
+      'id' => 'nid',
+      'subtype' => 'type',
+      'subtypes' => xmlsitemap_node_get_types(),
+    ),
+  );
+}
+
+/**
+ * Fetch an array of node types to be included in the sitemap.
+ */
+function xmlsitemap_node_get_types() {
+  $node_types = array_keys(node_get_types('names'));
+  foreach ($node_types as $index => $node_type) {
+    if (!variable_get('xmlsitemap_node_status_' . $node_type, 1)) {
+      unset($node_types[$index]);
+    }
+  }
+  return $node_types;
 }
 
 /**

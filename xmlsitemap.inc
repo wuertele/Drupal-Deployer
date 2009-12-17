@@ -144,13 +144,10 @@ function _xmlsitemap_set_memory_limit() {
 function _xmlsitemap_regenerate_after() {
   // Show a watchdog message that the sitemap was regenerated.
   watchdog('xmlsitemap',
-    'XML sitemaps regenerated in @timer ms. Memory used: @memory-usage, peak: @memory-peak, optimal: @memory-optimal, limit: @memory-limit.',
+    'XML sitemap files regenerated in @timer ms. Peak memory usage: @memory-peak.',
     array(
       '@timer' => timer_read('xmlsitemap_regenerate'),
-      '@memory-usage' => format_size(_xmlsitemap_get_memory_usage()),
       '@memory-peak' => format_size(memory_get_peak_usage(TRUE)),
-      '@memory-limit' => format_size(parse_size(@ini_get('memory_limit'))),
-      '@memory-optimal' => format_size(_xmlsitemap_get_optimal_memory_limit()),
     ),
     WATCHDOG_NOTICE,
     l(t('View sitemap'), 'sitemap.xml')
@@ -350,7 +347,7 @@ function xmlsitemap_generate_index($handle, &$status, $language) {
   }
 
   // Close the XML file.
-  $status &= (bool) fwrite($handle, '</sitemapindex>');
+  $status &= (bool) fwrite($handle, '</sitemapindex>' . PHP_EOL);
 
   return $status;
 }
@@ -366,19 +363,15 @@ function xmlsitemap_rebuild_batch($modules = array(), $save_custom = FALSE) {
     'file' => drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap.inc',
   );
 
-  //if ($save_custom) {
-  //  $batch['operations'][] = array('xmlsitemap_rebuild_batch_backup', array());
-  //}
+  // Purge any links first.
+  $batch['operations'][] = array('xmlsitemap_rebuild_batch_clear', array($modules, $save_custom));
 
   // Fetch all the sitemap links and save them to the {xmlsitemap} table.
   foreach ($modules as $module) {
-    $batch['operations'][] = array('xmlsitemap_rebuild_batch_clear', array($module));
-    $batch['operations'][] = array('xmlsitemap_rebuild_batch_fetch', array($module));
+    if (module_hook($module, 'xmlsitemap_links')) {
+      $batch['operations'][] = array('xmlsitemap_rebuild_batch_fetch', array($module));
+    }
   }
-
-  //if ($save_custom) {
-  //  $batch['operations'][] = array('xmlsitemap_rebuild_batch_restore', array($module));
-  //}
 
   // Generate all the sitemap pages.
   $batch['operations'][] = array('_xmlsitemap_regenerate_before', array());
@@ -392,11 +385,35 @@ function xmlsitemap_rebuild_batch($modules = array(), $save_custom = FALSE) {
 }
 
 /**
- * Batch callback; clear sitemap links for a specific module.
+ * Batch callback; clear sitemap links for modules.
  */
-function xmlsitemap_rebuild_batch_clear($module, &$context) {
-  module_invoke($module, 'xmlsitemap_links_clear');
-  $context['message'] = t('Now clearing %module links.', array('%module' => $module));
+function xmlsitemap_rebuild_batch_clear($modules, $save_custom, &$context) {
+  $purge = array();
+  foreach ($modules as $module) {
+    $types = module_invoke($module, 'xmlsitemap_link_info');
+    foreach ($types as $type => $info) {
+      if ($info['purge']) {
+        $purge[] = $type;
+      }
+    }
+  }
+
+  if ($purge) {
+    $where = array();
+    $where[] = 'type IN (' . db_placeholders($purge, 'varchar') . ')';
+
+    // If we want to save the custom data, make sure to exclude any links
+    // that are not using default inclusion or priority.
+    if ($save_custom) {
+      $where[] = 'status_override = 0';
+      $where[] = 'priority_override = 0';
+    }
+
+    $sql = "DELETE FROM {xmlsitemap} WHERE " . implode(' AND ', $where);
+    db_query($sql, $purge);
+  }
+
+  $context['message'] = t('Purging links.');
 }
 
 /**

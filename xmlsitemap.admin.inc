@@ -186,9 +186,9 @@ function xmlsitemap_settings_form_submit($form, $form_state) {
 /**
  * Menu callback; Confirm rebuilding of the sitemap.
  *
- * @see xmlsitemap_rebuild_confirm_submit()
+ * @see xmlsitemap_rebuild_form_submit()
  */
-function xmlsitemap_rebuild_confirm() {
+function xmlsitemap_rebuild_form() {
   if (!$_POST && !xmlsitemap_var('rebuild_needed')) {
     if (!xmlsitemap_var('regenerate_needed')) {
       drupal_set_message(t('Your sitemap is up to date and does not need to be rebuilt.'), 'warning');
@@ -199,7 +199,7 @@ function xmlsitemap_rebuild_confirm() {
   }
 
   // Show only the modules that implement the 6.x-2.x hooks.
-  $modules = module_implements('xmlsitemap_links_clear', TRUE);
+  $modules = module_implements('xmlsitemap_link_info', TRUE);
 
   $form['modules'] = array(
     '#type' => 'select',
@@ -210,18 +210,16 @@ function xmlsitemap_rebuild_confirm() {
     '#default_value' => xmlsitemap_var('rebuild_needed') || !xmlsitemap_var('developer_mode') ? $modules : array(),
     '#access' => xmlsitemap_var('developer_mode'),
   );
-  $form['save_custom_data'] = array(
+  $form['save_custom'] = array(
     '#type' => 'checkbox',
     '#title' => t('Save and restore any custom inclusion and priority links.'),
     '#default_value' => TRUE,
-    '#access' => xmlsitemap_var('developer_mode'),
   );
 
   // See if we can use temporary tables.
-  db_query_temporary("SELECT 1", 'xmlsitemap_temp_test');
-  if (!@db_result(db_query("SELECT 1 FROM {xmlsitemap_temp_test}"))) {
-    $form['save_custom_data']['#disabled'] = TRUE;
-    $form['save_custom_data']['#description'] = t('<strong>Because your database does not support temporary tables, this data cannot be saved and will be lost during the rebuild.</strong>');
+  if (!xmlsitemap_can_use_temporary_tables()) {
+    $form['save_custom']['#disabled'] = TRUE;
+    $form['save_custom']['#description'] = t('<strong>Because your database does not support temporary tables, this data cannot be saved and will be lost during the rebuild.</strong>');
   }
 
   return confirm_form(
@@ -237,15 +235,15 @@ function xmlsitemap_rebuild_confirm() {
 /**
  * Submit handler; Starts the sitemap rebuild batch.
  *
- * @see xmlsitemap_rebuild_confirm()
+ * @see xmlsitemap_rebuild_form()
  * @see xmlsitemap_rebuild_batch()
  */
-function xmlsitemap_rebuild_confirm_submit($form, &$form_state) {
+function xmlsitemap_rebuild_form_submit($form, &$form_state) {
   // Set the rebuild flag incase something fails during the rebuild.
   variable_set('xmlsitemap_rebuild_needed', TRUE);
 
   module_load_include('inc', 'xmlsitemap');
-  $batch = xmlsitemap_rebuild_batch($form_state['values']['modules'], $form_state['values']['save_custom_data']);
+  $batch = xmlsitemap_rebuild_batch($form_state['values']['modules'], $form_state['values']['save_custom']);
   batch_set($batch);
   $form_state['redirect'] = 'admin/settings/xmlsitemap';
 }

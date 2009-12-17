@@ -14,6 +14,17 @@
  */
 
 /**
+ * Provide information on the type of links this module provides.
+ */
+function hook_xmlsitemap_links_clear() {
+  return array(
+    'mymodule' => array(
+      'purge' => TRUE, // A boolean if this link type can be purged during a rebuild.
+    ),
+  );
+}
+
+/**
  * Retrieve a array of links to include in the sitemap.
  *
  * @return
@@ -64,15 +75,6 @@ function hook_xmlsitemap_links_batch_info() {
     'max' => db_result(db_query("SELECT COUNT(id) FROM {mymodule}")),
     // This should be the total number of items to process.
   );
-}
-
-/**
- * Clear the links created by hook_xmlsitemap_links().
- *
- * @see hook_xmlsitemap_links()
- */
-function hook_xmlsitemap_links_clear() {
-  db_query("DELETE FROM {xmlsitemap} WHERE type = 'mymodule'");
 }
 
 /**

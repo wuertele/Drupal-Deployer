@@ -60,7 +60,7 @@ function drush_xmlsitemap_rebuild() {
   variable_set('xmlsitemap_rebuild_needed', TRUE);
 
   // Build the batch array.
-  $modules = module_implements('xmlsitemap_links_clear', TRUE);
+  $modules = module_implements('xmlsitemap_link_info');
   $batch = xmlsitemap_rebuild_batch($modules, TRUE);
   $batch['progressive'] = FALSE;
   batch_set($batch);

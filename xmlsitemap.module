@@ -103,7 +103,7 @@ function xmlsitemap_menu() {
     'title' => 'Rebuild',
     'description' => 'Rebuild the site map.',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('xmlsitemap_rebuild_confirm'),
+    'page arguments' => array('xmlsitemap_rebuild_form'),
     'access arguments' => array('administer xmlsitemap'),
     'type' => MENU_LOCAL_TASK,
     'file' => 'xmlsitemap.admin.inc',
@@ -154,15 +154,12 @@ function xmlsitemap_cron() {
  * Implementation of hook_xmlsitemap_links().
  */
 function xmlsitemap_xmlsitemap_links() {
-  $links = array();
-
   // Frontpage link.
   $links[] = array(
     'type' => 'frontpage',
     'id' => 0,
     'loc' => '',
   );
-
   return $links;
 }
 
@@ -884,5 +881,37 @@ function xmlsitemap_get_changefreq_options() {
     XMLSITEMAP_FREQUENCY_WEEKLY => 'weekly',
     XMLSITEMAP_FREQUENCY_MONTHLY => 'monthly',
     XMLSITEMAP_FREQUENCY_YEARLY => 'yearly',
+  );
+}
+
+function xmlsitemap_can_use_temporary_tables() {
+  static $result;
+  if (!isset($result)) {
+    db_query_temporary("SELECT 1", 'xmlsitemap_temp_test');
+    $result = @db_result(db_query("SELECT 1 FROM {xmlsitemap_temp_test}"));
+  }
+  return $result;
+}
+
+function xmlsitemap_get_link_info() {
+  static $link_info;
+
+  if (!isset($link_info)) {
+    $link_info = module_invoke_all('xmlsitemap_link_info');
+    foreach ($link_info as $type => $info) {
+      $link_info[$type] += array(
+        'purge' => TRUE,
+      );
+    }
+  }
+
+  return $link_info;
+}
+
+function xmlsitemap_xmlsitemap_link_info() {
+  return array(
+    'frontpage' => array(
+      'purge' => TRUE,
+    ),
   );
 }
