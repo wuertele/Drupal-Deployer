@@ -93,7 +93,7 @@ function xmlsitemap_node_form_xmlsitemap_settings_form_alter(&$form, $form_state
     $node_types[$node_type] = array(
       'name' => drupal_ucfirst($node_type_name),
       'link' => 'admin/content/node-type/' . str_replace('_', '-', $node_type),
-      'status' => variable_get('xmlsitemap_node_status_' . $node_type, 1),
+      'status' => variable_get('xmlsitemap_node_status_' . $node_type, 0),
       'priority' => variable_get('xmlsitemap_node_priority_' . $node_type, 0.5),
     );
   }
@@ -113,7 +113,7 @@ function xmlsitemap_node_form_node_type_form_alter(&$form, $form_state) {
 
   module_load_include('inc', 'xmlsitemap', 'xmlsitemap.admin');
   $options = array(
-    'status' => variable_get('xmlsitemap_node_status_' . $node_type, 1),
+    'status' => variable_get('xmlsitemap_node_status_' . $node_type, 0),
     'priority' => variable_get('xmlsitemap_node_priority_' . $node_type, 0.5),
   );
   xmlsitemap_add_form_type_options($form, 'node', $options);
@@ -130,7 +130,7 @@ function xmlsitemap_node_type_form_submit($form, $form_state) {
   $new_priority = $form_state['values']['xmlsitemap_node_priority'];
   $new_type = $form_state['values']['type'];
 
-  if ($new_status != variable_get('xmlsitemap_node_status_' . $node_type, 1)) {
+  if ($new_status != variable_get('xmlsitemap_node_status_' . $node_type, 0)) {
     xmlsitemap_update_links(array('status' => $new_status), array('type' => 'node', 'subtype' => $node_type, 'status_override' => 0));
   }
   if ($new_priority != variable_get('xmlsitemap_node_priority_' . $node_type, 0.5)) {
@@ -232,7 +232,7 @@ function xmlsitemap_node_xmlsitemap_link_info() {
 function xmlsitemap_node_get_types() {
   $node_types = array_keys(node_get_types('names'));
   foreach ($node_types as $index => $node_type) {
-    if (!variable_get('xmlsitemap_node_status_' . $node_type, 1)) {
+    if (!variable_get('xmlsitemap_node_status_' . $node_type, 0)) {
       unset($node_types[$index]);
     }
   }
@@ -293,8 +293,8 @@ function xmlsitemap_node_create_link(&$node) {
     'id' => $node->nid,
     'subtype' => $node->type,
     'loc' => 'node/'. $node->nid,
-    'status' => variable_get('xmlsitemap_node_status_' . $node->type, 1),
-    'status_default' => variable_get('xmlsitemap_node_status_' . $node->type, 1),
+    'status' => variable_get('xmlsitemap_node_status_' . $node->type, 0),
+    'status_default' => variable_get('xmlsitemap_node_status_' . $node->type, 0),
     'status_override' => 0,
     'priority' => variable_get('xmlsitemap_node_priority_' . $node->type, 0.5),
     'priority_default' => variable_get('xmlsitemap_node_priority_' . $node->type, 0.5),
@@ -319,7 +319,7 @@ function xmlsitemap_node_variables() {
   $node_types = array_keys(node_get_types('names'));
   foreach ($node_types as $node_type) {
     $defaults['xmlsitemap_node_priority_' . $node_type] = 0.5;
-    $defaults['xmlsitemap_node_status_' . $node_type] = 1;
+    $defaults['xmlsitemap_node_status_' . $node_type] = 0;
     // @todo Remove the variable.
     $defaults['xmlsitemap_node_update_' . $node_type] = NULL;
   }
