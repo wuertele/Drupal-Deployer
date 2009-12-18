@@ -16,7 +16,7 @@
 /**
  * Provide information on the type of links this module provides.
  */
-function hook_xmlsitemap_links_clear() {
+function hook_xmlsitemap_links_info() {
   return array(
     'mymodule' => array(
       'purge' => TRUE, // A boolean if this link type can be purged during a rebuild.
@@ -35,8 +35,6 @@ function hook_xmlsitemap_links_clear() {
  *   - 'lastmod' => The UNIX timestmap of when the item was last modified.
  *   - 'changefreq' => The interval, in seconds, between the last set of changes.
  *   - 'priority' => An optional priority value between 0.0 and 1.0.
- *
- * @see hook_xmlsitemap_links_clear()
  */
 function hook_xmlsitemap_links() {
   $links = array();

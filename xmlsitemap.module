@@ -109,6 +109,7 @@ function xmlsitemap_menu() {
     'file' => 'xmlsitemap.admin.inc',
     'weight' => 10,
   );
+
   $items['sitemap.xml'] = array(
     'page callback' => 'xmlsitemap_output_chunk',
     'access arguments' => array('access content'),
@@ -172,13 +173,6 @@ function xmlsitemap_xmlsitemap_link_alter(&$link) {
     $link['priority'] = xmlsitemap_var('frontpage_priority');
     $link['changefreq'] = xmlsitemap_var('frontpage_changefreq');
   }
-}
-
-/**
- * Implementation of hook_xmlsitemap_links_clear().
- */
-function xmlsitemap_xmlsitemap_links_clear() {
-  db_query("DELETE FROM {xmlsitemap} WHERE type = 'frontpage'");
 }
 
 /**
@@ -455,6 +449,8 @@ function _xmlsitemap_build_conditions(array &$conditions = array(), array &$args
  *   An array of values to match keyed by field.
  * @return
  *   An array representing the first sitemap link matching the conditions found.
+ *
+ * @todo Convert to use $type and $id as parameters.
  */
 function xmlsitemap_load_link(array $conditions) {
   $args = _xmlsitemap_build_conditions($conditions);
@@ -884,25 +880,42 @@ function xmlsitemap_get_changefreq_options() {
   );
 }
 
+/**
+ * Fetch a list of sitemap link types available from enabled modules.
+ */
 function xmlsitemap_get_link_info() {
   static $link_info;
 
   if (!isset($link_info)) {
-    $link_info = module_invoke_all('xmlsitemap_link_info');
-    foreach ($link_info as $type => $info) {
-      $link_info[$type] += array(
-        'purge' => TRUE,
-      );
+    if ($cached = cache_get('xmlsitemap:link_info')) {
+      $link_info = $cached->data;
+    }
+    else {
+      $link_info = array();
+      foreach (module_implements('xmlsitemap_link_info') as $module) {
+        $module_link_info = module_invoke($module, 'xmlsitemap_link_info');
+        foreach ($module_link_info as $type => $info) {
+          $module_link_info[$type] += array(
+            'type' => $type,
+            'module' => $module,
+            'purge' => TRUE, //module_hook($module, 'xmlsitemap_link_data'),
+            'table' => FALSE,
+          );
+        }
+        $link_info = array_merge($link_info, $module_link_info);
+      }
+      cache_set('xmlsitemap:link_info', $link_info);
     }
   }
 
   return $link_info;
 }
 
+/**
+ * Implements hook_xmlsitemap_link_info().
+ */
 function xmlsitemap_xmlsitemap_link_info() {
   return array(
-    'frontpage' => array(
-      'purge' => TRUE,
-    ),
+    'frontpage' => array(),
   );
 }
