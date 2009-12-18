@@ -2,7 +2,7 @@
 // $Id$
 
 /**
- * Implementation of hook_help().
+ * Implements hook_help().
  */
 function xmlsitemap_engines_help($path, $arg) {
   $output = '';
@@ -18,7 +18,7 @@ function xmlsitemap_engines_help($path, $arg) {
 }
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function xmlsitemap_engines_menu() {
   $items['admin/settings/xmlsitemap/engines'] = array(
@@ -38,9 +38,18 @@ function xmlsitemap_engines_menu() {
   return $items;
 }
 
+/**
+ * Implements hook_cron().
+ */
+function xmlsitemap_engines_cron() {
+  if (xmlsitemap_engines_submit_access()) {
+    xmlsitemap_engines_submit_engines();
+  }
+}
+
 function xmlsitemap_engines_submit_access() {
-  // Cannot submit when site is offline since search engines cannot access the
-  // site's content.
+  // Skip if the site is offline since search engines will not be able to
+  // access the site's content.
   if (variable_get('site_offline', 0)) {
     return FALSE;
   }
@@ -50,13 +59,17 @@ function xmlsitemap_engines_submit_access() {
   //  return TRUE;
   //}
 
-  // If sitemap data has not been updated since last submission, skip.
-  if (xmlsitemap_engines_var('submit_updated') && xmlsitemap_var('generated_last') < xmlsitemap_engines_var('submit_last')) {
+  $submit_updated = variable_get('xmlsitemap_engines_submit_updated', TRUE);
+  $submitted_last = variable_get('xmlsitemap_engines_submit_last', 0);
+  $minimum_lifetime = variable_get('xmlsitemap_engines_minimum_lifetime', 86400);
+
+  // Skip if sitemap data has not been updated since last submission.
+  if ($submit_updated && variable_get('xmlsitemap_generated_last', 0) <= $submitted_last) {
     return FALSE;
   }
 
-  // Check that the minimum submission lifetime has been met.
-  if ((REQUEST_TIME - xmlsitemap_engines_var('submit_last')) < xmlsitemap_engines_var('minimum_lifetime')) {
+  // Skip if the time since last submission is less than the minimum lifetime.
+  if ((REQUEST_TIME - $submitted_last) < $minimum_lifetime) {
     return FALSE;
   }
 
@@ -68,13 +81,14 @@ function xmlsitemap_engines_submit_access() {
  */
 function xmlsitemap_engines_submit_engines() {
   $sitemaps = xmlsitemap_get_sitemaps();
-  $engines = xmlsitemap_engines_var('engines');
+  $engines = variable_get('xmlsitemap_engines_engines', array());
+  $engine_info = xmlsitemap_engines_get_engine_info();
+
   foreach ($engines as $engine) {
-    $engine_url = xmlsitemap_engines_get_engines($engine, 'url');
-    xmlsitemap_engines_submit_sitemaps($engine_url, $sitemaps);
+    xmlsitemap_engines_submit_sitemaps($engine_info[$engine]['url'], $sitemaps);
   }
 
-  $custom_urls = xmlsitemap_engines_var('custom_urls');
+  $custom_urls = variable_get('xmlsitemap_engines_custom_urls', '');
   $custom_urls = preg_split('/[\r\n]+/', $custom_urls, -1, PREG_SPLIT_NO_EMPTY);
   foreach ($custom_urls as $custom_url) {
     xmlsitemap_engines_submit_sitemaps($custom_url, $sitemaps);
@@ -100,15 +114,6 @@ function xmlsitemap_engines_submit_sitemaps($url, $sitemaps = array()) {
 }
 
 /**
- * Implementation of hook_cron().
- */
-function xmlsitemap_engines_cron() {
-  if (xmlsitemap_engines_submit_access()) {
-    xmlsitemap_engines_submit_engines();
-  }
-}
-
-/**
  * Replace valid tokens in the URL with their appropriate values.
  *
  * @param $url
@@ -121,54 +126,41 @@ function xmlsitemap_engines_prepare_url($url, $sitemap) {
 }
 
 /**
- * Get a list of supported search engines, or a detail about a specific engine.
+ * Returns information about supported search engines.
  *
  * @param $engine
- *   An optional specific engine to get details about.
- * @param $value
- *   An optional value about an engine to get details about.
- * @return
- *   If $engine and $value are not specified, a two-level array with all the
- *   engines and their details. If $engine is specified but $value is not, an
- *   array with just the details for a specific engine. If $engine and $value
- *   are both specified, just the specific detail for a specific engine.
+ *   (optional) The engine to return information for. If omitted, information
+ *   for all engines is returned.
+ * @param $reset
+ *   (optional) Boolean whether to reset the static cache and do nothing. Only
+ *   used for tests.
+ *
+ * @see hook_xmlsitemap_engines_info()
+ * @see hook_xmlsitemap_engines_info_alter()
  */
-function xmlsitemap_engines_get_engines($engine = NULL, $value = NULL) {
+function xmlsitemap_engines_get_engine_info($engine = NULL, $reset = FALSE) {
+  global $language;
   static $engines;
 
+  if ($reset) {
+    $engines = NULL;
+  }
+
   if (!isset($engines)) {
-    $engines = array(
-      'google' => array(
-        'name' => t('Google'),
-        'url' => 'http://www.google.com/webmasters/tools/ping?sitemap=[sitemap]',
-      ),
-      'yahoo' => array(
-        'name' => t('Yahoo!'),
-        'url' => 'http://search.yahooapis.com/SiteExplorerService/V1/ping?sitemap=[sitemap]',
-      ),
-      'ask' => array(
-        'name' => t('Ask.com'),
-        'url' => 'http://submissions.ask.com/ping?sitemap=[sitemap]',
-      ),
-      'bing' => array(
-        'name' => t('Bing (formerly Live Search)'),
-        'url' => 'http://www.bing.com/webmaster/ping.aspx?siteMap=[sitemap]',
-      ),
-      'moreover' => array(
-        'name' => t('Moreover'),
-        'url' => 'http://api.moreover.com/ping?u=[sitemap]',
-      ),
-    );
-
-    // Allow other modules to alter or add search engines.
-    drupal_alter('xmlsitemap_engines', $engines);
-    ksort($engines);
+    if ($cached = cache_get('xmlsitemap:engines:' . $language->language)) {
+      $engines = $cached->data;
+    }
+    else {
+      // Fetch the results of all hook_xmlsitemap_engine_info() implementations.
+      $engines = module_invoke_all('xmlsitemap_engine_info');
+      // Allow other modulse to alter the engine info.
+      drupal_alter('xmlsitemap_engine_info', $engines);
+      // Cache by language since engine names are translated.
+      cache_set('xmlsitemap:engines:' . $language->language, $engines);
+    }
   }
 
-  if (isset($engine) && isset($value)) {
-    return isset($engines[$engine][$value]) ? $engines[$engine][$value] : NULL;
-  }
-  elseif (isset($engine)) {
+  if (isset($engine)) {
     return isset($engines[$engine]) ? $engines[$engine] : NULL;
   }
   else {
@@ -177,7 +169,34 @@ function xmlsitemap_engines_get_engines($engine = NULL, $value = NULL) {
 }
 
 /**
- * Internal default variables for template_var().
+ * Implements hook_xmlsitemap_engine_info().
+ */
+function xmlsitemap_engines_xmlsitemap_engine_info() {
+  $engines['google'] = array(
+    'name' => t('Google'),
+    'url' => 'http://www.google.com/webmasters/tools/ping?sitemap=[sitemap]',
+  );
+  $engines['yahoo'] = array(
+    'name' => t('Yahoo!'),
+    'url' => 'http://search.yahooapis.com/SiteExplorerService/V1/ping?sitemap=[sitemap]',
+  );
+  $engines['ask'] = array(
+    'name' => t('Ask.com'),
+    'url' => 'http://submissions.ask.com/ping?sitemap=[sitemap]',
+  );
+  $engines['bing'] = array(
+    'name' => t('Bing (formerly Live Search)'),
+    'url' => 'http://www.bing.com/webmaster/ping.aspx?siteMap=[sitemap]',
+  );
+  $engines['moreover'] = array(
+    'name' => t('Moreover'),
+    'url' => 'http://api.moreover.com/ping?u=[sitemap]',
+  );
+  return $engines;
+}
+
+/**
+ * Implements hook_variables().
  */
 function xmlsitemap_engines_variables() {
   $variables = array(
@@ -187,25 +206,5 @@ function xmlsitemap_engines_variables() {
     'xmlsitemap_engines_submit_last' => 0,
     'xmlsitemap_engines_submit_updated' => TRUE,
   );
-
   return $variables;
-}
-
-/**
- * Internal implementation of variable_get().
- */
-function xmlsitemap_engines_var($name, $default = NULL) {
-  static $defaults = NULL;
-  if (!isset($defaults)) {
-    $defaults = xmlsitemap_engines_variables();
-  }
-
-  $name = 'xmlsitemap_engines_' . $name;
-
-  // @todo Remove when stable.
-  if (!isset($defaults[$name])) {
-    trigger_error(t('Default variable for %variable not found.', array('%variable' => $name)));
-  }
-
-  return variable_get($name, isset($default) || !isset($defaults[$name]) ? $default : $defaults[$name]);
 }

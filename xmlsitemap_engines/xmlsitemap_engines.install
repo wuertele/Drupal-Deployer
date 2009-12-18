@@ -3,9 +3,12 @@
 
 /**
  * @file
- * Install and uninstall schema and functions for the xmlsitemap_engines module.
+ * Install, update and uninstall functions for the xmlsitemap_engines module.
  */
 
+/**
+ * Implements hook_install().
+ */
 function xmlsitemap_engines_install() {
   // Set this module's weight to 1 so xmlsitemap_engines_cron() runs after
   // the sitemap has been generated in xmlsitemap_cron().
@@ -13,34 +16,45 @@ function xmlsitemap_engines_install() {
 }
 
 /**
- * Implementation of hook_uninstall().
+ * Implements hook_uninstall().
  */
 function xmlsitemap_engines_uninstall() {
-  // Remove variables.
-  drupal_load('module', 'xmlsitemap_engines');
-  $variables = array_keys(xmlsitemap_engines_variables());
-  foreach ($variables as $variable) {
-    variable_del($variable);
-  }
+  variable_del('xmlsitemap_engines_engines');
+  variable_del('xmlsitemap_engines_custom_urls');
+  variable_del('xmlsitemap_engines_minimum_lifetime');
+  variable_del('xmlsitemap_engines_submit_last');
+  variable_del('xmlsitemap_engines_submit_updated');
 }
 
+/**
+ * Filter the xmlsitemap_engines_submit variable.
+ */
 function xmlsitemap_engines_update_1() {
   variable_set('xmlsitemap_engines_submit', array_filter(variable_get('xmlsitemap_engines_submit', array())));
   return array();
 }
 
+/**
+ * Rename the xmlsitemap_engines_engines variable to xmlsitemap_engines_submit.
+ */
 function xmlsitemap_engines_update_2() {
   variable_set('xmlsitemap_engines_engines', variable_get('xmlsitemap_engines_submit', array()));
   variable_del('xmlsitemap_engines_submit');
   return array();
 }
 
+/**
+ * Increase the module weight so it always runs after sitemap generation.
+ */
 function xmlsitemap_engines_update_3() {
   $ret = array();
   $ret[] = update_sql("UPDATE {system} SET weight = 2 WHERE type = 'module' AND name = 'xmlsitemap_engines'");
   return $ret;
 }
 
+/**
+ * Update Windows Live search to Bing.
+ */
 function xmlsitemap_engines_update_4() {
   $engines = variable_get('xmlsitemap_engines_engines', array());
   $index = array_search('windows_live', $engines);
