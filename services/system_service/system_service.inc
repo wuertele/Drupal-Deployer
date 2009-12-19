@@ -86,3 +86,12 @@ function system_service_cache_clear_all() {
   drupal_flush_all_caches();
   watchdog('cache clear service', 'caches cleared');
 }
+
+/**
+ * Log a system message.
+ *
+ * @see watchdog()
+ **/
+function system_service_watchdog_send($type, $message, $variables = array(), $severity = WATCHDOG_NOTICE, $link = NULL) {
+  watchdog($type, $message, $variables, $severity, $link);
+}
