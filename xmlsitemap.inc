@@ -27,16 +27,16 @@ function xmlsitemap_get_path_alias($path, $language) {
   if (!isset($aliases)) {
     $aliases['all'] = array();
     $query = db_query("SELECT src, dst FROM {url_alias} WHERE language = '' ORDER BY pid");
-    while ($alias = db_fetch_object($query)) {
-      $aliases['all'][$alias->src] = $alias->dst;
+    while ($alias = db_fetch_array($query)) {
+      $aliases['all'][$alias['src']] = $alias['dst'];
     }
   }
   if ($language && $last_language != $language) {
     unset($aliases[$last_language]);
     $aliases[$language] = array();
     $query = db_query("SELECT src, dst FROM {url_alias} WHERE language = '%s' ORDER BY pid", $language);
-    while ($alias = db_fetch_object($query)) {
-      $aliases[$language][$alias->src] = $alias->dst;
+    while ($alias = db_fetch_array($query)) {
+      $aliases[$language][$alias['src']] = $alias['dst'];
     }
     $last_language = $language;
   }
