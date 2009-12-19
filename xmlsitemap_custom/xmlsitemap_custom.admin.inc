@@ -59,8 +59,9 @@ function xmlsitemap_custom_edit_link_form($form_state, $link = array()) {
     '#type' => 'textfield',
     '#title' => t('Path to link'),
     '#field_prefix' => url('', array('absolute' => TRUE)),
-    '#default_value' => $link['loc'],
+    '#default_value' => drupal_get_path_alias($link['loc'], $link['language']),
     '#required' => TRUE,
+    '#size' => 30,
   );
   $form['xmlsitemap']['priority'] = array(
     '#type' => 'select',
@@ -68,6 +69,13 @@ function xmlsitemap_custom_edit_link_form($form_state, $link = array()) {
     '#options' => xmlsitemap_get_priority_options(),
     '#default_value' => number_format($link['priority'], 1),
     '#description' => t('The priority of this URL relative to other URLs on your site.'),
+  );
+  $form['xmlsitemap']['changefreq'] = array(
+    '#type' => 'select',
+    '#title' => t('Change frequency'),
+    '#options' => array(0 => t('No value')) + xmlsitemap_get_changefreq_options(),
+    '#default_value' => $link['changefreq'],
+    '#description' => t('How frequently the page is likely to change. This value provides general information to search engines and may not correlate exactly to how often they crawl the page.'),
   );
   $languages = module_exists('locale') ? locale_language_list() : array();
   $form['language'] = array(
@@ -86,7 +94,6 @@ function xmlsitemap_custom_edit_link_form($form_state, $link = array()) {
   $form['cancel'] = array(
     '#value' => l(t('Cancel'), 'admin/settings/xmlsitemap/custom'),
     '#weight' => 11,
-    '#access' => FALSE,
   );
   $form['#redirect'] = 'admin/settings/xmlsitemap/custom';
 
