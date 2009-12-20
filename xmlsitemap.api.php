@@ -3,7 +3,7 @@
 
 /**
  * @file
- * Documentation for the xmlsitemap API.
+ * Hooks provided by the XML sitemap module.
  *
  * @ingroup xmlsitemap
  */
@@ -16,7 +16,7 @@
 /**
  * Provide information on the type of links this module provides.
  */
-function hook_xmlsitemap_links_info() {
+function hook_xmlsitemap_link_info() {
   return array(
     'mymodule' => array(
       'purge' => TRUE, // A boolean if this link type can be purged during a rebuild.

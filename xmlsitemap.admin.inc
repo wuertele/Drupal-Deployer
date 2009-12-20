@@ -191,10 +191,11 @@ function xmlsitemap_settings_form_submit($form, $form_state) {
 function xmlsitemap_rebuild_form() {
   if (!$_POST && !xmlsitemap_var('rebuild_needed')) {
     if (!xmlsitemap_var('regenerate_needed')) {
-      drupal_set_message(t('Your sitemap is up to date and does not need to be rebuilt.'), 'warning');
+      drupal_set_message(t('Your sitemap is up to date and does not need to be rebuilt.'), 'error');
     }
     else {
-      drupal_set_message(t('A rebuild is not necessary. If you are just wanting to regenerate the XML sitemap files, you can <a href="@link-cron">run cron manually</a>.', array('@link-cron' => url('admin/reports/status/run-cron'))), 'warning');
+      $_REQUEST += array('destination' => 'admin/settings/xmlsitemap');
+      drupal_set_message(t('A rebuild is not necessary. If you are just wanting to regenerate the XML sitemap files, you can <a href="@link-cron">run cron manually</a>.', array('@link-cron' => url('admin/reports/status/run-cron', array('query' => drupal_get_destination())))), 'warning');
     }
   }
 
