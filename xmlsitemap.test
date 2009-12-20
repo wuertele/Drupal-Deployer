@@ -26,8 +26,11 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
   }
 
   function tearDown() {
-    // Capture any (remaining) watchdog messages.
-    $this->assertWatchdogMessages();
+    // Capture any (remaining) watchdog errors.
+    $this->assertNoWatchdogErrors();
+    // Reset the watchdog seen IDs for the next test run.
+    $this->getWatchdogMessages(TRUE);
+
     parent::tearDown();
   }
 
@@ -83,18 +86,11 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
   }
 
   protected function drupalGetSitemap($language = '', $regenerate = FALSE) {
-    static $languages;
-
     if ($regenerate) {
       $this->regenerateSitemap();
     }
 
-    if (!isset($langauges)) {
-      $languages = language_list();
-      $languages[''] = NULL;
-    }
-
-    $this->drupalGet('sitemap.xml', array('language' => $languages[$language]));
+    $this->drupalGet('sitemap.xml', array('language' => $this->getLanguageObj($language)));
     $this->assertResponse(200);
   }
 
@@ -120,7 +116,6 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
   protected function assertLinksInSitemap() {
     $links = func_get_args();
     foreach ($links as $link) {
-      // Make sure we are looking for the full path.
       $path = url($link['loc'], array('language' => $this->getLanguageObj($link['language']), 'absolute' => TRUE));
       $this->assertRaw($link['loc'], t('Link %path found in the sitemap.', array('%path' => $path)));
     }
@@ -141,6 +136,8 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
       'type' => 'testing',
       'id' => $last_id,
     );
+
+    // Make the default path easier to read than a random string.
     $link += array('loc' => $link['type'] . '-' . $link['id']);
 
     $last_id = $link['id'] + 1;
@@ -220,48 +217,52 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
   }
 
   /**
-   * Assert any watchdog messages based on their severity.
-   *
-   * This function can be (repeatedly) invoked to assert new watchdog messages.
-   * All watchdog messages with a higher severity than WATCHDOG_NOTICE are
-   * considered as fails.
-   *
-   * @param $no_fail_expected
-   *   (optional) Boolean whether a failing watchdog message is expected.
-   *   Defaults to TRUE (no fail expected). If FALSE is passed, the logic for
-   *   assertion mesages is flipped.
-   *
-   * @todo Add this to D7 core.
+   * Fetch all seen watchdog messages.
    */
-  protected function assertWatchdogMessages($no_fail_expected = TRUE) {
-    static $seen_ids;
+  protected function getWatchdogMessages($reset = FALSE) {
+    static $seen_ids = array();
 
-    if (!isset($seen_ids)) {
-      if ($seen_ids = module_exists('dblog')) {
-        $seen_ids = array();
-      }
-    }
-    //debug($seen_ids);
-    if ($seen_ids === FALSE) {
+    if (!module_exists('dblog') || $reset) {
+      $seen_ids = array();
       return;
     }
 
-    $where = array();
-    //$where[] = "type = 'xmlsitemap'";
+    $sql = "SELECT wid, type, severity, message, variables, timestamp FROM {watchdog}";
     if ($seen_ids) {
-      //$where[] = "wid NOT IN (" . db_placeholders($seen_ids) . ")";
+      $sql .= " WHERE wid NOT IN (" . db_placeholders($seen_ids) . ")";
     }
-    $where = $where ? ' WHERE ' . implode(' AND ', $where) : '';
-    $query = db_query("SELECT wid, type, severity, message, variables FROM {watchdog} $where ORDER BY timestamp ASC", $seen_ids);
-    while ($dblog = db_fetch_object($query)) {
-      $message = $dblog->wid . ':' . $dblog->type . ':' . t($dblog->message, unserialize($dblog->variables));
-      if ($no_fail_expected ? $dblog->severity >= WATCHDOG_NOTICE : $dblog->severity < WATCHDOG_NOTICE) {
-        //$this->pass($message);
+    $sql .= " ORDER BY timestamp ASC";
+    $query = db_query($sql, $seen_ids);
+
+    $messages = array();
+    while ($message = db_fetch_object($query)) {
+      $message->text = $message->timestamp . ' ' . t($message->message, unserialize($message->variables));
+      $messages[$message->wid] = $message;
+    }
+
+    $seen_ids = array_merge($seen_ids, array_keys($messages));
+    return $messages;
+  }
+
+  /**
+   * Check that there were no watchdog errors or worse.
+   */
+  protected function assertNoWatchdogErrors() {
+    $messages = $this->getWatchdogMessages();
+    $verbose = array();
+
+    foreach ($messages as $message) {
+      if ($message->severity < WATCHDOG_NOTICE) {
+        $this->fail($message->text);
       }
       else {
-        $this->fail($message);
+        $verbose[] = $message->text;
       }
-      $seen_ids[] = $dblog->wid;
+    }
+
+    if ($verbose) {
+      array_unshift($verbose, '<h2>Watchdog messages</h3>');
+      $this->verbose(implode("<br />", $verbose));
     }
   }
 
