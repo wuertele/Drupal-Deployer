@@ -262,6 +262,7 @@ function xmlsitemap_generate_chunk_header($type, $handle, &$status, $language) {
  */
 function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
   static $languages;
+  $last_url = '';
 
   if (!isset($languages)) {
     $languages = language_list();
@@ -293,7 +294,19 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
   while ($link = db_fetch_array($query)) {
     $url_options['language'] = $link['language'] ? $languages[$link['language']] : $language;
     $link['alias'] = xmlsitemap_get_path_alias($link['loc'], $url_options['language']->language);
-    $link_output = '<url><loc>' . url($link['alias'], $url_options) . '</loc>';
+    $link_url = url($link['alias'], $url_options);
+
+    // Skip this link if it was a duplicate of the last one.
+    // @todo Figure out a way to do this before generation so we can report
+    // back to the user about this.
+    if ($link_url == $last_url) {
+      continue;
+    }
+    else {
+      $last_url = $link_url;
+    }
+
+    $link_output = '<url><loc>' . $link_url . '</loc>';
     if ($link['lastmod']) {
       $link_output .= '<lastmod>' . gmdate(DATE_W3C, $link['lastmod']) . '</lastmod>';
       // If the link has a lastmod value, update the changefreq so that links
