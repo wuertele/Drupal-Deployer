@@ -150,6 +150,25 @@ function mollom_link($type, $object, $teaser = FALSE) {
 }
 
 /**
+ * Implements hook_init().
+ */
+function mollom_init() {
+  // Expire all mollom session IDs as soon as possible.
+  $now = time();
+  if (isset($_SESSION['mollom_sessions'])) {
+    foreach ($_SESSION['mollom_sessions'] as $id => $timestamp) {
+      if ($now - $timestamp > 30 * 60) {
+        unset($_SESSION['mollom_sessions'][$id]);
+      }
+    }
+  }
+  // If all sessions were removed, also remove our storage key.
+  if (isset($_SESSION) && empty($_SESSION['mollom_sessions'])) {
+    unset($_SESSION['mollom_sessions']);
+  }
+}
+
+/**
  * Implements hook_menu().
  */
 function mollom_menu() {
@@ -862,7 +881,6 @@ function mollom_process_mollom($element, $input, &$form_state, $complete_form) {
       'require_analysis' => $element['#mollom_form']['mode'] == MOLLOM_MODE_ANALYSIS,
       'require_captcha' => $element['#mollom_form']['mode'] == MOLLOM_MODE_CAPTCHA,
       'passed_captcha' => FALSE,
-      'user_session_id' => session_id(),
       'fields' => $element['#mollom_form']['fields'],
       'mapping' => $element['#mollom_form']['mapping'],
     );
@@ -922,6 +940,9 @@ function mollom_process_mollom_session_id($element, $input, &$form_state) {
     if (!$mollom_session_id) {
       watchdog('mollom', "Mollom ID '%session' is badly formatted.", array('%session' => $input['session_id']));
     }
+    elseif (!isset($_SESSION['mollom_sessions'][$mollom_session_id])) {
+      watchdog('mollom', "Mollom ID '%session' not found in the current user session.", array('%session' => $mollom_session_id));
+    }
     elseif (!$cache = cache_get($mollom_session_id, 'cache_mollom')) {
       if (time() - $timestamp > 30 * 60) {
         watchdog('mollom', "Mollom ID '%session' is invalid, probably expired.", array('%session' => $mollom_session_id));
@@ -932,9 +953,6 @@ function mollom_process_mollom_session_id($element, $input, &$form_state) {
     }
     elseif ($cache->data['form_id'] !== $form_state['values']['form_id']) {
       watchdog('mollom', "Mollom ID '%session' has been tampered with: it was generated for form %form1, but is used on form %form2.", array('%session' => $mollom_session_id, '%form1' => $cache->data['form_id'], '%form2' => $form_state['values']['form_id']));
-    }
-    elseif ($cache->data['user_session_id'] !== session_id()) {
-      watchdog('mollom', "Mollom ID '%session' has been tampered with: it was generated for a user with Drupal session ID %sid1, but is used by a user with Drupal session ID %sid2.", array('%session' => $mollom_session_id, '%sid1' => $cache->data['user_session_id'], '%sid2' => session_id()));
     }
     else {
       $form_state['mollom'] = $cache->data;
@@ -1078,8 +1096,15 @@ function mollom_pre_render_mollom($element) {
 
   // If we received a Mollom session id via textual analysis or a CAPTCHA
   // request, inject it to the form.
+  $timestamp = time();
   if (!empty($element['#mollom']['session_id'])) {
-    $element['session_id']['#value'] = time() . '-' . $element['#mollom']['session_id'];
+    $element['session_id']['#value'] = $timestamp . '-' . $element['#mollom']['session_id'];
+
+    // Store the Mollom session id in the user session to force a
+    // session for anonymous users in Drupal 7 and Drupal 6 Pressflow.
+    // @see mollom_init()
+    // @see mollom_form_submit()
+    $_SESSION['mollom_sessions'][$element['#mollom']['session_id']] = $timestamp;
   }
 
   // If no CAPTCHA is required or the response was correct, hide the CAPTCHA.
@@ -1114,9 +1139,11 @@ function mollom_pre_render_mollom($element) {
  *   'post_id' mapping.
  */
 function mollom_form_submit($form_id, &$form_state) {
-  // Flush Mollom session information from form state cache.
+  // Flush Mollom session information from database cache and user session.
   if (!empty($form_state['values']['mollom']['session_id'])) {
-    cache_clear_all($form_state['values']['mollom']['session_id'], 'cache_mollom');
+    $session_id = $form_state['values']['mollom']['session_id'];
+    cache_clear_all($session_id, 'cache_mollom');
+    unset($_SESSION['mollom_sessions'][$session_id]);
   }
   // Remove Mollom session information from form state to account for unforeseen
   // new builds of the form.
