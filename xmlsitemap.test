@@ -12,6 +12,45 @@
  * Helper test class with some added functions for testing.
  */
 class XMLSitemapTestHelper extends DrupalWebTestCase {
+  protected $admin_user;
+
+  function setUp() {
+    // Call parent::setUp() allowing test cases to pass further modules.
+    $modules = func_get_args();
+    $modules = array_merge(array('xmlsitemap'), $modules);
+    call_user_func_array(array('parent', 'setUp'), $modules);
+
+    // Ensure the files directory is created and writable during testing.
+    // @todo This appears to be a bug with SimpleTest.
+    $this->checkFilesDirectory();
+  }
+
+  function tearDown() {
+    // Capture any (remaining) watchdog messages.
+    $this->assertWatchdogMessages();
+    parent::tearDown();
+  }
+
+  /**
+   * Check the files directory is created (massive fails if not done).
+   */
+  protected function checkFilesDirectory() {
+    $path = file_create_path(variable_get('xmlsitemap_path', 'xmlsitemap'));
+    if (!file_check_directory($path, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS)) {
+      $this->fail(t('Directory %dir was found and writable for testing.', array('%dir' => $path)));
+    }
+  }
+
+  protected function getLanguageObj($langcode = '', $reset = FALSE) {
+    static $languages;
+
+    if (!isset($languages) || $reset) {
+      $languages = language_list('language', TRUE);
+      $languages[''] = NULL;
+    }
+
+    return $languages[$langcode];
+  }
 
   /**
    * Assert that a link is found in the sitemap.
@@ -43,6 +82,22 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
     return $link;
   }
 
+  protected function drupalGetSitemap($language = '', $regenerate = FALSE) {
+    static $languages;
+
+    if ($regenerate) {
+      $this->regenerateSitemap();
+    }
+
+    if (!isset($langauges)) {
+      $languages = language_list();
+      $languages[''] = NULL;
+    }
+
+    $this->drupalGet('sitemap.xml', array('language' => $languages[$language]));
+    $this->assertResponse(200);
+  }
+
   protected function assertLinkNotInSitemap(&$link) {
     $link = xmlsitemap_load_link(array('id' => $link['id'], 'type' => $link['type']));
     $this->assertTrue(!$link || !$link['access'] || !$link['status'], t('Link found in sitemap.'));
@@ -62,14 +117,31 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
     }
   }
 
+  protected function assertLinksInSitemap() {
+    $links = func_get_args();
+    foreach ($links as $link) {
+      // Make sure we are looking for the full path.
+      $path = url($link['loc'], array('language' => $this->getLanguageObj($link['language']), 'absolute' => TRUE));
+      $this->assertRaw($link['loc'], t('Link %path found in the sitemap.', array('%path' => $path)));
+    }
+  }
+
+  protected function assertLinksNotInSitemap() {
+    $links = func_get_args();
+    foreach ($links as $link) {
+      $path = url($link['loc'], array('language' => $this->getLanguageObj($link['language']), 'absolute' => TRUE));
+      $this->assertNoRaw($link['loc'], t('Link %path not found in the sitemap.', array('%path' => $path)));
+    }
+  }
+
   protected function addSitemapLink(array $link = array()) {
     static $last_id = 1;
 
     $link += array(
       'type' => 'testing',
       'id' => $last_id,
-      'loc' => $this->randomName(),
     );
+    $link += array('loc' => $link['type'] . '-' . $link['id']);
 
     $last_id = $link['id'] + 1;
     xmlsitemap_save_link($link);
@@ -82,15 +154,9 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
   protected function regenerateSitemap() {
     variable_set('xmlsitemap_regenerate_needed', TRUE);
     variable_set('xmlsitemap_generated_last', 0);
-    drupal_cron_run();
-  }
-
-  /**
-   * Check the files directory is created (massive fails if not done).
-   */
-  protected function checkFilesDirectory() {
-    $path = file_create_path(xmlsitemap_var('path'));
-    file_check_directory($path, FILE_CREATE_DIRECTORY);
+    module_load_include('inc', 'xmlsitemap');
+    xmlsitemap_regenerate();
+    $this->assertTrue(variable_get('xmlsitemap_generated_last', 0), t('XML sitemaps regenerated.'));
   }
 
   protected function assertXMLSitemapProblems($problem_text = FALSE) {
@@ -106,11 +172,6 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
     $this->drupalGet('admin/settings/xmlsitemap');
     $this->assertNoText(t('One or more problems were detected with your sitemap configuration. Please check the status report for more information.'));
   }
-
-  //protected function saveSettings($url, array $settings) {
-  //  $this->drupalPost($url, $settings, t('Save configuration'));
-  //  $this->assertText(t('The configuration options have been saved.'));
-  //}
 
   private function getWatchdogMessage(array $conditions) {
     static $watchdog_schema;
@@ -157,6 +218,54 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
 
     return $this->assertEqual($value, $assert_value, "xmlsitemap_$variable is " . ($assert_value ? 'TRUE' : 'FALSE'));
   }
+
+  /**
+   * Assert any watchdog messages based on their severity.
+   *
+   * This function can be (repeatedly) invoked to assert new watchdog messages.
+   * All watchdog messages with a higher severity than WATCHDOG_NOTICE are
+   * considered as fails.
+   *
+   * @param $no_fail_expected
+   *   (optional) Boolean whether a failing watchdog message is expected.
+   *   Defaults to TRUE (no fail expected). If FALSE is passed, the logic for
+   *   assertion mesages is flipped.
+   *
+   * @todo Add this to D7 core.
+   */
+  protected function assertWatchdogMessages($no_fail_expected = TRUE) {
+    static $seen_ids;
+
+    if (!isset($seen_ids)) {
+      if ($seen_ids = module_exists('dblog')) {
+        $seen_ids = array();
+      }
+    }
+    //debug($seen_ids);
+    if ($seen_ids === FALSE) {
+      return;
+    }
+
+    $where = array();
+    //$where[] = "type = 'xmlsitemap'";
+    if ($seen_ids) {
+      //$where[] = "wid NOT IN (" . db_placeholders($seen_ids) . ")";
+    }
+    $where = $where ? ' WHERE ' . implode(' AND ', $where) : '';
+    $query = db_query("SELECT wid, type, severity, message, variables FROM {watchdog} $where ORDER BY timestamp ASC", $seen_ids);
+    while ($dblog = db_fetch_object($query)) {
+      $message = $dblog->wid . ':' . $dblog->type . ':' . t($dblog->message, unserialize($dblog->variables));
+      if ($no_fail_expected ? $dblog->severity >= WATCHDOG_NOTICE : $dblog->severity < WATCHDOG_NOTICE) {
+        //$this->pass($message);
+      }
+      else {
+        $this->fail($message);
+      }
+      $seen_ids[] = $dblog->wid;
+    }
+  }
+
+
 }
 
 class XMLSitemapUnitTest extends XMLSitemapTestHelper {
