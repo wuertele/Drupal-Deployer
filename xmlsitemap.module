@@ -40,7 +40,7 @@ define('XMLSITEMAP_FREQUENCY_HOURLY', 3600); // 60 * 60
 define('XMLSITEMAP_FREQUENCY_ALWAYS', 60);
 
 /**
- * Implementation of hook_help().
+ * Implements hook_help().
  */
 function xmlsitemap_help($path, $arg) {
   $output = '';
@@ -74,14 +74,14 @@ function xmlsitemap_help($path, $arg) {
 }
 
 /**
- * Implementation of hook_perm().
+ * Implements hook_perm().
  */
 function xmlsitemap_perm() {
   return array('administer xmlsitemap');
 }
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function xmlsitemap_menu() {
   $items['admin/settings/xmlsitemap'] = array(
@@ -139,7 +139,7 @@ function xmlsitemap_menu() {
 }
 
 /**
- * Implementation of hook_cron().
+ * Implements hook_cron().
  */
 function xmlsitemap_cron() {
   if (!xmlsitemap_var('regenerate_needed')
@@ -152,7 +152,7 @@ function xmlsitemap_cron() {
 }
 
 /**
- * Implementation of hook_xmlsitemap_links().
+ * Implements hook_xmlsitemap_links().
  */
 function xmlsitemap_xmlsitemap_links() {
   // Frontpage link.
@@ -165,7 +165,7 @@ function xmlsitemap_xmlsitemap_links() {
 }
 
 /**
- * Implementation of hook_xmlsitemap_link_alter().
+ * Implements hook_xmlsitemap_link_alter().
  */
 function xmlsitemap_xmlsitemap_link_alter(&$link) {
   // Alter the frontpage priority.
@@ -176,7 +176,7 @@ function xmlsitemap_xmlsitemap_link_alter(&$link) {
 }
 
 /**
- * Implementation of hook_robotstxt().
+ * Implements hook_robotstxt().
  */
 function xmlsitemap_robotstxt() {
   module_load_include('inc', 'xmlsitemap');
@@ -605,7 +605,7 @@ function xmlsitemap_get_chunk_file($chunk = 0, $language, $compressed = FALSE) {
 }
 
 /**
- * Implementation of hook_form_alter().
+ * Implements hook_form_alter().
  *
  * Set the regeneration needed flag if settings are changed.
  */
@@ -628,7 +628,7 @@ function xmlsitemap_form_alter(&$form, $form_state, $form_id) {
 function xmlsitemap_form_submit_flag_regenerate($form, $form_state) {
   foreach ($form_state['values'] as $variable => $value) {
     $stored_value = variable_get($variable, 'not_a_variable');
-    if (is_array($value) && isset($form_state['values']['array_filter'])) {
+    if (is_array($value) && !empty($form_state['values']['array_filter'])) {
       $value = array_keys(array_filter($value));
     }
     if ($stored_value != 'not_a_variable' && $stored_value != $value) {
@@ -881,13 +881,28 @@ function xmlsitemap_get_changefreq_options() {
 }
 
 /**
- * Fetch a list of sitemap link types available from enabled modules.
+ * Returns information about supported sitemap link types.
+ *
+ * @param $type
+ *   (optional) The link type to return information for. If omitted,
+ *   information for all link types is returned.
+ * @param $reset
+ *   (optional) Boolean whether to reset the static cache and do nothing. Only
+ *   used for tests.
+ *
+ * @see hook_xmlsitemap_link_info()
+ * @see hook_xmlsitemap_link_info_alter()
  */
-function xmlsitemap_get_link_info() {
+function xmlsitemap_get_link_info($type = NULL, $reset = FALSE) {
+  global $language;
   static $link_info;
 
+  if ($reset) {
+    $link_info = NULL;
+  }
+
   if (!isset($link_info)) {
-    if ($cached = cache_get('xmlsitemap:link_info')) {
+    if ($cached = cache_get('xmlsitemap:link_info:' . $language->language)) {
       $link_info = $cached->data;
     }
     else {
@@ -904,8 +919,13 @@ function xmlsitemap_get_link_info() {
         }
         $link_info = array_merge($link_info, $module_link_info);
       }
-      cache_set('xmlsitemap:link_info', $link_info);
+      drupal_alter('xmlsitemap_link_info', $link_info);
+      cache_set('xmlsitemap:link_info:' . $language->language, $link_info);
     }
+  }
+
+  if (isset($type)) {
+    return isset($link_info[$type]) ? $link_info[$type] : NULL;
   }
 
   return $link_info;
