@@ -34,7 +34,8 @@ function xmlsitemap_output_file($file, array $headers = array()) {
     return drupal_not_found();
   }
 
-  $last_modified = gmdate(DATE_RFC1123, filemtime($file));
+  $mtime = filemtime($file);
+  $last_modified = gmdate(DATE_RFC1123, $mtime);
   $etag = '"' . md5($last_modified) . '"';
 
   // See if the client has provided the required HTTP headers.
@@ -52,7 +53,7 @@ function xmlsitemap_output_file($file, array $headers = array()) {
     //'Content-length: ' . filesize($file),
     'Last-modified: ' . $last_modified,
     'Etag: ' . $etag,
-    'Expires: Sun, 20 May 1984 00:00:00 GMT',
+    'Expires: ' . gmdate(DATE_RFC1123, $mtime + variable_get('xmlsitemap_minimum_lifetime', 0)),
     'Cache-Control: must-revalidate',
     'X-Robots-Tag: noindex, follow',
   );
