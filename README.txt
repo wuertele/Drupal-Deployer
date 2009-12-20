@@ -4,7 +4,8 @@ CONTENTS OF THIS FILE
 ---------------------
 
  * Introduction
- * Installation
+ * Installing
+ * Uninstalling
  * Frequently Asked Questions (FAQ)
  * Known Issues
  * More Information
@@ -24,8 +25,8 @@ XML Sitemap automatically creates a sitemap that conforms to the sitemaps.org
 specification. This helps search engines keep their search results up to date.
 
 
-INSTALLATION
-------------
+INSTALLING
+----------
 
 See http://drupal.org/getting-started/5/install-contrib for instructions on
 how to install or update Drupal modules.
@@ -35,6 +36,15 @@ site's sitemap at admin/settings/xmlsitemap. Your can view your site's sitemap
 at http://yoursite.com/sitemap.xml.
 
 It is highly recommended that you have clean URLs enabled for this module.
+
+
+UNINSTALLING
+------------
+
+Because Drupal does not uninstall modules in reverse order of their
+dependencies, if you want to uninstall all the XML sitemap modules, be sure to
+disable and uninstall all the sub-modules before the base XML sitemap module.
+To help fix this bug in Drupal core, visit http://drupal.org/node/151452.
 
 
 FREQUENTLY ASKED QUESTIONS (FAQ)
