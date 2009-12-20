@@ -6,43 +6,45 @@
  * Unit tests for the xmlsitemap_i18n module.
  */
 
-class XMLSitemapI18nTest extends XMLSitemapTestHelper {
-  public static function getInfo() {
-    return array(
-      'name' => 'XML sitemap i18n tests',
-      'description' => 'Functional and integration tests for the XML sitemap and internationalization modules.',
-      'group' => 'XML sitemap',
-    );
-  }
+/**
+ * Common base test class for XML sitemap internationalization tests.
+ */
+class XMLSitemapI18nWebTestCase extends XMLSitemapTestHelper {
+  protected $languages;
 
+  /**
+   * Set up an administrative user account and testing keys.
+   */
   function setUp() {
-    parent::setUp('locale', 'translation', 'menu', 'taxonomy', 'i18n', 'i18nstrings', 'i18nblocks', 'i18nmenu', 'i18ntaxonomy', 'xmlsitemap', 'xmlsitemap_node', 'xmlsitemap_menu', 'xmlsitemap_taxonomy', 'xmlsitemap_i18n');
+    // Call parent::setUp() allowing Mollom test cases to pass further modules.
+    $modules = func_get_args();
+    $modules = array_merge(array('locale', 'translation', 'i18n', 'xmlsitemap_i18n'), $modules);
+    call_user_func_array(array('parent', 'setUp'), $modules);
 
-    // Create admin user.
-    $admin_user = $this->drupalCreateUser(array('administer languages', 'translate content', 'access administration pages', 'access content', 'administer xmlsitemap', 'administer menu', 'administer taxonomy', 'administer nodes'));
-    $this->drupalLogin($admin_user);
+    $this->admin_user = $this->drupalCreateUser(array(
+      'administer languages',
+      'translate content',
+      'access administration pages',
+      'administer nodes',
+      //'administer menu',
+      //'administer taxonomy',
+      'administer xmlsitemap',
+    ));
 
-    // Add predefined language.
-    $edit = array(
-      'langcode' => 'fr',
-    );
-    $this->drupalPost('admin/settings/language/add', $edit, t('Add language'));
-    $this->assertText('fr', t('Language added successfully.'));
+    // Add predefined language and reset the locale cache.
+    require_once './includes/locale.inc';
+    locale_add_language('fr');
+    locale(NULL, NULL, TRUE);
 
     variable_set('xmlsitemap_languages', array('en', 'fr'));
     variable_set('language_negotiation', LANGUAGE_NEGOTIATION_PATH_DEFAULT);
 
-    $this->checkFilesDirectory();
-
-    // Reset locale cache.
-    locale(NULL, NULL, TRUE);
+    $this->languages = language_list();
+    $this->languages[''] = NULL;
   }
 
   protected function assertLanguageSitemap($language, array $links_included = array(), array $links_excluded = array()) {
-    $languages = language_list();
-    $languages[''] = NULL;
-
-    $sitemap_url = url('sitemap.xml', array('absolute' => TRUE, 'language' => $languages[$language]));
+    $sitemap_url = url('sitemap.xml', array('absolute' => TRUE, 'language' => $this->languages[$language]));
     $this->drupalGet($sitemap_url);
 
     // Test for included links.
@@ -54,7 +56,7 @@ class XMLSitemapI18nTest extends XMLSitemapTestHelper {
         $link = $link['xmlsitemap'];
       }
       $link['language'] = $link['language'] ? $link['language'] : $language;
-      $link_url = url($link['loc'], array('absolute' => TRUE, 'language' => $languages[$link['language']]));
+      $link_url = url($link['loc'], array('absolute' => TRUE, 'language' => $this->languages[$link['language']]));
       $this->assertRaw($link_url, 'Link ' . $link_url . ' found.');
     }
 
@@ -67,31 +69,45 @@ class XMLSitemapI18nTest extends XMLSitemapTestHelper {
         $link = $link['xmlsitemap'];
       }
       $link['language'] = $link['language'] ? $link['language'] : $language;
-      $link_url = url($link['loc'], array('absolute' => TRUE, 'language' => $languages[$link['language']]));
+      $link_url = url($link['loc'], array('absolute' => TRUE, 'language' => $this->languages[$link['language']]));
       $this->assertNoRaw($link_url, 'Link ' . $link_url . ' not found.');
     }
   }
+}
+
+class XMLSitemapI18nNodeTest extends XMLSitemapI18nWebTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => 'XML sitemap i18n node tests',
+      'description' => 'Functional and integration tests for the XML sitemap node and internationalization modules.',
+      'group' => 'XML sitemap',
+    );
+  }
+
+  function setUp() {
+    parent::setUp('xmlsitemap_node');
+    variable_set('language_content_type_page', 1);
+    variable_set('xmlsitemap_node_status_page', 1);
+  }
+
+  function testNodeLanguageData() {
+    $this->drupalLogin($this->admin_user);
+    $node = $this->drupalCreateNode(array());
+
+    $this->drupalPost('node/' . $node->nid . '/edit', array('language' => 'en'), t('Save'));
+    $node = node_load($node->nid, NULL, TRUE);
+    $this->assertIdentical($node->xmlsitemap['language'], 'en');
+
+    $this->drupalPost('node/' . $node->nid . '/edit', array('language' => 'fr'), t('Save'));
+    $node = node_load($node->nid, NULL, TRUE);
+    $this->assertIdentical($node->xmlsitemap['language'], 'fr');
+  }
 
   function testNodeLanguage() {
-    variable_set('language_content_type_page', 1);
-
-    // Create three different nodes
-    $node1 = $this->drupalCreateNode(array('title' => 'Neutral page'));
-    $this->drupalPost('node/' . $node1->nid . '/edit', array('language' => ''), t('Save'));
-    $node1 = node_load($node1->nid);
-    $this->assertIdentical($node1->xmlsitemap['language'], '');
-
-    $node2 = $this->drupalCreateNode(array('title' => 'English page'));
-    $this->drupalPost('node/' . $node2->nid . '/edit', array('language' => 'en'), t('Save'));
-    $node2 = node_load($node2->nid);
-    $this->assertIdentical($node2->xmlsitemap['language'], 'en');
-
-    $node3 = $this->drupalCreateNode(array('title' => 'French page'));
-    $this->drupalPost('node/' . $node3->nid . '/edit', array('language' => 'fr'), t('Save'));
-    $node3 = node_load($node3->nid);
-    $this->assertIdentical($node3->xmlsitemap['language'], 'fr');
-
-    $this->drupalLogout();
+    // Create our three different language nodes.
+    $node1 = $this->drupalCreateNode(array('language' => ''));
+    $node2 = $this->drupalCreateNode(array('language' => 'en'));
+    $node3 = $this->drupalCreateNode(array('language' => 'fr'));
 
     variable_set('i18n_selection_mode', 'off');
     $this->regenerateSitemap();
@@ -123,10 +139,4 @@ class XMLSitemapI18nTest extends XMLSitemapTestHelper {
     $this->assertLanguageSitemap('en', array($node2), array($node1, $node3));
     $this->assertLanguageSitemap('fr', array($node3), array($node1, $node2));
   }
-
-  //function testMenuLanguage() {
-  //}
-  //
-  //function testTaxonomyLanguage() {
-  //}
 }
