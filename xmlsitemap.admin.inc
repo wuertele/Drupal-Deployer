@@ -328,6 +328,15 @@ function xmlsitemap_add_form_type_options(&$form, $module, $options) {
     '#options' => xmlsitemap_get_priority_options(),
     '#default_value' => $options['priority'],
   );
+
+  // Hide the priority field if the link is excluded.
+  if (module_exists('ctools')) {
+    ctools_include('dependent');
+    $form['xmlsitemap']['xmlsitemap_' . $module . '_priority'] += array(
+      '#process' => array('form_expand_ahah', 'ctools_dependent_process'),
+      '#dependency' => array('edit-xmlsitemap-' . $module . '-status' => array(1)),
+    );
+  }
 }
 
 /**
@@ -406,6 +415,16 @@ function xmlsitemap_add_form_link_options(&$form, $link) {
   //  '#type' => 'value',
   //  '#value' => $node->xmlsitemap['changecount'],
   //);
+
+  // Hide the priority field if the link is excluded.
+  if (module_exists('ctools')) {
+    ctools_include('dependent');
+    $default = $link['status_default'] ? array('default', 1) : array(1);
+    $form['xmlsitemap']['priority'] += array(
+      '#process' => array('form_expand_ahah', 'ctools_dependent_process'),
+      '#dependency' => array('edit-xmlsitemap-status' => $default),
+    );
+  }
 
   // Add the submit handler to adjust the default values if selected.
   if (!in_array('xmlsitemap_process_form_link_options', $form['#submit'])) {

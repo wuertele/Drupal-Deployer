@@ -75,16 +75,16 @@ MORE INFORMATION
 
 
 HOW CAN YOU CONTRIBUTE?
----------------------
+-----------------------
+
+- Report any bugs, feature requests, etc. in the issue tracker.
+  http://drupal.org/project/issues/xmlsitemap
+
+- Help translate this module.
+  http://localize.drupal.org/translate/projects/xmlsitemap
 
 - Write a review for this module at drupalmodules.com.
   http://drupalmodules.com/module/xml-sitemap
 
-- Help translate this module.
-  http://project.davereid.net/translate/projects/xmlsitemap
-
-- Help keep development active by dontating to the rewrite fund.
+- Help keep development active by dontating to the developer.
   http://davereid.chipin.com/
-
-- Report any bugs, feature requests, etc. in the issue tracker.
-  http://drupal.org/project/issues/xmlsitemap
