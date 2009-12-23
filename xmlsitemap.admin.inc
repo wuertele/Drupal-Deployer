@@ -72,10 +72,12 @@ function xmlsitemap_settings_form() {
     '#default_value' => xmlsitemap_var('batch_limit'),
     '#description' => t('If you have problems running cron or rebuilding the sitemap, you may want to lower this value.'),
   );
+  $path = variable_get('xmlsitemap_path', 'xmlsitemap');
+  file_check_directory(file_create_path($path), FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS);
   $form['advanced']['xmlsitemap_path'] = array(
     '#type' => 'textfield',
     '#title' => t('Sitemap cache directory'),
-    '#default_value' => xmlsitemap_var('path'),
+    '#default_value' => $path,
     '#size' => 30,
     '#maxlength' => 255,
     '#description' => t('Subdirectory in the directory %dir where the sitemap data will be stored. This folder <strong>must not be shared</strong> with any other Drupal site or install using XML sitemap.', array('%dir' => file_directory_path() .'/')),
@@ -152,14 +154,6 @@ function _xmlsitemap_process_language_checkboxes($element) {
  * @see xmlsitemap_settings_form()
  */
 function xmlsitemap_settings_form_validate($form, &$form_state) {
-  // Check if the xmlsitemap files directory has changed.
-  $path_new = file_create_path($form_state['values']['xmlsitemap_path']);
-  $path_old = file_create_path(xmlsitemap_var('path'));
-  if ($path_new != $path_old && file_check_directory($path_new, FILE_CREATE_DIRECTORY, 'xmlsitemap_path')) {
-    // If creating the new directory was successful, remove the old directory.
-    xmlsitemap_clear_cache(TRUE, $path_old);
-  }
-
   // Check that the chunk size will not create more than 1000 chunks.
   $chunk_size = $form_state['values']['xmlsitemap_chunk_size'];
   if ($chunk_size != 'auto' && $chunk_size != 50000 && (xmlsitemap_get_link_count() / $chunk_size) > 1000) {

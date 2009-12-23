@@ -570,25 +570,6 @@ function xmlsitemap_delete_link(array $conditions) {
 }
 
 /**
- * Delete all cached sitemap XML files.
- *
- * @param $rmdir
- *   A boolean that if TRUE the directory will be removed after emptying.
- * @param $path
- *   An optional directory path, defaults to the xmlsiteamp cache directory.
- */
-function xmlsitemap_clear_cache($rmdir = FALSE, $path = NULL) {
-  if (!isset($path)) {
-    $path = file_create_path(xmlsitemap_var('path'));
-  }
-
-  file_scan_directory($path, '.*', array('.', '..', 'CVS', '.svn'), 'file_delete', TRUE);
-  if ($rmdir) {
-    rmdir($path);
-  }
-}
-
-/**
  * Get the filename of a specific sitemap page chunk.
  *
  * @param $chunk
@@ -944,6 +925,35 @@ function xmlsitemap_xmlsitemap_link_info() {
  * Check that the sitemap files directory exists and is writable.
  */
 function xmlsitemap_check_directory() {
-  $directory = file_create_path(xmlsitemap_var('path'));
-  return file_check_directory($directory, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS);
+  $path = file_create_path(xmlsitemap_var('path'));
+  return file_check_directory($path, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS);
+}
+
+/**
+ * Recursively delete all files and folders in the specified filepath, then
+ * delete the containing folder.
+ *
+ * This is a backport of Drupal 7's file_unmanaged_delete_recursive().
+ *
+ * Note that this only deletes visible files with write permission.
+ *
+ * @param string $path
+ *   A filepath relative to file_directory_path.
+ */
+function _xmlsitemap_delete_recursive($path) {
+  if (is_file($path) || is_link($path)) {
+    unlink($path);
+  }
+  elseif (is_dir($path)) {
+    $dir = dir($path);
+    while (($entry = $dir->read()) !== FALSE) {
+      if ($entry == '.' || $entry == '..') {
+        continue;
+      }
+      $entry_path = $path . '/' . $entry;
+      _xmlsitemap_delete_recursive($entry_path);
+    }
+    $dir->close();
+    return rmdir($path);
+  }
 }
