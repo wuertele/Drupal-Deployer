@@ -15,14 +15,6 @@ function xmlsitemap_requirements($phase) {
   $requirements = array();
   $t = get_t();
 
-  if (function_exists('user_access') && !user_access('access content', drupal_anonymous_user())) {
-    $requirements['xmlsitemap_access'] = array(
-      'title' => $t('XML sitemap anonymous content access'),
-      'value' => $t('Access denied'),
-      'description' => $t('In order to allow search engines to view the XML sitemap, the anonymous user role must have the <a href="@perm-link">%permission</a> permission.', array('@perm-link' => url('admin/user/permissions/' . DRUPAL_ANONYMOUS_RID, array('fragment' => 'module-node')), '%permission' => 'access content')),
-      'severity' => REQUIREMENT_ERROR,
-    );
-  }
   if (variable_get('clean_url', 0) && file_exists('./sitemap.xml')) {
     $requirements['xmlsitemap_file'] = array(
       'title' => $t('XML sitemap'),
@@ -33,6 +25,14 @@ function xmlsitemap_requirements($phase) {
   }
 
   if ($phase == 'runtime') {
+    if (!user_access('access content', drupal_anonymous_user())) {
+      $requirements['xmlsitemap_access'] = array(
+        'title' => $t('XML sitemap anonymous content access'),
+        'value' => $t('Access denied'),
+        'description' => $t('In order to allow search engines to view the XML sitemap and content on your site, the anonymous user role must have the <a href="@perm-link">%permission</a> permission.', array('@perm-link' => url('admin/user/permissions/' . DRUPAL_ANONYMOUS_RID, array('fragment' => 'module-node')), '%permission' => 'access content')),
+        'severity' => REQUIREMENT_ERROR,
+      );
+    }
     if (!xmlsitemap_check_directory()) {
       $requirements['xmlsitemap_directory'] = array(
         'title' => $t('XML sitemap cache directory'),
