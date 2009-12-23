@@ -1,7 +1,7 @@
 // $Id$
 (function($){
 
-/*$.tablesorter.addParser({
+$.tablesorter.addParser({
   // set a unique id
   id: 'changefreq',
   is: function(s) {
@@ -26,7 +26,7 @@
     }
   },
   type: 'numeric'
-});*/
+});
 
 $(document).ready(function() {
   // Set some location variales.
@@ -35,6 +35,9 @@ $(document).ready(function() {
 
   $('table').tablesorter({
     sortList: [[0,0]],
+    headers: {
+      2: { sorter: 'changefreq' }
+    },
     widgets: ['zebra']
   });
 });

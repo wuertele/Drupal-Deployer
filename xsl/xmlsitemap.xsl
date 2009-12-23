@@ -73,7 +73,7 @@
         <tr>
           <th>URL location</th>
           <th>Last modification date</th>
-          <th><xsl:attribute name="class">{sorter: 'changefreq'}</xsl:attribute>Change frequency</th>
+          <th>Change frequency</th>
           <th>Priority</th>
         </tr>
       </thead>

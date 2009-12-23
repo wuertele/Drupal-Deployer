@@ -70,9 +70,6 @@ MORE INFORMATION
 
 - You can view the sitemap.org specification at http://sitemaps.org.
 
-- You can view the module's API documentation at
-  http://project.davereid.net/api/xmlsitemap
-
 
 HOW CAN YOU CONTRIBUTE?
 -----------------------

@@ -516,7 +516,7 @@ function _xmlsitemap_get_blurb($check_version = TRUE) {
 
   if (!isset($blurb)) {
     $blurb = FALSE;
-    if (!$check_version || preg_match('/dev|unstable|alpha|beta/i', _xmlsitemap_get_version())) {
+    if (!$check_version || (($version = _xmlsitemap_get_version()) && preg_match('/dev|unstable|alpha|beta|HEAD/i', $version))) {
       $sponsors = array(
         l('Symantec', 'http://www.symantec.com/'),
         l('WebWise Solutions', 'http://www.webwiseone.com/'),
@@ -525,7 +525,7 @@ function _xmlsitemap_get_blurb($check_version = TRUE) {
         l('Coupons Dealuxe', 'http://couponsdealuxe.com/'),
       );
       // Don't extract the following string for translation.
-      $blurb = '<p>Thank you for helping test the XML sitemap module rewrite. Please consider helping offset developer free time by <a href="http://davereid.chipin.com/">donating</a> or if your company is interested in sponsoring the rewrite or a specific feature, please <a href="http://davereid.net/contact">contact the developer</a>. Thank you to the following current sponsors: ' . implode(', ', $sponsors) . ', and all the indivduals that have donated. This message will not be seen in the stable versions.</p>';
+      $blurb = '<p>Thank you for helping test the XML sitemap module rewrite. Please consider helping offset developer free time by <a href="http://davereid.chipin.com/">donating</a> or if your company is interested in sponsoring the rewrite or a specific feature, please <a href="http://davereid.net/contact">contact the developer</a>.</p><p>Thank you to the following current sponsors: ' . implode(', ', $sponsors) . ', and all the indivduals that have donated. This message will not be seen in the stable versions.</p>';
       //http://drupalmodules.com/module/xml-sitemap
     }
   }
@@ -534,8 +534,10 @@ function _xmlsitemap_get_blurb($check_version = TRUE) {
 }
 
 function _xmlsitemap_get_version() {
-  $file = db_fetch_object(db_query("SELECT filename, name, type, status, schema_version FROM {system} WHERE type = 'module' AND name = 'xmlsitemap'"));
-  $info = drupal_parse_info_file(drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap.info');
-  drupal_alter('system_info', $info, $file);
-  return (isset($info['version']) ? $info['version'] : '');
+  static $version;
+  if (!isset($version)) {
+    $modules = module_rebuild_cache();
+    $version = $modules['xmlsitemap']->info['version'];
+  }
+  return $version;
 }
