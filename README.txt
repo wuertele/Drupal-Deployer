@@ -28,7 +28,7 @@ specification. This helps search engines keep their search results up to date.
 INSTALLING
 ----------
 
-See http://drupal.org/getting-started/5/install-contrib for instructions on
+See http://drupal.org/getting-started/install-contrib for instructions on
 how to install or update Drupal modules.
 
 Once XML Sitemap is installed and enabled, you can adjust the settings for your
