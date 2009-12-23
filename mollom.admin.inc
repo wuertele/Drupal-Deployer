@@ -262,10 +262,6 @@ function mollom_admin_unprotect_form_submit($form, &$form_state) {
  */
 function mollom_admin_settings() {
   $keys = _mollom_access();
-  // Since keys are not verified in HTTP POST requests, we need to default to
-  // a successful key status. Otherwise, the fallback form elements would not
-  // be accessible and therefore no value would be stored.
-  $status = $keys;
 
   if ($keys) {
     if (!$_POST) {
@@ -277,16 +273,13 @@ function mollom_admin_settings() {
       variable_del('mollom_servers');
 
       // Verify the key and output a status message.
-      // @todo This must be a form #validate handler; the form must not be
-      //   submitted if validation fails.
-      $status = _mollom_verify_key();
+      _mollom_verify_key();
     }
   }
 
   $form['server'] = array(
     '#type' => 'fieldset',
     '#title' => t('Server settings'),
-    '#access' => $status,
   );
   $form['server']['mollom_fallback'] = array(
     '#type' => 'radios',
@@ -320,14 +313,12 @@ function mollom_admin_settings() {
     '#title' => t('Public key'),
     '#default_value' => variable_get('mollom_public_key', ''),
     '#description' => t('The public key is used to uniquely identify you.'),
-    '#required' => TRUE,
   );
   $form['access-keys']['mollom_private_key'] = array(
     '#type' => 'textfield',
     '#title' => t('Private key'),
     '#default_value' => variable_get('mollom_private_key', ''),
     '#description' => t('The private key is used to prevent someone from hijacking your requests. Similar to a password, it should never be shared with anyone.'),
-    '#required' => TRUE,
   );
 
   return system_settings_form($form);
@@ -459,7 +450,8 @@ function mollom_reports_page() {
     $logs = array();
     $query = db_query_range("SELECT message, variables FROM {watchdog} WHERE type = 'mollom' AND severity <= %d ORDER BY wid DESC", WATCHDOG_WARNING, 0, 10);
     while ($log = db_fetch_object($query)) {
-      $logs[] = t($log->message, unserialize($log->variables));
+      $t_args = unserialize($log->variables);
+      $logs[] = t($log->message, ($t_args ? $t_args : array()));
     }
     $form['watchdog'] = array(
       '#type' => 'item',
@@ -467,6 +459,6 @@ function mollom_reports_page() {
       '#value' => $logs ? theme('item_list', $logs) : t('None'),
     );
   }
-  return drupal_render($form);
+  return $form;
 }
 

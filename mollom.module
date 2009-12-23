@@ -136,12 +136,14 @@ function mollom_link($type, $object, $teaser = FALSE) {
       $links['mollom_report'] = array(
         'title' => t('report to Mollom'),
         'href' => 'mollom/report/comment/' . $object->cid,
+        'query' => drupal_get_destination(),
       );
     }
     elseif ($type == 'node' && user_access('administer nodes') && mollom_get_mode($object->type . '_node_form')) {
       $links['mollom_report'] = array(
         'title' => t('report to Mollom'),
         'href' => 'mollom/report/node/' . $object->nid,
+        'query' => drupal_get_destination(),
       );
     }
   }
@@ -150,9 +152,9 @@ function mollom_link($type, $object, $teaser = FALSE) {
 }
 
 /**
- * Implements hook_init().
+ * Implements hook_exit().
  */
-function mollom_init() {
+function mollom_exit() {
   // Expire all mollom session IDs as soon as possible.
   $now = time();
   if (isset($_SESSION['mollom_sessions'])) {
@@ -230,7 +232,8 @@ function mollom_menu() {
   $items['admin/reports/mollom'] = array(
     'title' => 'Mollom statistics',
     'description' => 'Reports and usage statistics for the Mollom module.',
-    'page callback' => 'mollom_reports_page',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('mollom_reports_page'),
     'access callback' => '_mollom_access',
     'access arguments' => array('administer mollom'),
     'file' => 'mollom.admin.inc',
@@ -741,7 +744,7 @@ function _mollom_get_openid($account) {
       $ids[] = $identity->authname;
     }
 
-    if (count($ids)) {
+    if (!empty($ids)) {
       return implode($ids, ' ');
     }
   }
@@ -897,8 +900,6 @@ function mollom_process_mollom($element, $input, &$form_state, $complete_form) {
   $element['captcha'] = array(
     '#type' => 'textfield',
     '#title' => t('Word verification'),
-    // @todo Or simply move into #pre_render, 'cause this is cosmetical only.
-    '#required' => $form_state['mollom']['require_captcha'],
     '#size' => 10,
     '#default_value' => '',
     '#description' => t("Type the characters you see in the picture above; if you can't read them, submit the form and a new image will be generated. Not case sensitive."),
@@ -1012,7 +1013,7 @@ function mollom_validate_analysis($form, &$form_state) {
 /**
  * Form validation handler for CAPTCHA form element.
  */
-function mollom_validate_captcha($element, &$form_state) {
+function mollom_validate_captcha($form, &$form_state) {
   if (!$form_state['mollom']['require_captcha'] || $form_state['mollom']['passed_captcha']) {
     return;
   }
@@ -1088,8 +1089,8 @@ function mollom_pre_render_mollom($element) {
       // Assign the session ID returned by Mollom.
       $element['#mollom']['session_id'] = $result['session_id'];
     }
-    // Otherwise, hide the CAPTCHA if there was a communication error.
-    elseif ($result === NETWORK_ERROR) {
+    // Otherwise, hide the CAPTCHA.
+    else {
       $element['captcha']['#type'] = 'hidden';
     }
   }
@@ -1115,6 +1116,7 @@ function mollom_pre_render_mollom($element) {
   // a new one.
   else {
     $element['captcha']['#value'] = '';
+    $element['captcha']['#required'] = $element['#mollom']['require_captcha'];
   }
 
   // Due to a bug in Drupal core, we need to manually update Mollom session
@@ -1543,12 +1545,16 @@ function mollom_form_comment_admin_overview_alter(&$form, $form_state) {
 
 /**
  * Mollom report delete callback; Deletes a comment and its replies.
+ *
+ * @see comment_confirm_delete_submit()
  */
 function comment_mollom_report_delete($entity, $id) {
   module_load_include('inc', 'comment', 'comment.admin');
   $comment = _comment_load($id);
+  // Delete the comment and its replies.
   _comment_delete_thread($comment);
   _comment_update_node_statistics($comment->nid);
+  // Clear the cache so an anonymous user sees that his comment was deleted.
   cache_clear_all();
 
   drupal_set_message(t('The comment has been deleted.'));

@@ -1,5 +1,7 @@
 // $Id$
 
+(function ($) {
+
 /**
  * Attach click event handlers for CAPTCHA links.
  */
@@ -45,3 +47,5 @@ function getImageCaptcha() {
    });
    return false;
 }
+
+})(jQuery);

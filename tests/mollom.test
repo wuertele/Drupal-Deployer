@@ -82,7 +82,7 @@ class MollomWebTestCase extends DrupalWebTestCase {
     // Call parent::setUp() allowing Mollom test cases to pass further modules.
     $modules = func_get_args();
     $modules[] = 'mollom';
-    call_user_func_array(array('parent', 'setUp'), $modules);
+    call_user_func_array(array($this, 'parent::setUp'), $modules);
 
     $this->admin_user = $this->drupalCreateUser(array(
       'administer mollom',
@@ -689,6 +689,9 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
 
   function setUp() {
     parent::setUp('mollom_test');
+    // Re-route Mollom communication to this testing site.
+    variable_set('mollom_servers', array($GLOBALS['base_url'] . '/xmlrpc.php?version='));
+
     $this->drupalLogin($this->admin_user);
   }
 
@@ -749,12 +752,13 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
     // Try a simple submit of the form.
     $this->drupalLogout();
     $edit = array(
-      'title' => 'spam',
+      'title' => 'unsure',
     );
     $this->drupalPost('mollom-test/form', $edit, 'Submit');
     $this->assertNoText('Successful form submission.');
     $this->assertText($this->unsure_message);
     $this->postCorrectCaptcha(NULL, array(), 'Submit', 'Successful form submission.');
+    $this->assertMollomWatchdogMessages();
 
     // Try to submit values for top-level fields.
     $edit = array(
@@ -765,16 +769,18 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
     $this->assertNoText('Successful form submission.');
     $this->assertNoText($this->unsure_message);
     $this->assertText($this->spam_message);
+    $this->assertMollomWatchdogMessages();
 
     // Try to submit values for nested field.
     $edit = array(
-      'title' => 'ham',
+      'title' => $this->randomString(),
       'parent[child]' => 'spam',
     );
     $this->drupalPost('mollom-test/form', $edit, 'Submit');
     $this->assertNoText('Successful form submission.');
     $this->assertNoText($this->unsure_message);
     $this->assertText($this->spam_message);
+    $this->assertMollomWatchdogMessages();
 
     // Try to submit values for nested field and multiple value field.
     // Start with ham values for simple, nested, and first multiple field.
@@ -789,8 +795,9 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
     $this->assertNoText('Successful form submission.');
     $this->assertNoText($this->unsure_message);
     $this->assertNoText($this->spam_message);
+    $this->assertMollomWatchdogMessages();
 
-    // Add another ham value for multiple field.
+    // Add another value for multiple field.
     $edit = array(
       'field[new]' => 'ham',
     );
@@ -800,9 +807,15 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
     $this->assertNoText('Successful form submission.');
     $this->assertNoText($this->unsure_message);
     $this->assertNoText($this->spam_message);
+    $this->assertMollomWatchdogMessages();
 
-    // Now add a spam value to the multiple field and submit the form.
+    // Now replace all ham values with random values, add a spam value to the
+    // multiple field and submit the form.
     $edit = array(
+      'title' => $this->randomString(),
+      'parent[child]' => $this->randomString(),
+      'field[0]' => $this->randomString(),
+      'field[1]' => $this->randomString(),
       'field[new]' => 'spam',
     );
     $this->drupalPost(NULL, $edit, 'Submit');
@@ -810,6 +823,7 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
     // Verify that the form was not submitted and cannot be submitted.
     $this->assertNoText('Successful form submission.');
     $this->assertText($this->spam_message);
+    $this->assertMollomWatchdogMessages();
   }
 
   /**
@@ -917,6 +931,7 @@ class MollomUserFormsTestCase extends MollomWebTestCase {
     // Try to reset the user's password by specifying an invalid CAPTCHA.
     $edit = array('name' => $this->web_user->name);
     $this->postIncorrectCaptcha('user/password', $edit, t('E-mail new password'));
+    $this->postCorrectCaptcha(NULL, array(), t('E-mail new password'));
 
     // Try to reset the user's password by specifying a valid CAPTCHA.
     $this->postCorrectCaptcha('user/password', $edit, t('E-mail new password'));
@@ -1014,17 +1029,20 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
     // we will verify that this remains the same.
     $mollom_session_id = $this->getFieldValue("edit-mollom-session-id");
 
-    // Try to submit an incorrect answer for the CAPTCHA.
+    // Try to submit an incorrect answer for the CAPTCHA, without value for
+    // required field.
     $this->postIncorrectCaptcha(NULL, array(), t('Preview'));
+    $this->assertText(t('Comment field is required.'), t('Missing required field triggers form rebuild.'));
     $this->assertFieldByID('edit-mollom-session-id', $mollom_session_id, t('The Mollom Session ID is present on the comment form after a possible spam comment is previewed.'));
 
-    // Try to submit a correct answer for the CAPTCHA, but without one of the required field.
+    // Try to submit a correct answer for the CAPTCHA, still without required
+    // field value.
     $this->postCorrectCaptcha(NULL, array(), t('Preview'));
-    $this->assertText(t('Comment field is required.'), t('An empty comment field triggers a rebuild of the form.'));
+    $this->assertText(t('Comment field is required.'), t('Missing required field triggers form rebuild.'));
 
     // Finally, we should be able to submit a comment.
     $this->drupalPost(NULL, array('comment' => 'spam'), t('Save'));
-    $this->assertRaw('<p>spam</p>', t('The comment is finally posted and appears on the screen after it is submitted.'));
+    $this->assertRaw('<p>spam</p>', t('Spam comment could be posted with correct CAPTCHA.'));
   }
 
   /**
@@ -1481,6 +1499,7 @@ class MollomReportTestCase extends MollomWebTestCase {
     );
     $this->drupalPost(NULL, $edit, t('Delete'));
     $this->assertMollomWatchdogMessages();
+    $this->assertText(t('The content was successfully reported as inappropriate.'));
     $this->assertText(t('The comment has been deleted.'));
 
     // Verify that the comment and Mollom session data has been deleted.
