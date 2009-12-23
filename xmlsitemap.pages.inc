@@ -80,8 +80,6 @@ function xmlsitemap_file_transfer($source, $headers) {
     drupal_set_header($header);
   }
 
-  //$source = file_create_path($source);
-
   // Transfer file in 1024 byte chunks to save memory usage.
   if ($handle = fopen($source, 'rb')) {
     while (!feof($handle)) {
