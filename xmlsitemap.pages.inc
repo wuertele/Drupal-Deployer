@@ -115,8 +115,10 @@ function xmlsitemap_output_xsl() {
     'URL location' => t('URL location'),
     'Change frequency' => t('Change frequency'),
     'Priority' => t('Priority'),
-    '[xsl-css]' => base_path() . $module_path . '/xsl/xmlsitemap.xsl.css',
+    '[jquery]' => base_path() . 'misc/jquery.js',
+    '[jquery-tablesort]' => base_path() . $module_path . '/xsl/jquery.tablesorter.min.js',
     '[xsl-js]' => base_path() . $module_path . '/xsl/xmlsitemap.xsl.js',
+    '[xsl-css]' => base_path() . $module_path . '/xsl/xmlsitemap.xsl.css',
   );
   $xsl_content = strtr($xsl_content, $replacements);
 

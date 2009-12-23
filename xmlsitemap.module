@@ -329,24 +329,6 @@ function xmlsitemap_calculate_changefreq($timestamps) {
 }
 
 /**
- * Given an {xmlsitemap} field, return the correct %-placeholder.
- *
- * @param $field
- *   The {xmlsitemap} schema field name.
- * @return
- *   The placeholder string to embed in a query for that type.
- *
- * @see db_type_placeholder()
- */
-function _xmlsitemap_get_placeholder($field) {
-  static $schema;
-  if (!isset($schema)) {
-    $schema = drupal_get_schema('xmlsitemap');
-  }
-  return db_type_placeholder($schema['fields'][$field]['type']);
-}
-
-/**
  * Check if there is a visible sitemap link given a certain set of conditions.
  *
  * @param $conditions
@@ -434,7 +416,7 @@ function _xmlsitemap_build_conditions(array &$conditions = array(), array &$args
       $conditions[$field] = "$field $null_operator NULL";
     }
     else {
-      $placeholder = _xmlsitemap_get_placeholder($field);
+      $placeholder = db_type_placeholder(_xmlsitemap_get_field_type('xmlsitemap', $field));
       $conditions[$field] = "$field $operator $placeholder";
       $args[] = $value;
     }
@@ -562,9 +544,6 @@ function xmlsitemap_delete_link(array $conditions) {
 
   $args = _xmlsitemap_build_conditions($conditions);
   db_query("DELETE FROM {xmlsitemap} WHERE " . implode(' AND ', $conditions), $args);
-
-  // Allow other modules to respond after deleting the link.
-  //module_invoke_all('xmlsitemap_delete_link', $conditions, $args);
 
   return db_affected_rows();
 }
@@ -894,7 +873,7 @@ function xmlsitemap_get_link_info($type = NULL, $reset = FALSE) {
           $module_link_info[$type] += array(
             'type' => $type,
             'module' => $module,
-            'purge' => TRUE, //module_hook($module, 'xmlsitemap_link_data'),
+            'purge' => TRUE,
             'table' => FALSE,
           );
         }
@@ -956,4 +935,22 @@ function _xmlsitemap_delete_recursive($path) {
     $dir->close();
     return rmdir($path);
   }
+}
+
+/**
+ * Given an table and field, return the field type.
+ *
+ * @param $table
+ *   The table name.
+ * @param $field
+ *   The field name.
+ * @return
+ *   The schema type of {table}.field.
+ */
+function _xmlsitemap_get_field_type($table, $field) {
+  static $schema;
+  if (!isset($schema[$table])) {
+    $schema[$table] = drupal_get_schema($table);
+  }
+  return $schema[$table]['fields'][$field]['type'];
 }
