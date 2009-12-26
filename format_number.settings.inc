@@ -65,14 +65,14 @@ function format_number_settings_user(&$edit) {
     '#type' => 'radios',
     '#title' => t('Decimal point'),
     '#options' => format_number_get_decimal_point_options(),
-    '#default_value' => strlen($edit['decimal_point']) ? $edit['decimal_point'] : variable_get('format_number_decimal_point', '.'),
+    '#default_value' => drupal_strlen($edit['decimal_point']) ? $edit['decimal_point'] : variable_get('format_number_decimal_point', '.'),
     '#description' => t('Select the character that will be used as decimal point.'),
   );
   $form['format_number']['thousands_sep'] = array(
     '#type' => 'radios',
     '#title' => t('Thousands separator'),
     '#options' => format_number_get_thousands_separator_options(),
-    '#default_value' => strlen($edit['thousands_sep']) ? $edit['thousands_sep'] : variable_get('format_number_thousands_sep', ','),
+    '#default_value' => drupal_strlen($edit['thousands_sep']) ? $edit['thousands_sep'] : variable_get('format_number_thousands_sep', ','),
     '#description' => t('Select the character that will be used as thousands separator.'),
   );
   return $form;
