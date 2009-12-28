@@ -305,8 +305,6 @@ function mollom_admin_settings() {
       '@mollom-manager-add' => 'http://mollom.com/site-manager/add',
       '@mollom-manager' => 'http://mollom.com/site-manager',
     )),
-    '#collapsible' => $keys,
-    '#collapsed' => $keys,
   );
   $form['access-keys']['mollom_public_key'] = array(
     '#type' => 'textfield',
