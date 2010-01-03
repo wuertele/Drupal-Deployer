@@ -1,9 +1,17 @@
 <?php 
+// $Id$
+
+/**
+ * @file
+ * Views field handler.
+ */
+
 class currency_handler_field_currency extends views_handler_field {
   function render($values) {  
-    if($this->options['display_code_only']) {
+    if ($this->options['display_code_only']) {
       return parent::render($values);
-    } else {                 
+    }
+    else {                 
       $currency_names = currency_api_get_list();
       $value = $currency_names[$values->{$this->field_alias}];
       return check_plain($value);
