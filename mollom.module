@@ -6,8 +6,6 @@
  * Main Mollom integration module functions.
  *
  * @todo Increase module weight to catch form alterations by other modules.
- * @todo D7: Implement hook_modules_uninstalled() to remove obsolete records in
- *   {mollom_form}.
  */
 
 /**
@@ -149,25 +147,6 @@ function mollom_link($type, $object, $teaser = FALSE) {
   }
 
   return $links;
-}
-
-/**
- * Implements hook_exit().
- */
-function mollom_exit() {
-  // Expire all mollom session IDs as soon as possible.
-  $now = time();
-  if (isset($_SESSION['mollom_sessions'])) {
-    foreach ($_SESSION['mollom_sessions'] as $id => $timestamp) {
-      if ($now - $timestamp > 30 * 60) {
-        unset($_SESSION['mollom_sessions'][$id]);
-      }
-    }
-  }
-  // If all sessions were removed, also remove our storage key.
-  if (isset($_SESSION) && empty($_SESSION['mollom_sessions'])) {
-    unset($_SESSION['mollom_sessions']);
-  }
 }
 
 /**
@@ -880,7 +859,6 @@ function mollom_process_mollom($element, $input, &$form_state, $complete_form) {
   // Setup initial Mollom session and form information.
   if (empty($form_state['mollom'])) {
     $form_state['mollom'] = array(
-      'form_build_id' => $complete_form['#build_id'],
       'session_id' => NULL,
       'form_id' => $element['#mollom_form']['form_id'],
       'require_analysis' => $element['#mollom_form']['mode'] == MOLLOM_MODE_ANALYSIS,
@@ -929,9 +907,6 @@ function mollom_process_mollom($element, $input, &$form_state, $complete_form) {
  * $element['#mollom'], and as of now, Form API does not allow form validation
  * handlers to alter any elements in the form structure by reference.
  * @see http://drupal.org/node/642702
- *
- * @todo Investigate usage of $form_state['storage']['mollom'], but watch out
- *   for broken form state caching.
  */
 function mollom_process_mollom_session_id($element, $input, &$form_state) {
   // The current state can come either from the $form_state, if the form
@@ -976,6 +951,7 @@ function mollom_validate_analysis($form, &$form_state) {
     return;
   }
 
+  // Perform textual analysis.
   $data = mollom_form_get_values($form_state['values'], $form_state['mollom']['fields'], $form_state['mollom']['mapping']);
   if (!empty($form_state['mollom']['session_id'])) {
     $data += array('session_id' => $form_state['mollom']['session_id']);
@@ -1152,6 +1128,25 @@ function mollom_form_submit($form_id, &$form_state) {
   // Remove Mollom session information from form state to account for unforeseen
   // new builds of the form.
   unset($form_state['mollom']);
+}
+
+/**
+ * Implements hook_exit().
+ */
+function mollom_exit() {
+  // Expire all mollom session IDs as soon as possible.
+  $now = time();
+  if (isset($_SESSION['mollom_sessions'])) {
+    foreach ($_SESSION['mollom_sessions'] as $id => $timestamp) {
+      if ($now - $timestamp > 30 * 60) {
+        unset($_SESSION['mollom_sessions'][$id]);
+      }
+    }
+  }
+  // If all sessions were removed, also remove our storage key.
+  if (isset($_SESSION) && empty($_SESSION['mollom_sessions'])) {
+    unset($_SESSION['mollom_sessions']);
+  }
 }
 
 /**
@@ -1391,8 +1386,6 @@ function node_mollom_form_info() {
     }
     if ($type->has_body) {
       $forms[$form_id]['elements']['body'] = check_plain($type->body_label);
-      // @todo Consider optional, dependent 'format' support in D7.
-      // $forms[$form_id]['elements']['format'] = t('Input format'),
     }
     // Add CCK fields by default.
     if (module_exists('content')) {
