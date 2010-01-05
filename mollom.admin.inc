@@ -346,11 +346,8 @@ function _mollom_verify_key() {
  * Form submit handler to mass-report and unpublish or delete comments.
  */
 function mollom_comment_admin_overview_submit($form, &$form_state) {
-  // The operation has the following format: <module>-<operation>,
-  // where '<operation>' can be 'unpublish' or 'delete'.
-  list($id, $operation) = explode('-', $form_state['values']['operation']);
-
-  if ($id == 'mollom') {
+  if (strpos($form_state['values']['operation'], 'mollom-') === 0) {
+    list($id, $operation) = explode('-', $form_state['values']['operation']);
     foreach ($form_state['values']['comments'] as $cid => $value) {
       if ($value) {
         // First, send the proper information to the XML-RPC server:
@@ -388,11 +385,8 @@ function mollom_comment_admin_overview_submit($form, &$form_state) {
  * Form submit handler to mass-report and unpublish or delete nodes.
  */
 function mollom_node_admin_overview_submit($form, &$form_state) {
-  // The operation has the following format: <operation>,
-  // where '<operation>' can be 'unpublish' or 'delete'.
-  list($id, $operation) = explode('-', $form_state['values']['operation']);
-
-  if ($id == 'mollom') {
+  if (strpos($form_state['values']['operation'], 'mollom-') === 0) {
+    list($id, $operation) = explode('-', $form_state['values']['operation']);
     foreach ($form_state['values']['nodes'] as $nid => $value) {
       if ($value) {
         if ($data = mollom_data_load('node', $nid)) {

@@ -246,6 +246,22 @@ class MollomWebTestCase extends DrupalWebTestCase {
   }
 
   /**
+   * Assert that Mollom session data was stored for a submission.
+   */
+  protected function assertData($entity, $id) {
+    $data = mollom_data_load($entity, $id);
+    $this->assertTrue($data->session, t('Mollom session data for %entity @id exists: %session', array('%entity' => $entity, '@id' => $id, '%session' => $data->session)));
+  }
+
+  /**
+   * Assert that no Mollom session data exists for a certain entity.
+   */
+  protected function assertNoData($entity, $id) {
+    $data = mollom_data_load($entity, $id);
+    $this->assertFalse($data, t('No Mollom session data exists for %entity @id.', array('%entity' => $entity, '@id' => $id)));
+  }
+
+  /**
    * Test that the CAPTCHA field is found on the current page.
    */
   protected function assertCaptchaField() {
@@ -1487,7 +1503,7 @@ class MollomReportTestCase extends MollomWebTestCase {
     $this->assertMollomWatchdogMessages();
     $this->comment = db_fetch_object(db_query("SELECT * FROM {comments} WHERE comment = '%s' AND nid = %d", array($edit['comment'], $this->node->nid)));
     $this->assertTrue($this->comment, t('Comment was found in the database.'));
-    $this->assertTrue(mollom_data_load('comment', $this->comment->cid), t('Mollom session data was recorded.'));
+    $this->assertData('comment', $this->comment->cid);
 
     // Log in comment administrator and verify that we can report to Mollom.
     $this->drupalLogin($this->admin_user);
@@ -1504,7 +1520,63 @@ class MollomReportTestCase extends MollomWebTestCase {
 
     // Verify that the comment and Mollom session data has been deleted.
     $this->assertFalse(_comment_load($this->comment->cid), t('Comment was deleted.'));
-    $this->assertFalse(mollom_data_load('comment', $this->comment->cid), t('Mollom session data for comment was deleted.'));
+    $this->assertNoData('comment', $this->comment->cid);
+  }
+
+  /**
+   * Tests mass-reporting comments.
+   */
+  function testMassReportComments() {
+    $this->node = $this->drupalCreateNode(array('type' => 'story'));
+    variable_set('comment_preview_story', COMMENT_PREVIEW_OPTIONAL);
+
+    // Post 3 comments.
+    $this->drupalLogin($this->web_user);
+    $this->comments = array();
+    foreach (range(1, 3) as $num) {
+      $edit = array(
+        'subject' => $this->randomName(),
+        'comment' => 'ham',
+      );
+      $this->drupalPost('comment/reply/' . $this->node->nid, $edit, t('Save'));
+      $this->assertMollomWatchdogMessages();
+      $this->comments[$num] = db_fetch_object(db_query("SELECT * FROM {comments} WHERE subject = '%s' AND nid = %d", array($edit['subject'], $this->node->nid)));
+      $this->assertTrue($this->comments[$num], t('Comment was found in the database.'));
+      $this->assertData('comment', $this->comments[$num]->cid);
+    }
+
+    // Log in comment administrator and verify that we can mass-report all
+    // comments to Mollom.
+    $this->drupalLogin($this->admin_user);
+    $this->drupalGet('admin/content/comment');
+    // Note that this throws a PHP notice in comment.admin.inc:99, which is a
+    // bug in Drupal core, and which makes our tests fail due to exceptions.
+    // @see http://drupal.org/node/673974
+    $edit = array('operation' => 'mollom-unpublish');
+    foreach ($this->comments as $comment) {
+      $this->assertText($comment->subject, t('Comment found.'));
+      $edit["comments[{$comment->cid}]"] = TRUE;
+    }
+    $this->drupalPost(NULL, $edit, t('Update'));
+    $this->assertMollomWatchdogMessages();
+    $this->assertText(t('The selected comments have been reported as inappropriate and are unpublished.'));
+
+    // Verify that unpublished comments are found in approval queue and
+    // mass-report all comments again to delete them.
+    $this->drupalGet('admin/content/comment/approval');
+    $edit['operation'] = 'mollom-delete';
+    foreach ($this->comments as $comment) {
+      $this->assertText($comment->subject, t('Comment found.'));
+    }
+    $this->drupalPost(NULL, $edit, t('Update'));
+    $this->assertMollomWatchdogMessages();
+    $this->assertText(t('The selected comments have been reported as inappropriate and are deleted.'));
+
+    // Verify that the comments and Mollom session data has been deleted.
+    foreach ($this->comments as $comment) {
+      $this->assertFalse(_comment_load($comment->cid), t('Comment was deleted.'));
+      $this->assertNoData('comment', $comment->cid);
+    }
   }
 }
 
