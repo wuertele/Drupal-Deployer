@@ -151,23 +151,23 @@ function currency_api_convert($currency_from, $currency_to, $amount = 1) {
 
     // Validate the passed currency codes, to make sure they are valid
     if (FALSE == currency_api_get_desc($from)) {
-      $msg = "currency: Invalid currency_from=$from";
-      _log_to_watchdog($msg, WATCHDOG_ERROR);
+      $msg = t("currency: Invalid currency_from = %from", array('%from' => $from));
+      currency_log($msg, WATCHDOG_ERROR);
       $result['message'] = $msg;
       $result['status'] = FALSE;
     }
 
     if (FALSE == currency_api_get_desc($to)) {
-      $msg = "currency: Invalid currency_to=$to";
-      _log_to_watchdog($msg, WATCHDOG_ERROR);
+      $msg = t("currency: Invalid currency_to = %to", array('%to' => $to));
+      currency_log($msg, WATCHDOG_ERROR);
       return FALSE;
       $result['message'] = $msg;
       $result['status'] = FALSE;
     }
 
     if (!is_numeric($amount)) {
-      $msg = "currency: Invalid amount=$amount";
-      _log_to_watchdog($msg, WATCHDOG_ERROR);
+      $msg = t("currency: Invalid amount = %amount", array('%amount' => $amount));
+      currency_log($msg, WATCHDOG_ERROR);
       $result['message'] = $msg;
       $result['status'] = FALSE;
     }
@@ -175,13 +175,13 @@ function currency_api_convert($currency_from, $currency_to, $amount = 1) {
     $http_result = drupal_http_request($url);
     if (isset($http_result->error)) {
       $msg = t('currency: drupal_http_request error: @error', array('@error' => $http_result->error));
-      _log_to_watchdog($msg, WATCHDOG_ERROR);
+      currency_log($msg, WATCHDOG_ERROR);
       return FALSE;
     }
 
     if ($http_result->code != 200) {
       $msg = t('currency: drupal_http_request code: @code', array('@code' => $http_result->code));
-      _log_to_watchdog($msg, WATCHDOG_ERROR);
+      currency_log($msg, WATCHDOG_ERROR);
       return FALSE;
     }
 
@@ -189,8 +189,8 @@ function currency_api_convert($currency_from, $currency_to, $amount = 1) {
   }
 
   if (!$record) {
-    $msg = 'currency: cannot contact Yahoo Finance host';
-    _log_to_watchdog($msg, WATCHDOG_ERROR);
+    $msg = t('currency: cannot contact Yahoo Finance host');
+    currency_log($msg, WATCHDOG_ERROR);
     $result['status'] = FALSE;
     $result['message'] = $msg;
   }
@@ -204,7 +204,8 @@ function currency_api_convert($currency_from, $currency_to, $amount = 1) {
   $value = $amount * $rate;
 
   // Log it
-  _log_to_watchdog("currency: $amount $from = $value $to", WATCHDOG_NOTICE);
+  $msg = t("currency: @amount @from = @value @to", array('@amount' => $amount, '@from' => $from, '@value' => $value, '@to' => $to));
+  currency_log($msg, WATCHDOG_NOTICE);
 
   // Got what we need
   $result['value']  = $value;
@@ -255,6 +256,115 @@ function currency_api_get_desc($currency) {
     return $list[$currency];
   }
   return FALSE;
+}
+
+/**
+ * Returns an array of all currency names.
+ */
+function currency_api_get_list() {
+  static $list;
+  if (!isset($list)) {
+    $currencies = currency_api_get_currencies();
+    $list = array();
+    foreach ($currencies as $code => $currency) {
+      $list[$code] = $currency['name'];
+    }
+  }
+  return $list;
+}
+
+/**
+ * Returns an array of all currency symbols.
+ */
+function currency_api_get_symbols() {
+  static $symbols;
+  if (!isset($symbols)) {
+    $currencies = currency_api_get_currencies();
+    $symbols = array();
+    foreach ($currencies as $code => $currency) {
+      $symbols[$code] = $currency['symbol'];
+    }
+  }
+  return $symbols;
+}
+
+/**
+ * Helper function to build yahoo finance api request.
+ */
+function currency_api_get_fields($array) {
+  while (list($field, $header) = each($array)) {
+    $field_string = $field_string . $field;
+  }
+  
+  return $field_string;
+}
+
+/**
+ * Helper function to log messages to watchdog.
+ */
+function currency_log($msg = '', $severity = WATCHDOG_NOTICE, $type = 'currency') {
+  if (variable_get('currency_api_watchdog', 1)) {
+    watchdog($type, $msg, array(), $severity);
+  }
+}
+
+/**
+ *
+ * fetch cached rate for from and to countries
+ * retrieve from static array variable, else from database
+ * returns: rate by reference, true if exists otherwise false
+ *
+ */
+function currency_api_load(&$record, $currency_from, $currency_to) {
+  static $rate = array();
+  $cached = TRUE;
+
+  if (isset($rate[$currency_from][$currency_to])) {
+    // retrieve cached rate from static array variable
+    $record = $rate[$currency_from][$currency_to];
+  }
+  else {
+    $result = db_fetch_object(db_query("SELECT * FROM {currencyapi} WHERE currency_from = '%s' AND currency_to = '%s' AND timestamp > %d", $currency_from, $currency_to, time() - variable_get('currency_api_fetch', UPDATE_FREQUENCY)));
+    if ($result) {
+      $currency = array($currency_from . $currency_to .'=X', $result->rate, date('n/j/Y', $result->timestamp), date('g:ia', $result->timestamp));
+      $record = implode(',', $currency);
+      // cache rate in static array variable for subsequent queries
+      $rate[$currency_from][$currency_to] = $record;
+    }
+    else {
+      // rate does not exist in database cache
+      $record = NULL;
+      $cached = FALSE;
+    }
+  }
+
+  return $cached;
+}
+
+/**
+ *
+ * cache rate for from and to countries
+ * delete outdated record, if exists
+ * returns: true/false result from insert
+ *
+ */
+function currency_api_save($currency_from, $currency_to, $rate) {
+  // delete outdated record, if exists
+  db_query("DELETE FROM {currencyapi} WHERE currency_from = '%s' AND currency_to = '%s'", $currency_from, $currency_to);
+  return db_query("INSERT INTO {currencyapi} VALUES ('%s', '%s', %f, %d)", $currency_from, $currency_to, $rate, time());
+}
+
+/**
+ * custom theme to display currency amount
+ * default output example: $200.00 USD
+ *
+ * @param string
+ * @param array
+ * returns: formatted string
+ *
+ */
+function theme_currency_api_amount($amount, $attributes) {
+  return t('!symbol!amount !code', array('!symbol' => $attributes['symbol'], '!amount' => number_format($amount, $attributes['decimal']), '!code' => $attributes['code']));
 }
 
 /**
@@ -435,113 +545,4 @@ function currency_api_get_currencies() {
     'ZMK' => array('name' => t('Zambian Kwacha (ZMK)'), 'symbol' => t('ZK'), 'decimals' => 2),
     'ZWD' => array('name' => t('Zimbabwe Dollar (ZWD)'), 'symbol' => t('Z$'), 'decimals' => 2),
   );
-}
-
-/**
- * Returns an array of all currency names.
- */
-function currency_api_get_list() {
-  static $list;
-  if (!isset($list)) {
-    $currencies = currency_api_get_currencies();
-    $list = array();
-    foreach ($currencies as $code => $currency) {
-      $list[$code] = $currency['name'];
-    }
-  }
-  return $list;
-}
-
-/**
- * Returns an array of all currency symbols.
- */
-function currency_api_get_symbols() {
-  static $symbols;
-  if (!isset($symbols)) {
-    $currencies = currency_api_get_currencies();
-    $symbols = array();
-    foreach ($currencies as $code => $currency) {
-      $symbols[$code] = $currency['symbol'];
-    }
-  }
-  return $symbols;
-}
-
-/**
- * Helper function to build yahoo finance api request.
- */
-function currency_api_get_fields($array) {
-  while (list($field, $header) = each($array)) {
-    $field_string = $field_string . $field;
-  }
-  
-  return $field_string;
-}
-
-/**
- * Helper function to log messages to watchdog.
- */
-function _log_to_watchdog($msg = '', $severity = WATCHDOG_NOTICE, $type = 'user') {
-  if (variable_get('currency_api_watchdog', 1)) {
-    watchdog($type, $msg, NULL, $severity);
-  }
-}
-
-/**
- *
- * fetch cached rate for from and to countries
- * retrieve from static array variable, else from database
- * returns: rate by reference, true if exists otherwise false
- *
- */
-function currency_api_load(&$record, $currency_from, $currency_to) {
-  static $rate = array();
-  $cached = TRUE;
-
-  if (isset($rate[$currency_from][$currency_to])) {
-    // retrieve cached rate from static array variable
-    $record = $rate[$currency_from][$currency_to];
-  }
-  else {
-    $result = db_fetch_object(db_query("SELECT * FROM {currencyapi} WHERE currency_from = '%s' AND currency_to = '%s' AND timestamp > %d", $currency_from, $currency_to, time() - variable_get('currency_api_fetch', UPDATE_FREQUENCY)));
-    if ($result) {
-      $currency = array($currency_from . $currency_to .'=X', $result->rate, date('n/j/Y', $result->timestamp), date('g:ia', $result->timestamp));
-      $record = implode(',', $currency);
-      // cache rate in static array variable for subsequent queries
-      $rate[$currency_from][$currency_to] = $record;
-    }
-    else {
-      // rate does not exist in database cache
-      $record = NULL;
-      $cached = FALSE;
-    }
-  }
-
-  return $cached;
-}
-
-/**
- *
- * cache rate for from and to countries
- * delete outdated record, if exists
- * returns: true/false result from insert
- *
- */
-function currency_api_save($currency_from, $currency_to, $rate) {
-  // delete outdated record, if exists
-  db_query("DELETE FROM {currencyapi} WHERE currency_from = '%s' AND currency_to = '%s'", $currency_from, $currency_to);
-  return db_query("INSERT INTO {currencyapi} VALUES ('%s', '%s', %f, %d)", $currency_from, $currency_to, $rate, time());
-}
-
-/**
- * custom theme to display currency amount
- * default output example: $200.00 USD
- *
- * @param string
- * @param array
- * returns: formatted string
- *
- */
-function theme_currency_api_amount($amount, $attributes) {
-  return t('!symbol!amount !code', array('!symbol' => $attributes['symbol'], '!amount' => number_format($amount, $attributes['decimal']), '!code' => $attributes['code']));
 }
