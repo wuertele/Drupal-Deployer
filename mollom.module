@@ -913,24 +913,24 @@ function mollom_process_mollom_session_id($element, $input, &$form_state) {
   // was just rebuilt in the same request or from data posted by the user. In
   // that case we validate that the correct form_id and user session ID is used.
   if (empty($form_state['mollom']) && !empty($input['session_id'])) {
-    list($timestamp, $mollom_session_id) = explode('-', $input['session_id'], 2);
+    @list($timestamp, $mollom_session_id) = explode('-', $input['session_id'], 2);
 
-    if (!$mollom_session_id) {
-      watchdog('mollom', "Mollom ID '%session' is badly formatted.", array('%session' => $input['session_id']));
+    if (empty($mollom_session_id)) {
+      watchdog('mollom', 'Bogus session id %session.', array('%session' => $form_state['input']['mollom']['session_id']), WATCHDOG_WARNING);
     }
     elseif (!isset($_SESSION['mollom_sessions'][$mollom_session_id])) {
-      watchdog('mollom', "Mollom ID '%session' not found in the current user session.", array('%session' => $mollom_session_id));
+      watchdog('mollom', 'Non-existent session id %session.', array('%session' => $mollom_session_id));
     }
     elseif (!$cache = cache_get($mollom_session_id, 'cache_mollom')) {
       if (time() - $timestamp > 30 * 60) {
-        watchdog('mollom', "Mollom ID '%session' is invalid, probably expired.", array('%session' => $mollom_session_id));
+        watchdog('mollom', 'Expired session id %session.', array('%session' => $mollom_session_id));
       }
       else {
-        watchdog('mollom', "Mollom ID '%session' is invalid, probably reused.", array('%session' => $mollom_session_id));
+        watchdog('mollom', 'Re-used session id %session. This is not a bug in Mollom. If this happens too often, check your site for attacks.', array('%session' => $mollom_session_id), WATCHDOG_WARNING);
       }
     }
     elseif ($cache->data['form_id'] !== $form_state['values']['form_id']) {
-      watchdog('mollom', "Mollom ID '%session' has been tampered with: it was generated for form %form1, but is used on form %form2.", array('%session' => $mollom_session_id, '%form1' => $cache->data['form_id'], '%form2' => $form_state['values']['form_id']));
+      watchdog('mollom', 'Invalid form id %form_id for session id %session (generated for %form_id_session).  This is not a bug in Mollom. If this happens too often, check your site for attacks.', array('%session' => $mollom_session_id, '%form_id_session' => $cache->data['form_id'], '%form_id' => $form_state['values']['form_id']), WATCHDOG_WARNING);
     }
     else {
       $form_state['mollom'] = $cache->data;
@@ -1280,6 +1280,21 @@ function _mollom_watchdog($messages, $severity) {
   foreach ($messages as $message) {
     watchdog('mollom', $message['text'], !empty($message['arguments']) ? $message['arguments'] : NULL, $severity);
   }
+}
+
+/**
+ * Send feedback to Mollom.
+ */
+function _mollom_send_feedback($session_id, $feedback = 'spam') {
+   mollom('mollom.sendFeedback', array(
+     'session_id' => $data->session, 
+     'feedback' => $feedback
+   ));
+  
+   watchdog('mollom', "Reported session id %session as @feedback.", array(
+     '%session' => $session_id, 
+     '@feedback' => $feedback
+   ));
 }
 
 /**
