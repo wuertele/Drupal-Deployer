@@ -32,9 +32,9 @@ class file_aliases_content_handler_field extends content_handler_field {
       $item[$column] = $values->{$this->aliases[$attributes['column']]};
     }
 
-    $item['#delta'] = $field['multiple'] ?  $values->{$this->aliases['delta']} : 0;
+    $item['#delta'] = $field['multiple'] ? $values->{$this->aliases['delta']} : 0;
 
-    $field['module'] = 'file_aliases_'. $field['module'];
+    $field['module'] = 'file_aliases_' . $field['module'];
 
     // Render items.
     $formatter_name = $options['format'];

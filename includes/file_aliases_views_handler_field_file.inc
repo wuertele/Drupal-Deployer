@@ -30,14 +30,14 @@ class file_aliases_views_handler_field_file extends views_handler_field_file {
   function render_link($data, $values) {
     if (!empty($this->options['link_to_file']) && $data !== NULL && $data !== '') {
       $this->options['alter']['make_link'] = TRUE;
-      $this->options['alter']['path'] = drupal_get_path_alias('filefield_paths/alias/'. $values->{$this->aliases{'fid'}});
+      $this->options['alter']['path'] = drupal_get_path_alias('filefield_paths/alias/' . $values->{$this->aliases{'fid'}});
     }
 
     return $data;
   }
 
   function render($values) {
-    if (($alias = drupal_get_path_alias('filefield_paths/alias/'. $values->{$this->aliases{'fid'}})) !== 'filefield_paths/alias/'. $values->{$this->aliases{'fid'}}) {
+    if (($alias = drupal_get_path_alias('filefield_paths/alias/' . $values->{$this->aliases{'fid'}})) !== 'filefield_paths/alias/' . $values->{$this->aliases{'fid'}}) {
       return $this->render_link(check_plain($alias), $values);
     }
     return FALSE;
