@@ -3,7 +3,7 @@
 /**
  * Attach collapse behavior to the feedback form block (once).
  */
-Drupal.feedbackSetup = function() {
+Drupal.behaviors.feedbackForm = function() {
   $block = $('#block-feedback-form');
   $block.find('span.feedback-link')
     .prepend('<span id="feedback-form-toggle">[ + ]</span> ')
@@ -15,14 +15,17 @@ Drupal.feedbackSetup = function() {
         Drupal.feedbackFormToggle($block, true);
       }
     );
-  $block.find('form')
+  $block.find('form').hide()
     .find(':input[name="ajax"]').val(1).end()
     .submit(function() {
+      // Toggle throbber/button.
+      $('#feedback-throbber', this).addClass('throbbing');
       $('#feedback-submit', this).fadeOut('fast', function() {
-        Drupal.feedbackFormSubmit($(this).parents('form').get(0));
+        Drupal.feedbackFormSubmit($(this).parents('form'));
       });
       return false;
     });
+  $block.show();
   // Attach auto-submit to admin view form.
   $('fieldset.feedback-messages :input[type="checkbox"]').click(function() {
     $(this).parents('form').submit();
@@ -33,7 +36,7 @@ Drupal.feedbackSetup = function() {
  * Collapse or uncollapse the feedback form block.
  */
 Drupal.feedbackFormToggle = function($block, enable) {
-  $block.find('.content').slideToggle('medium');
+  $block.find('form').slideToggle('medium');
   if (enable) {
     $('#feedback-form-toggle', $block).html('[ + ]');
   }
@@ -45,15 +48,15 @@ Drupal.feedbackFormToggle = function($block, enable) {
 /**
  * Collapse or uncollapse the feedback form block.
  */
-Drupal.feedbackFormSubmit = function(form) {
-  var $form = $(form);
-  $.post(form.action, $form.serialize(), function(data) {
+Drupal.feedbackFormSubmit = function($form) {
+  $.post($form.get(0).action, $form.serialize(), function(data) {
     // Collapse the form.
     $('#block-feedback-form').find('.feedback-link').click();
     // Display status message.
     $form.parent().parent().append('<div id="feedback-status-message">' + data.message + '</div>');
     // Reset form values.
     $(':input[name="message"]', $form).val('');
+    $('#feedback-throbber', $form).removeClass('throbbing');
     $('#feedback-submit', $form).show();
     // Blend out status message.
     window.setTimeout(function() {
@@ -65,8 +68,3 @@ Drupal.feedbackFormSubmit = function(form) {
   return false;
 }
 
-if (Drupal.jsEnabled) {
-  $(document).ready(function() {
-    Drupal.feedbackSetup();
-  });
-}
