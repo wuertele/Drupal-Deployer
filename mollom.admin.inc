@@ -350,9 +350,9 @@ function mollom_comment_admin_overview_submit($form, &$form_state) {
     list($id, $operation) = explode('-', $form_state['values']['operation']);
     foreach ($form_state['values']['comments'] as $cid => $value) {
       if ($value) {
-        // First, send the proper information to the XML-RPC server:
+        // First, report the comments as spam to Mollom.com.
         if ($data = mollom_data_load('comment', $cid)) {
-          mollom('mollom.sendFeedback', array('session_id' => $data->session, 'feedback' => 'spam'));
+          _mollom_send_feedback($data->session);
         }
 
         // Second, perform the proper operation on the comments:
@@ -389,8 +389,9 @@ function mollom_node_admin_overview_submit($form, &$form_state) {
     list($id, $operation) = explode('-', $form_state['values']['operation']);
     foreach ($form_state['values']['nodes'] as $nid => $value) {
       if ($value) {
+        // First, report the nodes as spam to Mollom.com.
         if ($data = mollom_data_load('node', $nid)) {
-          mollom('mollom.sendFeedback', array('session_id' => $data->session, 'feedback' => 'spam'));
+           _mollom_send_feedback($data->session);
         }
 
         if ($node = node_load($nid)) {
