@@ -220,7 +220,7 @@ function path_redirect_local_actions($redirect = array()) {
 function path_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
   switch ($op) {
     case 'presave':
-      if (!empty($node->path)) {
+      if (!empty($node->nid) && !empty($node->path)) {
         path_redirect_check_alias_changed('node/' . $node->nid, $node->path, $node->language);
       }
       break;
@@ -250,11 +250,11 @@ function path_redirect_check_alias_changed($path, $new_alias, $language = '') {
   }
 
   $old_alias = drupal_get_path_alias($path, $language);
-  if ($old_alias != $base_path && $old_alias != $new_alias) {
+  if ($old_alias != $path && $old_alias != $new_alias) {
     // If the user is manually changing the path alias, add a redirect from the old alias to the node.
     $redirect = array(
       'source' => $old_alias,
-      'redirect' => $new_alias,
+      'redirect' => $path,
       //'language' => $language,
     );
     return path_redirect_save($redirect);
