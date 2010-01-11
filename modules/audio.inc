@@ -1,13 +1,12 @@
 <?php
 // $Id$
-
 /**
  * @file
  * Provides FileField Paths integration with the Audio module.
  */
 
 /**
- * Implementation of hook_filefield_paths_form_alter().
+ * Implements hook_filefield_paths_form_alter().
  */
 function audio_filefield_paths_form_alter(&$form, &$ffp) {
   if (isset($form['#id']) && $form['#id'] == 'node-type-form' && isset($form['#node_type']) && $form['#node_type']->module == 'audio') {
@@ -37,7 +36,7 @@ function audio_filefield_paths_form_alter(&$form, &$ffp) {
 }
 
 /**
- * Implementation of hook_filefield_paths_form_submit().
+ * Implements hook_filefield_paths_form_submit().
  */
 function audio_filefield_paths_form_submit(&$form_state, &$ffp) {
   if ($form_state['values']['form_id'] == 'node_type_form') {
@@ -48,7 +47,7 @@ function audio_filefield_paths_form_submit(&$form_state, &$ffp) {
 }
 
 /**
- * Implementation of hook_filefield_paths_get_fields().
+ * Implements hook_filefield_paths_get_fields().
  */
 function audio_filefield_paths_get_fields(&$node, &$ffp) {
   if (is_object($node) && isset($node->audio['file'])) {
@@ -66,7 +65,7 @@ function audio_filefield_paths_get_fields(&$node, &$ffp) {
 }
 
 /**
- * Implementation of hook_filefield_paths_batch_update().
+ * Implements hook_filefield_paths_batch_update().
  */
 function audio_filefield_paths_batch_update($field, $type, &$objects) {
   $result = db_query(
@@ -80,7 +79,7 @@ function audio_filefield_paths_batch_update($field, $type, &$objects) {
 }
 
 /**
- * Implementation of hook_filefield_paths_update().
+ * Implements hook_filefield_paths_update().
  */
 function audio_filefield_paths_update($oid, $field) {
   $node = node_load($oid);

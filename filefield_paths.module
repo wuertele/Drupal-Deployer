@@ -1,9 +1,8 @@
 <?php
 // $Id$
-
 /**
  * @file
- * Adds extra functionality to FileFields Path settings.
+ * Contains core functions for the FileField Paths module.
  */
 
 /**
@@ -371,7 +370,7 @@ function _filefield_paths_batch_update_process($objects, $module, $field, &$cont
 }
 
 /**
- * Implementation of hook_nodeapi().
+ * Implements hook_nodeapi().
  */
 function filefield_paths_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
   $function = 'filefield_paths_node_'. $op;
@@ -461,7 +460,7 @@ function filefield_paths_node_update(&$node) {
 }
 
 /**
- * Implementation of hook_content_fieldapi().
+ * Implements hook_content_fieldapi().
  */
 function filefield_paths_content_fieldapi($op, $field) {
   switch ($op) {
@@ -641,7 +640,10 @@ function filefield_paths_token_values($type, $object = NULL) {
     $item = pathinfo($object[0]['filename']);
     $tokens = array();
     if (!module_exists('filefield')) {
-      $tokens['filefield-onlyname'] = $item['filename'];
+      // PHP < 5.2: pathinfo() doesn't return 'filename' variable.
+      $tokens['filefield-onlyname'] = isset($item['filename'])
+        ? $item['filename']
+        : basename($object[0]['filename'], '.' . $item['extension']);
       $tokens['filefield-extension'] = $item['extension'];
     }
     // Original filename.

@@ -1,13 +1,12 @@
 <?php
 // $Id$
-
 /**
  * @file
  * Provides ImageField module specific functions for FileField Paths.
  */
 
 /**
- * Implementation of hook_filefield_paths_process_file().
+ * Implements hook_filefield_paths_process_file().
  */
 function imagefield_filefield_paths_process_file($new, $file, $settings, $node, $update) {
   if ($new) {
@@ -19,7 +18,7 @@ function imagefield_filefield_paths_process_file($new, $file, $settings, $node, 
 }
 
 /**
- * Implementation of hook_filefield_paths_cleanup().
+ * Implements hook_filefield_paths_cleanup().
  */
 function imagefield_filefield_paths_cleanup(&$ffp, $paths, $name) {
   // Check for ImageFields.

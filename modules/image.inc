@@ -1,13 +1,12 @@
 <?php
 // $Id$
-
 /**
  * @file
  * Provides FileField Paths integration with the Image module.
  */
 
 /**
- * Implementation of hook_filefield_paths_form_alter().
+ * Implements hook_filefield_paths_form_alter().
  */
 function image_filefield_paths_form_alter(&$form, &$ffp) {
   if (isset($form['#id']) && $form['#id'] == 'image-admin-settings') {
@@ -33,7 +32,7 @@ function image_filefield_paths_form_alter(&$form, &$ffp) {
 }
 
 /**
- * Implementation of hook_filefield_paths_form_submit().
+ * Implements hook_filefield_paths_form_submit().
  */
 function image_filefield_paths_form_submit(&$form_state, &$ffp) {
   if (isset($form_state['values']['ffp_image'])) {
@@ -44,7 +43,7 @@ function image_filefield_paths_form_submit(&$form_state, &$ffp) {
 }
 
 /**
- * Implementation of hook_filefield_paths_get_fields().
+ * Implements hook_filefield_paths_get_fields().
  */
 function image_filefield_paths_get_fields(&$node, &$ffp) {
   if ($node->type == 'image') {
@@ -80,7 +79,7 @@ function image_filefield_paths_get_fields(&$node, &$ffp) {
 }
 
 /**
- * Implementation of hook_filefield_paths_batch_update().
+ * Implements hook_filefield_paths_batch_update().
  */
 function image_filefield_paths_batch_update($field, $type, &$objects) {
   $result = db_query("SELECT nid FROM {node} WHERE type = '%s'", 'image');
@@ -92,7 +91,7 @@ function image_filefield_paths_batch_update($field, $type, &$objects) {
 }
 
 /**
- * Implementation of hook_filefield_paths_update().
+ * Implements hook_filefield_paths_update().
  */
 function image_filefield_paths_update($oid, $field) {
   $node = node_load($oid);

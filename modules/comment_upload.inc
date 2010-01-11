@@ -1,13 +1,12 @@
 <?php
 // $Id$
-
 /**
  * @file
  * Provides FileField Paths integration with the Comment Upload module.
  */
 
 /**
- * Implementation of hook_filefield_paths_form_alter().
+ * Implements hook_filefield_paths_form_alter().
  */
 function comment_upload_filefield_paths_form_alter(&$form, &$ffp) {
   if (isset($form['#id']) && $form['#id'] == 'node-type-form') {
@@ -36,7 +35,7 @@ function comment_upload_filefield_paths_form_alter(&$form, &$ffp) {
 }
 
 /**
- * Implementation of hook_filefield_paths_form_submit().
+ * Implements hook_filefield_paths_form_submit().
  */
 function comment_upload_filefield_paths_form_submit(&$form_state, &$ffp) {
   if (isset($form_state['values']['form_id']) && $form_state['values']['form_id'] == 'node_type_form') {
@@ -47,7 +46,7 @@ function comment_upload_filefield_paths_form_submit(&$form_state, &$ffp) {
 }
 
 /**
- * Implementation of hook_filefield_paths_get_fields().
+ * Implements hook_filefield_paths_get_fields().
  */
 function comment_upload_filefield_paths_get_fields(&$node, &$ffp) {
   if (is_object($node) && isset($node->cid) && isset($node->files)) {
@@ -65,7 +64,7 @@ function comment_upload_filefield_paths_get_fields(&$node, &$ffp) {
 }
 
 /**
- * Implementation of hook_filefield_paths_batch_update().
+ * Implements hook_filefield_paths_batch_update().
  */
 function comment_upload_filefield_paths_batch_update($field, $type, &$objects) {
   $result = db_query(
@@ -80,7 +79,7 @@ function comment_upload_filefield_paths_batch_update($field, $type, &$objects) {
 }
 
 /**
- * Implementation of hook_filefield_paths_update().
+ * Implements hook_filefield_paths_update().
  */
 function comment_upload_filefield_paths_update($oid, $field) {
   $comment = _comment_load($oid);
@@ -101,7 +100,7 @@ function comment_upload_filefield_paths_update($oid, $field) {
 }
 
 /**
- * Implementation of hook_comment().
+ * Implements hook_comment().
  */
 function filefield_paths_comment($a1, $op) {
   switch ($op) {
