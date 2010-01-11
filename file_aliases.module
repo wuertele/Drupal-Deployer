@@ -91,7 +91,21 @@ function file_aliases_filefield_paths_process_file($new, $file, $settings, $node
       } while (drupal_lookup_path('source', $file['filealias']) != NULL);
     }
 
+    // Create Alias.
     path_set_alias('filefield_paths/alias/' . $file['field']['fid'], $file['filealias']);
+
+    // Display Alias in Node Body and CCK Text fields.
+    if ($settings['filealias']['display']) {
+      // Regular expression to replace file reference with file alias.
+      $pattern = array(
+        'regex' => str_replace('/', '\/', $file['filepath']['new']),
+        'regex_enc' => str_replace('/', '\/', drupal_urlencode($file['filepath']['new'])),
+        'replace' => $file['filealias']
+      );
+  
+      // Process regular expression.
+      _filefield_paths_replace_pattern($pattern, $node, $update);
+    }
   }
 }
 

@@ -26,5 +26,5 @@ Features
 Required Modules
 ----------------
 
-* FileField Paths - http://drupal.org/project/filefield_paths
+* FileField Paths (6.x-1.4 or greater) - http://drupal.org/project/filefield_paths
 
