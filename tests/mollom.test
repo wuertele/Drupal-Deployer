@@ -79,9 +79,14 @@ class MollomWebTestCase extends DrupalWebTestCase {
    * Set up an administrative user account and testing keys.
    */
   function setUp() {
+    // Re-initialize stored session_id and watchdog messages.
+    $this->resetSessionID();
+    $this->messages = array();
+
     // Call parent::setUp() allowing Mollom test cases to pass further modules.
     $modules = func_get_args();
     $modules[] = 'mollom';
+    $modules[] = 'dblog';
     call_user_func_array(array($this, 'parent::setUp'), $modules);
 
     $this->admin_user = $this->drupalCreateUser(array(
@@ -116,15 +121,10 @@ class MollomWebTestCase extends DrupalWebTestCase {
    * @todo Add this to D7 core.
    */
   protected function assertMollomWatchdogMessages($no_fail_expected = TRUE) {
-    static $seen_ids = array();
-
-    if (!module_exists('dblog')) {
-      return;
-    }
     module_load_include('inc', 'dblog', 'dblog.admin');
 
-    $where = ($seen_ids ? 'AND wid NOT IN (' . db_placeholders($seen_ids) . ')' : '');
-    $result = db_query("SELECT * FROM {watchdog} WHERE type = 'mollom' $where ORDER BY timestamp ASC", $seen_ids);
+    $this->messages = array();
+    $result = db_query("SELECT * FROM {watchdog} WHERE type = 'mollom' ORDER BY timestamp ASC");
     while ($row = db_fetch_object($result)) {
       if ($no_fail_expected ? $row->severity >= WATCHDOG_NOTICE : $row->severity < WATCHDOG_NOTICE) {
         $this->pass(_dblog_format_message($row), t('Watchdog'));
@@ -132,8 +132,75 @@ class MollomWebTestCase extends DrupalWebTestCase {
       else {
         $this->fail(_dblog_format_message($row), t('Watchdog'));
       }
-      $seen_ids[] = $row->wid;
+      $this->messages[$row->wid] = $row;
     }
+    // Delete processed watchdog messages.
+    if (!empty($this->messages)) {
+      $seen_ids = array_keys($this->messages);
+      db_query("DELETE FROM {watchdog} WHERE wid IN (" . db_placeholders($seen_ids) . ")", $seen_ids);
+    }
+  }
+
+  /**
+   * Assert that the Mollom session id remains the same.
+   *
+   * The Mollom session id is only known to one server. If we are communicating
+   * with a different Mollom server (due to a refreshed server list or being
+   * redirected), then we will get a new session_id.
+   *
+   * @param $session_id
+   *   A Mollom session_id of the last request, as contained in the XML-RPC
+   *   response.
+   */
+  protected function assertSessionID($session_id) {
+    // Check whether watchdog messages indicate a refresh or redirect.
+    foreach ($this->messages as $message) {
+      if ($message->message == 'Refreshed servers: %servers' || $message->message == 'Server %server redirected to: %next.') {
+        $this->resetSessionID();
+      }
+    }
+
+    if (!isset($this->session_id)) {
+      // Use assertTrue() instead of pass(), to test !empty().
+      $this->assertTrue($session_id, t('New session_id: %session_id', array('%session_id' => $session_id)));
+      $this->session_id = $session_id;
+    }
+    else {
+      $this->_assertEqual('session_id', $session_id, $this->session_id);
+    }
+    return $this->session_id;
+  }
+
+  /**
+   * Reset the statically cached Mollom session id.
+   */
+  protected function resetSessionID() {
+    $this->session_id = NULL;
+  }
+
+  /**
+   * Assert a Mollom session id in a form.
+   *
+   * This is a wrapper around assertSessionID() allows to assert that a proper
+   * Mollom session id is found in the form contained in the internal browser
+   * output. The usual flow is:
+   * - drupalGet() or drupalPost() requests or submits a form.
+   * - drupalGet() and drupalPost() invoke assertMollomWatchdogMessages()
+   *   internally, which records all new watchdog messages.
+   * - This function, assertSessionIDInForm(), is invoked to assert that there
+   *   is a Mollom session id and, depending on the recorded watchdog messages,
+   *   that it either equals the last known session id or the new session id is
+   *   used for future comparisons in case of a server redirect.
+   * - The return value of this function is used to invoke assertData(), to
+   *   verify that the proper session id was stored in the database.
+   */
+  protected function assertSessionIDInForm() {
+    // The session id found in the form element value is prefixed with the UNIX
+    // timestamp denoting the time it was generated/output. The form element
+    // #process callback mollom_process_mollom_session_id() uses this timestamp
+    // to additionally validate its age.
+    list($timestamp, $session_id) = explode('-', $this->getFieldValueByName('mollom[session_id]'));
+    return $this->assertSessionID($session_id);
   }
 
   /**
@@ -170,6 +237,7 @@ class MollomWebTestCase extends DrupalWebTestCase {
     // Call the mollom.verifyKey function directly and check that the key
     // is valid.
     $key_is_valid = mollom('mollom.verifyKey');
+    $this->assertMollomWatchdogMessages();
     $this->assertIdentical($key_is_valid, TRUE, t('The Mollom servers can be contacted and the key pair specified in the mollom.test file is found to be valid.'));
   }
 
@@ -247,10 +315,20 @@ class MollomWebTestCase extends DrupalWebTestCase {
 
   /**
    * Assert that Mollom session data was stored for a submission.
+   *
+   * @param $entity
+   *   The entity type to search for in {mollom}.
+   * @param $id
+   *   The entity id to search for in {mollom}.
+   * @param $session_id
+   *   (optional) The Mollom session id to assert additionally.
    */
-  protected function assertData($entity, $id) {
+  protected function assertData($entity, $id, $session_id = NULL) {
     $data = mollom_data_load($entity, $id);
-    $this->assertTrue($data->session, t('Mollom session data for %entity @id exists: %session', array('%entity' => $entity, '@id' => $id, '%session' => $data->session)));
+    $this->assertTrue($data->session, t('Mollom session data for %entity @id exists: <pre>@data</pre>', array('%entity' => $entity, '@id' => $id, '@data' => var_export($data, TRUE))));
+    if (isset($session_id)) {
+      $this->_assertEqual(t('Stored session id'), $data->session, $session_id);
+    }
   }
 
   /**
@@ -404,15 +482,17 @@ class MollomWebTestCase extends DrupalWebTestCase {
   /**
    * Retrieve a field value by ID.
    */
-  protected function getFieldValue($field_id) {
-    $value = '';
-    if ($this->parse()) {
-      $fields = $this->elements->xpath($this->constructFieldXpath('id', $field_id));
-      if (isset($fields[0])) {
-        $value = $fields[0]->value;
-      }
-    }
-    return $value;
+  protected function getFieldValueByID($id) {
+    $fields = $this->xpath($this->constructFieldXpath('id', $id));
+    return (string) $fields[0]['value'];
+  }
+
+  /**
+   * Retrieve a field value by name.
+   */
+  protected function getFieldValueByName($name) {
+    $fields = $this->xpath($this->constructFieldXpath('name', $name));
+    return (string) $fields[0]['value'];
   }
 
   /**
@@ -425,6 +505,46 @@ class MollomWebTestCase extends DrupalWebTestCase {
     $return = array_shift($storage);
     variable_set('mollom_test_check_content', $storage);
     return $return;
+  }
+
+  /**
+   * Wraps drupalGet() for additional watchdog message assertion.
+   *
+   * @param $options
+   *   In addition to regular $options that are passed to url():
+   *   - watchdog: (optional) Boolean whether to assert that only non-severe
+   *     watchdog messages have been logged. Defaults to TRUE. Use FALSE to
+   *     negate the watchdog message severity assertion.
+   *
+   * @see DrupalWebTestCase->drupalGet()
+   * @see MollomWebTestCase->assertMollomWatchdogMessages()
+   * @see MollomWebTestCase->assertSessionID()
+   */
+  protected function drupalGet($path, array $options = array(), array $headers = array()) {
+    $output = parent::drupalGet($path, $options, $headers);
+    $options += array('watchdog' => TRUE);
+    $this->assertMollomWatchdogMessages($options['watchdog']);
+    return $output;
+  }
+
+  /**
+   * Wraps drupalPost() for additional watchdog message assertion.
+   *
+   * @param $options
+   *   In addition to regular $options that are passed to url():
+   *   - watchdog: (optional) Boolean whether to assert that only non-severe
+   *     watchdog messages have been logged. Defaults to TRUE. Use FALSE to
+   *     negate the watchdog message severity assertion.
+   *
+   * @see MollomWebTestCase->assertMollomWatchdogMessages()
+   * @see MollomWebTestCase->assertSessionID()
+   * @see DrupalWebTestCase->drupalPost()
+   */
+  protected function drupalPost($path, $edit, $submit, array $options = array(), array $headers = array()) {
+    $output = parent::drupalPost($path, $edit, $submit, $options, $headers);
+    $options += array('watchdog' => TRUE);
+    $this->assertMollomWatchdogMessages($options['watchdog']);
+    return $output;
   }
 
   /**
@@ -441,13 +561,64 @@ class MollomWebTestCase extends DrupalWebTestCase {
    * @return
    *   TRUE if the assertion succeeded, FALSE otherwise.
    */
-  function _assertEqual($name, $first, $second) {
+  protected function _assertEqual($name, $first, $second) {
     $message = strtr("@name: '@first' is equal to '@second'.", array(
       '@name' => $name,
       '@first' => $first,
       '@second' => $second,
     ));
     $this->assertEqual($first, $second, $message);
+  }
+}
+
+/**
+ * Tests low-level XML-RPC communication with Mollom servers.
+ */
+class MollomResponseTestCase extends MollomWebTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => 'Server responses',
+      'description' => 'Tests that Mollom server responses match expectations.',
+      'group' => 'Mollom',
+    );
+  }
+
+  /**
+   * Tests mollom.checkContent().
+   */
+  function testCheckContent() {
+    $data = array(
+      'author_name' => $this->admin_user->name,
+      'author_mail' => $this->admin_user->mail,
+      'author_id' => $this->admin_user->uid,
+      'author_ip' => ip_address(),
+    );
+
+    // Ensure proper response for 'ham' submissions.
+    $data['post_body'] = 'ham';
+    $result = mollom('mollom.checkContent', $data);
+    $this->assertMollomWatchdogMessages();
+    $this->_assertEqual('spam', $result['spam'], MOLLOM_ANALYSIS_HAM);
+    $this->_assertEqual('quality', $result['quality'], 1);
+    $session_id = $this->assertSessionID($result['session_id']);
+
+    // Ensure proper response for 'spam' submissions, re-using session_id.
+    $data['post_body'] = 'spam';
+    $data['session_id'] = $session_id;
+    $result = mollom('mollom.checkContent', $data);
+    $this->assertMollomWatchdogMessages();
+    $this->_assertEqual('spam', $result['spam'], MOLLOM_ANALYSIS_SPAM);
+    $this->_assertEqual('quality', $result['quality'], 0);
+    $session_id = $this->assertSessionID($result['session_id']);
+
+    // Ensure proper response for 'unsure' submissions, re-using session_id.
+    $data['post_body'] = 'unsure';
+    $data['session_id'] = $session_id;
+    $result = mollom('mollom.checkContent', $data);
+    $this->assertMollomWatchdogMessages();
+    $this->_assertEqual('spam', $result['spam'], MOLLOM_ANALYSIS_UNSURE);
+    $this->_assertEqual('quality', $result['quality'], 0.5);
+    $session_id = $this->assertSessionID($result['session_id']);
   }
 }
 
@@ -475,9 +646,8 @@ class MollomAccessTestCase extends MollomWebTestCase {
       'mollom_public_key' => 'invalid-public-key',
       'mollom_private_key' => 'invalid-private-key',
     );
-    $this->drupalPost(NULL, $edit, t('Save configuration'));
+    $this->drupalPost(NULL, $edit, t('Save configuration'), array('watchdog' => FALSE));
     $this->assertText(t('The configuration options have been saved.'));
-    $this->assertMollomWatchdogMessages(FALSE);
     $this->assertRaw(t('"messages error"'), t('The Mollom settings page reports that the Mollom keys are invalid.'));
   }
 
@@ -516,10 +686,8 @@ class MollomAccessTestCase extends MollomWebTestCase {
       'comment' => 'ham',
     );
     $this->drupalPost('comment/reply/' . $node->nid, $edit, t('Preview'));
-    $this->assertMollomWatchdogMessages();
 
     $this->drupalPost(NULL, array(), t('Save'));
-    $this->assertMollomWatchdogMessages();
     $this->assertText('node body');
     $this->assertText($edit['comment']);
 
@@ -530,11 +698,9 @@ class MollomAccessTestCase extends MollomWebTestCase {
     $this->clickLink('edit');
 
     $this->drupalPost(NULL, array('subject' => '', 'comment' => 'spam'), t('Preview'));
-    $this->assertMollomWatchdogMessages();
     $this->assertNoText($this->spam_message);
 
     $this->drupalPost(NULL, array(), t('Save'));
-    $this->assertMollomWatchdogMessages();
     $this->assertNoText($this->spam_message);
     $this->assertText('node body');
 
@@ -544,11 +710,9 @@ class MollomAccessTestCase extends MollomWebTestCase {
     $this->clickLink('edit');
 
     $this->drupalPost(NULL, array(), t('Preview'));
-    $this->assertMollomWatchdogMessages();
     $this->assertText($this->spam_message);
 
     $this->drupalPost(NULL, array(), t('Save'));
-    $this->assertMollomWatchdogMessages();
     $this->assertText($this->spam_message);
     $this->assertNoText('node body');
   }
@@ -580,7 +744,6 @@ class MollomFallbackTestCase extends MollomWebTestCase {
     $this->drupalPost('admin/settings/mollom/settings', array('mollom_fallback' => MOLLOM_FALLBACK_BLOCK), t('Save configuration'));
     $this->assertText('The configuration options have been saved.');
     $this->drupalLogout();
-    $this->assertMollomWatchdogMessages();
 
     // Configure Mollom to use a non-existent server as that should trigger
     // the fallback mechanism.
@@ -588,10 +751,9 @@ class MollomFallbackTestCase extends MollomWebTestCase {
 
     // Check the password request form.
     // @todo Test mail sending with assertMail() now that it is available.
-    $this->drupalGet('user/password');
+    $this->drupalGet('user/password', array('watchdog' => FALSE));
     $this->assertNoCaptchaField();
     $this->assertText($this->fallback_message);
-    $this->assertMollomWatchdogMessages(FALSE);
   }
 
   /**
@@ -612,7 +774,7 @@ class MollomFallbackTestCase extends MollomWebTestCase {
     variable_set('mollom_servers', array('http://fake-host'));
 
     // Check the password request form.
-    $this->drupalGet('user/password');
+    $this->drupalGet('user/password', array('watchdog' => FALSE));
     $this->assertNoCaptchaField();
     $this->assertNoText($this->fallback_message);
   }
@@ -774,7 +936,6 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
     $this->assertNoText('Successful form submission.');
     $this->assertText($this->unsure_message);
     $this->postCorrectCaptcha(NULL, array(), 'Submit', 'Successful form submission.');
-    $this->assertMollomWatchdogMessages();
 
     // Try to submit values for top-level fields.
     $edit = array(
@@ -785,7 +946,6 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
     $this->assertNoText('Successful form submission.');
     $this->assertNoText($this->unsure_message);
     $this->assertText($this->spam_message);
-    $this->assertMollomWatchdogMessages();
 
     // Try to submit values for nested field.
     $edit = array(
@@ -796,7 +956,6 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
     $this->assertNoText('Successful form submission.');
     $this->assertNoText($this->unsure_message);
     $this->assertText($this->spam_message);
-    $this->assertMollomWatchdogMessages();
 
     // Try to submit values for nested field and multiple value field.
     // Start with ham values for simple, nested, and first multiple field.
@@ -811,7 +970,6 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
     $this->assertNoText('Successful form submission.');
     $this->assertNoText($this->unsure_message);
     $this->assertNoText($this->spam_message);
-    $this->assertMollomWatchdogMessages();
 
     // Add another value for multiple field.
     $edit = array(
@@ -823,7 +981,6 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
     $this->assertNoText('Successful form submission.');
     $this->assertNoText($this->unsure_message);
     $this->assertNoText($this->spam_message);
-    $this->assertMollomWatchdogMessages();
 
     // Now replace all ham values with random values, add a spam value to the
     // multiple field and submit the form.
@@ -839,7 +996,6 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
     // Verify that the form was not submitted and cannot be submitted.
     $this->assertNoText('Successful form submission.');
     $this->assertText($this->spam_message);
-    $this->assertMollomWatchdogMessages();
   }
 
   /**
@@ -990,7 +1146,7 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
 
   public static function getInfo() {
     return array(
-      'name' => 'Comment submission protection',
+      'name' => 'Comment form protection',
       'description' => 'Check that the comment submission form can be protected.',
       'group' => 'Mollom',
     );
@@ -1038,27 +1194,27 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
 
     // Request the comment reply form. There should be a CAPTCHA form.
     $this->drupalLogin($this->web_user);
-    $this->drupalGet('comment/reply/'. $this->node->nid);
+    $this->drupalGet('comment/reply/' . $this->node->nid);
     $this->assertCaptchaField();
-
-    // Retrieve the Mollom Session ID. After each attempted submission below,
-    // we will verify that this remains the same.
-    $mollom_session_id = $this->getFieldValue("edit-mollom-session-id");
+    $this->assertSessionIDInForm();
 
     // Try to submit an incorrect answer for the CAPTCHA, without value for
     // required field.
     $this->postIncorrectCaptcha(NULL, array(), t('Preview'));
     $this->assertText(t('Comment field is required.'), t('Missing required field triggers form rebuild.'));
-    $this->assertFieldByID('edit-mollom-session-id', $mollom_session_id, t('The Mollom Session ID is present on the comment form after a possible spam comment is previewed.'));
+    $this->assertSessionIDInForm();
 
     // Try to submit a correct answer for the CAPTCHA, still without required
     // field value.
     $this->postCorrectCaptcha(NULL, array(), t('Preview'));
     $this->assertText(t('Comment field is required.'), t('Missing required field triggers form rebuild.'));
+    $session_id = $this->assertSessionIDInForm();
 
     // Finally, we should be able to submit a comment.
     $this->drupalPost(NULL, array('comment' => 'spam'), t('Save'));
     $this->assertRaw('<p>spam</p>', t('Spam comment could be posted with correct CAPTCHA.'));
+    $cid = db_result(db_query("SELECT cid FROM {comments} WHERE comment = '%s' ORDER BY timestamp DESC", array('spam')));
+    $this->assertData('comment', $cid, $session_id);
   }
 
   /**
@@ -1075,46 +1231,47 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
     $this->drupalGet('comment/reply/'. $this->node->nid);
     $this->assertNoCaptchaField();
 
-    // Try to save a comment that is 'unsure' and make sure there is a CAPTCHA
-    // and a Mollom ID.
+    // Try to save a comment that is 'unsure' and make sure there is a CAPTCHA.
     $this->drupalPost(NULL, array('comment' => 'unsure'), t('Save'));
     $this->assertCaptchaField();
-    $this->assertFieldByID('edit-mollom-session-id', '', t('The Mollom Session ID is present on the comment form after a possible spam comment is previewed.'));
-
-    // Retrieve the Mollom Session ID. After each attempted submission below,
-    // we will verify that this remains the same.
-    $mollom_session_id = $this->getFieldValue("edit-mollom-session-id");
+    $session_id = $this->assertSessionIDInForm();
 
     // Try to submit the form by using an invalid CAPTCHA. At this point,
     // the submission should be rejected and a new CAPTCHA generated (even
     // if the text of the comment is changed to ham).
     $this->postIncorrectCaptcha(NULL, array('comment' => 'ham'), t('Save'));
-    $this->assertFieldByID('edit-mollom-session-id', $mollom_session_id, 'The Mollom Session ID remains unchanged.');
+    $session_id = $this->assertSessionIDInForm();
 
     // Now try using a valid CAPTCHA. The CAPTCHA form should no longer
     // be present.
     $this->postCorrectCaptcha(NULL, array(), t('Save'));
     $this->assertRaw('<p>ham</p>', t('A comment that is known to be ham appears on the screen after it is submitted.'));
+    $cid = db_result(db_query("SELECT cid FROM {comments} WHERE comment = '%s' ORDER BY timestamp DESC", array('ham')));
+    $this->assertData('comment', $cid, $session_id);
 
-    // Preview a 'spam' comment and try to save it. It should be
-    // rejected, with no CAPTCHA appearing on the page.
+    // Try to save a new 'spam' comment; it should be rejected, with no CAPTCHA
+    // appearing on the page.
+    $this->resetSessionID();
+    $this->drupalGet('comment/reply/' . $this->node->nid);
     $original_number_of_comments = $this->getCommentCount($this->node->nid);
-    $this->assertSpamSubmit('comment/reply/'. $this->node->nid, array('comment'), array(), t('Save'));
-    $this->assertCommentCount($this->node->nid, $original_number_of_comments);
-    $this->assertFieldByID('edit-mollom-session-id', $mollom_session_id, 'The Mollom Session ID remains unchanged.');
-
-    // Try to save again the above 'spam' comment. It should also be
-    // rejected with no CAPTCHA.
     $this->assertSpamSubmit(NULL, array('comment'), array(), t('Save'));
+    $session_id = $this->assertSessionIDInForm();
     $this->assertCommentCount($this->node->nid, $original_number_of_comments);
-    $this->assertFieldByID('edit-mollom-session-id', $mollom_session_id, 'The Mollom Session ID remains unchanged.');
 
-    // Preview and save a comment that is 'ham'. Make sure that the submitted
-    // comment appears on the screen and in the database.
+    // Try to save again; it should be rejected, with no CAPTCHA.
+    $this->assertSpamSubmit(NULL, array('comment'), array(), t('Save'));
+    $session_id = $this->assertSessionIDInForm();
+    $this->assertCommentCount($this->node->nid, $original_number_of_comments);
+
+    // Save a new 'ham' comment.
+    $this->resetSessionID();
+    $this->drupalGet('comment/reply/' . $this->node->nid);
     $original_number_of_comments = $this->getCommentCount($this->node->nid);
-    $this->assertHamSubmit('comment/reply/'. $this->node->nid, array('comment'), array(), t('Save'));
+    $this->assertHamSubmit(NULL, array('comment'), array(), t('Save'));
     $this->assertRaw('<p>ham</p>', t('A comment that is known to be ham appears on the screen after it is submitted.'));
     $this->assertCommentCount($this->node->nid, $original_number_of_comments + 1);
+    $cid = db_result(db_query("SELECT cid FROM {comments} WHERE comment = '%s' ORDER BY timestamp DESC", array('ham')));
+    $this->assertData('comment', $cid);
   }
 
   /**
@@ -1435,11 +1592,12 @@ class MollomDataTestCase extends MollomWebTestCase {
     $this->drupalLogout();
     $this->drupalGet('node/' . $node->nid);
     $this->clickLink(t('Add new comment'));
+    // Ensure we have some potentially escaped characters in the values.
     $edit = array(
-      'name' => $this->randomString(),
+      'name' => $this->randomString(6) . ' & ' . $this->randomString(8),
       'mail' => 'mollom@example.com',
       'homepage' => 'http://mollom.com',
-      'subject' => $this->randomString(),
+      'subject' => '"' . $this->randomString() . '"',
       'comment' => 'unsure',
     );
     $this->drupalPost(NULL, $edit, t('Save'));
@@ -1500,7 +1658,6 @@ class MollomReportTestCase extends MollomWebTestCase {
       'comment' => 'ham',
     );
     $this->drupalPost('comment/reply/' . $this->node->nid, $edit, t('Save'));
-    $this->assertMollomWatchdogMessages();
     $this->comment = db_fetch_object(db_query("SELECT * FROM {comments} WHERE comment = '%s' AND nid = %d", array($edit['comment'], $this->node->nid)));
     $this->assertTrue($this->comment, t('Comment was found in the database.'));
     $this->assertData('comment', $this->comment->cid);
@@ -1514,7 +1671,6 @@ class MollomReportTestCase extends MollomWebTestCase {
       'feedback' => 'spam',
     );
     $this->drupalPost(NULL, $edit, t('Delete'));
-    $this->assertMollomWatchdogMessages();
     $this->assertText(t('The content was successfully reported as inappropriate.'));
     $this->assertText(t('The comment has been deleted.'));
 
@@ -1539,7 +1695,6 @@ class MollomReportTestCase extends MollomWebTestCase {
         'comment' => 'ham',
       );
       $this->drupalPost('comment/reply/' . $this->node->nid, $edit, t('Save'));
-      $this->assertMollomWatchdogMessages();
       $this->comments[$num] = db_fetch_object(db_query("SELECT * FROM {comments} WHERE subject = '%s' AND nid = %d", array($edit['subject'], $this->node->nid)));
       $this->assertTrue($this->comments[$num], t('Comment was found in the database.'));
       $this->assertData('comment', $this->comments[$num]->cid);
@@ -1558,7 +1713,6 @@ class MollomReportTestCase extends MollomWebTestCase {
       $edit["comments[{$comment->cid}]"] = TRUE;
     }
     $this->drupalPost(NULL, $edit, t('Update'));
-    $this->assertMollomWatchdogMessages();
     $this->assertText(t('The selected comments have been reported as inappropriate and are unpublished.'));
 
     // Verify that unpublished comments are found in approval queue and
@@ -1569,7 +1723,6 @@ class MollomReportTestCase extends MollomWebTestCase {
       $this->assertText($comment->subject, t('Comment found.'));
     }
     $this->drupalPost(NULL, $edit, t('Update'));
-    $this->assertMollomWatchdogMessages();
     $this->assertText(t('The selected comments have been reported as inappropriate and are deleted.'));
 
     // Verify that the comments and Mollom session data has been deleted.

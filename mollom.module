@@ -698,12 +698,12 @@ function mollom_form_get_values($form_values, $fields, $mapping) {
     $data['author_openid'] = $mapping['author_openid'];
   }
   elseif (!empty($data['author_id'])) {
-    if (!empty($account->uid)) {
-      $data['author_openid'] = _mollom_get_openid($account);
+    if (!empty($account->uid) && ($openid = _mollom_get_openid($account))) {
+      $data['author_openid'] = $openid;
     }
   }
-  elseif (!empty($user->uid)) {
-    $data['author_openid'] = _mollom_get_openid($user);
+  elseif (!empty($user->uid) && ($openid = _mollom_get_openid($user))) {
+    $data['author_openid'] = $openid;
   }
 
   // User IP.
@@ -866,6 +866,7 @@ function mollom_process_mollom($element, $input, &$form_state, $complete_form) {
       'passed_captcha' => FALSE,
       'fields' => $element['#mollom_form']['fields'],
       'mapping' => $element['#mollom_form']['mapping'],
+      'response' => NULL,
     );
   }
 
@@ -966,7 +967,9 @@ function mollom_validate_analysis($form, &$form_state) {
   // Assign the session ID returned by Mollom.
   $form_state['mollom']['session_id'] = $result['session_id'];
   // Store the response for #submit handlers.
-  $GLOBALS['mollom_response'] = $result;
+  $form_state['mollom']['response'] = $result;
+  // @todo Only used for Contact module and mail integration in general.
+  $GLOBALS['mollom_response'] = $form_state['mollom']['response'];
 
   switch ($result['spam']) {
     case MOLLOM_ANALYSIS_HAM:
@@ -992,7 +995,14 @@ function mollom_validate_analysis($form, &$form_state) {
  * Form validation handler for CAPTCHA form element.
  */
 function mollom_validate_captcha($form, &$form_state) {
-  if (!$form_state['mollom']['require_captcha'] || $form_state['mollom']['passed_captcha']) {
+  if (!$form_state['mollom']['require_captcha']) {
+    return;
+  }
+
+  // When re-validating a form that already passed a CAPTCHA in a previous
+  // request, we need to re-populate our global variable for mollom_data_save().
+  if ($form_state['mollom']['passed_captcha']) {
+    $GLOBALS['mollom_response'] = $form_state['mollom']['response'];
     return;
   }
 
@@ -1008,6 +1018,11 @@ function mollom_validate_captcha($form, &$form_state) {
     'captcha_result' => $form_state['values']['mollom']['captcha'],
     'author_ip' => ip_address(),
   ));
+  // Store the response for #submit handlers.
+  $form_state['mollom']['response']['session_id'] = $form_state['mollom']['session_id'];
+  $form_state['mollom']['response']['spam'] = (int) $result;
+  // @todo Only used for Contact module and mail integration in general.
+  $GLOBALS['mollom_response'] = $form_state['mollom']['response'];
 
   // Explictly check for TRUE, since mollom.checkCaptcha() can also return an
   // error message (e.g. expired or invalid session_id).
@@ -1081,7 +1096,7 @@ function mollom_pre_render_mollom($element) {
 
     // Store the Mollom session id in the user session to force a
     // session for anonymous users in Drupal 7 and Drupal 6 Pressflow.
-    // @see mollom_init()
+    // @see mollom_exit()
     // @see mollom_form_submit()
     $_SESSION['mollom_sessions'][$element['#mollom']['session_id']] = $timestamp;
   }
@@ -1097,16 +1112,8 @@ function mollom_pre_render_mollom($element) {
     $element['captcha']['#required'] = $element['#mollom']['require_captcha'];
   }
 
-  // Due to a bug in Drupal core, we need to manually update Mollom session
-  // information in $form_state.
-  // @see http://drupal.org/node/644150
-  // And due to yet even more bugs in Drupal core form constructor functions,
-  // some forms (such as comment_form()) cannot be cached, since they contain
-  // processing/validation logic. We therefore cannot use $form_state
-  // along with form caching. >:-/
-  // @see http://drupal.org/node/644222
   if (!empty($element['#mollom']['session_id'])) {
-    cache_set($element['#mollom']['session_id'], $element['#mollom'], 'cache_mollom', time() + 21600);
+    cache_set($element['#mollom']['session_id'], $element['#mollom'], 'cache_mollom', $timestamp + 21600);
   }
 
   return $element;
@@ -1190,33 +1197,29 @@ function mollom($method, $data = array()) {
 
       if ($result === FALSE && ($error = xmlrpc_error())) {
         if ($error->code == MOLLOM_REFRESH) {
-          // Safety pal to avoid endless loops.
+          // Avoid endless loops.
           if (!$refresh) {
-            // Retrieve a list of valid Mollom servers from mollom.com.
+            $refresh = TRUE;
+
+            // Retrieve a new list of valid Mollom servers.
             $servers = _mollom_retrieve_server_list();
 
-            // Reset the list of servers so we start from the first server in
-            // the list.
+            // Reset the list of servers to restart from the first server.
             reset($servers);
 
-            // Store the updated list of servers in the database.
+            // Update the server list.
             variable_set('mollom_servers', $servers);
 
-            // Log this for debugging purposes.
             $messages[] = array(
               'text' => 'Refreshed servers: %servers',
               'arguments' => array('%servers' => implode(', ', $servers)),
             );
-
-            // Mark that we have refreshed the list.
-            $refresh = TRUE;
           }
         }
         elseif ($error->code == MOLLOM_REDIRECT) {
-          // If this is a network error, we go to the next server in the list.
+          // Try the next server in the list.
           $next = next($servers);
 
-          // Do nothing, we automatically select the next server.
           $messages[] = array(
             'text' => 'Server %server redirected to: %next.',
             'arguments' => array('%server' => $server, '%next' => $next),
@@ -1234,13 +1237,12 @@ function mollom($method, $data = array()) {
             ),
           );
 
-          // If it is a 'clean' Mollom error we return instantly.
+          // Instantly return upon a 'real' error.
           if ($error->code == MOLLOM_ERROR) {
             _mollom_watchdog($messages, WATCHDOG_ERROR);
             return MOLLOM_ERROR;
           }
-
-          // If this is a network error, we go to the next server in the list.
+          // Otherwise, try the next server.
           next($servers);
         }
       }
@@ -1286,15 +1288,14 @@ function _mollom_watchdog($messages, $severity) {
  * Send feedback to Mollom.
  */
 function _mollom_send_feedback($session_id, $feedback = 'spam') {
-   mollom('mollom.sendFeedback', array(
-     'session_id' => $data->session, 
-     'feedback' => $feedback
-   ));
-  
-   watchdog('mollom', "Reported session id %session as @feedback.", array(
-     '%session' => $session_id, 
-     '@feedback' => $feedback
-   ));
+  mollom('mollom.sendFeedback', array(
+    'session_id' => $session_id,
+    'feedback' => $feedback,
+  ));
+  watchdog('mollom', 'Reported session id %session as %feedback.', array(
+    '%session' => $session_id,
+    '%feedback' => $feedback,
+  ));
 }
 
 /**
@@ -1681,6 +1682,7 @@ function mollom_mail_alter(&$message) {
   // any mails sent by Drupal since they should never be reported as spam.
   $valid_ids = array('contact_page_mail', 'contact_page_copy', 'contact_user_mail', 'contact_user_copy');
   if (isset($GLOBALS['mollom_response']['session_id']) && in_array($message['id'], $valid_ids)) {
+    mollom_data_save('contact', $message['id']);
     $report_link = t('Report as inappropriate: @link', array(
       '@link' => url('mollom/report/session/' . $GLOBALS['mollom_response']['session_id'], array('absolute' => TRUE)),
     ));
