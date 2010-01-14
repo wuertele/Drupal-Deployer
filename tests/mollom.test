@@ -270,7 +270,7 @@ class MollomWebTestCase extends DrupalWebTestCase {
     // Explicitly enable the passed fields, if $fields were passed.
     if (isset($fields)) {
       foreach ($fields as $field) {
-        $edit['mollom[fields][' . $field . ']'] = TRUE;
+        $edit['mollom[fields][' . rawurlencode($field) . ']'] = TRUE;
       }
     }
     $form_info = mollom_get_form_info($form_id);
@@ -279,13 +279,13 @@ class MollomWebTestCase extends DrupalWebTestCase {
       // remaining checkboxes manually.
       if (isset($fields)) {
         if (!isset($edit[$field])) {
-          $edit['mollom[fields][' . $field . ']'] = FALSE;
+          $edit['mollom[fields][' . rawurlencode($field) . ']'] = FALSE;
         }
       }
       // If no $fields were passed, enable all elements exposed by the
       // implementation.
       else {
-        $edit['mollom[fields][' . $field . ']'] = TRUE;
+        $edit['mollom[fields][' . rawurlencode($field) . ']'] = TRUE;
       }
     }
     $this->drupalPost(NULL, $edit, t('Save'));
@@ -843,7 +843,7 @@ class MollomServerListRecoveryTestCase extends MollomWebTestCase {
       variable_set('mollom_servers', $servers);
 
       $key_is_valid = mollom('mollom.verifyKey');
-      $this->assertIdentical($key_is_valid, NETWORK_ERROR, t('The Mollom servers could not be contacted'));
+      $this->assertIdentical($key_is_valid, NETWORK_ERROR, t('The Mollom servers could not be contacted.'));
       $this->assertMollomWatchdogMessages(FALSE);
 
       $key_is_valid = mollom('mollom.verifyKey');
@@ -1201,13 +1201,13 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
     // Try to submit an incorrect answer for the CAPTCHA, without value for
     // required field.
     $this->postIncorrectCaptcha(NULL, array(), t('Preview'));
-    $this->assertText(t('Comment field is required.'), t('Missing required field triggers form rebuild.'));
+    $this->assertText(t('Comment field is required.'));
     $this->assertSessionIDInForm();
 
     // Try to submit a correct answer for the CAPTCHA, still without required
     // field value.
     $this->postCorrectCaptcha(NULL, array(), t('Preview'));
-    $this->assertText(t('Comment field is required.'), t('Missing required field triggers form rebuild.'));
+    $this->assertText(t('Comment field is required.'));
     $session_id = $this->assertSessionIDInForm();
 
     // Finally, we should be able to submit a comment.

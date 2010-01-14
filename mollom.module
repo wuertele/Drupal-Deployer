@@ -927,7 +927,7 @@ function mollom_process_mollom_session_id($element, $input, &$form_state) {
         watchdog('mollom', 'Expired session id %session.', array('%session' => $mollom_session_id));
       }
       else {
-        watchdog('mollom', 'Re-used session id %session. This is not a bug in Mollom. If this happens too often, check your site for attacks.', array('%session' => $mollom_session_id), WATCHDOG_WARNING);
+        watchdog('mollom', 'Unknown session id %session. This is not a bug in Mollom. If this happens too often, check your site for attacks.', array('%session' => $mollom_session_id), WATCHDOG_WARNING);
       }
     }
     elseif ($cache->data['form_id'] !== $form_state['values']['form_id']) {
@@ -983,10 +983,10 @@ function mollom_validate_analysis($form, &$form_state) {
 
     default:
       // Fall back to a CAPTCHA.
-      $form_state['mollom']['require_captcha'] = TRUE;
-
       form_set_error('mollom', t("We're sorry, but to submit this post, please complete the word verification below."));
       watchdog('mollom', 'Unsure: <pre>@message</pre>Result: <pre>@result</pre>', array('@message' => print_r($data, TRUE), '@result' => print_r($result, TRUE)));
+
+      $form_state['mollom']['require_captcha'] = TRUE;
       break;
   }
 }
@@ -1056,18 +1056,20 @@ function mollom_validate_captcha($form, &$form_state) {
  * @see http://drupal.org/node/642702
  */
 function mollom_pre_render_mollom($element) {
-  // Prevent the page cache from storing a form containing a CAPTCHA element.
-  if ($element['#mollom']['require_captcha']) {
-    $GLOBALS['conf']['cache'] = CACHE_DISABLED;
-  }
-
+  $form_state['mollom'] = &$element['#mollom'];
   // Request and inject a CAPTCHA when required; but also in case validation
   // through textual analysis failed.
-  if ($element['#mollom']['require_captcha'] && !$element['#mollom']['passed_captcha']) {
-    // Request a CAPTCHA; always default to an image CAPTCHA.
+  if ($form_state['mollom']['require_captcha'] && !$form_state['mollom']['passed_captcha']) {
+    $element['captcha']['#required'] = TRUE;
+    // Empty the CAPTCHA field value, since the user has to re-enter a new one.
+    $element['captcha']['#value'] = '';
+
+    // Prevent the page cache from storing a form containing a CAPTCHA element.
+    $GLOBALS['conf']['cache'] = CACHE_DISABLED;
+
     $data['author_ip'] = ip_address();
-    if (!empty($element['#mollom']['session_id'])) {
-      $data['session_id'] = $element['#mollom']['session_id'];
+    if (!empty($form_state['mollom']['session_id'])) {
+      $data['session_id'] = $form_state['mollom']['session_id'];
     }
     $result = mollom('mollom.getImageCaptcha', $data);
 
@@ -1080,40 +1082,38 @@ function mollom_pre_render_mollom($element) {
       $element['captcha']['#field_prefix'] = $captcha;
 
       // Assign the session ID returned by Mollom.
-      $element['#mollom']['session_id'] = $result['session_id'];
+      $form_state['mollom']['session_id'] = $result['session_id'];
+      $form_state['mollom']['response']['session_id'] = $result['session_id'];
     }
-    // Otherwise, hide the CAPTCHA.
+    // Otherwise, we have a communication or configuration error.
+    // @todo Short-cut form processing entirely in this case; see also
+    //   mollom_validate_captcha().
     else {
-      $element['captcha']['#type'] = 'hidden';
+      $form_state['mollom']['require_analysis'] = FALSE;
+      $form_state['mollom']['require_captcha'] = FALSE;
+      return array();
     }
+  }
+  // If no CAPTCHA is required or the response was correct, hide the CAPTCHA.
+  elseif (!$form_state['mollom']['require_captcha'] || $form_state['mollom']['passed_captcha']) {
+    $element['captcha']['#access'] = FALSE;
   }
 
   // If we received a Mollom session id via textual analysis or a CAPTCHA
   // request, inject it to the form.
   $timestamp = time();
-  if (!empty($element['#mollom']['session_id'])) {
-    $element['session_id']['#value'] = $timestamp . '-' . $element['#mollom']['session_id'];
+  if (!empty($form_state['mollom']['session_id'])) {
+    $element['session_id']['#value'] = $timestamp . '-' . $form_state['mollom']['session_id'];
 
     // Store the Mollom session id in the user session to force a
     // session for anonymous users in Drupal 7 and Drupal 6 Pressflow.
     // @see mollom_exit()
     // @see mollom_form_submit()
-    $_SESSION['mollom_sessions'][$element['#mollom']['session_id']] = $timestamp;
+    $_SESSION['mollom_sessions'][$form_state['mollom']['session_id']] = $timestamp;
   }
 
-  // If no CAPTCHA is required or the response was correct, hide the CAPTCHA.
-  if (!$element['#mollom']['require_captcha'] || $element['#mollom']['passed_captcha']) {
-    $element['captcha']['#type'] = 'hidden';
-  }
-  // Otherwise, empty the value of the CAPTCHA, since the user has to re-enter
-  // a new one.
-  else {
-    $element['captcha']['#value'] = '';
-    $element['captcha']['#required'] = $element['#mollom']['require_captcha'];
-  }
-
-  if (!empty($element['#mollom']['session_id'])) {
-    cache_set($element['#mollom']['session_id'], $element['#mollom'], 'cache_mollom', $timestamp + 21600);
+  if (!empty($form_state['mollom']['session_id'])) {
+    cache_set($form_state['mollom']['session_id'], $form_state['mollom'], 'cache_mollom', $timestamp + 21600);
   }
 
   return $element;
@@ -1127,8 +1127,8 @@ function mollom_pre_render_mollom($element) {
  */
 function mollom_form_submit($form_id, &$form_state) {
   // Flush Mollom session information from database cache and user session.
-  if (!empty($form_state['values']['mollom']['session_id'])) {
-    $session_id = $form_state['values']['mollom']['session_id'];
+  if (!empty($form_state['mollom']['session_id'])) {
+    $session_id = $form_state['mollom']['session_id'];
     cache_clear_all($session_id, 'cache_mollom');
     unset($_SESSION['mollom_sessions'][$session_id]);
   }

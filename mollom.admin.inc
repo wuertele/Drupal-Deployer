@@ -279,11 +279,10 @@ function mollom_admin_settings() {
 
   $form['server'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Server settings'),
+    '#title' => t('Fallback strategy'),
   );
   $form['server']['mollom_fallback'] = array(
     '#type' => 'radios',
-    '#title' => t('Fallback strategy'),
     // Default to treating everything as inappropriate.
     '#default_value' => variable_get('mollom_fallback', MOLLOM_FALLBACK_BLOCK),
     '#options' => array(
