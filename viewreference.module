@@ -220,9 +220,13 @@ function theme_viewreference_formatter_default($element) {
   $output = '';
   if (!empty($element['#item']['view_id']) && is_numeric($element['#item']['view_id'])) {
     $view = db_fetch_object(db_query("SELECT name, position FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
-    $args = viewreference_get_element_args($element);
-    $view_object = views_get_view($view->name);
-    $output .= $view_object->preview($view->position, $args);
+    if ($view) {
+      $args = viewreference_get_element_args($element);
+      $view_object = views_get_view($view->name);
+      if ($view_object && $view_object->access($view->position)) {
+        $output .= $view_object->preview($view->position, $args);
+      }
+    }
   }
   return $output;
 }
@@ -234,11 +238,15 @@ function theme_viewreference_formatter_full($element) {
   $output = '';
   if (!empty($element['#item']['view_id']) && is_numeric($element['#item']['view_id'])) {
     $view = db_fetch_object(db_query("SELECT name, position FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
-    $args = viewreference_get_element_args($element);
-    $view_object = views_get_view($view->name);
-    $title = $view_object->get_title() ? $view_object->get_title() : $view->title;
-    $output .= '<h3 class="title viewreference-title">'. check_plain($title) .'</h3>';
-    $output .= $view_object->preview($view->position, $args);
+    if ($view) {
+      $args = viewreference_get_element_args($element);
+      $view_object = views_get_view($view->name);
+      if ($view_object && $view_object->access($view->position)) {
+        $title = $view_object->get_title() ? $view_object->get_title() : $view->title;
+        $output .= '<h3 class="title viewreference-title">'. check_plain($title) .'</h3>';
+        $output .= $view_object->preview($view->position, $args);
+      }
+    }
   }
   return $output;
 }
@@ -250,9 +258,13 @@ function theme_viewreference_formatter_plain($element) {
   $output = '';
   if (!empty($element['#item']['view_id']) && is_numeric($element['#item']['view_id'])) {
     $view = db_fetch_object(db_query("SELECT name, title FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
-    $view_object = views_get_view($view->name);
-    $title = $view_object->get_title() ? $view_object->get_title() : $view->title;
-    $output .= check_plain($title);
+    if ($view) {
+      $view_object = views_get_view($view->name);
+      if ($view_object && $view_object->access($view->position)) {
+        $title = $view_object->get_title() ? $view_object->get_title() : $view->title;
+        $output .= check_plain($title);
+      }
+    }
   }
   return $output;
 }
@@ -264,19 +276,23 @@ function theme_viewreference_formatter_link($element) {
   $output = '';
   if (!empty($element['#item']['view_id']) && is_numeric($element['#item']['view_id'])) {
     $view = db_fetch_object(db_query("SELECT name, position, title FROM {viewreference} WHERE view_id = '%d'", $element['#item']['view_id']));
-    $view_object = views_get_view($view->name);
-    $title = $view_object->get_title() ? $view_object->get_title() : $view->title;
-    if (isset($view_object->display[$view->position]->display_options['path']) && !$view_object->disabled) {
-      $args = viewreference_get_element_args($element);
-      $url_args = implode("/", $args);
-      $path = $view_object->display[$view->position]->display_options['path'];
-      if ($url_args) {
-        $path .= "/". $url_args;
+    if ($view) {
+      $view_object = views_get_view($view->name);
+      if ($view_object && $view_object->access($view->position)) {
+        $title = $view_object->get_title() ? $view_object->get_title() : $view->title;
+        if (isset($view_object->display[$view->position]->display_options['path']) && !$view_object->disabled) {
+          $args = viewreference_get_element_args($element);
+          $url_args = implode("/", $args);
+          $path = $view_object->display[$view->position]->display_options['path'];
+          if ($url_args) {
+            $path .= "/". $url_args;
+          }
+          $output .= l($title, $view_object->get_url($args, $path));
+        }
+        else {
+          $output .= check_plain($title);
+        }
       }
-      $output .= l($title, $view_object->get_url($args, $path));
-    }
-    else {
-      $output .= check_plain($title);
     }
   }
   return $output;
