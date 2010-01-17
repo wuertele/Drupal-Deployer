@@ -144,7 +144,13 @@ function cck_fieldgroup_tabs_pre_render($form) {
 function cck_fieldgroup_tabs_nodeapi(&$node, $op, $teaser, $page) {
   switch ($op) {
     case 'view':
-      $context = $teaser ? 'teaser' : 'full';
+      // NODE_BUILD_NORMAL is 0, and ('whatever' == 0) is TRUE, so we need a ===.
+      if ($node->build_mode === NODE_BUILD_NORMAL || $node->build_mode == NODE_BUILD_PREVIEW) {
+        $context = $teaser ? 'teaser' : 'full';
+      }
+      else {
+        $context = $node->build_mode;
+      }
       foreach (fieldgroup_groups($node->type) as $group_name => $group) {
         // $node->content[$group_name] will be set only if there was visible content.
         if (isset($node->content[$group_name]) && $group['settings']['display'][$context]['format'] == 'tabs') {
