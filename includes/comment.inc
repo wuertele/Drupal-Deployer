@@ -434,7 +434,7 @@ function theme_project_issue_comment_table($comment_changes) {
       $rows[] = theme('project_issue_comment_table_row', $field, $change);
     }
   }
-  return theme('table', array(), $rows);
+  return $rows ? theme('table', array(), $rows) : '';
 }
 
 /**
