@@ -245,7 +245,7 @@ function project_mail_notify($nid) {
     $anon_auth_access = TRUE;
   }
   $grants = module_implements('node_grants');
-  $check_node_access = $node->status != 1 || !$anon_auth_access || !empty($grants);
+  $check_node_access = $node->status != 1 || empty($anon_auth_access) || !empty($grants);
 
   $params['node']    = $node;
   $params['project'] = $project;
