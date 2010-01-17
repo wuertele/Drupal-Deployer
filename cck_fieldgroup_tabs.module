@@ -180,6 +180,13 @@ function cck_fieldgroup_tabs_nodeapi(&$node, $op, $teaser, $page) {
               unset($node->content[$key]);
             }
           }
+          // Move all #content_extra_fields into the residual tab in order to allow tabs to render them correctly.
+          // #pre-render with alter_extra_weights in the tab is needed to correctly sort the elements.
+          $residual['#content_extra_fields'] = $node->content['#content_extra_fields'];
+          $residual['#pre_render'] = array('content_alter_extra_weights');
+          $key = array_search($node->content['#pre_render'], 'content_alter_extra_weights');
+          unset($node->content['#content_extra_fields'], $node->content['#pre_render'][$key]);
+
           $node->content['fieldgroup_tabs']['fieldgroup_tabs_basic'] = $residual;
         }
       }
