@@ -15,14 +15,13 @@ function xmlsitemap_taxonomy_cron() {
  */
 function xmlsitemap_taxonomy_xmlsitemap_index_links($limit) {
   if ($vids = xmlsitemap_taxonomy_get_vids()) {
-    $query = db_query_range("SELECT t.tid FROM {term_data} t LEFT JOIN {xmlsitemap} x ON x.type = 'taxonomy' AND t.tid = x.id WHERE x.id IS NULL AND t.vid IN (" . db_placeholders($vids) . ") ORDER BY t.tid DESC", $vids, 0, $limit);
+    $query = db_query_range("SELECT t.tid FROM {term_data} t LEFT JOIN {xmlsitemap} x ON x.type = 'taxonomy_term' AND t.tid = x.id WHERE x.id IS NULL AND t.vid IN (" . db_placeholders($vids) . ") ORDER BY t.tid DESC", $vids, 0, $limit);
     while ($tid = db_result($query)) {
       $term = xmlsitemap_taxonomy_taxonomy_term_load($tid);
       $link = xmlsitemap_taxonomy_create_link($term);
       xmlsitemap_save_link($link);
     }
   }
-
 }
 
 /**
@@ -79,7 +78,7 @@ function xmlsitemap_taxonomy_xmlsitemap_link_info() {
  */
 function xmlsitemap_taxonomy_taxonomy_term_load($tid) {
   $term = taxonomy_get_term($tid);
-  if ($data = xmlsitemap_load_link(array('type' => 'taxonomy', 'id' => $tid))) {
+  if ($data = xmlsitemap_load_link(array('type' => 'taxonomy_term', 'id' => $tid))) {
     $term->xmlsitemap = $data;
   }
   return $term;
@@ -92,7 +91,7 @@ function xmlsitemap_taxonomy_taxonomy_term_load($tid) {
  */
 function xmlsitemap_taxonomy_form_xmlsitemap_settings_form_alter(&$form, $form_state) {
   $type = array(
-    'type' => 'taxonomy',
+    'type' => 'taxonomy_term',
     'title' => t('Taxonomy'),
     'item_title' => t('Vocabulary'),
     'access' => user_access('administer taxonomy'),
@@ -109,7 +108,7 @@ function xmlsitemap_taxonomy_form_xmlsitemap_settings_form_alter(&$form, $form_s
   }
 
   xmlsitemap_add_form_type_summary($form, $type, $vocabularies);
-  $form['taxonomy']['#weight'] = 40;
+  $form['taxonomy_term']['#weight'] = 40;
 }
 
 /**
@@ -158,10 +157,10 @@ function xmlsitemap_taxonomy_taxonomy_form_vocabulary_submit($form, $form_state)
   $new_priority = $form_state['values']['xmlsitemap_taxonomy_priority'];
 
   if ($new_status != variable_get('xmlsitemap_taxonomy_status_' . $vid, 0)) {
-    xmlsitemap_update_links(array('status' => $new_status), array('type' => 'taxonomy', 'subtype' => $vid, 'status_override' => 0));
+    xmlsitemap_update_links(array('status' => $new_status), array('type' => 'taxonomy_term', 'subtype' => $vid, 'status_override' => 0));
   }
   if ($new_priority != variable_get('xmlsitemap_taxonomy_priority_' . $vid, 0.5)) {
-    xmlsitemap_update_links(array('priority' => $new_priority), array('type' => 'taxonomy', 'subtype' => $vid, 'priority_override' => 0));
+    xmlsitemap_update_links(array('priority' => $new_priority), array('type' => 'taxonomy_term', 'subtype' => $vid, 'priority_override' => 0));
   }
 
   variable_set('xmlsitemap_taxonomy_status_' . $vid, $new_status);
@@ -191,7 +190,7 @@ function xmlsitemap_taxonomy_form_taxonomy_form_term_alter(&$form, $form_state) 
 
     $form['xmlsitemap']['#access'] |= user_access('administer taxonomy');
     if (user_access('administer taxonomy')) {
-      $form['xmlsitemap']['#description'] .= ' ' . t('The default priority for this vocabulary can be changed <a href="@link-type">here</a>.', array('@link-type' => url('admin/content/taxonomy/edit/vocabulary/' . $term->vid, array('query' => drupal_get_destination()))));
+      $form['xmlsitemap']['#description'] = t('The default priority for this vocabulary can be changed <a href="@link-type">here</a>.', array('@link-type' => url('admin/content/taxonomy/edit/vocabulary/' . $term->vid, array('query' => drupal_get_destination()))));
     }
 
     // The submit and delete buttons need to be weighted down.
@@ -210,7 +209,7 @@ function xmlsitemap_taxonomy_taxonomy($op, $type, $array = NULL) {
     $vid = $array['vid'];
     // Insert and update actions handled by xmlsitemap_taxonomy_taxonomy_form_vocabulary_submit().
     if ($op == 'delete') {
-      xmlsitemap_delete_link(array('type' => 'taxonomy', 'subtype' => $vid));
+      xmlsitemap_delete_link(array('type' => 'taxonomy_term', 'subtype' => $vid));
       variable_del('xmlsitemap_taxonomy_status_' . $vid);
       variable_del('xmlsitemap_taxonomy_priority_' . $vid);
     }
@@ -222,7 +221,7 @@ function xmlsitemap_taxonomy_taxonomy($op, $type, $array = NULL) {
       xmlsitemap_save_link($link);
     }
     elseif ($op == 'delete') {
-      xmlsitemap_delete_link(array('type' => 'taxonomy', 'id' => $tid));
+      xmlsitemap_delete_link(array('type' => 'taxonomy_term', 'id' => $tid));
     }
   }
 }
@@ -242,7 +241,7 @@ function xmlsitemap_taxonomy_create_link(stdClass $term) {
 
   $term->xmlsitemap += array(
     'id' => $term->tid,
-    'type' => 'taxonomy',
+    'type' => 'taxonomy_term',
     'subtype' => $term->vid,
     'loc' => taxonomy_term_path($term),
     'status' => variable_get('xmlsitemap_taxonomy_status_' . $term->vid, 0),

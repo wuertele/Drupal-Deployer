@@ -177,15 +177,16 @@ function xmlsitemap_schema() {
       'type' => array(
         'description' => 'Primary key with id; the type of item (e.g. node, user, etc.).',
         'type' => 'varchar',
-        'length' => 12,
+        'length' => 32,
         'not null' => TRUE,
         'default' => '',
       ),
       'subtype' => array(
         'description' => 'A sub-type identifier for the link (node type, menu name, term VID, etc.).',
         'type' => 'varchar',
-        'length' => 32,
-        'default' => NULL,
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
       ),
       'loc' => array(
         'description' => 'The URL to the item relative to the Drupal path.',
@@ -458,6 +459,20 @@ function xmlsitemap_update_17() {
   $ret = array();
   $ret[] = update_sql("UPDATE {xmlsitemap} SET access = 1 WHERE access > 1");
   $ret[] = update_sql("UPDATE {xmlsitemap} SET status = 1 WHERE status > 1");
+  return $ret;
+}
+
+function xmlsitemap_update_18() {
+  $ret = array();
+  $field = array(
+    'type' => 'varchar',
+    'length' => 32,
+    'not null' => TRUE,
+    'default' => '',
+  );
+  db_change_field($ret, 'xmlsitemap', 'type', 'type', $field);
+  $field['length'] = 128;
+  db_change_field($ret, 'xmlsitemap', 'subtype', 'subtype', $field);
   return $ret;
 }
 
