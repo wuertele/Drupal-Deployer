@@ -120,8 +120,7 @@ function _xmlsitemap_get_optimal_memory_limit() {
     $optimal_limit += xmlsitemap_get_chunk_size() * 500;
 
     // Add memory for storing the url aliases.
-    $aliases = db_result(db_query("SELECT COUNT(pid) FROM {url_alias} WHERE language = ''"));
-    $aliases += db_result(db_query("SELECT COUNT(pid) as pid_count FROM {url_alias} WHERE language <> '' GROUP BY language ORDER BY pid_count DESC"));
+    $aliases = db_result(db_query("SELECT COUNT(pid) FROM {url_alias}"));
     $optimal_limit += $aliases * 250;
   }
   return $optimal_limit;
