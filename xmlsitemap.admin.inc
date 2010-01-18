@@ -20,7 +20,6 @@ function xmlsitemap_settings_form() {
     '#title' => t('Settings'),
     '#collapsible' => TRUE,
     '#collapsed' => FALSE,
-    '#group' => 'xmlsitemap_settings',
   );
   $form['xmlsitemap']['xmlsitemap_minimum_lifetime'] = array(
     '#type' => 'select',
@@ -49,7 +48,6 @@ function xmlsitemap_settings_form() {
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
     '#weight' => 10,
-    '#group' => 'xmlsitemap_settings',
   );
   //$form['advanced']['xmlsitemap_gz'] = array(
   //  '#type' => 'checkbox',
