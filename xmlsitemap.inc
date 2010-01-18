@@ -59,7 +59,6 @@ function xmlsitemap_regenerate() {
   _xmlsitemap_regenerate_before();
 
   // Generate the sitemap pages.
-  $languages = language_list();
   $chunk_count = xmlsitemap_get_chunk_count(TRUE);
   if ($chunk_count > 1) {
     // If we have more than one chunk, we need to increment this value by one
@@ -68,7 +67,7 @@ function xmlsitemap_regenerate() {
   }
   foreach (xmlsitemap_var('languages') as $language) {
     for ($i = 0; $i < $chunk_count; $i++) {
-      xmlsitemap_generate($i, $languages[$language]);
+      xmlsitemap_generate($i, xmlsitemap_language_load($language));
     }
   }
 
@@ -261,13 +260,7 @@ function xmlsitemap_generate_chunk_header($type, $handle, &$status, $language) {
  *   A language object for the sitemap chunk.
  */
 function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
-  static $languages;
   $last_url = '';
-
-  if (!isset($languages)) {
-    $languages = language_list();
-    $languages[''] = language_default();
-  }
 
   $query = array(
     'SELECT'   => 'SELECT x.loc, x.lastmod, x.changefreq, x.changecount, x.priority, x.language',
@@ -292,7 +285,7 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
   xmlsitemap_generate_chunk_header('urlset', $handle, $status, $language);
 
   while ($link = db_fetch_array($query)) {
-    $url_options['language'] = $link['language'] ? $languages[$link['language']] : $language;
+    $url_options['language'] = $link['language'] ? xmlsitemap_language_load($link['language']) : $language;
     $link['alias'] = xmlsitemap_get_path_alias($link['loc'], $url_options['language']->language);
     $link_url = url($link['alias'], $url_options);
 
@@ -388,9 +381,8 @@ function xmlsitemap_rebuild_batch($modules = array(), $save_custom = FALSE) {
 
   // Generate all the sitemap pages.
   $batch['operations'][] = array('_xmlsitemap_regenerate_before', array());
-  $languages = language_list();
   foreach (xmlsitemap_var('languages') as $language) {
-    $batch['operations'][] = array('xmlsitemap_rebuild_batch_generate', array($languages[$language]));
+    $batch['operations'][] = array('xmlsitemap_rebuild_batch_generate', array(xmlsitemap_language_load($language)));
   }
   $batch['operations'][] = array('_xmlsitemap_regenerate_after', array());
 

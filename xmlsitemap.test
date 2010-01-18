@@ -46,17 +46,6 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
     }
   }
 
-  protected function getLanguageObj($langcode = '', $reset = FALSE) {
-    static $languages;
-
-    if (!isset($languages) || $reset) {
-      $languages = language_list('language', TRUE);
-      $languages[''] = NULL;
-    }
-
-    return $languages[$langcode];
-  }
-
   /**
    * Assert that a link is found in the sitemap.
    *
@@ -92,7 +81,7 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
       $this->regenerateSitemap();
     }
 
-    $this->drupalGet('sitemap.xml', array('language' => $this->getLanguageObj($language)));
+    $this->drupalGet('sitemap.xml', array('language' => xmlsitemap_language_load($language)));
     $this->assertResponse(200);
   }
 
@@ -118,7 +107,7 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
   protected function assertLinksInSitemap() {
     $links = func_get_args();
     foreach ($links as $link) {
-      $path = url($link['loc'], array('language' => $this->getLanguageObj($link['language']), 'absolute' => TRUE));
+      $path = url($link['loc'], array('language' => xmlsitemap_language_load($link['language']), 'absolute' => TRUE));
       $this->assertRaw($link['loc'], t('Link %path found in the sitemap.', array('%path' => $path)));
     }
   }
@@ -126,7 +115,7 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
   protected function assertLinksNotInSitemap() {
     $links = func_get_args();
     foreach ($links as $link) {
-      $path = url($link['loc'], array('language' => $this->getLanguageObj($link['language']), 'absolute' => TRUE));
+      $path = url($link['loc'], array('language' => xmlsitemap_language_load($link['language']), 'absolute' => TRUE));
       $this->assertNoRaw($link['loc'], t('Link %path not found in the sitemap.', array('%path' => $path)));
     }
   }
@@ -460,9 +449,6 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
     $this->assertEqual($user->uid, 0);
   }
 
-  //function testWriteRecord() {
-  //}
-  //
   //function testLoadLink() {
   //}
 

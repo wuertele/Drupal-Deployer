@@ -46,7 +46,7 @@ function xmlsitemap_settings_form() {
     '#type' => 'fieldset',
     '#title' => t('Advanced settings'),
     '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
+    '#collapsed' => !variable_get('xmlsitemap_developer_mode', FALSE),
     '#weight' => 10,
   );
   //$form['advanced']['xmlsitemap_gz'] = array(
@@ -77,7 +77,8 @@ function xmlsitemap_settings_form() {
     '#default_value' => variable_get('xmlsitemap_path', 'xmlsitemap'),
     '#size' => 30,
     '#maxlength' => 255,
-    '#description' => t('Subdirectory in the directory %dir where the sitemap data will be stored. This folder <strong>must not be shared</strong> with any other Drupal site or install using XML sitemap.', array('%dir' => file_directory_path() .'/')),
+    '#description' => t('Subdirectory where the sitemap data will be stored. This folder <strong>must not be shared</strong> with any other Drupal site or install using XML sitemap.'),
+    '#field_prefix' =>  file_directory_path() . '/',
     '#required' => TRUE,
   );
   $form['advanced']['xmlsitemap_base_url'] = array(
@@ -91,7 +92,7 @@ function xmlsitemap_settings_form() {
   $form['advanced']['xmlsitemap_developer_mode'] = array(
     '#type' => 'checkbox',
     '#title' => t('Enable developer mode.'),
-    '#default_value' => xmlsitemap_var('developer_mode'),
+    '#default_value' => variable_get('xmlsitemap_developer_mode', FALSE),
     '#description' => t('Exposes additional settings intended for development.'),
   );
 
@@ -121,6 +122,7 @@ function xmlsitemap_settings_form() {
   $form['#validate'][] = 'xmlsitemap_settings_form_validate';
   $form['#submit'][] = 'xmlsitemap_settings_form_submit';
   $form['array_filter'] = array('#type' => 'value', '#value' => TRUE);
+
   $form = system_settings_form($form);
   $form['buttons']['#weight'] = 100;
   return $form;
@@ -131,16 +133,14 @@ function xmlsitemap_settings_form() {
  * checkbox.
  */
 function _xmlsitemap_process_language_checkboxes($element) {
-  $sitemaps = xmlsitemap_get_sitemaps(TRUE);
   foreach (element_children($element) as $key) {
     if ($key == language_default('language')) {
       $element[$key]['#disabled'] = TRUE;
       $element[$key]['#default_value'] = TRUE;
       $element[$key]['#weight'] = -1;
     }
-    if (isset($sitemaps[$key])) {
-      $element[$key]['#description'] = $sitemaps[$key];
-    }
+    $link = url('sitemap.xml', array('absolute' => TRUE, 'language' => xmlsitemap_language_load($key)));
+    $element[$key]['#description'] = l($link, $link);
   }
   return $element;
 }

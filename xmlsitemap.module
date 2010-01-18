@@ -207,12 +207,11 @@ function xmlsitemap_get_sitemaps($links = FALSE) {
 
   if (!$sitemaps) {
     $url_options = xmlsitemap_get_url_options();
-    $languages = language_list();
     $sitemap_languages = xmlsitemap_var('languages');
     natsort($sitemap_languages);
 
     foreach ($sitemap_languages as $language) {
-      $url_options['language'] = $languages[$language];
+      $url_options['language'] = xmlsitemap_language_load($language);
       $sitemap = url('sitemap.xml', $url_options);
       $sitemaps[$language] = $links ? l($sitemap, $sitemap) : $sitemap;
     }
@@ -978,4 +977,23 @@ function _xmlsitemap_get_field_type($table, $field) {
     $schema[$table] = drupal_get_schema($table);
   }
   return $schema[$table]['fields'][$field]['type'];
+}
+
+/**
+ * Load a language object by its language code.
+ *
+ * @param $language
+ *   A language code. If not provided the default language will be returned.
+ * @return
+ *   A language object.
+ */
+function xmlsitemap_language_load($language = '') {
+  static $languages;
+
+  if (!isset($languages)) {
+    $languages = language_list();
+    $languages[''] = NULL;
+  }
+
+  return $languages[$language];
 }
