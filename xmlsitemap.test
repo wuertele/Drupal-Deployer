@@ -166,7 +166,7 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
 
   protected function assertNoXMLSitemapProblems() {
     $this->drupalGet('admin/settings/xmlsitemap');
-    $this->assertNoText(t('One or more problems were detected with your sitemap configuration. Please check the status report for more information.'));
+    $this->assertNoText(t('One or more problems were detected with your XML sitemap configuration. Please check the status report for more information.'));
   }
 
   private function getWatchdogMessage(array $conditions) {
@@ -599,18 +599,16 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
   }
 
   function setUp() {
-    parent::setUp('xmlsitemap', 'path');
+    parent::setUp('path');
     $this->admin_user = $this->drupalCreateUser(array('access content', 'administer site configuration', 'administer xmlsitemap'));
     $this->drupalLogin($this->admin_user);
-    $this->checkFilesDirectory();
-    $this->regenerateSitemap();
   }
 
   /**
    * Test the sitemap file caching.
    */
   function testSitemapCaching() {
-    $this->drupalGet('sitemap.xml');
+    $this->drupalGetSitemap('', TRUE);
     $this->assertResponse(200);
     $etag = $this->drupalGetHeader('etag');
     $last_modified = $this->drupalGetHeader('last-modified');
@@ -625,27 +623,28 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
    * Test that the sitemap will not be genereated before the lifetime expires.
    */
   function testMinimumLifetime() {
+    $this->regenerateSitemap();
+
     $edit = array('xmlsitemap_minimum_lifetime' => 300);
     $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
     $this->assertText(t('The configuration options have been saved.'));
 
-    xmlsitemap_save_link(array('type' => 'testing', 'id' => 1, 'loc' => 'lifetime-test'));
+    $link = $this->addSitemapLink(array('loc' => 'lifetime-test'));
     drupal_cron_run();
-    $this->drupalGet('sitemap.xml');
+    $this->drupalGetSitemap();
     $this->assertNoRaw('lifetime-test');
 
     variable_set('xmlsitemap_generated_last', REQUEST_TIME - 300);
     drupal_cron_run();
-    $this->drupalGet('sitemap.xml');
+    $this->drupalGetSitemap();
     $this->assertRaw('lifetime-test');
 
-    xmlsitemap_delete_link(array('type' => 'testing', 'id' => 1));
+    xmlsitemap_delete_link(array('type' => $link['type'], 'id' => $link['id']));
     drupal_cron_run();
-    $this->drupalGet('sitemap.xml');
+    $this->drupalGetSitemap();
     $this->assertRaw('lifetime-test');
 
-    $this->regenerateSitemap();
-    $this->drupalGet('sitemap.xml');
+    $this->drupalGetSitemap('', TRUE);
     $this->assertNoRaw('lifetime-test');
   }
 
@@ -669,8 +668,7 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
     $this->drupalPost('admin/settings/xmlsitemap', $edit, t('Save configuration'));
     $this->assertText(t('The configuration options have been saved.'));
 
-    $this->regenerateSitemap();
-    $this->drupalGet('sitemap.xml');
+    $this->drupalGetSitemap('', TRUE);
     $this->assertRaw('<loc>http://example.com/</loc>');
   }
 
