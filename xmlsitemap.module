@@ -142,11 +142,18 @@ function xmlsitemap_menu() {
  * Implements hook_cron().
  */
 function xmlsitemap_cron() {
-  if (!xmlsitemap_var('regenerate_needed')
-      || (REQUEST_TIME - xmlsitemap_var('generated_last')) < xmlsitemap_var('minimum_lifetime')) {
+  // If there were no new or changed links, skip.
+  if (!variable_get('xmlsitemap_regenerate_needed', FALSE)) {
     return;
   }
 
+  // If the minimum sitemap lifetime hasn't been passed, skip.
+  $lifetime = REQUEST_TIME - variable_get('xmlsitemap_generated_last', 0);
+  if ($lifetime < variable_get('xmlsitemap_minimum_lifetime', 0)) {
+    return;
+  }
+
+  // Regenerate the sitemap XML files.
   module_load_include('inc', 'xmlsitemap');
   xmlsitemap_regenerate();
 }
