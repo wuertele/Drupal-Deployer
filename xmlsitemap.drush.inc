@@ -12,33 +12,23 @@
  * Implements hook_drush_command().
  */
 function xmlsitemap_drush_command() {
-  $items['xmlsitemap regenerate'] = array(
+  $items['xmlsitemap-regenerate'] = array(
     'description' => 'Regenerate the XML sitemap files.',
     'callback' => 'drush_xmlsitemap_regenerate',
+    'drupal dependencies' => array('xmlsitemap'),
   );
-  $items['xmlsitemap rebuild'] = array(
+  $items['xmlsitemap-rebuild'] = array(
     'description' => 'Dump and re-process all possible XML sitemap data, and then regenerate the files.',
     'callback' => 'drush_xmlsitemap_rebuild',
+    'drupal dependencies' => array('xmlsitemap'),
   );
   return $items;
-}
-
-/**
- * Check that the sitemap files directory exists and is writable.
- *
- * @todo Remove when Drush intercepts watchdog errors.
- */
-function drush_xmlsitemap_check_directory() {
-  if (!xmlsitemap_check_directory()) {
-    drush_die(dt('The XML sitemap cache directory @directory was not found was not writable.', array('@directory' => xmlsitemap_get_directory())));
-  }
 }
 
 /**
  * Regenerate the sitemap files from existing data.
  */
 function drush_xmlsitemap_regenerate() {
-  drush_xmlsitemap_check_directory();
   module_load_include('inc', 'xmlsitemap');
   xmlsitemap_regenerate();
 
@@ -53,7 +43,6 @@ function drush_xmlsitemap_regenerate() {
  * Dump and rebuild all the sitemap data, then regenerate the files.
  */
 function drush_xmlsitemap_rebuild() {
-  drush_xmlsitemap_check_directory();
   module_load_include('inc', 'xmlsitemap');
   timer_start('xmlsitemap_rebuild');
 
