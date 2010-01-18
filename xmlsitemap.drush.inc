@@ -28,6 +28,7 @@ function xmlsitemap_drush_command() {
  */
 function drush_xmlsitemap_check_directory() {
   if (!xmlsitemap_check_directory()) {
+    $dir = file_create_path(variable_get('xmlsitempa_path', 'xmlsitemap'));
     drush_die(dt('The XML sitemap cache directory @directory was not found was not writable.', array('@directory' => $dir)));
   }
 }
