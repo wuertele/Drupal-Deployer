@@ -22,6 +22,14 @@ function xmlsitemap_drush_command() {
     'callback' => 'drush_xmlsitemap_rebuild',
     'drupal dependencies' => array('xmlsitemap'),
   );
+  $items['xmlsitemap-index'] = array(
+    'description' => 'Process un-indexed XML sitemap links.',
+    'callback' => 'drush_xmlsitemap_index',
+    'drupal dependencies' => array('xmlsitemap'),
+    'options' => array(
+      '--limit' => 'The limit of links of each type to process. Default value: ' . variable_get('xmlsitemap_batch_limit', 100),
+    ),
+  );
   return $items;
 }
 
@@ -68,4 +76,12 @@ function drush_xmlsitemap_rebuild() {
     '@memory-peak' => format_size(memory_get_peak_usage(TRUE)),
    );
   drush_print(dt('XML sitemap files rebuilt in @timer ms. Peak memory usage: @memory-peak.', $vars));
+}
+
+/**
+ * Process un-indexed XML sitemap links.
+ */
+function drush_xmlsitemap_index() {
+  $limit = (int) drush_get_option('limit', variable_get('xmlsitemap_batch_limit', 100));
+  module_invoke_all('xmlsitemap_index_links', $limit);
 }

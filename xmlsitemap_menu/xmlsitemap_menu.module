@@ -7,12 +7,19 @@
  * Process old menu links not found in the {xmlsitemap} table.
  */
 function xmlsitemap_menu_cron() {
+  xmlsitemap_menu_xmlsitemap_import_links(xmlsitemap_var('batch_limit'));
+}
+
+/**
+ * Implements hook_xmlsitemap_import_links().
+ */
+function xmlsitemap_menu_xmlsitemap_import_links($limit) {
   if ($menus = xmlsitemap_menu_get_menus()) {
     // Set the global user variable to the anonymous user.
     xmlsitemap_switch_user(0);
 
-    $sql = "SELECT ml.mlid FROM {menu_links} ml LEFT JOIN {xmlsitemap} x ON x.type = 'menu' AND ml.mlid = x.id WHERE x.id IS NULL AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ")";
-    $query = db_query_range($sql, $menus, 0, xmlsitemap_var('batch_limit'));
+    $sql = "SELECT ml.mlid FROM {menu_links} ml LEFT JOIN {xmlsitemap} x ON x.type = 'menu' AND ml.mlid = x.id WHERE x.id IS NULL AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ") ORDER BY ml.mlid DESC";
+    $query = db_query_range($sql, $menus, 0, $limit);
 
     while ($mlid = db_result($query)) {
       $menu_item = xmlsitemap_menu_menu_link_load($mlid);

@@ -7,12 +7,20 @@
  * Process old nodes not found in the {xmlsitemap} table.
  */
 function xmlsitemap_node_cron() {
-  // Start with the most recently changed nodes first.
-  $query = db_query_range("SELECT n.nid FROM {node} n LEFT JOIN {xmlsitemap} x ON x.type = 'node' AND n.nid = x.id WHERE x.id IS NULL ORDER BY n.changed DESC", 0, xmlsitemap_var('batch_limit'));
-  while ($nid = db_result($query)) {
-    $node = node_load($nid, NULL, TRUE);
-    $link = xmlsitemap_node_create_link($node);
-    xmlsitemap_save_link($link);
+  xmlsitemap_node_xmlsitemap_index_links(xmlsitemap_var('batch_limit'));
+}
+
+/**
+ * Implements hook_xmlsitemap_index_links().
+ */
+function xmlsitemap_node_xmlsitemap_index_links($limit) {
+  if ($types = xmlsitemap_node_get_types()) {
+    $query = db_query_range("SELECT n.nid FROM {node} n LEFT JOIN {xmlsitemap} x ON x.type = 'node' AND n.nid = x.id WHERE x.id IS NULL AND n.type IN (" . db_placeholders($types, 'varchar') . ") ORDER BY n.nid DESC", $types, 0, $limit);
+    while ($nid = db_result($query)) {
+      $node = node_load($nid, NULL, TRUE);
+      $link = xmlsitemap_node_create_link($node);
+      xmlsitemap_save_link($link);
+    }
   }
 }
 
