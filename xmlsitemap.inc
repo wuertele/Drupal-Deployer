@@ -90,8 +90,7 @@ function _xmlsitemap_regenerate_before() {
   _xmlsitemap_get_memory_usage(TRUE);
 
   // Clear all cached sitemap files.
-  $path = file_create_path(variable_get('xmlsitemap_path', 'xmlsitemap'));
-  _xmlsitemap_delete_recursive($path);
+  xmlsitemap_clear_directory();
   xmlsitemap_check_directory();
 }
 
@@ -186,7 +185,7 @@ function xmlsitemap_generate($chunk = 0, $language = NULL) {
     $language = language_default();
   }
 
-  $file = xmlsitemap_get_chunk_file($chunk, $language);
+  $file = xmlsitemap_get_chunk_file($chunk, $language->language);
 
   if (!$handle = fopen($file, 'wb')) {
     trigger_error(t('Could not open file @file for writing.', array('@file' => $file)));
@@ -206,7 +205,7 @@ function xmlsitemap_generate($chunk = 0, $language = NULL) {
     trigger_error(t('Unknown error occurred while writing to file @file.', array('@file' => $file)));
   }
   elseif (xmlsitemap_var('gz')) {
-    $file_gz = xmlsitemap_get_chunk_file($chunk, $language, TRUE);
+    $file_gz = xmlsitemap_get_chunk_file($chunk, $language->language, 'gz');
     file_put_contents($file_gz, gzencode(file_get_contents($file), 9));
   }
 

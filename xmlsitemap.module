@@ -554,14 +554,14 @@ function xmlsitemap_delete_link(array $conditions) {
  * @param $chunk
  *   An integer representing the integer of the sitemap page chunk.
  * @param $language
- *   A language object, defaults to the default language.
+ *   A string with a language code.
  * @return
  *   A file path to the expected chunk file.
  *
  * @todo Move to xmlsitemap.inc
  */
-function xmlsitemap_get_chunk_file($chunk = 0, $language, $compressed = FALSE) {
-  return file_create_path(xmlsitemap_var('path')) .'/xmlsitemap-' . $language->language . '-' . $chunk . ($compressed ? '.gz' : '.xml');
+function xmlsitemap_get_chunk_file($chunk = 0, $language, $extension = 'xml') {
+  return xmlsitemap_get_directory() . "/xmlsitemap-{$language}-{$chunk}.{$extension}";
 }
 
 /**
@@ -900,12 +900,27 @@ function xmlsitemap_xmlsitemap_link_info() {
   );
 }
 
+function xmlsitemap_get_directory() {
+  static $directory;
+
+  if (!isset($directory)) {
+    $directory = file_create_path(variable_get('xmlsitemap_path', 'xmlsitemap'));
+  }
+
+  return $directory;
+}
+
 /**
  * Check that the sitemap files directory exists and is writable.
  */
 function xmlsitemap_check_directory() {
-  $path = file_create_path(xmlsitemap_var('path'));
-  return file_check_directory($path, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS);
+  $directory = xmlsitemap_get_directory();
+  return file_check_directory($directory, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS);
+}
+
+function xmlsitemap_clear_directory($delete = FALSE) {
+  $directory = xmlsitemap_get_directory();
+  return _xmlsitemap_delete_recursive($directory, $delete);
 }
 
 /**
@@ -919,7 +934,7 @@ function xmlsitemap_check_directory() {
  * @param string $path
  *   A filepath relative to file_directory_path.
  */
-function _xmlsitemap_delete_recursive($path) {
+function _xmlsitemap_delete_recursive($path, $delete_root = FALSE) {
   if (is_file($path) || is_link($path)) {
     unlink($path);
   }
@@ -930,11 +945,28 @@ function _xmlsitemap_delete_recursive($path) {
         continue;
       }
       $entry_path = $path . '/' . $entry;
-      _xmlsitemap_delete_recursive($entry_path);
+      _xmlsitemap_delete_recursive($entry_path, TRUE);
     }
     $dir->close();
-    return rmdir($path);
+    return $delete_root ? rmdir($path) : TRUE;
   }
+}
+
+/**
+ * Check that the sitemap files directory exists and is writable.
+ */
+function xmlsitemap_check_directory() {
+  $directory = xmlsitemap_get_directory();
+  $result = file_prepare_directory($directory, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS);
+  if (!$result) {
+    watchdog('file system', 'The directory %directory does not exist or is not writable.', array('%directory' => $directory), WATCHDOG_ERROR);
+  }
+  return $result;
+}
+
+function xmlsitemap_clear_directory($delete = FALSE) {
+  $directory = xmlsitemap_get_directory();
+  return _xmlsitemap_delete_recursive($directory, $delete);
 }
 
 /**

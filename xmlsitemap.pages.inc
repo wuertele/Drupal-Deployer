@@ -22,7 +22,7 @@ function xmlsitemap_output_chunk($chunk = 0) {
     xmlsitemap_generate($chunk, $language);
   }
 
-  $file = xmlsitemap_get_chunk_file($chunk, $language);
+  $file = xmlsitemap_get_chunk_file($chunk, $language->language);
   xmlsitemap_output_file($file);
 }
 

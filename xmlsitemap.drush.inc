@@ -25,11 +25,12 @@ function xmlsitemap_drush_command() {
 
 /**
  * Check that the sitemap files directory exists and is writable.
+ *
+ * @todo Remove when Drush intercepts watchdog errors.
  */
 function drush_xmlsitemap_check_directory() {
   if (!xmlsitemap_check_directory()) {
-    $dir = file_create_path(variable_get('xmlsitempa_path', 'xmlsitemap'));
-    drush_die(dt('The XML sitemap cache directory @directory was not found was not writable.', array('@directory' => $dir)));
+    drush_die(dt('The XML sitemap cache directory @directory was not found was not writable.', array('@directory' => xmlsitemap_get_directory())));
   }
 }
 
