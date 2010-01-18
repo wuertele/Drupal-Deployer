@@ -68,7 +68,12 @@ function cck_fieldgroup_tabs_node_type_form($node_type) {
     '#description' => t('Leave blank to keep top level form elements like title and body outside of a Basic Tabs.'),
     '#default_value' => variable_get('cck_fieldgroup_tabs_residual_title_' . $node_type, ''),
   );
-
+  $form['cck_fieldgroup_tabs']['cck_fieldgroup_tabs_description'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Description'),
+    '#description' => t('Text to display above the tabset on content display.'),
+    '#default_value' => variable_get('cck_fieldgroup_tabs_description_' . $node_type, ''),
+  );
   return $form;
 }
 
@@ -147,6 +152,9 @@ function cck_fieldgroup_tabs_nodeapi(&$node, $op, $teaser, $page) {
               '#type' => 'tabset',
               '#weight' => $group['weight'],
             );
+            if ($description = variable_get('cck_fieldgroup_tabs_description_' . $node->type, '')) {
+              $node->content['fieldgroup_tabs']['#description'] = filter_xss_admin($description);
+            }
           }
           // Otherwise, reset the weight if lower than what's already set.
           // This ensures the tabset has the weight of the lowest fieldgroup
