@@ -94,6 +94,8 @@ function xmlsitemap_node_form_xmlsitemap_settings_form_alter(&$form, $form_state
     'title' => t('Content types'),
     'item_title' => t('Content type'),
     'access' => user_access('administer content types'),
+    'table' => 'node',
+    'subtype key' => 'type',
   );
 
   $node_types = node_get_types('names');
@@ -199,12 +201,15 @@ function xmlsitemap_node_form_alter(&$form, $form_state, $form_id) {
 function xmlsitemap_node_xmlsitemap_links($offset = 0, $limit = 0) {
   $links = array();
 
-  $sql = "SELECT n.nid FROM {node} n WHERE n.nid > %d ORDER BY n.nid";
-  $query = ($limit ? db_query_range($sql, $offset, 0, $limit) : db_query($sql, $offset));
+  if ($types = xmlsitemap_node_get_types()) {
+    $sql = "SELECT n.nid FROM {node} n WHERE n.nid > %d AND n.type IN (" . db_placeholders($types, 'varchar') . ") ORDER BY n.nid";
+    $args = array_merge(array($offset), $types);
+    $query = ($limit ? db_query_range($sql, $offset, 0, $args) : db_query($sql, $args));
 
-  while ($nid = db_result($query)) {
-    $node = node_load($nid, NULL, TRUE);
-    $links[] = xmlsitemap_node_create_link($node);
+    while ($nid = db_result($query)) {
+      $node = node_load($nid, NULL, TRUE);
+      $links[] = xmlsitemap_node_create_link($node);
+    }
   }
 
   return $links;
@@ -214,8 +219,9 @@ function xmlsitemap_node_xmlsitemap_links($offset = 0, $limit = 0) {
  * Implements hook_xmlsitemap_links_batch_info().
  */
 function xmlsitemap_node_xmlsitemap_links_batch_info() {
+  $types = xmlsitemap_node_get_types();
   return array(
-    'max' => db_result(db_query("SELECT COUNT(n.nid) FROM {node} n")),
+    'max' => $types ? db_result(db_query("SELECT COUNT(n.nid) FROM {node} n AND n.type IN (" . db_placeholders($types, 'varchar') . ")", $types)) : 0,
   );
 }
 
