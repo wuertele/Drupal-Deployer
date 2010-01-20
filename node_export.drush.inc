@@ -41,6 +41,22 @@ function node_export_drush_command() {
         'Import nodes from given filename, saving them with uid 2 as author.',
     ),
   );
+  $items['node_export type'] = array(
+    'callback' => 'node_export_drush_callback_export_type',
+    'description' => "Export all nodes in the given content type.",
+    'arguments' => array(
+      'type' => 'The content type to export.',
+    ),    
+    'options' => array(
+      '--file' => "A filename to write the node data to.",
+    ),
+    'examples' => array(
+      'drush node_export type story --file=filename' => 
+        'Export all nodes of type \'story\' to given filename.',
+    ),
+    'drush node_export type story > filename' => 
+      'Export all nodes of type \'story\' to given filename. (Runs the risk of error messages going to that file.)',
+  );
 
   return $items;
 }
@@ -128,3 +144,31 @@ function node_export_drush_callback_import() {
   }
 
 }
+
+/**
+ * Drush comand callback.
+ *
+ * Export nodes of the provided type.
+*/
+function node_export_drush_callback_export_type($type) {
+  if ($type == NULL) {
+    drush_set_error('DRUSH_NOT_COMPLETED', 'Please supply the type of nodes you want to export.');
+  }
+  $file = drush_get_option('file');
+  
+  $nids = array();
+  $sql = "SELECT nid FROM {node} WHERE type = '%s'";
+  $rs = db_query($sql, $type);
+  
+  while ($row = db_fetch_array($rs)) {
+    $nids[] = $row['nid'];
+  }
+  
+  if (!empty($nids)) {
+    call_user_func_array('node_export_drush_callback_export', $nids);
+  }
+  else {
+    drush_set_error('DRUSH_NOT_COMPLETED', "No nodes found of type $type.");
+  }
+}
+
