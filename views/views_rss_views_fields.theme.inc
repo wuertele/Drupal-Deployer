@@ -30,6 +30,9 @@ function template_preprocess_views_view_views_rss_fields(&$vars) {
   if ($view->style_options['georss']['lat'] && $view->style_options['georss']['lon']) {
    $vars['georss'] = TRUE;
   }
+  
+  // Set Headers
+  drupal_set_header('Content-Type: application/rss+xml; charset=utf-8');
 }
 
 /**
