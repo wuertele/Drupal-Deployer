@@ -149,16 +149,15 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
 
   protected function assertXMLSitemapProblems($problem_text = FALSE) {
     $this->drupalGet('admin/settings/xmlsitemap');
-    $this->assertText(t('One or more problems were detected with your XML sitemap configuration. Please check the status report for more information.'));
+    $this->assertText(t('One or more problems were detected with your XML sitemap configuration. Check the status report for more information.'));
     if ($problem_text) {
-      $this->clickLink(t('status report'));
       $this->assertText($problem_text);
     }
   }
 
   protected function assertNoXMLSitemapProblems() {
     $this->drupalGet('admin/settings/xmlsitemap');
-    $this->assertNoText(t('One or more problems were detected with your XML sitemap configuration. Please check the status report for more information.'));
+    $this->assertNoText(t('One or more problems were detected with your XML sitemap configuration. Check the status report for more information.'));
   }
 
   private function getWatchdogMessage(array $conditions) {
@@ -666,6 +665,7 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
    */
   function testStatusReport() {
     // Test the rebuild flag.
+    variable_set('xmlsitemap_generated_last', REQUEST_TIME);
     variable_set('xmlsitemap_rebuild_needed', TRUE);
     $this->assertXMLSitemapProblems(t('The XML sitemap data is out of sync and needs to be completely rebuilt.'));
     $this->clickLink(t('completely rebuilt'));
@@ -675,7 +675,7 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
 
     // Test the regenerate flag (and cron hasn't run in a while).
     variable_set('xmlsitemap_regenerate_needed', TRUE);
-    variable_set('xmlsitemap_generated_last', REQUEST_TIME - variable_get('cron_threshold_warning', 172800) - 10);
+    variable_set('xmlsitemap_generated_last', REQUEST_TIME - variable_get('cron_threshold_warning', 172800) - 100);
     $this->assertXMLSitemapProblems(t('The XML cached files are out of date and need to be regenerated. You can run cron manually to regenerate the sitemap files.'));
     $this->clickLink(t('run cron manually'));
     $this->assertResponse(200);

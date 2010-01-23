@@ -91,24 +91,26 @@ function xmlsitemap_requirements($phase) {
 
 /**
  * Check the status of all hook_requirements() from xmlsitemap modules.
- *
- * @param $return_only
- *   If TRUE, will return the result, otherwise it will show a message.
- * @return
- *   TRUE if there is a warning or error requirement, or FALSE otherwise.
  */
 function xmlsitemap_check_status() {
-  $severity = REQUIREMENT_OK;
+  static $messages;
 
-  foreach (module_implements('requirements') as $module) {
-    if (strpos($module, 'xmlsitemap') !== FALSE) {
-      module_load_install($module);
-      $requirements = module_invoke($module, 'requirements', 'runtime');
-      $severity = max($severity, drupal_requirements_severity($requirements));
+  if (!isset($messages)) {
+    $messages = array();
+    foreach (module_implements('requirements') as $module) {
+      if (strpos($module, 'xmlsitemap') !== FALSE) {
+        module_load_install($module);
+        $requirements = module_invoke($module, 'requirements', 'runtime');
+        foreach ($requirements as $requirement) {
+          if (isset($requirement['severity']) && max(REQUIREMENT_OK, $requirement['severity'])) {
+            $messages[] = $requirement['description'];
+          }
+        }
+      }
     }
   }
 
-  return $severity == REQUIREMENT_ERROR;
+  return $messages;
 }
 
 /**
