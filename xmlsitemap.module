@@ -46,9 +46,11 @@ function xmlsitemap_help($path, $arg) {
   $output = '';
 
   switch ($path) {
+    case 'admin/help/xmlsitemap':
+      return;
     case 'admin/help#xmlsitemap':
       $sitemaps = xmlsitemap_get_sitemaps(TRUE);
-      $output .= format_plural(count($sitemaps), 'Your sitemap is located at: !sitemaps', 'Your sitemaps are located at: !sitemaps', array('!sitemaps' => theme('item_list', $sitemaps)));
+      $output .= '<p>' . format_plural(count($sitemaps), 'Your sitemap is located at !sitemap.', 'Your sitemaps are located at: !sitemaps', array('!sitemaps' => theme('item_list', $sitemaps), '!sitemap' => current($sitemaps))) . '</p>';
       break;
     case 'admin/settings/xmlsitemap':
       break;
@@ -56,17 +58,14 @@ function xmlsitemap_help($path, $arg) {
       $output .= '<p>' . t("This action rebuilds your site's XML sitemap and regenerates the cached files, and may be a lengthy process. If you just installed XML sitemap, this can be helpful to import all your site's content into the sitemap. Otherwise, this should only be used in emergencies.") . '</p>';
   }
 
-  // Use a static variable because this code may be called more than once.
-  static $checked = FALSE;
-  if (!$checked && arg(0) == 'admin' && strpos($path, 'xmlsitemap') !== FALSE) {
-    $checked = TRUE;
-    module_load_install('xmlsitemap');
-    if (user_access('administer site configuration') && $messages = xmlsitemap_check_status()) {
-      drupal_set_message(t('One or more problems were detected with your XML sitemap configuration. Check the <a href="@status-report">status report</a> for more information.<br />!list', array('@status-report' => url('admin/reports/status'), '!list' => theme('item_list', $messages))), 'warning', FALSE);
+  if (arg(0) == 'admin' && strpos($path, 'xmlsitemap') !== FALSE) {
+    if ($arg[1] == 'settings' && user_access('administer xmlsitemap')) {
+      module_load_install('xmlsitemap');
+      xmlsitemap_check_status();
     }
     module_load_include('inc', 'xmlsitemap');
     if ($blurb = _xmlsitemap_get_blurb()) {
-      $output .= '<div class="form-item"><div class="description">' . $blurb . '</div></div>';
+      $output .= $blurb;
     }
   }
 
@@ -987,10 +986,10 @@ function _xmlsitemap_get_field_type($table, $field) {
  * @return
  *   A language object.
  */
-function xmlsitemap_language_load($language = '') {
+function xmlsitemap_language_load($language = '', $reset = FALSE) {
   static $languages;
 
-  if (!isset($languages)) {
+  if (!isset($languages) || $reset) {
     $languages = language_list();
     $languages[''] = NULL;
   }
