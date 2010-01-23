@@ -8,29 +8,46 @@
 
 function xmlsitemap_custom_list_links() {
   $header = array(
-    array('data' => t('Location'), 'field' => 'loc'),
-    array('data' => t('Operations'), 'colspan' => 2),
+    'loc' => array('data' => t('Location'), 'field' => 'loc'),
+    'priority' => array('data' => t('Priority'), 'field' => 'priority'),
+    'operations' => array('data' => t('Operations')),
   );
   $rows = array();
+  $destination = drupal_get_destination();
 
-  $sql = "SELECT id, loc, priority FROM {xmlsitemap} WHERE type = 'custom'" . tablesort_sql($header);
-  $query = db_query($sql);
+  $sql = "SELECT * FROM {xmlsitemap} WHERE type = 'custom'" . tablesort_sql(array_values($header));
+  $query = pager_query($sql, 50);
+
   while ($link = db_fetch_object($query)) {
+    $row = array();
+    $row['loc'] = l($link->loc, $link->loc);
+    $row['priority'] = number_format($link->priority, 1);
+    $operations = array();
+    $operations['edit'] = array(
+      'title' => t('Edit'),
+      'href' => 'admin/settings/xmlsitemap/custom/edit/' . $link->id,
+      'query' => $destination,
+    );
+    $operations['delete'] = array(
+      'title' => t('Delete'),
+      'href' => 'admin/settings/xmlsitemap/custom/delete/' . $link->id,
+      'query' => $destination,
+    );
+    $row['operations'] = theme('links', $operations, array('class' => 'links inline nowrap'));
+    $rows[] = $row;
+  }
+
+  if (empty($rows)) {
     $rows[] = array(
-      l($link->loc, $link->loc),
-      l(t('Edit'), 'admin/settings/xmlsitemap/custom/edit/' . $link->id, array('query' => drupal_get_destination())),
-      l(t('Delete'), 'admin/settings/xmlsitemap/custom/delete/' . $link->id, array('query' => drupal_get_destination())),
+      array(
+        'data' => l(t('Add custom link'), 'admin/settings/xmlsitemap/custom/add', array('query' => drupal_get_destination())),
+        'colspan' => 3,
+      ),
     );
   }
 
-  $rows[] = array(
-    array(
-      'data' => l(t('Add custom link'), 'admin/settings/xmlsitemap/custom/add', array('query' => drupal_get_destination())),
-      'colspan' => 3,
-    ),
-  );
-
-  $output = theme('table', $header, $rows);
+  $output = theme('table', array_values($header), $rows);
+  $output .= theme('pager', NULL, 50, 0);
   return $output;
 }
 
@@ -95,12 +112,11 @@ function xmlsitemap_custom_edit_link_form($form_state, $link = array()) {
     '#value' => l(t('Cancel'), 'admin/settings/xmlsitemap/custom'),
     '#weight' => 11,
   );
-  $form['#redirect'] = 'admin/settings/xmlsitemap/custom';
 
   return $form;
 }
 
-function xmlsitemap_custom_edit_link_form_validate(&$form, &$form_state) {
+function xmlsitemap_custom_edit_link_form_validate($form, &$form_state) {
   $link = &$form_state['values'];
 
   // Make sure we trim and normalize the path first.
@@ -131,10 +147,11 @@ function xmlsitemap_custom_edit_link_form_validate(&$form, &$form_state) {
   }
 }
 
-function xmlsitemap_custom_edit_link_form_submit(&$form, &$form_state) {
+function xmlsitemap_custom_edit_link_form_submit($form, &$form_state) {
   $link = $form_state['values'];
   xmlsitemap_save_link($link);
   drupal_set_message(t('The custom link for %loc was saved.', array('%loc' => $link['loc'])));
+  $form_state['redirect'] = 'admin/settings/xmlsitemap/custom';
 }
 
 function xmlsitemap_custom_delete_link_form($form_state, array $link) {
