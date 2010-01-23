@@ -46,7 +46,7 @@ function menu_service_process($data, $fields) {
         $tmp = (object) $item['link'];
       }
       if (!$fields || in_array('path_alias', $fields, TRUE)) {
-        $tmp->path_alias = drupal_get_path_alias($tmp->link_path);
+        $tmp->path_alias = drupal_get_path_alias($item['link']['link_path']);
       }
       $tmp->children = menu_service_process($item['below'], $fields);
       $out[] = $tmp;
