@@ -8,20 +8,33 @@
 
 function xmlsitemap_custom_list_links() {
   $header = array(
-    'loc' => array('data' => t('Location'), 'field' => 'loc'),
+    'loc' => array('data' => t('Location'), 'field' => 'loc', 'sort' => 'asc'),
     'priority' => array('data' => t('Priority'), 'field' => 'priority'),
+    'changefreq' => array('data' => t('Change frequency'), 'field' => 'changefreq'),
+    'language' => array('data' => t('Language'), 'field' => 'language'),
     'operations' => array('data' => t('Operations')),
   );
+  // Do not include the language column if locale is disabled.
+  if (!module_exists('locale')) {
+    unset($header['language']);
+  }
+
   $rows = array();
   $destination = drupal_get_destination();
 
-  $sql = "SELECT * FROM {xmlsitemap} WHERE type = 'custom'" . tablesort_sql(array_values($header));
+  $sql = "SELECT * FROM {xmlsitemap}";
+  $sql .= " WHERE type = 'custom'";
+  $sql .= tablesort_sql($header);
   $query = pager_query($sql, 50);
 
   while ($link = db_fetch_object($query)) {
     $row = array();
     $row['loc'] = l($link->loc, $link->loc);
     $row['priority'] = number_format($link->priority, 1);
+    $row['changefreq'] = $link->changefreq ? drupal_ucfirst(xmlsitemap_get_changefreq($link->changefreq)) : t('None');
+    if (isset($header['language'])) {
+      $row['language'] = module_invoke('locale', 'language_name', $link->language);
+    }
     $operations = array();
     $operations['edit'] = array(
       'title' => t('Edit'),
@@ -46,7 +59,7 @@ function xmlsitemap_custom_list_links() {
     );
   }
 
-  $output = theme('table', array_values($header), $rows);
+  $output = theme('table', $header, $rows);
   $output .= theme('pager', NULL, 50, 0);
   return $output;
 }
@@ -76,21 +89,21 @@ function xmlsitemap_custom_edit_link_form($form_state, $link = array()) {
     '#type' => 'textfield',
     '#title' => t('Path to link'),
     '#field_prefix' => url('', array('absolute' => TRUE)),
-    '#default_value' => drupal_get_path_alias($link['loc'], $link['language']),
+    '#default_value' => $link['loc'] ? drupal_get_path_alias($link['loc'], $link['language']) : '',
     '#required' => TRUE,
     '#size' => 30,
   );
-  $form['xmlsitemap']['priority'] = array(
+  $form['priority'] = array(
     '#type' => 'select',
     '#title' => t('Priority'),
     '#options' => xmlsitemap_get_priority_options(),
     '#default_value' => number_format($link['priority'], 1),
     '#description' => t('The priority of this URL relative to other URLs on your site.'),
   );
-  $form['xmlsitemap']['changefreq'] = array(
+  $form['changefreq'] = array(
     '#type' => 'select',
     '#title' => t('Change frequency'),
-    '#options' => array(0 => t('No value')) + xmlsitemap_get_changefreq_options(),
+    '#options' => array(0 => t('None')) + xmlsitemap_get_changefreq_options(),
     '#default_value' => $link['changefreq'],
     '#description' => t('How frequently the page is likely to change. This value provides general information to search engines and may not correlate exactly to how often they crawl the page.'),
   );
