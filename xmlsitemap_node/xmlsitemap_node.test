@@ -17,6 +17,7 @@ class XMLSitemapNodeTestHelper extends XMLSitemapTestHelper {
 
     $this->admin_user = $this->drupalCreateUser(array('administer nodes', 'administer content types', 'administer xmlsitemap'));
     $this->normal_user = $this->drupalCreateUser(array('create page content', 'edit any page content', 'access content'));
+    variable_set('xmlsitemap_node_status_page', 1);
   }
 
   //function addNodes($count) {
@@ -118,7 +119,7 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     $this->assertNodeLinkValues($node_old, array('status' => 1, 'priority' => 0.5));
 
     $edit = array(
-      'xmlsitemap_node_status' => FALSE,
+      'xmlsitemap_node_status' => 0,
       'xmlsitemap_node_priority' => '0.0',
     );
     $this->drupalGet('admin/content/node-type/page');
@@ -130,7 +131,7 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     $this->assertNodeLinkValues($node_old, array('status' => 0, 'priority' => 0.0));
 
     $edit = array(
-      'xmlsitemap_node_status' => TRUE,
+      'xmlsitemap_node_status' => 1,
       'xmlsitemap_node_priority' => '0.5',
     );
     $this->drupalPost('admin/content/node-type/page', $edit, t('Save content type'));
@@ -177,7 +178,7 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
       $node = array_pop($nodes);
       if ($i <= $limit) {
         // The first $limit nodes should be inserted.
-        $this->assertNodeLinkValues($node, array('status' => 1, 'lastmod' => $node->changed));
+        $this->assertNodeLinkValues($node, array('access' => 1, 'status' => 1, 'lastmod' => $node->changed));
       }
       else {
         // Any beyond $limit should not be in the sitemap.
