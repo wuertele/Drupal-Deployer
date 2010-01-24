@@ -96,15 +96,27 @@ function xmlsitemap_check_status() {
   static $messages;
 
   if (!isset($messages)) {
+    // Cache the list of modules that are checked.
+    if ($cache = cache_get('xmlsitemap:status:modules')) {
+      $modules = $cache->data;
+    }
+    else {
+      $modules = array();
+      foreach (module_implements('requirements') as $module) {
+        if (strpos($module, 'xmlsitemap') !== FALSE) {
+          $modules[] = $module;
+        }
+      }
+      cache_set('xmlsitemap:status:modules', $modules);
+    }
+
     $messages = array();
-    foreach (module_implements('requirements') as $module) {
-      if (strpos($module, 'xmlsitemap') !== FALSE) {
-        module_load_install($module);
-        $requirements = module_invoke($module, 'requirements', 'runtime');
-        foreach ($requirements as $requirement) {
-          if (isset($requirement['severity']) && max(REQUIREMENT_OK, $requirement['severity'])) {
-            $messages[] = $requirement['description'];
-          }
+    foreach ($modules as $module) {
+      module_load_install($module);
+      $requirements = module_invoke($module, 'requirements', 'runtime');
+      foreach ($requirements as $requirement) {
+        if (isset($requirement['severity']) && max(REQUIREMENT_OK, $requirement['severity'])) {
+          $messages[] = $requirement['description'];
         }
       }
     }
