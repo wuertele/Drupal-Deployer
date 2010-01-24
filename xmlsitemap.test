@@ -78,18 +78,18 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
     return $link;
   }
 
-  protected function assertSitemapLinkVisible(array $link, $load = FALSE) {
-    if ($load) {
-      $link = $this->assertSitemapLink($link);
+  protected function assertSitemapLinkVisible() {
+    $links = func_get_args();
+    foreach ($links as $link) {
+      $this->assertTrue($link && $link['access'] && $link['status'], 'Sitemap link is visible.');
     }
-    $this->assertTrue($link && $link['access'] && $link['status'], 'Sitemap link is visible.');
   }
 
-  protected function assertSitemapLinkNotVisible(array $link, $load = FALSE) {
-    if ($load) {
-      $link = $this->assertSitemapLink($link);
+  protected function assertSitemapLinkNotVisible() {
+    $links = func_get_args();
+    foreach ($links as $link) {
+      $this->assertTrue($link && !($link['access'] && $link['status']), 'Sitemap link is not visible.');
     }
-    $this->assertTrue($link && !($link['access'] && $link['status']), 'Sitemap link is not visible.');
   }
 
   protected function assertSitemapLinkValues(array $link, array $conditions) {
@@ -116,42 +116,6 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
         $this->assertNotEqual($link[$key], $value, t('Not equal values for link field @key.', array('@key' => $key)));
       }
     }
-  }
-
-  /**
-   * Assert that a link is found in the sitemap.
-   *
-   * @param $conditions
-   *   An array of values/conditions to match keyed by field name.
-   */
-  protected function assertInSitemap($conditions) {
-    $link = xmlsitemap_load_link($conditions);
-    $this->assertTrue($link && $link['access'] && $link['status'], t('Link found in sitemap.'));
-    return $link;
-  }
-
-  /**
-   * Assert that a link is not found in the sitemap.
-   *
-   * @param $conditions
-   *   An array of values/conditions to match keyed by field name.
-   */
-  protected function assertNotInSitemap($conditions) {
-    $link = xmlsitemap_load_link($conditions);
-    $this->assertTrue(!$link || !$link['access'] || !$link['status'], t('Link not found in sitemap.'));
-    return $link;
-  }
-
-  protected function assertLinkInSitemap(&$link) {
-    $link = xmlsitemap_load_link(array('id' => $link['id'], 'type' => $link['type']));
-    $this->assertTrue($link && $link['access'] && $link['status'], t('Link found in sitemap.'));
-    return $link;
-  }
-
-  protected function assertLinkNotInSitemap(&$link) {
-    $link = xmlsitemap_load_link(array('id' => $link['id'], 'type' => $link['type']));
-    $this->assertTrue(!$link || !$link['access'] || !$link['status'], t('Link found in sitemap.'));
-    return $link;
   }
 
   protected function assertRawSitemapLinks() {
@@ -562,9 +526,10 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
    */
   function testUpdateLinks() {
     // Add our testing data.
-    $link1 = $this->addSitemapLink(array('subtype' => 'group1'));
-    $link2 = $this->addSitemapLink(array('subtype' => 'group1'));
-    $link3 = $this->addSitemapLink(array('subtype' => 'group2'));
+    $links = array();
+    $links[1] = $this->addSitemapLink(array('subtype' => 'group1'));
+    $links[2] = $this->addSitemapLink(array('subtype' => 'group1'));
+    $links[3] = $this->addSitemapLink(array('subtype' => 'group2'));
     variable_set('xmlsitemap_regenerate_needed', FALSE);
     // id | type    | subtype | language | access | status | priority
     // 1  | testing | group1  | ''       | 1      | 1      | 0.5
@@ -573,9 +538,6 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
 
     $updated = xmlsitemap_update_links(array('status' => 0), array('type' => 'testing', 'subtype' => 'group1', 'status_override' => 0));
     $this->assertEqual($updated, 2);
-    //$this->assertLinkNotInSitemap($link1);
-    //$this->assertLinkNotInSitemap($link2);
-    //$this->assertLinkInSitemap($link3);
     $this->assertFlag('regenerate_needed', TRUE);
     // id | type    | subtype | language | status | priority
     // 1  | testing | group1  | ''       | 0      | 0.5

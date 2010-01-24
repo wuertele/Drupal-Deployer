@@ -27,11 +27,13 @@ class XMLSitemapNodeTestHelper extends XMLSitemapTestHelper {
   //}
 
   protected function assertNodeInSitemap($node) {
-    return $this->assertInSitemap(array('type' => 'node', 'id' => (is_object($node) ? $node->nid : $node)));
+    $link = xmlsitemap_load_link(array('type' => 'node', 'id' => (is_object($node) ? $node->nid : $node)));
+    return $this->assertSitemapLinkVisible($link);
   }
 
   protected function assertNodeNotInSitemap($node) {
-    return $this->assertNotInSitemap(array('type' => 'node', 'id' => (is_object($node) ? $node->nid : $node)));
+    $link = xmlsitemap_load_link(array('type' => 'node', 'id' => (is_object($node) ? $node->nid : $node)));
+    return $this->assertSitemapLinkNotVisible($link);
   }
 
   protected function assertNodeLinkValues($node, array $values) {
@@ -167,12 +169,9 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
 
     // Clear all the node link data so we can emulate 'old' nodes.
     db_query("DELETE FROM {xmlsitemap} WHERE type = 'node'");
-    foreach ($nodes as $node) {
-      $this->assertNodeNotInSitemap($node);
-    }
 
     // Run cron to import old nodes.
-    drupal_cron_run();
+    xmlsitemap_node_cron();
 
     for ($i = 1; $i <= ($limit + 1); $i++) {
       $node = array_pop($nodes);
@@ -182,7 +181,7 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
       }
       else {
         // Any beyond $limit should not be in the sitemap.
-        $this->assertNodeNotInSitemap($node);
+        $this->assertNoSitemapLink(array('type' => 'node', 'id' => $node->nid));
       }
     }
   }
