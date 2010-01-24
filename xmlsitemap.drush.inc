@@ -14,17 +14,14 @@
 function xmlsitemap_drush_command() {
   $items['xmlsitemap-regenerate'] = array(
     'description' => 'Regenerate the XML sitemap files.',
-    'callback' => 'drush_xmlsitemap_regenerate',
     'drupal dependencies' => array('xmlsitemap'),
   );
   $items['xmlsitemap-rebuild'] = array(
     'description' => 'Dump and re-process all possible XML sitemap data, and then regenerate the files.',
-    'callback' => 'drush_xmlsitemap_rebuild',
     'drupal dependencies' => array('xmlsitemap'),
   );
   $items['xmlsitemap-index'] = array(
     'description' => 'Process un-indexed XML sitemap links.',
-    'callback' => 'drush_xmlsitemap_index',
     'drupal dependencies' => array('xmlsitemap'),
     'options' => array(
       '--limit' => 'The limit of links of each type to process. Default value: ' . variable_get('xmlsitemap_batch_limit', 100),
