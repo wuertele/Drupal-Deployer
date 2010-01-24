@@ -38,19 +38,19 @@ function unitsapi_convert($value, $from, $to, $details = FALSE) {
 
   // Only accept numeric values.
   if (!is_numeric($value)) {
-    drupal_set_message(t('Unit conversion value must be numeric.'), 'error');
+    watchdog('units api', 'Unit conversion value must be numeric.', array(), WATCHDOG_ERROR);
     return FALSE;
   }
 
   // Check to see if the unit key was found in the array.
   if (!isset($units[$from]) || !isset($units[$to])) {
-    drupal_set_message(t('Units API cannot find the specified measurement units.'), 'error');
+    watchdog('units api', 'Units API cannot find the specified measurement units.', array(), WATCHDOG_ERROR);
     return FALSE;
   }
 
   // Only convert with like kinds
   if ($units[$from]['kind'] != $units[$to]['kind']) {
-    drupal_set_message(t('Units API cannot convert between different kinds of measurement units.'), 'error');
+    watchdog('units api', 'Units API cannot convert between different kinds of measurement units.', array(), WATCHDOG_ERROR);
     return FALSE;
   }
 
@@ -111,18 +111,17 @@ function unitsapi_xml_cache() {
 
   // Load the XML file
   if (!function_exists('simplexml_load_file')) {
-    drupal_set_message(t('SimpleXML not found.  PHP 5 is required for Units API.'), 'error');
+    watchdog('units api', 'SimpleXML not found.  PHP 5 is required for Units API.', array(), WATCHDOG_ERROR);
     return FALSE;
   }
   elseif (!file_exists($file)) {
-    drupal_set_message(t('The specified Units XML file does not exist.'), 'error');
+    watchdog('units api', 'The specified Units XML file does not exist.', array(), WATCHDOG_ERROR);
     return FALSE;
   }
   elseif (!$xml = simplexml_load_file($file)) {
-    drupal_set_message(t('The Units API XML file could not be loaded by SimpleXML.'), 'error');
+    watchdog('units api', 'The Units API XML file could not be loaded by SimpleXML.', array(), WATCHDOG_ERROR);
     return FALSE;
   }
-
 
   // Loop the XML file.  It is often easier to force the type of the SimpleXML object to an array.
   foreach ((array) $xml as $kind => $units) {
