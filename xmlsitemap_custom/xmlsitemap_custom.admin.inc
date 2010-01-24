@@ -134,11 +134,7 @@ function xmlsitemap_custom_edit_link_form_validate($form, &$form_state) {
 
   // Make sure we trim and normalize the path first.
   $link['loc'] = trim($link['loc']);
-  $normal_path = drupal_get_normal_path($link['loc']);
-  if ($link['loc'] != $normal_path) {
-    drupal_set_message(t('The sitemap system stores system paths only, but will use the URL alias in the sitemap output. The custom link %link has been stored as %normal_path.', array('%link' => $link['loc'], '%normal_path' => $normal_path)));
-    $link['loc'] = $normal_path;
-  }
+  $link['loc'] = drupal_get_normal_path($link['loc'], $link['language']);
 
   // Test anonymous user access to the custom link paths.
   xmlsitemap_switch_user(0);

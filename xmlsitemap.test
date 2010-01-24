@@ -46,6 +46,78 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
     }
   }
 
+  protected function drupalGetSitemap($language = '', $regenerate = FALSE) {
+    if ($regenerate) {
+      $this->regenerateSitemap();
+    }
+
+    $this->drupalGet('sitemap.xml', array('language' => xmlsitemap_language_load($language)));
+    $this->assertResponse(200);
+  }
+
+  /**
+   * Regenerate the sitemap by setting the regenerate flag and running cron.
+   */
+  protected function regenerateSitemap() {
+    variable_set('xmlsitemap_regenerate_needed', TRUE);
+    variable_set('xmlsitemap_generated_last', 0);
+    module_load_include('inc', 'xmlsitemap');
+    xmlsitemap_regenerate();
+    $this->assertTrue(variable_get('xmlsitemap_generated_last', 0) && !variable_get('xmlsitemap_regenerate_needed', FALSE), t('XML sitemaps regenerated and flag cleared.'));
+  }
+
+  protected function assertSitemapLink($conditions) {
+    $link = xmlsitemap_load_link($conditions);
+    $this->assertTrue(is_array($link), 'Link loaded.');
+    return $link;
+  }
+
+  protected function assertNoSitemapLink($conditions) {
+    $link = xmlsitemap_load_link($conditions);
+    $this->assertFalse($link, 'Link not loaded.');
+    return $link;
+  }
+
+  protected function assertSitemapLinkVisible(array $link, $load = FALSE) {
+    if ($load) {
+      $link = $this->assertSitemapLink($link);
+    }
+    $this->assertTrue($link && $link['access'] && $link['status'], 'Sitemap link is visible.');
+  }
+
+  protected function assertSitemapLinkNotVisible(array $link, $load = FALSE) {
+    if ($load) {
+      $link = $this->assertSitemapLink($link);
+    }
+    $this->assertTrue($link && !($link['access'] && $link['status']), 'Sitemap link is not visible.');
+  }
+
+  protected function assertSitemapLinkValues(array $link, array $conditions) {
+    foreach ($conditions as $key => $value) {
+      if ($value === NULL || $link[$key] === NULL) {
+        // For nullable fields, always check for identical values (===).
+        $this->assertIdentical($link[$key], $value, t('Identical values for link field @key.', array('@key' => $key)));
+      }
+      else {
+        // Otherwise check simple equality (==).
+        $this->assertEqual($link[$key], $value, t('Equal values for link field @key.', array('@key' => $key)));
+      }
+    }
+  }
+
+  protected function assertNotSitemapLinkValues(array $link, array $conditions) {
+    foreach ($conditions as $key => $value) {
+      if ($value === NULL || $link[$key] === NULL) {
+        // For nullable fields, always check for identical values (===).
+        $this->assertNotIdentical($link[$key], $value, t('Not identical values for link field @key.', array('@key' => $key)));
+      }
+      else {
+        // Otherwise check simple equality (==).
+        $this->assertNotEqual($link[$key], $value, t('Not equal values for link field @key.', array('@key' => $key)));
+      }
+    }
+  }
+
   /**
    * Assert that a link is found in the sitemap.
    *
@@ -76,35 +148,13 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
     return $link;
   }
 
-  protected function drupalGetSitemap($language = '', $regenerate = FALSE) {
-    if ($regenerate) {
-      $this->regenerateSitemap();
-    }
-
-    $this->drupalGet('sitemap.xml', array('language' => xmlsitemap_language_load($language)));
-    $this->assertResponse(200);
-  }
-
   protected function assertLinkNotInSitemap(&$link) {
     $link = xmlsitemap_load_link(array('id' => $link['id'], 'type' => $link['type']));
     $this->assertTrue(!$link || !$link['access'] || !$link['status'], t('Link found in sitemap.'));
     return $link;
   }
 
-  protected function assertLinkValues($link, array $values) {
-    foreach ($values as $key => $value) {
-      if ($value === NULL || $link[$key] === NULL) {
-        // For nullable fields, always check for identical values (===).
-        $this->assertIdentical($link[$key], $value, t('Identical values for link field @key.', array('@key' => $key)));
-      }
-      else {
-        // Otherwise check simple equality (==).
-        $this->assertEqual($link[$key], $value, t('Equal values for link field @key.', array('@key' => $key)));
-      }
-    }
-  }
-
-  protected function assertLinksInSitemap() {
+  protected function assertRawSitemapLinks() {
     $links = func_get_args();
     foreach ($links as $link) {
       $path = url($link['loc'], array('language' => xmlsitemap_language_load($link['language']), 'absolute' => TRUE));
@@ -112,7 +162,7 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
     }
   }
 
-  protected function assertLinksNotInSitemap() {
+  protected function assertNoRawSitemapLinks() {
     $links = func_get_args();
     foreach ($links as $link) {
       $path = url($link['loc'], array('language' => xmlsitemap_language_load($link['language']), 'absolute' => TRUE));
@@ -136,15 +186,14 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
     return $link;
   }
 
-  /**
-   * Regenerate the sitemap by setting the regenerate flag and running cron.
-   */
-  protected function regenerateSitemap() {
-    variable_set('xmlsitemap_regenerate_needed', TRUE);
-    variable_set('xmlsitemap_generated_last', 0);
-    module_load_include('inc', 'xmlsitemap');
-    xmlsitemap_regenerate();
-    $this->assertTrue(variable_get('xmlsitemap_generated_last', 0), t('XML sitemaps regenerated.'));
+  protected function assertFlag($variable, $assert_value = TRUE, $reset_if_true = TRUE) {
+    $value = xmlsitemap_var($variable);
+
+    if ($reset_if_true && $value) {
+      variable_set('xmlsitemap_' . $variable, FALSE);
+    }
+
+    return $this->assertEqual($value, $assert_value, "xmlsitemap_$variable is " . ($assert_value ? 'TRUE' : 'FALSE'));
   }
 
   protected function assertXMLSitemapProblems($problem_text = FALSE) {
@@ -182,28 +231,6 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
 
   protected function assertNoWatchdogMessage(array $conditions, $message = 'Watchdog message not found.') {
     $this->assertFalse($this->getWatchdogMessage($conditions), $message);
-  }
-
-  protected function assertSitemapLink($conditions) {
-    $link = xmlsitemap_load_link($conditions);
-    $this->assertTrue($link);
-    return $link;
-  }
-
-  protected function assertNotSitemapLink($conditions) {
-    $link = xmlsitemap_load_link($conditions);
-    $this->assertFalse($link);
-    return $link;
-  }
-
-  protected function assertFlag($variable, $assert_value = TRUE, $reset_if_true = TRUE) {
-    $value = xmlsitemap_var($variable);
-
-    if ($reset_if_true && $value) {
-      variable_set('xmlsitemap_' . $variable, FALSE);
-    }
-
-    return $this->assertEqual($value, $assert_value, "xmlsitemap_$variable is " . ($assert_value ? 'TRUE' : 'FALSE'));
   }
 
   /**
@@ -255,8 +282,6 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
       $this->verbose(implode("<br />", $verbose));
     }
   }
-
-
 }
 
 class XMLSitemapUnitTest extends XMLSitemapTestHelper {
@@ -577,7 +602,6 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
 }
 
 class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
-
   public static function getInfo() {
     return array(
       'name' => 'XML sitemap interface tests',

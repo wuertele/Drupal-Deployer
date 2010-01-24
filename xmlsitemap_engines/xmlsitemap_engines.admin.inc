@@ -40,7 +40,7 @@ function xmlsitemap_engines_settings_form() {
   $form['xmlsitemap_engines_custom_urls'] = array(
     '#type' => 'textarea',
     '#title' => t('Custom submission URLs'),
-    '#description' => t('Enter one custom submission URL per line. The token [sitemap] will be replaced with the URL to your sitemap. For example: %example-before would become %example-after.', array('%example-before' => 'http://example.com/ping?[sitemap]', '%example-after' => xmlsitemap_engines_prepare_url('http://example.com/ping?[sitemap]', url('sitemap.xml', xmlsitemap_get_url_options())))),
+    '#description' => t('Enter one custom submission URL per line. The token [sitemap] will be replaced with the URL to your sitemap. For example: %example-before would become %example-after.', array('%example-before' => 'http://example.com/ping?[sitemap]', '%example-after' => xmlsitemap_engines_prepare_url('http://example.com/ping?[sitemap]', url('sitemap.xml', array('absolute' => TRUE))))),
     '#default_value' => variable_get('xmlsitemap_engines_custom_urls', ''),
     '#rows' => 2,
     '#wysiwyg' => FALSE,
