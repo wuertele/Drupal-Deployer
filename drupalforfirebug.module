@@ -23,6 +23,9 @@ function drupalforfirebug_menu() {
 */
 function drupalforfirebug_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
   global $dfp_runtime;
+  if (!user_access('Access Firebug Debug')) {
+    return;
+  }
   $nid = (isset($node->nid)) ? $node->nid : '*'. t('NEW') . '*';
   $data = drupalforfirebug_array_compare((array) $dfp_runtime['drupalforfirebug_nodes']['original'][$node->type][$nid], (array) $node);
   $output = drupalforfirebug_field_object('node', $nid, $op, $data);
@@ -34,6 +37,9 @@ function drupalforfirebug_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
 */
 function drupalforfirebug_views_pre_view(&$view, &$display_id) {
   global $dfp_runtime;
+  if (!user_access('Access Firebug Debug')) {
+    return;
+  }
   $data = drupalforfirebug_array_compare((array) $dfp_runtime['drupalforfirebug_views']['original'][$view->name], (array) $view);
   $output = drupalforfirebug_field_object('view', $view->name, NULL, $data);
   drupalforfirebug_log($output, 'hook_views');
@@ -44,6 +50,9 @@ function drupalforfirebug_views_pre_view(&$view, &$display_id) {
 */
 function drupalforfirebug_form_alter(&$form, $form_state, $form_id) {
   global $dfp_runtime;
+  if (!user_access('Access Firebug Debug')) {
+    return;
+  }
   if ($form_id != 'drupalforfirebug_execute_form') {
     $form_modified = (array) $form;
     $data = drupalforfirebug_array_compare($dfp_runtime['drupalforfirebug_forms']['original'][$form_id], $form_modified);
@@ -57,6 +66,9 @@ function drupalforfirebug_form_alter(&$form, $form_state, $form_id) {
 */
 function drupalforfirebug_user($op, &$edit, &$account, $category = NULL) {
   global $dfp_runtime;
+  if (!user_access('Access Firebug Debug')) {
+    return;
+  }
   if (isset($account->uid)) { 
     $uid = $account->uid;
     $name = $account->name;
@@ -203,43 +215,44 @@ function drupalforfirebug_get_exec_php_callback() {
 * Output Function to Return Hidden Div Containers in Footer
 */
 function drupalforfirebug_exit() {
-  if (user_access('Access Firebug Debug')) {
-    $output = '<div style="display: none" id="drupalforfirebug_general">';
-    $output .= '<fieldset>';
-    $output .= '<legend>' . t('Drupal for Firebug General Messages') . '</legend>';
-    $general_messages = drupalforfirebug_get('general');
-    $output .= $general_messages;
-    if (!$general_messages) {
-      $output .= t('There were no messages sent to the general log. Please use "firep($item, $optional_title)" to output messages to this console.');
-    }
-    $output .= '</div>';
-    $output .= '<div style="display: none" id="drupalforfirebug_sql">';
-    $output .= drupalforfirebug_get_sql_log();
-    $output .= '</div>';
-    $output .= '<div style="display: none" id="drupalforfirebug_hook_form_alter">';
-    $output .= $form_alter_output = drupalforfirebug_get('hook_form_alter');
-    if (!$form_alter_output) { $output .= t('There was no form altering.'); }
-    $output .= '</div>';
-    $output .= '<div style="display: none" id="drupalforfirebug_hook_user">';
-    $output .= $user_output = drupalforfirebug_get('hook_user');
-    if (!$user_output) { $output .= t('There was no user processing.'); }
-    $output .= '</div>';
-    $output .= '<div style="display: none" id="drupalforfirebug_hook_nodeapi">';
-    $output .= $node_api_output = drupalforfirebug_get('hook_nodeapi');
-    if (!$node_api_output) { $output .= t('There was no node processing.'); }
-    $output .= '</div>';
-    $output .= '<div style="display: none" id="drupalforfirebug_hook_views">';
-    if (module_exists('views')) {
-      $output .= $views_output = drupalforfirebug_get('hook_views');
-      if (!$views_output) { $output .= t('There was no views processing.'); }
-    } else {
-      $output .= t('The views module is not installed.');
-    }
-    $output .= '</div>';
-    $output .= '<div style="display: none" id="drupalforfirebug_php">';
-    $output .= drupalforfirebug_get_php_exec_area();
-    $output .= '</div>';
+  if (!user_access('Access Firebug Debug')) {
+    return;
   }
+  $output = '<div style="display: none" id="drupalforfirebug_general">';
+  $output .= '<fieldset>';
+  $output .= '<legend>' . t('Drupal for Firebug General Messages') . '</legend>';
+  $general_messages = drupalforfirebug_get('general');
+  $output .= $general_messages;
+  if (!$general_messages) {
+    $output .= t('There were no messages sent to the general log. Please use "firep($item, $optional_title)" to output messages to this console.');
+  }
+  $output .= '</div>';
+  $output .= '<div style="display: none" id="drupalforfirebug_sql">';
+  $output .= drupalforfirebug_get_sql_log();
+  $output .= '</div>';
+  $output .= '<div style="display: none" id="drupalforfirebug_hook_form_alter">';
+  $output .= $form_alter_output = drupalforfirebug_get('hook_form_alter');
+  if (!$form_alter_output) { $output .= t('There was no form altering.'); }
+  $output .= '</div>';
+  $output .= '<div style="display: none" id="drupalforfirebug_hook_user">';
+  $output .= $user_output = drupalforfirebug_get('hook_user');
+  if (!$user_output) { $output .= t('There was no user processing.'); }
+  $output .= '</div>';
+  $output .= '<div style="display: none" id="drupalforfirebug_hook_nodeapi">';
+  $output .= $node_api_output = drupalforfirebug_get('hook_nodeapi');
+  if (!$node_api_output) { $output .= t('There was no node processing.'); }
+  $output .= '</div>';
+  $output .= '<div style="display: none" id="drupalforfirebug_hook_views">';
+  if (module_exists('views')) {
+    $output .= $views_output = drupalforfirebug_get('hook_views');
+    if (!$views_output) { $output .= t('There was no views processing.'); }
+  } else {
+    $output .= t('The views module is not installed.');
+  }
+  $output .= '</div>';
+  $output .= '<div style="display: none" id="drupalforfirebug_php">';
+  $output .= drupalforfirebug_get_php_exec_area();
+  $output .= '</div>';
   print $output;
   unset($GLOBALS['dfp_runtime']);
 }
