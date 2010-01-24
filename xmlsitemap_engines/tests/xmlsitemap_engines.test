@@ -18,6 +18,7 @@ class XMLSitemapEnginesFunctionalTest extends XMLSitemapTestHelper {
     parent::setUp('xmlsitemap_engines', 'xmlsitemap_engines_test');
     $this->admin_user = $this->drupalCreateUser(array('access content', 'administer xmlsitemap'));
     $this->drupalLogin($this->admin_user);
+    variable_set('xmlsitemap_generated_last', REQUEST_TIME);
   }
 
   function testPing() {
@@ -42,12 +43,11 @@ class XMLSitemapEnginesFunctionalTest extends XMLSitemapTestHelper {
 
     xmlsitemap_engines_cron();
     $this->assertWatchdogMessage(array('type' => 'xmlsitemap', 'message' => 'Submitted the sitemap to %url and received response @code.'));
-    $this->assertWatchdogMessage(array('type' => 'xmlsitemap', 'message' => 'No sitemap parameter provided.'));
+    $this->assertWatchdogMessage(array('type' => 'xmlsitemap', 'message' => 'No valid sitemap parameter provided.'));
+    $this->assertWatchdogMessage(array('type' => 'page not found', 'message' => 'ping'));
 
-    $edit = array('xmlsitemap_engines_custom_urls' => url('ping', array('absolute' => TRUE, 'query' => '[sitemap]')));
+    $edit = array('xmlsitemap_engines_custom_urls' => url('ping', array('absolute' => TRUE, 'query' => 'sitemap=[sitemap]')));
     $this->drupalPost('admin/settings/xmlsitemap/engines', $edit, t('Save configuration'));
     $this->assertText(t('The configuration options have been saved.'));
-
-
   }
 }
