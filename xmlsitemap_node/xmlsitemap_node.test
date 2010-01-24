@@ -13,8 +13,6 @@ class XMLSitemapNodeTestHelper extends XMLSitemapTestHelper {
 
   function setUp() {
     parent::setUp('xmlsitemap', 'xmlsitemap_node', 'comment');
-    $this->checkFilesDirectory();
-
     $this->admin_user = $this->drupalCreateUser(array('administer nodes', 'administer content types', 'administer xmlsitemap'));
     $this->normal_user = $this->drupalCreateUser(array('create page content', 'edit any page content', 'access content'));
     variable_set('xmlsitemap_node_status_page', 1);
@@ -26,17 +24,17 @@ class XMLSitemapNodeTestHelper extends XMLSitemapTestHelper {
   //  }
   //}
 
-  protected function assertNodeInSitemap($node) {
-    $link = xmlsitemap_load_link(array('type' => 'node', 'id' => (is_object($node) ? $node->nid : $node)));
+  protected function assertNodeSitemapLinkVisible(stdClass $node) {
+    $link = xmlsitemap_load_link(array('type' => 'node', 'id' => $node->nid));
     return $this->assertSitemapLinkVisible($link);
   }
 
-  protected function assertNodeNotInSitemap($node) {
-    $link = xmlsitemap_load_link(array('type' => 'node', 'id' => (is_object($node) ? $node->nid : $node)));
+  protected function assertNodeSitemapLinkNotVisible(stdClass $node) {
+    $link = xmlsitemap_load_link(array('type' => 'node', 'id' => $node->nid));
     return $this->assertSitemapLinkNotVisible($link);
   }
 
-  protected function assertNodeLinkValues($node, array $values) {
+  protected function assertNodeSitemapLinkValues(stdClass $node, array $values) {
     $link = xmlsitemap_load_link(array('type' => 'node', 'id' => $node->nid));
     if (!$link) {
       $this->fail(t('Could not load sitemap link for node @nid.', array('@nid' => $node->nid)));
@@ -72,7 +70,7 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
 
   function testNodeSettings() {
     $node = $this->drupalCreateNode(array('status' => FALSE, 'uid' => $this->normal_user->uid));
-    $this->assertNodeLinkValues($node, array('access' => 0, 'status' => 1, 'priority' => 0.5, 'status_override' => 0, 'priority_override' => 0));
+    $this->assertNodeSitemapLinkValues($node, array('access' => 0, 'status' => 1, 'priority' => 0.5, 'status_override' => 0, 'priority_override' => 0));
 
     $this->drupalLogin($this->normal_user);
     $this->drupalGet('node/' . $node->nid . '/edit');
@@ -85,7 +83,7 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     );
     $this->drupalPost('node/' . $node->nid . '/edit', $edit, t('Save'));
     $this->assertText('Page Test node title has been updated.');
-    $this->assertNodeLinkValues($node, array('access' => 0, 'status' => 1, 'priority' => 0.5, 'status_override' => 0, 'priority_override' => 0));
+    $this->assertNodeSitemapLinkValues($node, array('access' => 0, 'status' => 1, 'priority' => 0.5, 'status_override' => 0, 'priority_override' => 0));
 
     $this->drupalLogin($this->admin_user);
     $this->drupalGet('node/' . $node->nid . '/edit');
@@ -99,7 +97,7 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     );
     $this->drupalPost('node/' . $node->nid . '/edit', $edit, t('Save'));
     $this->assertText('Page Test node title has been updated.');
-    $this->assertNodeLinkValues($node, array('access' => 1, 'status' => 0, 'priority' => 0.9, 'status_override' => 1, 'priority_override' => 1));
+    $this->assertNodeSitemapLinkValues($node, array('access' => 1, 'status' => 0, 'priority' => 0.9, 'status_override' => 1, 'priority_override' => 1));
 
     $edit = array(
       'xmlsitemap[status]' => 'default',
@@ -108,7 +106,7 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     );
     $this->drupalPost('node/' . $node->nid . '/edit', $edit, t('Save'));
     $this->assertText('Page Test node title has been updated.');
-    $this->assertNodeLinkValues($node, array('access' => 0, 'status' => 1, 'priority' => 0.5, 'status_override' => 0, 'priority_override' => 0));
+    $this->assertNodeSitemapLinkValues($node, array('access' => 0, 'status' => 1, 'priority' => 0.5, 'status_override' => 0, 'priority_override' => 0));
   }
 
   /**
@@ -118,7 +116,7 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     $this->drupalLogin($this->admin_user);
 
     $node_old = $this->drupalCreateNode();
-    $this->assertNodeLinkValues($node_old, array('status' => 1, 'priority' => 0.5));
+    $this->assertNodeSitemapLinkValues($node_old, array('status' => 1, 'priority' => 0.5));
 
     $edit = array(
       'xmlsitemap_node_status' => 0,
@@ -129,8 +127,8 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     $this->assertText(t('The content type Page has been updated.'));
 
     $node = $this->drupalCreateNode();
-    $this->assertNodeLinkValues($node, array('status' => 0, 'priority' => 0.0));
-    $this->assertNodeLinkValues($node_old, array('status' => 0, 'priority' => 0.0));
+    $this->assertNodeSitemapLinkValues($node, array('status' => 0, 'priority' => 0.0));
+    $this->assertNodeSitemapLinkValues($node_old, array('status' => 0, 'priority' => 0.0));
 
     $edit = array(
       'xmlsitemap_node_status' => 1,
@@ -139,8 +137,8 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     $this->drupalPost('admin/content/node-type/page', $edit, t('Save content type'));
     $this->assertText(t('The content type Page has been updated.'));
 
-    $this->assertNodeLinkValues($node, array('status' => 1, 'priority' => 0.5));
-    $this->assertNodeLinkValues($node_old, array('status' => 1, 'priority' => 0.5));
+    $this->assertNodeSitemapLinkValues($node, array('status' => 1, 'priority' => 0.5));
+    $this->assertNodeSitemapLinkValues($node_old, array('status' => 1, 'priority' => 0.5));
 
     //$this->drupalPost('node/' . $node->nid . '/edit', array(), t('Save'));
     //$this->assertText(t('Page @title has been updated.', array('@title' => $node->title)));
@@ -160,8 +158,6 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     for ($i = 1; $i <= ($limit + 1); $i++) {
       $node = $this->drupalCreateNode();
       array_push($nodes, $node);
-      // Create a link with the same ID but different type.
-      $this->addSitemapLink(array('id' => $node->nid));
       // Need to delay by one second so the nodes don't all have the same
       // timestamp.
       sleep(1);
@@ -177,7 +173,7 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
       $node = array_pop($nodes);
       if ($i <= $limit) {
         // The first $limit nodes should be inserted.
-        $this->assertNodeLinkValues($node, array('access' => 1, 'status' => 1, 'lastmod' => $node->changed));
+        $this->assertNodeSitemapLinkValues($node, array('access' => 1, 'status' => 1, 'lastmod' => $node->changed));
       }
       else {
         // Any beyond $limit should not be in the sitemap.
