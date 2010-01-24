@@ -272,7 +272,7 @@ function xmlsitemap_add_form_type_summary(&$form, $type, $items) {
   $statuses = xmlsitemap_get_status_options(NULL);
 
   $rows = array();
-  foreach ($items as $item) {
+  foreach ($items as $item_type => $item) {
     $rows[] = array(
       !empty($type['access']) ? l($item['name'], $item['link'], array('query' => drupal_get_destination())) : check_plain($item['name']),
       $statuses[$item['status'] ? 1 : 0],
@@ -282,13 +282,6 @@ function xmlsitemap_add_form_type_summary(&$form, $type, $items) {
 
   $form[$type['type']]['list'] = array(
     '#value' => theme('table', $header, $rows),
-  );
-
-  $count = db_result(db_query("SELECT COUNT(id) FROM {xmlsitemap} WHERE type = '%s' AND access = 1 AND status = 1", $type['type']));
-  $form[$type['type']]['count'] = array(
-    '#type' => 'item',
-    '#value' => format_plural($count, 'There is 1 @type link in the XML sitemap.', 'There are @count @type links in the XML sitemap.', array('@type' => drupal_strtolower($type['type']))),
-    '#access' => xmlsitemap_var('developer_mode'),
   );
 }
 
