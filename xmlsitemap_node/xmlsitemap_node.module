@@ -35,10 +35,6 @@ function xmlsitemap_node_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       break;
     case 'update':
       $link = xmlsitemap_node_create_link($node);
-      if (!empty($node->revision)) {
-        // Update the change frequency.
-        xmlsitemap_recalculate_changefreq($link);
-      }
       xmlsitemap_save_link($link);
       break;
     case 'delete':
@@ -57,11 +53,7 @@ function xmlsitemap_node_comment($comment, $op) {
     case 'unpublish':
       $comment = (object) $comment;
       if ($node = node_load($comment->nid, NULL, TRUE)) {
-        $node->xmlsitemap = xmlsitemap_load_link(array('type' => 'node', 'id' => $node->nid));
         $link = xmlsitemap_node_create_link($node);
-        if ($op == 'publish') {
-          xmlsitemap_recalculate_changefreq($link);
-        }
         xmlsitemap_save_link($link);
       }
       break;
@@ -170,22 +162,6 @@ function xmlsitemap_node_form_alter(&$form, $form_state, $form_id) {
     if (user_access('administer content types')) {
       $form['xmlsitemap']['#description'] = t('The default XML sitemap settings for this content type can be changed <a href="@link-type">here</a>.', array('@link-type' => url('admin/content/node-type/' . $node->type, array('query' => drupal_get_destination()))));
     }
-
-    //// The following values should not exist for new nodes.
-    //if ($node->nid) {
-    //  $form['xmlsitemap']['lastmod'] = array(
-    //    '#type' => 'value',
-    //    '#value' => $node->xmlsitemap['lastmod'],
-    //  );
-    //  $form['xmlsitemap']['changefreq'] = array(
-    //    '#type' => 'value',
-    //    '#value' => $node->xmlsitemap['changefreq'],
-    //  );
-    //  $form['xmlsitemap']['changecount'] = array(
-    //    '#type' => 'value',
-    //    '#value' => $node->xmlsitemap['changecount'],
-    //  );
-    //}
   }
 }
 
@@ -310,9 +286,12 @@ function xmlsitemap_node_create_link(&$node) {
     'priority' => variable_get('xmlsitemap_node_priority_' . $node->type, 0.5),
     'priority_default' => variable_get('xmlsitemap_node_priority_' . $node->type, 0.5),
     'priority_override' => 0,
-    'changefreq' => $node->nid ? xmlsitemap_calculate_changefreq(xmlsitemap_node_get_timestamps($node)) : 0,
-    'changecount' => $node->nid ? count(xmlsitemap_node_get_timestamps($node)) - 1 : 0,
   );
+
+  // Always recalculate changefreq and changecount.
+  $timestamps = xmlsitemap_node_get_timestamps($node);
+  $node->xmlsitemap['changefreq'] = $node->nid ? xmlsitemap_calculate_changefreq($timestamps) : 0;
+  $node->xmlsitemap['changecount'] = $node->nid ? count($timestamps) - 1 : 0;
 
   // The following values must always be checked because they are volatile.
   $node->xmlsitemap['lastmod'] = isset($node->changed) ? $node->changed : REQUEST_TIME;
