@@ -17,6 +17,34 @@ function unitsapi_help($path, $arg) {
   }
 }
 
+ /**
+ * Implimentation of hook_define_units() from the Units module.
+ *
+ * Exposes all units defined in the units.xml to the units module.
+ *
+ * @return 
+ *  Array of arrays of unit definitions, with unit ids as keys.
+ * 
+ * @see hook_define_units()
+ */
+function unitsapi_define_units() {
+  $units = unitsapi_get_units();
+  $converted_units = array();
+  if (!empty($units)) {
+    foreach ($units as $unit_name => $unit) {
+      $converted_units[$unit['kind'] . '_' . $unit_name] = array(
+        'shortname'   => $unit['symbol'],
+        'fullname'    => t($unit['singular']),
+        'symbol'      => $unit['symbol'],
+        'category_id' => $unit['kind'],
+        'category'    => t($unit['kind']),
+        'decimals'    => '0',
+      );
+    }
+  }
+  return $converted_units;
+}
+
 /**
  * The API call for all unit conversions.
  *
