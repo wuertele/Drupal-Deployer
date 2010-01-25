@@ -8,7 +8,7 @@
 
 function services_keyauth_admin_keys_list() {
   $keys = services_keyauth_get_keys();
-  $header = array(t('Key'), t('Title'), t('Domain'), t('IP Addresses'), array('data' => t('Operations'), 'colspan' => '2'));
+  $header = array(t('Key'), t('Title'), t('Domain'), array('data' => t('Operations'), 'colspan' => '2'));
   $rows = array();
 
   foreach ($keys as $kid => $key) {
@@ -17,7 +17,6 @@ function services_keyauth_admin_keys_list() {
     $row[] = $kid;
     $row[] = $key->title;
     $row[] = $key->domain;
-    $row[] = check_plain(implode(',', array_map("trim", explode("\n", $key->ip_addresses))));
 
     // Populate the operations field.
     $operations = array();
@@ -35,7 +34,7 @@ function services_keyauth_admin_keys_list() {
   }
 
   if (empty($rows)) {
-    $rows[] = array(array('data' => t('No API keys created.'), 'colspan' => '6', 'class' => 'message'));
+    $rows[] = array(array('data' => t('No API keys created.'), 'colspan' => '5', 'class' => 'message'));
   }
 
   return theme('table', $header, $rows);
@@ -114,14 +113,14 @@ function services_keyauth_admin_keys_save(&$key) {
     WHERE kid = '%s'", $key['kid']));
 
   if ($is_existing) {
-    db_query("UPDATE {services_keys} SET title = '%s', domain = '%s', ip_addresses = '%s'
-      WHERE kid = '%s'", $key['title'], $key['domain'], $key['ip_addresses'], $key['kid']);
+    db_query("UPDATE {services_keys} SET title = '%s', domain = '%s'
+      WHERE kid = '%s'", $key['title'], $key['domain'], $key['kid']);
     db_query("DELETE FROM {services_key_permissions} WHERE kid = '%s'", $key['kid']);
     $return = SAVED_UPDATED;
   }
   else {
-    db_query("INSERT INTO {services_keys} (kid, title, domain, ip_addresses)
-      VALUES ('%s', '%s', '%s', '%s')", $key['kid'], $key['title'], $key['domain'], $key['ip_addresses']);
+    db_query("INSERT INTO {services_keys} (kid, title, domain)
+      VALUES ('%s', '%s', '%s')", $key['kid'], $key['title'], $key['domain']);
     $return = SAVED_NEW;
   }
   foreach ($key['method_access'] as $method => $value) {
