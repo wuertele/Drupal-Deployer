@@ -17,14 +17,14 @@ function unitsapi_help($path, $arg) {
   }
 }
 
- /**
+/**
  * Implementation of hook_define_units().
  *
  * Exposes all units defined in the units.xml to the units module.
  *
- * @return 
- *  Array of arrays of unit definitions, with unit ids as keys.
- * 
+ * @return
+ *   Array of arrays of unit definitions, with unit ids as keys.
+ *
  * @see hook_define_units()
  */
 function unitsapi_define_units() {
@@ -55,8 +55,7 @@ function unitsapi_define_units() {
  * @param $to
  *   A string containing the name of the measurement to convert to.
  * @param $details
- *   A boolean value.  TRUE returns an array with details about the conversion.  FALSE returns
- *   simply the converted value.  Default is FALSE.
+ *   TRUE returns a detailed conversion array.  FALSE returns the value only.
  * @return
  *   A float containing the result of the conversion. FALSE if an error occured.
  */
@@ -248,7 +247,7 @@ function _unitsapi_convert_temperature($value, $factor) {
 }
 
 /**
- * Helper function to generate a table of unit keys, symbols, and conversion factors.  Used in hook_help()
+ * Helper function to generate a table of units.
  *
  * @return
  *   A themed table of unit keys, symbols, and conversion factors.
@@ -258,9 +257,9 @@ function _unitsapi_key_table() {
   $units = unitsapi_get_units();
 
   $header = array(
-    t('KEY'),
-    t('UNIT NAME'),
-    t('CONVERSION FACTOR'),
+    t('Key'),
+    t('Unit name'),
+    t('Conversion factor'),
   );
 
   if (!empty($units) && is_array($units)) {
@@ -277,7 +276,7 @@ function _unitsapi_key_table() {
         $output_factor = '';
 
         foreach ($unit['factor'] as $factor_key => $factor) {
-          $output_factor .= t('from @factor-key: <a href="@source-url">@factor</a>', array('@factor-key' => $factor_key, '@source-url' => url($unit['source']), '@factor' => $factor)) .'<br />';
+          $output_factor .= t('from @factor-key:',  array('@factor-key' => $factor_key)) . ' ' . l($factor, $unit['source']) . '<br />';
         }
 
         $row = array(
@@ -290,7 +289,7 @@ function _unitsapi_key_table() {
         $row = array(
           check_plain($key),
           t('@singular (@symbol)', array('@singular' => $unit['singular'], '@symbol' => $unit['symbol'])),
-          t('<a href="@source-url">@factor</a>', array('@source-url' => url($unit['source']), '@factor' => $unit['factor'])),
+          l($unit['factor'], $unit['source']),
         );
       }
 
