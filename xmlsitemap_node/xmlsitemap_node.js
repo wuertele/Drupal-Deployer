@@ -1,5 +1,7 @@
 // $Id$
 
+(function ($) {
+
 Drupal.verticalTabs = Drupal.verticalTabs || {};
 
 Drupal.verticalTabs.xmlsitemap = function() {
@@ -14,4 +16,6 @@ Drupal.verticalTabs.xmlsitemap = function() {
   vals.push(Drupal.t('Priority: @value', { '@value': priority }));
 
   return vals.join('<br />');
-}
+};
+
+})(jQuery);
