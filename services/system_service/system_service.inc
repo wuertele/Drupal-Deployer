@@ -84,7 +84,7 @@ function system_service_getservices() {
  */
 function system_service_cache_clear_all() {
   drupal_flush_all_caches();
-  watchdog('cache clear service', 'caches cleared');
+  watchdog('system service', 'caches cleared');
 }
 
 /**
