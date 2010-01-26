@@ -23,7 +23,7 @@ function node_service_get($nid, $fields = array()) {
 
   if ($node) {
     // Apply field level content permissions
-    if (module_exists('content_permissions') && variable_get('services_use_content_permissions', FALSE)) {
+    if (module_exists('content') && variable_get('services_use_content_permissions', FALSE)) {
       $content_fields = content_fields(NULL, $node->type);
       foreach ($content_fields as $field_name => $field_info) {
         if (isset($node->$field_name)) {
