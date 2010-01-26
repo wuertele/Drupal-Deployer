@@ -325,6 +325,8 @@ function xmlsitemap_add_form_type_options(&$form, $module, $options) {
 
 /**
  * Add a link's XML sitemap options to the link's form.
+ *
+ * @todo Add changefreq overridability.
  */
 function xmlsitemap_add_form_link_options(&$form, $link) {
   $form['xmlsitemap'] = array(

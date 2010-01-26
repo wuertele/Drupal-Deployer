@@ -24,6 +24,7 @@ class XMLSitemapI18nWebTestCase extends XMLSitemapTestHelper {
     // Add predefined language and reset the locale cache.
     require_once './includes/locale.inc';
     locale_add_language('fr', NULL, NULL, LANGUAGE_LTR, '', 'fr');
+    drupal_init_language();
 
     variable_set('xmlsitemap_languages', array('en', 'fr'));
     variable_set('language_negotiation', LANGUAGE_NEGOTIATION_PATH);
@@ -119,11 +120,11 @@ class XMLSitemapI18nNodeTest extends XMLSitemapI18nWebTestCase {
     $node = $this->drupalCreateNode(array());
 
     $this->drupalPost('node/' . $node->nid . '/edit', array('language' => 'en'), t('Save'));
-    $node = node_load($node->nid, NULL, TRUE);
-    $this->assertIdentical($node->xmlsitemap['language'], 'en');
+    $link = $this->assertSitemapLink(array('type' => 'node', 'id' => $node->nid));
+    $this->assertIdentical($link['language'], 'en');
 
     $this->drupalPost('node/' . $node->nid . '/edit', array('language' => 'fr'), t('Save'));
-    $node = node_load($node->nid, NULL, TRUE);
-    $this->assertIdentical($node->xmlsitemap['language'], 'fr');
+    $link = $this->assertSitemapLink(array('type' => 'node', 'id' => $node->nid));
+    $this->assertIdentical($link['language'], 'fr');
   }
 }
