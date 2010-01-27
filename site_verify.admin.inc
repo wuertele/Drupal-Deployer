@@ -26,7 +26,10 @@ function site_verify_list() {
   ksort($rows);
 
   if (!$rows) {
-    $rows[] = array(array('data' => t('No active verifications. <a href="@add">Add one?</a>', array('@add' => url('admin/build/site-verify/add'))), 'colspan' => 5));
+    $rows[] = array(array(
+      'data' => t('No verifications available. <a href="@add">Add verification</a>.', array('@add' => url('admin/build/site-verify/add'))),
+      'colspan' => 5,
+    ));
   }
 
   $output = theme('table', $headers, $rows);
