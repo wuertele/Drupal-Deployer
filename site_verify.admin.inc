@@ -19,8 +19,8 @@ function site_verify_list() {
       $engines[$record->engine]['name'],
       $record->meta ? '<span title="' . check_plain(truncate_utf8($record->meta, 48)) . '">' . t('Yes') . '</spam>' : t('No'),
       $record->file ? l($record->file, $record->file) : t('None'),
-      l('Edit', 'admin/build/site-verify/edit/' . $record->svid),
-      l('Delete', 'admin/build/site-verify/delete/' . $record->svid),
+      l(t('Edit'), 'admin/build/site-verify/edit/' . $record->svid),
+      l(t('Delete'), 'admin/build/site-verify/delete/' . $record->svid),
     );
   }
   ksort($rows);
@@ -56,9 +56,18 @@ function site_verify_edit_form(&$form_state, $record = array(), $engine = NULL) 
     case 1:
       $engines = site_verify_get_engines();
       $options = array();
-      foreach ($engines as $engine) {
-        $options[$engine['key']] = $engine['name'];
+      foreach ($engines as $key => $engine) {
+        $options[$key] = $engine['name'];
       }
+      asort($options);
+
+      // Ensure custom is always last.
+      if (isset($options['custom'])) {
+        $custom = $options['custom'];
+        unset($options['custom']);
+        $options['custom'] = $custom;
+      }
+
       $form['engine'] = array(
         '#type' => 'select',
         '#title' => t('Search engine'),
@@ -90,7 +99,7 @@ function site_verify_edit_form(&$form_state, $record = array(), $engine = NULL) 
         '#type' => 'textfield',
         '#title' => t('Verification META tag'),
         '#default_value' => $record['meta'],
-        '#description' => t('This is the full meta tag provided for verification. This value will be inserted in the <a href="@front-page">front page</a>.', array('@front-page' => url())),
+        '#description' => t('This is the full meta tag provided for verification. Note that this meta tag will only be visible in the source code of your <a href="@frontpage">front page</a>.', array('@front-page' => url('<front>'))),
         '#element_validate' => $record['engine']['meta_validate'],
         '#access' => $record['engine']['meta'],
       );

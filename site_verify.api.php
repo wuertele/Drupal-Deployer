@@ -3,7 +3,7 @@
 
 /**
  * @file
- * Documentation for the site_verify API.
+ * Hooks provided by the site_verify module.
  */
 
 /**
@@ -12,13 +12,9 @@
  */
 
 /**
- * Add or edit the list of supported search engines.
- *
- * @param $engines
- *   An array (passed by reference) of the list of engines, keyed by engine
- *   type.
+ * Define supported search engines.
  */
-function hook_site_verify_engines_alter(&$engines) {
+function hook_site_verify_engine_info() {
   $engines['myengine'] = array(
     // Note that the key is limited to 32 characters.
     'name' => t('My search engine'),
@@ -30,6 +26,18 @@ function hook_site_verify_engines_alter(&$engines) {
     'meta' => TRUE,
     'meta_validate' => 'myengine_validate_meta',
   );
+  return $engines;
+}
+
+/**
+ * Alter the list of supported search engines.
+ *
+ * @param $engines
+ *   An array (passed by reference) of the list of engines, keyed by engine
+ *   type.
+ */
+function hook_site_verify_engine_alter(&$engines) {
+  $engines['myengine']['meta'] = FALSE;
 }
 
 /**

@@ -2,7 +2,7 @@
 // $Id$
 
 /**
- * Implementation of hook_menu().
+ * Implements hook_menu().
  */
 function site_verify_menu() {
   $items['admin/build/site-verify'] = array(
@@ -63,7 +63,7 @@ function site_verify_menu() {
 }
 
 /**
- * Implementation of hook_init().
+ * Implements hook_init().
  */
 function site_verify_init() {
   // Add the verification meta tags to the front page.
@@ -107,62 +107,55 @@ function site_verify_engine_load($engine) {
 }
 
 /**
- * Get a list of supported search engines, or a detail about a specific engine.
- *
- * @param $engine
- *   An optional specific engine to get details about.
- * @param $value
- *   An optional value about an engine to get details about.
- * @return
- *   If $engine and $value are not specified, a two-level array with all the
- *   engines and their details. If $engine is specified but $value is not, an
- *   array with just the details for a specific engine. If $engine and $value
- *   are both specified, just the specific detail for a specific engine.
+ * Implements hook_site_verify_engine_info().
+ */
+function site_verify_site_verify_engine_info() {
+  $engines['google'] = array(
+    'name' => t('Google'),
+    'file' => TRUE,
+    'file_contents' => TRUE,
+    'file_example' => 'google1234567890abcdef.html',
+    'meta' => TRUE,
+    'meta_example' => '<meta name="google-site-verification" content="NbwaW3WIDp_SPsSsfl78Ive7F34-znm9lxLJXjuWNGE" />',
+  );
+  $engines['yahoo'] = array(
+    'name' => t('Yahoo!'),
+    'file' => TRUE,
+    'file_contents' => TRUE,
+    'meta' => TRUE,
+  );
+  $engines['bing'] = array(
+    'name' => t('Bing'),
+    'file' => TRUE,
+    'file_contents' => TRUE,
+    'meta' => TRUE,
+  );
+  $engines['yandex'] = array(
+    'name' => t('Yandex'),
+    'file' => TRUE,
+    'file_example' => 'yandex_b5741169901f6c20.txt',
+    'meta' => TRUE,
+    'meta_example' => '<meta name="yandex-verification" content="b5741169901f6c20" />',
+  );
+  $engines['custom'] = array(
+    'name' => t('Custom verification'),
+    'file' => TRUE,
+    'file_contents' => TRUE,
+    'meta' => TRUE,
+  );
+  return $engines;
+}
+
+/**
+ * Fetch an array of supported search engines.
  */
 function site_verify_get_engines() {
   static $engines;
 
   if (!isset($engines)) {
-    $engines = array(
-      'google' => array(
-        'name' => t('Google'),
-        'file' => TRUE,
-        'file_contents' => TRUE,
-        'file_example' => 'google1234567890abcdef.html',
-        'meta' => TRUE,
-        'meta_example' => '<meta name="google-site-verification" content="NbwaW3WIDp_SPsSsfl78Ive7F34-znm9lxLJXjuWNGE" />',
-      ),
-      'yahoo' => array(
-        'name' => t('Yahoo!'),
-        'file' => TRUE,
-        'file_contents' => TRUE,
-        'meta' => TRUE,
-      ),
-      'bing' => array(
-        'name' => t('Bing'),
-        'file' => TRUE,
-        'file_contents' => TRUE,
-        'meta' => TRUE,
-      ),
-      'yandex' => array(
-        'name' => t('Yandex'),
-        'file' => TRUE,
-        'file_example' => 'yandex_b5741169901f6c20.txt',
-        'meta' => TRUE,
-        'meta_example' => '<meta name="yandex-verification" content="b5741169901f6c20" />',
-      ),
-    );
-
-    // Allow other modules to alter or add search engines.
-    drupal_alter('site_verify_engines', $engines);
-    ksort($engines);
-
-    $engines['custom'] = array(
-      'name' => t('Custom verification'),
-      'file' => TRUE,
-      'file_contents' => TRUE,
-      'meta' => TRUE,
-    );
+    // Fetch the list of engines and allow other modules to alter it.
+    $engines = module_invoke_all('site_verify_engine_info');
+    drupal_alter('site_verify_engine', $engines);
 
     // Merge the default values for each engine entry.
     foreach ($engines as $key => $engine) {
