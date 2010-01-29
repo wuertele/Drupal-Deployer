@@ -129,7 +129,8 @@ function mollom_link($type, $object, $teaser = FALSE) {
   $links = array();
 
   // Only show the links if the module is configured.
-  if (_mollom_access()) {
+  $status = _mollom_status();
+  if ($status['operable']) {
     if ($type == 'comment' && user_access('administer comments') && mollom_get_mode('comment_form')) {
       $links['mollom_report'] = array(
         'title' => t('report to Mollom'),
@@ -387,7 +388,8 @@ function mollom_data_delete($entity, $id) {
  */
 function mollom_form_alter(&$form, &$form_state, $form_id) {
   // Site administrators don't have their content checked with Mollom.
-  if (!user_access('post with no checking')) {
+  $status = _mollom_status();
+  if (!user_access('post with no checking') && $status['operable']) {
     // Retrieve configuration for this form.
     if ($mollom_form = mollom_form_load($form_id)) {
       // Determine whether to bypass validation for the current user.
@@ -728,6 +730,49 @@ function _mollom_get_openid($account) {
       return implode($ids, ' ');
     }
   }
+}
+
+/**
+ * Returns current healthiness about Mollom configuration.
+ *
+ * @param $reset
+ *   (optional) Boolean whether to reset the stored state and re-check.
+ *   Defaults to FALSE.
+ *
+ * @return
+ *   An associative array describing the current status of the module:
+ *   - operable: Boolean whether the module is considered operable, depending on
+ *     the other status indicators.
+ *   - keys: Boolean whether Mollom API keys have been configured.
+ *   - keys valid: Boolean whether Mollom API keys are valid.
+ *   - servers: Boolean whether there is a non-empty list of Mollom servers.
+ *
+ * @see mollom_requirements()
+ */
+function _mollom_status($reset = FALSE) {
+  // Load stored status.
+  $status = variable_get('mollom_status', array(
+    'operable' => FALSE,
+    'keys valid' => FALSE,
+  ));
+
+  // Both API keys are required.
+  $public_key = variable_get('mollom_public_key', '');
+  $private_key = variable_get('mollom_private_key', '');
+  $status['keys'] = (!empty($public_key) && !empty($private_key));
+
+  // A non-empty server list is required.
+  $servers = variable_get('mollom_servers', array());
+  $status['servers'] = !empty($servers);
+
+  // If we have keys and are asked to reset, check whether keys are valid.
+  if ($status['keys'] && $reset) {
+    $status['keys valid'] = mollom('mollom.verifyKey');
+    $status['operable'] = ($status['keys valid'] === TRUE);
+    variable_set('mollom_status', $status);
+  }
+
+  return $status;
 }
 
 /**
@@ -1178,11 +1223,20 @@ function mollom($method, $data = array()) {
   $refresh = FALSE;
 
   // Retrieve the list of Mollom servers from the database.
-  $servers = variable_get('mollom_servers', NULL);
+  $servers = variable_get('mollom_servers', array());
 
-  if ($servers == NULL) {
+  if (empty($servers)) {
     // Retrieve a new list of servers.
     $servers = _mollom_retrieve_server_list();
+    // If API keys are invalid, a XML-RPC error code is returned.
+    if (!is_array($servers)) {
+      return $servers;
+    }
+
+    $messages[] = array(
+      'text' => 'Refreshed servers: %servers',
+      'arguments' => array('%servers' => implode(', ', $servers)),
+    );
 
     // Store the list of servers in the database.
     variable_set('mollom_servers', $servers);
@@ -1196,13 +1250,20 @@ function mollom($method, $data = array()) {
       $result = xmlrpc($server . '/' . MOLLOM_API_VERSION, $method, $data + _mollom_authentication());
 
       if ($result === FALSE && ($error = xmlrpc_error())) {
-        if ($error->code == MOLLOM_REFRESH) {
+        if ($error->code === MOLLOM_REFRESH) {
           // Avoid endless loops.
           if (!$refresh) {
             $refresh = TRUE;
 
             // Retrieve a new list of valid Mollom servers.
             $servers = _mollom_retrieve_server_list();
+            // If API keys are invalid, the XML-RPC error code is returned.
+            // To reach this, we must have had a server list (and therefore
+            // valid keys) before, so we do not immediately return (like above),
+            // but instead trigger the fallback mode.
+            if (!is_array($servers)) {
+              break;
+            }
 
             // Reset the list of servers to restart from the first server.
             reset($servers);
@@ -1216,7 +1277,7 @@ function mollom($method, $data = array()) {
             );
           }
         }
-        elseif ($error->code == MOLLOM_REDIRECT) {
+        elseif ($error->code === MOLLOM_REDIRECT) {
           // Try the next server in the list.
           $next = next($servers);
 
@@ -1238,7 +1299,7 @@ function mollom($method, $data = array()) {
           );
 
           // Instantly return upon a 'real' error.
-          if ($error->code == MOLLOM_ERROR) {
+          if ($error->code === MOLLOM_ERROR) {
             _mollom_watchdog($messages, WATCHDOG_ERROR);
             return MOLLOM_ERROR;
           }
@@ -1254,7 +1315,17 @@ function mollom($method, $data = array()) {
   }
 
   // If none of the servers worked, activate the fallback mechanism.
-  _mollom_fallback();
+  // @todo mollom() can be invoked outside of form processing. _mollom_fallback()
+  //   unconditionally invokes form_set_error(), which always displays the
+  //   fallback error message. Ideally, we would pass a $verbose argument to
+  //   _mollom_fallback(), but for that, we'd have to know here already.
+  //   Consequently, mollom() would need that $verbose argument. In the end, we
+  //   likely want to either embed the fallback handling into form processing,
+  //   or introduce a new helper function that is invoked instead of mollom()
+  //   during form processing.
+  if ($method != 'mollom.verifyKey') {
+    _mollom_fallback();
+  }
 
   // If everything failed, we reset the server list to force Mollom to request
   // a new list.
@@ -1314,7 +1385,8 @@ function mollom_get_statistics($refresh = FALSE) {
 
   // Only fetch if $refresh is TRUE, the cache is empty, or the cache is expired.
   if ($refresh || !$cache || time() >= $cache->expire) {
-    if (_mollom_access()) {
+    $status = _mollom_status();
+    if ($status['operable']) {
       $statistics = drupal_map_assoc(array(
         'total_days',
         'total_accepted',

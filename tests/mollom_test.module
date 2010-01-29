@@ -13,10 +13,30 @@ function mollom_test_xmlrpc() {
   return array(
     // $data contains a variable amount of properties, so we cannot specify a
     // signature.
+    'mollom.verifyKey' => 'mollom_test_verify_key',
     'mollom.checkContent' => 'mollom_test_check_content',
     'mollom.getImageCaptcha' => 'mollom_test_get_captcha',
     'mollom.checkCaptcha' => 'mollom_test_check_captcha',
  );
+}
+
+/**
+ * XML-RPC callback for mollom.verifyKey to validate API keys.
+ */
+function mollom_test_verify_key($data) {
+  $storage = variable_get(__FUNCTION__, array());
+  $storage[] = $data;
+  variable_set(__FUNCTION__, $storage);
+
+  module_load_include('inc', 'mollom');
+  module_load_include('php', 'simpletest', 'drupal_web_test_case');
+  module_load_include('test', 'mollom', 'tests/mollom');
+  $expected = _mollom_authentication(MOLLOM_TEST_PUBLIC_KEY, MOLLOM_TEST_PRIVATE_KEY);
+
+  if ($data['public_key'] === $expected['public_key'] && $data['hash'] === $expected['hash']) {
+    return TRUE;
+  }
+  xmlrpc_error(MOLLOM_ERROR);
 }
 
 /**
@@ -34,6 +54,9 @@ function mollom_test_check_content($data) {
   $spam = FALSE;
   $ham = FALSE;
   foreach (array('post_title', 'post_body') as $key) {
+    if (!isset($data[$key])) {
+      continue;
+    }
     // 'spam' always has precedence.
     if (strpos($data[$key], 'spam') !== FALSE) {
       $spam = TRUE;

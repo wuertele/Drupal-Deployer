@@ -7,6 +7,41 @@
  */
 
 /**
+ * Implements hook_requirements().
+ */
+function mollom_requirements($phase = 'runtime') {
+  $requirements = array();
+  if ($phase == 'runtime') {
+    $status = _mollom_status(TRUE);
+    // Immediately return if everything is in order.
+    if ($status['operable']) {
+      return $requirements;
+    }
+    // If not, something is wrong; prepare the requirements entry and set
+    // defaults for any yet unknown edge-cases.
+    $requirements['mollom'] = array(
+      'title' => 'Mollom API keys',
+      'value' => '',
+      'severity' => REQUIREMENT_ERROR,
+    );
+    // Missing API keys.
+    if (!$status['keys']) {
+      $requirements['mollom']['value'] = t('Not configured');
+      $requirements['mollom']['description'] = t('Mollom API keys are not <a href="@settings-url">configured</a> yet.', array('@settings-url' => url('admin/settings/mollom/settings')));
+    }
+    elseif ($status['keys valid'] === NETWORK_ERROR) {
+      $requirements['mollom']['value'] = t('Network error');
+      $requirements['mollom']['description'] = t('The Mollom servers could not be contacted. Please make sure that your web server can make outgoing HTTP requests.');
+    }
+    elseif ($status['keys valid'] === MOLLOM_ERROR) {
+      $requirements['mollom']['value'] = t('Invalid');
+      $requirements['mollom']['description'] = t('The <a href="@settings-url">configured</a> Mollom API keys are invalid.', array('@settings-url' => url('admin/settings/mollom/settings')));
+    }
+  }
+  return $requirements;
+}
+
+/**
  * Implements hook_schema().
  */
 function mollom_schema() {

@@ -260,20 +260,16 @@ function mollom_admin_unprotect_form_submit($form, &$form_state) {
 /**
  * Form builder; Global Mollom settings form.
  */
-function mollom_admin_settings() {
-  $keys = _mollom_access();
-
-  if ($keys) {
-    if (!$_POST) {
-      // When a user visits the Mollom administration page, automatically
-      // clear the server list.  This causes the client to fetch a fresh
-      // server list from the server.
-      // @todo Add a timeout interval. Also consider hook_enable() together with
-      //   hook_cron().
-      variable_del('mollom_servers');
-
-      // Verify the key and output a status message.
-      _mollom_verify_key();
+function mollom_admin_settings(&$form_state) {
+  // When a user visits the Mollom administration page, automatically verify the
+  // keys and output any error messages.
+  if (empty($form_state['post'])) {
+    $status = _mollom_status(TRUE);
+    if ($status['keys valid'] === NETWORK_ERROR) {
+      drupal_set_message(t('We tried to contact the Mollom servers but we encountered a network error. Please make sure that your web server can make outgoing HTTP requests.'), 'error');
+    }
+    elseif ($status['keys valid'] === MOLLOM_ERROR) {
+      drupal_set_message(t('We contacted the Mollom servers to verify your keys: your keys do not exist or are no longer valid. Please visit the <em>Manage sites</em> page on the Mollom website again: <a href="@mollom-user">@mollom-user</a>.', array('@mollom-user' => 'http://mollom.com/user')), 'error');
     }
   }
 
@@ -298,7 +294,7 @@ function mollom_admin_settings() {
   $form['access-keys'] = array(
     '#type' => 'fieldset',
     '#title' => t('Mollom access keys'),
-    '#description' => t('In order to use Mollom, you need both a public and private key. To obtain your keys, simply <a href="@mollom-register">create a user account on mollom.com</a>, <a href="@mollom-login">login to mollom.com</a>, and <a href="@mollom-manager-add">create a subscription</a> for your site.  Once you created a subscription, your private and public access keys will be available from the <a href="@mollom-manager">site manager on mollom.com</a>. Copy-paste them in the form below, and you are ready to go.', array(
+    '#description' => t('To use Mollom, you need a public and private key. To obtain your keys, <a href="@mollom-login">register and login on mollom.com</a>, and <a href="@mollom-manager-add">create a subscription</a> for your site. Once you created a subscription, copy your private and public access keys from the <a href="@mollom-manager">site manager</a> into the form fields below, and you are ready to go.', array(
       '@mollom-register' => 'http://mollom.com/user/register',
       '@mollom-login' => 'http://mollom.com/user',
       '@mollom-manager-add' => 'http://mollom.com/site-manager/add',
@@ -319,26 +315,6 @@ function mollom_admin_settings() {
   );
 
   return system_settings_form($form);
-}
-
-/**
- * Verifies the Mollom key by contacting Mollom servers.
- */
-function _mollom_verify_key() {
-  $status = mollom('mollom.verifyKey');
-
-  if ($status === NETWORK_ERROR) {
-    drupal_set_message(t('We tried to contact the Mollom servers but we encountered a network error. Please make sure that your web server can make outgoing HTTP requests.'), 'error');
-    return FALSE;
-  }
-  elseif ($status === MOLLOM_ERROR) {
-    drupal_set_message(t('We contacted the Mollom servers to verify your keys: your keys do not exist or are no longer valid. Please visit the <em>Manage sites</em> page on the Mollom website again: <a href="@mollom-user">@mollom-user</a>.', array('@mollom-user' => 'http://mollom.com/user')), 'error');
-    return FALSE;
-  }
-  else {
-    drupal_set_message(t('We contacted the Mollom servers to verify your keys: the Mollom services are operating correctly. We are now blocking spam.'));
-    return TRUE;
-  }
 }
 
 /**

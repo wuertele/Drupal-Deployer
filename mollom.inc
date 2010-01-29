@@ -25,10 +25,19 @@
  *
  * Make sure your server's time is synchronized with the world clocks,
  * and that you don't share your private key with anyone else.
+ *
+ * @param $public_key
+ *   (optional) The public key to use for authentication. Only used internally.
+ * @param $private_key
+ *   (optional) The private key to use for authentication. Only used internally.
  */
-function _mollom_authentication() {
-  $public_key = variable_get('mollom_public_key', '');
-  $private_key = variable_get('mollom_private_key', '');
+function _mollom_authentication($public_key = NULL, $private_key = NULL) {
+  if (!isset($public_key)) {
+    $public_key = variable_get('mollom_public_key', '');
+  }
+  if (!isset($private_key)) {
+    $private_key = variable_get('mollom_private_key', '');
+  }
 
   // Generate a timestamp according to the dateTime format (http://www.w3.org/TR/xmlschema-2/#dateTime):
   $time = gmdate("Y-m-d\TH:i:s.\\0\\0\\0O", time());
@@ -71,6 +80,6 @@ function _mollom_retrieve_server_list() {
     }
   }
 
-  return array();
+  return xmlrpc_errno();
 }
 
