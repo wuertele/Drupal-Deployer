@@ -731,7 +731,7 @@ function _mollom_get_openid($account) {
 }
 
 /**
- * Returns current healthiness about Mollom configuration.
+ * Returns the (last known) status of the configured Mollom API keys.
  *
  * @param $reset
  *   (optional) Boolean whether to reset the stored state and re-check.
@@ -741,7 +741,8 @@ function _mollom_get_openid($account) {
  *   TRUE if the module is considered operable, or an associative array
  *   describing the current status of the module:
  *   - keys: Boolean whether Mollom API keys have been configured.
- *   - keys valid: Boolean whether Mollom API keys are valid.
+ *   - keys valid: TRUE if Mollom API keys are valid, or the error code as
+ *     returned by Mollom servers.
  *   - servers: Boolean whether there is a non-empty list of Mollom servers.
  *
  * @see mollom_requirements()
@@ -749,7 +750,6 @@ function _mollom_get_openid($account) {
 function _mollom_status($reset = FALSE) {
   // Load stored status.
   $status = variable_get('mollom_status', array(
-    'operable' => FALSE,
     'keys valid' => FALSE,
   ));
 
@@ -761,11 +761,10 @@ function _mollom_status($reset = FALSE) {
   // If we have keys and are asked to reset, check whether keys are valid.
   if ($status['keys'] && $reset) {
     $status['keys valid'] = mollom('mollom.verifyKey');
-    $status['operable'] = ($status['keys valid'] === TRUE);
     variable_set('mollom_status', $status);
   }
 
-  if ($status['operable']) {
+  if ($status['keys valid'] === TRUE) {
     return TRUE;
   }
 

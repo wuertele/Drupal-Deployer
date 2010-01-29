@@ -963,6 +963,149 @@ class MollomServerListRecoveryTestCase extends MollomWebTestCase {
   }
 }
 
+class MollomLanguageDetectionTestCase extends MollomWebTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => 'Language detection',
+      'description' => 'Tests language detection functionality.',
+      'group' => 'Mollom',
+    );
+  }
+
+  /**
+   * Test the language detection functionality at the API level without using a web interface.
+   */
+  function testLanguageDetectionAPI() {
+    // Note that Mollom supports more languages than those tested.
+    $strings = array(
+      'en' => "Hi, this is a test of the language detection code to see if it works well.",
+      'nl' => "Hallo, dit is een test van de taaldetectiecode om te controleren of het werkt.",
+      'fr' => "Bonjour, ceci est un test du detecteur langue automatique pour voir ci ça marche bien.",
+      'de' => "Bedecke deinen Himmel, Zeus, Mit Wolkendunst Und übe, dem Knaben gleich, der Disteln köpft, An Eichen dich und Bergeshöhn.",
+      'ko' => "'엄마야 누나야 강변살자. 뜰에는 반짝이는 금모래 빛. 뒷문 밖에는 갈잎의 노래",
+      'ru' => "Холуй трясется. Раб хохочет. Палач свою секиру точит. Тиран кромсает каплуна. Сверкает зимняя луна.",
+      'hu' => "Földszintiek mászófámról pillantva fejjel lefelé ti lógtok bele nézőim az űrbe ki tudja így kölcsönös kíváncsiak a helyes felelet kié",
+      'el' => "Σαν να 'χουνε την όψη της αιώνες οργωμένη. Κάτι άναρχο κι ατέλειωτο στο πρόσωπό της μένει.",
+      'ja' => "吹くからに秋の草木のしをるれば",
+      'th' => "ทั่วประเทศ ประมาณ ๔๐,๐๐๐ แห่ง ชาวไทยนับตั้งแต่ครั้งอดีตมีวิถี ชีวิตผูกพันกับพุทธศาสนาอย่างใกล้ชิด แสดงออกมาเป็น ขนบธรรมเนียมประเพณี",
+      'zh' => "螽斯羽，诜诜兮。宜尔子孙，振振兮",
+    );
+	
+    foreach ($strings as $language => $text) {
+      $result = mollom('mollom.detectLanguage', array('text' => $text));
+      $this->assertEqual($result[0]['language'], $language, t('A language code was specified and they match.'));
+      $this->assertTrue($result[0]['confidence'] > 0, t('A confidence value was specified and it is greater than 0.'));
+    }
+  }
+}
+
+class MollomBlackListTestCase extends MollomWebTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => 'Blacklisting',
+      'description' => 'Tests URL and text blacklist functionality.',
+      'group' => 'Mollom',
+    );
+  }
+
+  /**
+   * Test the URL blacklist functionality at the API level without using a web interface.
+   */
+  function testUrlBlackListAPI() {
+    // Blacklist a URL.
+    mollom('mollom.addBlacklistURL', array('url' => 'http://unicorn.com'));
+
+    // Check whether posts containing the blacklisted URL are properly blocked.
+    $result = mollom('mollom.checkContent', array(
+      'post_body' => "When the exact URL is present, the post should get blocked: http://unicorn.com",
+    ));
+    $this->assertEqual($result['spam'], MOLLOM_ANALYSIS_SPAM, t('The message was blocked.'));
+
+    $result = mollom('mollom.checkContent', array(
+      'post_body' => "When the URL is expanded in the back, the post should get blocked: http://unicorn.com/oh-my",
+    ));
+    $this->assertEqual($result['spam'], MOLLOM_ANALYSIS_SPAM, t('The message was blocked.'));
+
+    $result = mollom('mollom.checkContent', array(
+      'post_body' => "When the URL is expanded in the front, the post should get blocked: http://www.unicorn.com",
+    ));
+    $this->assertEqual($result['spam'], MOLLOM_ANALYSIS_SPAM, t('The message was blocked.'));
+
+    $result = mollom('mollom.checkContent', array(
+      'post_body' => "When the URL has a different schema, the post should get blocked: ftp://www.unicorn.com",
+    ));
+    $this->assertEqual($result['spam'], MOLLOM_ANALYSIS_SPAM, t('The message was blocked.'));
+
+    // Validate that there is one entry.
+    $blacklist = mollom('mollom.listBlacklistURL');
+    $this->assertEqual(count($blacklist), 1, t('The server-side blacklist has one entry.'));
+
+    // Although we only added one element, we're using a loop because we want to
+    // reset the blacklist in case it got somehow polluted.
+    foreach ($blacklist as $entry) {
+      $result = mollom('mollom.removeBlacklistURL', array('url' => $entry['url']));
+      $this->assertTrue($result, t('The blacklisted URL was removed.'));
+    }
+
+    // Retrieve the blacklist again, and make sure it is empty.
+    $blacklist = mollom('mollom.listBlacklistURL');
+    $this->assertEqual(count($blacklist), 0, t('The server-side blacklist is empty.'));
+  }
+
+  /**
+   * Test the text blacklist functionality at the API level without using a web interface.
+   */
+  function testTextBlackListAPI() {
+    // Blacklist a word:
+    mollom('mollom.addBlacklistText', array(
+      'text' => 'unicorn',
+      'match' => 'contains',
+      'reason' => 'spam',
+      'language' => 'en',
+    ));
+
+    // Check whether posts containing the blacklisted URL are properly blocked.
+    $result = mollom('mollom.checkContent', array(
+      'post_body' => "When the text is present, the post should get blocked: unicorn",
+    ));
+    $this->assertEqual($result['spam'], MOLLOM_ANALYSIS_SPAM, t('The message was blocked.'));
+
+    $result = mollom('mollom.checkContent', array(
+      'post_body' => "When match is 'contains', the word can be surrounded by other text: abcunicorndef",
+    ));
+    $this->assertEqual($result['spam'], MOLLOM_ANALYSIS_SPAM, t('The message was blocked.'));
+
+    // To update the work (i.e. to change the 'match' property), we simply 
+    // overwrite it.
+    mollom('mollom.addBlacklistText', array(
+      'text' => 'unicorn',
+      'match' => 'exact',
+      'reason' => 'spam',
+      'language' => 'en',
+    ));
+
+    $result = mollom('mollom.checkContent', array(
+      'post_body' => "When match is 'exact', it has to be exact: abcunicorndef",
+    ));
+    $this->assertNotEqual($result['spam'], MOLLOM_ANALYSIS_SPAM, t('The message was not blocked.'));
+
+    // Validate that there is one entry.
+    $blacklist = mollom('mollom.listBlacklistText');
+    $this->assertEqual(count($blacklist), 1, t('The server-side blacklist has one entry.'));
+
+    // Although we added only one element, we're using a loop because we want to
+    // reset the blacklist in case it got somehow polluted.
+    foreach ($blacklist as $entry) {
+      $result = mollom('mollom.removeBlacklistText', array('text' => $entry['text']));
+      $this->assertTrue($result, t('The blacklisted text was removed.'));
+    }
+
+    // Retrieve the blacklist again, and make sure it is empty.
+    $blacklist = mollom('mollom.listBlacklistText');
+    $this->assertEqual(count($blacklist), 0, t('The server-side blacklist is empty.'));
+  }
+}
+
 /**
  * Tests Mollom form configuration functionality.
  */
