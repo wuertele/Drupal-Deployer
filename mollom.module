@@ -129,8 +129,7 @@ function mollom_link($type, $object, $teaser = FALSE) {
   $links = array();
 
   // Only show the links if the module is configured.
-  $status = _mollom_status();
-  if ($status['operable']) {
+  if (_mollom_status() === TRUE) {
     if ($type == 'comment' && user_access('administer comments') && mollom_get_mode('comment_form')) {
       $links['mollom_report'] = array(
         'title' => t('report to Mollom'),
@@ -388,8 +387,7 @@ function mollom_data_delete($entity, $id) {
  */
 function mollom_form_alter(&$form, &$form_state, $form_id) {
   // Site administrators don't have their content checked with Mollom.
-  $status = _mollom_status();
-  if (!user_access('post with no checking') && $status['operable']) {
+  if (!user_access('post with no checking') && _mollom_status() === TRUE) {
     // Retrieve configuration for this form.
     if ($mollom_form = mollom_form_load($form_id)) {
       // Determine whether to bypass validation for the current user.
@@ -740,9 +738,8 @@ function _mollom_get_openid($account) {
  *   Defaults to FALSE.
  *
  * @return
- *   An associative array describing the current status of the module:
- *   - operable: Boolean whether the module is considered operable, depending on
- *     the other status indicators.
+ *   TRUE if the module is considered operable, or an associative array
+ *   describing the current status of the module:
  *   - keys: Boolean whether Mollom API keys have been configured.
  *   - keys valid: Boolean whether Mollom API keys are valid.
  *   - servers: Boolean whether there is a non-empty list of Mollom servers.
@@ -761,16 +758,20 @@ function _mollom_status($reset = FALSE) {
   $private_key = variable_get('mollom_private_key', '');
   $status['keys'] = (!empty($public_key) && !empty($private_key));
 
-  // A non-empty server list is required.
-  $servers = variable_get('mollom_servers', array());
-  $status['servers'] = !empty($servers);
-
   // If we have keys and are asked to reset, check whether keys are valid.
   if ($status['keys'] && $reset) {
     $status['keys valid'] = mollom('mollom.verifyKey');
     $status['operable'] = ($status['keys valid'] === TRUE);
     variable_set('mollom_status', $status);
   }
+
+  if ($status['operable']) {
+    return TRUE;
+  }
+
+  // In case of an error, also indicate whether we have a non-empty server list.
+  $servers = variable_get('mollom_servers', array());
+  $status['servers'] = !empty($servers);
 
   return $status;
 }
@@ -1385,8 +1386,7 @@ function mollom_get_statistics($refresh = FALSE) {
 
   // Only fetch if $refresh is TRUE, the cache is empty, or the cache is expired.
   if ($refresh || !$cache || time() >= $cache->expire) {
-    $status = _mollom_status();
-    if ($status['operable']) {
+    if (_mollom_status() === TRUE) {
       $statistics = drupal_map_assoc(array(
         'total_days',
         'total_accepted',

@@ -265,7 +265,10 @@ function mollom_admin_settings(&$form_state) {
   // keys and output any error messages.
   if (empty($form_state['post'])) {
     $status = _mollom_status(TRUE);
-    if ($status['keys valid'] === NETWORK_ERROR) {
+    if ($status === TRUE) {
+      // Everything is in order.
+    }
+    elseif ($status['keys valid'] === NETWORK_ERROR) {
       drupal_set_message(t('We tried to contact the Mollom servers but we encountered a network error. Please make sure that your web server can make outgoing HTTP requests.'), 'error');
     }
     elseif ($status['keys valid'] === MOLLOM_ERROR) {
