@@ -3,12 +3,23 @@
 (function ($) {
 
 /**
+ * Open Mollom privacy policy link in a new window.
+ *
+ * Required for valid XHTML Strict markup.
+ */
+Drupal.behaviors.mollomPrivacy = function (context) {
+  $('.mollom-privacy a', context).click(function () {
+    this.target = '_blank';
+  });
+};
+
+/**
  * Attach click event handlers for CAPTCHA links.
  */
-Drupal.behaviors.mollom = function(context) {
+Drupal.behaviors.mollomCaptcha = function (context) {
   $('a.mollom-audio-captcha', context).click(getAudioCaptcha);
   $('a.mollom-image-captcha', context).click(getImageCaptcha);
-}
+};
 
 function getAudioCaptcha() {
   var context = $(this).parents('.form-item').parent();
