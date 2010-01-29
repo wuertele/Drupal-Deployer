@@ -96,27 +96,31 @@ function xmlsitemap_settings_form() {
     '#description' => t('Exposes additional settings intended for development.'),
   );
 
-  $form['frontpage'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Front page'),
-    '#description' => t('The front page path can be changed at <a href="@url-frontpage">@url-frontpage</a>.', array('@url-frontpage' => url('admin/settings/site-information'))),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#weight' => 20,
-    '#group' => 'xmlsitemap_settings',
-  );
-  $form['frontpage']['xmlsitemap_frontpage_priority'] = array(
-    '#type' => 'select',
-    '#title' => t('Priority'),
-    '#options' => xmlsitemap_get_priority_options(),
-    '#default_value' => xmlsitemap_var('frontpage_priority'),
-  );
-  $form['frontpage']['xmlsitemap_frontpage_changefreq'] = array(
-    '#type' => 'select',
-    '#title' => t('Change frequency'),
-    '#options' => xmlsitemap_get_changefreq_options(),
-    '#default_value' => xmlsitemap_var('frontpage_changefreq'),
-  );
+  $entites = xmlsitemap_get_link_info(NULL, TRUE);
+  foreach ($entites as $entity => $entity_info) {
+    $form[$entity] = array(
+      '#type' => 'fieldset',
+      '#title' => $entity_info['label'],
+      '#collapsible' => TRUE,
+      '#collapsed' => TRUE,
+      '#group' => 'xmlsitemap_settings',
+      '#weight' => 30,
+    );
+
+    if (!empty($entity_info['bundles'])) {
+      // If this entity has bundles, show a bundle setting summary.
+      xmlsitemap_add_form_entity_summary($form[$entity], $entity, $entity_info);
+    }
+
+    if (!empty($entity_info['xmlsitemap']['settings callback'])) {
+      // Add any entity-specific settings.
+      $entity_info['xmlsitemap']['settings callback']($form[$entity]);
+    }
+
+    // Ensure that the entity fieldset is not shown if there are no accessible
+    // sub-elements.
+    $form[$entity]['#access'] = (bool) xmlsitemap_element_get_visible_children($form[$entity]);
+  }
 
   $form['#pre_render'][] = 'vertical_tabs_form_pre_render';
   $form['#validate'][] = 'xmlsitemap_settings_form_validate';
@@ -126,6 +130,48 @@ function xmlsitemap_settings_form() {
   $form = system_settings_form($form);
   $form['buttons']['#weight'] = 100;
   return $form;
+}
+
+/**
+ * Backport of element_get_visible_children() from Drupal 7.
+ */
+function xmlsitemap_element_get_visible_children(array $elements) {
+  $visible_children = array();
+
+  foreach (element_children($elements) as $key) {
+    $child = $elements[$key];
+
+    // Skip un-accessible children.
+    if (isset($child['#access']) && !$child['#access']) {
+      continue;
+    }
+
+    // Skip value and hidden elements, since they are not rendered.
+    if (isset($child['#type']) && in_array($child['#type'], array('value', 'hidden'))) {
+      continue;
+    }
+
+    $visible_children[$key] = $child;
+  }
+
+  return array_keys($visible_children);
+}
+
+/**
+ * Check if there is a child element accessible in a parent element.
+ *
+ * @param $element
+ *   A form element.
+ * @return
+ *   TRUE if a child element of $element if accessible, or FALSE otherwise.
+ */
+function xmlsitemap_element_children_visisble($element) {
+  foreach (element_children($element) as $key) {
+    if (!isset($element[$key]['#access']) || !empty($element[$key]['#access']) || !isset($element[$key]['#type'])) {
+      return TRUE;
+    }
+  }
+  return FALSE;
 }
 
 /**
@@ -235,54 +281,80 @@ function xmlsitemap_rebuild_form_submit($form, &$form_state) {
 }
 
 /**
- * Create a list of items that can be included in the sitemap.
- *
- * @param $form
- *   An array with the form to add the type summary.
- * @param $type
- *   An array of details about the type with the following key/value pairs:
- *     type: The {xmlsitemap}.type value
- *     title: The title of the type (usually plural form)
- *     item_title: The title of each individual item of this type (singular)
- *     access: An optional boolean that if TRUE will create links to each
- *             item's edit page as specified by the link key in $items.
- * @param $items
- *   An array of items with the following keys:
- *     'name': The translated name of the item.
- *     'link': The path to edit the item. If $type['access'] is not TRUE, just
-               the item's name will be shown instead of a link.
- *     'status': The item's default inclusion status.
- *     'priority': The items default priority.
+ * Add a table summary for an entity and its bundles.
  */
-function xmlsitemap_add_form_type_summary(&$form, $type, $items) {
-  $form[$type['type']] = array(
-    '#type' => 'fieldset',
-    '#title' => $type['title'],
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
-    '#group' => 'xmlsitemap_settings',
-  );
-
+function xmlsitemap_add_form_entity_summary(&$form, $entity, array $entity_info) {
   $header = array(
-    $type['item_title'],
+    t('Type'),
     t('Inclusion'),
     t('Priority'),
+    t('Total'),
+    t('Indexed'),
+    t('Visible'),
   );
   $priorities = xmlsitemap_get_priority_options(NULL, FALSE);
   $statuses = xmlsitemap_get_status_options(NULL);
 
   $rows = array();
-  foreach ($items as $item_type => $item) {
-    $rows[] = array(
-      !empty($type['access']) ? l($item['name'], $item['link'], array('query' => drupal_get_destination())) : check_plain($item['name']),
-      $statuses[$item['status'] ? 1 : 0],
-      $priorities[number_format($item['priority'], 1)],
+  $totals = array('total' => 0, 'indexed' => 0, 'visible' => 0);
+  foreach ($entity_info['bundles'] as $bundle => $bundle_info) {
+    $bundle_info['admin'] += array(
+      'access callback' => 'user_access',
+      'access arguments' => array(),
+      'access' => FALSE,
     );
+    if ($bundle_info['admin']['access callback']) {
+      $bundle_info['admin']['access'] = call_user_func_array($bundle_info['admin']['access callback'], $bundle_info['admin']['access arguments']);
+    }
+
+    // Fetch current per-bundle link total and indexed counts.
+    $status = xmlsitemap_get_link_type_indexed_status($entity, $bundle);
+    $totals['total'] += $status['total'];
+    $totals['indexed'] += $status['indexed'];
+    $totals['visible'] += $status['visible'];
+
+    $row = array();
+    if ($bundle_info['admin']['access']) {
+      $row[] = l($bundle_info['label'], $bundle_info['admin']['real path'], array('query' => drupal_get_destination()));
+    }
+    else {
+      $row[] = $bundle_info['label'];
+    }
+    $row[] = $statuses[$bundle_info['xmlsitemap']['status'] ? 1 : 0];
+    $row[] = $priorities[number_format($bundle_info['xmlsitemap']['priority'], 1)];
+    $row[] = $status['total'];
+    $row[] = $status['indexed'];
+    $row[] = $status['visible'];
+    $rows[] = $row;
   }
 
-  $form[$type['type']]['list'] = array(
-    '#value' => theme('table', $header, $rows),
-  );
+  if ($rows) {
+    $rows[] = array(
+      array(
+        'data' => t('Totals'),
+        'colspan' => 3,
+        'header' => TRUE,
+      ),
+      array(
+        'data' => $totals['total'],
+        'header' => TRUE,
+      ),
+      array(
+        'data' => $totals['indexed'],
+        'header' => TRUE,
+      ),
+      array(
+        'data' => $totals['visible'],
+        'header' => TRUE,
+      ),
+      /*$totals['total'],
+      $totals['indexed'],
+      $totals['visible'],*/
+    );
+    $form['summary'] = array(
+      '#value' => theme('table', $header, $rows),
+    );
+  }
 }
 
 /**

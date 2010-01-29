@@ -2,6 +2,43 @@
 // $Id$
 
 /**
+ * Implements hook_xmlsitemap_link_info().
+ */
+function xmlsitemap_node_xmlsitemap_link_info() {
+  $types['node'] = array(
+    'label' => t('Node'),
+    'base table' => 'node',
+    'object keys' => array(
+      'id' => 'nid',
+      'bundle' => 'type',
+    ),
+    'path callback' => 'xmlsitemap_node_path',
+    'load hook' => 'node_load',
+  );
+  foreach (node_get_types('names') as $type => $name) {
+    $types['node']['bundles'][$type] = array(
+      'label' => $name,
+      'admin' => array(
+        'real path' => 'admin/content/types/' . str_replace('_', '-', $type),
+        'access arguments' => array('administer content types'),
+      ),
+      'xmlsitemap' => array(
+        'priority' => variable_get('xmlsitemap_node_priority_' . $type, 0.5),
+        'status' => variable_get('xmlsitemap_node_status_' . $type, 0),
+      ),
+    );
+  }
+  return $types;
+}
+
+/**
+ * @todo Replace with node_path in Drupal 7.
+ */
+function xmlsitemap_node_path($node) {
+  return 'node/' . $node->nid;
+}
+
+/**
  * Implements hook_cron().
  *
  * Process old nodes not found in the {xmlsitemap} table.
@@ -67,33 +104,6 @@ function xmlsitemap_node_node_type($op, $info) {
     variable_del('xmlsitemap_node_priority_' . $info->type);
     //xmlsitemap_delete_link(array('type' => 'node', 'subtype' => $info->type));
   }
-}
-
-/**
- * Implements hook_form_FORM_ID_alter().
- *
- * Show a summary of content types on the XML sitemap settings page.
- */
-function xmlsitemap_node_form_xmlsitemap_settings_form_alter(&$form, $form_state) {
-  $type = array(
-    'type' => 'node',
-    'title' => t('Content types'),
-    'item_title' => t('Content type'),
-    'access' => user_access('administer content types'),
-  );
-
-  $node_types = node_get_types('names');
-  foreach ($node_types as $node_type => $node_type_name) {
-    $node_types[$node_type] = array(
-      'name' => drupal_ucfirst($node_type_name),
-      'link' => 'admin/content/node-type/' . str_replace('_', '-', $node_type),
-      'status' => variable_get('xmlsitemap_node_status_' . $node_type, 0),
-      'priority' => variable_get('xmlsitemap_node_priority_' . $node_type, 0.5),
-    );
-  }
-
-  xmlsitemap_add_form_type_summary($form, $type, $node_types);
-  $form['node']['#weight'] = 30;
 }
 
 /**
@@ -172,7 +182,7 @@ function xmlsitemap_node_xmlsitemap_links($offset = 0, $limit = 0) {
   if ($types = xmlsitemap_node_get_types()) {
     $sql = "SELECT n.nid FROM {node} n WHERE n.nid > %d AND n.type IN (" . db_placeholders($types, 'varchar') . ") ORDER BY n.nid";
     $args = array_merge(array($offset), $types);
-    $query = ($limit ? db_query_range($sql, $offset, 0, $args) : db_query($sql, $args));
+    $query = ($limit ? db_query_range($sql, $args, 0, $limit) : db_query($sql, $args));
 
     while ($nid = db_result($query)) {
       $node = node_load($nid, NULL, TRUE);
@@ -190,21 +200,6 @@ function xmlsitemap_node_xmlsitemap_links_batch_info() {
   $types = xmlsitemap_node_get_types();
   return array(
     'max' => $types ? db_result(db_query("SELECT COUNT(n.nid) FROM {node} n WHERE n.type IN (" . db_placeholders($types, 'varchar') . ")", $types)) : 0,
-  );
-}
-
-/**
- * Implements hook_xmlsitemap_link_info().
- */
-function xmlsitemap_node_xmlsitemap_link_info() {
-  return array(
-    'node' => array(
-      'purge' => TRUE,
-      'table' => 'node',
-      'id' => 'nid',
-      'subtype' => 'type',
-      'subtypes' => xmlsitemap_node_get_types(),
-    ),
   );
 }
 

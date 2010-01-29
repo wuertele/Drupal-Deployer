@@ -875,17 +875,21 @@ function xmlsitemap_get_link_info($type = NULL, $reset = FALSE) {
       $link_info = array();
       foreach (module_implements('xmlsitemap_link_info') as $module) {
         $module_link_info = module_invoke($module, 'xmlsitemap_link_info');
-        foreach ($module_link_info as $type => $info) {
-          $module_link_info[$type] += array(
-            'type' => $type,
-            'module' => $module,
-            'purge' => TRUE,
-            'table' => FALSE,
+        foreach ($module_link_info as $key => $info) {
+          $module_link_info[$key] += array(
+            'type' => $key,
+            //'module' => $module,
+            'base table' => FALSE,
+            'bundles' => array(),
+            'object keys' => array(),
+            'admin' => array(),
           );
         }
         $link_info = array_merge($link_info, $module_link_info);
       }
       drupal_alter('xmlsitemap_link_info', $link_info);
+      ksort($link_info);
+      // Cache by language since this info contains translated strings.
       cache_set('xmlsitemap:link_info:' . $language->language, $link_info);
     }
   }
@@ -902,8 +906,36 @@ function xmlsitemap_get_link_info($type = NULL, $reset = FALSE) {
  */
 function xmlsitemap_xmlsitemap_link_info() {
   return array(
-    'frontpage' => array(),
+    'frontpage' => array(
+      'label' => t('Frontpage'),
+      'xmlsitemap' => array(
+        'settings callback' => 'xmlsitemap_link_frontpage_settings',
+      ),
+    ),
   );
+}
+
+/**
+ * XML sitemap link type settings callback for frontpage link entity.
+ */
+function xmlsitemap_link_frontpage_settings(&$form) {
+  module_load_include('inc', 'xmlsitemap', 'xmlsitemap.admin');
+  if (user_access('administer site configuration')) {
+    $form['#description'] = t('The front page path can be changed at <a href="@url-frontpage">@url-frontpage</a>.', array('@url-frontpage' => url('admin/settings/site-information')));
+  }
+  $form['xmlsitemap_frontpage_priority'] = array(
+    '#type' => 'select',
+    '#title' => t('Priority'),
+    '#options' => xmlsitemap_get_priority_options(),
+    '#default_value' => variable_get('xmlsitemap_frontpage_priority', 1.0),
+  );
+  $form['xmlsitemap_frontpage_changefreq'] = array(
+    '#type' => 'select',
+    '#title' => t('Change frequency'),
+    '#options' => xmlsitemap_get_changefreq_options(),
+    '#default_value' => variable_get('xmlsitemap_frontpage_changefreq', XMLSITEMAP_FREQUENCY_DAILY),
+  );
+  return $form;
 }
 
 /**
@@ -997,4 +1029,28 @@ function xmlsitemap_language_load($language = '', $reset = FALSE) {
   }
 
   return $languages[$language];
+}
+
+function xmlsitemap_get_link_type_enabled_bundles($entity_type) {
+  $bundles = array();
+  $info = xmlsitemap_get_link_info($entity_type);
+  foreach ($info['bundles'] as $key => $bundle) {
+    if (!empty($bundle['xmlsitemap']['status'])) {
+      $bundles[$key] = $bundle['label'];
+    }
+  }
+  return $bundles;
+}
+
+function xmlsitemap_get_link_type_indexed_status($entity_type, $bundle = '') {
+  $info = xmlsitemap_get_link_info($entity_type);
+  $status['indexed'] = db_result(db_query("SELECT COUNT(id) FROM {xmlsitemap} WHERE type = '%s' AND subtype = '%s'", $entity_type, $bundle));
+  $status['visible'] = db_result(db_query("SELECT COUNT(id) FROM {xmlsitemap} WHERE type = '%s' AND subtype = '%s' AND status = 1 AND access = 1", $entity_type, $bundle));
+  if (!empty($info['object keys']['bundle'])) {
+    $status['total'] = db_result(db_query("SELECT COUNT(%s) FROM {%s} WHERE %s = '%s'", db_escape_string($info['object keys']['id']), db_escape_table($info['base table']), db_escape_string($info['object keys']['bundle']), $bundle));
+  }
+  else {
+    $status['total'] = db_result(db_query("SELECT COUNT(%s) FROM {%s}", db_escape_string($info['object keys']['id']), db_escape_table($info['base table'])));
+  }
+  return $status;
 }

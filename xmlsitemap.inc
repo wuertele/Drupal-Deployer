@@ -393,19 +393,17 @@ function xmlsitemap_rebuild_batch($modules = array(), $save_custom = FALSE) {
  * Batch callback; clear sitemap links for modules.
  */
 function xmlsitemap_rebuild_batch_clear($modules, $save_custom, &$context) {
-  $purge = array();
-  foreach ($modules as $module) {
-    $types = module_invoke($module, 'xmlsitemap_link_info');
-    foreach ($types as $type => $info) {
-      if ($info['purge']) {
-        $purge[] = $type;
-      }
+  // Build a list of all the types that can be rebuilt automatically.
+  $types = array();
+  foreach (xmlsitemap_get_link_info() as $entity_type => $info) {
+    if (!empty($info['base table']) && !empty($info['object keys'])) {
+      $types[] = $entity_type;
     }
   }
 
-  if ($purge) {
+  if ($types) {
     $where = array();
-    $where[] = 'type IN (' . db_placeholders($purge, 'varchar') . ')';
+    $where[] = 'type IN (' . db_placeholders($types, 'varchar') . ')';
 
     // If we want to save the custom data, make sure to exclude any links
     // that are not using default inclusion or priority.
@@ -415,7 +413,7 @@ function xmlsitemap_rebuild_batch_clear($modules, $save_custom, &$context) {
     }
 
     $sql = "DELETE FROM {xmlsitemap} WHERE " . implode(' AND ', $where);
-    db_query($sql, $purge);
+    db_query($sql, $types);
   }
 
   $context['message'] = t('Purging links.');
@@ -426,6 +424,7 @@ function xmlsitemap_rebuild_batch_clear($modules, $save_custom, &$context) {
  */
 function xmlsitemap_rebuild_batch_fetch($module, &$context) {
   if (!isset($context['sandbox']['progress'])) {
+    $context['sandbox']['module'] = $module;
     $context['sandbox']['batch'] = module_hook($module, 'xmlsitemap_links_batch_info');
     if ($context['sandbox']['batch']) {
       $context['sandbox'] += module_invoke($module, 'xmlsitemap_links_batch_info');
@@ -457,6 +456,7 @@ function xmlsitemap_rebuild_batch_fetch($module, &$context) {
   if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
     $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
   }
+  //dpm($context);
 }
 
 /**

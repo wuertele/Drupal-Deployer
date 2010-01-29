@@ -2,6 +2,39 @@
 // $Id$
 
 /**
+ * Implements hook_xmlsitemap_link_info().
+ */
+function xmlsitemap_menu_xmlsitemap_link_info() {
+  $types['menu'] = array(
+    'label' => t('Menu'),
+    'base table' => 'menu_links',
+    'object keys' => array(
+      'id' => 'mlid',
+      'bundle' => 'menu_name',
+    ),
+    'path callback' => 'xmlsitemap_menu_path',
+  );
+  foreach (menu_get_menus() as $menu => $name) {
+    $types['menu']['bundles'][$menu] = array(
+      'label' => $name,
+      'admin' => array(
+        'real path' => 'admin/build/menu-customize/' . $menu . '/edit',
+        'access arguments' => array('administer menu'),
+      ),
+      'xmlsitemap' => array(
+        'priority' => variable_get('xmlsitemap_menu_priority_' . $menu, 0.5),
+        'status' => variable_get('xmlsitemap_menu_status_' . $menu, 0),
+      ),
+    );
+  }
+  return $types;
+}
+
+function xmlsitemap_menu_path($menu_item) {
+  return $menu_item['link_path'];
+}
+
+/**
  * Implements hook_cron().
  *
  * Process old menu links not found in the {xmlsitemap} table.
@@ -69,21 +102,6 @@ function xmlsitemap_menu_xmlsitemap_links_batch_info() {
 }
 
 /**
- * Implements hook_xmlsitemap_link_info().
- */
-function xmlsitemap_menu_xmlsitemap_link_info() {
-  return array(
-    'menu' => array(
-      'purge' => TRUE,
-      'table' => 'menu_links',
-      'id' => 'mlid',
-      'subtype' => 'menu_name',
-      'subtypes' => xmlsitemap_menu_get_menus(),
-    ),
-  );
-}
-
-/**
  * Load a menu link and its associated sitemap link data.
  */
 function xmlsitemap_menu_menu_link_load($mlid) {
@@ -92,33 +110,6 @@ function xmlsitemap_menu_menu_link_load($mlid) {
     $menu_item['xmlsitemap'] = $data;
   }
   return $menu_item;
-}
-
-/**
- * Implements hook_form_FORM_ID_alter().
- *
- * Show a summary of menus on the XML sitemap settings page.
- */
-function xmlsitemap_menu_form_xmlsitemap_settings_form_alter(&$form, $form_state) {
-  $type = array(
-    'type' => 'menu',
-    'title' => t('Menus'),
-    'item_title' => t('Menu'),
-    'access' => user_access('administer menu'),
-  );
-
-  $menus = menu_get_menus();
-  foreach ($menus as $menu => $name) {
-    $menus[$menu] = array(
-      'name' => $name,
-      'link' => 'admin/build/menu-customize/' . $menu . '/edit',
-      'status' => variable_get('xmlsitemap_menu_status_' . $menu, 0),
-      'priority' => variable_get('xmlsitemap_menu_priority_' . $menu, 0.5),
-    );
-  }
-
-  xmlsitemap_add_form_type_summary($form, $type, $menus);
-  $form['menu']['#weight'] = 40;
 }
 
 /**

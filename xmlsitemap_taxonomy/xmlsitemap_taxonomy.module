@@ -2,6 +2,36 @@
 // $Id$
 
 /**
+ * Implements hook_xmlsitemap_link_info().
+ */
+function xmlsitemap_taxonomy_xmlsitemap_link_info() {
+  $types['taxonomy_term'] = array(
+    'label' => t('Taxonomy'),
+    'base table' => 'term_data',
+    'object keys' => array(
+      'id' => 'tid',
+      'bundle' => 'vid',
+    ),
+    'path callback' => 'taxonomy_term_path',
+    'load hook' => 'taxonomy_get_term',
+  );
+  foreach (taxonomy_get_vocabularies() as $vid => $vocabulary) {
+    $types['taxonomy_term']['bundles'][$vid] = array(
+      'label' => $vocabulary->name,
+      'admin' => array(
+        'real path' => 'admin/content/taxonomy/edit/vocabulary/' . $vid,
+        'access arguments' => array('administer taxonomy'),
+      ),
+      'xmlsitemap' => array(
+        'priority' => variable_get('xmlsitemap_taxonomy_priority_' . $vid, 0.5),
+        'status' => variable_get('xmlsitemap_taxonomy_status_' . $vid, 0),
+      ),
+    );
+  }
+  return $types;
+}
+
+/**
  * Implements hook_cron().
  *
  * Process old taxonomy terms not found in the {xmlsitemap} table.
@@ -55,21 +85,6 @@ function xmlsitemap_taxonomy_xmlsitemap_links_batch_info() {
 }
 
 /**
- * Implements hook_xmlsitemap_link_info().
- */
-function xmlsitemap_taxonomy_xmlsitemap_link_info() {
-  return array(
-    'taxononomy' => array(
-      'purge' => TRUE,
-      'table' => 'term_data',
-      'id' => 'tid',
-      'subtype' => 'vid',
-      'subtypes' => xmlsitemap_taxonomy_get_vids(),
-    ),
-  );
-}
-
-/**
  * Load a taxonomy term and its associated sitemap link data.
  *
  * Use this instead of taxonomy_get_term().
@@ -82,33 +97,6 @@ function xmlsitemap_taxonomy_taxonomy_term_load($tid) {
     $term->xmlsitemap = $data;
   }
   return $term;
-}
-
-/**
- * Implements hook_form_FORM_ID_alter().
- *
- * Show a summary of vocabularies on the XML sitemap settings page.
- */
-function xmlsitemap_taxonomy_form_xmlsitemap_settings_form_alter(&$form, $form_state) {
-  $type = array(
-    'type' => 'taxonomy_term',
-    'title' => t('Taxonomy'),
-    'item_title' => t('Vocabulary'),
-    'access' => user_access('administer taxonomy'),
-  );
-
-  $vocabularies = taxonomy_get_vocabularies();
-  foreach ($vocabularies as $vid => $vocabulary) {
-    $vocabularies[$vid] = array(
-      'name' => $vocabulary->name,
-      'link' => 'admin/content/taxonomy/edit/vocabulary/' . $vid,
-      'status' => xmlsitemap_taxonomy_var('status_' . $vid),
-      'priority' => xmlsitemap_taxonomy_var('priority_' . $vid),
-    );
-  }
-
-  xmlsitemap_add_form_type_summary($form, $type, $vocabularies);
-  $form['taxonomy_term']['#weight'] = 40;
 }
 
 /**
@@ -194,9 +182,9 @@ function xmlsitemap_taxonomy_form_taxonomy_form_term_alter(&$form, $form_state) 
     }
 
     // The submit and delete buttons need to be weighted down.
-    $form['submit'] += array('#weight' => 50);
+    $form['submit'] += array('#weight' => 100);
     if (isset($form['delete'])) {
-      $form['delete'] += array('#weight' => 51);
+      $form['delete'] += array('#weight' => 110);
     }
   }
 }
