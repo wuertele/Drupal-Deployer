@@ -427,6 +427,19 @@ function mollom_form_alter(&$form, &$form_state, $form_id) {
 
       // Add a submit handler to remove form state storage.
       $form['#submit'][] = 'mollom_form_submit';
+
+      // Add link to privacy policy on forms protected via textual analysis,
+      // if enabled.
+      if ($mollom_form['mode'] == MOLLOM_MODE_ANALYSIS && variable_get('mollom_privacy_link', 1)) {
+        $form['mollom']['privacy'] = array(
+          '#prefix' => '<div class="description mollom-privacy">',
+          '#suffix' => '</div>',
+          '#value' => t('By submitting this form, you accept the <a href="@privacy-policy-url" target="_blank">Mollom privacy policy</a>.', array(
+            '@privacy-policy-url' => 'http://mollom.com/web-service-privacy-policy',
+          )),
+          '#weight' => 10,
+        );
+      }
     }
   }
 }
