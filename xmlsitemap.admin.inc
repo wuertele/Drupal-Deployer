@@ -96,7 +96,7 @@ function xmlsitemap_settings_form() {
     '#description' => t('Exposes additional settings intended for development.'),
   );
 
-  $entites = xmlsitemap_get_link_info(NULL, TRUE);
+  $entites = xmlsitemap_get_link_info();
   foreach ($entites as $entity => $entity_info) {
     $form[$entity] = array(
       '#type' => 'fieldset',
@@ -136,41 +136,20 @@ function xmlsitemap_settings_form() {
  * Backport of element_get_visible_children() from Drupal 7.
  */
 function xmlsitemap_element_get_visible_children(array $elements) {
-  $visible_children = array();
-
   foreach (element_children($elements) as $key) {
-    $child = $elements[$key];
-
     // Skip un-accessible children.
-    if (isset($child['#access']) && !$child['#access']) {
+    if (isset($elements[$key]['#access']) && !$elements[$key]['#access']) {
       continue;
     }
 
     // Skip value and hidden elements, since they are not rendered.
-    if (isset($child['#type']) && in_array($child['#type'], array('value', 'hidden'))) {
+    if (isset($elements[$key]['#type']) && in_array($elements[$key]['#type'], array('value', 'hidden'))) {
       continue;
     }
 
-    $visible_children[$key] = $child;
+    return TRUE;
   }
 
-  return array_keys($visible_children);
-}
-
-/**
- * Check if there is a child element accessible in a parent element.
- *
- * @param $element
- *   A form element.
- * @return
- *   TRUE if a child element of $element if accessible, or FALSE otherwise.
- */
-function xmlsitemap_element_children_visisble($element) {
-  foreach (element_children($element) as $key) {
-    if (!isset($element[$key]['#access']) || !empty($element[$key]['#access']) || !isset($element[$key]['#type'])) {
-      return TRUE;
-    }
-  }
   return FALSE;
 }
 
