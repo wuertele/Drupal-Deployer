@@ -53,7 +53,9 @@ class XMLSitemapCustomFunctionalTest extends XMLSitemapTestHelper {
     $edit['loc'] = ' public-files ';
     $this->drupalPost(NULL, $edit, t('Save'));
     $this->assertText('The custom link for system/files was saved');
-    $link = $this->assertSitemapLink(array('type' => 'custom', 'loc' => 'system/files'));
+    $links = xmlsitemap_link_load_multiple(array('type' => 'custom', 'loc' => 'system/files'));
+    $this->assertEqual(count($links), 1, t('Custom link saved in the database.'));
+    $link = reset($links);
     $this->assertSitemapLinkValues($link, array('priority' => 0.5, 'changefreq' => 0, 'access' => 1, 'status' => 1));
 
     $this->clickLink('Edit');
@@ -63,7 +65,7 @@ class XMLSitemapCustomFunctionalTest extends XMLSitemapTestHelper {
     );
     $this->drupalPost(NULL, $edit, t('Save'));
     $this->assertText('The custom link for system/files was saved');
-    $link = $this->assertSitemapLink(array('type' => 'custom', 'id' => $link['id']));
+    $link = $this->assertSitemapLink('custom', $link['id']);
     $this->assertSitemapLinkValues($link, array('priority' => 0.1, 'changefreq' => XMLSITEMAP_FREQUENCY_ALWAYS, 'access' => 1, 'status' => 1));
 
     $this->clickLink('Delete');
@@ -92,12 +94,14 @@ class XMLSitemapCustomFunctionalTest extends XMLSitemapTestHelper {
     $edit['loc'] = 'misc/drupal.js';
     $this->drupalPost('admin/settings/xmlsitemap/custom/add', $edit, t('Save'));
     $this->assertText('The custom link for ' . $edit['loc'] . ' was saved');
-    $link = $this->assertSitemapLink(array('type' => 'custom', 'loc' => $edit['loc']));
+    $links = xmlsitemap_link_load_multiple(array('type' => 'custom', 'loc' => $edit['loc']));
+    $this->assertEqual(count($links), 1, t('Custom link saved in the database.'));
 
     // Test a valid folder.
     $edit['loc'] = 'misc';
     $this->drupalPost('admin/settings/xmlsitemap/custom/add', $edit, t('Save'));
     $this->assertText('The custom link for ' . $edit['loc'] . ' was saved');
-    $link = $this->assertSitemapLink(array('type' => 'custom', 'loc' => $edit['loc']));
+    $links = xmlsitemap_link_load_multiple(array('type' => 'custom', 'loc' => $edit['loc']));
+    $this->assertEqual(count($links), 1, t('Custom link saved in the database.'));
   }
 }

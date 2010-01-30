@@ -66,14 +66,26 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
     $this->assertTrue(variable_get('xmlsitemap_generated_last', 0) && !variable_get('xmlsitemap_regenerate_needed', FALSE), t('XML sitemaps regenerated and flag cleared.'));
   }
 
-  protected function assertSitemapLink($conditions) {
-    $link = xmlsitemap_load_link($conditions);
+  protected function assertSitemapLink($entity_type, $entity_id = NULL) {
+    if (is_array($entity_type)) {
+      $links = xmlsitemap_link_load_multiple($entity_type);
+      $link = $links ? reset($links) : FALSE;
+    }
+    else {
+      $link = xmlsitemap_link_load($entity_type, $entity_id);
+    }
     $this->assertTrue(is_array($link), 'Link loaded.');
     return $link;
   }
 
-  protected function assertNoSitemapLink($conditions) {
-    $link = xmlsitemap_load_link($conditions);
+  protected function assertNoSitemapLink($entity_type, $entity_id = NULL) {
+    if (is_array($entity_type)) {
+      $links = xmlsitemap_link_load_multiple($entity_type);
+      $link = $links ? reset($links) : FALSE;
+    }
+    else {
+      $link = xmlsitemap_link_load($entity_type, $entity_id);
+    }
     $this->assertFalse($link, 'Link not loaded.');
     return $link;
   }
@@ -510,14 +522,14 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
     // Test that the regenerate flag is set when visible links are deleted.
     $deleted = xmlsitemap_delete_link(array('loc' => 'testing1'));
     $this->assertEqual($deleted, 2);
-    $this->assertFalse(xmlsitemap_load_link(array('type' => $link1['type'], 'id' => $link1['id'])));
-    $this->assertFalse(xmlsitemap_load_link(array('type' => $link2['type'], 'id' => $link2['id'])));
-    $this->assertTrue(xmlsitemap_load_link(array('type' => $link3['type'], 'id' => $link3['id'])));
+    $this->assertFalse(xmlsitemap_link_load($link1['type'], $link1['id']));
+    $this->assertFalse(xmlsitemap_link_load($link2['type'], $link2['id']));
+    $this->assertTrue(xmlsitemap_link_load($link3['type'], $link3['id']));
     $this->assertFlag('regenerate_needed', TRUE);
 
     $deleted = xmlsitemap_delete_link(array('type' => $link3['type'], 'id' => $link3['id']));
     $this->assertEqual($deleted, 1);
-    $this->assertFalse(xmlsitemap_load_link(array('type' => $link3['type'], 'id' => $link3['id'])));
+    $this->assertFalse(xmlsitemap_link_load($link3['type'], $link3['id']));
     $this->assertFlag('regenerate_needed', FALSE);
   }
 

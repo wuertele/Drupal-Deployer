@@ -409,16 +409,35 @@ function _xmlsitemap_check_changed_link(array $link, $original_link = NULL, $fla
 
 /**
  * Condition builder for queries.
- *
- * @todo (Drupal7) Replace with DBTNG
  */
-function _xmlsitemap_build_conditions(array &$conditions = array(), array &$args = array(), $operator = '=', $null_operator = 'IS') {
+function _xmlsitemap_build_conditions(array &$conditions = array(), array &$args = array(), $operator = '=', $update = FALSE) {
+  $operators = array(
+    'null' => array('=' => 'IS', '<>' => 'IS NOT'),
+    'in' => array('=' => 'IN', '<>' => 'NOT IN'),
+  );
+
   foreach ($conditions as $field => $value) {
     if (is_int($field)) {
       continue;
     }
     elseif ($value === NULL) {
-      $conditions[$field] = "$field $null_operator NULL";
+      if ($update) {
+        $conditions[$field] = "$field = NULL";
+      }
+      else {
+        $conditions[$field] = "$field {$operators['null'][$operator]} NULL";
+      }
+    }
+    elseif (is_array($value)) {
+      if ($update) {
+        trigger_error(strtr('Update not supported for field %field in @function.', array('%field' => theme('placeholder', $field), '@function' => __FUNCTION__)));
+        unset($conditions[$field]);
+      }
+      else {
+        $type = _xmlsitemap_get_field_type('xmlsitemap', $field);
+        $conditions[$field] = "$field {$operators['in'][$operator]} (" . db_placeholders($value, $type) . ")";
+        $args = array_merge($args, $value);
+      }
     }
     else {
       $placeholder = db_type_placeholder(_xmlsitemap_get_field_type('xmlsitemap', $field));
@@ -426,27 +445,45 @@ function _xmlsitemap_build_conditions(array &$conditions = array(), array &$args
       $args[] = $value;
     }
   }
+
   return $args;
 }
 
 /**
- * Load a specific sitemap link.
+ * Load sitemap links from the database.
  *
  * @param $conditions
- *   An array of values to match keyed by field.
+ *   An array of conditions on the {xmlsitemap} table in the form
+ *   'field' => $value.
  * @return
- *   An array representing the first sitemap link matching the conditions found.
- *
- * @todo Convert to use $type and $id as parameters.
+ *   An array of sitemap link arrays.
  */
-function xmlsitemap_load_link(array $conditions) {
+function xmlsitemap_link_load_multiple(array $conditions = array()) {
+  $links = array();
+
   $args = _xmlsitemap_build_conditions($conditions);
-  $link = db_fetch_array(db_query_range("SELECT * FROM {xmlsitemap} WHERE ". implode(' AND ', $conditions), $args, 0, 1));
+  $query = db_query("SELECT * FROM {xmlsitemap} WHERE " . implode(' AND ', $conditions), $args);
 
-  // Allow other modules to respond after loading the link.
-  //module_invoke_all('xmlsitemap_load_link', $link, $conditions, $args);
+  while ($link = db_fetch_array($query)) {
+    $links[] = $link;
+  }
 
-  return $link;
+  return $links;
+}
+
+/**
+ * Load a specific sitemap link from the database.
+ *
+ * @param $entity_type
+ *   A string with the entity type.
+ * @param $entity_id
+ *   An integer with the entity ID.
+ * @return
+ *   A sitemap link (array) or FALSE if the conditions were not found.
+ */
+function xmlsitemap_link_load($entity_type, $entity_id) {
+  $link = xmlsitemap_link_load_multiple(array('type' => $entity_type, 'id' => $entity_id));
+  return $link ? reset($link) : FALSE;
 }
 
 /**
@@ -523,7 +560,7 @@ function xmlsitemap_update_links($updates = array(), $conditions = array()) {
 
   // Process updates.
   $args = array();
-  _xmlsitemap_build_conditions($updates, $args, '=', '=');
+  _xmlsitemap_build_conditions($updates, $args, '=', TRUE);
   _xmlsitemap_build_conditions($conditions, $args);
   $sql = "UPDATE {xmlsitemap} SET " . implode(', ', $updates) . " WHERE " . implode(' AND ', $conditions);
   db_query($sql, $args);
