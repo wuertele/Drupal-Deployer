@@ -122,9 +122,9 @@ function unitsapi_get_units() {
     unitsapi_xml_cache();
     $cache = cache_get('unitsapi_data');
   }
-
-  return $cache->data;
-
+  $units = $cache->data;
+  drupal_alter('unitsapi', $units);
+  return $units;
 }
 
 /**
@@ -181,21 +181,6 @@ function unitsapi_xml_cache() {
         'source' => $unitarray['source'],
       );
 
-    }
-  }
-
-  $data = module_invoke_all('unitsapi');
-
-  // Loop through the $data array and make changes to the $units collection
-  if (!empty($data) && is_array($data)) {
-    foreach ($data as $key => $unit) {
-      if (!empty($unit) && is_array($unit) && isset($units_cache[$key])) {
-        foreach ($unit as $parameter => $value) {
-          if (isset($units_cache[$key][$parameter])) {
-            $units_cache[check_plain($key)][check_plain($parameter)] = check_plain($value);
-          }
-        }
-      }
     }
   }
 
