@@ -55,7 +55,7 @@ function xmlsitemap_menu_xmlsitemap_index_links($limit) {
     $query = db_query_range($sql, $menus, 0, $limit);
 
     while ($mlid = db_result($query)) {
-      $menu_item = xmlsitemap_menu_menu_link_load($mlid);
+      $menu_item = menu_link_load($mlid);
       $link = xmlsitemap_menu_create_link($menu_item);
       xmlsitemap_save_link($link);
     }
@@ -80,7 +80,7 @@ function xmlsitemap_menu_xmlsitemap_links($offset = 0, $limit = 0) {
     $query = ($limit ? db_query_range($sql, $args, 0, $limit) : db_query($sql, $args));
 
     while ($mlid = db_result($query)) {
-      $menu_item = xmlsitemap_menu_menu_link_load($mlid);
+      $menu_item = menu_link_load($mlid);
       $links[] = xmlsitemap_menu_create_link($menu_item);
     }
 
@@ -99,17 +99,6 @@ function xmlsitemap_menu_xmlsitemap_links_batch_info() {
   return array(
     'max' => $menus ? db_result(db_query("SELECT COUNT(ml.mlid) FROM {menu_links} ml WHERE ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ")", $menus)) : 0,
   );
-}
-
-/**
- * Load a menu link and its associated sitemap link data.
- */
-function xmlsitemap_menu_menu_link_load($mlid) {
-  $menu_item = menu_link_load($mlid);
-  if ($data = xmlsitemap_link_load('menu', $mlid)) {
-    $menu_item['xmlsitemap'] = $data;
-  }
-  return $menu_item;
 }
 
 /**
@@ -225,7 +214,7 @@ function xmlsitemap_menu_form_menu_edit_item_alter(&$form, $form_state) {
  */
 function xmlsitemap_menu_menu_edit_item_submit($form, $form_state) {
   xmlsitemap_switch_user(0);
-  $menu_item = xmlsitemap_menu_menu_link_load($form_state['values']['menu']['mlid']);
+  $menu_item = menu_link_load($form_state['values']['menu']['mlid']);
   xmlsitemap_restore_user();
   xmlsitemap_menu_item_update($menu_item);
 }
@@ -261,6 +250,9 @@ function xmlsitemap_menu_get_menus() {
 function xmlsitemap_menu_create_link(array $menu_item) {
   if (!isset($menu_item['xmlsitemap'])) {
     $menu_item['xmlsitemap'] = array();
+    if ($menu_item['mlid'] && $link = xmlsitemap_load_link('menu', $menu_item['mlid'])) {
+      $menu_item['xmlsitemap'] = $link;
+    }
   }
 
   $menu_item['xmlsitemap'] += array(
