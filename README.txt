@@ -50,7 +50,8 @@ Requirements
 ------------
   - Drupal 6.x
   - PHP 4.3.0 or greater
-  - FCKeditor 2.5.x or greater (http://ckeditor.com/download)
+  - FCKeditor 2.5.x or greater
+    Download FCKeditor (not CKeditor) from http://ckeditor.com/download
 
 Configuration
 -------------------
