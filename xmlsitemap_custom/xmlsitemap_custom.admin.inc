@@ -181,7 +181,7 @@ function xmlsitemap_custom_delete_link_form($form_state, array $link) {
 
 function xmlsitemap_custom_delete_link_form_submit($form, &$form_state) {
   $link = $form_state['values']['link'];
-  xmlsitemap_delete_link(array('type' => 'custom', 'id' => $link['id']));
+  xmlsitemap_link_delete('custom', $link['id']);
   drupal_set_message(t('The custom link for %loc has been deleted.', array('%loc' => $link['loc'])));
   watchdog('xmlsitemap', 'The custom link for %loc has been deleted.', array('%loc' => $link['loc']), WATCHDOG_NOTICE);
   $form_state['redirect'] = 'admin/settings/xmlsitemap/custom';

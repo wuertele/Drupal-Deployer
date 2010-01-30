@@ -509,9 +509,9 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
   }
 
   /**
-   * Tests for xmlsitemap_delete_link().
+   * Tests for xmlsitemap_link_delete().
    */
-  function testDeleteLink() {
+  function testLinkDelete() {
     // Add our testing data.
     $link1 = $this->addSitemapLink(array('loc' => 'testing1', 'status' => 0));
     $link2 = $this->addSitemapLink(array('loc' => 'testing1', 'status' => 1));
@@ -520,14 +520,14 @@ class XMLSitemapUnitTest extends XMLSitemapTestHelper {
 
     // Test delete multiple links.
     // Test that the regenerate flag is set when visible links are deleted.
-    $deleted = xmlsitemap_delete_link(array('loc' => 'testing1'));
+    $deleted = xmlsitemap_link_delete_multiple(array('loc' => 'testing1'));
     $this->assertEqual($deleted, 2);
     $this->assertFalse(xmlsitemap_link_load($link1['type'], $link1['id']));
     $this->assertFalse(xmlsitemap_link_load($link2['type'], $link2['id']));
     $this->assertTrue(xmlsitemap_link_load($link3['type'], $link3['id']));
     $this->assertFlag('regenerate_needed', TRUE);
 
-    $deleted = xmlsitemap_delete_link(array('type' => $link3['type'], 'id' => $link3['id']));
+    $deleted = xmlsitemap_link_delete($link3['type'], $link3['id']);
     $this->assertEqual($deleted, 1);
     $this->assertFalse(xmlsitemap_link_load($link3['type'], $link3['id']));
     $this->assertFlag('regenerate_needed', FALSE);
@@ -632,7 +632,7 @@ class XMLSitemapFunctionalTest extends XMLSitemapTestHelper {
     $this->drupalGetSitemap();
     $this->assertRaw('lifetime-test');
 
-    xmlsitemap_delete_link(array('type' => $link['type'], 'id' => $link['id']));
+    xmlsitemap_link_delete($link['type'], $link['id']);
     drupal_cron_run();
     $this->drupalGetSitemap();
     $this->assertRaw('lifetime-test');

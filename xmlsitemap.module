@@ -450,6 +450,21 @@ function _xmlsitemap_build_conditions(array &$conditions = array(), array &$args
 }
 
 /**
+ * Load a specific sitemap link from the database.
+ *
+ * @param $entity_type
+ *   A string with the entity type.
+ * @param $entity_id
+ *   An integer with the entity ID.
+ * @return
+ *   A sitemap link (array) or FALSE if the conditions were not found.
+ */
+function xmlsitemap_link_load($entity_type, $entity_id) {
+  $link = xmlsitemap_link_load_multiple(array('type' => $entity_type, 'id' => $entity_id));
+  return $link ? reset($link) : FALSE;
+}
+
+/**
  * Load sitemap links from the database.
  *
  * @param $conditions
@@ -469,21 +484,6 @@ function xmlsitemap_link_load_multiple(array $conditions = array()) {
   }
 
   return $links;
-}
-
-/**
- * Load a specific sitemap link from the database.
- *
- * @param $entity_type
- *   A string with the entity type.
- * @param $entity_id
- *   An integer with the entity ID.
- * @return
- *   A sitemap link (array) or FALSE if the conditions were not found.
- */
-function xmlsitemap_link_load($entity_type, $entity_id) {
-  $link = xmlsitemap_link_load_multiple(array('type' => $entity_type, 'id' => $entity_id));
-  return $link ? reset($link) : FALSE;
 }
 
 /**
@@ -569,17 +569,36 @@ function xmlsitemap_update_links($updates = array(), $conditions = array()) {
 }
 
 /**
- * Delete one or more sitemap links.
+ * Delete a specific sitemap link from the database.
  *
  * If a visible sitemap link was deleted, this will automatically set the
  * regenerate needed flag.
  *
- * @param $conditions
- *   An array of values to match keyed by field.
+ * @param $entity_type
+ *   A string with the entity type.
+ * @param $entity_id
+ *   An integer with the entity ID.
  * @return
  *   The number of links that were deleted.
  */
-function xmlsitemap_delete_link(array $conditions) {
+function xmlsitemap_link_delete($entity_type, $entity_id) {
+  $conditions = array('type' => $entity_type, 'id' => $entity_id);
+  return xmlsitemap_link_delete_multiple($conditions);
+}
+
+/**
+ * Delete multiple sitemap links from the database.
+ *
+ * If visible sitemap links were deleted, this will automatically set the
+ * regenerate needed flag.
+ *
+ * @param $conditions
+ *   An array of conditions on the {xmlsitemap} table in the form
+ *   'field' => $value.
+ * @return
+ *   The number of links that were deleted.
+ */
+function xmlsitemap_link_delete_multiple(array $conditions) {
   if (!variable_get('xmlsitemap_regenerate_needed', TRUE)) {
     _xmlsitemap_check_changed_links($conditions, array(), TRUE);
   }
