@@ -639,7 +639,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
         )) .'<br />'.
       t('Available placeholders') .':<br />'.
       '<strong>%h</strong> - '. t('host name (%host)', array('%host' => base_path())) .'<br />'.
-      '<strong>%t</strong> - '. t('path to theme (%theme)', array('%theme' => base_path() . path_to_theme() .'/'))
+      '<strong>%t</strong> - '. t('path to theme (%theme)', array('%theme' => base_path() . fckeditor_path_to_theme() .'/'))
   );
 
   $form['css']['css_style'] = array(
@@ -657,7 +657,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
           '%file' => 'fckstyles.xml',
           '%setting' => t('Style'),
           '%sourcefile' => fckeditor_path(TRUE) .'/fckstyles.xml',
-          '%themefile' => path_to_theme() .'/fckstyles.xml',
+          '%themefile' => fckeditor_path_to_theme() .'/fckstyles.xml',
         ))
   );
 
@@ -676,7 +676,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
         )) .'<br />'.
       t('Available placeholders') .':<br />'.
       '<strong>%h</strong> - '. t('host name (%host)', array('%host' => base_path())) .'<br />'.
-      '<strong>%t</strong> - '. t('path to theme (%theme)', array('%theme' => base_path() . path_to_theme() .'/')) .'<br />'.
+      '<strong>%t</strong> - '. t('path to theme (%theme)', array('%theme' => base_path() . fckeditor_path_to_theme() .'/')) .'<br />'.
       '<strong>%m</strong> - '. t('path to FCKeditor module (%module)', array('%module' => drupal_get_path('module', 'fckeditor'))),
   );
 
@@ -695,7 +695,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
           '%file' => 'fcktemplates.xml',
           '%setting' => t('Templates'),
           '%sourcefile' => fckeditor_path(TRUE) .'/fcktemplates.xml',
-          '%themefile' => path_to_theme() .'/fcktemplates.xml',
+          '%themefile' => fckeditor_path_to_theme() .'/fcktemplates.xml',
         ))
   );
 
@@ -714,7 +714,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
         )) .'<br />'.
       t('Available placeholders') .':<br />'.
       '<strong>%h</strong> - '. t('host name (%host)', array('%host' => base_path())) .'<br />'.
-      '<strong>%t</strong> - '. t('path to theme (%theme)', array('%theme' => base_path() . path_to_theme() .'/')) .'<br />'.
+      '<strong>%t</strong> - '. t('path to theme (%theme)', array('%theme' => base_path() . fckeditor_path_to_theme() .'/')) .'<br />'.
       '<strong>%m</strong> - '. t('path to FCKeditor module (%module)', array('%module' => drupal_get_path('module', 'fckeditor'))),
   );
 
