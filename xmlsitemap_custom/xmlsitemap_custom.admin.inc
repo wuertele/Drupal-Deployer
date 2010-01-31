@@ -22,8 +22,7 @@ function xmlsitemap_custom_list_links() {
   $rows = array();
   $destination = drupal_get_destination();
 
-  $sql = "SELECT * FROM {xmlsitemap}";
-  $sql .= " WHERE type = 'custom'";
+  $sql = "SELECT * FROM {xmlsitemap} WHERE type = 'custom'";
   $sql .= tablesort_sql($header);
   $query = pager_query($sql, 50);
 

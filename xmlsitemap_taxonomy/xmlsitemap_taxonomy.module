@@ -7,6 +7,7 @@
 function xmlsitemap_taxonomy_xmlsitemap_link_info() {
   $types['taxonomy_term'] = array(
     'label' => t('Taxonomy'),
+    'bundle label' => t('Vocabulary name'),
     'base table' => 'term_data',
     'object keys' => array(
       'id' => 'tid',
@@ -99,18 +100,6 @@ function xmlsitemap_taxonomy_form_taxonomy_form_vocabulary_alter(&$form, $form_s
     'priority' => variable_get('xmlsitemap_taxonomy_priority_' . $vid, 0.5),
   );
   xmlsitemap_add_form_type_options($form, 'taxonomy', $options);
-
-  // @todo Enable these features:
-  //$form['xmlsitemap']['xmlsitemap_taxonomy_calculate_priority'] = array(
-  //  '#type' => 'checkbox',
-  //  '#title' => t('Calculate priority based on term depth and weight.'),
-  //  '#default_value' => xmlsitemap_taxonomy_var('calculate_priority_' . $vid),
-  //);
-  //$form['xmlsitemap']['xmlsitemap_taxonomy_include_empty_terms'] = array(
-  //  '#type' => 'checkbox',
-  //  '#title' => t('Include terms that do not have any associated content.'),
-  //  '#default_value' => xmlsitemap_taxonomy_var('include_empty_terms_' . $vid),
-  //);
 
   // The submit and delete buttons need to be weighted down.
   $form['submit'] += array('#weight' => 50);
@@ -239,43 +228,42 @@ function xmlsitemap_taxonomy_create_link(stdClass $term) {
 /**
  * Calculate the priority of a taxonomy term based on depth and weight.
  */
-function xmlsitemap_taxonomy_calculate_term_priority($term) {
+/*function xmlsitemap_taxonomy_calculate_term_priority(stdClass $term) {
   // Calculate priority.
   // Min weight = -128
   // Max weight = 127
   // Max depth = ?
-  return NULL;
-}
+}*/
 
 /**
  * Find the tree depth of a taxonomy term.
  *
  * @param $tid
- *   A term ID.
+ *   A taxonomy term object.
  * @return
  *   The tree depth of the term.
  */
-function xmlsitemap_taxonomy_get_term_depth($tid) {
+function xmlsitemap_taxonomy_get_term_depth(stdClass $term) {
   static $depths = array();
 
-  if (!isset($depths[$tid])) {
-    if ($parent = db_result(db_query("SELECT parent FROM {term_hierarchy} WHERE tid = %d", $tid))) {
+  if (!isset($depths[$term->tid])) {
+    if ($parent = db_result(db_query("SELECT parent FROM {term_hierarchy} WHERE tid = %d", $term->tid))) {
       // If the term has a parent, the term's depth is the parent's depth + 1.
       if (!isset($depths[$parent])) {
         $depths[$parent] = xmlsitemap_taxonomy_get_term_depth($parent);
       }
-      $depths[$tid] = $depths[$parent] + 1;
+      $depths[$term->tid] = $depths[$parent] + 1;
     }
     else {
       // Term has no parents, so depth is 0.
-      $depths[$tid] = 0;
+      $depths[$term->tid] = 0;
     }
   }
 
-  return $depths[$tid];
+  return $depths[$term->tid];
 }
 
-function xmlsitemap_taxonomy_get_node_count($term) {
+function xmlsitemap_taxonomy_get_node_count(stdClass $term) {
   // @todo Use db_rewrite_sql() w/ switch user.
   return db_result(db_query_range("SELECT COUNT(tn.nid) FROM {term_node} tn LEFT JOIN {node n} USING (nid) WHERE tn.tid = %d AND n.status = 1", $term->tid, 0, 1));
 }
@@ -321,22 +309,3 @@ function xmlsitemap_taxonomy_variables() {
 //  $defaults['xmlsitemap_taxonomy_include_empty_terms_' . $vid] = TRUE;
 //  return $defaults;
 //}
-
-/**
- * Internal implementation of variable_get().
- */
-function xmlsitemap_taxonomy_var($name, $default = NULL) {
-  static $defaults = NULL;
-  if (!isset($defaults)) {
-    $defaults = xmlsitemap_taxonomy_variables();
-  }
-
-  $name = 'xmlsitemap_taxonomy_' . $name;
-
-  // @todo Remove when stable.
-  if (!isset($defaults[$name])) {
-    trigger_error(t('Default variable for %variable not found.', array('%variable' => $name)));
-  }
-
-  return variable_get($name, isset($default) || !isset($defaults[$name]) ? $default : $defaults[$name]);
-}

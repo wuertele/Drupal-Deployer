@@ -922,32 +922,27 @@ function xmlsitemap_get_link_info($type = NULL, $reset = FALSE) {
   if ($reset) {
     $link_info = NULL;
   }
+  elseif ($cached = cache_get('xmlsitemap:link_info:' . $language->language)) {
+    $link_info = $cached->data;
+  }
 
   if (!isset($link_info)) {
-    if ($cached = cache_get('xmlsitemap:link_info:' . $language->language)) {
-      $link_info = $cached->data;
-    }
-    else {
-      $link_info = array();
-      foreach (module_implements('xmlsitemap_link_info') as $module) {
-        $module_link_info = module_invoke($module, 'xmlsitemap_link_info');
-        foreach ($module_link_info as $key => $info) {
-          $module_link_info[$key] += array(
-            'type' => $key,
-            //'module' => $module,
-            'base table' => FALSE,
-            'bundles' => array(),
-            'object keys' => array(),
-            'admin' => array(),
-          );
-        }
-        $link_info = array_merge($link_info, $module_link_info);
+    $link_info = array();
+    foreach (module_implements('xmlsitemap_link_info') as $module) {
+      $module_link_info = module_invoke($module, 'xmlsitemap_link_info');
+      foreach ($module_link_info as $key => $info) {
+        $module_link_info[$key] += array(
+          'type' => $key,
+          'base table' => FALSE,
+          'bundles' => array(),
+        );
       }
-      drupal_alter('xmlsitemap_link_info', $link_info);
-      ksort($link_info);
-      // Cache by language since this info contains translated strings.
-      cache_set('xmlsitemap:link_info:' . $language->language, $link_info);
+      $link_info = array_merge($link_info, $module_link_info);
     }
+    drupal_alter('xmlsitemap_link_info', $link_info);
+    ksort($link_info);
+    // Cache by language since this info contains translated strings.
+    cache_set('xmlsitemap:link_info:' . $language->language, $link_info);
   }
 
   if (isset($type)) {

@@ -24,7 +24,7 @@ function xmlsitemap_settings_form() {
   $form['xmlsitemap']['xmlsitemap_minimum_lifetime'] = array(
     '#type' => 'select',
     '#title' => t('Minimum sitemap lifetime'),
-    '#options' => array(0 => t('No minimum')) + drupal_map_assoc(array(300, 900, 1800, 3600, 10800, 21600, 32400, 43200, 86400, 172800, 259200, 604800), 'format_interval'),
+    '#options' => array(0 => t('No minimum')) + drupal_map_assoc(array(300, 900, 1800, 3600, 10800, 21600, 43200, 86400, 172800, 259200, 604800), 'format_interval'),
     '#default_value' => xmlsitemap_var('minimum_lifetime')
   );
   $form['xmlsitemap']['xmlsitemap_xsl'] = array(
@@ -96,7 +96,7 @@ function xmlsitemap_settings_form() {
     '#description' => t('Exposes additional settings intended for development.'),
   );
 
-  $entites = xmlsitemap_get_link_info();
+  $entites = xmlsitemap_get_link_info(NULL, TRUE);
   foreach ($entites as $entity => $entity_info) {
     $form[$entity] = array(
       '#type' => 'fieldset',
@@ -205,8 +205,8 @@ function xmlsitemap_settings_form_submit($form, $form_state) {
  * @see xmlsitemap_rebuild_form_submit()
  */
 function xmlsitemap_rebuild_form() {
-  if (!$_POST && !xmlsitemap_var('rebuild_needed')) {
-    if (!xmlsitemap_var('regenerate_needed')) {
+  if (!$_POST && !variable_get('xmlsitemap_rebuild_needed', FALSE)) {
+    if (!variable_get('xmlsitemap_regenerate_needed', FALSE)) {
       drupal_set_message(t('Your sitemap is up to date and does not need to be rebuilt.'), 'error');
     }
     else {
@@ -263,27 +263,21 @@ function xmlsitemap_rebuild_form_submit($form, &$form_state) {
  * Add a table summary for an entity and its bundles.
  */
 function xmlsitemap_add_form_entity_summary(&$form, $entity, array $entity_info) {
-  $header = array(
-    t('Type'),
-    t('Inclusion'),
-    t('Priority'),
-    t('Total'),
-    t('Indexed'),
-    t('Visible'),
-  );
   $priorities = xmlsitemap_get_priority_options(NULL, FALSE);
   $statuses = xmlsitemap_get_status_options(NULL);
 
   $rows = array();
   $totals = array('total' => 0, 'indexed' => 0, 'visible' => 0);
   foreach ($entity_info['bundles'] as $bundle => $bundle_info) {
-    $bundle_info['admin'] += array(
-      'access callback' => 'user_access',
-      'access arguments' => array(),
-      'access' => FALSE,
-    );
-    if ($bundle_info['admin']['access callback']) {
-      $bundle_info['admin']['access'] = call_user_func_array($bundle_info['admin']['access callback'], $bundle_info['admin']['access arguments']);
+    if (isset($bundle_info['admin'])) {
+      $bundle_info['admin'] += array(
+        'access callback' => 'user_access',
+        'access arguments' => array(),
+        'access' => FALSE,
+      );
+      if ($bundle_info['admin']['access callback']) {
+        $bundle_info['admin']['access'] = call_user_func_array($bundle_info['admin']['access callback'], $bundle_info['admin']['access arguments']);
+      }
     }
 
     // Fetch current per-bundle link total and indexed counts.
@@ -293,7 +287,7 @@ function xmlsitemap_add_form_entity_summary(&$form, $entity, array $entity_info)
     $totals['visible'] += $status['visible'];
 
     $row = array();
-    if ($bundle_info['admin']['access']) {
+    if (!empty($bundle_info['admin']['access'])) {
       $row[] = l($bundle_info['label'], $bundle_info['admin']['real path'], array('query' => drupal_get_destination()));
     }
     else {
@@ -308,6 +302,14 @@ function xmlsitemap_add_form_entity_summary(&$form, $entity, array $entity_info)
   }
 
   if ($rows) {
+    $header = array(
+      $entity_info['bundle label'],
+      t('Inclusion'),
+      t('Priority'),
+      t('Available'),
+      t('Indexed'),
+      t('Visible'),
+    );
     $rows[] = array(
       array(
         'data' => t('Totals'),
@@ -362,15 +364,13 @@ function xmlsitemap_add_form_type_options(&$form, $module, $options) {
     '#title' => t('Default priority'),
     '#options' => xmlsitemap_get_priority_options(),
     '#default_value' => $options['priority'],
+    '#process' => array('form_expand_ahah', 'ctools_dependent_process'),
+    '#dependency' => array('edit-xmlsitemap-' . $module . '-status' => array(1)),
   );
 
   // Hide the priority field if the link is excluded.
   if (module_exists('ctools')) {
     ctools_include('dependent');
-    $form['xmlsitemap']['xmlsitemap_' . $module . '_priority'] += array(
-      '#process' => array('form_expand_ahah', 'ctools_dependent_process'),
-      '#dependency' => array('edit-xmlsitemap-' . $module . '-status' => array(1)),
-    );
   }
 }
 
@@ -429,7 +429,12 @@ function xmlsitemap_add_form_link_options(&$form, $link) {
     '#options' => xmlsitemap_get_priority_options($link['priority_default']),
     '#default_value' => $link['priority_override'] ? number_format($link['priority'], 1) : 'default',
     '#description' => t('The priority of this URL relative to other URLs on your site.'),
+    '#process' => array('form_expand_ahah', 'ctools_dependent_process'),
+    '#dependency' => array('edit-xmlsitemap-status' => array(1)),
   );
+  if ($link['status_default']) {
+    $form['xmlsitemap']['priority']['#dependency']['edit-xmlsitemap-status'][] = 'default';
+  }
   $form['xmlsitemap']['priority_default'] = array(
     '#type' => 'value',
     '#value' => $link['priority_default'],
@@ -456,11 +461,6 @@ function xmlsitemap_add_form_link_options(&$form, $link) {
   // Hide the priority field if the link is excluded.
   if (module_exists('ctools')) {
     ctools_include('dependent');
-    $default = $link['status_default'] ? array('default', 1) : array(1);
-    $form['xmlsitemap']['priority'] += array(
-      '#process' => array('form_expand_ahah', 'ctools_dependent_process'),
-      '#dependency' => array('edit-xmlsitemap-status' => $default),
-    );
   }
 
   // Add the submit handler to adjust the default values if selected.
