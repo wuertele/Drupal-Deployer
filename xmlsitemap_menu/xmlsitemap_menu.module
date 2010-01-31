@@ -14,6 +14,9 @@ function xmlsitemap_menu_xmlsitemap_link_info() {
       'bundle' => 'menu_name',
     ),
     'path callback' => 'xmlsitemap_menu_path',
+    'xmlsitemap' => array(
+      'process callback' => 'xmlsitemap_menu_xmlsitemap_process_menu_links',
+    ),
   );
   foreach (menu_get_menus() as $menu => $name) {
     $types['menu']['bundles'][$menu] = array(
@@ -48,58 +51,35 @@ function xmlsitemap_menu_cron() {
  * Implements hook_xmlsitemap_index_links().
  */
 function xmlsitemap_menu_xmlsitemap_index_links($limit) {
-  if ($menus = xmlsitemap_menu_get_menus()) {
-    // Set the global user variable to the anonymous user.
-    xmlsitemap_switch_user(0);
-
+  if ($menus = xmlsitemap_get_link_type_enabled_bundles('menu')) {
     $sql = "SELECT ml.mlid FROM {menu_links} ml LEFT JOIN {xmlsitemap} x ON x.type = 'menu' AND ml.mlid = x.id WHERE x.id IS NULL AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ") ORDER BY ml.mlid DESC";
     $query = db_query_range($sql, $menus, 0, $limit);
-
+    $mlids = array();
     while ($mlid = db_result($query)) {
-      $menu_item = menu_link_load($mlid);
-      $link = xmlsitemap_menu_create_link($menu_item);
-      xmlsitemap_save_link($link);
+      $mlids[] = $mlid;
     }
-
-    // Set the global user variable back to the original user.
-    xmlsitemap_restore_user();
+    xmlsitemap_menu_xmlsitemap_process_menu_links($mlids);
   }
 }
 
 /**
- * Implements hook_xmlsitemap_links().
+ * Process menu sitemap links.
+ *
+ * @param $tids
+ *   An array of menu link IDs.
  */
-function xmlsitemap_menu_xmlsitemap_links($offset = 0, $limit = 0) {
-  $links = array();
+function xmlsitemap_menu_xmlsitemap_process_menu_links(array $mlids) {
+  // Set the global user variable to the anonymous user.
+  xmlsitemap_switch_user(0);
 
-  if ($menus = xmlsitemap_menu_get_menus()) {
-    // Set the global user variable to the anonymous user.
-    xmlsitemap_switch_user(0);
-
-    $sql = "SELECT ml.mlid FROM {menu_links} ml WHERE ml.mlid > %d AND ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ") ORDER BY ml.mlid";
-    $args = array_merge(array($offset), $menus);
-    $query = ($limit ? db_query_range($sql, $args, 0, $limit) : db_query($sql, $args));
-
-    while ($mlid = db_result($query)) {
-      $menu_item = menu_link_load($mlid);
-      $links[] = xmlsitemap_menu_create_link($menu_item);
-    }
-
-    // Set the global user variable back to the original user.
-    xmlsitemap_restore_user();
+  foreach ($mlids as $mlid) {
+    $menu_item = menu_link_load($mlid);
+    $link = xmlsitemap_menu_create_link($menu_item);
+    xmlsitemap_save_link($link);
   }
 
-  return $links;
-}
-
-/**
- * Implements hook_xmlsitemap_links_batch_info().
- */
-function xmlsitemap_menu_xmlsitemap_links_batch_info() {
-  $menus = xmlsitemap_menu_get_menus();
-  return array(
-    'max' => $menus ? db_result(db_query("SELECT COUNT(ml.mlid) FROM {menu_links} ml WHERE ml.menu_name IN (" . db_placeholders($menus, 'varchar') . ")", $menus)) : 0,
-  );
+  // Set the global user variable back to the original user.
+  xmlsitemap_restore_user();
 }
 
 /**
@@ -227,19 +207,6 @@ function xmlsitemap_menu_item_update(array $menu_item) {
 
 function xmlsitemap_menu_item_delete(array $menu_item) {
   xmlsitemap_link_delete('menu', $menu_item['mlid']);
-}
-
-/**
- * Fetch an array of menus to be included in the sitemap.
- */
-function xmlsitemap_menu_get_menus() {
-  $menus = array_keys(menu_get_menus());
-  foreach ($menus as $index => $menu) {
-    if (!variable_get('xmlsitemap_menu_status_' . $menu, 0)) {
-      unset($menus[$index]);
-    }
-  }
-  return $menus;
 }
 
 /**

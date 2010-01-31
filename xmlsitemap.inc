@@ -361,7 +361,7 @@ function xmlsitemap_generate_index($handle, &$status, $language) {
 /**
  * Batch information callback.
  */
-function xmlsitemap_rebuild_batch($modules = array(), $save_custom = FALSE) {
+function xmlsitemap_rebuild_batch(array $entities, array $callbacks, $save_custom = FALSE) {
   $batch = array(
     'operations' => array(),
     'finished' => 'xmlsitemap_rebuild_batch_finished',
@@ -370,13 +370,11 @@ function xmlsitemap_rebuild_batch($modules = array(), $save_custom = FALSE) {
   );
 
   // Purge any links first.
-  $batch['operations'][] = array('xmlsitemap_rebuild_batch_clear', array($modules, $save_custom));
+  $batch['operations'][] = array('xmlsitemap_rebuild_batch_clear', array($entities, (bool) $save_custom));
 
   // Fetch all the sitemap links and save them to the {xmlsitemap} table.
-  foreach ($modules as $module) {
-    if (module_hook($module, 'xmlsitemap_links')) {
-      $batch['operations'][] = array('xmlsitemap_rebuild_batch_fetch', array($module));
-    }
+  foreach ($entities as $entity) {
+    $batch['operations'][] = array($callbacks[$entity], array($entity));
   }
 
   // Generate all the sitemap pages.
@@ -390,73 +388,73 @@ function xmlsitemap_rebuild_batch($modules = array(), $save_custom = FALSE) {
 }
 
 /**
- * Batch callback; clear sitemap links for modules.
+ * Batch callback; clear sitemap links for entites.
  */
-function xmlsitemap_rebuild_batch_clear($modules, $save_custom, &$context) {
-  // Build a list of all the types that can be rebuilt automatically.
-  $types = array();
-  foreach (xmlsitemap_get_link_info() as $entity_type => $info) {
-    if (!empty($info['base table']) && !empty($info['object keys'])) {
-      $types[] = $entity_type;
-    }
-  }
-
-  if ($types) {
-    $where = array();
-    $where[] = 'type IN (' . db_placeholders($types, 'varchar') . ')';
+function xmlsitemap_rebuild_batch_clear(array $entities, $save_custom, &$context) {
+  if (!empty($entities)) {
+    $sql = "DELETE FROM {xmlsitemap} WHERE type IN (" . db_placeholders($entities, 'varchar') . ')';
 
     // If we want to save the custom data, make sure to exclude any links
     // that are not using default inclusion or priority.
     if ($save_custom) {
-      $where[] = 'status_override = 0';
-      $where[] = 'priority_override = 0';
+      $sql .= ' AND status_override = 0 AND priority_override = 0';
     }
 
-    $sql = "DELETE FROM {xmlsitemap} WHERE " . implode(' AND ', $where);
-    db_query($sql, $types);
+    db_query($sql, $entities);
   }
 
   $context['message'] = t('Purging links.');
 }
 
 /**
- * Batch callback; fetch and add the sitemap links for a specific module.
+ * Batch callback; fetch and add the sitemap links for a specific entity.
  */
-function xmlsitemap_rebuild_batch_fetch($module, &$context) {
-  if (!isset($context['sandbox']['progress'])) {
-    $context['sandbox']['module'] = $module;
-    $context['sandbox']['batch'] = module_hook($module, 'xmlsitemap_links_batch_info');
-    if ($context['sandbox']['batch']) {
-      $context['sandbox'] += module_invoke($module, 'xmlsitemap_links_batch_info');
-    }
-    else {
-      $context['sandbox']['links'] = module_invoke($module, 'xmlsitemap_links');
-      $context['sandbox']['max'] = count($context['sandbox']['links']);
-    }
-    $context['sandbox'] += array(
-      'progress' => 0,
-      'current' => 0,
-    );
+function xmlsitemap_rebuild_batch_fetch($entity, &$context) {
+  if (!isset($context['sandbox']['info'])) {
+    $context['sandbox']['info'] = xmlsitemap_get_link_info($entity);
+    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['last_id'] = 0;
+  }
+  $info = $context['sandbox']['info'];
+
+  // Build the generic query.
+  $table = db_escape_table($info['base table']);
+  $id = db_escape_string($info['object keys']['id']);
+  $query = $args = $ids = array();
+  $query['SELECT'] = "SELECT $id";
+  $query['FROM']   = "FROM {$table}";
+  $query['WHERE']  = "WHERE $id > %d";
+  $args[] = $context['sandbox']['last_id'];
+
+  if (!empty($info['object keys']['bundle'])) {
+    $bundle = $info['object keys']['bundle'];
+    $bundle_type = _xmlsitemap_get_field_type($info['base table'], $info['object keys']['bundle']);
+    $bundles = xmlsitemap_get_link_type_enabled_bundles($entity);
+    $query['WHERE'] .= " AND $bundle IN (" . db_placeholders($bundles, $bundle_type) . ")";
+    $args = array_merge($args, $bundles);
+  }
+  $query['ORDER BY'] = "ORDER BY $id";
+
+  if (!isset($context['sandbox']['max'])) {
+    $count_query = $query;
+    $count_query['SELECT'] = "SELECT COUNT($id)";
+    $sql = implode(' ', $count_query);
+    $context['sandbox']['max'] = (int) db_result(db_query($sql, $args));
   }
 
-  if ($context['sandbox']['batch']) {
-    $links = module_invoke($module, 'xmlsitemap_links', $context['sandbox']['current'], xmlsitemap_var('batch_limit'));
+  $sql = implode(' ', $query);
+  $query = db_query_range($sql, $args, 0, variable_get('xmlsitemap_batch_limit', 100));
+  while ($id = db_result($query)) {
+    $ids[] = $id;
   }
-  else {
-    $links = array_splice($context['sandbox']['links'], 0, xmlsitemap_var('batch_limit'));
-  }
-
-  foreach ($links as $link) {
-    xmlsitemap_save_link($link);
-    $context['sandbox']['progress']++;
-    $context['sandbox']['current'] = $link['id'];
-    $context['message'] = t('Now processing %module link @count.', array('%module' => $module, '@count' => $context['sandbox']['progress']));
-  }
+  $info['xmlsitemap']['process callback']($ids);
+  $context['sandbox']['last_id'] = end($ids);
+  $context['sandbox']['progress'] += count($ids);
+  $context['message'] = t('Now processing %entity @last_id (@progress of @count).', array('%entity' => $entity, '@last_id' => $context['sandbox']['last_id'], '@progress' => $context['sandbox']['progress'], '@count' => $context['sandbox']['max']));
 
   if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
     $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
   }
-  //dpm($context);
 }
 
 /**

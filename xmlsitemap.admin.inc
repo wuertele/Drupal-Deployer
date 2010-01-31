@@ -215,16 +215,34 @@ function xmlsitemap_rebuild_form() {
     }
   }
 
-  // Show only the modules that implement the 6.x-2.x hooks.
-  $modules = module_implements('xmlsitemap_link_info', TRUE);
+  // Build the list of rebuildable entities.
+  $entities = xmlsitemap_get_link_info();
+  $callbacks = $options = array();
+  foreach ($entities as $entity => $info) {
+    if (empty($info['xmlsitemap']['rebuild callback'])) {
+      // Only show entities which can be rebuilt.
+      continue;
+    }
+    if (!empty($info['object keys']['bundle']) && !xmlsitemap_get_link_type_enabled_bundles($entity)) {
+      continue;
+    }
+    else {
+      $callbacks[$entity] = $info['xmlsitemap']['rebuild callback'];
+      $options[$entity] = $info['label'];
+    }
+  }
 
-  $form['modules'] = array(
+  $form['callbacks'] = array(
+    '#type' => 'value',
+    '#value' => $callbacks,
+  );
+  $form['entities'] = array(
     '#type' => 'select',
-    '#title' => t("Select which modules' links you would like to rebuild"),
-    '#description' => t('If no modules are selected, the sitemap files will just be regenerated.'),
+    '#title' => t("Select which link types you would like to rebuild"),
+    '#description' => t('If no link types are selected, the sitemap files will just be regenerated.'),
     '#multiple' => TRUE,
-    '#options' => drupal_map_assoc($modules),
-    '#default_value' => xmlsitemap_var('rebuild_needed') || !xmlsitemap_var('developer_mode') ? $modules : array(),
+    '#options' => $options,
+    '#default_value' => xmlsitemap_var('rebuild_needed') || !xmlsitemap_var('developer_mode') ? array_keys($options) : array(),
     '#access' => xmlsitemap_var('developer_mode'),
   );
   $form['save_custom'] = array(
@@ -254,7 +272,7 @@ function xmlsitemap_rebuild_form_submit($form, &$form_state) {
   variable_set('xmlsitemap_rebuild_needed', TRUE);
 
   module_load_include('inc', 'xmlsitemap');
-  $batch = xmlsitemap_rebuild_batch($form_state['values']['modules'], $form_state['values']['save_custom']);
+  $batch = xmlsitemap_rebuild_batch($form_state['values']['entities'], $form_state['values']['callbacks'], $form_state['values']['save_custom']);
   batch_set($batch);
   $form_state['redirect'] = 'admin/settings/xmlsitemap';
 }

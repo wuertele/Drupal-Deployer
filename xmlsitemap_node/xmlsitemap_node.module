@@ -15,6 +15,9 @@ function xmlsitemap_node_xmlsitemap_link_info() {
     ),
     'path callback' => 'xmlsitemap_node_path',
     'load hook' => 'node_load',
+    'xmlsitemap' => array(
+      'process callback' => 'xmlsitemap_node_xmlsitemap_process_node_links',
+    ),
   );
   foreach (node_get_types('names') as $type => $name) {
     $types['node']['bundles'][$type] = array(
@@ -52,13 +55,27 @@ function xmlsitemap_node_cron() {
  * Implements hook_xmlsitemap_index_links().
  */
 function xmlsitemap_node_xmlsitemap_index_links($limit) {
-  if ($types = xmlsitemap_node_get_types()) {
+  if ($types = xmlsitemap_get_link_type_enabled_bundles('node')) {
     $query = db_query_range("SELECT n.nid FROM {node} n LEFT JOIN {xmlsitemap} x ON x.type = 'node' AND n.nid = x.id WHERE x.id IS NULL AND n.type IN (" . db_placeholders($types, 'varchar') . ") ORDER BY n.nid DESC", $types, 0, $limit);
+    $nids = array();
     while ($nid = db_result($query)) {
-      $node = node_load($nid, NULL, TRUE);
-      $link = xmlsitemap_node_create_link($node);
-      xmlsitemap_save_link($link);
+      $nids[] = $nid;
     }
+    xmlsitemap_node_xmlsitemap_process_node_links($nids);
+  }
+}
+
+/**
+ * Process node sitemap links.
+ *
+ * @param $nids
+ *   An array of node IDs.
+ */
+function xmlsitemap_node_xmlsitemap_process_node_links(array $nids) {
+  foreach ($nids as $nid) {
+    $node = node_load($nid, NULL, TRUE);
+    $link = xmlsitemap_node_create_link($node);
+    xmlsitemap_save_link($link);
   }
 }
 
@@ -105,6 +122,20 @@ function xmlsitemap_node_node_type($op, $info) {
     variable_del('xmlsitemap_node_priority_' . $info->type);
     //xmlsitemap_link_delete_multiple(array('type' => 'node', 'subtype' => $info->type));
   }
+}
+
+/**
+ * Implements hook_content_extra_fields().
+ *
+ * This is so that the XML sitemap fieldset is sortable on the node edit form.
+ */
+function xmlsitemap_node_content_extra_fields() {
+  $extras['xmlsitemap'] = array(
+    'label' => t('XML sitemap'),
+    'description' => t('XML sitemap module form'),
+    'weight' => 30,
+  );
+  return $extras;
 }
 
 /**
@@ -172,63 +203,6 @@ function xmlsitemap_node_form_alter(&$form, $form_state, $form_id) {
       $form['xmlsitemap']['#description'] = t('The default XML sitemap settings for this content type can be changed <a href="@link-type">here</a>.', array('@link-type' => url('admin/content/node-type/' . str_replace('_', '-', $node->type), array('query' => drupal_get_destination()))));
     }
   }
-}
-
-/**
- * Implements hook_xmlsitemap_links().
- */
-function xmlsitemap_node_xmlsitemap_links($offset = 0, $limit = 0) {
-  $links = array();
-
-  if ($types = xmlsitemap_node_get_types()) {
-    $sql = "SELECT n.nid FROM {node} n WHERE n.nid > %d AND n.type IN (" . db_placeholders($types, 'varchar') . ") ORDER BY n.nid";
-    $args = array_merge(array($offset), $types);
-    $query = ($limit ? db_query_range($sql, $args, 0, $limit) : db_query($sql, $args));
-
-    while ($nid = db_result($query)) {
-      $node = node_load($nid, NULL, TRUE);
-      $links[] = xmlsitemap_node_create_link($node);
-    }
-  }
-
-  return $links;
-}
-
-/**
- * Implements hook_xmlsitemap_links_batch_info().
- */
-function xmlsitemap_node_xmlsitemap_links_batch_info() {
-  $types = xmlsitemap_node_get_types();
-  return array(
-    'max' => $types ? db_result(db_query("SELECT COUNT(n.nid) FROM {node} n WHERE n.type IN (" . db_placeholders($types, 'varchar') . ")", $types)) : 0,
-  );
-}
-
-/**
- * Fetch an array of node types to be included in the sitemap.
- */
-function xmlsitemap_node_get_types() {
-  $node_types = array_keys(node_get_types('names'));
-  foreach ($node_types as $index => $node_type) {
-    if (!variable_get('xmlsitemap_node_status_' . $node_type, 0)) {
-      unset($node_types[$index]);
-    }
-  }
-  return $node_types;
-}
-
-/**
- * Implements hook_content_extra_fields().
- *
- * This is so that the XML sitemap fieldset is sortable on the node edit form.
- */
-function xmlsitemap_node_content_extra_fields() {
-  $extras['xmlsitemap'] = array(
-    'label' => t('XML sitemap'),
-    'description' => t('XML sitemap module form'),
-    'weight' => 30,
-  );
-  return $extras;
 }
 
 /**

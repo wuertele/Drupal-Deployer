@@ -927,17 +927,17 @@ function xmlsitemap_get_link_info($type = NULL, $reset = FALSE) {
   }
 
   if (!isset($link_info)) {
-    $link_info = array();
-    foreach (module_implements('xmlsitemap_link_info') as $module) {
-      $module_link_info = module_invoke($module, 'xmlsitemap_link_info');
-      foreach ($module_link_info as $key => $info) {
-        $module_link_info[$key] += array(
-          'type' => $key,
-          'base table' => FALSE,
-          'bundles' => array(),
-        );
+    $link_info = module_invoke_all('xmlsitemap_link_info');
+    foreach ($link_info as $key => &$info) {
+      $info += array(
+        'type' => $key,
+        'base table' => FALSE,
+        'bundles' => array(),
+        'xmlsitemap' => array(),
+      );
+      if (!isset($info['xmlsitemap']['rebuild callback']) && !empty($info['base table']) && !empty($info['object keys']['id']) && !empty($info['xmlsitemap']['process callback'])) {
+        $info['xmlsitemap']['rebuild callback'] = 'xmlsitemap_rebuild_batch_fetch';
       }
-      $link_info = array_merge($link_info, $module_link_info);
     }
     drupal_alter('xmlsitemap_link_info', $link_info);
     ksort($link_info);
@@ -1085,9 +1085,9 @@ function xmlsitemap_language_load($language = '', $reset = FALSE) {
 function xmlsitemap_get_link_type_enabled_bundles($entity_type) {
   $bundles = array();
   $info = xmlsitemap_get_link_info($entity_type);
-  foreach ($info['bundles'] as $key => $bundle) {
-    if (!empty($bundle['xmlsitemap']['status'])) {
-      $bundles[$key] = $bundle['label'];
+  foreach ($info['bundles'] as $bundle => $bundle_info) {
+    if (!empty($bundle_info['xmlsitemap']['status'])) {
+      $bundles[] = $bundle;
     }
   }
   return $bundles;
