@@ -808,7 +808,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
   if (variable_get('file_downloads', '') == FILE_DOWNLOADS_PRIVATE) {
     $form['fckeditor_upload_settings']['UserFilesPath']['#description'] = t('Setting relative path to uploaded files has been disabled because private downloads are enabled and this path is calculated automatically. To change the location of uploaded files in the private file system, edit the !globallink.', array('!globallink' => l(t('FCKeditor Global Profile'), 'admin/settings/fckeditor/editg')));
     $form['fckeditor_upload_settings']['UserFilesPath']['#disabled'] = TRUE;
-    $form['fckeditor_upload_settings']['UserFilesAbsolutePath']['#description'] = t('Setting path to uploaded files has been disabled because private downloads are enabled and this path is calculated automatically.To change the location of uploaded files in the private file system, edit the !globallink.', array('!globallink' => l(t('FCKeditor Global Profile'), 'admin/settings/fckeditor/editg')));
+    $form['fckeditor_upload_settings']['UserFilesAbsolutePath']['#description'] = t('Setting path to uploaded files has been disabled because private downloads are enabled and this path is calculated automatically. To change the location of uploaded files in the private file system, edit the !globallink.', array('!globallink' => l(t('FCKeditor Global Profile'), 'admin/settings/fckeditor/editg')));
     $form['fckeditor_upload_settings']['UserFilesAbsolutePath']['#disabled'] = TRUE;
   }
 
