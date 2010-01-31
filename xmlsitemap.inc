@@ -286,6 +286,7 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
 
   while ($link = db_fetch_array($query)) {
     $url_options['language'] = $link['language'] ? xmlsitemap_language_load($link['language']) : $language;
+    // @todo $url_options['langauge'] could be NULL if language was not found.
     $link['alias'] = xmlsitemap_get_path_alias($link['loc'], $url_options['language']->language);
     $link_url = url($link['alias'], $url_options);
 
