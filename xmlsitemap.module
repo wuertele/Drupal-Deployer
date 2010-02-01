@@ -1097,11 +1097,15 @@ function xmlsitemap_get_link_type_indexed_status($entity_type, $bundle = '') {
   $info = xmlsitemap_get_link_info($entity_type);
   $status['indexed'] = db_result(db_query("SELECT COUNT(id) FROM {xmlsitemap} WHERE type = '%s' AND subtype = '%s'", $entity_type, $bundle));
   $status['visible'] = db_result(db_query("SELECT COUNT(id) FROM {xmlsitemap} WHERE type = '%s' AND subtype = '%s' AND status = 1 AND access = 1", $entity_type, $bundle));
+  $base_table = db_escape_table($info['base table']);
+  $id_key = db_escape_string($info['object keys']['id']);
   if (!empty($info['object keys']['bundle'])) {
-    $status['total'] = db_result(db_query("SELECT COUNT(%s) FROM {%s} WHERE %s = '%s'", db_escape_string($info['object keys']['id']), db_escape_table($info['base table']), db_escape_string($info['object keys']['bundle']), $bundle));
+    $bundle_key = db_escape_string($info['object keys']['bundle']);
+    $bundle_placeholder = db_type_placeholder(_xmlsitemap_get_field_type($info['base table'], $info['object keys']['bundle']));
+    $status['total'] = db_result(db_query("SELECT COUNT($id_key) FROM {$base_table} WHERE $bundle_key = $bundle_placeholder", $bundle));
   }
   else {
-    $status['total'] = db_result(db_query("SELECT COUNT(%s) FROM {%s}", db_escape_string($info['object keys']['id']), db_escape_table($info['base table'])));
+    $status['total'] = db_result(db_query("SELECT COUNT($id_key) FROM {$base_table}"));
   }
   return $status;
 }
