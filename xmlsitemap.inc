@@ -419,26 +419,26 @@ function xmlsitemap_rebuild_batch_fetch($entity, &$context) {
   $info = $context['sandbox']['info'];
 
   // Build the generic query.
-  $table = db_escape_table($info['base table']);
-  $id = db_escape_string($info['object keys']['id']);
+  $base_table = db_escape_table($info['base table']);
+  $id_key = db_escape_string($info['object keys']['id']);
   $query = $args = $ids = array();
-  $query['SELECT'] = "SELECT $id";
-  $query['FROM']   = "FROM {$table}";
-  $query['WHERE']  = "WHERE $id > %d";
+  $query['SELECT'] = "SELECT $id_key";
+  $query['FROM']   = "FROM {$base_table}";
+  $query['WHERE']  = "WHERE $id_key > %d";
   $args[] = $context['sandbox']['last_id'];
 
   if (!empty($info['object keys']['bundle'])) {
-    $bundle = $info['object keys']['bundle'];
+    $bundle_key = db_escape_string($info['object keys']['bundle']);
     $bundle_type = _xmlsitemap_get_field_type($info['base table'], $info['object keys']['bundle']);
     $bundles = xmlsitemap_get_link_type_enabled_bundles($entity);
-    $query['WHERE'] .= " AND $bundle IN (" . db_placeholders($bundles, $bundle_type) . ")";
+    $query['WHERE'] .= " AND $bundle_key IN (" . db_placeholders($bundles, $bundle_type) . ")";
     $args = array_merge($args, $bundles);
   }
-  $query['ORDER BY'] = "ORDER BY $id";
+  $query['ORDER BY'] = "ORDER BY $id_key";
 
   if (!isset($context['sandbox']['max'])) {
     $count_query = $query;
-    $count_query['SELECT'] = "SELECT COUNT($id)";
+    $count_query['SELECT'] = "SELECT COUNT($id_key)";
     $sql = implode(' ', $count_query);
     $context['sandbox']['max'] = (int) db_result(db_query($sql, $args));
   }

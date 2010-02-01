@@ -220,13 +220,17 @@ function xmlsitemap_rebuild_form() {
   $callbacks = $options = array();
   foreach ($entities as $entity => $info) {
     if (empty($info['xmlsitemap']['rebuild callback'])) {
-      // Only show entities which can be rebuilt.
+      // If the entity is missing a rebuild callback, skip.
       continue;
     }
     if (!empty($info['object keys']['bundle']) && !xmlsitemap_get_link_type_enabled_bundles($entity)) {
+      // If the entity has bundles, but no enabled bundles, skip since
+      // rebuilding wouldn't get any links.
       continue;
     }
     else {
+      // Build the list of callbacks and options for the form and batch
+      // processing.
       $callbacks[$entity] = $info['xmlsitemap']['rebuild callback'];
       $options[$entity] = $info['label'];
     }

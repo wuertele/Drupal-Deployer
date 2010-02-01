@@ -13,6 +13,7 @@
  */
 class XMLSitemapTestHelper extends DrupalWebTestCase {
   protected $admin_user;
+  protected $seen_ids = array();
 
   function setUp() {
     // Call parent::setUp() allowing test cases to pass further modules.
@@ -30,7 +31,7 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
     // Capture any (remaining) watchdog errors.
     $this->assertNoWatchdogErrors();
     // Reset the watchdog seen IDs for the next test run.
-    $this->getWatchdogMessages(array(), TRUE);
+    $this->seen_ids = array();
 
     parent::tearDown();
   }
@@ -191,12 +192,11 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
    * @todo Add unit tests for this function.
    */
   protected function getWatchdogMessages(array $conditions = array(), $reset = FALSE) {
-    static $seen_ids = array();
     static $watchdog_schema;
     static $levels;
 
     if (!module_exists('dblog') || $reset) {
-      $seen_ids = array();
+      $this->seen_ids = array();
       return;
     }
     if (!isset($watchdog_schema)) {
@@ -213,15 +213,15 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
       $conditions[$field] = $field . ' = ' . db_type_placeholder($watchdog_schema['fields'][$field]['type']);
       $args[] = ($field == 'variables' && is_array($value)) ? serialize($value) : $value;
     }
-    if ($seen_ids) {
-      $conditions[] = 'wid NOT IN (' . db_placeholders($seen_ids) . ')';
-      $args = array_merge($args, $seen_ids);
+    if ($this->seen_ids) {
+      $conditions[] = 'wid NOT IN (' . db_placeholders($this->seen_ids) . ')';
+      $args = array_merge($args, $this->seen_ids);
     }
 
     if ($conditions) {
       $sql .= " WHERE " . implode(' AND ', $conditions);
     }
-    $sql .= " ORDER BY timestamp ASC";
+    $sql .= " ORDER BY timestamp";
     $query = db_query($sql, $args);
 
     $messages = array();
@@ -234,7 +234,7 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
       $messages[$message->wid] = $message;
     }
 
-    $seen_ids = array_merge($seen_ids, array_keys($messages));
+    $this->seen_ids = array_merge($this->seen_ids, array_keys($messages));
     return $messages;
   }
 
