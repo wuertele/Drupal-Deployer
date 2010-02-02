@@ -340,6 +340,7 @@ class MollomWebTestCase extends DrupalWebTestCase {
     if (isset($session_id)) {
       $this->_assertEqual(t('Stored session id'), $data->session, $session_id);
     }
+    return $data;
   }
 
   /**
@@ -419,7 +420,7 @@ class MollomWebTestCase extends DrupalWebTestCase {
     $before_url = $this->getUrl();
     $this->drupalPost($url, $edit, $button);
     if ($this->getUrl() == $before_url) {
-      $this->assertCaptchaField($url);
+      $this->assertCaptchaField();
     }
     $this->assertText($this->incorrect_message);
     if ($success_message) {
@@ -495,7 +496,7 @@ class MollomWebTestCase extends DrupalWebTestCase {
     $before_url = $this->getUrl();
     $this->drupalPost($url, $edit, $button);
     if ($this->getUrl() == $before_url) {
-      $this->assertCaptchaField($url);
+      $this->assertCaptchaField();
     }
     $this->assertText($this->unsure_message);
     if ($success_message) {
@@ -595,6 +596,29 @@ class MollomWebTestCase extends DrupalWebTestCase {
       '@second' => $second,
     ));
     $this->assertEqual($first, $second, $message);
+  }
+
+  /**
+   * Helper function for assertNotEqual().
+   *
+   * Check to see if two values are equal. And provide a meaningful response.
+   *
+   * @param $name
+   *   A name or identifier to use in the assertion message.
+   * @param $first
+   *   The first value to check.
+   * @param $second
+   *   The second value to check.
+   * @return
+   *   TRUE if the assertion succeeded, FALSE otherwise.
+   */
+  protected function _assertNotEqual($name, $first, $second) {
+    $message = strtr("@name: '@first' is not equal to '@second'.", array(
+      '@name' => $name,
+      '@first' => $first,
+      '@second' => $second,
+    ));
+    $this->assertNotEqual($first, $second, $message);
   }
 }
 
@@ -1903,6 +1927,51 @@ class MollomDataTestCase extends MollomWebTestCase {
     // Verify that no data was submitted to Mollom.
     $data = $this->getServerRecord();
     $this->assertFalse($data, t('Administrative form submission was not validated by Mollom.'));
+  }
+
+  /**
+   * Tests automated 'post_id' mapping and session data storage.
+   *
+   * This is an atomic test to verify that a simple 'post_id' mapping defined
+   * via hook_mollom_form_info() is sufficient for basic integration with
+   * Mollom (without reporting).
+   */
+  function testPostIdMapping() {
+    // Enable protection for mollom_test_form.
+    $this->drupalLogin($this->admin_user);
+    $this->setProtection('mollom_test_form');
+    $this->drupalLogout();
+
+    // Submit a mollom_test thingy.
+    $edit = array(
+      'title' => 'ham',
+      'body' => $this->randomString(),
+    );
+    $this->drupalPost('mollom-test/form', $edit, 'Submit');
+    $this->assertText('Successful form submission.');
+    $mid = $this->getFieldValueByName('mid');
+    $this->assertTrue($mid > 0, t('Submission was stored.'));
+    $data = $this->assertData('mollom_test', $mid);
+
+    // Ensure we were redirected to the form for the stored entry.
+    $this->assertFieldByName('body', $edit['body'], t('Existing body value found.'));
+    $new_mid = $this->getFieldValueByName('mid');
+    $this->assertEqual($new_mid, $mid, t('Existing entity id found.'));
+
+    // Update the stored entry.
+    $edit['title'] = 'unsure';
+    $this->drupalPost(NULL, $edit, 'Submit');
+    $this->assertCaptchaField();
+    $this->postCorrectCaptcha(NULL, array(), 'Submit', 'Successful form submission.');
+    $new_data = $this->assertData('mollom_test', $mid);
+
+    // Verify that only session data was updated.
+    $this->_assertEqual('entity', $data->entity, $new_data->entity);
+    $this->_assertEqual('id', $data->did, $new_data->did);
+    $this->_assertNotEqual('session_id', $data->session, $new_data->session);
+    $this->_assertNotEqual('quality', $data->quality, $new_data->quality);
+    $count = db_result(db_query("SELECT COUNT(1) FROM {mollom}"));
+    $this->assertEqual($count, 1, t('Stored data in {mollom} was updated.'));
   }
 }
 

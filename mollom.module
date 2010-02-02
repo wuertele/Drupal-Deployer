@@ -381,9 +381,6 @@ function mollom_data_delete($entity, $id) {
  *
  * This function intercepts all forms in Drupal and Mollom-enables them if
  * necessary.
- *
- * @todo Add handling of 'post_id' mapping; probably into validation handlers,
- *   before submitted values are sent to Mollom.
  */
 function mollom_form_alter(&$form, &$form_state, $form_id) {
   // Site administrators don't have their content checked with Mollom.
@@ -654,8 +651,12 @@ function mollom_form_get_values($form_values, $fields, $mapping) {
   // Mollom's XML-RPC methods only accept data properties that are defined. We
   // also do not want to send more than we have to, so we need to build an
   // exact data structure.
-  // @see hook_mollom_form_info()
   $data = array();
+  // Post id; not sent to Mollom.
+  // @see mollom_form_submit()
+  if (!empty($mapping['post_id'])) {
+    $data['post_id'] = $mapping['post_id'];
+  }
   // Post title.
   if (!empty($mapping['post_title'])) {
     $data['post_title'] = $mapping['post_title'];
@@ -922,6 +923,7 @@ function mollom_process_mollom($element, $input, &$form_state, $complete_form) {
       'require_analysis' => $element['#mollom_form']['mode'] == MOLLOM_MODE_ANALYSIS,
       'require_captcha' => $element['#mollom_form']['mode'] == MOLLOM_MODE_CAPTCHA,
       'passed_captcha' => FALSE,
+      'entity' => $element['#mollom_form']['entity'],
       'fields' => $element['#mollom_form']['fields'],
       'mapping' => $element['#mollom_form']['mapping'],
       'response' => NULL,
@@ -1012,6 +1014,10 @@ function mollom_validate_analysis($form, &$form_state) {
 
   // Perform textual analysis.
   $data = mollom_form_get_values($form_state['values'], $form_state['mollom']['fields'], $form_state['mollom']['mapping']);
+  // Remove 'post_id' property; only used by mollom_form_submit().
+  if (isset($data['post_id'])) {
+    unset($data['post_id']);
+  }
   if (!empty($form_state['mollom']['session_id'])) {
     $data += array('session_id' => $form_state['mollom']['session_id']);
   }
@@ -1179,11 +1185,26 @@ function mollom_pre_render_mollom($element) {
 
 /**
  * Form submit handler to flush Mollom session and form information from cache.
- *
- * @todo Invoke mollom_data_save() here in case we have an 'entity' and
- *   'post_id' mapping.
  */
 function mollom_form_submit($form_id, &$form_state) {
+  // Some modules are implementing multi-step forms without separate form
+  // submit handlers. In case we reach here and the form will be rebuilt, we
+  // need to defer our submit handling until final submission.
+  if (!empty($form_state['rebuild'])) {
+    return;
+  }
+  // If an 'entity' and a 'post_id' mapping was provided via
+  // hook_mollom_form_info(), try to automatically store Mollom session data.
+  if (!empty($form_state['mollom']['entity']) && isset($form_state['mollom']['mapping']['post_id'])) {
+    // For new entities, the entity's form submit handler will have added the
+    // new entity id value into $form_state['values'], so we need to rebuild the
+    // data mapping.
+    $data = mollom_form_get_values($form_state['values'], $form_state['mollom']['fields'], $form_state['mollom']['mapping']);
+    // We only consider non-empty and non-zero values as valid entity ids.
+    if (!empty($data['post_id'])) {
+      mollom_data_save($form_state['mollom']['entity'], $data['post_id']);
+    }
+  }
   // Flush Mollom session information from database cache and user session.
   if (!empty($form_state['mollom']['session_id'])) {
     $session_id = $form_state['mollom']['session_id'];

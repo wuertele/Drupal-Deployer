@@ -155,8 +155,7 @@ function mollom_test_mollom_form_info() {
   $forms['mollom_test_form'] = array(
     'title' => 'Mollom test form',
     'bypass access' => array('administer mollom'),
-    // @todo Test automated entity handling.
-    // 'entity' => 'comment',
+    'entity' => 'mollom_test',
     'elements' => array(
       'title' => 'Title',
       'body' => 'Body',
@@ -165,7 +164,7 @@ function mollom_test_mollom_form_info() {
       'field' => 'Multiple value field',
     ),
     'mapping' => array(
-      // 'post_id' => 'cid',
+      'post_id' => 'mid',
       'post_title' => 'title',
       'author_name' => 'name',
     ),
@@ -176,11 +175,16 @@ function mollom_test_mollom_form_info() {
 /**
  * Form builder for Mollom test form.
  */
-function mollom_test_form(&$form_state) {
+function mollom_test_form(&$form_state, $mid = NULL) {
   if (empty($form_state['storage'])) {
+    $body = '';
+    if (isset($mid)) {
+      $body = db_result(db_query("SELECT body FROM {mollom_test} WHERE mid = %d", $mid));
+    }
     $form_state['storage'] = array(
+      'mid' => $mid,
       'title' => '',
-      'body' => '',
+      'body' => $body,
       'exclude' => '',
       'parent' => array('child' => ''),
       'field' => array(),
@@ -190,6 +194,10 @@ function mollom_test_form(&$form_state) {
   $form_state['storage']['field']['new'] = '';
 
   $form['#tree'] = TRUE;
+  $form['mid'] = array(
+    '#type' => 'hidden',
+    '#value' => $form_state['storage']['mid'],
+  );
   $form['title'] = array(
     '#type' => 'textfield',
     '#title' => 'Title',
@@ -255,9 +263,18 @@ function mollom_test_form_field_submit($form, &$form_state) {
  */
 function mollom_test_form_submit($form, &$form_state) {
   $form_state['rebuild'] = FALSE;
+  unset($form_state['storage']);
 
   $form_state['values']['field'][] = $form_state['values']['field']['new'];
   unset($form_state['values']['field']['new']);
+
+  // Store submission.
+  $update = !empty($form_state['values']['mid']) ? 'mid' : array();
+  drupal_write_record('mollom_test', $form_state['values'], $update);
+
+  // Redirect to stored entry.
+  $form_state['redirect'] = 'mollom-test/form/' . $form_state['values']['mid'];
+
   drupal_set_message('Successful form submission.');
   drupal_set_message('<pre>' . var_export($form_state['values'], TRUE) . '</pre>');
 }
