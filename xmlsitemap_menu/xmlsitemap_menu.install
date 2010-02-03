@@ -10,11 +10,11 @@
  * Implements hook_uninstall().
  */
 function xmlsitemap_menu_uninstall() {
-  // Remove variables.
-  drupal_load('module', 'xmlsitemap_menu');
-  $variables = array_keys(xmlsitemap_menu_variables());
-  foreach ($variables as $variable) {
-    variable_del($variable);
+  drupal_load('module', 'menu');
+  drupal_load('module', 'xmlsitemap');
+  $menus = array_keys(menu_get_menus());
+  foreach ($menus as $menu) {
+    xmlsitemap_link_bundle_delete('menu', $menu);
   }
 }
 
@@ -73,4 +73,25 @@ function xmlsitemap_menu_update_7() {
     }
   }
   return $ret;
+}
+
+/**
+ * Cleanup variables.
+ */
+function xmlsitemap_menu_update_6200() {
+  drupal_load('module', 'menu');
+  $menus = array_keys(menu_get_menus());
+  foreach ($menus as $menu) {
+    $settings = array(
+      'status' => variable_get('xmlsitemap_menu_status_' . $menu, 0),
+      'priority' => variable_get('xmlsitemap_menu_priority_' . $menu, 0.5),
+    );
+    variable_set('xmlsitemap_settings_menu_' . $menu, $settings);
+    variable_del('xmlsitemap_menu_status_' . $menu);
+    variable_del('xmlsitemap_menu_priority_' . $menu);
+    variable_del('xmlsitemap_menu_calculate_priority_' . $menu);
+  }
+  variable_del('xmlsitemap_menu_menus');
+  variable_del('xmlsitemap_menu_calculate_priority');
+  return array();
 }

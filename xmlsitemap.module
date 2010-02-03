@@ -874,7 +874,7 @@ function xmlsitemap_write_record($table, &$object, $update = array()) {
 
 function xmlsitemap_process_form_link_options($form, &$form_state) {
   $link = &$form_state['values']['xmlsitemap'];
-  $fields = array('status' => 1, 'priority' => 0.5);
+  $fields = array('status' => 0, 'priority' => 0.5);
 
   foreach ($fields as $field => $default) {
     if ($link[$field] === 'default') {
@@ -937,6 +937,12 @@ function xmlsitemap_get_link_info($type = NULL, $reset = FALSE) {
       );
       if (!isset($info['xmlsitemap']['rebuild callback']) && !empty($info['base table']) && !empty($info['object keys']['id']) && !empty($info['xmlsitemap']['process callback'])) {
         $info['xmlsitemap']['rebuild callback'] = 'xmlsitemap_rebuild_batch_fetch';
+      }
+      foreach ($info['bundles'] as $bundle => &$bundle_info) {
+        $bundle_info += array(
+          'xmlsitemap' => array(),
+        );
+        $bundle_info['xmlsitemap'] += xmlsitemap_link_bundle_settings_load($key, $bundle);
       }
     }
     drupal_alter('xmlsitemap_link_info', $link_info);
@@ -1086,7 +1092,9 @@ function xmlsitemap_get_link_type_enabled_bundles($entity_type) {
   $bundles = array();
   $info = xmlsitemap_get_link_info($entity_type);
   foreach ($info['bundles'] as $bundle => $bundle_info) {
-    if (!empty($bundle_info['xmlsitemap']['status'])) {
+    $settings = xmlsitemap_link_bundle_settings_load($entity_type, $bundle);
+    if (!empty($settings['status'])) {
+    //if (!empty($bundle_info['xmlsitemap']['status'])) {
       $bundles[] = $bundle;
     }
   }
@@ -1108,4 +1116,49 @@ function xmlsitemap_get_link_type_indexed_status($entity_type, $bundle = '') {
     $status['total'] = db_result(db_query("SELECT COUNT($id_key) FROM {$base_table}"));
   }
   return $status;
+}
+
+function xmlsitemap_link_bundle_settings_save($entity, $bundle, array $settings, $update_links = TRUE) {
+  if ($update_links) {
+    $old_settings = xmlsitemap_link_bundle_settings_load($entity, $bundle);
+    if ($settings['status'] != $old_settings['status']) {
+      xmlsitemap_update_links(array('status' => $settings['status']), array('type' => $entity, 'subtype' => $bundle, 'status_override' => 0));
+    }
+    if ($settings['priority'] != $old_settings['priority']) {
+      xmlsitemap_update_links(array('priority' => $settings['priority']), array('type' => $entity, 'subtype' => $bundle, 'priority_override' => 0));
+    }
+  }
+
+  variable_set("xmlsitemap_settings_{$entity}_{$bundle}", $settings);
+  cache_clear_all('xmlsitemap:link_info:', 'cache', TRUE);
+  //xmlsitemap_get_link_info(NULL, TRUE);
+}
+
+function xmlsitemap_link_bundle_settings_load($entity, $bundle) {
+  $settings = variable_get("xmlsitemap_settings_{$entity}_{$bundle}", array());
+  $settings += array('status' => 0, 'priority' => 0.5);
+  return $settings;
+}
+
+function xmlsitemap_link_bundle_delete($entity, $bundle, $delete_links = TRUE) {
+  variable_del("xmlsitemap_settings_{$entity}_{$bundle}");
+  if ($delete_links) {
+    xmlsitemap_link_delete_multiple(array('type' => $entity, 'subtype' => $bundle));
+  }
+  cache_clear_all('xmlsitemap:link_info:', 'cache', TRUE);
+  //xmlsitemap_get_link_info(NULL, TRUE);
+}
+
+function xmlsitemap_can_admin_bundle(array $bundle_info) {
+  if (isset($bundle_info['admin'])) {
+    $bundle_info['admin'] += array(
+      'access callback' => 'user_access',
+      'access arguments' => array(),
+    );
+    if (!empty($bundle_info['admin']['access callback'])) {
+      return call_user_func_array($bundle_info['admin']['access callback'], $bundle_info['admin']['access arguments']);
+    }
+  }
+
+  return FALSE;
 }

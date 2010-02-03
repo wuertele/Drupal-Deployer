@@ -96,8 +96,8 @@ function xmlsitemap_settings_form() {
     '#description' => t('Exposes additional settings intended for development.'),
   );
 
-  $entites = xmlsitemap_get_link_info(NULL, TRUE);
-  foreach ($entites as $entity => $entity_info) {
+  $entities = xmlsitemap_get_link_info(NULL, TRUE);
+  foreach ($entities as $entity => $entity_info) {
     $form[$entity] = array(
       '#type' => 'fieldset',
       '#title' => $entity_info['label'],
@@ -291,17 +291,6 @@ function xmlsitemap_add_form_entity_summary(&$form, $entity, array $entity_info)
   $rows = array();
   $totals = array('total' => 0, 'indexed' => 0, 'visible' => 0);
   foreach ($entity_info['bundles'] as $bundle => $bundle_info) {
-    if (isset($bundle_info['admin'])) {
-      $bundle_info['admin'] += array(
-        'access callback' => 'user_access',
-        'access arguments' => array(),
-        'access' => FALSE,
-      );
-      if ($bundle_info['admin']['access callback']) {
-        $bundle_info['admin']['access'] = call_user_func_array($bundle_info['admin']['access callback'], $bundle_info['admin']['access arguments']);
-      }
-    }
-
     // Fetch current per-bundle link total and indexed counts.
     $status = xmlsitemap_get_link_type_indexed_status($entity, $bundle);
     $totals['total'] += $status['total'];
@@ -309,7 +298,7 @@ function xmlsitemap_add_form_entity_summary(&$form, $entity, array $entity_info)
     $totals['visible'] += $status['visible'];
 
     $row = array();
-    if (!empty($bundle_info['admin']['access'])) {
+    if (xmlsitemap_can_admin_bundle($bundle_info) && !empty($bundle_info['admin']['real path'])) {
       $row[] = l($bundle_info['label'], $bundle_info['admin']['real path'], array('query' => drupal_get_destination()));
     }
     else {
@@ -350,9 +339,6 @@ function xmlsitemap_add_form_entity_summary(&$form, $entity, array $entity_info)
         'data' => $totals['visible'],
         'header' => TRUE,
       ),
-      /*$totals['total'],
-      $totals['indexed'],
-      $totals['visible'],*/
     );
     $form['summary'] = array(
       '#value' => theme('table', $header, $rows),
@@ -363,37 +349,80 @@ function xmlsitemap_add_form_entity_summary(&$form, $entity, array $entity_info)
 /**
  * Add the link type XML sitemap options to the link type's form.
  *
- * @todo Abstract the submission and link updating for this submit?
+ * Caller is responsible for ensuring xmlsitemap_link_bundle_settings_save()
+ * is called during submission.
  */
-function xmlsitemap_add_form_type_options(&$form, $module, $options) {
-  $form['xmlsitemap'] = array(
+function xmlsitemap_add_link_bundle_settings(array &$form, array $form_state, $entity, $bundle) {
+  xmlsitemap_link_bundle_settings_form($form, $form_state, $entity, $bundle, FALSE);
+
+  // Make the base element a fieldset.
+  $form['xmlsitemap'] += array(
     '#type' => 'fieldset',
     '#title' => t('XML sitemap'),
-    '#description' => t('Changing these type settings will affect any items of this type that have either inclusion or priority set to default.'),
     '#collapsible' => TRUE,
     '#collapsed' => TRUE,
     '#access' => user_access('administer xmlsitemap'),
     '#group' => 'additional_settings',
+    '#attached' => array(
+      'js' => array(
+        'vertical-tabs' => drupal_get_path('module', 'xmlsitemap') . '/xmlsitemap.js',
+      ),
+    ),
   );
-  $form['xmlsitemap']['xmlsitemap_' . $module . '_status'] = array(
+}
+
+function xmlsitemap_link_bundle_settings_form(array &$form, array $form_state, $entity, $bundle, $buttons = TRUE) {
+  $settings = xmlsitemap_link_bundle_settings_load($entity, $bundle);
+
+  $form['xmlsitemap'] = array(
+    '#tree' => TRUE,
+    '#entity' => $entity,
+    '#bundle' => $bundle,
+  );
+  $form['xmlsitemap']['description'] = array(
+    '#prefix' => '<div class="description">',
+    '#suffix' => '</div>',
+    '#value' => t('Changing these type settings will affect any items of this type that have either inclusion or priority set to default.'),
+  );
+  $form['xmlsitemap']['status'] = array(
     '#type' => 'select',
     '#title' => t('Inclusion'),
     '#options' => xmlsitemap_get_status_options(),
-    '#default_value' => $options['status'],
+    '#default_value' => $settings['status'],
   );
-  $form['xmlsitemap']['xmlsitemap_' . $module . '_priority'] = array(
+  $form['xmlsitemap']['priority'] = array(
     '#type' => 'select',
     '#title' => t('Default priority'),
     '#options' => xmlsitemap_get_priority_options(),
-    '#default_value' => $options['priority'],
+    '#default_value' => $settings['priority'],
     '#process' => array('form_expand_ahah', 'ctools_dependent_process'),
-    '#dependency' => array('edit-xmlsitemap-' . $module . '-status' => array(1)),
+    '#dependency' => array('edit-xmlsitemap-status' => array(1)),
   );
 
   // Hide the priority field if the link is excluded.
   if (module_exists('ctools')) {
     ctools_include('dependent');
   }
+
+  if ($buttons) {
+    $form['actions'] = array(
+      '#type' => 'container',
+    );
+    $form['actions']['save'] = array(
+      '#type' => 'submit',
+      '#value' => t('Save'),
+    );
+  }
+
+  return $form;
+}
+
+function xmlsitemap_link_bundle_settings_form_submit($form, $form_state) {
+  $entity = $form['xmlsitemap']['#entity'];
+  $bundle = $form['xmlsitemap']['#bundle'];
+  $info = xmlsitemap_get_link_info($entity);
+  xmlsitemap_link_bundle_settings_save($entity, $bundle, $form_state['values']['xmlsitemap']);
+  drupal_set_message(t('Settings for the @bundle-label %bundle have been saved.', array('@bundle-label' => drupal_strtolower($info['bundle label']), '%bundle' => $info['bundles'][$bundle]['label'])));
 }
 
 /**
@@ -402,6 +431,8 @@ function xmlsitemap_add_form_type_options(&$form, $module, $options) {
  * @todo Add changefreq overridability.
  */
 function xmlsitemap_add_form_link_options(&$form, $link) {
+  $info = xmlsitemap_get_link_info($link['type']);
+
   $form['xmlsitemap'] = array(
     '#type' => 'fieldset',
     '#tree' => TRUE,
@@ -416,6 +447,15 @@ function xmlsitemap_add_form_link_options(&$form, $link) {
       ),
     ),
   );
+
+  $bundle_info = $info['bundles'][$link['subtype']];
+  if (xmlsitemap_can_admin_bundle($bundle_info) && !empty($bundle_info['admin']['real path'])) {
+    $form['xmlsitemap']['description'] = array(
+      '#prefix' => '<div class="description">',
+      '#suffix' => '</div>',
+      '#value' => t('The default XML sitemap settings for this @bundle can be changed <a href="@link-type">here</a>.', array('@bundle' => drupal_strtolower($info['bundle label']), '@link-type' => url($bundle_info['admin']['real path'], array('query' => drupal_get_destination())))),
+    );
+  }
 
   // Show a warning if the link is not accessible and will not be included in
   // the sitemap.

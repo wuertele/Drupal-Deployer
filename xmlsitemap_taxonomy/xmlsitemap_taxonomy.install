@@ -10,11 +10,11 @@
  * Implements hook_uninstall().
  */
 function xmlsitemap_taxonomy_uninstall() {
-  // Remove variables.
-  drupal_load('module', 'xmlsitemap_taxonomy');
-  $variables = array_keys(xmlsitemap_taxonomy_variables());
-  foreach ($variables as $variable) {
-    variable_del($variable);
+  drupal_load('module', 'taxonomy');
+  drupal_load('module', 'xmlsitemap');
+  $vids = array_keys(taxonomy_get_vocabularies());
+  foreach ($vids as $vid) {
+    xmlsitemap_link_bundle_delete('taxonomy_term', $vid);
   }
 }
 
@@ -44,4 +44,26 @@ function xmlsitemap_taxonomy_update_2() {
   db_change_field($ret, 'xmlsitemap', 'type', 'type', $field);
   $ret[] = update_sql("UPDATE {xmlsitemap} SET type = 'taxonomy_term' WHERE type = 'taxonomy'");
   return $ret;
+}
+
+/**
+ * Cleanup variables.
+ */
+function xmlsitemap_taxonomy_update_6200() {
+  drupal_load('module', 'taxonomy');
+  $vids = array_keys(taxonomy_get_vocabularies());
+  foreach ($vids as $vid) {
+    $settings = array(
+      'status' => variable_get('xmlsitemap_taxonomy_status_' . $vid, 0),
+      'priority' => variable_get('xmlsitemap_taxonomy_priority_' . $vid, 0.5),
+    );
+    variable_set('xmlsitemap_settings_taxonomy_term_' . $vid, $settings);
+    variable_del('xmlsitemap_taxonomy_status_' . $vid);
+    variable_del('xmlsitemap_taxonomy_priority_' . $vid);
+    variable_del('xmlsitemap_taxonomy_calculate_priority_' . $vid);
+    variable_del('xmlsitemap_taxonomy_include_empty_terms_' . $vid);
+  }
+  variable_del('xmlsitemap_taxonomy_include_empty_terms');
+  variable_del('xmlsitemap_taxonomy_calculate_priority');
+  return array();
 }

@@ -15,7 +15,7 @@ class XMLSitemapNodeTestHelper extends XMLSitemapTestHelper {
     parent::setUp('xmlsitemap', 'xmlsitemap_node', 'comment');
     $this->admin_user = $this->drupalCreateUser(array('administer nodes', 'administer content types', 'administer xmlsitemap'));
     $this->normal_user = $this->drupalCreateUser(array('create page content', 'edit any page content', 'access content'));
-    variable_set('xmlsitemap_node_status_page', 1);
+    xmlsitemap_link_bundle_settings_save('node', 'page', array('status' => 1, 'priority' => 0.5));
   }
 
   //function addNodes($count) {
@@ -44,20 +44,6 @@ class XMLSitemapNodeTestHelper extends XMLSitemapTestHelper {
     }
   }
 }
-
-//class XMLSitemapNodeUnitTest extends DrupalWebTestCase {
-//  public static function getInfo() {
-//    return array(
-//      'name' => 'XML Sitemap node unit tests',
-//      'description' => 'Unit tests for the XML Sitemap node module.',
-//      'group' => 'XML Sitemap',
-//    );
-//  }
-//
-//  function setUp() {
-//    parent::setUp('xmlsitemap', 'xmlsitemap_node');
-//  }
-//}
 
 class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
   public static function getInfo() {
@@ -119,28 +105,33 @@ class XMLSitemapNodeFunctionalTest extends XMLSitemapNodeTestHelper {
     $this->assertNodeSitemapLinkValues($node_old, array('status' => 1, 'priority' => 0.5));
 
     $edit = array(
-      'xmlsitemap_node_status' => 0,
-      'xmlsitemap_node_priority' => '0.0',
+      'xmlsitemap[status]' => 0,
+      'xmlsitemap[priority]' => '0.0',
     );
     $this->drupalPost('admin/content/node-type/page', $edit, t('Save content type'));
-    $this->assertText(t('The content type Page has been updated.'));
+    $this->assertText('The content type Page has been updated.');
 
     $node = $this->drupalCreateNode();
     $this->assertNodeSitemapLinkValues($node, array('status' => 0, 'priority' => 0.0));
     $this->assertNodeSitemapLinkValues($node_old, array('status' => 0, 'priority' => 0.0));
 
     $edit = array(
-      'xmlsitemap_node_status' => 1,
-      'xmlsitemap_node_priority' => '0.5',
+      'type' => 'page2',
+      'xmlsitemap[status]' => 1,
+      'xmlsitemap[priority]' => '0.5',
     );
     $this->drupalPost('admin/content/node-type/page', $edit, t('Save content type'));
-    $this->assertText(t('The content type Page has been updated.'));
+    $this->assertText('Changed the content type of 2 posts from page to page2.');
+    $this->assertText('The content type Page has been updated.');
 
-    $this->assertNodeSitemapLinkValues($node, array('status' => 1, 'priority' => 0.5));
-    $this->assertNodeSitemapLinkValues($node_old, array('status' => 1, 'priority' => 0.5));
+    $this->assertNodeSitemapLinkValues($node, array('subtype' => 'page2', 'status' => 1, 'priority' => 0.5));
+    $this->assertNodeSitemapLinkValues($node_old, array('subtype' => 'page2', 'status' => 1, 'priority' => 0.5));
+    $this->assertEqual(count(xmlsitemap_link_load_multiple(array('type' => 'node', 'subtype' => 'page'))), 0);
+    $this->assertEqual(count(xmlsitemap_link_load_multiple(array('type' => 'node', 'subtype' => 'page2'))), 2);
 
-    //$this->drupalPost('node/' . $node->nid . '/edit', array(), t('Save'));
-    //$this->assertText(t('Page @title has been updated.', array('@title' => $node->title)));
+    $this->drupalPost('admin/content/node-type/page2/delete', array(), t('Delete'));
+    $this->assertText('The content type Page has been deleted.');
+    $this->assertFalse(xmlsitemap_link_load_multiple(array('type' => 'node', 'subtype' => 'page2')), 'Nodes with deleted node type removed from {xmlsitemap}.');
   }
 
   /**
