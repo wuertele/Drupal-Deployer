@@ -40,6 +40,12 @@ INSTALLATION
 CONFIGURATION
 -------------
 1. Enable permissions at admin/user/permissions.
+   Security Warning: Users with the permission "use PHP to import nodes"
+   will be able to change nodes as they see fit before an import, as well as 
+   being able to execute PHP scripts on the server.  It is advisable not to
+   give this permission to a typical node author, only the administrator or
+   developer should use this feature.  You may even like to turn this module
+   off when it is no longer required.
 2. Configure module at admin/settings/node_export.
 
 
