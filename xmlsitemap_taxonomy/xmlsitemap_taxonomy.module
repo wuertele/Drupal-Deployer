@@ -161,7 +161,7 @@ function xmlsitemap_taxonomy_create_link(stdClass $term) {
     }
   }
 
-  $settings = xmlsitemap_link_bundle_settings_load('taxonomy_term', $term->vid);
+  $settings = xmlsitemap_link_bundle_load('taxonomy_term', $term->vid);
 
   $term->xmlsitemap += array(
     'id' => $term->tid,
@@ -225,19 +225,4 @@ function xmlsitemap_taxonomy_get_term_depth(stdClass $term) {
 function xmlsitemap_taxonomy_get_node_count(stdClass $term) {
   // @todo Use db_rewrite_sql() w/ switch user.
   return db_result(db_query_range("SELECT COUNT(tn.nid) FROM {term_node} tn LEFT JOIN {node n} USING (nid) WHERE tn.tid = %d AND n.status = 1", $term->tid, 0, 1));
-}
-
-/**
- * Internal default variables for template_var().
- */
-function xmlsitemap_taxonomy_variables() {
-  $defaults = array();
-  $vids = array_keys(taxonomy_get_vocabularies());
-  foreach ($vids as $vid) {
-    $defaults['xmlsitemap_settings_taxonomy_term_' . $vid] = array(
-      'status' => 0,
-      'priority' => 0.5,
-    );
-  }
-  return $defaults;
 }

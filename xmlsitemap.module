@@ -47,6 +47,7 @@ function xmlsitemap_help($path, $arg) {
 
   switch ($path) {
     case 'admin/help/xmlsitemap':
+    case 'admin/settings/xmlsitemap/settings/%/%/%':
       return;
     case 'admin/help#xmlsitemap':
       $sitemaps = xmlsitemap_get_sitemaps(TRUE);
@@ -133,6 +134,17 @@ function xmlsitemap_menu() {
     'type' => MENU_CALLBACK,
     'file' => 'xmlsitemap.pages.inc',
   );
+
+  // CTools/Dialog API callback for editing bundle settings.
+  if (module_exists('ctools') && module_exists('dialog')) {
+    $items['admin/settings/xmlsitemap/settings/%/%/%ctools_js'] = array(
+      'page callback' => 'xmlsitemap_bundle_settings_dialog',
+      'page arguments' => array(4, 5, 6),
+      'access arguments' => array('administer xmlsitemap'),
+      'type' => MENU_CALLBACK,
+      'file' => 'xmlsitemap.admin.inc',
+    );
+  }
 
   return $items;
 }
@@ -942,7 +954,7 @@ function xmlsitemap_get_link_info($type = NULL, $reset = FALSE) {
         $bundle_info += array(
           'xmlsitemap' => array(),
         );
-        $bundle_info['xmlsitemap'] += xmlsitemap_link_bundle_settings_load($key, $bundle);
+        $bundle_info['xmlsitemap'] += xmlsitemap_link_bundle_load($key, $bundle);
       }
     }
     drupal_alter('xmlsitemap_link_info', $link_info);
@@ -1092,7 +1104,7 @@ function xmlsitemap_get_link_type_enabled_bundles($entity_type) {
   $bundles = array();
   $info = xmlsitemap_get_link_info($entity_type);
   foreach ($info['bundles'] as $bundle => $bundle_info) {
-    $settings = xmlsitemap_link_bundle_settings_load($entity_type, $bundle);
+    $settings = xmlsitemap_link_bundle_load($entity_type, $bundle);
     if (!empty($settings['status'])) {
     //if (!empty($bundle_info['xmlsitemap']['status'])) {
       $bundles[] = $bundle;
@@ -1120,7 +1132,7 @@ function xmlsitemap_get_link_type_indexed_status($entity_type, $bundle = '') {
 
 function xmlsitemap_link_bundle_settings_save($entity, $bundle, array $settings, $update_links = TRUE) {
   if ($update_links) {
-    $old_settings = xmlsitemap_link_bundle_settings_load($entity, $bundle);
+    $old_settings = xmlsitemap_link_bundle_load($entity, $bundle);
     if ($settings['status'] != $old_settings['status']) {
       xmlsitemap_update_links(array('status' => $settings['status']), array('type' => $entity, 'subtype' => $bundle, 'status_override' => 0));
     }
@@ -1136,14 +1148,14 @@ function xmlsitemap_link_bundle_settings_save($entity, $bundle, array $settings,
 
 function xmlsitemap_link_bundle_rename($entity, $bundle_old, $bundle_new) {
   if ($bundle_old != $bundle_new) {
-    $settings = xmlsitemap_link_bundle_settings_load($entity, $bundle_old);
+    $settings = xmlsitemap_link_bundle_load($entity, $bundle_old);
     variable_del("xmlsitemap_settings_{$entity}_{$bundle_old}");
     xmlsitemap_link_bundle_settings_save($entity, $bundle_new, $settings, FALSE);
     xmlsitemap_update_links(array('subtype' => $bundle_new), array('type' => $entity, 'subtype' => $bundle_old));
   }
 }
 
-function xmlsitemap_link_bundle_settings_load($entity, $bundle) {
+function xmlsitemap_link_bundle_load($entity, $bundle) {
   $settings = variable_get("xmlsitemap_settings_{$entity}_{$bundle}", array());
   $settings += array('status' => 0, 'priority' => 0.5);
   return $settings;
@@ -1158,14 +1170,19 @@ function xmlsitemap_link_bundle_delete($entity, $bundle, $delete_links = TRUE) {
   //xmlsitemap_get_link_info(NULL, TRUE);
 }
 
-function xmlsitemap_can_admin_bundle(array $bundle_info) {
-  if (isset($bundle_info['admin'])) {
-    $bundle_info['admin'] += array(
-      'access callback' => 'user_access',
-      'access arguments' => array(),
-    );
-    if (!empty($bundle_info['admin']['access callback'])) {
-      return call_user_func_array($bundle_info['admin']['access callback'], $bundle_info['admin']['access arguments']);
+function xmlsitemap_can_admin_bundle($entity, $bundle) {
+  $info = xmlsitemap_get_link_info($entity);
+
+  if (isset($info['bundles'][$bundle]['admin'])) {
+    $admin = $info['bundles'][$bundle]['admin'];
+    $admin += array('access arguments' => array());
+
+    if (!isset($admin['access callback']) && count($admin['access arguments']) == 1) {
+      $admin['access callback'] = 'user_access';
+    }
+
+    if (!empty($admin['access callback'])) {
+      return call_user_func_array($admin['access callback'], $admin['access arguments']);
     }
   }
 
