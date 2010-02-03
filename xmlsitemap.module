@@ -1134,6 +1134,15 @@ function xmlsitemap_link_bundle_settings_save($entity, $bundle, array $settings,
   //xmlsitemap_get_link_info(NULL, TRUE);
 }
 
+function xmlsitemap_link_bundle_rename($entity, $bundle_old, $bundle_new) {
+  if ($bundle_old != $bundle_new) {
+    $settings = xmlsitemap_link_bundle_settings_load($entity, $bundle_old);
+    variable_del("xmlsitemap_settings_{$entity}_{$bundle_old}");
+    xmlsitemap_link_bundle_settings_save($entity, $bundle_new, $settings, FALSE);
+    xmlsitemap_update_links(array('subtype' => $bundle_new), array('type' => $entity, 'subtype' => $bundle_old));
+  }
+}
+
 function xmlsitemap_link_bundle_settings_load($entity, $bundle) {
   $settings = variable_get("xmlsitemap_settings_{$entity}_{$bundle}", array());
   $settings += array('status' => 0, 'priority' => 0.5);

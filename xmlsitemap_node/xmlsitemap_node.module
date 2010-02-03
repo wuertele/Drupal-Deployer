@@ -117,10 +117,7 @@ function xmlsitemap_node_node_type($op, $info) {
     // Cannot perform xmlsitemap_link_bundle_settings_save() here since
     // node_type_form_submit() strips all non-essential data from $info.
     if (!empty($info->old_type) && $info->old_type != $info->type) {
-      $setting = variable_get('xmlsitemap_settings_node_'. $info->old_type, array());
-      variable_del('xmlsitemap_settings_node_'. $info->old_type);
-      variable_set('xmlsitemap_settings_node_'. $info->type, $setting);
-      xmlsitemap_update_links(array('subtype' => $info->type), array('type' => 'node', 'subtype' => $info->old_type));
+      xmlsitemap_link_bundle_rename('node', $info->old_type, $info->type);
     }
   }
   if ($op == 'delete') {
@@ -256,19 +253,4 @@ function xmlsitemap_node_create_link(&$node) {
   $node->xmlsitemap['language'] = isset($node->language) ? $node->language : '';
 
   return $node->xmlsitemap;
-}
-
-/**
- * Internal default variables for xmlsitemap_node_var().
- */
-function xmlsitemap_node_variables() {
-  $defaults = array();
-  $node_types = array_keys(node_get_types('names'));
-  foreach ($node_types as $node_type) {
-    $defaults['xmlsitemap_settings_node_' . $node_type] = array(
-      'status' => 0,
-      'priority' => 0.5,
-    );
-  }
-  return $defaults;
 }
