@@ -423,7 +423,7 @@ function xmlsitemap_rebuild_batch_fetch($entity, &$context) {
   $id_key = db_escape_string($info['object keys']['id']);
   $query = $args = $ids = array();
   $query['SELECT'] = "SELECT $id_key";
-  $query['FROM']   = "FROM {$base_table}";
+  $query['FROM']   = "FROM {{$base_table}}";
   $query['WHERE']  = "WHERE $id_key > %d";
   $args[] = $context['sandbox']['last_id'];
 
