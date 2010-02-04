@@ -40,7 +40,7 @@ function drush_xmlsitemap_regenerate() {
   $vars = array(
     '@timer' => timer_read('xmlsitemap_regenerate'),
     '@memory-peak' => format_size(memory_get_peak_usage(TRUE)),
-   );
+  );
   drush_print(dt('XML sitemap files regenerated in @timer ms. Peak memory usage: @memory-peak.', $vars));
 }
 
@@ -71,7 +71,7 @@ function drush_xmlsitemap_rebuild() {
   $vars = array(
     '@timer' => timer_read('xmlsitemap_rebuild'),
     '@memory-peak' => format_size(memory_get_peak_usage(TRUE)),
-   );
+  );
   drush_print(dt('XML sitemap files rebuilt in @timer ms. Peak memory usage: @memory-peak.', $vars));
 }
 
