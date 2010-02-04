@@ -54,10 +54,29 @@ function drush_xmlsitemap_rebuild() {
   // Set the rebuild flag incase something fails during the rebuild.
   variable_set('xmlsitemap_rebuild_needed', TRUE);
 
+  // Build the list of rebuildable entities.
+  $entities = xmlsitemap_get_link_info();
+  $callbacks = $options = array();
+  foreach ($entities as $entity => $info) {
+    if (empty($info['xmlsitemap']['rebuild callback'])) {
+      // If the entity is missing a rebuild callback, skip.
+      continue;
+    }
+    if (!empty($info['object keys']['bundle']) && !xmlsitemap_get_link_type_enabled_bundles($entity)) {
+      // If the entity has bundles, but no enabled bundles, skip since
+      // rebuilding wouldn't get any links.
+      continue;
+    }
+    else {
+      // Build the list of callbacks and options for the form and batch
+      // processing.
+      $callbacks[$entity] = $info['xmlsitemap']['rebuild callback'];
+      $options[$entity] = $info['label'];
+    }
+  }
+
   // Build the batch array.
-  $modules = module_implements('xmlsitemap_link_info');
-  $batch = xmlsitemap_rebuild_batch($modules, TRUE);
-  $batch['progressive'] = FALSE;
+  $batch = xmlsitemap_rebuild_batch(array_keys($options), $callbacks, TRUE);
   batch_set($batch);
 
   // We need to manually set the progressive variable again.
