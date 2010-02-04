@@ -9,7 +9,7 @@ function xmlsitemap_engines_help($path, $arg) {
   switch ($path) {
     case 'admin/settings/xmlsitemap/engines':
       if (!module_exists('site_verify')) {
-        $output .= t('In order to verify site ownership with the search engines listed below, it is highly recommended to download and install the <a href="@site-verify">Site verification module</a>.', array('@site-verify' => 'http://drupal.org/project/site_verify'));
+        $output .= '<p>' . t('In order to verify site ownership with the search engines listed below, it is highly recommended to download and install the <a href="@site-verify">Site verification module</a>.', array('@site-verify' => 'http://drupal.org/project/site_verify')) . '</p>';
       }
       break;
   }
@@ -145,19 +145,17 @@ function xmlsitemap_engines_get_engine_info($engine = NULL, $reset = FALSE) {
   if ($reset) {
     $engines = NULL;
   }
+  elseif ($cached = cache_get('xmlsitemap:engines:' . $language->language)) {
+    $engines = $cached->data;
+  }
 
   if (!isset($engines)) {
-    if ($cached = cache_get('xmlsitemap:engines:' . $language->language)) {
-      $engines = $cached->data;
-    }
-    else {
-      // Fetch the results of all hook_xmlsitemap_engine_info() implementations.
-      $engines = module_invoke_all('xmlsitemap_engine_info');
-      // Allow other modulse to alter the engine info.
-      drupal_alter('xmlsitemap_engine_info', $engines);
-      // Cache by language since engine names are translated.
-      cache_set('xmlsitemap:engines:' . $language->language, $engines);
-    }
+    // Fetch the results of all hook_xmlsitemap_engine_info() implementations.
+    $engines = module_invoke_all('xmlsitemap_engine_info');
+    // Allow other modulse to alter the engine info.
+    drupal_alter('xmlsitemap_engine_info', $engines);
+    // Cache by language since engine names are translated.
+    cache_set('xmlsitemap:engines:' . $language->language, $engines);
   }
 
   if (isset($engine)) {
@@ -175,18 +173,22 @@ function xmlsitemap_engines_xmlsitemap_engine_info() {
   $engines['google'] = array(
     'name' => t('Google'),
     'url' => 'http://www.google.com/webmasters/tools/ping?sitemap=[sitemap]',
+    'help path' => 'http://www.google.com/support/webmasters/bin/answer.py?hl=en&answer=156184',
   );
   $engines['yahoo'] = array(
     'name' => t('Yahoo!'),
     'url' => 'http://search.yahooapis.com/SiteExplorerService/V1/ping?sitemap=[sitemap]',
+    'help path' => 'http://help.yahoo.com/l/us/yahoo/search/siteexplorer/manage/siteexplorer-45.html',
   );
   $engines['ask'] = array(
     'name' => t('Ask.com'),
     'url' => 'http://submissions.ask.com/ping?sitemap=[sitemap]',
+    'help path' => 'http://about.ask.com/en/docs/about/webmasters.shtml#22',
   );
   $engines['bing'] = array(
-    'name' => t('Bing (formerly Live Search)'),
+    'name' => t('Bing'),
     'url' => 'http://www.bing.com/webmaster/ping.aspx?siteMap=[sitemap]',
+    'help path' => 'http://www.bing.com/webmaster',
   );
   $engines['moreover'] = array(
     'name' => t('Moreover'),
