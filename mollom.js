@@ -17,8 +17,8 @@ Drupal.behaviors.mollomPrivacy = function (context) {
  * Attach click event handlers for CAPTCHA links.
  */
 Drupal.behaviors.mollomCaptcha = function (context) {
-  $('a.mollom-audio-captcha', context).click(getAudioCaptcha);
-  $('a.mollom-image-captcha', context).click(getImageCaptcha);
+  $('.mollom-audio-captcha', context).click(getAudioCaptcha);
+  $('.mollom-image-captcha', context).click(getImageCaptcha);
 };
 
 function getAudioCaptcha() {
@@ -32,10 +32,10 @@ function getAudioCaptcha() {
     function(data) {
       // When data is successfully loaded, replace
       // contents of captcha-div with an audio CAPTCHA:
-      $('a.mollom-captcha', context).parent().html(data);
+      $('.mollom-captcha', context).parent().html(data);
 
       // Add an onclick-event handler for the new link:
-      $('a.mollom-image-captcha', context).click(getImageCaptcha);
+      $('.mollom-image-captcha', context).click(getImageCaptcha);
    });
    return false;
 }
@@ -51,10 +51,10 @@ function getImageCaptcha() {
     function(data) {
       // When data is successfully loaded, replace
       // contents of captcha-div with an image CAPTCHA:
-      $('a.mollom-captcha', context).parent().html(data);
+      $('.mollom-captcha', context).parent().html(data);
 
       // Add an onclick-event handler for the new link:
-      $('a.mollom-audio-captcha', context).click(getAudioCaptcha);
+      $('.mollom-audio-captcha', context).click(getAudioCaptcha);
    });
    return false;
 }
