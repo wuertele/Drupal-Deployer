@@ -54,12 +54,21 @@ function xmlsitemap_requirements($phase) {
       $requirements['xmlsitemap_chunk_count'] = array(
         'title' => $t('XML sitemap page count'),
         'value' => xmlsitemap_get_chunk_count(),
-        'description' => $t('You have exceeded the number of sitemap pages (1,000).'),
+        'description' => $t('You have exceeded the number of sitemap pages (@number).', array('@number' => number_format(XMLSITEMAP_MAX_SITEMAP_CHUNKS))),
         'severity' => REQUIREMENT_ERROR,
       );
       if (!in_array(xmlsitemap_get_chunk_size(), array(50000, 'auto'))) {
         $requirements['xmlsitemap_chunk_count']['description'] .= ' ' . t('Please increase the number of links per page.');
       }
+    }
+    $max_filesize = variable_get('xmlsitemap_max_filesize', 0);
+    if ($max_filesize > XMLSITEMAP_MAX_SITEMAP_FILESIZE) {
+      $requirements['xmlsitemap_file_size'] = array(
+        'title' => $t('XML sitemap file_size'),
+        'value' => format_size($max_filesize),
+        'description' => $t('You have exceeded the maximum sitemap file size of @size. If possible, decrease the number of links per sitemap page.', array('@size' => format_size(XMLSITEMAP_MAX_SITEMAP_FILESIZE))),
+        'severity' => REQUIREMENT_ERROR,
+      );
     }
 
     // Check when the cached files were last generated.

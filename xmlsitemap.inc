@@ -91,6 +91,10 @@ function _xmlsitemap_regenerate_before() {
   // Clear all cached sitemap files.
   xmlsitemap_clear_directory();
   xmlsitemap_check_directory();
+
+  // Clear the maximum chunk and file size variables.
+  variable_set('xmlsitemap_maximum_chunks', 0);
+  variable_set('xmlsitemap_maximum_filesize', 0);
 }
 
 function _xmlsitemap_get_memory_usage($start = FALSE) {
@@ -199,6 +203,12 @@ function xmlsitemap_generate($chunk = 0, $language = NULL) {
     xmlsitemap_generate_chunk($handle, $status, $chunk, $language);
   }
   fclose($handle);
+
+  // Track the maximum filesize.
+  $filesize = filesize($file);
+  if ($filesize > variable_get('xmlsitemap_max_filesize', 0)) {
+    variable_set('xmlsitemap_max_filesize', $filesize);
+  }
 
   if (!$status) {
     trigger_error(t('Unknown error occurred while writing to file @file.', array('@file' => $file)));
