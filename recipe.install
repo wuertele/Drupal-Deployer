@@ -1,111 +1,160 @@
 <?php
+// $Id$
+
+/**
+ * @file
+ * Install, update and uninstall functions for the recipe module.
+ */
+
+
+/**
+* Implementation of hook_schema().
+*/
 function recipe_schema() {
   $schema['recipe'] = array(
     'fields' => array(
       'nid' => array(
-        'description' => t('The primary identifier for a recipe.'),
+        'description' => 'The primary identifier for a recipe.',
         'type' => 'serial',
         'unsigned' => TRUE,
-        'not null' => TRUE),
+        'not null' => TRUE,
+      ),
       'source' => array(
         'type' => 'varchar',
         'not null' => FALSE,
-        'length' => 255),
+        'length' => 255,
+      ),
       'yield' => array(
         'type' => 'int',
         'unsigned' => FALSE,
-        'not null' => TRUE),
+        'not null' => TRUE,
+      ),
       'instructions' => array(
-        'type' => 'text'),
+        'type' => 'text',
+      ),
       'notes' => array(
-        'type' => 'text'),
+        'type' => 'text',
+      ),
       'preptime' => array(
         'type' => 'int',
         'unsigned' => TRUE,
-        'default' => 0),
+        'default' => 0,
+      ),
     ),
     'primary key' => array('nid'),
   );
+
   $schema['recipe_node_ingredient'] = array(
-    'description' => t('The base table for recipe ingredients.'),
+    'description' => 'The base table for recipe ingredients.',
     'fields' => array(
       'id' => array(
-        'description' => t('The primary identifier for a recipe ingredient.'),
+        'description' => 'The primary identifier for a recipe ingredient.',
         'type' => 'serial',
         'unsigned' => TRUE,
-        'not null' => TRUE),
+        'not null' => TRUE,
+      ),
       'nid' => array(
         'type' => 'int',
         'unsigned' => TRUE,
-        'not null' => TRUE),
+        'not null' => TRUE,
+      ),
       'unit_id' => array(
         'type' => 'int',
         'unsigned' => TRUE,
-        'not null' => TRUE),
+        'not null' => TRUE,
+      ),
       'quantity' => array(
         'type' => 'float',
-        'not null' => FALSE),
+        'not null' => FALSE,
+      ),
       'ingredient_id' => array(
         'type' => 'int',
         'unsigned' => TRUE,
-        'not null' => TRUE),
+        'not null' => TRUE,
+      ),
+      'weight' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'size' => 'tiny',
+        'description' => 'Ingredient weight within recipe.',
+      ),
     ),
     'primary key' => array('id'),
   );
+
   $schema['recipe_ingredient'] = array(
-    'description' => t('The base table for recipe ingredients.'),
+    'description' => 'The base table for recipe ingredients.',
     'fields' => array(
       'id' => array(
-        'description' => t('The primary identifier for a recipe ingredient.'),
+        'description' => 'The primary identifier for a recipe ingredient.',
         'type' => 'serial',
         'unsigned' => TRUE,
-        'not null' => TRUE),
+        'not null' => TRUE,
+      ),
       'name' => array(
         'type' => 'varchar',
-        'length' => 255),
+        'length' => 255,
+      ),
       'link' => array(
         'type' => 'int',
         'unsigned' => TRUE,
-        'not null' => TRUE),
+        'not null' => TRUE,
+      ),
     ),
     'primary key' => array('id'),
   );
+
   $schema['recipe_unit'] = array(
-    'description' => t('The base table for recipe units.'),
+    'description' => 'The base table for recipe units.',
     'fields' => array(
       'id' => array(
         'type' => 'serial',
         'unsigned' => TRUE,
-        'not null' => TRUE),
+        'not null' => TRUE,
+      ),
       'name' => array(
         'type' => 'varchar',
-        'length' => 255),
+        'length' => 255,
+      ),
       'abbreviation' => array(
         'type' => 'varchar',
-        'length' => 8),
+        'length' => 8,
+      ),
       'metric' => array(
         'type' => 'int',
         'not null' => TRUE,
         'unsigned' => TRUE,
-        'default' => 0),
+        'default' => 0,
+      ),
       'type' => array(
         'type' => 'varchar',
         'length' => 6,
         'not null' => TRUE,
-        'default' => 'Mass'),
+        'default' => 'Mass',
+      ),
     ),
     'primary key' => array('id'),
   );
 
   return $schema;
 }
+
+
+/**
+ * Implementation of hook_install().
+ */
 function recipe_install() {
   drupal_install_schema('recipe');
   recipe_populate_units();
 }
 
+
+/**
+ * load the recipe_units table.
+ */
 function recipe_populate_units() {
-  $s = true;
+  $s = TRUE;
   $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (1, 'Slice', 'sli', 0, 'Unit');");
   $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (2, 'Unit', '', 0, 'Unit');");
   $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (3, 'Clove', 'clv', 0, 'Unit');");
@@ -138,6 +187,29 @@ function recipe_populate_units() {
   return $s;
 }
 
+
+/**
+* Implementation of hook_uninstall().
+*/
 function recipe_uninstall() {
+  // remove db tables
   drupal_uninstall_schema('recipe');
+
+  // remove node revisions
+  db_query("DELETE FROM {node_revisions} WHERE nid in (select nid from {node} WHERE type='%s')", 'recipe');
+  // remove recipe nodes
+  db_query("DELETE FROM {node} WHERE type = '%s'", 'recipe');
+
+  // remove variables
+  db_query("DELETE FROM {variable} WHERE name like '%s%%'", 'recipe_');
+}
+
+
+/**
+ * Adds weight column to recipe_node_ingredient
+ */
+function recipe_update_6100() {
+  $ret = array();
+  $ret[] = update_sql('ALTER TABLE {recipe_node_ingredient} ADD weight TINYINT NOT NULL default 0');
+  return $ret;
 }
