@@ -23,7 +23,6 @@ function mollom_captcha_js($type, $session_id) {
           'query' => array('url' => $response['url']),
         ));
         $output = '<object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" codebase="http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=9,0,0,0" width="110" height="50">';
-        #$output .= '<param name="allowScriptAccess" value="sameDomain" />';
         $output .= '<param name="allowFullScreen" value="false" />';
         $output .= '<param name="movie" value="' . $source . '" />';
         $output .= '<param name="loop" value="false" />';
