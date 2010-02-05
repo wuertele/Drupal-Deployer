@@ -487,7 +487,7 @@ function recipe_menu() {
     'title' => 'Recipe Import',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('recipe_import_form'),
-    'access callback' => 'user_access',
+    'access callback' => 'recipe_import_access',
     'access arguments' => array('access content'),
     'type' => MENU_NORMAL_ITEM
   );
@@ -1743,9 +1743,7 @@ function recipe_euclid($number_one, $number_two) {
  */
 function recipe_import_form($form_state) {
 
-  $options = array(
-      'recipe_import_parse_plain_text' => t('Plain Text')
-  );
+	$options = module_invoke_all('recipe_import_parser');
 
   if (isset($form_state['values']['recipe_preview'])) {
     $form['#prefix'] = $form_state['values']['recipe_preview'];
@@ -1906,54 +1904,6 @@ function recipe_import_parse($form, &$form_state) {
 
 
 /**
- * Parsing instance for plain text recipes
- */
-function recipe_import_parse_plain_text($text) {
-  // region constants
-  define('TITLE', 0);
-  define('INGREDIENTS', 1);
-  define('DIRECTIONS', 2);
-
-  $recipe = array();
-
-  $region = TITLE;
-  foreach (split("\n", $text) as $line) {
-    $line = trim($line);
-    if ( $region < DIRECTIONS && $line == '' ) {
-      $region++;
-      continue;
-    }
-    if ( $region == TITLE ) {
-      $recipe['title'] = $line;
-    }
-    else if ( $region == INGREDIENTS ) {
-      if ( preg_match('/^([0-9\-\.\/]+) +([A-Za-z]+) +(.*)/', $line, $matches)  ) {
-        $i = array();
-        $i['quantity'] = $matches[1];
-        $i['unit_name'] = $matches[2];
-        $i['ingredient_name'] = $matches[3];
-
-        // FALSE if no-match
-        $i['unit_obj'] = recipe_unit_match($i['unit_name']);
-
-        // FALSE if no-match
-        $i['ingred_obj'] = recipe_ingredient_match($i['ingredient_name']);
-
-        $recipe['ingredients'][] = $i;
-      }
-      else {
-        $recipe['ingredients'][] = "ERROR: CANNOT PARSE " . $line;
-      }
-    }
-    else if ( $region == DIRECTIONS ) {
-      $recipe['instructions'] .= $line ."\n";
-    }
-  }
-  return $recipe;
-}
-
-
-/**
  * Fetch a recipe_unit.
  *
  * @param $recipe_abbrev_name
@@ -1991,4 +1941,19 @@ function recipe_ingredient_match($recipe_ingredient_name) {
     );
   }
   return FALSE;
+}
+
+
+/**
+ * Extend user_access to account to no import parsers being available
+ */
+function recipe_import_access($string, $account = NULL, $reset = FALSE) {
+
+  // short circuit if there are no parsers available.  
+  $options = module_invoke_all('recipe_import_parser');
+  if ( count($options) == 0 ) {
+  	return FALSE;
+  }
+  
+  return user_access($string, $account, $reset);
 }

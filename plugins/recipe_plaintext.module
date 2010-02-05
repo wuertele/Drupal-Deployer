@@ -1,0 +1,67 @@
+<?php
+// $Id$
+
+
+/**
+ * @file
+ * recipe_plaintext.module - Imported plugin module which allows plain text recipes to be imported into recipe nodes
+ */
+
+
+/**
+ * Implementation of hook_recipe_import_parser().
+ */
+function recipe_plaintext_recipe_import_parser() {
+  $options = array(
+      'recipe_import_parse_plain_text' => t('Plain Text')
+  );
+  return $options;	
+}
+
+
+/**
+ * Parsing instance for plain text recipes
+ */
+function recipe_import_parse_plain_text($text) {
+  // region constants
+  define('TITLE', 0);
+  define('INGREDIENTS', 1);
+  define('DIRECTIONS', 2);
+
+  $recipe = array();
+
+  $region = TITLE;
+  foreach (split("\n", $text) as $line) {
+    $line = trim($line);
+    if ( $region < DIRECTIONS && $line == '' ) {
+      $region++;
+      continue;
+    }
+    if ( $region == TITLE ) {
+      $recipe['title'] = $line;
+    }
+    else if ( $region == INGREDIENTS ) {
+      if ( preg_match('/^([0-9\-\.\/]+) +([A-Za-z]+) +(.*)/', $line, $matches)  ) {
+        $i = array();
+        $i['quantity'] = $matches[1];
+        $i['unit_name'] = $matches[2];
+        $i['ingredient_name'] = $matches[3];
+
+        // FALSE if no-match
+        $i['unit_obj'] = recipe_unit_match($i['unit_name']);
+
+        // FALSE if no-match
+        $i['ingred_obj'] = recipe_ingredient_match($i['ingredient_name']);
+
+        $recipe['ingredients'][] = $i;
+      }
+      else {
+        $recipe['ingredients'][] = "ERROR: CANNOT PARSE " . $line;
+      }
+    }
+    else if ( $region == DIRECTIONS ) {
+      $recipe['instructions'] .= $line ."\n";
+    }
+  }
+  return $recipe;
+}
