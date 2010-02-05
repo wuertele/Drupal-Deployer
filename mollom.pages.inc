@@ -14,6 +14,9 @@
 function mollom_captcha_js($type, $session_id) {
   $output = '';
   $data = array('author_ip' => ip_address(), 'session_id' => $session_id);
+  if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') {
+    $data['ssl'] = TRUE;
+  }
 
   switch ($type) {
     case 'audio':

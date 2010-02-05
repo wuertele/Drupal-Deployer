@@ -771,6 +771,30 @@ class MollomResponseTestCase extends MollomWebTestCase {
     $this->_assertEqual('quality', $result['quality'], 0.5);
     $session_id = $this->assertSessionID($result['session_id']);
   }
+
+  /**
+   * Tests mollom.getImageCaptcha().
+   *
+   * @todo Add further getImageCaptcha() response assertions.
+   */
+  function testGetImageCaptcha() {
+    // Ensure we get no SSL URL by default.
+    $data = array(
+      'author_ip' => ip_address(),
+    );
+    $result = mollom('mollom.getImageCaptcha', $data);
+    $this->assertMollomWatchdogMessages();
+    $this->assertTrue(strpos($result['url'], 'http://') === 0, t('CAPTCHA URL uses HTTP protocol.'));
+
+    // Ensure we get a SSL URL when passing the 'ssl' parameter.
+    $data = array(
+      'author_ip' => ip_address(),
+      'ssl' => TRUE,
+    );
+    $result = mollom('mollom.getImageCaptcha', $data);
+    $this->assertMollomWatchdogMessages();
+    $this->assertTrue(strpos($result['url'], 'https://') === 0, t('CAPTCHA URL uses HTTPS protocol.'));
+  }
 }
 
 class MollomAccessTestCase extends MollomWebTestCase {
