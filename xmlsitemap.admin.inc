@@ -46,7 +46,7 @@ function xmlsitemap_settings_form() {
     '#type' => 'fieldset',
     '#title' => t('Advanced settings'),
     '#collapsible' => TRUE,
-    '#collapsed' => !variable_get('xmlsitemap_developer_mode', FALSE),
+    '#collapsed' => !variable_get('xmlsitemap_developer_mode', 0),
     '#weight' => 10,
   );
   //$form['advanced']['xmlsitemap_gz'] = array(
@@ -89,11 +89,22 @@ function xmlsitemap_settings_form() {
     '#description' => t('This is the base URL for links generated in the sitemap.'),
     '#required' => TRUE,
   );
+  $form['advanced']['xmlsitemap_lastmod_format'] = array(
+    '#type' => 'select',
+    '#title' => t('Last modification date format'),
+    '#options' => array(
+    	'Y-m-d' => t('Short'),
+    	DATE_W3C => t('Long'),
+    ),
+    '#default_value' => variable_get('xmlsitemap_lastmod_format', DATE_W3C),
+  );
+  foreach ($form['advanced']['xmlsitemap_lastmod_format']['#options'] as $key => &$label) {
+    $label .= ' (' . gmdate($key, REQUEST_TIME) . ')';
+  }
   $form['advanced']['xmlsitemap_developer_mode'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Enable developer mode.'),
-    '#default_value' => variable_get('xmlsitemap_developer_mode', FALSE),
-    '#description' => t('Exposes additional settings intended for development.'),
+    '#title' => t('Enable developer mode to expose additional settings.'),
+    '#default_value' => variable_get('xmlsitemap_developer_mode', 0),
   );
 
   $entities = xmlsitemap_get_link_info(NULL, TRUE);
@@ -246,8 +257,8 @@ function xmlsitemap_rebuild_form() {
     '#description' => t('If no link types are selected, the sitemap files will just be regenerated.'),
     '#multiple' => TRUE,
     '#options' => $options,
-    '#default_value' => xmlsitemap_var('rebuild_needed') || !xmlsitemap_var('developer_mode') ? array_keys($options) : array(),
-    '#access' => xmlsitemap_var('developer_mode'),
+    '#default_value' => variable_get('xmlsitemap_rebuild_needed', FALSE) || !variable_get('xmlsitemap_developer_mode', 0) ? array_keys($options) : array(),
+    '#access' => variable_get('xmlsitemap_developer_mode', 0),
   );
   $form['save_custom'] = array(
     '#type' => 'checkbox',

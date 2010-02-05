@@ -93,8 +93,8 @@ function _xmlsitemap_regenerate_before() {
   xmlsitemap_check_directory();
 
   // Clear the maximum chunk and file size variables.
-  variable_set('xmlsitemap_maximum_chunks', 0);
-  variable_set('xmlsitemap_maximum_filesize', 0);
+  variable_set('xmlsitemap_max_chunks', 0);
+  variable_set('xmlsitemap_max_filesize', 0);
 }
 
 function _xmlsitemap_get_memory_usage($start = FALSE) {
@@ -271,6 +271,7 @@ function xmlsitemap_generate_chunk_header($type, $handle, &$status, $language) {
  */
 function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
   $last_url = '';
+  $lastmod_format = variable_get('xmlsitemap_lastmod_format', DATE_W3C);
 
   $query = array(
     'SELECT'   => 'SELECT x.loc, x.lastmod, x.changefreq, x.changecount, x.priority, x.language',
@@ -312,7 +313,7 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
 
     $link_output = '<url><loc>' . $link_url . '</loc>';
     if ($link['lastmod']) {
-      $link_output .= '<lastmod>' . gmdate(DATE_W3C, $link['lastmod']) . '</lastmod>';
+      $link_output .= '<lastmod>' . gmdate($lastmod_format, $link['lastmod']) . '</lastmod>';
       // If the link has a lastmod value, update the changefreq so that links
       // with a short changefreq but updated two years ago show decay.
       // We use abs() here just incase items were created on this same cron run
@@ -350,6 +351,7 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
 function xmlsitemap_generate_index($handle, &$status, $language) {
   $url_options = xmlsitemap_get_url_options(array('language' => $language, 'alias' => TRUE));
   $chunk_count = xmlsitemap_get_chunk_count(TRUE);
+  $lastmod_format = variable_get('xmlsitemap_lastmod_format', DATE_W3C);
 
   // Add the XML header and XSL if desired.
   xmlsitemap_generate_chunk_header('sitemapindex', $handle, $status, $language);
@@ -358,7 +360,7 @@ function xmlsitemap_generate_index($handle, &$status, $language) {
     $output = '<sitemap>';
     $output .= '<loc>' . url('sitemap-' . $i . '.xml', $url_options) . '</loc>';
     // @todo Use the actual lastmod value of the chunk file.
-    $output .= '<lastmod>' . gmdate(DATE_W3C, REQUEST_TIME) . '</lastmod>';
+    $output .= '<lastmod>' . gmdate($lastmod_format, REQUEST_TIME) . '</lastmod>';
     $output .= '</sitemap>' . PHP_EOL;
     $status &= (bool) fwrite($handle, $output);
   }
