@@ -19,8 +19,9 @@ function mollom_captcha_js($type, $session_id) {
     case 'audio':
       $response = mollom('mollom.getAudioCaptcha', $data);
       if ($response) {
-        $source = url(drupal_get_path('module', 'mollom') . '/mollom-captcha-player.swf', array(
+        $source = url(base_path() . drupal_get_path('module', 'mollom') . '/mollom-captcha-player.swf', array(
           'query' => array('url' => $response['url']),
+          'external' => TRUE,
         ));
         $output = '<object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" codebase="http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=9,0,0,0" width="110" height="50">';
         $output .= '<param name="allowFullScreen" value="false" />';
