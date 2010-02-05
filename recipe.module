@@ -528,17 +528,11 @@ function recipe_access($op, $node, $account) {
   global $user;
 
   if ($op == 'create') {
-    // Only users with permission to do so may create this node type.
-    return user_access('create recipes');
+    return user_access('create recipes', $account);
   }
 
-  // Users who create a node may edit or delete it later, assuming they have the
-  // necessary permissions.
   if ($op == 'update' || $op == 'delete') {
-    if (user_access('edit any recipes')) {
-      return TRUE;
-    }
-    else if (user_access('edit own recipes') && ($user->uid == $node->uid)) {
+    if ( (user_access('edit own recipes', $account) && ($account->uid == $node->uid)) || user_access('edit any recipes', $account)) {
       return TRUE;
     }
   }
@@ -1743,7 +1737,7 @@ function recipe_euclid($number_one, $number_two) {
  */
 function recipe_import_form($form_state) {
 
-	$options = module_invoke_all('recipe_import_parser');
+  $options = module_invoke_all('recipe_import_parser');
 
   if (isset($form_state['values']['recipe_preview'])) {
     $form['#prefix'] = $form_state['values']['recipe_preview'];
@@ -1949,11 +1943,11 @@ function recipe_ingredient_match($recipe_ingredient_name) {
  */
 function recipe_import_access($string, $account = NULL, $reset = FALSE) {
 
-  // short circuit if there are no parsers available.  
+  // short circuit if there are no parsers available.
   $options = module_invoke_all('recipe_import_parser');
   if ( count($options) == 0 ) {
-  	return FALSE;
+    return FALSE;
   }
-  
+
   return user_access($string, $account, $reset);
 }
