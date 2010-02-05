@@ -13,9 +13,10 @@
  *
  * @see xmlsitemap_file_transfer()
  */
-function xmlsitemap_output_chunk($chunk = 0) {
+function xmlsitemap_output_chunk() {
   global $language;
 
+  $chunk = isset($_GET['page']) && is_numeric($_GET['page']) ? $_GET['page'] : 0;
   $file = xmlsitemap_get_chunk_file($chunk, $language->language);
   xmlsitemap_output_file($file);
 }

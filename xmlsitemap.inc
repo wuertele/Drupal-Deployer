@@ -159,9 +159,6 @@ function _xmlsitemap_regenerate_after() {
   // Unset the regenerate flag.
   variable_set('xmlsitemap_regenerate_needed', FALSE);
 
-  // If the chunk count has changed, we will need to rebuild the menu.
-  variable_set('menu_rebuild_needed', TRUE);
-
   variable_set('xmlsitemap_generated_last', REQUEST_TIME);
 }
 
@@ -358,7 +355,8 @@ function xmlsitemap_generate_index($handle, &$status, $language) {
 
   for ($i = 1; $i <= $chunk_count; $i++) {
     $output = '<sitemap>';
-    $output .= '<loc>' . url('sitemap-' . $i . '.xml', $url_options) . '</loc>';
+    $url_options['query']['page'] = $i;
+    $output .= '<loc>' . url('sitemap.xml', $url_options) . '</loc>';
     // @todo Use the actual lastmod value of the chunk file.
     $output .= '<lastmod>' . gmdate($lastmod_format, REQUEST_TIME) . '</lastmod>';
     $output .= '</sitemap>' . PHP_EOL;
