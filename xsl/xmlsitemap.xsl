@@ -51,8 +51,8 @@
     <table class="tablesorter siteindex">
       <thead>
         <tr>
-          <td>Sitemap URL</td>
-          <td>Last modification date</td>
+          <th>Sitemap URL</th>
+          <th>Last modification date</th>
         </tr>
       </thead>
       <tbody>
