@@ -671,10 +671,19 @@ function xmlsitemap_update_6200() {
 }
 
 /**
- * Cleanup any remaining 6.x-1.x variables or weights.
+ * Cleanup any remaining 6.x-1.x tables, variables or weights.
  */
 function xmlsitemap_update_6201() {
   $ret = array();
+  if (db_table_exists('xmlsitemap_additional')) {
+    db_drop_table($ret, 'xmlsitemap_additional');
+  }
+  if (db_table_exists('xmlsitemap_modules')) {
+    db_drop_table($ret, 'xmlsitemap_modules');
+  }
+  if (db_table_exists('xmlsitemap_file')) {
+    db_drop_table($ret, 'xmlsitemap_file');
+  }
   variable_del('xmlsitemap_all_links_to_default_language');
   variable_del('xmlsitemap_cache_directory');
   // xmlsitemap_chunk_size not deleted since we use the same variable name.
@@ -684,9 +693,12 @@ function xmlsitemap_update_6201() {
   variable_del('xmlsitemap_cron_submit_frequency');
   variable_del('xmlsitemap_front_page_changefreq');
   variable_del('xmlsitemap_front_page_priority');
+  variable_del('xmlsitemap_log_access');
   variable_del('xmlsitemap_previous_chunks_count');
   variable_del('xmlsitemap_sitemap_is_changed');
   variable_del('xmlsitemap_sitemap_needs_update');
+  variable_del('xmlsitemap_submit');
+  variable_del('xmlsitemap_update_sitemap_request');
   variable_del('xmlsitemap_update_timestamp');
   variable_del('xmlsitemap_use_stylesheet');
   $ret[] = update_sql("UPDATE {system} SET weight = 1 WHERE type = 'module' AND name = 'xmlsitemap'");
