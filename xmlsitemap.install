@@ -535,14 +535,12 @@ function xmlsitemap_update_6196() {
   $value = variable_get('xmlsitemap_front_page_changefreq', 3600);
   variable_set('xmlsitemap_frontpage_changefreq', $value);
 
-  $value = (float) variable_get('xmlsitemap_front_page_priority', 1);
+  $value = variable_get('xmlsitemap_front_page_priority', 1);
   variable_set('xmlsitemap_frontpage_priority', $value);
 
-  variable_get('xmlsitemap_update_timestamp', 0);
-  variable_set('xmlsitemap_generated_last', $value);
-
-  $value = variable_get('xmlsitemap_sitemap_is_changed', FALSE) || variable_get('xmlsitemap_sitemap_needs_update', FALSE);
-  variable_set('xmlsitemap_regenerate_needed', $value);
+  // Intentionally set this variables so we get a generated sitemap ASAP.
+  variable_set('xmlsitemap_generated_last', 0);
+  variable_set('xmlsitemap_regenerate_needed', TRUE);
 
   variable_del('xmlsitemap_chunk_size');
   return array();
@@ -554,7 +552,7 @@ function xmlsitemap_update_6196() {
 function xmlsitemap_update_6198() {
   $ret = array();
 
-  if (db_columm_exists('xmlsitemap', 'sid')) {
+  if (db_column_exists('xmlsitemap', 'sid')) {
     db_drop_table($ret, 'xmlsitemap');
 
     $schema['xmlsitemap'] = array(
@@ -658,7 +656,7 @@ function xmlsitemap_update_6198() {
         'language' => array('language'),
       ),
     );
-    db_create_table($ret, $schema['xmlsitemap']);
+    db_create_table($ret, 'xmlsitemap', $schema['xmlsitemap']);
     db_query("INSERT INTO {xmlsitemap} (type, id, loc, priority, changefreq) VALUES ('frontpage', 0, '', %f, %d)", variable_get('xmlsitemap_frontpage_priority', 1.0), variable_get('xmlsitemap_frontpage_changefreq', 86400));
   }
 

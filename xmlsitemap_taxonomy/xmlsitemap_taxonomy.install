@@ -95,12 +95,14 @@ function xmlsitemap_taxonomy_update_6198(&$context) {
   while ($record = db_fetch_object($query)) {
     if ($term = taxonomy_get_term($record->tid)) {
       $link = xmlsitemap_taxonomy_create_link($term);
+      $link['status'] = variable_get('xmlsitemap_taxonomy_status_' . $term->vid, 0);
+      $link['priority'] = variable_get('xmlsitemap_taxonomy_priority_' . $term->vid, 0.5);
       if ($record->priority_override == -1) {
         $link['status'] = 0;
         $link['status_override'] = 1;
       }
-      else {
-        $link['priority'] = (float) $record->priority_override;
+      elseif ($record->priority_override != -2) {
+        $link['priority'] = $record->priority_override;
         $link['priority_override'] = 1;
       }
       xmlsitemap_save_link($link);
