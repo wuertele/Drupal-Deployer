@@ -15,9 +15,10 @@ function xmlsitemap_user_xmlsitemap_link_info() {
     'bundles' => array(
       'user' => array(
         'label' => t('Users'),
-        'xmlsitemap' => array(
-          'status' => 1,
-        )
+        'admin' => array(
+          'path' => 'admin/user/settings',
+          'access arguments' => array('administer users'),
+        ),
       ),
     ),
     'path callback' => 'xmlsitemap_user_path',
@@ -83,6 +84,25 @@ function xmlsitemap_user_user($op, &$edit, $account, $category = NULL) {
       xmlsitemap_link_delete('user', $account->uid);
       break;
   }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * @see user_admin_settings()
+ * @see xmlsitemap_add_link_bundle_settings()
+ */
+function xmlsitemap_user_form_user_admin_settings_alter(&$form, $form_state) {
+  module_load_include('inc', 'xmlsitemap', 'xmlsitemap.admin');
+  xmlsitemap_add_link_bundle_settings($form, $form_state, 'user', 'user');
+  array_unshift($form['#submit'], 'xmlsitemap_user_user_admin_settings_submit');
+}
+
+function xmlsitemap_user_user_admin_settings_submit($form, &$form_state) {
+  xmlsitemap_link_bundle_settings_save('user', 'user', $form_state['values']['xmlsitemap']);
+
+  // Do not allow node_type_form_submit() to run variable_set() on this.
+  unset($form_state['values']['xmlsitemap']);
 }
 
 /**
