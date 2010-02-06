@@ -166,7 +166,7 @@ function xmlsitemap_install() {
 
   // Insert the homepage link into the {xmlsitemap} table so we do not show an
   // empty sitemap after install.
-  db_query("INSERT INTO {xmlsitemap} (type, id, loc, priority, changefreq) VALUES ('frontpage', 0, '', %f, %d)", xmlsitemap_var('frontpage_priority'), xmlsitemap_var('frontpage_changefreq'));
+  db_query("INSERT INTO {xmlsitemap} (type, id, loc, priority, changefreq) VALUES ('frontpage', 0, '', %f, %d)", variable_get('xmlsitemap_frontpage_priority', 1.0), variable_get('xmlsitemap_frontpage_changefreq', 86400));
 
   // @todo Does the sitemap show up on first install or is it a 404 page?
 }
@@ -514,10 +514,185 @@ function xmlsitemap_update_18() {
 }
 
 /**
+ * Upgrade 6.x-1.x variables.
+ */
+function xmlsitemap_update_6196() {
+  $value = variable_get('xmlsitemap_cron_limit', 100);
+  variable_set('xmlsitemap_batch_limit', $value);
+
+  $value = variable_get('xmlsitemap_cache_directory', file_directory_path() . '/xmlsitemap');
+  if (strpos($value, file_directory_path() . '/') === 0) {
+    $value = str_replace(file_directory_path() . '/', '', $value);
+  }
+  else {
+    $value = 'xmlsitemap';
+  }
+  variable_set('xmlsitemap_path', $value);
+
+  $value = variable_get('xmlsitemap_use_stylesheet', FALSE);
+  variable_set('xmlsitemap_xsl', $value);
+
+  $value = variable_get('xmlsitemap_front_page_changefreq', 3600);
+  variable_set('xmlsitemap_frontpage_changefreq', $value);
+
+  $value = (float) variable_get('xmlsitemap_front_page_priority', 1);
+  variable_set('xmlsitemap_frontpage_priority', $value);
+
+  variable_get('xmlsitemap_update_timestamp', 0);
+  variable_set('xmlsitemap_generated_last', $value);
+
+  $value = variable_get('xmlsitemap_sitemap_is_changed', FALSE) || variable_get('xmlsitemap_sitemap_needs_update', FALSE);
+  variable_set('xmlsitemap_regenerate_needed', $value);
+
+  variable_del('xmlsitemap_chunk_size');
+  return array();
+}
+
+/**
+ * Upgrade the {xmlsitemap} table (drop and re-create).
+ */
+function xmlsitemap_update_6198() {
+  $ret = array();
+
+  if (db_columm_exists('xmlsitemap', 'sid')) {
+    db_drop_table($ret, 'xmlsitemap');
+
+    $schema['xmlsitemap'] = array(
+      'description' => 'The base table for xmlsitemap links.',
+      'fields' => array(
+        'id' => array(
+          'description' => 'Primary key with type; a unique id for the item.',
+          'type' => 'int',
+          'not null' => TRUE,
+          'unsigned' => TRUE,
+          'default' => 0,
+        ),
+        'type' => array(
+          'description' => 'Primary key with id; the type of item (e.g. node, user, etc.).',
+          'type' => 'varchar',
+          'length' => 32,
+          'not null' => TRUE,
+          'default' => '',
+        ),
+        'subtype' => array(
+          'description' => 'A sub-type identifier for the link (node type, menu name, term VID, etc.).',
+          'type' => 'varchar',
+          'length' => 128,
+          'not null' => TRUE,
+          'default' => '',
+        ),
+        'loc' => array(
+          'description' => 'The URL to the item relative to the Drupal path.',
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => '',
+        ),
+        'language' => array(
+          'description' => 'The {languages}.language of this link or an empty string if it is language-neutral.',
+          'type' => 'varchar',
+          'length' => 12,
+          'not null' => TRUE,
+          'default' => '',
+        ),
+        'access' => array(
+          'description' => 'A boolean that represents if the item is viewable by the anonymous user. This field is useful to store the result of node_access() so we can retain changefreq and priority_override information.',
+          'type' => 'int',
+          'size' => 'tiny',
+          'not null' => TRUE,
+          'default' => 1,
+        ),
+        'status' => array(
+          'description' => 'An integer that represents if the item is included in the sitemap.',
+          'type' => 'int',
+          'size' => 'tiny',
+          'not null' => TRUE,
+          'default' => 1,
+        ),
+        'status_override' => array(
+          'description' => 'A boolean that if TRUE means that the status field has been overridden from its default value.',
+          'type' => 'int',
+          'size' => 'tiny',
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'lastmod' => array(
+          'description' => 'The UNIX timestamp of last modification of the item.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'priority' => array(
+          'description' => 'The priority of this URL relative to other URLs on your site. Valid values range from 0.0 to 1.0.',
+          'type' => 'float',
+          'default' => NULL,
+        ),
+        'priority_override' => array(
+          'description' => 'A boolean that if TRUE means that the priority field has been overridden from its default value.',
+          'type' => 'int',
+          'size' => 'tiny',
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'changefreq' => array(
+          'description' => 'The average time in seconds between changes of this item.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'changecount' => array(
+          'description' => 'The number of times this item has been changed. Used to help calculate the next changefreq value.',
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+      ),
+      'primary key' => array('id', 'type'),
+      'indexes' => array(
+        'loc' => array('loc'),
+        'access_status_loc' => array('access', 'status', 'loc'),
+        'type_subtype' => array('type', 'subtype'),
+        'language' => array('language'),
+      ),
+    );
+    db_create_table($ret, $schema['xmlsitemap']);
+    db_query("INSERT INTO {xmlsitemap} (type, id, loc, priority, changefreq) VALUES ('frontpage', 0, '', %f, %d)", variable_get('xmlsitemap_frontpage_priority', 1.0), variable_get('xmlsitemap_frontpage_changefreq', 86400));
+  }
+
+  return $ret;
+}
+
+/**
  * Empty update.
  */
 function xmlsitemap_update_6200() {
   return array();
+}
+
+/**
+ * Cleanup any remaining 6.x-1.x variables or weights.
+ */
+function xmlsitemap_update_6201() {
+  $ret = array();
+  variable_del('xmlsitemap_all_links_to_default_language');
+  variable_del('xmlsitemap_cache_directory');
+  // xmlsitemap_chunk_size not deleted since we use the same variable name.
+  db_query("DELETE FROM {variable} WHERE name LIKE 'xmlsitemap_create_cache_result_%%'");
+  variable_del('xmlsitemap_cron_limit');
+  variable_del('xmlsitemap_cron_submit');
+  variable_del('xmlsitemap_cron_submit_frequency');
+  variable_del('xmlsitemap_front_page_changefreq');
+  variable_del('xmlsitemap_front_page_priority');
+  variable_del('xmlsitemap_previous_chunks_count');
+  variable_del('xmlsitemap_sitemap_is_changed');
+  variable_del('xmlsitemap_sitemap_needs_update');
+  variable_del('xmlsitemap_update_timestamp');
+  variable_del('xmlsitemap_use_stylesheet');
+  $ret[] = update_sql("UPDATE {system} SET weight = 1 WHERE type = 'module' AND name = 'xmlsitemap'");
+  return $ret;
 }
 
 /**
