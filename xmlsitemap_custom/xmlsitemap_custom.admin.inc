@@ -52,8 +52,8 @@ function xmlsitemap_custom_list_links() {
   if (empty($rows)) {
     $rows[] = array(
       array(
-        'data' => l(t('Add custom link'), 'admin/settings/xmlsitemap/custom/add', array('query' => drupal_get_destination())),
-        'colspan' => 3,
+        'data' => t('No custom links available.') . ' ' . l(t('Add custom link'), 'admin/settings/xmlsitemap/custom/add', array('query' => $destination)),
+        'colspan' => count($header),
       ),
     );
   }
