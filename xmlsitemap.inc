@@ -60,14 +60,14 @@ function xmlsitemap_regenerate() {
 
   // Generate the sitemap pages.
   $chunk_count = xmlsitemap_get_chunk_count(TRUE);
-  if ($chunk_count > 1) {
-    // If we have more than one chunk, we need to increment this value by one
-    // since the index page (chunk 0) will also need to be generated.
-    $chunk_count++;
-  }
-  foreach (xmlsitemap_var('languages') as $language) {
-    for ($i = 0; $i < $chunk_count; $i++) {
-      xmlsitemap_generate($i, xmlsitemap_language_load($language));
+  foreach (xmlsitemap_var('languages') as $langcode) {
+    $language = xmlsitemap_language_load($langcode);
+    // Generate index.
+    if ($chunk_count > 1) {
+      xmlsitemap_generate('index', $language);
+    }
+    for ($i = 1; $i <= $chunk_count; $i++) {
+      xmlsitemap_generate($i, $language);
     }
   }
 
@@ -174,8 +174,8 @@ function _xmlsitemap_regenerate_after() {
  *
  * @todo Revise/simplify or remove the function.
  */
-function xmlsitemap_generate($chunk = 0, $language = NULL) {
-  if (!is_numeric($chunk) || $chunk > xmlsitemap_get_chunk_count()) {
+function xmlsitemap_generate($chunk, $language = NULL) {
+  if (($chunk == 'index' && xmlsitemap_get_chunk_count() < 2) || ($chunk != 'index' && (!is_numeric($chunk) || $chunk > xmlsitemap_get_chunk_count()))) {
     // Don't bother translating this string.
     trigger_error('Improper condition hit in xmlsitemap_generate(). Chunk: ' . $chunk . ', Chunk Count: ' . xmlsitemap_get_chunk_count());
     return FALSE;
@@ -185,7 +185,11 @@ function xmlsitemap_generate($chunk = 0, $language = NULL) {
     $language = language_default();
   }
 
-  $file = xmlsitemap_get_chunk_file($chunk, $language->language);
+  $context = array();
+  //if (module_exists('xmlsitemap_i18n')) {
+    $context['language'] = $language->language;
+  //}
+  $file = xmlsitemap_get_file_from_context($context, $chunk);
 
   if (!$handle = fopen($file, 'wb')) {
     trigger_error(t('Could not open file @file for writing.', array('@file' => $file)));
@@ -193,7 +197,7 @@ function xmlsitemap_generate($chunk = 0, $language = NULL) {
   }
 
   $status = TRUE;
-  if (xmlsitemap_get_chunk_count() > 1 && !$chunk) {
+  if ($chunk == 'index') {
     xmlsitemap_generate_index($handle, $status, $language);
   }
   else {
@@ -473,18 +477,18 @@ function xmlsitemap_rebuild_batch_fetch($entity, &$context) {
  */
 function xmlsitemap_rebuild_batch_generate($language, &$context) {
   if (!isset($context['sandbox']['progress'])) {
-    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['progress'] = 1;
     $context['sandbox']['max'] = xmlsitemap_get_chunk_count(TRUE);
-    // If we have more than one chunk, we need to increment this value by one
-    // since the index page (chunk 0) will also need to be generated.
     if ($context['sandbox']['max'] > 1) {
-      $context['sandbox']['max']++;
+      xmlsitemap_generate('index', $language);
     }
+    // Bump the max number up by one since it gets incremented after generation.
+    $context['sandbox']['max']++;
   }
 
   xmlsitemap_generate($context['sandbox']['progress'], $language);
-  $context['sandbox']['progress']++;
   $context['message'] = t('Now generating @language sitemap page @chunk.', array('@language' => $language->name, '@chunk' => $context['sandbox']['progress']));
+  $context['sandbox']['progress']++;
 
   if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
     $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];

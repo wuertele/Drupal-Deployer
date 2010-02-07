@@ -16,8 +16,26 @@
 function xmlsitemap_output_chunk() {
   global $language;
 
-  $chunk = isset($_GET['page']) && is_numeric($_GET['page']) ? $_GET['page'] : 0;
-  $file = xmlsitemap_get_chunk_file($chunk, $language->language);
+  $context = array();
+  if (module_exists('xmlsitemap_i18n')) {
+    $context['language'] = $language->langauge;
+  }
+
+  // Check if we should be displaing the index.
+  if (!isset($_GET['page'])) {
+    $index_file = xmlsitemap_get_file_from_context($context, 'index');
+    if (file_exists($index_file)) {
+      $chunk = 'index';
+    }
+    else {
+      $chunk = 1;
+    }
+  }
+  else {
+    $chunk = (int) $_GET['page'];
+  }
+
+  $file = xmlsitemap_get_file_from_context($context, $chunk);
   xmlsitemap_output_file($file);
 }
 
