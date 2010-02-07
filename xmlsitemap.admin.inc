@@ -509,7 +509,7 @@ function xmlsitemap_add_form_link_options(&$form, $link) {
   );
 
   $bundle_info = $info['bundles'][$link['subtype']];
-  if (xmlsitemap_can_admin_bundle($link['type'], $link['subtype']) && $path = xmlsitemap_get_bundle_path($entity, $bundle)) {
+  if (xmlsitemap_can_admin_bundle($link['type'], $link['subtype']) && $path = xmlsitemap_get_bundle_path($link['type'], $link['subtype'])) {
     $form['xmlsitemap']['description'] = array(
       '#prefix' => '<div class="description">',
       '#suffix' => '</div>',
