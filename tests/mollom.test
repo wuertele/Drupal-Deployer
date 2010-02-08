@@ -281,7 +281,7 @@ class MollomWebTestCase extends DrupalWebTestCase {
     // Explicitly enable the passed fields, if $fields were passed.
     if (isset($fields)) {
       foreach ($fields as $field) {
-        $edit['mollom[fields][' . rawurlencode($field) . ']'] = TRUE;
+        $edit['mollom[enabled_fields][' . rawurlencode($field) . ']'] = TRUE;
       }
     }
     $form_info = mollom_get_form_info($form_id);
@@ -290,13 +290,13 @@ class MollomWebTestCase extends DrupalWebTestCase {
       // remaining checkboxes manually.
       if (isset($fields)) {
         if (!isset($edit[$field])) {
-          $edit['mollom[fields][' . rawurlencode($field) . ']'] = FALSE;
+          $edit['mollom[enabled_fields][' . rawurlencode($field) . ']'] = FALSE;
         }
       }
       // If no $fields were passed, enable all elements exposed by the
       // implementation.
       else {
-        $edit['mollom[fields][' . rawurlencode($field) . ']'] = TRUE;
+        $edit['mollom[enabled_fields][' . rawurlencode($field) . ']'] = TRUE;
       }
     }
     $this->drupalPost(NULL, $edit, t('Save'));
@@ -1250,11 +1250,11 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
     $this->drupalPost(NULL, $edit, t('Next'));
     $this->assertText('Mollom test form');
     $edit = array(
-      'mollom[fields][title]' => TRUE,
-      'mollom[fields][body]' => TRUE,
-      'mollom[fields][exclude]' => FALSE,
-      'mollom[fields][' . rawurlencode('parent][child') . ']' => TRUE,
-      'mollom[fields][field]' => TRUE,
+      'mollom[enabled_fields][title]' => TRUE,
+      'mollom[enabled_fields][body]' => TRUE,
+      'mollom[enabled_fields][exclude]' => FALSE,
+      'mollom[enabled_fields][' . rawurlencode('parent][child') . ']' => TRUE,
+      'mollom[enabled_fields][field]' => TRUE,
     );
     $this->drupalPost(NULL, $edit, t('Save'));
 
@@ -1279,16 +1279,16 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
     }
 
     // Add a field to the stored configuration that existed previously.
-    $mollom_form['fields'][] = 'orphan_field';
+    $mollom_form['enabled_fields'][] = 'orphan_field';
     mollom_form_save($mollom_form);
 
     // Verify that field configuration contains only available elements.
     $this->drupalGet('admin/settings/mollom/manage/mollom_test_form');
     $form_info = mollom_get_form_info('mollom_test_form');
-    $fields = $this->xpath('//input[starts-with(@name, "mollom[fields]")]');
+    $fields = $this->xpath('//input[starts-with(@name, "mollom[enabled_fields]")]');
     $elements = array();
     foreach ($fields as $field) {
-      $elements[] = substr(substr(rawurldecode($field['name']), 0, -1), 15);
+      $elements[] = substr(substr(rawurldecode($field['name']), 0, -1), 23);
     }
     $this->assertEqual($elements, array_keys($form_info['elements']), t('Field list only contains available form elements.'));
 
@@ -1424,7 +1424,7 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
           // all possible elements preselected.
           elseif ($info['mode'] == MOLLOM_MODE_ANALYSIS && !empty($info['elements'])) {
             foreach ($info['elements'] as $field => $label) {
-              $this->assertFieldByName("mollom[fields][$field]", TRUE);
+              $this->assertFieldByName("mollom[enabled_fields][$field]", TRUE);
             }
           }
         }

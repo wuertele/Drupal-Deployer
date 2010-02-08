@@ -528,7 +528,7 @@ function mollom_get_form_info($form_id = NULL, $reset = FALSE) {
 function mollom_form_load($form_id) {
   $mollom_form = db_fetch_array(db_query_range("SELECT * FROM {mollom_form} WHERE form_id = '%s'", $form_id, 0, 1));
   if ($mollom_form) {
-    $mollom_form['fields'] = unserialize($mollom_form['fields']);
+    $mollom_form['enabled_fields'] = unserialize($mollom_form['enabled_fields']);
 
     // Attach form registry information.
     $mollom_form += mollom_get_form_info($form_id);
@@ -948,7 +948,7 @@ function mollom_process_mollom($element, $input, &$form_state, $complete_form) {
       'require_captcha' => $element['#mollom_form']['mode'] == MOLLOM_MODE_CAPTCHA,
       'passed_captcha' => FALSE,
       'entity' => $element['#mollom_form']['entity'],
-      'fields' => $element['#mollom_form']['fields'],
+      'enabled_fields' => $element['#mollom_form']['enabled_fields'],
       'mapping' => $element['#mollom_form']['mapping'],
       'response' => NULL,
     );
@@ -1037,7 +1037,7 @@ function mollom_validate_analysis($form, &$form_state) {
   }
 
   // Perform textual analysis.
-  $data = mollom_form_get_values($form_state['values'], $form_state['mollom']['fields'], $form_state['mollom']['mapping']);
+  $data = mollom_form_get_values($form_state['values'], $form_state['mollom']['enabled_fields'], $form_state['mollom']['mapping']);
   // Remove 'post_id' property; only used by mollom_form_submit().
   if (isset($data['post_id'])) {
     unset($data['post_id']);
@@ -1226,7 +1226,7 @@ function mollom_form_submit($form_id, &$form_state) {
     // For new entities, the entity's form submit handler will have added the
     // new entity id value into $form_state['values'], so we need to rebuild the
     // data mapping.
-    $data = mollom_form_get_values($form_state['values'], $form_state['mollom']['fields'], $form_state['mollom']['mapping']);
+    $data = mollom_form_get_values($form_state['values'], $form_state['mollom']['enabled_fields'], $form_state['mollom']['mapping']);
     // We only consider non-empty and non-zero values as valid entity ids.
     if (!empty($data['post_id'])) {
       mollom_data_save($form_state['mollom']['entity'], $data['post_id']);

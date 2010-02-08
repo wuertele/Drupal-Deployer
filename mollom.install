@@ -112,8 +112,8 @@ function mollom_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
-      'fields' => array(
-        'description' => 'A list of form fields configured for textual analysis.',
+      'enabled_fields' => array(
+        'description' => 'A list of form elements configured for textual analysis.',
         'type' => 'text',
         'serialize' => TRUE,
       ),
@@ -149,13 +149,13 @@ function mollom_install() {
   $form_info = mollom_get_form_info();
   foreach ($form_info as $form_id => $info) {
     if (!empty($info['mode'])) {
-      $info['fields'] = array_keys($info['elements']);
+      $info['enabled_fields'] = array_keys($info['elements']);
       // Upon installation, our own schema is not available yet, so we cannot
       // use mollom_form_save(), resp. drupal_write_record().
-      db_query("INSERT INTO {mollom_form} (form_id, mode, fields, module) VALUES ('%s', %d, '%s', '%s')", array(
+      db_query("INSERT INTO {mollom_form} (form_id, mode, enabled_fields, module) VALUES ('%s', %d, '%s', '%s')", array(
         $info['form_id'],
         $info['mode'],
-        serialize($info['fields']),
+        serialize($info['enabled_fields']),
         $info['module'],
       ));
     }
@@ -239,7 +239,7 @@ function mollom_update_6105() {
         'not null' => TRUE,
         'default' => 0,
       ),
-      'fields' => array(
+      'enabled_fields' => array(
         'type' => 'text',
         'serialize' => TRUE,
       ),
@@ -272,7 +272,7 @@ function mollom_update_6105() {
     if (!empty($mode) && isset($form_info[$form_id])) {
       $info = $form_info[$form_id];
       $info['mode'] = $mode;
-      $info['fields'] = array_keys($info['elements']);
+      $info['enabled_fields'] = array_keys($info['elements']);
       mollom_form_save($info);
     }
     variable_del($row->name);
@@ -336,6 +336,22 @@ function mollom_update_6107() {
 function mollom_update_6108() {
   $ret = array();
   $ret[] = update_sql("UPDATE {permission} SET perm = REPLACE(perm, 'post with no checking', 'bypass mollom protection')");
+  return $ret;
+}
+
+/**
+ * Rename 'fields' column to 'enabled_fields'; previously introduced in mollom_update_6105().
+ *
+ * 'fields' is a reserved keyword in MySQL.
+ */
+function mollom_update_6109() {
+  $ret = array();
+  if (db_column_exists('mollom_form', 'fields')) {
+    db_change_field($ret, 'mollom_form', 'fields', 'enabled_fields', array(
+      'type' => 'text',
+      'serialize' => TRUE,
+    ));
+  }
   return $ret;
 }
 
