@@ -34,6 +34,16 @@ function xmlsitemap_output_chunk() {
   // Fallback to non-context sitemap?
 
   $file = xmlsitemap_get_file_from_context($context, $chunk);
+
+  if (variable_get('xmlsitemap_developer_mode', 0) && isset($_GET['debug'])) {
+    $output = array();
+    $output[] = "Chunk: $chunk";
+    $output[] = "Context: " . print_r($context, TRUE);
+    $output[] = "Cache file location: $file";
+    $output[] = "Cache file exists: " . (file_exists($file) ? 'Yes' : 'No');
+    return implode('<br />', $output);
+  }
+
   return xmlsitemap_output_file($file);
 }
 
