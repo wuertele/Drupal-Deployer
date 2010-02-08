@@ -545,7 +545,7 @@ function recipe_ingredient_id_from_name($name) {
       global $active_db;
       $node_link = db_result(db_query("SELECT nid FROM {node} WHERE title = '%s'", $name));
       if (!$node_link) {
-      	$node_link = 0;
+        $node_link = 0;
       }
       db_query("INSERT INTO {recipe_ingredient} (name, link) VALUES ('%s', %d)", $name, $node_link);
       $ingredient_id = db_result(db_query("SELECT id FROM {recipe_ingredient} WHERE LOWER(name)='%s'", trim(strtolower($name))));
@@ -908,19 +908,19 @@ function recipe_export_recipeml($nid) {
 }
 
 function my_xml_escape($string) {
-	
-	$chars = array(
-	  '&' => '&amp;',
-    '<' => '&lt;', 
-    '>' => '&gt;', 
+
+  $chars = array(
+    '&' => '&amp;',
+    '<' => '&lt;',
+    '>' => '&gt;',
     '"' => '&quot;',
     '\''=> '&apos;'
   );
   foreach ( $chars as $c1 => $c2 ) {
-    $string = str_replace($c1, $c2, $string); 
+    $string = str_replace($c1, $c2, $string);
   }
-	
-	return $string;
+
+  return $string;
 }
 
 /**
@@ -1050,7 +1050,7 @@ function recipe_page() {
       }
     }
     else {
-      // This is the normal page display 
+      // This is the normal page display
       $body = '';
       if (variable_get('recipe_recent_box_enable', 1)) {
         // link to add new content on Page, if user has access
@@ -1431,18 +1431,22 @@ function theme_recipe_node($node, $yield_form = TRUE) {
       $yield = $_POST['custom_yield'];
       $_POST = array();
     }
-    else {
-      if ($_POST['op'] == t('Halve')) {
+    else if ($_POST['op'] == t('Halve')) {
         $yield = $_POST['custom_yield']/2;
         $_POST = array();
       }
-      else {
-        if ($_POST['op'] == t('Double')) {
-          $yield = $_POST['custom_yield']*2;
-          $_POST = array();
-        }
-      }
+    else if ($_POST['op'] == t('Double')) {
+      $yield = $_POST['custom_yield']*2;
+      $_POST = array();
     }
+    // Reset yield back to recipe default
+    else if ($_POST['op'] == t('Reset')) {
+      $yield = $node->yield;
+      $_POST = array();
+    }
+
+
+
 
     if ($yield && $yield != $node->yield && $node->yield !=0) {
       $factor = $yield / $node->yield;
@@ -1551,6 +1555,10 @@ function recipe_custom_yield_form($form_id, $node) {
   $form['custom_yield_container']['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Change'),
+  );
+  $form['custom_yield_container']['reset'] = array(
+    '#type' => 'submit',
+    '#value' => t('Reset'),
   );
   $form['custom_yield_container']['halve'] = array(
     '#type' => 'submit',
@@ -1680,10 +1688,10 @@ function recipe_euclid($number_one, $number_two) {
 function recipe_import_form($form_state) {
 
   $formats = module_invoke_all('recipeio', 'import_single');
-  
+
   $options = array();
   foreach ( $formats as $format ) {
-  	$options[$format['callback']] = $format['format_name'];
+    $options[$format['callback']] = $format['format_name'];
   }
 
   if (isset($form_state['values']['recipe_preview'])) {
