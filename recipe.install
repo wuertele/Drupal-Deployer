@@ -150,39 +150,17 @@ function recipe_install() {
 
 
 /**
- * load the recipe_units table.
+ * Load the recipe_units table.
  */
 function recipe_populate_units() {
   $s = TRUE;
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (1, 'Slice', 'sli', 0, 'Unit');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (2, 'Unit', '', 0, 'Unit');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (3, 'Clove', 'clv', 0, 'Unit');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (4, 'Pinch', 'pn', 0, 'Unit');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (5, 'Package', 'pk', 0, 'Unit');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (6, 'Can', 'cn', 0, 'Unit');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (7, 'Drop', 'dr', 0, 'Unit');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (8, 'Bunch', 'bn', 0, 'Unit');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (9, 'Dash', 'ds', 0, 'Unit');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (10, 'Carton', 'ct', 0, 'Unit');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (11, 'Cup', 'c', 0, 'Unit');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (12, 'Tablespoon', 'T', 0, 'Volume');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (13, 'Teaspoon', 't', 0, 'Volume');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (14, 'Pound', 'lb', 0, 'Mass');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (15, 'Ounce', 'oz', 0, 'Mass');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (16, 'Pint', 'pt', 0, 'Volume');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (17, 'Quart', 'q', 0, 'Volume');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (18, 'Gallon', 'gal', 0, 'Volume');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (19, 'Milligram', 'mg', 1, 'Mass');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (20, 'Centigram', 'cg', 1, 'Mass');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (21, 'Gram', 'g', 1, 'Mass');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (22, 'Kilogram', 'kg', 1, 'Mass');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (23, 'Millilitre', 'ml', 1, 'Volume');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (24, 'Centilitre', 'cl', 1, 'Volume');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (25, 'Litre', 'l', 1, 'Volume');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (26, 'Decilitre', 'dl', 1, 'Volume');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (27, 'Tablespoon (Metric)', 'tbsp', 1, 'Volume');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (28, 'Teaspoon (Metric)', 'tsp', 1, 'Volume');");
-  $s = $s && db_query("INSERT INTO {recipe_unit} VALUES (29, 'Unknown', '', 0, 'Unit');");
+  $units = get_default_units();
+  foreach ( $units as $u ) {
+    $s = $s && db_query(
+      "INSERT INTO {recipe_unit} (name, abbreviation, metric, type) VALUES ('%s', '%s', %d, '%s')",
+      $u['name'], $u['abbreviation'], $u['metric'], $u['type']
+    );
+  }
   return $s;
 }
 
@@ -209,6 +187,46 @@ function recipe_uninstall() {
  */
 function recipe_update_6100() {
   $ret = array();
-  $ret[] = update_sql('ALTER TABLE {recipe_node_ingredient} ADD weight INT NOT NULL default 0');
+  db_add_field($ret, 'recipe_node_ingredient', 'weight', array('type' => 'int', 'not null' => TRUE, 'default' => 0));
   return $ret;
+}
+
+
+/**
+ * Get an array of the default unit values.
+ * Used to fill the recipe_unit table.
+ */
+function get_default_units() {
+  $units = array(
+    array('name'=>'Slice',               'abbreviation'=>'sli', 'metric'=>0, 'type'=>'Unit'),
+    array('name'=>'Unit',                'abbreviation'=>'',    'metric'=>0, 'type'=>'Unit'),
+    array('name'=>'Clove',               'abbreviation'=>'clv', 'metric'=>0, 'type'=>'Unit'),
+    array('name'=>'Pinch',               'abbreviation'=>'pn',  'metric'=>0, 'type'=>'Unit'),
+    array('name'=>'Package',             'abbreviation'=>'pk',  'metric'=>0, 'type'=>'Unit'),
+    array('name'=>'Can',                 'abbreviation'=>'cn',  'metric'=>0, 'type'=>'Unit'),
+    array('name'=>'Drop',                'abbreviation'=>'dr',  'metric'=>0, 'type'=>'Unit'),
+    array('name'=>'Bunch',               'abbreviation'=>'bn',  'metric'=>0, 'type'=>'Unit'),
+    array('name'=>'Dash',                'abbreviation'=>'ds',  'metric'=>0, 'type'=>'Unit'),
+    array('name'=>'Carton',              'abbreviation'=>'ct',  'metric'=>0, 'type'=>'Unit'),
+    array('name'=>'Cup',                 'abbreviation'=>'c',   'metric'=>0, 'type'=>'Volume'),
+    array('name'=>'Tablespoon',          'abbreviation'=>'T',   'metric'=>0, 'type'=>'Volume'),
+    array('name'=>'Teaspoon',            'abbreviation'=>'t',   'metric'=>0, 'type'=>'Volume'),
+    array('name'=>'Pound',               'abbreviation'=>'lb',  'metric'=>0, 'type'=>'Mass'),
+    array('name'=>'Ounce',               'abbreviation'=>'oz',  'metric'=>0, 'type'=>'Mass'),
+    array('name'=>'Pint',                'abbreviation'=>'pt',  'metric'=>0, 'type'=>'Volume'),
+    array('name'=>'Quart',               'abbreviation'=>'q',   'metric'=>0, 'type'=>'Volume'),
+    array('name'=>'Gallon',              'abbreviation'=>'gal', 'metric'=>0, 'type'=>'Volume'),
+    array('name'=>'Milligram',           'abbreviation'=>'mg',  'metric'=>1, 'type'=>'Mass'),
+    array('name'=>'Centigram',           'abbreviation'=>'cg',  'metric'=>1, 'type'=>'Mass'),
+    array('name'=>'Gram',                'abbreviation'=>'g',   'metric'=>1, 'type'=>'Mass'),
+    array('name'=>'Kilogram',            'abbreviation'=>'kg',  'metric'=>1, 'type'=>'Mass'),
+    array('name'=>'Millilitre',          'abbreviation'=>'ml',  'metric'=>1, 'type'=>'Volume'),
+    array('name'=>'Centilitre',          'abbreviation'=>'cl',  'metric'=>1, 'type'=>'Volume'),
+    array('name'=>'Litre',               'abbreviation'=>'l',   'metric'=>1, 'type'=>'Volume'),
+    array('name'=>'Decilitre',           'abbreviation'=>'dl',  'metric'=>1, 'type'=>'Volume'),
+    array('name'=>'Tablespoon (Metric)', 'abbreviation'=>'tbsp','metric'=>1, 'type'=>'Volume'),
+    array('name'=>'Teaspoon (Metric)',   'abbreviation'=>'tsp', 'metric'=>1, 'type'=>'Volume'),
+    array('name'=>'Unknown',             'abbreviation'=>'Unknown', 'metric'=>0, 'type'=>'Unit')
+  );
+  return $units;
 }
