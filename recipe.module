@@ -16,7 +16,8 @@
  * Implementation of hook_perm().
  */
 function recipe_perm() {
-  return array(t('create recipes'), t('edit own recipes'), t('edit any recipes'));
+  // register permissions. TODO: probably need individual types for each import/export
+  return array(t('create recipes'), t('edit own recipes'), t('edit any recipes'), t('export recipes'));
 }
 
 /**
@@ -36,7 +37,7 @@ function recipe_link($type, $node = NULL, $teaser = FALSE) {
 
   if ($type == 'node' && $node->type == 'recipe') {
     if (!$teaser) {
-      if (variable_get('recipe_export_recipeml_enable', 1) == 1) {
+      if ((variable_get('recipe_export_recipeml_enable', 1) == 1) && (user_access('export recipes', $account))) {
         $links['recipe_recipeml'] = array(
           'title' => t('Export to RecipeML'),
           'href' => "recipe/export/recipeml/$node->nid",
@@ -422,7 +423,8 @@ function recipe_menu() {
   $items['recipe/export'] = array(
     'page callback' => 'recipe_export',
     'type' => MENU_CALLBACK,
-    'access arguments' => array('access content'),
+    //'access arguments' => array('access content'),
+    'access arguments' => array('export content'),
   );
   $items['admin/settings/recipe'] = array(
     'title' => 'Recipe module',
@@ -1050,7 +1052,6 @@ function recipe_page() {
     else {
       // This is the normal page display 
       $body = '';
-      //SGP
       if (variable_get('recipe_recent_box_enable', 1)) {
         // link to add new content on Page, if user has access
         if (user_access('create recipes', $account)) {
