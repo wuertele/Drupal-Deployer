@@ -30,51 +30,51 @@
  *
  * @param Object settings An object literal containing key/value pairs to provide optional settings.
  *
- * @option String cssHeader (optional)      A string of the class name to be appended to sortable tr elements in the thead of the table.
- *                        Default value: "header"
+ * @option String cssHeader (optional) 			A string of the class name to be appended to sortable tr elements in the thead of the table.
+ * 												Default value: "header"
  *
- * @option String cssAsc (optional)       A string of the class name to be appended to sortable tr elements in the thead on a ascending sort.
- *                        Default value: "headerSortUp"
+ * @option String cssAsc (optional) 			A string of the class name to be appended to sortable tr elements in the thead on a ascending sort.
+ * 												Default value: "headerSortUp"
  *
- * @option String cssDesc (optional)      A string of the class name to be appended to sortable tr elements in the thead on a descending sort.
- *                        Default value: "headerSortDown"
+ * @option String cssDesc (optional) 			A string of the class name to be appended to sortable tr elements in the thead on a descending sort.
+ * 												Default value: "headerSortDown"
  *
- * @option String sortInitialOrder (optional)   A string of the inital sorting order can be asc or desc.
- *                        Default value: "asc"
+ * @option String sortInitialOrder (optional) 	A string of the inital sorting order can be asc or desc.
+ * 												Default value: "asc"
  *
- * @option String sortMultisortKey (optional)   A string of the multi-column sort key.
- *                        Default value: "shiftKey"
+ * @option String sortMultisortKey (optional) 	A string of the multi-column sort key.
+ * 												Default value: "shiftKey"
  *
- * @option String textExtraction (optional)   A string of the text-extraction method to use.
- *                        For complex html structures inside td cell set this option to "complex",
- *                        on large tables the complex option can be slow.
- *                        Default value: "simple"
+ * @option String textExtraction (optional) 	A string of the text-extraction method to use.
+ * 												For complex html structures inside td cell set this option to "complex",
+ * 												on large tables the complex option can be slow.
+ * 												Default value: "simple"
  *
- * @option Object headers (optional)      An array containing the forces sorting rules.
- *                        This option let's you specify a default sorting rule.
- *                        Default value: null
+ * @option Object headers (optional) 			An array containing the forces sorting rules.
+ * 												This option let's you specify a default sorting rule.
+ * 												Default value: null
  *
- * @option Array sortList (optional)      An array containing the forces sorting rules.
- *                        This option let's you specify a default sorting rule.
- *                        Default value: null
+ * @option Array sortList (optional) 			An array containing the forces sorting rules.
+ * 												This option let's you specify a default sorting rule.
+ * 												Default value: null
  *
- * @option Array sortForce (optional)       An array containing forced sorting rules.
- *                        This option let's you specify a default sorting rule, which is prepended to user-selected rules.
- *                        Default value: null
+ * @option Array sortForce (optional) 			An array containing forced sorting rules.
+ * 												This option let's you specify a default sorting rule, which is prepended to user-selected rules.
+ * 												Default value: null
  *
-  * @option Array sortAppend (optional)       An array containing forced sorting rules.
- *                        This option let's you specify a default sorting rule, which is appended to user-selected rules.
- *                        Default value: null
+  * @option Array sortAppend (optional) 			An array containing forced sorting rules.
+ * 												This option let's you specify a default sorting rule, which is appended to user-selected rules.
+ * 												Default value: null
  *
- * @option Boolean widthFixed (optional)    Boolean flag indicating if tablesorter should apply fixed widths to the table columns.
- *                        This is usefull when using the pager companion plugin.
- *                        This options requires the dimension jquery plugin.
- *                        Default value: false
+ * @option Boolean widthFixed (optional) 		Boolean flag indicating if tablesorter should apply fixed widths to the table columns.
+ * 												This is usefull when using the pager companion plugin.
+ * 												This options requires the dimension jquery plugin.
+ * 												Default value: false
  *
- * @option Boolean cancelSelection (optional)   Boolean flag indicating if tablesorter should cancel selection of the table headers text.
- *                        Default value: true
+ * @option Boolean cancelSelection (optional) 	Boolean flag indicating if tablesorter should cancel selection of the table headers text.
+ * 												Default value: true
  *
- * @option Boolean debug (optional)       Boolean flag indicating if tablesorter should display debuging information usefull for development.
+ * @option Boolean debug (optional) 			Boolean flag indicating if tablesorter should display debuging information usefull for development.
  *
  * @type jQuery
  *
