@@ -34,7 +34,7 @@ function xmlsitemap_drush_command() {
  * Regenerate the sitemap files from existing data.
  */
 function drush_xmlsitemap_regenerate() {
-  module_load_include('inc', 'xmlsitemap');
+  module_load_include('inc', 'xmlsitemap', 'xmlsitemap.generate');
   xmlsitemap_regenerate();
 
   $vars = array(
@@ -48,7 +48,7 @@ function drush_xmlsitemap_regenerate() {
  * Dump and rebuild all the sitemap data, then regenerate the files.
  */
 function drush_xmlsitemap_rebuild() {
-  module_load_include('inc', 'xmlsitemap');
+  module_load_include('inc', 'xmlsitemap', 'xmlsitemap.generate');
   timer_start('xmlsitemap_rebuild');
 
   // Set the rebuild flag incase something fails during the rebuild.

@@ -130,6 +130,7 @@ function xmlsitemap_settings_form() {
 
     // Ensure that the entity fieldset is not shown if there are no accessible
     // sub-elements.
+    module_load_include('inc', 'xmlsitemap');
     $form[$entity]['#access'] = (bool) xmlsitemap_element_get_visible_children($form[$entity]);
   }
 
@@ -141,27 +142,6 @@ function xmlsitemap_settings_form() {
   $form = system_settings_form($form);
   $form['buttons']['#weight'] = 100;
   return $form;
-}
-
-/**
- * Backport of element_get_visible_children() from Drupal 7.
- */
-function xmlsitemap_element_get_visible_children(array $elements) {
-  foreach (element_children($elements) as $key) {
-    // Skip un-accessible children.
-    if (isset($elements[$key]['#access']) && !$elements[$key]['#access']) {
-      continue;
-    }
-
-    // Skip value and hidden elements, since they are not rendered.
-    if (isset($elements[$key]['#type']) && in_array($elements[$key]['#type'], array('value', 'hidden'))) {
-      continue;
-    }
-
-    return TRUE;
-  }
-
-  return FALSE;
 }
 
 /**
@@ -286,7 +266,7 @@ function xmlsitemap_rebuild_form_submit($form, &$form_state) {
   // Set the rebuild flag incase something fails during the rebuild.
   variable_set('xmlsitemap_rebuild_needed', TRUE);
 
-  module_load_include('inc', 'xmlsitemap');
+  module_load_include('inc', 'xmlsitemap', 'xmlsitemap.generate');
   $batch = xmlsitemap_rebuild_batch($form_state['values']['entities'], $form_state['values']['callbacks'], $form_state['values']['save_custom']);
   batch_set($batch);
   $form_state['redirect'] = 'admin/settings/xmlsitemap';

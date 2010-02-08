@@ -14,15 +14,11 @@
  * @see xmlsitemap_file_transfer()
  */
 function xmlsitemap_output_chunk() {
-  global $language;
-
-  $context = array();
-  if (module_exists('xmlsitemap_i18n')) {
-    $context['language'] = $language->langauge;
-  }
+  $context = module_invoke_all('xmlsitemap_context');
+  drupal_alter('xmlsitemap_context', $context);
 
   // Check if we should be displaing the index.
-  if (!isset($_GET['page'])) {
+  if (!isset($_GET['page']) || !is_numeric($_GET['page'])) {
     $index_file = xmlsitemap_get_file_from_context($context, 'index');
     if (file_exists($index_file)) {
       $chunk = 'index';
@@ -35,8 +31,10 @@ function xmlsitemap_output_chunk() {
     $chunk = (int) $_GET['page'];
   }
 
+  // Fallback to non-context sitemap?
+
   $file = xmlsitemap_get_file_from_context($context, $chunk);
-  xmlsitemap_output_file($file);
+  return xmlsitemap_output_file($file);
 }
 
 /**

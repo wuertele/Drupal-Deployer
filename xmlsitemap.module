@@ -148,7 +148,7 @@ function xmlsitemap_cron() {
   }
 
   // Regenerate the sitemap XML files.
-  module_load_include('inc', 'xmlsitemap');
+  module_load_include('inc', 'xmlsitemap', 'xmlsitemap.generate');
   xmlsitemap_regenerate();
 }
 
@@ -180,7 +180,6 @@ function xmlsitemap_xmlsitemap_link_alter(&$link) {
  * Implements hook_robotstxt().
  */
 function xmlsitemap_robotstxt() {
-  module_load_include('inc', 'xmlsitemap');
   $sitemaps = xmlsitemap_get_sitemaps();
   foreach ($sitemaps as $index => $sitemap) {
     $sitemaps[$index] = 'Sitemap: ' . $sitemap;
@@ -344,6 +343,7 @@ function _xmlsitemap_check_changed_links(array $conditions = array(), array $upd
   $conditions['status'] = (!empty($updates['status']) && empty($condition['status'])) ? 0 : 1;
   $conditions['access'] = (!empty($updates['access']) && empty($condition['access'])) ? 0 : 1;
 
+  module_load_include('inc', 'xmlsitemap');
   $args = _xmlsitemap_build_conditions($conditions);
   $sql = "SELECT 1 FROM {xmlsitemap} WHERE ". implode(' AND ', $conditions);
   $changed = db_result(db_query_range($sql, $args, 0, 1));
@@ -403,48 +403,6 @@ function _xmlsitemap_check_changed_link(array $link, $original_link = NULL, $fla
 }
 
 /**
- * Condition builder for queries.
- */
-function _xmlsitemap_build_conditions(array &$conditions = array(), array &$args = array(), $operator = '=', $update = FALSE) {
-  $operators = array(
-    'null' => array('=' => 'IS', '<>' => 'IS NOT'),
-    'in' => array('=' => 'IN', '<>' => 'NOT IN'),
-  );
-
-  foreach ($conditions as $field => $value) {
-    if (is_int($field)) {
-      continue;
-    }
-    elseif ($value === NULL) {
-      if ($update) {
-        $conditions[$field] = "$field = NULL";
-      }
-      else {
-        $conditions[$field] = "$field {$operators['null'][$operator]} NULL";
-      }
-    }
-    elseif (is_array($value)) {
-      if ($update) {
-        trigger_error(strtr('Update not supported for field %field in @function.', array('%field' => theme('placeholder', $field), '@function' => __FUNCTION__)));
-        unset($conditions[$field]);
-      }
-      else {
-        $type = _xmlsitemap_get_field_type('xmlsitemap', $field);
-        $conditions[$field] = "$field {$operators['in'][$operator]} (" . db_placeholders($value, $type) . ")";
-        $args = array_merge($args, $value);
-      }
-    }
-    else {
-      $placeholder = db_type_placeholder(_xmlsitemap_get_field_type('xmlsitemap', $field));
-      $conditions[$field] = "$field $operator $placeholder";
-      $args[] = $value;
-    }
-  }
-
-  return $args;
-}
-
-/**
  * Load a specific sitemap link from the database.
  *
  * @param $entity_type
@@ -471,6 +429,7 @@ function xmlsitemap_link_load($entity_type, $entity_id) {
 function xmlsitemap_link_load_multiple(array $conditions = array()) {
   $links = array();
 
+  module_load_include('inc', 'xmlsitemap');
   $args = _xmlsitemap_build_conditions($conditions);
   $query = db_query("SELECT * FROM {xmlsitemap} WHERE " . implode(' AND ', $conditions), $args);
 
@@ -520,6 +479,7 @@ function xmlsitemap_save_link(array $link) {
     _xmlsitemap_check_changed_link($link, $existing, TRUE);
   }
 
+  module_load_include('inc', 'xmlsitemap');
   if ($existing) {
     xmlsitemap_write_record('xmlsitemap', $link, array('type', 'id'));
   }
@@ -555,6 +515,7 @@ function xmlsitemap_update_links($updates = array(), $conditions = array()) {
 
   // Process updates.
   $args = array();
+  module_load_include('inc', 'xmlsitemap');
   _xmlsitemap_build_conditions($updates, $args, '=', TRUE);
   _xmlsitemap_build_conditions($conditions, $args);
   $sql = "UPDATE {xmlsitemap} SET " . implode(', ', $updates) . " WHERE " . implode(' AND ', $conditions);
@@ -598,26 +559,11 @@ function xmlsitemap_link_delete_multiple(array $conditions) {
     _xmlsitemap_check_changed_links($conditions, array(), TRUE);
   }
 
+  module_load_include('inc', 'xmlsitemap');
   $args = _xmlsitemap_build_conditions($conditions);
   db_query("DELETE FROM {xmlsitemap} WHERE " . implode(' AND ', $conditions), $args);
 
   return db_affected_rows();
-}
-
-/**
- * Get the filename of a specific sitemap page chunk.
- *
- * @param $chunk
- *   An integer representing the integer of the sitemap page chunk.
- * @param $language
- *   A string with a language code.
- * @return
- *   A file path to the expected chunk file.
- *
- * @todo Move to xmlsitemap.inc
- */
-function xmlsitemap_get_chunk_file($chunk = 0, $language, $extension = 'xml') {
-  return xmlsitemap_get_directory() . "/xmlsitemap-{$language}-{$chunk}.{$extension}";
 }
 
 /**
@@ -671,7 +617,7 @@ function xmlsitemap_variables() {
     'xmlsitemap_path' => 'xmlsitemap',
     'xmlsitemap_base_url' => $GLOBALS['base_url'],
     'xmlsitemap_developer_mode' => FALSE,
-    'xmlsitemap_frontpage_priority' => 1.0,
+    'xmlsitemap_frontpage_priority' => '1.0',
     'xmlsitemap_frontpage_changefreq' => XMLSITEMAP_FREQUENCY_DAILY,
     'xmlsitemap_max_chunks' => 0,
     'xmlsitemap_max_filesize' => 0,
@@ -692,7 +638,7 @@ function xmlsitemap_var($name, $default = NULL) {
     $defaults = xmlsitemap_variables();
   }
 
-  $name = 'xmlsitemap_'. $name;
+  $name = 'xmlsitemap_' . $name;
 
   // @todo Remove when stable.
   if (!isset($defaults[$name])) {
@@ -727,7 +673,7 @@ function xmlsitemap_switch_user($new_user = NULL) {
     if (!$new_user) {
       $new_user = drupal_anonymous_user();
     }
-    elseif (!$new_user = user_load(array('uid' => $new_user))) {
+    elseif (!$new_user = user_load($new_user)) {
       return FALSE;
     }
 
@@ -763,110 +709,6 @@ function xmlsitemap_switch_user($new_user = NULL) {
  */
 function xmlsitemap_restore_user() {
   return xmlsitemap_switch_user();
-}
-
-/**
- * Special implementation of drupal_write_record() to allow NULL values.
- *
- * @todo Remove when http://drupal.org/node/227677 is fixed.
- */
-function xmlsitemap_write_record($table, &$object, $update = array()) {
-  // Standardize $update to an array.
-  if (is_string($update)) {
-    $update = array($update);
-  }
-
-  $schema = drupal_get_schema($table);
-  if (empty($schema)) {
-    return FALSE;
-  }
-
-  // Convert to an object if needed.
-  if (is_array($object)) {
-    $object = (object) $object;
-    $array = TRUE;
-  }
-  else {
-    $array = FALSE;
-  }
-
-  $fields = $defs = $values = $serials = $placeholders = array();
-  $object_fields = get_object_vars($object);
-
-  // Go through our schema, build SQL, and when inserting, fill in defaults for
-  // fields that are not set.
-  foreach ($schema['fields'] as $field => $info) {
-    // Special case -- skip serial types if we are updating.
-    if ($info['type'] == 'serial') {
-      if (empty($update)) {
-        // Track serial fields so we can helpfully populate them after the query.
-        $serials[] = $field;
-      }
-      continue;
-    }
-
-    // For inserts, populate defaults from Schema if not already provided
-    if (!isset($object->$field) && !count($update) && isset($info['default']) && !array_key_exists($field, $object_fields)) {
-      $object->$field = $info['default'];
-    }
-
-    // Build arrays for the fields, placeholders, and values in our query.
-    if (isset($object->$field) || (array_key_exists($field, $object_fields) && empty($info['not null']))) {
-      $fields[] = $field;
-      if (isset($object->$field)) {
-        $placeholders[] = db_type_placeholder($info['type']);
-        $values[] = empty($info['serialize']) ? $object->$field : serialize($object->$field);
-      }
-      else {
-        $placeholders[] = '%s';
-        $values[] = 'NULL';
-      }
-    }
-  }
-
-  // Build the SQL.
-  $query = '';
-  if (!count($update)) {
-    $query = "INSERT INTO {". $table ."} (". implode(', ', $fields) .') VALUES ('. implode(', ', $placeholders) .')';
-    $return = SAVED_NEW;
-  }
-  else {
-    $query = '';
-    foreach ($fields as $id => $field) {
-      if ($query) {
-        $query .= ', ';
-      }
-      $query .= $field .' = '. $placeholders[$id];
-    }
-
-    foreach ($update as $key) {
-      $conditions[] = "$key = ". db_type_placeholder($schema['fields'][$key]['type']);
-      $values[] = $object->$key;
-    }
-
-    $query = "UPDATE {". $table ."} SET $query WHERE ". implode(' AND ', $conditions);
-    $return = SAVED_UPDATED;
-  }
-
-  // Execute the SQL.
-  if (db_query($query, $values)) {
-    if ($serials) {
-      // Get last insert ids and fill them in.
-      foreach ($serials as $field) {
-        $object->$field = db_last_insert_id($table, $field);
-      }
-    }
-  }
-  else {
-    $return = FALSE;
-  }
-
-  // If we began with an array, convert back so we don't surprise the caller.
-  if ($array) {
-    $object = (array) $object;
-  }
-
-  return $return;
 }
 
 function xmlsitemap_process_form_link_options($form, &$form_state) {
