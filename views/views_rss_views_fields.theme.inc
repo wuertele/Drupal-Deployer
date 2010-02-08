@@ -51,7 +51,7 @@ function template_preprocess_views_rss_fields_item(&$vars) {
   // Loop through key=>value pairs
   foreach ($item as $key => $value) {
     if ($value) {
-      $row .= '<' . $key . '>' . filter_xss_admin($value) . '</' . $key . '>
+      $row .= '<' . $key . '>' . check_plain($value) . '</' . $key . '>
       ';
     }
   }

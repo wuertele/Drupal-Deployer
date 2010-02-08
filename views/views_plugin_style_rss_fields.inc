@@ -137,7 +137,7 @@ class views_plugin_style_rss_fields extends views_plugin_style {
       $item = array();
       foreach (array_merge($this->options['fields'], $this->options['georss']) as $key => $val) {
         if (!isset($this->view->field[$val])) continue;
-        $item[$key] = htmlentities($row[$val], ENT_QUOTES, '', FALSE);
+        $item[$key] = $row[$val];
       }
       $items[] = $item;
     }
