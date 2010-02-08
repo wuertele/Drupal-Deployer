@@ -2,6 +2,44 @@
 // $Id$
 
 /**
+ * Implements hook_xmlsitemap_context().
+ */
+function xmlsitemap_i18n_xmlsitemap_context() {
+  global $language;
+
+  $context['language'] = $language->language;
+  return $context;
+}
+/**
+ * Implements hook_xmlsitemap_context().
+ */
+function xmlsitemap_i18n_xmlsitemap_context_fallback() {
+  $language = language_default();
+  $context['language'] = $language->language;
+  return $context;
+}
+
+function xmlsitemap_i18n_xmlsitemap_context_info() {
+  $context['language'] = array(
+    'label' => t('Language'),
+    'summary callback' => 'locale_language_name',
+    'settings callback' => 'xmlsitemap_i18n_xmlsitemap_language_context_settings',
+  );
+  return $context;
+}
+
+function xmlsitemap_i18n_xmlsitemap_language_context_settings(stdClass $sitemap) {
+  $form['language'] = array(
+    '#type' => 'select',
+    '#title' => t('Language'),
+    '#options' => locale_language_list(),
+    '#default_value' => issset($sitemap->context['language']) ? $sitemap->context['language'] : '',
+    '#description' => t("Each language's sitemap will respect the <a href=\"@i18n-settings\">multilingual content selection mode</a>.", array('@i18n-settings' => url('admin/settings/language/i18n'))),
+  );
+  return $form;
+}
+
+/**
  * Implements hook_form_FORM_ID_alter().
  *
  * Set the regeneration needed flag if multilingual settings are changed.
