@@ -4,7 +4,10 @@
 
 /**
  * @file
- * recipe.admin.inc - admin menu hook 
+ * recipe.admin.inc -contains all admin pages, settings, and validate.
+ *
+ * This file will only be parsed when processing admin menu options.
+ * See http://drupal.org/node/146172
  */
 
 
