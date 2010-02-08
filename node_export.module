@@ -317,8 +317,13 @@ function node_export_settings() {
     );
     $form['publishing'][$type]['node_export_reset_created_'. $type] = array(
       '#type' => 'checkbox',
-      '#title' => t('Created time (<em>Authored on</em> date)'),
+      '#title' => t('Created time (<em>Authored on</em> date/time)'),
       '#default_value' => variable_get('node_export_reset_created_'. $type, TRUE),
+    );
+    $form['publishing'][$type]['node_export_reset_changed_'. $type] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Changed time (<em>Last updated</em> date/time)'),
+      '#default_value' => variable_get('node_export_reset_changed_'. $type, TRUE),
     );
     $form['publishing'][$type]['node_export_reset_menu_'. $type] = array(
       '#type' => 'checkbox',
@@ -536,7 +541,7 @@ function node_export_import($node_code, $method = NULL, $redirect = TRUE, $msg_f
 }
 
 /**
- *  Import Form
+ * Import Form
  */
 function node_export_import_form($form_state) {
 
@@ -644,9 +649,9 @@ function node_export_import_form_submit($form, &$form_state) {
 }
 
 /**
- *  Exports a node - prepopulate a node editing form
- *  @return
- *    A prepopulate form.
+ * Exports a node - prepopulate a node editing form
+ * @return
+ *   A prepopulate form.
  */
 function node_export_node_prepopulate($original_node) {
   if (node_export_is_permitted($original_node->type)) {
@@ -661,25 +666,114 @@ function node_export_node_prepopulate($original_node) {
 }
 
 /**
- *  Theme function facilitates rendering of prepopulate form.
+ * Theme function facilitates rendering of prepopulate form.
  */
 function theme_node_export_node_prepopulate($element) {
   return $element['node_form']['#value'];
 }
 
 /**
- *  Exports a node by directly saving it.
+ * Exports a node by directly saving it.
  */
 function node_export_node_save($original_node) {
   if (node_export_is_permitted($original_node->type)) {
     $node = node_export_node_clone($original_node, "save-edit");
-    node_save($node);
+    node_export_save($node);
     return $node->nid;
   }
 }
 
 /**
- *  Prepare a clone of the node during import.
+ * Save a node object into the database.
+ *
+ * A modified version of node_save().
+ */
+function node_export_save(&$node) {
+  // Let modules modify the node before it is saved to the database.
+  node_invoke_nodeapi($node, 'presave');
+  global $user;
+
+  $node->is_new = FALSE;
+
+  // Apply filters to some default node fields:
+  if (empty($node->nid)) {
+    // Insert a new node.
+    $node->is_new = TRUE;
+
+    // When inserting a node, $node->log must be set because
+    // {node_revisions}.log does not (and cannot) have a default
+    // value.  If the user does not have permission to create
+    // revisions, however, the form will not contain an element for
+    // log so $node->log will be unset at this point.
+    if (!isset($node->log)) {
+      $node->log = '';
+    }
+
+    // For the same reasons, make sure we have $node->teaser and
+    // $node->body.  We should consider making these fields nullable
+    // in a future version since node types are not required to use them.
+    if (!isset($node->teaser)) {
+      $node->teaser = '';
+    }
+    if (!isset($node->body)) {
+      $node->body = '';
+    }
+  }
+  elseif (!empty($node->revision)) {
+    $node->old_vid = $node->vid;
+  }
+  else {
+    // When updating a node, avoid clobberring an existing log entry with an empty one.
+    if (empty($node->log)) {
+      unset($node->log);
+    }
+  }
+
+  // Set some required fields:
+  if (empty($node->created)) {
+    $node->created = time();
+  }
+
+  // The update of the changed value is forced in the original node_export().
+  if (empty($node->changed)) {
+    $node->changed = time();
+  }
+
+  $node->timestamp = time();
+  $node->format = isset($node->format) ? $node->format : FILTER_FORMAT_DEFAULT;
+
+  // Generate the node table query and the node_revisions table query.
+  if ($node->is_new) {
+    _node_save_revision($node, $user->uid);
+    drupal_write_record('node', $node);
+    db_query('UPDATE {node_revisions} SET nid = %d WHERE vid = %d', $node->nid, $node->vid);
+    $op = 'insert';
+  }
+  else {
+    drupal_write_record('node', $node, 'nid');
+    if (!empty($node->revision)) {
+      _node_save_revision($node, $user->uid);
+      db_query('UPDATE {node} SET vid = %d WHERE nid = %d', $node->vid, $node->nid);
+    }
+    else {
+      _node_save_revision($node, $user->uid, 'vid');
+    }
+    $op = 'update';
+  }
+
+  // Call the node specific callback (if any).
+  node_invoke($node, $op);
+  node_invoke_nodeapi($node, $op);
+
+  // Update the node access table for this node.
+  node_access_acquire_grants($node);
+
+  // Clear the page and block caches.
+  cache_clear_all();
+}
+
+/**
+ * Prepare a clone of the node during import.
  */
 function node_export_node_clone($original_node, $mode) {
     global $user;
@@ -693,6 +787,10 @@ function node_export_node_clone($original_node, $mode) {
 
     if (variable_get('node_export_reset_created_'. $node->type, TRUE)) {
       $node->created = NULL;
+    }
+
+    if (variable_get('node_export_reset_changed_'. $node->type, TRUE)) {
+      $node->changed = NULL;
     }
 
     if (variable_get('node_export_reset_menu_'. $node->type, TRUE)) {
@@ -726,7 +824,7 @@ function node_export_node_clone($original_node, $mode) {
 }
 
 /**
- *  Build node code string recursively
+ * Build node code string recursively
  */
 function node_export_node_encode($var, $iteration = 0) {
   $tab = '';
@@ -766,7 +864,7 @@ function node_export_node_encode($var, $iteration = 0) {
 }
 
 /**
- *  Evaluate and return decoded string.
+ * Evaluate and return decoded string.
  */
 function node_export_node_decode($string) {
   $array = eval('return '. $string .';');
