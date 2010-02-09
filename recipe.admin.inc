@@ -62,7 +62,7 @@ function recipe_admin_settings() {
       'simple' => t('Simple'),
       'complex' => t('Complex'),
     ),
-    '#description' => t('The simple ingredient system allows all ingredients to be entered on one line. The complex system forces the user to separate the quantity and units from the ingredient.'),
+    '#description' => t('The simple ingredient system allows all ingredients to be entered on one line. WARNING: Simple has bugs. The \'complex system\' forces the user to separate the quantity and units from the ingredient.'),
   );
   $form['recipe_fraction_display'] = array(
     '#type' => 'textfield',
