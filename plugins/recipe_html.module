@@ -1,0 +1,73 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * recipe_recipeML.module - Enables importing and exporting of recipeML format recipes.
+ */
+
+/**
+ * Implementation of hook_recipeio($type).
+ */
+function recipe_html_recipeio($type) {
+  $supported = array();
+  switch ($type) {
+    case 'export_single':
+      // Key here must be lower case and not use any url special chars
+      $supported['reciphtml'] = array(
+        'format_name' => t('HTML'),
+        'callback' => 'recipe_html_export',
+        'format_help' => t('Export to a printer friendly HTML format.')
+      );
+    break;
+  }
+  return $supported;
+}
+
+
+function recipe_html_export($nid = NULL) {
+  if ( $nid === NULL ) {
+    drupal_set_message(t('Recipe not found.'));
+    drupal_not_found();
+  }
+
+  $node = node_load(array('nid' => $nid, 'type' => 'recipe'));
+
+  $node = recipe_node_prepare($node, FALSE);
+  $output = theme('recipe_node', $node, FALSE);
+
+  $html = theme('recipe_export_html', check_plain($node->title), $output);
+
+  return $html;
+}
+
+
+/**
+ * Implementation of hook_theme().
+ */
+function recipe_html_theme() {
+  return array(
+    'recipe_export_html' => array(
+      'arguments' => array('title' => NULL, 'content' => NULL),
+    ),
+  );
+}
+
+
+/**
+ * How the recipe's HTML export should be themed.
+ *
+ * @ingroup themeable
+ */
+function theme_recipe_export_html($title, $content) {
+  global $base_url;
+  $html = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n";
+  $html .= '<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">';
+  $html .= "<head>\n<title>". $title ."</title>\n";
+  $html .= '<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />';
+  $html .= '<base href="'. $base_url .'/" />'."\n";
+  $html .= "<style type=\"text/css\">\n@import url(". drupal_get_path('module', 'recipe') ."/recipe.css);\n</style>\n";
+  # 'title' is exception to "all recipe titles in recipe CSS namespace" rule
+  $html .= "</head>\n<body>\n<h1 class=\"title recipe-title\">". $title ."</h1>\n". $content ."\n</body>\n</html>\n";
+  return $html;
+}

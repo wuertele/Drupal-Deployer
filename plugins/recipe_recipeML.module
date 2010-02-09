@@ -1,0 +1,72 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * recipe_recipeML.module - Enables importing and exporting of recipeML format recipes.
+ */
+
+/**
+ * Implementation of hook_recipeio($type).
+ */
+function recipe_recipeML_recipeio($type) {
+  $supported = array();
+  switch ($type) {
+    case 'export_single':
+      // Key here must be lower case and not use any url special chars
+      $supported['recipeml'] = array(
+        'format_name' => t('recipeML'),
+        'callback' => 'recipe_recipeML_export',
+        'format_help' => t('Export to a recipeML based xml format.')
+      );
+    break;
+  }
+  return $supported;
+}
+
+
+function recipe_recipeML_export($nid = NULL) {
+  if ( $nid === NULL ) {
+    drupal_set_message(t('Recipe not found.'));
+    drupal_not_found();
+  }
+
+  $node = node_load(array('nid' => $nid, 'type' => 'recipe'));
+
+  $output = '<?xml version="1.0" encoding="UTF-8"?>'."\n".
+  '<!DOCTYPE recipeml PUBLIC "-//FormatData//DTD RecipeML 0.5//EN" "http://www.formatdata.com/recipeml/recipeml.dtd">'."\n".
+  '<recipeml version="0.5">'."\n".
+  '  <recipe>'."\n".
+  '    <head>'."\n".
+  '      <title>'. my_xml_escape($node->title) .'</title>'."\n".
+  '    </head>'."\n".
+  '    <yield><qty>'. $node->yield .'</qty></yield>'."\n".
+  '    <ingredients>';
+
+  foreach ($node->ingredients as $ingredient) {
+    $output .= "\n".'<ing><amt><qty>'. $ingredient->quantity .'</qty><unit>'. $ingredient->abbreviation .'</unit></amt><item>'. $ingredient->name .'</item></ing>';
+  }
+
+  $output .= "\n".
+  '    </ingredients>'."\n".
+  '    <directions>'. my_xml_escape($node->instructions) .'</directions>'."\n".
+  '  </recipe>'."\n".
+  '</recipeml>';
+
+  drupal_set_header('Content-type: text/xml');
+  return $output;
+}
+
+function my_xml_escape($string) {
+  $chars = array(
+    '&'   => '&amp;',
+    '<'   => '&lt;',
+    '>'   => '&gt;',
+    '"'   => '&quot;',
+    '\''  => '&apos;'
+  );
+  foreach ( $chars as $c1 => $c2 ) {
+    $string = str_replace($c1, $c2, $string);
+  }
+  return $string;
+}

@@ -72,22 +72,6 @@ function recipe_admin_settings() {
     '#maxlength' => 255,
     '#description' => t('How fractions should be displayed. Leave blank to display as decimals. Each incidence of %d will be replaced by the whole number, the numerator, and the denominator in that order. Anything between curly braces will not be displayed when the whole number is equal to 0. Recommended settings are "{%d }%d&amp;frasl;%d" or "{%d }&lt;sup&gt;%d&lt;/sup&gt;/&lt;sub&gt;%d&lt;/sub&gt;"'),
   );
-  $form['recipe_export_html_enable'] = array(
-    '#type' => 'radios',
-    '#title' => t('Export to HTML'),
-    '#default_value' => variable_get('recipe_export_html_enable', 1),
-    '#options' => array(t('Disabled'), t('Enabled')),
-    '#description' => t('Enables or disables the Export as HTML link.'),
-    '#required' => FALSE,
-  );
-  $form['recipe_export_recipeml_enable'] = array(
-    '#type' => 'radios',
-    '#title' => t('Export to RecipeML'),
-    '#default_value' => variable_get('recipe_export_recipeml_enable', 1),
-    '#options' => array(t('Disabled'), t('Enabled')),
-    '#description' => t('Enables or disables the Export as RecipeML link.'),
-    '#required' => FALSE,
-  );
   $form['recipe_hide_summary'] = array(
     '#type' => 'radios',
     '#title' => t('Hide Summary'),

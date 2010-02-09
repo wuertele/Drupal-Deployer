@@ -14,7 +14,7 @@
  *                    BLANK LINE
  * Instruction Lines: Freeform Instructions, blank lines ok from here on.
  */
- 
+
 
 /**
  * Implementation of hook_recipeio($type).
@@ -23,10 +23,19 @@ function recipe_plaintext_recipeio($type) {
   $supported = array();
   switch ($type) {
     case 'import_single':
-      $supported[] = array(
+      // Key here must be lower case and not use any url special chars
+      $supported['plaintext'] = array(
         'format_name' => t('Plain Text'),
-        'callback' => 'recipe_import_parse_plain_text',
+        'callback' => 'recipe_plaintext_import',
         'format_help' => ''
+      );
+    break;
+    case 'export_single':
+      // Key here must be lower case and not use any url special chars
+      $supported['plaintext'] = array(
+        'format_name' => t('Plain Text'),
+        'callback' => 'recipe_plaintext_export',
+        'format_help' => t('Export to a plain text format.')
       );
     break;
   }
@@ -37,7 +46,7 @@ function recipe_plaintext_recipeio($type) {
 /**
  * Parsing instance for plain text recipes
  */
-function recipe_import_parse_plain_text($text) {
+function recipe_plaintext_import($text) {
   // region constants
   define('TITLE', 0);
   define('INGREDIENTS', 1);
@@ -85,4 +94,27 @@ function recipe_import_parse_plain_text($text) {
     }
   }
   return $recipe;
+}
+
+
+function recipe_plaintext_export($nid = NULL) {
+  if ( $nid === NULL ) {
+    drupal_set_message(t('Recipe not found.'));
+    drupal_not_found();
+  }
+
+  $node = node_load(array('nid' => $nid, 'type' => 'recipe'));
+
+  $output = $node->title;
+  $output .= "\n\n";
+  foreach ( $node->ingredients as $key => $i ) {
+    $output .= $i->quantity .' '. $i->abbreviation .' '. $i->name ."\n";
+  }
+  $output .= "\n";
+  $tmp = "Instructions:\n". $node->instructions ."\n\nDescription:\n". $node->body ."\n\nNotes:\n". $node->notes;
+  $tmp = str_replace('<p>', '', $tmp);
+  $output .= $tmp;
+
+  drupal_set_header('Content-type: text');
+  return $output;
 }

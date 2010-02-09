@@ -11,7 +11,7 @@
  * Implementation of hook_perm().
  */
 function recipe_perm() {
-  // register permissions. TODO: probably need individual types for each import/export
+  // register permissions. TODO: probably need individual types for each import/export -> "might be too many-jv").
   return array(t('create recipes'), t('edit own recipes'), t('edit any recipes'), t('export recipes'));
 }
 
@@ -32,19 +32,15 @@ function recipe_link($type, $node = NULL, $teaser = FALSE) {
 
   if ($type == 'node' && $node->type == 'recipe') {
     if (!$teaser) {
-      if ((variable_get('recipe_export_recipeml_enable', 1) == 1) && (user_access('export recipes', $account))) {
-        $links['recipe_recipeml'] = array(
-          'title' => t('Export to RecipeML'),
-          'href' => "recipe/export/recipeml/$node->nid",
-          'attributes' => array('title' => t('Export this recipe to RecipeML.')),
-        );
-      }
-      if (variable_get('recipe_export_html_enable', 1) == 1) {
-        $links['recipe_html'] = array(
-          'title' => t('Printer-friendly version'),
-          'href' => "recipe/export/html/$node->nid",
-          'attributes' => array('title' => t('Show a printer-friendly version of this recipe.')),
-        );
+      if ( user_access('export recipes') ) {
+        $formats = module_invoke_all('recipeio', 'export_single');
+        foreach ( $formats as $key => $format ) {
+          $links[$key] = array(
+            'title' => t('Export to '). $format['format_name'],
+            'href' => "recipe/export/$key/$node->nid",
+            'attributes' => array('title' => $format['format_help']),
+          );
+        }
       }
     }
   }
@@ -806,115 +802,33 @@ function recipe_unit_name($unit_id) {
   return $unit_names[$unit_id];
 }
 
+
 /**
  * Menu callback; Generates various representation of a recipe page with
  * all descendants and prints the requested representation to output.
  *
- * The function delegates the generation of output to helper functions.
- * The function name is derived by prepending 'recipe_export_' to the
- * given output type.  So, e.g., a type of 'html' results in a call to
- * the function recipe_export_html().
- *
  * @param type
  *   - a string encoding the type of output requested.
- *      The following types are currently supported in recipe module
- *          html: HTML (printer friendly output)
- *          recipeml: XML (RecipeML formatted output)
- *       Other types can be supported with contributed modules.
  * @param nid
  *   - an integer representing the node id (nid) of the node to export
- *
  */
-function recipe_export($type = 'html', $nid = 0) {
+function recipe_export($type = 'html', $nid = NULL) {
+  // normalize typed urls
   $type = drupal_strtolower($type);
-  $export_function = 'recipe_export_'. $type;
 
-  if (function_exists($export_function)) {
-    echo call_user_func($export_function, $nid);
+  // load supported formats
+  $formats = module_invoke_all('recipeio', 'export_single');
+
+  // If callback exists, call it, otherwise error out.
+  if (isset($formats[$type]) && function_exists($formats[$type]['callback'])) {
+    echo call_user_func($formats[$type]['callback'], $nid);
   }
   else {
-    drupal_set_message(t('Unknown export format.'));
+    drupal_set_message(t('Unknown export format.') . '(' . $type . ')');
     drupal_not_found();
   }
 }
 
-/**
- * This function is called by recipe_export() to generate HTML for export.
- *
- * @param nid
- *   - An integer representing the node id (nid) of the node to export.
- * @return
- *   - String containing HTML representing the recipe.
- */
-function recipe_export_html($nid) {
-  if ($nid == 0) {
-    drupal_goto('recipe');
-  }
-  $node = node_load(array('nid' => $nid, 'type' => 'recipe'));
-
-  $node = recipe_node_prepare($node, FALSE);
-  $output = theme('recipe_node', $node, FALSE);
-
-  $html = theme('recipe_export_html', check_plain($node->title), $output);
-
-  return $html;
-}
-
-/**
- * This function is called by recipe_export() to generate RecipeML for export.
- *
- * @param nid
- *   - An integer representing the node id (nid) of the node to export.
- * @return
- *   - String containing the recipe in RecipeML.
- */
-function recipe_export_recipeml($nid) {
-  if ($nid == 0) {
-    drupal_goto('recipe');
-  }
-
-  $node = node_load(array('nid' => $nid, 'type' => 'recipe'));
-
-  drupal_set_header('Content-type: text/xml');
-
-  $output = '<?xml version="1.0" encoding="UTF-8"?>'."\n".
-  '<!DOCTYPE recipeml PUBLIC "-//FormatData//DTD RecipeML 0.5//EN" "http://www.formatdata.com/recipeml/recipeml.dtd">'."\n".
-  '<recipeml version="0.5">'."\n".
-  '  <recipe>'."\n".
-  '    <head>'."\n".
-  '      <title>'. my_xml_escape($node->title) .'</title>'."\n".
-  '    </head>'."\n".
-  '    <yield><qty>'. $node->yield .'</qty></yield>'."\n".
-  '    <ingredients>';
-
-  foreach ($node->ingredients as $ingredient) {
-    $output .= "\n".'<ing><amt><qty>'. $ingredient->quantity .'</qty><unit>'. $ingredient->abbreviation .'</unit></amt><item>'. $ingredient->name .'</item></ing>';
-  }
-
-  $output .= "\n".
-  '    </ingredients>'."\n".
-  '    <directions>'. my_xml_escape($node->instructions) .'</directions>'."\n".
-  '  </recipe>'."\n".
-  '</recipeml>';
-
-  return $output;
-}
-
-function my_xml_escape($string) {
-
-  $chars = array(
-    '&'   => '&amp;',
-    '<'   => '&lt;',
-    '>'   => '&gt;',
-    '"'   => '&quot;',
-    '\''  => '&apos;'
-  );
-  foreach ( $chars as $c1 => $c2 ) {
-    $string = str_replace($c1, $c2, $string);
-  }
-
-  return $string;
-}
 
 /**
  * Callback function for ingredient autocomplete
@@ -1382,7 +1296,7 @@ function _recipe_get_tid_from_term($term) {
 }
 
 /**
- * Theme functions group.
+ * Implementation of hook_theme().
  */
 function recipe_theme() {
   return array(
@@ -1402,9 +1316,6 @@ function recipe_theme() {
     ),
     'recipe_more_info' => array(
       'arguments' => array('content' => NULL),
-    ),
-    'recipe_export_html' => array(
-      'arguments' => array('title' => NULL, 'content' => NULL),
     ),
   );
 }
@@ -1617,23 +1528,6 @@ function theme_recipe_more_info($content) {
   return '<div class="recipe-more-link">' . $content . '</div>';
 }
 
-/**
- * How the recipe's HTML export should be themed.
- *
- * @ingroup themeable
- */
-function theme_recipe_export_html($title, $content) {
-  global $base_url;
-  $html = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n";
-  $html .= '<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">';
-  $html .= "<head>\n<title>". $title ."</title>\n";
-  $html .= '<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />';
-  $html .= '<base href="'. $base_url .'/" />'."\n";
-  $html .= "<style type=\"text/css\">\n@import url(". drupal_get_path('module', 'recipe') ."/recipe.css);\n</style>\n";
-  # 'title' is exception to "all recipe titles in recipe CSS namespace" rule
-  $html .= "</head>\n<body>\n<h1 class=\"title recipe-title\">". $title ."</h1>\n". $content ."\n</body>\n</html>\n";
-  return $html;
-}
 
 /**
  *
@@ -1749,10 +1643,10 @@ function recipe_import_form_preview($form, &$form_state) {
       }
 
       if ( $i['ingred_obj'] == FALSE ) {
-      	if ( preg_match('/^failed:/i', $i['ingredient_name']) ) {
-      		$preview .= '<span class="recipe-error-item" title="Error, ingredient line unreadable">' . $i['ingredient_name'] . '</span>';
-      	}
-      	else {
+        if ( preg_match('/^failed:/i', $i['ingredient_name']) ) {
+          $preview .= '<span class="recipe-error-item" title="Error, ingredient line unreadable">' . $i['ingredient_name'] . '</span>';
+        }
+        else {
           $preview .= '<span class="recipe-new-item" title="New, ingredient not found in database">' . $i['ingredient_name'] . '*</span>';
         }
       }
