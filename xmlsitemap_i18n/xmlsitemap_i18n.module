@@ -10,6 +10,15 @@ function xmlsitemap_i18n_xmlsitemap_context() {
   $context['language'] = $language->language;
   return $context;
 }
+
+function xmlsitemap_i18n_xmlsitemap_context_url_options(array $context) {
+  $options = array();
+  if (isset($context['language'])) {
+    $options['language'] = xmlsitemap_language_load($context['language']);
+  }
+  return $options;
+}
+
 /**
  * Implements hook_xmlsitemap_context().
  */
@@ -63,11 +72,14 @@ function xmlsitemap_i18n_form_xmlsitemap_settings_form_alter(&$form, $form_state
  *
  * @see i18n_db_rewrite_where()
  */
-function xmlsitemap_i18n_xmlsitemap_query_alter(array &$query, array &$args, stdClass $language) {
+function xmlsitemap_i18n_xmlsitemap_query_alter(array &$query, array &$args, array $context) {
+  if (!isset($context['language'])) {
+    return;
+  }
+
   // Get languages to simplify query building.
   $mode = variable_get('i18n_selection_mode', 'simple');
-  //$current = i18n_get_lang();
-  $current = $language->language;
+  $current = $context['language'];
   $default = i18n_default_language();
 
   if ($mode == 'mixed' && $current == $default) {

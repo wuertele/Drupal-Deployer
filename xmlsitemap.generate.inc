@@ -52,6 +52,32 @@ function xmlsitemap_get_path_alias($path, $language) {
   }
 }
 
+function xmlsitemap_get_url_options_from_context(array $context) {
+  $options = module_invoke_all('xmlsitemap_context_url_options', $context);
+  drupal_alter('xmlsitemap_context_url_options', $options, $context);
+  return $options;
+}
+
+/**
+ * @todo Replace with table of sitemap objects.
+ */
+function xmlsitemap_get_contexts() {
+  $contexts = array();
+
+  // Add an empty, default context.
+  $contexts[] = array();
+
+  if (module_exists('xmlsitemap_i18n')) {
+    foreach (xmlsitemap_var('languages') as $langcode) {
+      $contexts[] = array('language' => $langcode);
+    }
+  }
+
+  $hashes = array_map('md5', array_map('serialize', $contexts));
+  $contexts = array_combine($hashes, $contexts);
+  return $contexts;
+}
+
 /**
  * Delete and regenerate the sitemap files.
  */
@@ -59,15 +85,15 @@ function xmlsitemap_regenerate() {
   _xmlsitemap_regenerate_before();
 
   // Generate the sitemap pages.
+  $contexts = xmlsitemap_get_contexts();
   $chunk_count = xmlsitemap_get_chunk_count(TRUE);
-  foreach (xmlsitemap_var('languages') as $langcode) {
-    $language = xmlsitemap_language_load($langcode);
+  foreach ($contexts as $context) {
     // Generate index.
     if ($chunk_count > 1) {
-      xmlsitemap_generate('index', $language);
+      xmlsitemap_generate('index', $context);
     }
     for ($i = 1; $i <= $chunk_count; $i++) {
-      xmlsitemap_generate($i, $language);
+      xmlsitemap_generate($i, $context);
     }
   }
 
@@ -174,21 +200,13 @@ function _xmlsitemap_regenerate_after() {
  *
  * @todo Revise/simplify or remove the function.
  */
-function xmlsitemap_generate($chunk, $language = NULL) {
+function xmlsitemap_generate($chunk, array $context) {
   if (($chunk == 'index' && xmlsitemap_get_chunk_count() < 2) || ($chunk != 'index' && (!is_numeric($chunk) || $chunk > xmlsitemap_get_chunk_count()))) {
     // Don't bother translating this string.
     trigger_error('Improper condition hit in xmlsitemap_generate(). Chunk: ' . $chunk . ', Chunk Count: ' . xmlsitemap_get_chunk_count());
     return FALSE;
   }
 
-  if (!isset($language)) {
-    $language = language_default();
-  }
-
-  $context = array();
-  if (module_exists('xmlsitemap_i18n')) {
-    $context['language'] = $language->language;
-  }
   $file = xmlsitemap_get_file_from_context($context, $chunk);
 
   if (!$handle = fopen($file, 'wb')) {
@@ -198,10 +216,10 @@ function xmlsitemap_generate($chunk, $language = NULL) {
 
   $status = TRUE;
   if ($chunk == 'index') {
-    xmlsitemap_generate_index($handle, $status, $language);
+    xmlsitemap_generate_index($handle, $status, $context);
   }
   else {
-    xmlsitemap_generate_chunk($handle, $status, $chunk, $language);
+    xmlsitemap_generate_chunk($handle, $status, $chunk, $context);
   }
   fclose($handle);
 
@@ -222,10 +240,6 @@ function xmlsitemap_generate($chunk, $language = NULL) {
   return $status;
 }
 
-//function xmlsitemap_fwrite($handle, &$status, $string) {
-//  $status &= (bool) fwrite($handle, $string);
-//}
-
 /**
  * Write the proper XML sitemap header.
  *
@@ -235,12 +249,13 @@ function xmlsitemap_generate($chunk, $language = NULL) {
  * @param $status
  * @param $language
  */
-function xmlsitemap_generate_chunk_header($type, $handle, &$status, $language) {
+function xmlsitemap_generate_chunk_header($type, $handle, &$status, array $context) {
   $output = '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL;
+  $url_options = xmlsitemap_get_url_options_from_context($context);
 
   // Add the stylesheet link.
   if (xmlsitemap_var('xsl')) {
-    $xsl_url = url('sitemap.xsl', array('language' => $language, 'base_url' => xmlsitemap_var('base_url')));
+    $xsl_url = url('sitemap.xsl', $url_options);
     $output .= '<?xml-stylesheet type="text/xsl" href="' . $xsl_url . '"?>' . PHP_EOL;
   }
 
@@ -270,9 +285,16 @@ function xmlsitemap_generate_chunk_header($type, $handle, &$status, $language) {
  * @param $language
  *   A language object for the sitemap chunk.
  */
-function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
+function xmlsitemap_generate_chunk($handle, &$status, $chunk, array $context) {
+  $url_options = xmlsitemap_get_url_options_from_context($context);
+  $url_options += array(
+    'absolute' => TRUE,
+    'base_url' => xmlsitemap_var('base_url'),
+    'alias' => TRUE,
+    'language' => language_default(),
+  );
+
   $last_url = '';
-  $url_options = xmlsitemap_get_url_options(array('alias' => TRUE));
   $lastmod_format = variable_get('xmlsitemap_lastmod_format', DATE_W3C);
 
   $query = array(
@@ -286,7 +308,7 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
   // Allow other modules to alter the sitemap query SQL and arguments.
   $data = &$query;
   $data['__drupal_alter_by_ref'] = array(&$args);
-  drupal_alter('xmlsitemap_query', $data, $language);
+  drupal_alter('xmlsitemap_query', $data, $context);
 
   $sql = implode($query, ' ');
   $offset = max($chunk - 1, 0) * xmlsitemap_get_chunk_size();
@@ -294,13 +316,12 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
   $query = db_query_range($sql, $args, $offset, $limit);
 
   // Add the XML header and XSL if desired.
-  xmlsitemap_generate_chunk_header('urlset', $handle, $status, $language);
+  xmlsitemap_generate_chunk_header('urlset', $handle, $status, $context);
 
   while ($link = db_fetch_array($query)) {
-    $url_options['language'] = $link['language'] ? xmlsitemap_language_load($link['language']) : $language;
-    // @todo $url_options['langauge'] could be NULL if language was not found.
-    $link['alias'] = xmlsitemap_get_path_alias($link['loc'], $url_options['language']->language);
-    $link_url = url($link['alias'], $url_options);
+    $link['language'] = $link['language'] ? xmlsitemap_language_load($link['language']) : $url_options['language'];
+    $link['alias'] = xmlsitemap_get_path_alias($link['loc'], $link['language']->language);
+    $link_url = url($link['alias'], array('language' => $link['language']) + $url_options);
 
     // Skip this link if it was a duplicate of the last one.
     // @todo Figure out a way to do this before generation so we can report
@@ -349,13 +370,20 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, $language) {
  * @param $language
  *   A language object, defaults to the default language.
  */
-function xmlsitemap_generate_index($handle, &$status, $language) {
-  $url_options = xmlsitemap_get_url_options(array('language' => $language, 'alias' => TRUE));
+function xmlsitemap_generate_index($handle, &$status, $context) {
+  $url_options = xmlsitemap_get_url_options_from_context($context);
+  $url_options += array(
+    'absolute' => TRUE,
+    'base_url' => xmlsitemap_var('base_url'),
+    'alias' => TRUE,
+    'language' => language_default(),
+  );
+
   $chunk_count = xmlsitemap_get_chunk_count(TRUE);
   $lastmod_format = variable_get('xmlsitemap_lastmod_format', DATE_W3C);
 
   // Add the XML header and XSL if desired.
-  xmlsitemap_generate_chunk_header('sitemapindex', $handle, $status, $language);
+  xmlsitemap_generate_chunk_header('sitemapindex', $handle, $status, $context);
 
   for ($i = 1; $i <= $chunk_count; $i++) {
     $output = '<sitemap>';
@@ -392,10 +420,11 @@ function xmlsitemap_rebuild_batch(array $entities, array $callbacks, $save_custo
     $batch['operations'][] = array($callbacks[$entity], array($entity));
   }
 
-  // Generate all the sitemap pages.
+  // Generate all the sitemap pages for each context.
   $batch['operations'][] = array('_xmlsitemap_regenerate_before', array());
-  foreach (xmlsitemap_var('languages') as $language) {
-    $batch['operations'][] = array('xmlsitemap_rebuild_batch_generate', array(xmlsitemap_language_load($language)));
+  $contexts = xmlsitemap_get_contexts();
+  foreach ($contexts as $context) {
+    $batch['operations'][] = array('xmlsitemap_rebuild_batch_generate', array($context));
   }
   $batch['operations'][] = array('_xmlsitemap_regenerate_after', array());
 
@@ -473,21 +502,21 @@ function xmlsitemap_rebuild_batch_fetch($entity, &$context) {
 }
 
 /**
- * Batch callback; generate the sitemap chunks for a language.
+ * Batch callback; generate the sitemap chunks for a context.
  */
-function xmlsitemap_rebuild_batch_generate($language, &$context) {
+function xmlsitemap_rebuild_batch_generate(array $sitemap_context, array &$context) {
   if (!isset($context['sandbox']['progress'])) {
     $context['sandbox']['progress'] = 1;
     $context['sandbox']['max'] = xmlsitemap_get_chunk_count(TRUE);
     if ($context['sandbox']['max'] > 1) {
-      xmlsitemap_generate('index', $language);
+      xmlsitemap_generate('index', $sitemap_context);
     }
     // Bump the max number up by one since it gets incremented after generation.
     $context['sandbox']['max']++;
   }
 
-  xmlsitemap_generate($context['sandbox']['progress'], $language);
-  $context['message'] = t('Now generating @language sitemap page @chunk.', array('@language' => $language->name, '@chunk' => $context['sandbox']['progress']));
+  xmlsitemap_generate($context['sandbox']['progress'], $sitemap_context);
+  $context['message'] = t('Now generating sitemap page @chunk.', array('@chunk' => $context['sandbox']['progress']));
   $context['sandbox']['progress']++;
 
   if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
