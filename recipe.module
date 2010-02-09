@@ -1734,6 +1734,7 @@ function recipe_import_form($form_state) {
  * Import preview routine that allows that users to see what actually will be imported before doing so.
  */
 function recipe_import_form_preview($form, &$form_state) {
+  drupal_add_css(drupal_get_path('module', 'recipe') .'/recipe.css');
   $recipe = recipe_import_parse($form, $form_state);
 
   if ( $recipe != FALSE ) {
@@ -1743,22 +1744,27 @@ function recipe_import_form_preview($form, &$form_state) {
     foreach ( $recipe['ingredients'] as $i ) {
       $preview .= $i['quantity'] . " ";
       if ( $i['unit_obj'] == FALSE ) {
-        $preview .= $i['unit_name'] . "(new) ";
+        $preview .= '<span class="recipe-new-item" title="New, unit not found in database">' . $i['unit_name'] . "*</span> ";
       }
       else {
-        $preview .= $i['unit_name'] . "(match) ";
+        $preview .= '<span class="recipe-matched-item" title="Found, unit in database">' . $i['unit_name'] . "&radic;</span> ";
       }
 
       if ( $i['ingred_obj'] == FALSE ) {
-        $preview .= $i['ingredient_name'] . "(new)";
+      	if ( preg_match('/^failed:/i', $i['ingredient_name']) ) {
+      		$preview .= '<span class="recipe-error-item" title="Error, ingredient line unreadable">' . $i['ingredient_name'] . '</span>';
+      	}
+      	else {
+          $preview .= '<span class="recipe-new-item" title="New, ingredient not found in database">' . $i['ingredient_name'] . '*</span>';
+        }
       }
       else {
-        $preview .= $i['ingredient_name'] . "(match)";
+        $preview .= '<span class="recipe-matched-item" title="Found, ingredient in database">' . $i['ingredient_name'] . "&radic;</span>";
       }
       $preview .= '<br/>';
     }
 
-    $preview .= 'Instructions:<br/>=====<br/>' . $recipe['instructions'] . "<br/>";
+    $preview .= '<br/>Instructions:<br/>=====<br/>' . $recipe['instructions'] . "<br/>";
 
     $form_state['values']['recipe_preview'] = '<div class="recipe-preview">' . $preview . '</div>';
     $form_state['rebuild'] = TRUE;
