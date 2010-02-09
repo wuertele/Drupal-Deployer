@@ -183,6 +183,24 @@ function recipe_uninstall() {
 
 
 /**
+ * Takes schema from 5.x-1.0 version up to 6.x, pre 6100
+ */
+function recipe_update_5100() {
+  $ret = array();
+  db_change_field($ret, 'recipe', 'nid', 'nid', array('type' => 'serial', 'not null' => TRUE, 'unsigned' => TRUE, 'size' => 'normal'));
+  db_change_field($ret, 'recipe', 'yield', 'yield', array('type' => 'int', 'not null' => TRUE, 'unsigned' => FALSE));
+  db_change_field($ret, 'recipe_node_ingredient', 'unit_id', 'unit_id', array('type' => 'int', 'not null' => TRUE, 'unsigned' => TRUE));
+  db_change_field($ret, 'recipe_node_ingredient', 'quantity', 'quantity', array('type' => 'float', 'not null' => FALSE));
+  db_change_field($ret, 'recipe_ingredient', 'link', 'link', array('type' => 'int', 'not null' => TRUE, 'unsigned' => TRUE));
+  db_change_field($ret, 'recipe_unit', 'id', 'id', array('type' => 'serial', 'not null' => TRUE, 'unsigned' => TRUE, 'size' => 'normal'));
+  db_change_field($ret, 'recipe_unit', 'name', 'name', array('type' => 'varchar', 'length' => 255, 'not null' => FALSE));
+  db_change_field($ret, 'recipe_unit', 'abbreviation', 'abbreviation', array('type' => 'varchar', 'length' => 8, 'not null' => FALSE));
+  db_change_field($ret, 'recipe_unit', 'metric', 'metric', array('type' => 'int', 'not null' => TRUE, 'unsigned' => TRUE, 'default' => 0));
+  db_change_field($ret, 'recipe_unit', 'type', 'type', array('type' => 'varchar', 'length' => 6, 'not null' => TRUE, 'default' => 'Mass'));
+  return $ret;
+}
+
+/**
  * Adds weight column to recipe_node_ingredient
  */
 function recipe_update_6100() {
