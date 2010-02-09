@@ -5,11 +5,6 @@
 /**
  * @file
  * recipe.module - share recipes
- * for drupal 5.x
- *
- * Updated to drupal 6.x by shadow
- *
- * @todo
  */
 
 /**
@@ -117,7 +112,7 @@ function recipe_delete($node) {
 * Implementation of hook_form().
 */
 function recipe_form(&$node, $form_state) {
-  // drupal 4.7 requires the title field to be defined by the custom node's module
+
   $form['title'] = array(
     '#type' => 'textfield',
     '#title' => t('Title'),
@@ -1831,7 +1826,7 @@ function recipe_import_form_submit($form, &$form_state) {
  *    'quantity' =>
  *    'ingredient_name' =>
  *    'unit_name' =>
- *    'unit_obj' => comes from database lookup: see recipe_unit_match().  ==FALSE if no-match
+ *    'unit_obj' => comes from database lookup: see recipe_unit_fuzzymatch().  ==FALSE if no-match
  *    'ingre_obj' => comes from database lookup: see recipe_ingredient_match().  ==FALSE if no-match
  * );
  *
@@ -1855,19 +1850,32 @@ function recipe_import_parse($form, &$form_state) {
 /**
  * Fetch a recipe_unit.
  *
- * @param $recipe_abbrev_name
- *   A string representing a recipe_abbrev_name.
+ * @param $recipe_name_or_abbrev
+ *   A string representing an approximation of a unit abbreviation or a unit name.
  * @return
- *   A recipe_unit object upon successful load or FALSE
+ *   A recipe_unit array upon successful load or FALSE
  */
-function recipe_unit_match($recipe_abbrev_name) {
-  $result = db_query("SELECT id, name, abbreviation FROM {recipe_unit} where abbreviation='%s'", $recipe_abbrev_name);
-  while ($row = db_fetch_object($result)) {
-    return array(
-      'id' => $row->id,
-      'name' => $row->name,
-      'abbreviation' => $row->abbreviation
-    );
+function recipe_unit_fuzzymatch($recipe_name_or_abbrev, $reset = FALSE) {
+  static $units;
+
+  if ( !isset($units) || $reset ) {
+    // get all units to prepare for fuzzy match
+    $units = array();
+    $result = db_query("SELECT id, name, abbreviation FROM {recipe_unit}");
+    while ($row = db_fetch_object($result)) {
+      $units[] = $row;
+    }
+  }
+  foreach ( $units as $u ) {
+    $name_pat = '^'. $u->name . 's{0,1}$';
+    $abbrev_pat = '^'. $u->abbreviation . 's{0,1}\.{0,1}$';
+    if ( preg_match("/$name_pat|$abbrev_pat/i", $recipe_name_or_abbrev) ) {
+      return array(
+        'id' => $u->id,
+        'name' => $u->name,
+        'abbreviation' => $u->abbreviation
+      );
+    }
   }
   return FALSE;
 }
@@ -1879,7 +1887,7 @@ function recipe_unit_match($recipe_abbrev_name) {
  * @param $recipe_ingredient_name
  *   A string representing a recipe_ingredient_name.
  * @return
- *   A recipe_ingredient object upon successful load or FALSE
+ *   A recipe_ingredient array upon successful load or FALSE
  */
 function recipe_ingredient_match($recipe_ingredient_name) {
   $result = db_query("SELECT id, name FROM {recipe_ingredient} where name='%s'", $recipe_ingredient_name);

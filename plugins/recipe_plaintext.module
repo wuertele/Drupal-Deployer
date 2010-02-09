@@ -1,28 +1,36 @@
 <?php
 // $Id$
 
-
 /**
  * @file
  * recipe_plaintext.module - Support for the plaintext format input and output.
+ *
+ * Format Spec
+ *
+ *             Line1: TITLE
+ *                    BLANK LINE
+ * Ingredient Lines : <quantity> <unit> <ingredient>
+ *                    ...
+ *                    BLANK LINE
+ * Instruction Lines: Freeform Instructions, blank lines ok from here on.
  */
-
+ 
 
 /**
  * Implementation of hook_recipeio($type).
  */
 function recipe_plaintext_recipeio($type) {
-	$supported = array();
-	switch ($type) {
+  $supported = array();
+  switch ($type) {
     case 'import_single':
-  		$supported[] = array(
-  			'format_name' => t('Plain Text'),
-  			'callback' => 'recipe_import_parse_plain_text',
-  			'format_help' => ''
-  		);
-  	break;
+      $supported[] = array(
+        'format_name' => t('Plain Text'),
+        'callback' => 'recipe_import_parse_plain_text',
+        'format_help' => ''
+      );
+    break;
   }
-  return $supported;	
+  return $supported;
 }
 
 
@@ -48,14 +56,14 @@ function recipe_import_parse_plain_text($text) {
       $recipe['title'] = $line;
     }
     else if ( $region == INGREDIENTS ) {
-      if ( preg_match('/^([0-9\-\.\/]+) +([A-Za-z]+) +(.*)/', $line, $matches)  ) {
+      if ( preg_match('/^([0-9\-\.\/]+) +([A-Za-z\.]+) +(.*)/', $line, $matches)  ) {
         $i = array();
         $i['quantity'] = $matches[1];
         $i['unit_name'] = $matches[2];
         $i['ingredient_name'] = $matches[3];
 
         // FALSE if no-match
-        $i['unit_obj'] = recipe_unit_match($i['unit_name']);
+        $i['unit_obj'] = recipe_unit_fuzzymatch($i['unit_name']);
 
         // FALSE if no-match
         $i['ingred_obj'] = recipe_ingredient_match($i['ingredient_name']);
