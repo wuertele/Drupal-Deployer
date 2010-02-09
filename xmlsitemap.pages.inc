@@ -9,35 +9,79 @@
  */
 
 /**
- * Output a sitemap page.
- *
- * @see xmlsitemap_file_transfer()
+ * Get the sitemap context of the current request.
  */
-function xmlsitemap_output_chunk() {
-  $context = module_invoke_all('xmlsitemap_context');
-  drupal_alter('xmlsitemap_context', $context);
+function xmlsitemap_get_current_context() {
+  static $context;
 
+  if (!isset($context)) {
+    $context = module_invoke_all('xmlsitemap_context');
+    drupal_alter('xmlsitemap_context', $context);
+    asort($context);
+  }
+
+  return $context;
+}
+
+/**
+ * Validate the context and use the default context if it fails validation.
+ *
+ * @todo Merge into xmlsitemap_get_current_context()?
+ * @todo Use real default context variable instead of hard-coded default.
+ */
+function xmlsitemap_context_check(array $context) {
+  $hash = md5(serialize($context));
+  $default_hash = md5(serialize(array()));
+
+  module_load_include('inc', 'xmlsitemap', 'xmlsitemap.generate');
+  $available_contexts = xmlsitemap_get_contexts();
+
+  if (in_array($hash, array_keys($available_contexts))) {
+    return $context;
+  }
+  else {
+    return $available_contexts[$default_hash];
+  }
+}
+
+/**
+ * Get the sitemap chunk/page of the current request.
+ */
+function xmlsitemap_get_current_chunk(array $context) {
   // Check if we should be displaing the index.
   if (!isset($_GET['page']) || !is_numeric($_GET['page'])) {
     $index_file = xmlsitemap_get_file_from_context($context, 'index');
     if (file_exists($index_file)) {
-      $chunk = 'index';
+      return 'index';
     }
     else {
-      $chunk = 1;
+      return 1;
     }
   }
   else {
-    $chunk = (int) $_GET['page'];
+    return (int) $_GET['page'];
   }
+}
 
-  // Fallback to non-context sitemap?
-
+/**
+ * Output a sitemap page.
+ *
+ * @see xmlsitemap_get_current_context()
+ * @see xmlsitemap_get_current_chunk()
+ * @see xmlsitemap_get_file_from_context()
+ * @see xmlsitemap_file_transfer()
+ */
+function xmlsitemap_output_chunk() {
+  $original_context = xmlsitemap_get_current_context();
+  $context = xmlsitemap_context_check($original_context);
+  $chunk = xmlsitemap_get_current_chunk($context);
   $file = xmlsitemap_get_file_from_context($context, $chunk);
 
+  // Provide debugging information if enabled.
   if (variable_get('xmlsitemap_developer_mode', 0) && isset($_GET['debug'])) {
     $output = array();
     $output[] = "Chunk: $chunk";
+    $output[] = "Original context: " . print_r($original_context, TRUE);
     $output[] = "Context: " . print_r($context, TRUE);
     $output[] = "Cache file location: $file";
     $output[] = "Cache file exists: " . (file_exists($file) ? 'Yes' : 'No');
