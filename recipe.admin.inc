@@ -59,10 +59,10 @@ function recipe_admin_settings() {
     '#title' => t('Ingredient entering system'),
     '#default_value' => variable_get('recipe_ingredient_system', 'complex'),
     '#options' => array(
-      'simple' => t('Simple'),
+      'simple' => t('Simple [deprecated]'),
       'complex' => t('Complex'),
     ),
-    '#description' => t('The simple ingredient system allows all ingredients to be entered on one line. WARNING: Simple has bugs. The \'complex system\' forces the user to separate the quantity and units from the ingredient.'),
+    '#description' => t('WARNING: \'Simple\' mode is deprecated due to data corruption bugs. Simple is scheduled for removal in a future release. Please set to \'Complex\'.'),
   );
   $form['recipe_fraction_display'] = array(
     '#type' => 'textfield',

@@ -8,6 +8,30 @@
 
 
 /**
+ * implementation of hook_requirements to make sure we let them know about
+ * the 'simple' editor option is depricated and will be removed post 1.0.
+ * @param $phase
+ * @return unknown_type
+ */
+function recipe_requirements($phase) {
+  if ($phase == 'runtime') {
+    $system = variable_get('recipe_ingredient_system', '');
+    //drupal_set_message($system);
+    $requirement = array();
+    if ($system == 'simple') {
+      drupal_set_message(t("The Recipe module Ingredient entering system is set to 'simple' which is deprecated. Please go to !settings and set this to 'complex'.",array("!settings"=>l(t("Recipe Setttings"),'admin/settings/recipe'))));
+      $requirement['title'] = t("Recipe Ingredient system");
+      $requirement['severity'] = REQUIREMENT_WARNING;
+      $requirement['value'] = t("Not Set");
+      $requirement['description'] = t("The Recipe module Ingredient entering system is set to 'simple' which is deprecated. Please go to !settings and set this to 'complex'.",array("!settings"=>l(t("Recipe Setttings"),'admin/settings/recipe')));
+      return array('recipe_ingredient_system', $requirement);
+    }
+  }
+  return NULL;
+}
+
+
+/**
 * Implementation of hook_schema().
 */
 function recipe_schema() {
