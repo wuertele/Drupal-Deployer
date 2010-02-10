@@ -45,12 +45,18 @@ function node_export_file_form_alter(&$form, $form_state, $form_id) {
       '#description' => t('Which content types should export file attachments and uploads?'),
     );
 
+    $textarea_delivery = $form['basic']['node_export_node_code']['#default_value'];
+    $bulk_delivery = $form['basic']['node_export_bulk_code']['#default_value'];
+
+    $mode_message_display = ($textarea_delivery != 'file' || $bulk_delivery != 'file');
+
     $form['node_export_file']['node_export_file_mode'] = array(
       '#type' => 'radios',
       '#title' => t('File export mode'),
-      '#default_value' => variable_get('node_export_file_mode', 'local'),
-      '#options' => array('local' => t('Local file export'), 'remote' => t('Remote file export, URL')),
-      '#description' => t('Should node exports contain a local path to the file, or a URL?  If you plan to import nodes on a different server or web-host, choose remote.  <em>NOTE: Remote mode only works with a public files directory.</em>'),
+      '#default_value' => variable_get('node_export_file_mode', 'inline'),
+      '#options' => array('inline' => t('Inside export code (base 64 encoded string)'), 'local' => t('Local file export'), 'remote' => t('Remote file export, URL')),
+      '#description' => t('Should file exports be inline inside the export code, a local path to the file or a URL?  "Inside export code" is the easiest option to use, local and remote modes are more useful for power users.  <em>NOTE: Remote mode only works with a public files directory.</em>'),
+      '#prefix' => '<div id="node-export-file-mode-message"><div class="message warning" style="display: ' . ($mode_message_display ? 'block' : 'none') . ';">' . t('Warning, "Inside export code (base 64 encoded string)" mode generates much larger exports.  For this reason it is recommended you set the export code delivery methods to "Text file download" (both <strong>Node export code delivery</strong> and <strong>Bulk node export code delivery</strong>).') . '</div></div>',
     );
 
     $form['node_export_file']['node_export_file_assets_path'] = array(
@@ -180,8 +186,17 @@ function _image_field_filter($attribute, $field) {
  */
 function _node_export_file_node_alter(&$node, $original_node, $method, $attribute_filter_callback) {
   $assets_path = variable_get('node_export_file_assets_path', '');
-  $export_mode = variable_get('node_export_file_mode', 'local');
-  $export_var = ($export_mode == 'local') ? 'node_export_file_path' : 'node_export_file_url';
+  $export_mode = variable_get('node_export_file_mode', 'inline');
+
+  switch ($export_mode) {
+    case 'local':
+      $export_var = 'node_export_file_path'; break;
+    case 'remote':
+      $export_var = 'node_export_file_url';  break;
+    default:
+    case 'inline':
+      $export_var = 'node_export_file_data'; break;
+  }
 
   if ($method == 'export') {
     if (_node_export_file_check_assets_path($export_mode, $assets_path) === FALSE) {
@@ -213,15 +228,15 @@ function _node_export_file_node_alter(&$node, $original_node, $method, $attribut
           continue;
         }
 
-        $export_path = _node_export_file_get_export_path($file, $export_mode, $assets_path);
+        $export_data = _node_export_file_get_export_data($file, $export_mode, $assets_path);
 
         if (is_object($field[$i])) {
-          $field[$i]->{$export_var} = $export_path;
+          $field[$i]->{$export_var} = $export_data;
           $field[$i]->fid = NULL;
           _node_export_file_clean_local_file_path($field[$i]->filepath);
         }
-        else if (is_array($field[$i])) {
-          $field[$i][$export_var] = $export_path;
+        elseif (is_array($field[$i])) {
+          $field[$i][$export_var] = $export_data;
           $field[$i]['fid'] = NULL;
           _node_export_file_clean_local_file_path($field[$i]['filepath']);
         }
@@ -236,7 +251,7 @@ function _node_export_file_node_alter(&$node, $original_node, $method, $attribut
             $field[$i]->fid = $file->fid;
             $field[$i]->filepath = $file->filepath;
           }
-          else if (is_array($field[$i])) {
+          elseif (is_array($field[$i])) {
             $field[$i]['fid'] = $file->fid;
             $field[$i]['filepath'] = $file->filepath;
           }
@@ -307,30 +322,34 @@ function _node_export_file_check_files($original_files) {
  * @param $file
  *   The file object to handle.
  * @param $export_mode
- *   The mode, 'local' / 'remote'
+ *   The mode, 'inline' / 'local' / 'remote'
  * @param $assets_path
  *   Either empty ('') if files should not be copied to the assets path, or
  *   the path to a writable directory.
  */
-function _node_export_file_get_export_path($file, $export_mode, $assets_path) {
+function _node_export_file_get_export_data($file, $export_mode, $assets_path) {
   if ($export_mode == 'local') {
     if ($assets_path) {
-      $export_path = $assets_path .'/'. basename($file->filepath);
-      if (!copy($file->filepath, $export_path)) {
-        drupal_set_message(t("Export file error, could not copy '$file->filepath' to '$export_path'."), 'error');
+      $export_data = $assets_path .'/'. basename($file->filepath);
+      if (!copy($file->filepath, $export_data)) {
+        drupal_set_message(t("Export file error, could not copy '%filepath' to '%exportpath'.", array('%filepath' => $file->filepath, '%exportpath' => $export_data)), 'error');
         return FALSE;
       }
     }
     else {
-      $export_path = $file->filepath;
+      $export_data = $file->filepath;
     }
   }
   // Remote export mode
+  elseif ($export_mode == 'remote') {
+    $export_data = url($file->filepath, array('absolute' => TRUE));
+  }
+  // Default is 'inline' export mode
   else {
-    $export_path = url($file->filepath, array('absolute' => TRUE));
+    $export_data = base64_encode(file_get_contents($file->filepath));
   }
 
-  return $export_path;
+  return $export_data;
 }
 
 /**
@@ -379,6 +398,15 @@ function _node_export_file_import_file(&$file) {
     )
   ) {
     drupal_write_record('files', $file);
+  }
+  elseif (isset($file->node_export_file_data)) {
+    $directory = file_create_path(dirname($file->filepath));
+
+    if (file_check_directory($directory, TRUE)) {
+      if (file_put_contents($file->filepath, base64_decode($file->node_export_file_data))) {
+        drupal_write_record('files', $file);
+      }
+    }
   }
   // The file is in a local location, move it to the
   // destination then finish the save
@@ -447,3 +475,4 @@ function _node_export_file_import_file(&$file) {
 
   return TRUE;
 }
+

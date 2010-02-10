@@ -5,26 +5,28 @@
  *  Admin DHTML for node_export_file module.
  **/
 
-$(function () {
+Drupal.behaviors.nodeExportFileAdmin = function () {
   var assets_state = false; // Start hidden
+  var file_mode = null;
   var assets_div = $('div#edit-node-export-file-assets-path-wrapper');
 
   // On load, hide or show the assets path
-  $('input[@name=node_export_file_mode]').each(function () {
-    if (this.checked) {
-      assets_state = _node_export_file_get_state($(this).val())
+  file_mode = $('input[@name=node_export_file_mode]:checked').val();
+  assets_state = _node_export_file_get_state(file_mode);
 
-      return; // Break the loop, checked radio found.
-    }
-  });
-
+  _node_export_file_toggle_export_mode_warning(file_mode);
   _node_export_file_assets_toggle(assets_state, assets_div, 'hide');
 
-  $('input[@name=node_export_file_mode]').change(function () {
+  $('input[name="node_export_file_mode"]').change(function () {
     assets_state = _node_export_file_get_state($(this).val())
     _node_export_file_assets_toggle(assets_state, assets_div, 'slide');
+    _node_export_file_toggle_export_mode_warning($(this).val());
   });
-});
+
+  $('input[name="node_export_node_code"],input[name="node_export_bulk_code"]').change(function () {
+    _node_export_file_toggle_export_mode_warning($('input[name="node_export_file_mode"]').val());
+  });
+};
 
 /**
  * Get state based on input value.
@@ -58,3 +60,21 @@ function _node_export_file_assets_toggle(state, div, effect) {
     }
   }
 }
+
+/**
+ * Toggles the file mode warning message.
+ */
+function _node_export_file_toggle_export_mode_warning(state) {
+  if (state == 'inline') {
+    if ($('#edit-node-export-node-code-copy:checked').add('#edit-node-export-bulk-code-copy:checked').length == 0) {
+      $('#node-export-file-mode-message').slideUp();
+    }
+    else {
+      $('#node-export-file-mode-message').slideDown();
+    }
+  }
+  else {
+    $('#node-export-file-mode-message').slideUp();
+  }
+}
+
