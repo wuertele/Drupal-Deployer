@@ -91,42 +91,50 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
     return $link;
   }
 
-  protected function assertSitemapLinkVisible() {
-    $links = func_get_args();
-    foreach ($links as $link) {
-      $this->assertTrue($link && $link['access'] && $link['status'], 'Sitemap link is visible.');
-    }
+  protected function assertSitemapLinkVisible($entity_type, $entity_id) {
+    $link = xmlsitemap_link_load($entity_type, $entity_id);
+    $this->assertTrue($link && $link['access'] && $link['status'], t('Sitemap link @type @id is visible.', array('@type' => $entity_type, '@id' => $entity_id)));
   }
 
-  protected function assertSitemapLinkNotVisible() {
-    $links = func_get_args();
-    foreach ($links as $link) {
-      $this->assertTrue($link && !($link['access'] && $link['status']), 'Sitemap link is not visible.');
-    }
+  protected function assertSitemapLinkNotVisible($entity_type, $entity_id) {
+    $link = xmlsitemap_link_load($entity_type, $entity_id);
+    $this->assertTrue($link && !($link['access'] && $link['status']), t('Sitemap link @type @id is not visible.', array('@type' => $entity_type, '@id' => $entity_id)));
   }
 
-  protected function assertSitemapLinkValues(array $link, array $conditions) {
+  protected function assertSitemapLinkValues($entity_type, $entity_id, array $conditions) {
+    $link = xmlsitemap_link_load($entity_type, $entity_id);
+
+    if (!$link) {
+      return $this->fail(t('Could not load sitemap link for @type @id.', array('@type' => $entity_type, '@id' => $entity_id)));
+    }
+
     foreach ($conditions as $key => $value) {
       if ($value === NULL || $link[$key] === NULL) {
         // For nullable fields, always check for identical values (===).
-        $this->assertIdentical($link[$key], $value, t('Identical values for link field @key.', array('@key' => $key)));
+        $this->assertIdentical($link[$key], $value, t('Identical values for @type @id link field @key.', array('@type' => $entity_type, '@id' => $entity_id, '@key' => $key)));
       }
       else {
         // Otherwise check simple equality (==).
-        $this->assertEqual($link[$key], $value, t('Equal values for link field @key.', array('@key' => $key)));
+        $this->assertEqual($link[$key], $value, t('Equal values for @type @id link field @key.', array('@type' => $entity_type, '@id' => $entity_id, '@key' => $key)));
       }
     }
   }
 
-  protected function assertNotSitemapLinkValues(array $link, array $conditions) {
+  protected function assertNotSitemapLinkValues($entity_type, $entity_id, array $conditions) {
+    $link = xmlsitemap_link_load($entity_type, $entity_id);
+
+    if (!$link) {
+      return $this->fail(t('Could not load sitemap link for @type @id.', array('@type' => $entity_type, '@id' => $entity_id)));
+    }
+
     foreach ($conditions as $key => $value) {
       if ($value === NULL || $link[$key] === NULL) {
         // For nullable fields, always check for identical values (===).
-        $this->assertNotIdentical($link[$key], $value, t('Not identical values for link field @key.', array('@key' => $key)));
+        $this->assertNotIdentical($link[$key], $value, t('Not identical values for @type @id link field @key.', array('@type' => $entity_type, '@id' => $entity_id, '@key' => $key)));
       }
       else {
         // Otherwise check simple equality (==).
-        $this->assertNotEqual($link[$key], $value, t('Not equal values for link field @key.', array('@key' => $key)));
+        $this->assertNotEqual($link[$key], $value, t('Not equal values for link @type @id field @key.', array('@type' => $entity_type, '@id' => $entity_id, '@key' => $key)));
       }
     }
   }
