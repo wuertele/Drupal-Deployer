@@ -32,12 +32,22 @@ function recipe_mastercook4_export($nid = NULL) {
   }
 
   $node = node_load(array('nid' => $nid, 'type' => 'recipe'));
-  
+
+  drupal_set_header('Content-type: text');
+  return merge_template($node);
+}
+
+
+
+function merge_template($node = NULL) {
+
+  //prepare prepare time
   $decimal_hours = $node->preptime/60;
   $hours = floor($decimal_hours);
   $minutes = sprintf("%02d",floor(($decimal_hours - $hours)*60));
+  $preptime = "$hours:$minutes";
 
-	// need to work on the category wrapping
+  //prepare categories
   $categories = '';
   $vocabs = taxonomy_get_vocabularies('recipe');
   foreach ($vocabs as $vocab) {
@@ -49,35 +59,65 @@ function recipe_mastercook4_export($nid = NULL) {
   }
   $categories = wordwrap($categories, 66, "\n                ");
 
-  $o = "                     *  Exported from  MasterCook  *\n";
-  $o .= "\n";
-  $o .= $node->title . "\n";
-  $o .= "\n";
-  $o .= "Recipe By     : " . $node->source . "\n";  
-  $o .= "Serving Size  : " . $node->yield . "    Preparation Time :$hours:$minutes\n";
-  $o .= "Categories    : $categories\n\n";
-  $o .= "  Amount  Measure       Ingredient -- Preparation Method\n";
-  $o .= "--------  ------------  --------------------------------\n";
-  
+  //prepare ingredients
+  $ingredients = '';
   foreach ( $node->ingredients as $key => $i ) {
-    $o .= format_mastercook4_ingredient($i);
+    $ingredients .= format_mastercook4_ingredient($i);
   }
-  $o .= "\n";
-  $o .= $node->instructions ."\n\n". $node->body ."\n\n". $node->notes . "\n";
-  $o .= "\n";
-  $o .= "                   - - - - - - - - - - - - - - - - - -\n";
 
-  drupal_set_header('Content-type: text');
-  return $o;
+  // get the template string
+  $template = get_template();
+  // merge title
+  $template = str_replace("<<title>>", $node->title, $template);
+  // merge recipe by
+  $template = str_replace("<<recipeby>>", $node->source, $template);
+  // merge serving size
+  $template = str_replace("<<servingsize>>", $node->yield, $template);
+  // merge preptime
+  $template = str_replace("<<preptime>>", $preptime, $template);
+  // merge categories
+  $template = str_replace("<<categories>>", $categories, $template);
+  // merge ingredients
+  $template = str_replace("<<ingredients>>", $ingredients, $template);
+  // merge instructions
+  $template = str_replace("<<instructions>>", $node->instructions, $template);
+  // merge notes
+  if ( $node->notes != '' ) {
+    $node->notes = "NOTES : " . $node->notes;
+  }
+  $template = str_replace("<<notes>>", $node->notes, $template);
+
+  return $template;
 }
 
-function format_mastercook4_ingredient($ingredient=NULL) {
-	
+
+function get_template() {
+$template = "
+                     *  Exported from  MasterCook  *
+
+<<title>>
+
+Recipe By     : <<recipeby>>
+Serving Size  : <<servingsize>>   Preparation Time :<<preptime>>
+Categories    : <<categories>>
+
+  Amount  Measure       Ingredient -- Preparation Method
+--------  ------------  --------------------------------
+<<ingredients>>
+<<instructions>>
+
+                   - - - - - - - - - - - - - - - - - -
+
+<<notes>>
+";
+return $template;
+}
+
+function format_mastercook4_ingredient($ingredient = NULL) {
   $ingredient->quantity = recipe_ingredient_quantity_from_decimal($ingredient->quantity);
   // no html entities
   $ingredient->quantity = str_replace('&frasl;', '/', $ingredient->quantity);
-  $ingredient->unit_name = strtolower(recipe_unit_name($ingredient->unit_id));
-	$o = sprintf("%8s  %-12s  %s\n", $ingredient->quantity, $ingredient->unit_name, $ingredient->name);
-	
-	return $o;
+  $ingredient->unit_name = recipe_unit_name($ingredient->unit_id);
+  $o = sprintf("%8s  %-12s  %s\n", $ingredient->quantity, $ingredient->unit_name, $ingredient->name);
+  return $o;
 }
