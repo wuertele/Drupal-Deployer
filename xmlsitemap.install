@@ -684,6 +684,14 @@ function xmlsitemap_update_6201() {
   if (db_table_exists('xmlsitemap_file')) {
     db_drop_table($ret, 'xmlsitemap_file');
   }
+
+  // Take care of any stray 6.x-1.x modules that are no longer supported.
+  $modules = array('xmlsitemap_file', 'xmlsitemap_helper', 'xmlsitemap_term');
+  module_disable($modules);
+  foreach ($modules as $module) {
+    drupal_set_installed_schema_version($module, SCHEMA_UNINSTALLED);
+  }
+
   variable_del('xmlsitemap_all_links_to_default_language');
   variable_del('xmlsitemap_cache_directory');
   // xmlsitemap_chunk_size not deleted since we use the same variable name.
