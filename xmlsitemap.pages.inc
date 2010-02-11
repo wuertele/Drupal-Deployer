@@ -31,16 +31,25 @@ function xmlsitemap_get_current_context() {
  */
 function xmlsitemap_context_check(array $context) {
   $hash = md5(serialize($context));
-  $default_hash = md5(serialize(array()));
+
+  $default = array();
+  if (module_exists('xmlsitemap_i18n')) {
+    $default['language'] = language_default('language');
+  }
+  $default_hash = md5(serialize($default));
 
   module_load_include('inc', 'xmlsitemap', 'xmlsitemap.generate');
-  $available_contexts = xmlsitemap_get_contexts();
+  $valid_contexts = array_keys(xmlsitemap_get_contexts());
 
-  if (in_array($hash, array_keys($available_contexts))) {
+  if (in_array($hash, $valid_contexts)) {
     return $context;
   }
+  elseif (in_array($default_hash, $valid_contexts)) {
+    return $default;
+  }
   else {
-    return $available_contexts[$default_hash];
+    trigger_error("Could not find fallback XML sitemap context. Context $hash: " . print_r($context, TRUE) . ". Default context $default_hash: " . print_r($default, TRUE), E_USER_ERROR);
+    return array();
   }
 }
 

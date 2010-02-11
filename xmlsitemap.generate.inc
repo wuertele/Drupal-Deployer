@@ -64,17 +64,19 @@ function xmlsitemap_get_url_options_from_context(array $context) {
 function xmlsitemap_get_contexts() {
   $contexts = array();
 
-  // Add an empty, default context.
-  $contexts[] = array();
-
   if (module_exists('xmlsitemap_i18n')) {
     foreach (xmlsitemap_var('languages') as $langcode) {
       $contexts[] = array('language' => $langcode);
     }
   }
+  else {
+    // Add an empty, default context.
+    $contexts[] = array();
+  }
 
   $hashes = array_map('md5', array_map('serialize', $contexts));
   $contexts = array_combine($hashes, $contexts);
+
   return $contexts;
 }
 
@@ -295,7 +297,7 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, array $context) {
   );
 
   $last_url = '';
-  $lastmod_format = variable_get('xmlsitemap_lastmod_format', DATE_W3C);
+  $lastmod_format = variable_get('xmlsitemap_lastmod_format', 'Y-m-d\TH:i\Z');
 
   $query = array(
     'SELECT'   => 'SELECT x.loc, x.lastmod, x.changefreq, x.changecount, x.priority, x.language',
@@ -380,7 +382,7 @@ function xmlsitemap_generate_index($handle, &$status, $context) {
   );
 
   $chunk_count = xmlsitemap_get_chunk_count(TRUE);
-  $lastmod_format = variable_get('xmlsitemap_lastmod_format', DATE_W3C);
+  $lastmod_format = variable_get('xmlsitemap_lastmod_format', 'Y-m-d\TH:i\Z');
 
   // Add the XML header and XSL if desired.
   xmlsitemap_generate_chunk_header('sitemapindex', $handle, $status, $context);
