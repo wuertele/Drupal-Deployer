@@ -94,7 +94,8 @@ function xmlsitemap_settings_form() {
     '#title' => t('Last modification date format'),
     '#options' => array(
       'Y-m-d' => t('Short'),
-      'Y-m-d\TH:i\Z' => t('Long'),
+      'Y-m-d\TH:i\Z' => t('Medium'),
+      'c' => t('Long'),
     ),
     '#default_value' => variable_get('xmlsitemap_lastmod_format', 'Y-m-d\TH:i\Z'),
   );
