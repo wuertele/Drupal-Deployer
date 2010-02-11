@@ -94,9 +94,9 @@ function xmlsitemap_settings_form() {
     '#title' => t('Last modification date format'),
     '#options' => array(
       'Y-m-d' => t('Short'),
-      DATE_W3C => t('Long'),
+      'Y-m-d\TH:i\Z' => t('Long'),
     ),
-    '#default_value' => variable_get('xmlsitemap_lastmod_format', DATE_W3C),
+    '#default_value' => variable_get('xmlsitemap_lastmod_format', 'Y-m-d\TH:i\Z'),
   );
   foreach ($form['advanced']['xmlsitemap_lastmod_format']['#options'] as $key => &$label) {
     $label .= ' (' . gmdate($key, REQUEST_TIME) . ')';
