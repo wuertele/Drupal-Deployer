@@ -95,20 +95,9 @@ function xmlsitemap_taxonomy_form_taxonomy_form_term_alter(&$form, $form_state) 
   // if the normal editing form elements are present. Hopefully this is fixed
   // in Drupal 7.
   if (isset($form['identification'])) {
-    if ($form['#term']['tid']) {
-      $term = taxonomy_get_term($form['#term']['tid']);
-    }
-    else {
-      $term = (object) $form['#term'];
-    }
-    $term->vid = $form['vid']['#value'];
-    $link = xmlsitemap_taxonomy_create_link($term);
-
     // Add the link options.
     module_load_include('inc', 'xmlsitemap', 'xmlsitemap.admin');
-    xmlsitemap_add_form_link_options($form, $link);
-
-    $form['xmlsitemap']['#access'] |= user_access('administer taxonomy');
+    xmlsitemap_add_form_link_options($form, 'taxonomy_term', $form['vid']['#value'], $form['#term']['tid']);
 
     // The submit and delete buttons need to be weighted down.
     $form['submit'] += array('#weight' => 100);
@@ -136,7 +125,8 @@ function xmlsitemap_taxonomy_taxonomy($op, $type, $array = NULL) {
   if ($type == 'term') {
     $tid = $array['tid'];
     if ($op == 'insert' || $op == 'update') {
-      $link = xmlsitemap_taxonomy_create_link((object) $array);
+      $term = (object) $array;
+      $link = xmlsitemap_taxonomy_create_link($term);
       xmlsitemap_save_link($link);
     }
     elseif ($op == 'delete') {

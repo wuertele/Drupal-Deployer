@@ -173,17 +173,9 @@ function xmlsitemap_node_type_form_submit($form, &$form_state) {
  */
 function xmlsitemap_node_form_alter(&$form, $form_state, $form_id) {
   if (isset($form['type']) && isset($form['#node']) && $form['type']['#value'] .'_node_form' == $form_id) {
-    $node = clone $form['#node'];
-    if (!isset($node->nid)) {
-      // Handle new nodes that do not have a value for nid yet.
-      $node->nid = NULL;
-    }
-    $link = xmlsitemap_node_create_link($node);
-
     // Add the link options.
     module_load_include('inc', 'xmlsitemap', 'xmlsitemap.admin');
-    xmlsitemap_add_form_link_options($form, $link);
-
+    xmlsitemap_add_form_link_options($form, 'node', $form['type']['#value'], $form['nid']['#value']);
     $form['xmlsitemap']['#access'] |= user_access('administer nodes');
     $form['xmlsitemap']['#weight'] = 30;
   }
@@ -219,7 +211,7 @@ function xmlsitemap_node_get_timestamps($node) {
  * @param $node
  *   A node object.
  */
-function xmlsitemap_node_create_link(&$node) {
+function xmlsitemap_node_create_link(stdClass &$node) {
   if (!isset($node->xmlsitemap) || !is_array($node->xmlsitemap)) {
     $node->xmlsitemap = array();
     if ($node->nid && $link = xmlsitemap_link_load('node', $node->nid)) {
