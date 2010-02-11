@@ -554,34 +554,16 @@ function recipe_ingredient_id_from_name($name) {
  */
 function recipe_ingredient_quantity_from_decimal($ingredient_quantity) {
   if (strpos($ingredient_quantity, '.') && variable_get('recipe_fraction_display', t('{%d} %d&frasl;%d'))) {
-    $decimal = $ingredient_quantity;
-
-    if ($decimal == 0) {
-      $whole = 0;
-      $numerator = 0;
-      $denominator = 1;
-      $top_heavy = 0;
-    }
-    else {
-      $sign = 1;
-      if ($decimal < 0) {
-        $sign = -1;
-      }
-    }
-
-    if (floor(abs($decimal)) == 0) {
-      $whole = 0;
-      $conversion = abs($decimal);
-    }
-    else {
-      $whole = floor(abs($decimal));
-      $conversion = abs($decimal);
-    }
+    $decimal = abs($ingredient_quantity);
+    $whole = floor($decimal);
+    $numerator = 0;
+    $denominator = 1;
+    $top_heavy = 0;
 
     $power = 1;
     $flag = 0;
     while ($flag == 0) {
-      $argument = $conversion * $power;
+      $argument = $decimal * $power;
       if ($argument == floor($argument)) {
         $flag = 1;
       }
@@ -590,38 +572,37 @@ function recipe_ingredient_quantity_from_decimal($ingredient_quantity) {
       }
     }
 
-    // Workaround for thirds, sixths, ninths, twelfths.
+
+    // We have to workaround for repeating, non-exact decimals for thirds, sixths, ninths, twelfths.
     $overrides = array(
       '3333' => array(1, 3), '6666' => array(2, 3), '9999' => array(3, 3), // thirds
       '1666' => array(1, 6), '8333' => array(5, 6), // sixths
       '1111' => array(1, 9), '2222' => array(2, 9), '4444' => array(4, 9), '5555' => array(5, 9), '7777' => array(7, 9), '8888' => array(8, 9), // ninths
       '0833' => array(1, 12), '4166' => array(5, 12), '5833' => array(7, 12), '9166' => array(11, 12), // twelfths
     );
-    $conversionstr = substr((string) ($conversion - floor($conversion)), 2, 4);
+    // truncate the whole part to get just the fractional part
+    $conversionstr = substr((string) ($decimal - floor($decimal)), 2, 4);
     if (array_key_exists($conversionstr, $overrides)) {
       if ($overrides[$conversionstr][0] == $overrides[$conversionstr][1]) {
-          return ($whole + 1) * $sign;
+          return ($whole + 1);
       }
       $denominator = $overrides[$conversionstr][1];
-      $numerator   = (floor($conversion) * $denominator) + $overrides[$conversionstr][0];
+      $numerator   = (floor($decimal) * $denominator) + $overrides[$conversionstr][0];
     }
     else {
-      $numerator = $conversion * $power;
+      $numerator = $decimal * $power;
       $denominator = $power;
     }
 
-    $hcf = recipe_euclid($numerator, $denominator);
 
-    $numerator = $numerator/$hcf;
-    $denominator = $denominator/$hcf;
-    $whole = $sign * $whole;
-    $top_heavy = $sign * $numerator;
+    // repeating decimals have been corrected
+    $gcd = greatest_common_divisor($numerator, $denominator);
+
+    $numerator = $numerator/$gcd;
+    $denominator = $denominator/$gcd;
+    $top_heavy = $numerator;
 
     $numerator = abs($top_heavy) - (abs($whole) * $denominator);
-
-    if (($whole == 0) && ($sign == -1)) {
-      $numerator = $numerator * $sign;
-    }
 
     $ingredient_quantity = sprintf(variable_get('recipe_fraction_display', t('{%d} %d&frasl;%d')), $whole, $numerator, $denominator);
 
@@ -637,6 +618,19 @@ function recipe_ingredient_quantity_from_decimal($ingredient_quantity) {
 
   return filter_xss_admin($ingredient_quantity);
 }
+
+/**
+ * Find the greatest common divisor
+ */
+function greatest_common_divisor ($a, $b) {
+  while ( $b != 0) {
+    $remainder = $a % $b;
+    $a = $b;
+    $b = $remainder;
+  }
+  return abs($a);
+}
+
 
 /**
  * Converts an ingredient's quantity from fractions to decimal.
@@ -1537,46 +1531,6 @@ function theme_recipe_list(&$output) {
  */
 function theme_recipe_more_info($content) {
   return '<div class="recipe-more-link">' . $content . '</div>';
-}
-
-
-/**
- *
- *
- */
-function recipe_euclid($number_one, $number_two) {
-  if (($number_one == 0) or ($number_two == 0)) {
-    $hcf = 1;
-    return $hcf;
-  }
-  else {
-    if ($number_one < $number_two) {
-      $buffer = $number_one;
-      $number_one = $number_two;
-      $number_two = $buffer;
-    }
-
-    $dividend = $number_one;
-    $divisor = $number_two;
-    $remainder = $dividend;
-
-    while ($remainder > 0) {
-      if ((floor($dividend/$divisor)) == ($dividend/$divisor)) {
-        $quotient = $dividend/$divisor;
-        $remainder = 0;
-      }
-      else {
-        $quotient = floor($dividend/$divisor);
-        $remainder = $dividend - ($quotient * $divisor);
-      }
-      $hcf = $divisor;
-      $dividend = $divisor;
-      $divisor = $remainder;
-    }
-
-
-  }
-  return $hcf;
 }
 
 
