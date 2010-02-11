@@ -23,8 +23,7 @@ function xmlsitemap_i18n_xmlsitemap_context_url_options(array $context) {
  * Implements hook_xmlsitemap_context().
  */
 function xmlsitemap_i18n_xmlsitemap_context_fallback() {
-  $language = language_default();
-  $context['language'] = $language->language;
+  $context['language'] = language_default('language');
   return $context;
 }
 
@@ -73,12 +72,13 @@ function xmlsitemap_i18n_form_xmlsitemap_settings_form_alter(&$form, $form_state
  * @see i18n_db_rewrite_where()
  */
 function xmlsitemap_i18n_xmlsitemap_query_alter(array &$query, array &$args, array $context) {
-  if (!isset($context['language'])) {
+  $mode = variable_get('i18n_selection_mode', 'simple');
+
+  if (!isset($context['language']) || $mode == 'off') {
     return;
   }
 
   // Get languages to simplify query building.
-  $mode = variable_get('i18n_selection_mode', 'simple');
   $current = $context['language'];
   $default = i18n_default_language();
 
@@ -111,7 +111,8 @@ function xmlsitemap_i18n_xmlsitemap_query_alter(array &$query, array &$args, arr
       $args[] = $current;
       break;
     case 'off':
-      // All content. No language conditions apply.
+      // All content. No language conditions apply. Handled by if statement
+      // above.
       break;
   }
 }
