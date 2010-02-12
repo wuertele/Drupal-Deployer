@@ -1,54 +1,162 @@
 <?php
 // $Id$
 
+/**
+ *
+ *  @file
+ *  A jSON server implementation for the services module.
+ *
+ */
+
+
+/**
+ *  Implementation of hook_server_info().
+ */
 function json_server_server_info() {
   return array(
     '#name' => 'JSON',
-    '#path' => 'json',
+    '#path' => 'json'
   );
 }
 
+
+/**
+ *  Implementation of hook_server_error().
+ */
 function json_server_server_error($message) {
-  return array("status" => FALSE, "message" => $message);
+  return array("#error" => TRUE, "#message" => $message);
 }
 
+
+/**
+ *  Implementation of hook_server().
+ */
 function json_server_server() {
-  if (!isset($_POST)) {
-    return "JSON server accepts POST requests only.";
+  if ($_SERVER['REQUEST_METHOD'] != 'POST') {
+    return json_server_encode_json(array('#error' => TRUE, '#data' => "JSON server accepts POST requests only."));
   }
   
-  $request = $_POST['method'];
   $methods = services_get_all();
+  services_strip_hashes($methods);
+  $request = json_server_parse_json($_POST['method']);
   $args = array();
+  
   foreach ($methods as $method) {
-    if ($method['#method'] == $request) {
+    if ($method['method'] == $request) {
       unset($_POST['q']);
       unset($_POST['method']);
       $args = array();
-      foreach($method['#args'] as $arg) {
-        if(isset($_POST[$arg['#name']])) {
-          $args[] = $_POST[$arg['#name']];
+
+      foreach ($method['args'] as $arg) {
+        if (isset($_POST[$arg['name']])) {
+          $args[] = json_server_parse_json($_POST[$arg['name']]);
         }
-        elseif($arg['#optional'] == 0) {
-          return drupal_to_js(array("status" => FALSE, "data" => "Argument ". $arg['#name'] ." not recieved"));
+        elseif ($arg['optional'] == 0) {
+          return json_server_encode_json(array("#error" => TRUE, "#data" => "Argument ". $arg['name'] ." not recieved"));
         }
         else {
-          $args[] = NULL;
+          $args[$arg['name']] = NULL;
         }
       }
-      $result = services_method_call($method['#method'], $args);
-      if (is_array($result) && isset($result['#error']) && $result['#error'] === TRUE)
-        return drupal_to_js(array('status' => FALSE, 'data' => $result['#message']));
       
-      return drupal_to_js(array('status' => TRUE, 'data' => $result));
+      $result = services_method_call($request, $args);
+      
+      if (is_array($result) && $result['error'] === TRUE) {
+        return json_server_encode_json(array('#error' => TRUE, '#data' => $result['message']));
+      }
+      
+      return json_server_encode_json(array('#error' => FALSE, '#data' => $result));
     }
   }
-
-  return drupal_to_js(array('status' => FALSE, 'data' => "Invalid method $request"));
+  return json_server_encode_json(array('#error' => TRUE, '#data' => "Invalid method $request"));
 }
 
-function json_load() {
-  global $base_url;
+
+/**
+ *  Load the needed assets to run the server via js.
+ */
+function json_server_load() {
   $path = drupal_get_path("module", "json_server");
   drupal_add_js($path ."/json_server.js");
 }
+
+
+/**
+ *  A helper function to handle parsing a json string.
+ */
+function json_server_parse_json($v) {
+  // PHP 5+.
+  /*  TODO: currently disabled because it does not always provide the output we want. Is it worth the performance improvement?
+  if (function_exists('json_decode')) {
+    return json_decode($v);
+  }
+  */
+  
+  // PHP 4.
+  if ($v{0} == '"') {
+    $v = substr($v, 1, -1);
+  }
+  elseif ($v{0} == '{') {
+    $var = explode(",", substr($v, 1, -2));
+    $v = array();
+    foreach ($var as $value) {
+      $va = explode(":", $value);
+      $v[$va[0]] = json_server_parse_json($va[1]);
+    }
+  }
+  elseif ($v{0} == '[') {
+    $var = explode(",", substr($v, 1, -2));
+    $v = array();
+    foreach ($var as $value) {
+      $v[] = json_server_parse_json($va[0]);
+    }
+  }
+  
+  return $v;
+}
+
+
+/**
+ *  Helper function to create json encoded strings.
+ */
+function json_server_encode_json($contents) {
+  // PHP 5+.
+  if (function_exists('json_encode')) {
+    $contents = json_encode($contents);
+  }
+  
+  // Support the old school.
+  else {
+    $contents = drupal_to_js($contents);
+  }
+
+  // No gzip support.
+  if (headers_sent()) {
+    return $contents;
+  }
+  
+  // Check for gzip support.
+  else {
+    $accepted_encoding = $_SERVER['HTTP_ACCEPT_ENCODING'];
+    if (strpos($accepted_encoding, 'x-gzip') !== FALSE) {
+      $encoding = 'x-gzip';
+    } elseif (strpos($accepted_encoding, 'gzip') !== FALSE) {
+      $encoding = 'gzip';
+    }
+    
+    // No gzip supported.
+    else {
+      return $contents;
+    }
+    
+    // Add encoding with gzip.
+    header('Content-Encoding: '. $encoding);
+    $output = "\x1f\x8b\x08\x00\x00\x00\x00\x00";
+    $size = strlen($contents);
+    $contents = gzcompress($contents, 9);
+    $contents = substr($contents, 0, $size);
+    
+    return $output . $contents;
+  }
+}
+

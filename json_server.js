@@ -1,47 +1,40 @@
-// $Id$
-Drupal.service = function(method, parameters, success) {
-  if (!this.servicesClient) {
-    return new Drupal.service(method, parameters, success);
-  }
-  parameters.method = method;
-  parsed = this.parse(parameters);
-  this.ajax(parsed, success);
-}
-Drupal.service.prototype = {
-  servicesClient: true,
-  parse: function(parameters) {
-    return $.param(this._parse([], [], parameters));
-  },
-  _parse: function(currentData, currentNesting, parameters) {
-    for (index in parameters) {
-      data = parameters[index];
-      currentNesting.push(encodeURIComponent(index));
-      if (typeof data == 'object') {
-        currentData = this._parse(currentData, currentNesting, data);
+//$Id$
+
+/**
+ *  Convert a variable to a json string.
+ */
+Drupal.toJson = function(v) {
+  switch (typeof v) {
+    case 'boolean':
+      return v == true ? 'TRUE' : 'FALSE';
+    case 'number':
+      return v;
+    case 'string':
+      return '"'+ v +'"';
+    case 'object':
+      var output = "{";
+      for(i in v) {
+        output = output + i + ":" + Drupal.toJson(v[i]) + ",";
       }
-      else {
-        currentData.push({name: this._makeURI(currentNesting), value: encodeURIComponent(data) });
-      }
-      currentNesting.pop();
-    }
-    return currentData;
-  },
-  _makeURI: function(data) {
-    output = data.shift();
-    for (i in data) {
-      output += '['+ data[i] +']';
-    }
-    return output;
-  },
-  ajax: function(data, success) {
-    $.ajax({
-      url: Drupal.settings.basePath +"?q=services/json",
-      type: "POST",
-      data: data,
-      success: function(data) {
-        parsed = Drupal.parseJson(data);
-        success(parsed['status'], parsed['data']);
-      },
-    });
+      output = output + "}";
+      return output;
+    default:
+      return 'null';
   }
 };
+
+/**
+ *  A JavaScript implementation for interacting with services.
+ */
+Drupal.service = function(service_method, args, success) {
+  args = $.extend({method: service_method}, args);
+  args_done = {};
+  for(i in args) {
+    args_done[i] = Drupal.toJson(args[i]);
+  }
+  $.post(Drupal.settings.basePath + "?q=services/json", args_done, function(unparsed_data) {
+    parsed_data = Drupal.parseJson(unparsed_data);
+    success(!parsed_data['#error'], parsed_data['#data']);
+  });
+};
+
