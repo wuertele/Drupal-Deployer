@@ -4,17 +4,20 @@
 /**
  * @file
  * recipe_plaintext.module - Support for the plaintext format input and output.
- *
- * Format Spec
- *
- *             Line1: TITLE
- *                    BLANK LINE
- * Ingredient Lines : <quantity> <unit> <ingredient>
- *                    ...
- *                    BLANK LINE
- * Instruction Lines: Freeform Instructions, blank lines ok from here on.
  */
-
+ 
+$recipe_plaintext_example = '
+Recipe Title
+<--blank line-->
+3 lb salt
+4 T pepper
+5-1/2 t oregano
+<--blank line-->
+Free-form instuctions.
+Step 1.
+Step 2.  Step3.
+Whatever
+'; 
 
 /**
  * Implementation of hook_recipeio($type).
@@ -24,12 +27,18 @@ function recipe_plaintext_recipeio($type) {
     'import_single' => array(
       'format_name' => t('Plain Text'),
       'callback' => 'recipe_plaintext_import',
-      'format_help' => ''
+      'format_help' => '',
+      'format_example' => "$recipe_plaintext_example",
     ),
     'export_single' => array(
       'format_name' => t('Plain Text'),
       'callback' => 'recipe_plaintext_export',
-      'format_help' => t('Export to a plain text format.')
+      'format_help' => t('Export to a plaintext format.')
+    ),
+    'export_multi' => array(
+      'format_name' => t('Plain Text'),
+      'callback' => 'recipe_plaintext_export_multi',
+      'format_help' => t('Export all recipes to a plaintext format.')
     )
   );
   return array('plaintext'=>$supported[$type]);
@@ -105,6 +114,18 @@ function recipe_plaintext_import($text) {
     }
   }
   return $recipe;
+}
+
+
+function recipe_plaintext_export_multi() {
+  $rs = db_query("SELECT n.nid from {node} n WHERE n.type='recipe' ORDER BY n.title");
+  $o = '';
+  while ($row = db_fetch_object($rs)) {
+    $o .= recipe_plaintext_export($row->nid);
+    $o .= "====\n";
+  }
+  drupal_set_header('Content-type: text');
+  return $o;
 }
 
 
