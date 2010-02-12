@@ -20,26 +20,19 @@
  * Implementation of hook_recipeio($type).
  */
 function recipe_plaintext_recipeio($type) {
-  $supported = array();
-  switch ($type) {
-    case 'import_single':
-      // Key here must be lower case and not use any url special chars
-      $supported['plaintext'] = array(
-        'format_name' => t('Plain Text'),
-        'callback' => 'recipe_plaintext_import',
-        'format_help' => ''
-      );
-    break;
-    case 'export_single':
-      // Key here must be lower case and not use any url special chars
-      $supported['plaintext'] = array(
-        'format_name' => t('Plain Text'),
-        'callback' => 'recipe_plaintext_export',
-        'format_help' => t('Export to a plain text format.')
-      );
-    break;
-  }
-  return $supported;
+  $supported = array(
+    'import_single' => array(
+      'format_name' => t('Plain Text'),
+      'callback' => 'recipe_plaintext_import',
+      'format_help' => ''
+    ),
+    'export_single' => array(
+      'format_name' => t('Plain Text'),
+      'callback' => 'recipe_plaintext_export',
+      'format_help' => t('Export to a plain text format.')
+    )
+  );
+  return array('plaintext'=>$supported[$type]);
 }
 
 
@@ -65,6 +58,7 @@ function recipe_plaintext_import($text) {
       $recipe['title'] = $line;
     }
     else if ( $region == INGREDIENTS ) {
+      // 1 cup flour
       if ( preg_match('/^([0-9\-\.\/]+) +([A-Za-z\.]+) +(.*)/', $line, $matches)  ) {
         $i = array();
         $i['quantity'] = $matches[1];
@@ -79,6 +73,23 @@ function recipe_plaintext_import($text) {
 
         $recipe['ingredients'][] = $i;
       }
+
+      // 1 apple
+      elseif ( preg_match('/^([0-9\-\.\/]+) +(.*)/', $line, $matches)  ) {
+        $i = array();
+        $i['quantity'] = $matches[1];
+        $i['unit_name'] = 'Unit';
+        $i['ingredient_name'] = $matches[2];
+
+        // FALSE if no-match
+        $i['unit_obj'] = recipe_unit_fuzzymatch($i['unit_name']);
+
+        // FALSE if no-match
+        $i['ingred_obj'] = recipe_ingredient_match($i['ingredient_name']);
+
+        $recipe['ingredients'][] = $i;
+      }
+
       else {
         $i = array();
         $i['quantity'] = 0;
