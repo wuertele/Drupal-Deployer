@@ -431,13 +431,13 @@ function _node_export_file_import_file(&$file) {
     // Need time to do the download
     ini_set('max_execution_time', 900);
 
-    $temp_path = md5(mt_rand()) .'.txt';
+    $temp_path = file_directory_temp() . '/' . md5(mt_rand()) .'.txt';
     if (($source = fopen($file->node_export_file_url, 'r')) == FALSE) {
-      drupal_set_message(t("Could not open '!file' for reading.", array('!file' => $file->node_export_file_url)));
+      drupal_set_message(t("Could not open '@file' for reading.", array('@file' => $file->node_export_file_url)));
       return FALSE;
     }
     elseif (($dest = fopen($temp_path, 'w')) == FALSE) {
-      drupal_set_message(t("Could not open '!file' for writing.", array('!file' => $file->filepath)));
+      drupal_set_message(t("Could not open '@file' for writing.", array('@file' => $file->filepath)));
       return FALSE;
     }
     else {
@@ -451,14 +451,20 @@ function _node_export_file_import_file(&$file) {
       clearstatcache();
 
       if ($bytes_read != filesize($temp_path)) {
-        drupal_set_message(t("Remote export '!url' could not be fully downloaded, '!file' to temporary location '!temp'.", array('!url' => $file->node_export_file_url, '!file' => $file->filepath, '!temp' => $temp_path)));
+        drupal_set_message(t("Remote export '!url' could not be fully downloaded, '@file' to temporary location '!temp'.", array('!url' => $file->node_export_file_url, '@file' => $file->filepath, '!temp' => $temp_path)));
         return FALSE;
       }
       // File was downloaded successfully!
       else {
-        // TODO: Handle potential errors here.
-        file_copy($temp_path, $file->filepath, FILE_EXISTS_REPLACE);
+        if (!@copy($temp_path, $file->filepath)) {
+          unlink($temp_path);
+          drupal_set_message(t("Could not move temporary file '@temp' to '@file'.", array('@temp' => $temp_path, '@file' => $file->filepath)));
+          return FALSE;
+        }
+
         unlink($temp_path);
+        $file->filesize = filesize($file->filepath);
+        $file->filemime = file_get_mimetype($file->filepath);
       }
     }
 
