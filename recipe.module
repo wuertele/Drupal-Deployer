@@ -37,7 +37,7 @@ function recipe_link($type, $node = NULL, $teaser = FALSE) {
         foreach ( $formats as $key => $format ) {
           $links[$key] = array(
             'title' => t('Export to '). $format['format_name'],
-            'href' => "recipe/export/$key/$node->nid",
+            'href' => "recipe/export/$key/$node->nid/$node->yield",
             'attributes' => array('title' => $format['format_help']),
           );
         }
@@ -821,7 +821,7 @@ function recipe_unit_name($unit_id) {
  * @param nid
  *   - an integer representing the node id (nid) of the node to export
  */
-function recipe_export($type = 'html', $nid = NULL) {
+function recipe_export($type = 'html', $nid = NULL, $yield = NULL) {
   // normalize typed urls
   $type = drupal_strtolower($type);
 
@@ -830,7 +830,7 @@ function recipe_export($type = 'html', $nid = NULL) {
 
   // If callback exists, call it, otherwise error out.
   if (isset($formats[$type]) && function_exists($formats[$type]['callback'])) {
-    echo call_user_func($formats[$type]['callback'], $nid);
+    echo call_user_func($formats[$type]['callback'], $nid, $yield);
   }
   else {
     drupal_set_message(t('Unknown export format.') . '(' . $type . ')');
@@ -1342,7 +1342,7 @@ function recipe_theme() {
   return array(
     'recipe_node' => array(
       'function' => 'theme_recipe_node',
-      'arguments' => array('node' => NULL, 'yield_form' => TRUE),
+      'arguments' => array('node' => NULL, 'yield_form' => TRUE, 'yield_arg' => NULL),
     ),
     'recipe_index' => array(
       'function' => 'theme_recipe_index',
@@ -1368,42 +1368,47 @@ function recipe_theme() {
  * presentation in a CSS class that is prefixed by the module name. This
  * way, style sheets can modify the output without requiring theme code.
  */
-function theme_recipe_node($node, $yield_form = TRUE) {
+function theme_recipe_node($node, $display_yield_form = TRUE, $yield_arg = NULL) {
   // Get custom yield or default to a factor of 1.
-  if ($yield_form && intval($node->yield) == $node->yield) {
-    if ($_POST['op'] == t('Change')) {
-      $yield = $_POST['custom_yield'];
+  $node->yield = intval($node->yield);
+  $factor = 1;
+
+  // check post variable to see if the yield form was posted.
+  if ($_POST['op'] == t('Change')) {
+    $yield = $_POST['custom_yield'];
+    $_POST = array();
+  }
+  elseif ($_POST['op'] == t('Halve')) {
+      $yield = $_POST['custom_yield']/2;
       $_POST = array();
     }
-    elseif ($_POST['op'] == t('Halve')) {
-        $yield = $_POST['custom_yield']/2;
-        $_POST = array();
-      }
-    elseif ($_POST['op'] == t('Double')) {
-      $yield = $_POST['custom_yield']*2;
-      $_POST = array();
-    }
-    // Reset yield back to recipe default
-    elseif ($_POST['op'] == t('Reset')) {
-      $yield = $node->yield;
-      $_POST = array();
-    }
+  elseif ($_POST['op'] == t('Double')) {
+    $yield = $_POST['custom_yield']*2;
+    $_POST = array();
+  }
+  // Reset yield back to recipe default
+  elseif ($_POST['op'] == t('Reset')) {
+    $yield = $node->yield;
+    $_POST = array();
+  }
 
+  // $yield_arg overrides the post if available
+  if ( $yield_arg != NULL ) {
+    $yield = $yield_arg;
+  }
 
+  // Figure out the yield factor and reset the node->yield.
+  if ($yield && $yield != $node->yield && $node->yield !=0) {
+    $factor = $yield / $node->yield;
+    $node->yield = $yield;
+  }
 
-
-    if ($yield && $yield != $node->yield && $node->yield !=0) {
-      $factor = $yield / $node->yield;
-      $node->yield = $yield;
-    }
-    else {
-      $factor = 1;
-    }
+  // replace yield value with the yield form
+  if ( $display_yield_form ) {
     $yield = drupal_get_form('recipe_custom_yield_form', $node);
   }
   else {
     $yield = $node->yield;
-    $factor = 1;
   }
 
   // Construct the $ingredients[] array.
