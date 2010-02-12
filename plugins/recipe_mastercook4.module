@@ -10,22 +10,32 @@
  * Implementation of hook_recipeio($type).
  */
 function recipe_mastercook4_recipeio($type) {
-  $supported = array();
-  switch ($type) {
-    case 'export_single':
-      // Key here must be lower case and not use any url special chars
-      $supported['mastercook4'] = array(
-        'format_name' => t('MasterCook4'),
-        'callback' => 'recipe_mastercook4_export',
-        'format_help' => t('Export to a MasterCook4 based text format.')
-      );
-    break;
-  }
-  return $supported;
+  $supported = array(
+    'export_single' => array(
+      'format_name' => t('MasterCook4'),
+      'callback' => 'recipe_mastercook4_export_single',
+      'format_help' => t('Export to a recipe to MasterCook4 based text format.')
+    ),
+    'export_multi' => array(
+      'format_name' => t('MasterCook4'),
+      'callback' => 'recipe_mastercook4_export_multi',
+      'format_help' => t('Export all recipes to MasterCook4 based text format.')
+    )
+  );
+  return array('mastercook4'=>$supported[$type]);
 }
 
+function recipe_mastercook4_export_multi() {
+  $rs = db_query("SELECT n.nid from {node} n WHERE n.type='recipe' ORDER BY n.title");
+  $o = '';
+  while ($row = db_fetch_object($rs)) {
+    $o .= recipe_mastercook4_export_single($row->nid);
+  }
+  drupal_set_header('Content-type: text');
+  return $o;
+}
 
-function recipe_mastercook4_export($nid = NULL) {
+function recipe_mastercook4_export_single($nid = NULL) {
   if ( $nid === NULL ) {
     drupal_set_message(t('Recipe not found.'));
     drupal_not_found();

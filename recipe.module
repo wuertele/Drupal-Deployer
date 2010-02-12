@@ -408,17 +408,28 @@ function recipe_menu() {
     'type' => MENU_NORMAL_ITEM,
     //'file'  => 'recipe.pages.inc',
   );
+
   $items['recipe/ingredient/autocomplete'] = array(
     'title' => 'Ingredient autocomplete',
     'page callback' => 'recipe_autocomplete_page',
     'type' => MENU_CALLBACK,
     'access arguments' => array('access content'),
   );
+
   $items['recipe/export'] = array(
     'page callback' => 'recipe_export',
     'type' => MENU_CALLBACK,
     'access arguments' => array('export recipes'),
   );
+  $items['recipe/export_multi'] = array(
+    'title' => 'Recipe Export',
+    'page callback' => 'recipe_export_multi',
+    'access callback' => 'recipe_export_multi_access',
+    'access arguments' => array('export recipes'),
+    'type' => MENU_NORMAL_ITEM,
+    //'file'  => 'recipe.pages.inc',
+  );
+
   $items['admin/settings/recipe'] = array(
     'title' => 'Recipe module',
     'description' => 'Settings that control how the recipe module functions.',
@@ -826,6 +837,32 @@ function recipe_export($type = 'html', $nid = NULL) {
     drupal_not_found();
   }
 }
+
+function recipe_export_multi($type = NULL) {
+
+  // load supported formats
+  $formats = module_invoke_all('recipeio', 'export_multi');
+  $o = 'Supported Output Formats:<br/>';
+  if ( $type === NULL ) {
+    foreach ( $formats as $key => $format ) {
+      $o .= l($format['format_name'], "recipe/export_multi/$key") . "<br/>";
+    }
+    return $o;
+  }
+
+  // normalize typed urls
+  $type = drupal_strtolower($type);
+
+  // If callback exists, call it, otherwise error out.
+  if (isset($formats[$type]) && function_exists($formats[$type]['callback'])) {
+    echo call_user_func($formats[$type]['callback']);
+  }
+  else {
+    drupal_set_message(t('Unknown export format.') . '(' . $type . ')');
+    drupal_not_found();
+  }
+}
+
 
 
 /**
@@ -1765,7 +1802,7 @@ function recipe_ingredient_match($recipe_ingredient_name) {
 
 
 /**
- * Extend user_access to account to no import parsers being available
+ * Extend user_access to handle case where no import formats are available
  */
 function recipe_import_access($string, $account = NULL, $reset = FALSE) {
 
@@ -1774,6 +1811,21 @@ function recipe_import_access($string, $account = NULL, $reset = FALSE) {
   if ( count($formats) == 0 ) {
     return FALSE;
   }
+  // we have a format so continue to user_access
+  return user_access($string, $account, $reset);
+}
 
+
+/**
+ * Extend user_access to handle case where no export formats are available
+ */
+function recipe_export_multi_access($string, $account = NULL, $reset = FALSE) {
+
+  // short circuit if there are no parsers available.
+  $formats = module_invoke_all('recipeio', 'export_multi');
+  if ( count($formats) == 0 ) {
+    return FALSE;
+  }
+  // we have a format so continue to user_access
   return user_access($string, $account, $reset);
 }
