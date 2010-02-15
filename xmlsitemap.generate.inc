@@ -308,9 +308,16 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, array $context) {
   $args = array();
 
   // Allow other modules to alter the sitemap query SQL and arguments.
-  $data = &$query;
-  $data['__drupal_alter_by_ref'] = array(&$args);
-  drupal_alter('xmlsitemap_query', $data, $context);
+  static $alter;
+  if (!isset($alter)) {
+    // Skip altering if there are no modules to invoke.
+    $alter = (bool) module_implements('xmlsitemap_query_alter');
+  }
+  if ($alter) {
+    $data = &$query;
+    $data['__drupal_alter_by_ref'] = array(&$args);
+    drupal_alter('xmlsitemap_query', $data, $context);
+  }
 
   $sql = implode($query, ' ');
   $offset = max($chunk - 1, 0) * xmlsitemap_get_chunk_size();
