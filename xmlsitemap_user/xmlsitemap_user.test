@@ -21,9 +21,16 @@ class XMLSitemapUserFunctionalTest extends XMLSitemapTestHelper {
   function setUp() {
     parent::setUp('xmlsitemap_user');
 
+    // Save the user settings before creating the users.
+    xmlsitemap_link_bundle_settings_save('user', 'user', array('status' => 1, 'priority' => 0.5));
+
+    // Create the users
     $this->admin_user = $this->drupalCreateUser(array('administer users', 'administer permissions', 'administer xmlsitemap'));
     $this->normal_user = $this->drupalCreateUser(array('access content'));
-    xmlsitemap_link_bundle_settings_save('user', 'user', array('status' => 1, 'priority' => 0.5));
+
+    // Update the normal user to make its sitemap link visible.
+    $account = clone $this->normal_user;
+    user_save($account, array('access' => 1, 'login' => 1));
   }
 
   function testBlockedUser() {
