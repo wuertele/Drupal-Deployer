@@ -38,12 +38,26 @@ function recipe_recipeML_export($nid = NULL) {
     return;
   }
 
+  $vocabs = taxonomy_get_vocabularies('recipe');
+  $cat_string = '';
+  foreach ($vocabs as $vocab) {
+    $terms = taxonomy_node_get_terms_by_vocabulary($node, $vocab->vid);
+    foreach ( $terms as $term ) {
+      $term = array_shift($terms);
+      $cat_string .= $vocab->name .": ". $term->name . ', ';
+    }
+    $cat_string = substr($cat_string, 0, -2);
+  }
+  if ( $cat_string != '' ) {
+    $cat_string = '<categories>'. $cat_string .'</categories>';
+  }
+
   $output = '<?xml version="1.0" encoding="UTF-8"?>'."\n".
   '<!DOCTYPE recipeml PUBLIC "-//FormatData//DTD RecipeML 0.5//EN" "http://www.formatdata.com/recipeml/recipeml.dtd">'."\n".
   '<recipeml version="0.5">'."\n".
   '  <recipe>'."\n".
   '    <head>'."\n".
-  '      <title>'. my_xml_escape($node->title) .'</title>'."\n".
+  '      <title>'. my_xml_escape($node->title) .'</title>'."\n".$cat_string.
   '    </head>'."\n".
   '    <yield><qty>'. $node->yield .'</qty></yield>'."\n".
   '    <ingredients>';
@@ -70,8 +84,5 @@ function my_xml_escape($string) {
     '"'   => '&quot;',
     '\''  => '&apos;'
   );
-  foreach ( $chars as $c1 => $c2 ) {
-    $string = str_replace($c1, $c2, $string);
-  }
-  return $string;
+  return str_replace(array_keys($chars), array_values($chars), $string);
 }
