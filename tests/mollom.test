@@ -1079,7 +1079,12 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
    */
   function testUrlBlacklistAPI() {
     // Blacklist a URL.
-    mollom('mollom.addBlacklistURL', array('url' => 'http://unicorn.com'));
+    $result = mollom('mollom.addBlacklistURL', array('url' => 'http://unicorn.com'));
+    $this->assertTrue($result, t('The URL was blacklisted.'));
+    
+    // Validate that there is one entry.
+    $blacklist = mollom('mollom.listBlacklistURL');
+    $this->assertEqual(count($blacklist), 1, t('The server-side blacklist has one entry.'));
 
     // Check whether posts containing the blacklisted URL are properly blocked.
     $result = mollom('mollom.checkContent', array(
@@ -1102,10 +1107,6 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
     ));
     $this->assertEqual($result['spam'], MOLLOM_ANALYSIS_SPAM, t('The message was blocked.'));
 
-    // Validate that there is one entry.
-    $blacklist = mollom('mollom.listBlacklistURL');
-    $this->assertEqual(count($blacklist), 1, t('The server-side blacklist has one entry.'));
-
     // Although we only added one element, we're using a loop because we want to
     // reset the blacklist in case it got somehow polluted.
     foreach ($blacklist as $entry) {
@@ -1123,11 +1124,16 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
    */
   function testTextBlacklistAPI() {
     // Blacklist a word:
-    mollom('mollom.addBlacklistText', array(
+    $result = mollom('mollom.addBlacklistText', array(
       'text' => 'unicorn',
       'match' => 'contains',
       'reason' => 'spam',
     ));
+    $this->assertTrue($result, t('The text was blacklisted.'));
+    
+    // Validate that there is one entry.
+    $blacklist = mollom('mollom.listBlacklistText');
+    $this->assertEqual(count($blacklist), 1, t('The server-side blacklist has one entry.'));
 
     // Check whether posts containing the blacklisted URL are properly blocked.
     $result = mollom('mollom.checkContent', array(
@@ -1142,20 +1148,21 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
 
     // To update the work (i.e. to change the 'match' property), we simply 
     // overwrite it.
-    mollom('mollom.addBlacklistText', array(
+    $result = mollom('mollom.addBlacklistText', array(
       'text' => 'unicorn',
       'match' => 'exact',
       'reason' => 'spam',
     ));
+    $this->assertTrue($result, t('The text was blacklisted.'));
+    
+    // Validate that there is one entry.
+    $blacklist = mollom('mollom.listBlacklistText');
+    $this->assertEqual(count($blacklist), 1, t('The server-side blacklist has one entry.'));
 
     $result = mollom('mollom.checkContent', array(
       'post_body' => "When match is 'exact', it has to be exact: abcunicorndef",
     ));
     $this->assertNotEqual($result['spam'], MOLLOM_ANALYSIS_SPAM, t('The message was not blocked.'));
-
-    // Validate that there is one entry.
-    $blacklist = mollom('mollom.listBlacklistText');
-    $this->assertEqual(count($blacklist), 1, t('The server-side blacklist has one entry.'));
 
     // Although we added only one element, we're using a loop because we want to
     // reset the blacklist in case it got somehow polluted.
