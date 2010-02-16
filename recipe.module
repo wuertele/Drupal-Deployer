@@ -1040,8 +1040,10 @@ function recipe_page() {
         if (user_access('create recipes', $account)) {
               $body = "<div class='recipe-add-content'><a href='/node/add/recipe'>Add a Recipe</a></div>";
         }
-        $body .= theme('box', variable_get('recipe_recent_box_title', t('Latest recipes')), module_invoke('node', 'title_list', recipe_get_latest(variable_get('recipe_recent_display', '5')), '') . theme('recipe_more_info', theme('feed_icon', url("recipe/feed"), t('Syndicate'))));
+        // Add latest recipes and xml feed icon.
+        $body .= theme('box', variable_get('recipe_recent_box_title', t('Latest recipes')), node_title_list(recipe_get_latest(variable_get('recipe_recent_display', '5'))) . theme('recipe_more_info', theme('feed_icon', url("recipe/feed"), t('Syndicate'))));
       }
+      // Add recipe taxonomy term links.
       $content = recipe_index();
       if ($content != '') {
         $body .= theme('box', t('Recipe categories'), $content);
@@ -1151,8 +1153,8 @@ function recipe_get_current_url() {
  *   A database query result.
  */
 function recipe_get_latest($count = 0) {
-  $tids = recipe_get_recipe_terms();
-  return recipe_select_nodes($tids, 'or', 0, FALSE, $count);
+	$sql = "SELECT nid, title, sticky, created FROM {node} n WHERE status = 1 AND type = 'recipe' ORDER BY sticky DESC, created DESC";
+	return db_query_range($sql, 0, $count);
 }
 
 /**
@@ -1247,86 +1249,6 @@ function recipe_node_prepare($node, $teaser = FALSE) {
   }
 
   return $node;
-}
-
-/**
- * Finds all nodes that match selected taxonomy conditions.
- * This is just a copy of taxonomy_select_nodes(), but includes node title
- * field in the selection.
- * Is this useful or try to find a taxonomy function to achieve this?
- *
- * @param $tids
- *   An array of term IDs to match.
- * @param $operator
- *   How to interpret multiple IDs in the array. Can be "or" or "and".
- * @param $depth
- *   How many levels deep to traverse the taxonomy tree. Can be a nonnegative
- *   integer or "all".
- * @param $pager
- *   Whether the nodes are to be used with a pager (the case on most Drupal
- *   pages) or not (in an XML feed, for example).
- * @return
- *   A resource identifier pointing to the query results.
- */
-function recipe_select_nodes($tids = array(), $operator = 'or', $depth = 0, $pager = TRUE, $count = 0) {
-  if (count($tids) > 0) {
-    // For each term ID, generate an array of descendant term IDs to the right depth.
-    $descendant_tids = array();
-    if ($depth === 'all') {
-      $depth = NULL;
-    }
-    foreach ($tids as $index => $tid) {
-      $term = module_invoke('taxonomy', 'get_term', $tid);
-      $tree = module_invoke('taxonomy', 'get_tree', $term->vid, $tid, -1, $depth);
-      $descendant_tids[] = array_merge(array($tid), array_map('_recipe_get_tid_from_term', $tree));
-    }
-
-    // TODO: Use db_placeholder()
-    if ($operator == 'or') {
-      $str_tids = implode(',', call_user_func_array('array_merge', $descendant_tids));
-      if (module_exists('category')) {
-        $sql = 'SELECT DISTINCT n.nid, n.title, n.sticky, n.created FROM {node} n INNER JOIN {category_node} cn ON n.nid = cn.nid WHERE cn.cid IN ('. $str_tids .') AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC';
-        $sql_count = 'SELECT COUNT(n.nid) FROM {node} n INNER JOIN {category_node} cn ON n.nid = cn.nid WHERE cn.tid IN ('. $str_tids .') AND n.status = 1';
-      }
-      else {
-        $sql = 'SELECT DISTINCT n.nid, n.title, n.sticky, n.created FROM {node} n INNER JOIN {term_node} tn ON n.vid = tn.vid WHERE tn.tid IN ('. $str_tids .') AND n.status = 1 ORDER BY n.sticky DESC, n.created DESC';
-        $sql_count = 'SELECT COUNT(n.nid) FROM {node} n INNER JOIN {term_node} tn ON n.vid = tn.vid WHERE tn.tid IN ('. $str_tids .') AND n.status = 1';
-      }
-    }
-    else {
-      $joins = '';
-      $wheres = '';
-      if (module_exists('category')) {
-        foreach ($descendant_tids as $index => $tids) {
-          $joins .= ' INNER JOIN {category_node} cn'. $index .' ON n.nid = cn'. $index .'.nid';
-          $wheres .= ' AND cn'. $index .'.cid IN ('. implode(',', $tids) .')';
-        }
-      }
-      else {
-        foreach ($descendant_tids as $index => $tids) {
-          $joins .= ' INNER JOIN {term_node} tn'. $index .' ON n.nid = tn'. $index .'.nid';
-          $wheres .= ' AND tn'. $index .'.tid IN ('. implode(',', $tids) .')';
-        }
-      }
-      $sql = 'n.nid, n.title, n.sticky, n.created FROM {node} n '. $joins .' WHERE n.status = 1 AND '. $wheres .' ORDER BY n.sticky DESC, n.created DESC';
-      $sql_count = 'SELECT COUNT(n.nid) FROM {node} n '. $joins .' WHERE n.status = 1 AND '. $wheres;
-    }
-  }
-  else {
-    // no taxonomy used
-    $sql = "SELECT nid, title, sticky, created FROM {node} n WHERE status = 1 AND type = 'recipe' ORDER BY sticky DESC, created DESC";
-    $sql_count = "SELECT COUNT(nid) FROM {node} n  WHERE status = 1 AND type = 'recipe'";
-  }
-
-  if ($pager && ($count > 0)) {
-    $result = pager_query(db_rewrite_sql($sql), variable_get('default_nodes_main', 10) , 0, db_rewrite_sql($sql_count));
-  }
-  else {
-    $count = ($count > 0) ? $count : 15;
-    $result = db_query_range(db_rewrite_sql($sql), 0, $count);
-  }
-
-  return $result;
 }
 
 /**
