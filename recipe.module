@@ -1013,6 +1013,7 @@ function recipe_unit_from_name($name) {
 function recipe_page() {
   $body = "";
 
+  // rss xml feed
   if (arg(1) == 'feed') {
     $rs = recipe_get_latest(variable_get('recipe_recent_display', '5'));
     $nodes = array();
@@ -1023,6 +1024,7 @@ function recipe_page() {
     return;
   }
   else {
+    // taxonomy terms
     if (arg(1) != NULL) {
       $breadcrumb = drupal_get_breadcrumb();
       $term = recipe_build_breadcrumbs($breadcrumb);
@@ -1038,6 +1040,7 @@ function recipe_page() {
         $body .= module_invoke('taxonomy', 'render_nodes', module_invoke('taxonomy', 'select_nodes', $terms));
       }
     }
+    // no taxonomy terms
     else {
       // This is the normal page display
       $body = '';
@@ -1079,8 +1082,13 @@ function recipe_build_breadcrumbs(&$breadcrumb) {
       $i++;
     }
 
-    $term = current(module_invoke('taxonomy', 'get_term_by_name', $last_term));
-    return $term;
+    $matching_terms = taxonomy_get_term_by_name($last_term);
+    $recipe_terms = recipe_get_recipe_terms();
+    foreach ($matching_terms as $term) {
+      if ( in_array($term->tid, $recipe_terms) ) {
+        return $term;
+      }
+    }
   }
   return NULL;
 }
