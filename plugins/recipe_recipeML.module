@@ -20,9 +20,19 @@ function recipe_recipeML_recipeio($type) {
       'format_name' => t('recipeML'),
       'callback' => 'recipe_recipeML_export_multi',
       'format_help' => t('Export all recipes to recipeML based xml format.')
+    ),
+    'import_multi' => array(
+      'format_name' => t('recipeML'),
+      'callback' => 'recipe_recipeML_import_multi',
+      'format_help' => t('Import recipes from a recipeML based xml file.')
     )
   );
-  return array('recipeml'=>$supported[$type]);
+  if ( isset($supported[$type]) ) {
+    return array('recipeml'=>$supported[$type]);
+  }
+  else {
+  	return FALSE;
+  }
 }
 
 function recipe_recipeML_export_multi() {
@@ -109,3 +119,156 @@ function my_xml_escape($string) {
   );
   return str_replace(array_keys($chars), array_values($chars), $string);
 }
+
+
+function recipe_recipeML_import_multi() {
+	$o = drupal_get_form('recipe_recipeML_import_form');
+	return theme('page', $o);
+}
+
+
+function recipe_recipeML_import_form($form_state) {
+  $form = array();
+  $form['#attributes'] = array('enctype' => "multipart/form-data");
+  $form['recipe_import_file'] = array(
+    '#type' => 'file',
+    '#title' => t('RecipeML File'),
+    '#default_value' => $object['foo'],
+    '#size' => 34,
+    '#description' => t("A Recipe in RecipeML format, see http://www.formatdata.com/recipeml"),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit', 
+    '#value' => t('Import'),
+  );
+	return $form;
+}
+function recipe_recipeML_import_form_validate($form, &$form_state) {
+  //if(!file_check_upload('recipe_import_file')) {
+  //  form_set_error('recipe_import_file', 'File missing for upload.');
+  //}
+}
+function recipe_recipeML_import_form_submit($form, &$form_state) {
+  global $ingredient, $yield, $data_string, $recipes, $recipe, $user;
+
+  // save to a temp files
+  if($file = file_save_upload('recipe_import_file', array(), 'files', FILE_EXISTS_RENAME)) {
+    drupal_set_message(t('The attached file was successfully uploaded'));
+  }
+  else {
+    drupal_set_message(t('The attched file failed to upload.'), 'error');
+    return;
+  }	
+
+  $output = '';
+  if ($file) {
+    // Load the xml string.
+    $data = file_get_contents($file->filepath);
+
+    // Parse the data.
+    $xml_parser = drupal_xml_parser_create($data);
+    xml_set_element_handler($xml_parser, 'recipe_import_element_start', 'recipe_import_element_end');
+    xml_set_character_data_handler($xml_parser, 'recipe_import_element_data');
+
+    if (!xml_parse($xml_parser, $data, 1)) {
+      $message = t('Failed to parse RecipeML file: %error at line %line.',
+                   array(
+                   '%error' => xml_error_string(xml_get_error_code($xml_parser)),
+                   '%line' => xml_get_current_line_number($xml_parser)));
+      watchdog('recipe', $message, WATCHDOG_WARNING);
+      drupal_set_message($message, 'error');
+    }
+    // Free the parser.
+    xml_parser_free($xml_parser);
+    // Delete the upload file.
+    file_delete($file->filepath);
+    
+    if ($_POST['op'] == t('Import')) {
+      foreach($recipes as $recipe) {
+        node_save($recipe);
+      }
+    }
+  }
+}
+
+
+
+/**
+ * Call-back function used by the XML parser.
+ */
+function recipe_import_element_start($parser, $name, $attributes) {
+  global $recipe, $yield, $ingredient;
+
+  switch ($name) {
+    case 'RECIPE':
+      $recipe = new StdClass();
+      $recipe->type = "recipe";
+      break;
+    case 'ING':
+      $ingredient = new StdClass();
+      break;
+    case 'YIELD':
+      $yield = true;
+      break;
+  }
+}
+
+/**
+ * Call-back function used by the XML parser.
+ */
+function recipe_import_element_end($parser, $name) {
+  global $ingredient, $yield, $data_string, $recipes, $recipe, $user;
+
+  switch ($name) {
+      case 'RECIPE':
+        $recipe->uid = $user->uid;
+        if ($recipe->yield == 0) $recipe->yield = 1;
+        if (!$recipe->notes) $recipe->notes = "Imported from RecipeML file";
+        if (!$recipe->title) {
+          $recipe->title = "RecipeML autotitle";
+        } else {
+          if (!$recipe->teaser) $recipe->teaser= $recipe->title." recipe";
+          if (!$recipe->body) $recipe->body = $recipe->title." recipe";
+        }
+        $recipes[] = $recipe;
+        break;
+      case 'ING':
+        $recipe->ingredients[] = $ingredient;
+        break;
+      case 'YIELD':
+        $yield = false;
+        break;
+      case "TITLE":
+        $recipe->title = trim($data_string);
+        break;
+      case 'QTY':
+        if ($yield) $recipe->yield = trim($data_string);
+        else $ingredient->quantity = trim($data_string);
+        break;
+      case 'UNIT':
+        if ($unit = recipe_unit_from_name(trim($data_string)))
+          $ingredient->unit_id = $unit->id;
+        break;
+      case 'ITEM':
+        $ingredient->name = trim($data_string);
+        break;
+      case 'YIELD':
+        $yield = false;
+        break;
+      case 'DIRECTIONS':
+        $recipe->instructions .= trim($data_string);
+        break;
+      case 'STEP':
+        $recipe->instructions .= trim($data_string)."\n";
+  }
+  $data_string = '';
+}
+
+/**
+ * Call-back function used by the XML parser.
+ */
+function recipe_import_element_data($parser, $data) {
+  global $data_string;
+  $data_string .= $data;
+}
+

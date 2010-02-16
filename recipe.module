@@ -12,7 +12,7 @@
  */
 function recipe_perm() {
   // register permissions. TODO: probably need individual types for each import/export -> "might be too many-jv").
-  return array(t('create recipes'), t('edit own recipes'), t('edit any recipes'), t('export recipes'));
+  return array(t('create recipes'), t('edit own recipes'), t('edit any recipes'), t('export recipes'), t('import recipes'));
 }
 
 /**
@@ -426,6 +426,14 @@ function recipe_menu() {
     'page callback' => 'recipe_export_multi',
     'access callback' => 'recipe_export_multi_access',
     'access arguments' => array('export recipes'),
+    'type' => MENU_NORMAL_ITEM,
+    //'file'  => 'recipe.pages.inc',
+  );
+  $items['recipe/import_multi'] = array(
+    'title' => 'Recipe Import',
+    'page callback' => 'recipe_import_multi',
+    'access callback' => 'recipe_import_multi_access',
+    'access arguments' => array('import recipes'),
     'type' => MENU_NORMAL_ITEM,
     //'file'  => 'recipe.pages.inc',
   );
@@ -845,7 +853,9 @@ function recipe_export_multi($type = NULL) {
   $o = 'Supported Output Formats:<br/>';
   if ( $type === NULL ) {
     foreach ( $formats as $key => $format ) {
-      $o .= l($format['format_name'], "recipe/export_multi/$key") . "<br/>";
+    	if ( $format ) {
+        $o .= l($format['format_name'], "recipe/export_multi/$key") . "<br/>";
+      }
     }
     return $o;
   }
@@ -863,6 +873,32 @@ function recipe_export_multi($type = NULL) {
   }
 }
 
+function recipe_import_multi($type = NULL) {
+
+  // load supported formats
+  $formats = module_invoke_all('recipeio', 'import_multi');
+  $o = 'Supported Input Formats:<br/>';
+  if ( $type === NULL ) {
+    foreach ( $formats as $key => $format ) {
+    	if ( $format ) {
+      	$o .= l($format['format_name'], "recipe/import_multi/$key") . "<br/>";
+      }
+    }
+    return $o;
+  }
+
+  // normalize typed urls
+  $type = drupal_strtolower($type);
+
+  // If callback exists, call it, otherwise error out.
+  if (isset($formats[$type]) && function_exists($formats[$type]['callback'])) {
+    echo call_user_func($formats[$type]['callback']);
+  }
+  else {
+    drupal_set_message(t('Unknown import format.') . '(' . $type . ')');
+    drupal_not_found();
+  }
+}
 
 
 /**
@@ -1828,6 +1864,21 @@ function recipe_export_multi_access($string, $account = NULL, $reset = FALSE) {
 
   // short circuit if there are no parsers available.
   $formats = module_invoke_all('recipeio', 'export_multi');
+  if ( count($formats) == 0 ) {
+    return FALSE;
+  }
+  // we have a format so continue to user_access
+  return user_access($string, $account, $reset);
+}
+
+
+/**
+ * Extend user_access to handle case where no import formats are available
+ */
+function recipe_import_multi_access($string, $account = NULL, $reset = FALSE) {
+
+  // short circuit if there are no parsers available.
+  $formats = module_invoke_all('recipeio', 'import_multi');
   if ( count($formats) == 0 ) {
     return FALSE;
   }

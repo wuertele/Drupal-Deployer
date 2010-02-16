@@ -10,22 +10,24 @@
  * Implementation of hook_recipeio($type).
  */
 function recipe_html_recipeio($type) {
-  $supported = array();
-  switch ($type) {
-    case 'export_single':
-      // Key here must be lower case and not use any url special chars
-      $supported['reciphtml'] = array(
-        'format_name' => t('HTML'),
-        'callback' => 'recipe_html_export',
-        'format_help' => t('Export to a printer friendly HTML format.')
-      );
-    break;
+  $supported = array(
+    'export_single' => array(
+      'format_name' => t('HTML'),
+      'callback' => 'recipe_html_export_single',
+      'format_help' => t('Export to a printer friendly HTML format.')
+    )
+  );
+
+  if ( isset($supported[$type]) ) {
+    return array('reciphtml'=>$supported[$type]);
   }
-  return $supported;
+  else {
+  	return FALSE;
+  }
 }
 
 
-function recipe_html_export($nid = NULL, $yield = NULL) {
+function recipe_html_export_single($nid = NULL, $yield = NULL) {
   if ( $nid === NULL ) {
     drupal_set_message(t('Recipe not found.'));
     drupal_not_found();
