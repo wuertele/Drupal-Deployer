@@ -102,5 +102,15 @@ function drush_xmlsitemap_rebuild() {
  */
 function drush_xmlsitemap_index() {
   $limit = (int) drush_get_option('limit', variable_get('xmlsitemap_batch_limit', 100));
+  $count_before = db_result(db_query("SELECT COUNT(id) FROM {xmlsitemap}"));
+
   module_invoke_all('xmlsitemap_index_links', $limit);
+  $count_after = db_result(db_query("SELECT COUNT(id) FROM {xmlsitemap}"));
+
+  if ($count_after == $count_before) {
+    drush_print(dt('No new XML sitemap links to index.'));
+  }
+  else {
+    drush_print(dt('Indexed @count new XML sitemap links.', array('@count' => $count_after - $count_before)));
+  }
 }
