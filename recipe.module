@@ -853,7 +853,7 @@ function recipe_export_multi($type = NULL) {
   $o = 'Supported Output Formats:<br/>';
   if ( $type === NULL ) {
     foreach ( $formats as $key => $format ) {
-    	if ( $format ) {
+      if ( $format ) {
         $o .= l($format['format_name'], "recipe/export_multi/$key") . "<br/>";
       }
     }
@@ -880,8 +880,8 @@ function recipe_import_multi($type = NULL) {
   $o = 'Supported Input Formats:<br/>';
   if ( $type === NULL ) {
     foreach ( $formats as $key => $format ) {
-    	if ( $format ) {
-      	$o .= l($format['format_name'], "recipe/import_multi/$key") . "<br/>";
+      if ( $format ) {
+        $o .= l($format['format_name'], "recipe/import_multi/$key") . "<br/>";
       }
     }
     return $o;
@@ -1014,7 +1014,13 @@ function recipe_page() {
   $body = "";
 
   if (arg(1) == 'feed') {
-    module_invoke('node', 'feed', module_invoke('taxonomy', 'select_nodes', recipe_get_recipe_terms(), 'or', 0, FALSE));
+    $rs = recipe_get_latest(variable_get('recipe_recent_display', '5'));
+    $nodes = array();
+    while ($row = db_fetch_object($rs)) {
+      $nodes[] = $row->nid;
+    }
+    node_feed($nodes, array('title' => 'Latest recipes feed', 'link' => url('recipe', array('absolute' => 'TRUE')), 'description' => 'List of the most recent recipe submissions.'));
+    return;
   }
   else {
     if (arg(1) != NULL) {
@@ -1153,8 +1159,8 @@ function recipe_get_current_url() {
  *   A database query result.
  */
 function recipe_get_latest($count = 0) {
-	$sql = "SELECT nid, title, sticky, created FROM {node} n WHERE status = 1 AND type = 'recipe' ORDER BY sticky DESC, created DESC";
-	return db_query_range($sql, 0, $count);
+  $sql = "SELECT nid, title, sticky, created FROM {node} n WHERE status = 1 AND type = 'recipe' ORDER BY sticky DESC, created DESC";
+  return db_query_range($sql, 0, $count);
 }
 
 /**
