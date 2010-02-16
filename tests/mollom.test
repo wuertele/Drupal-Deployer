@@ -662,8 +662,6 @@ class MollomStatusTestCase extends MollomWebTestCase {
     $this->drupalLogin($this->admin_user);
     $this->drupalGet('admin/reports/status');
     $this->clickLink('run cron manually');
-    $this->drupalGet('admin');
-    $this->assertNoLink('status report');
 
     // Install the module.
     $this->drupalPost('admin/build/modules', array('status[mollom]' => TRUE), t('Save configuration'));
@@ -682,8 +680,7 @@ class MollomStatusTestCase extends MollomWebTestCase {
 
     // Verify requirements error about missing API keys.
     $this->drupalLogin($this->admin_user);
-    $this->drupalGet('admin');
-    $this->clickLink('status report');
+    $this->drupalGet('admin/reports/status');
     // @todo Should a user without Mollom administration access see a
     //   requirement error containing a link to the settings page?
     $this->assertRaw(t('Mollom API keys are not <a href="@settings-url">configured</a> yet.', array('@settings-url' => url('admin/settings/mollom/settings'))), t('Requirements error found.'));
@@ -706,8 +703,6 @@ class MollomStatusTestCase extends MollomWebTestCase {
     $this->assertRaw(t('We contacted the Mollom servers to verify your keys: your keys do not exist or are no longer valid. Please visit the <em>Manage sites</em> page on the Mollom website again: <a href="@mollom-user">@mollom-user</a>.', array('@mollom-user' => 'http://mollom.com/user')), t('Invalid keys error message found.'));
 
     // Verify requirements error about invalid API keys.
-    $this->drupalGet('admin', array('watchdog' => FALSE));
-    $this->assertLink('status report');
     $this->drupalGet('admin/reports/status', array('watchdog' => FALSE));
     $this->assertRaw(t('The <a href="@settings-url">configured</a> Mollom API keys are invalid.', array('@settings-url' => url('admin/settings/mollom/settings'))), t('Requirements error found.'));
 
