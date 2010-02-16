@@ -28,10 +28,10 @@ function recipe_recipeML_recipeio($type) {
     )
   );
   if ( isset($supported[$type]) ) {
-    return array('recipeml'=>$supported[$type]);
+    return array('recipeml' => $supported[$type]);
   }
   else {
-  	return FALSE;
+    return FALSE;
   }
 }
 
@@ -87,9 +87,9 @@ function recipe_recipeML_export_single($nid = NULL, $add_content_header = TRUE) 
 
   $output .= '<recipe>'."\n".
     '<head>'."\n".
-    '<title>'. my_xml_escape($node->title) .'</title>'."\n".$cat_string.
+    '<title>'. my_xml_escape($node->title) ."</title>\n$cat_string".
     '</head>'."\n".
-    '<yield><qty>'. $node->yield .'</qty></yield>'."\n".
+    '<yield><qty>'. $node->yield ."</qty></yield>\n".
     '<ingredients>';
 
   foreach ($node->ingredients as $ingredient) {
@@ -122,8 +122,8 @@ function my_xml_escape($string) {
 
 
 function recipe_recipeML_import_multi() {
-	$o = drupal_get_form('recipe_recipeML_import_form');
-	return theme('page', $o);
+  $o = drupal_get_form('recipe_recipeML_import_form');
+  return theme('page', $o);
 }
 
 
@@ -138,10 +138,10 @@ function recipe_recipeML_import_form($form_state) {
     '#description' => t("A Recipe in RecipeML format, see http://www.formatdata.com/recipeml"),
   );
   $form['submit'] = array(
-    '#type' => 'submit', 
+    '#type' => 'submit',
     '#value' => t('Import'),
   );
-	return $form;
+  return $form;
 }
 function recipe_recipeML_import_form_validate($form, &$form_state) {
   //if(!file_check_upload('recipe_import_file')) {
@@ -152,13 +152,13 @@ function recipe_recipeML_import_form_submit($form, &$form_state) {
   global $ingredient, $yield, $data_string, $recipes, $recipe, $user;
 
   // save to a temp files
-  if($file = file_save_upload('recipe_import_file', array(), 'files', FILE_EXISTS_RENAME)) {
+  if ($file = file_save_upload('recipe_import_file', array(), 'files', FILE_EXISTS_RENAME)) {
     drupal_set_message(t('The attached file was successfully uploaded'));
   }
   else {
     drupal_set_message(t('The attched file failed to upload.'), 'error');
     return;
-  }	
+  }
 
   $output = '';
   if ($file) {
@@ -182,9 +182,9 @@ function recipe_recipeML_import_form_submit($form, &$form_state) {
     xml_parser_free($xml_parser);
     // Delete the upload file.
     file_delete($file->filepath);
-    
+
     if ($_POST['op'] == t('Import')) {
-      foreach($recipes as $recipe) {
+      foreach ($recipes as $recipe) {
         node_save($recipe);
       }
     }
@@ -201,14 +201,14 @@ function recipe_import_element_start($parser, $name, $attributes) {
 
   switch ($name) {
     case 'RECIPE':
-      $recipe = new StdClass();
+      $recipe = new stdClass();
       $recipe->type = "recipe";
       break;
     case 'ING':
-      $ingredient = new StdClass();
+      $ingredient = new stdClass();
       break;
     case 'YIELD':
-      $yield = true;
+      $yield = TRUE;
       break;
   }
 }
@@ -226,9 +226,14 @@ function recipe_import_element_end($parser, $name) {
         if (!$recipe->notes) $recipe->notes = "Imported from RecipeML file";
         if (!$recipe->title) {
           $recipe->title = "RecipeML autotitle";
-        } else {
-          if (!$recipe->teaser) $recipe->teaser= $recipe->title." recipe";
-          if (!$recipe->body) $recipe->body = $recipe->title." recipe";
+        } 
+        else {
+          if (!$recipe->teaser) {
+            $recipe->teaser = $recipe->title ." recipe";
+          }
+          if (!$recipe->body) {
+            $recipe->body = $recipe->title ." recipe";
+          }
         }
         $recipes[] = $recipe;
         break;
@@ -236,7 +241,7 @@ function recipe_import_element_end($parser, $name) {
         $recipe->ingredients[] = $ingredient;
         break;
       case 'YIELD':
-        $yield = false;
+        $yield = FALSE;
         break;
       case "TITLE":
         $recipe->title = trim($data_string);
@@ -253,13 +258,13 @@ function recipe_import_element_end($parser, $name) {
         $ingredient->name = trim($data_string);
         break;
       case 'YIELD':
-        $yield = false;
+        $yield = FALSE;
         break;
       case 'DIRECTIONS':
         $recipe->instructions .= trim($data_string);
         break;
       case 'STEP':
-        $recipe->instructions .= trim($data_string)."\n";
+        $recipe->instructions .= trim($data_string) ."\n";
   }
   $data_string = '';
 }

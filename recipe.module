@@ -32,11 +32,11 @@ function recipe_link($type, $node = NULL, $teaser = FALSE) {
 
   if ($type == 'node' && $node->type == 'recipe') {
     if (!$teaser) {
-      if ( user_access('export recipes') ) {
+      if (user_access('export recipes')) {
         $formats = module_invoke_all('recipeio', 'export_single');
-        foreach ( $formats as $key => $format ) {
+        foreach ($formats as $key => $format) {
           $links[$key] = array(
-            'title' => t('Export to '). $format['format_name'],
+            'title' => t('Export to ') . $format['format_name'],
             'href' => "recipe/export/$key/$node->nid/$node->yield",
             'attributes' => array('title' => $format['format_help']),
           );
@@ -641,7 +641,7 @@ function recipe_ingredient_quantity_from_decimal($ingredient_quantity) {
 /**
  * Find the greatest common divisor
  */
-function greatest_common_divisor ($a, $b) {
+function greatest_common_divisor($a, $b) {
   while ( $b != 0) {
     $remainder = $a % $b;
     $a = $b;
@@ -853,7 +853,7 @@ function recipe_export_multi($type = NULL) {
   $o = 'Supported Output Formats:<br/>';
   if ( $type === NULL ) {
     foreach ( $formats as $key => $format ) {
-      if ( $format ) {
+      if ($format) {
         $o .= l($format['format_name'], "recipe/export_multi/$key") . "<br/>";
       }
     }
@@ -880,7 +880,7 @@ function recipe_import_multi($type = NULL) {
   $o = 'Supported Input Formats:<br/>';
   if ( $type === NULL ) {
     foreach ( $formats as $key => $format ) {
-      if ( $format ) {
+      if ($format) {
         $o .= l($format['format_name'], "recipe/import_multi/$key") . "<br/>";
       }
     }
@@ -921,7 +921,7 @@ function recipe_autocomplete_page($string = "", $limit = 10) {
  */
 function recipe_validate($node, &$form) {
 
-  if ( !is_numeric($node->yield) || $node->yield <=0 ) {
+  if (!is_numeric($node->yield) || $node->yield <=0) {
     form_set_error('yield', t('Yield must be a valid positive integer.'));
   }
 
@@ -1357,7 +1357,7 @@ function theme_recipe_node($node, $display_yield_form = TRUE, $yield_arg = NULL)
   }
 
   // $yield_arg overrides the post if available
-  if ( $yield_arg != NULL ) {
+  if ($yield_arg != NULL) {
     $yield = $yield_arg;
   }
 
@@ -1368,7 +1368,7 @@ function theme_recipe_node($node, $display_yield_form = TRUE, $yield_arg = NULL)
   }
 
   // replace yield value with the yield form
-  if ( $display_yield_form ) {
+  if ($display_yield_form) {
     $yield = drupal_get_form('recipe_custom_yield_form', $node);
   }
   else {
@@ -1428,7 +1428,7 @@ function theme_recipe_node($node, $display_yield_form = TRUE, $yield_arg = NULL)
     foreach ($vocabs as $vocab) {
       $summary .= '<tr><th>'. $vocab->name .'</th><td>';
       $terms = taxonomy_node_get_terms_by_vocabulary($node, $vocab->vid);
-      foreach ( $terms as $term ) {
+      foreach ($terms as $term) {
         $term = array_shift($terms);
         $summary .= l($term->name, 'taxonomy/term/'. $term->tid) .' ';
       }
@@ -1548,7 +1548,7 @@ function recipe_import_form($form_state) {
   $formats = module_invoke_all('recipeio', 'import_single');
 
   $options = array();
-  foreach ( $formats as $format ) {
+  foreach ($formats as $format) {
     $options[$format['callback']] = $format['format_name'];
   }
 
@@ -1600,21 +1600,21 @@ function recipe_import_form_preview($form, &$form_state) {
   drupal_add_css(drupal_get_path('module', 'recipe') .'/recipe.css');
   $recipe = recipe_import_parse($form, $form_state);
 
-  if ( $recipe != FALSE ) {
+  if ($recipe != FALSE) {
     $preview = 'Recipe Name: ' . $recipe['title'] . "<br/><br/>";
 
     $preview .= 'Ingredients:<br/>=====<br/>';
-    foreach ( $recipe['ingredients'] as $i ) {
+    foreach ($recipe['ingredients'] as $i) {
       $preview .= $i['quantity'] . " ";
-      if ( $i['unit_obj'] == FALSE ) {
+      if ($i['unit_obj'] == FALSE) {
         $preview .= '<span class="recipe-new-item" title="New, unit not found in database">' . $i['unit_name'] . "*</span> ";
       }
       else {
         $preview .= '<span class="recipe-matched-item" title="Found, unit in database">' . $i['unit_name'] . "&radic;</span> ";
       }
 
-      if ( $i['ingred_obj'] == FALSE ) {
-        if ( preg_match('/^failed:/i', $i['ingredient_name']) ) {
+      if ($i['ingred_obj'] == FALSE) {
+        if (preg_match('/^failed:/i', $i['ingredient_name'])) {
           $preview .= '<span class="recipe-error-item" title="Error, ingredient line unreadable">' . $i['ingredient_name'] . '</span>';
         }
         else {
@@ -1662,7 +1662,7 @@ function recipe_import_form_submit($form, &$form_state) {
     foreach ($recipe['ingredients'] as $i) {
       $ingredient = new stdClass();
       $ingredient->quantity = $i['quantity'];
-      if ( $i['unit_obj'] != FALSE ) {
+      if ($i['unit_obj'] != FALSE) {
         $ingredient->unit_id = $i['unit_obj']['id'];
       }
       $ingredient->name = $i['ingredient_name'];
@@ -1727,7 +1727,7 @@ function recipe_import_parse($form, &$form_state) {
 function recipe_unit_fuzzymatch($recipe_name_or_abbrev, $reset = FALSE) {
   static $units;
 
-  if ( !isset($units) || $reset ) {
+  if (!isset($units) || $reset) {
     // get all units to prepare for fuzzy match
     $units = array();
     $result = db_query("SELECT id, name, abbreviation FROM {recipe_unit}");
@@ -1735,10 +1735,10 @@ function recipe_unit_fuzzymatch($recipe_name_or_abbrev, $reset = FALSE) {
       $units[] = $row;
     }
   }
-  foreach ( $units as $u ) {
+  foreach ($units as $u) {
     $name_pat = '^'. $u->name . 's{0,1}$';
     $abbrev_pat = '^'. $u->abbreviation . 's{0,1}\.{0,1}$';
-    if ( preg_match("/$name_pat|$abbrev_pat/i", $recipe_name_or_abbrev) ) {
+    if (preg_match("/$name_pat|$abbrev_pat/i", $recipe_name_or_abbrev)) {
       return array(
         'id' => $u->id,
         'name' => $u->name,
@@ -1777,7 +1777,7 @@ function recipe_import_access($string, $account = NULL, $reset = FALSE) {
 
   // short circuit if there are no parsers available.
   $formats = module_invoke_all('recipeio', 'import_single');
-  if ( count($formats) == 0 ) {
+  if (count($formats) == 0) {
     return FALSE;
   }
   // we have a format so continue to user_access
@@ -1792,7 +1792,7 @@ function recipe_export_multi_access($string, $account = NULL, $reset = FALSE) {
 
   // short circuit if there are no parsers available.
   $formats = module_invoke_all('recipeio', 'export_multi');
-  if ( count($formats) == 0 ) {
+  if (count($formats) == 0) {
     return FALSE;
   }
   // we have a format so continue to user_access
@@ -1807,7 +1807,7 @@ function recipe_import_multi_access($string, $account = NULL, $reset = FALSE) {
 
   // short circuit if there are no parsers available.
   $formats = module_invoke_all('recipeio', 'import_multi');
-  if ( count($formats) == 0 ) {
+  if (count($formats) == 0) {
     return FALSE;
   }
   // we have a format so continue to user_access
