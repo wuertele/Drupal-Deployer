@@ -481,7 +481,9 @@ function mollom_admin_settings(&$form_state) {
   if (empty($form_state['post'])) {
     $status = _mollom_status(TRUE);
     if ($status === TRUE) {
-      // Everything is in order.
+      // Output a positive status message, since users keep on asking whether
+      // Mollom should work or not.
+      drupal_set_message(t('We contacted the Mollom servers to verify your keys: the Mollom services are operating correctly. We are now blocking spam.'));
     }
     elseif ($status['keys valid'] === NETWORK_ERROR) {
       drupal_set_message(t('We tried to contact the Mollom servers but we encountered a network error. Please make sure that your web server can make outgoing HTTP requests.'), 'error');
