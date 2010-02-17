@@ -4,61 +4,51 @@ CONTENTS OF THIS FILE
 ---------------------
 
  * Introduction
- * Installation
+ * Install
  * TODO
  * Database Information
 
 INTRODUCTION
 ------------
 
-Current Maintainers: brdwor, drawk, marble, and tzoscott 
+Current Maintainers: brdwor, drawk, marble, tzoscott and jvandervort.
 Original Author: Moshe Weitzman <weitzman@tejasa.com>
 
 Recipe is a module for sharing cooking recipes. 
 
 
-INSTALLATION
-------------
-1. Upload and install the module.
-
-2. Adjust Permissions for user roles. NOTE: a 'site editor' role is supported.
-
-3. In Recipe Admin, enable/disable desired features.
-
-4. Enable a Recipes menu item so users may find it...
-
-5. OPTIONAL: Create a taxonomy vocabulary and name it.
-   For example: 'Recipe Tags'.
-
-   Under Content Types check 'Recipe', and under Settings check desired 
-   options and Save.
-
-   Be sure to create at least one Term.
-
-   In Menus, enable a link to Recipes so users may access the module.
+INSTALL
+-------
+See INSTALL file for important instructions.
 
 
 TODO
 -----
+NOTE: Some of these TODO items are old and predate the Drupal 6 architecture.
+This means that some of these TODO items might be possible now, but have not
+been tested or confirmed using other modules together with Recipe.. 
+Some help testing/experimenting is appreciated.
 
+- Make recipe_unit more translatable. This might mean moving units to an
+  included array file, or integration with one of the Drupal 'unit' modules.
 - Get ingredients into the searchable Index. Requires some SQL expertise. 
   See recipe_update_index()
-- emit recipeXML for syndicating recipes. Anyone know of a standard format?
 - Let users maintain their own recipe collection just like a blog or 
   personal image gallery
 - Integrate with bookmarks.module so users may create a 'recipe box' listing
   the favorite recipes
-- Views2 support, including ingredients display.
+- Views2 support - Views enabling, and custom handler for 'many' fields
+  (such as Ingredients).
 - Investigate CCK Multigroup and Fields for D7.
 
 
 DATABASE DESCRIPTION
 --------------------
 
-Data is saved in a quite normalized manner. Recipes are collections of 
-pointers to ingredients and to quantity terms. New terms can be added by
-modifying the schema. New ingredients are added automatically whenever they
-are used for the first time. 
+Data is saved in normal form. Recipes are collections of pointers to 
+ingredients and to quantity terms. New terms can be added by modifying the
+schema. New ingredients are added automatically whenever they are used for 
+the first time. 
 
 Following is an ASCII art attempt to illustrate the DB relationships:
 
