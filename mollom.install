@@ -297,6 +297,10 @@ function mollom_update_6106() {
     'not null' => TRUE,
     'default' => '',
   ));
+  // Change the primary key to prevent duplicate key errors in the following
+  // data conversions.
+  db_drop_primary_key($ret, 'mollom');
+  db_add_primary_key($ret, 'mollom', array('entity', 'did'));
 
   // Migrate existing node data.
   $ret[] = update_sql("UPDATE {mollom} SET entity = 'node' WHERE did LIKE 'node-%'");
@@ -316,8 +320,6 @@ function mollom_update_6106() {
     'default' => '',
   ));
 
-  db_drop_primary_key($ret, 'mollom');
-  db_add_primary_key($ret, 'mollom', array('entity', 'did'));
   return $ret;
 }
 
