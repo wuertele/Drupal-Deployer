@@ -50,6 +50,7 @@ function recipe_link($type, $node = NULL, $teaser = FALSE) {
 
 /**
  * Implementation of hook_node_info().
+ * Exposes link under create content.
  */
 function recipe_node_info() {
   return array(
@@ -401,13 +402,15 @@ function recipe_menu() {
     'type' => MENU_NORMAL_ITEM
   );
 
-  $items['recipe'] = array(
-    'title' => 'Recipes',
-    'page callback' => 'recipe_page',
-    'access arguments' => array('access content'),
-    'type' => MENU_NORMAL_ITEM,
-    //'file'  => 'recipe.pages.inc',
-  );
+  if (variable_get('recipe_index_enable', 1)) {
+    $items['recipe'] = array(
+      'title' => 'Recipes',
+      'page callback' => 'recipe_index_page',
+      'access callback' => 'user_access',
+      'access arguments' => array('access data'),
+      'file' => 'recipe_index.inc',
+    );
+  }
 
   $items['recipe/ingredient/autocomplete'] = array(
     'title' => 'Ingredient autocomplete',
@@ -421,23 +424,39 @@ function recipe_menu() {
     'type' => MENU_CALLBACK,
     'access arguments' => array('export recipes'),
   );
-  $items['recipe/export_multi'] = array(
-    'title' => 'Recipe Export',
-    'page callback' => 'recipe_export_multi',
-    'access callback' => 'recipe_export_multi_access',
-    'access arguments' => array('export recipes'),
-    'type' => MENU_NORMAL_ITEM,
-    //'file'  => 'recipe.pages.inc',
-  );
-  $items['recipe/import_multi'] = array(
-    'title' => 'Recipe Import',
-    'page callback' => 'recipe_import_multi',
-    'access callback' => 'recipe_import_multi_access',
-    'access arguments' => array('import recipes'),
+
+
+
+  $items['admin/content/recipe'] = array(
+    'title' => 'Recipes',
+    'description' => 'Import and export recipes.',
+    'page callback' => 'recipe_io_page',
+    'access arguments' => array('administer site configuration'),
     'type' => MENU_NORMAL_ITEM,
     //'file'  => 'recipe.pages.inc',
   );
 
+  $items['admin/content/recipe/export_multi'] = array(
+    'title' => 'Export',
+    'description' => 'Export all recipes from this site into a supported output format.  The data is returned directly to your web browser.  You can enable output formats on the modules screen.',
+    'page callback' => 'recipe_export_multi',
+    'access callback' => 'recipe_export_multi_access',
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+    //'file'  => 'recipe.pages.inc',
+  );
+
+  $items['admin/content/recipe/import_multi'] = array(
+    'title' => 'Import',
+    'description' => 'Import recipes in a supported input format into this site.  The data is uploaded as a file to the server.  You can enable input formats on the modules screen.',
+    'page callback' => 'recipe_import_multi',
+    'access callback' => 'recipe_import_multi_access',
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_NORMAL_ITEM,
+    //'file'  => 'recipe.pages.inc',
+  );
+
+  // For tabs you need this duplication of recipe_admin_settings.
   $items['admin/settings/recipe'] = array(
     'title' => 'Recipe module',
     'description' => 'Settings that control how the recipe module functions.',
@@ -445,7 +464,25 @@ function recipe_menu() {
     'page arguments' => array('recipe_admin_settings'),
     'access arguments' => array('administer site configuration'),
     'file' => 'recipe.admin.inc',
-    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['admin/settings/recipe/settings'] = array(
+    'title' => 'Recipe',
+    'description' => 'Settings that control how the recipe module functions.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('recipe_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'recipe.admin.inc',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -10,
+  );
+  $items['admin/settings/recipe/recipe_index'] = array(
+    'title' => 'Index page',
+    'description' => t('Configure settings for the recipe index page.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('recipe_index_settings_form'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'recipe.admin.inc',
+    'type' => MENU_LOCAL_TASK,
   );
 
   return $items;
@@ -854,7 +891,7 @@ function recipe_export_multi($type = NULL) {
   if ( $type === NULL ) {
     foreach ( $formats as $key => $format ) {
       if ($format) {
-        $o .= l($format['format_name'], "recipe/export_multi/$key") . "<br/>";
+        $o .= l($format['format_name'], "admin/content/recipe/export_multi/$key") . "<br/>";
       }
     }
     return $o;
@@ -881,7 +918,7 @@ function recipe_import_multi($type = NULL) {
   if ( $type === NULL ) {
     foreach ( $formats as $key => $format ) {
       if ($format) {
-        $o .= l($format['format_name'], "recipe/import_multi/$key") . "<br/>";
+        $o .= l($format['format_name'], "admin/content/recipe/import_multi/$key") . "<br/>";
       }
     }
     return $o;
@@ -1003,226 +1040,7 @@ function recipe_unit_from_name($name) {
 
   return $units_array[$string];
 }
-
-/**
- * Menu Callback - created output for the main recipe page.
- *
- * @return
- *   $body
- */
-function recipe_page() {
-  $body = "";
-
-  // rss xml feed
-  if (arg(1) == 'feed') {
-    $rs = recipe_get_latest(variable_get('recipe_recent_display', '5'));
-    $nodes = array();
-    while ($row = db_fetch_object($rs)) {
-      $nodes[] = $row->nid;
-    }
-    node_feed($nodes, array('title' => 'Latest recipes feed', 'link' => url('recipe', array('absolute' => 'TRUE')), 'description' => 'List of the most recent recipe submissions.'));
-    return;
-  }
-  else {
-    // taxonomy terms
-    if (arg(1) != NULL) {
-      $breadcrumb = drupal_get_breadcrumb();
-      $term = recipe_build_breadcrumbs($breadcrumb);
-      drupal_set_breadcrumb($breadcrumb);
-
-      if ($term != NULL) {
-        $content = recipe_index($term->tid);
-        if ($content != '') {
-          $body = theme('box', t('@term-name - Sub categories', array('@term-name' => $term->name)), $content);
-        }
-
-        $terms = array_merge(array($term->tid), array_map('_recipe_get_tid_from_term', module_invoke('taxonomy', 'get_children', $term->tid)));
-        $body .= module_invoke('taxonomy', 'render_nodes', module_invoke('taxonomy', 'select_nodes', $terms));
-      }
-    }
-    // no taxonomy terms
-    else {
-      // This is the normal page display
-      $body = '';
-      if (variable_get('recipe_recent_box_enable', 1)) {
-        // link to add new content on Page, if user has access
-        if (user_access('create recipes', $account)) {
-              $body = "<div class='recipe-add-content'><a href='/node/add/recipe'>Add a Recipe</a></div>";
-        }
-        // Add latest recipes and xml feed icon.
-        $body .= theme('box', variable_get('recipe_recent_box_title', t('Latest recipes')), node_title_list(recipe_get_latest(variable_get('recipe_recent_display', '5'))) . theme('recipe_more_info', theme('feed_icon', url("recipe/feed"), t('Syndicate'))));
-      }
-      // Add recipe taxonomy term links.
-      $content = recipe_index();
-      if ($content != '') {
-        $body .= theme('box', t('Recipe categories'), $content);
-      }
-    }
-  }
-  return $body;
-}
-
-/**
- * Builds a breadcrumb list.
- *
- * @param
- *   breadcrumb a reference to the breadcrumb array. New items will be appending to this array.
- * @return
- *   returns a term object if the last item in the url is a term, otherwise returns NULL.
- */
-function recipe_build_breadcrumbs(&$breadcrumb) {
-  if (arg(1) != NULL) {
-    $i = 1;
-    $url = 'recipe';
-    $breadcrumb[] = l(t('Recipes'), $url);
-    while (arg($i) != NULL) {
-      $last_term = urldecode(arg($i));
-      $url = $url .'/'. urlencode($last_term);
-      $breadcrumb[] = l($last_term, $url);
-      $i++;
-    }
-
-    $matching_terms = taxonomy_get_term_by_name($last_term);
-    $recipe_terms = recipe_get_recipe_terms();
-    foreach ($matching_terms as $term) {
-      if ( in_array($term->tid, $recipe_terms) ) {
-        return $term;
-      }
-    }
-  }
-  return NULL;
-}
-
-/**
- * Recursively traverses the term tree to construct the index.
- *
- * @return
- *   String the output for this tree.
- */
-function recipe_build_index(&$tree, $parent_url) {
-  $output = '';
-
-  if ($tree == array()) {
-    return '';
-  }
-
-  do {
-    $cur = current($tree);
-    $nex = next($tree);
-    if ($nex === FALSE) {
-      $next_depth = -1;
-    }
-    else {
-      $next_depth = $nex->depth;
-    }
-
-    $cur->link = $parent_url .'/'. urlencode(strtolower(trim($cur->name)));
-
-    $cur->children = '';
-    if ($next_depth > $cur->depth) {
-      $cur->children = recipe_build_index($tree, $cur->link);
-
-      // Sync $next_depth, because 'next item' may be shoved forward.
-      // Thanks for the patch Roderik.
-      $nex = current($tree);
-      if ($nex === FALSE) {
-        $next_depth = -1;
-      }
-      else {
-        $next_depth = $nex->depth;
-      }
-    }
-
-    $cur->count = module_invoke('taxonomy', 'term_count_nodes', ($cur->tid));
-
-    $output .= theme('recipe_index_item', $cur);
-  }
-  while ($cur->depth == $next_depth);
-
-  return theme('recipe_list', $output);
-}
-
-/**
- * Constructs a url from the current url arguments list.
- *
- * @return
- *   A string containing a formated URL.
- */
-function recipe_get_current_url() {
-  $arg_index = 1;
-  $url = arg(0);
-
-  while ($argument = arg($arg_index)) {
-    $url .= '/'. urlencode($argument);
-    $arg_index++;
-  }
-
-  return $url;
-}
-
-/**
- * Get the latest recipes.
- *
- * @return
- *   A database query result.
- */
-function recipe_get_latest($count = 0) {
-  $sql = "SELECT nid, title, sticky, created FROM {node} n WHERE status = 1 AND type = 'recipe' ORDER BY sticky DESC, created DESC";
-  return db_query_range($sql, 0, $count);
-}
-
-/**
- * Get all the terms associated with recipes.
- *
- * @return
- *   An array of unique term ids.
- */
-function recipe_get_recipe_terms() {
-  $vocabs = recipe_get_vocabularies();
-  $tids = array();
-  foreach ($vocabs as $vocab) {
-    $tids = array_merge($tids, recipe_tax_get_terms($vocab->vid));
-  }
-  return array_unique($tids);
-}
-
-/**
- * Gets all the vocabularies that are associated with the recipe module.
- *
- * @return
- *   Array the vocabularies.
- */
-function recipe_get_vocabularies() {
-  $vocabularies = module_invoke('taxonomy', 'get_vocabularies', 'recipe');
-  return $vocabularies;
-}
-
-/**
- * Constructs the recipe index page, using theme functions.
- *
- * @return
- *   A string containing the output ready for display.
- */
-function recipe_index($tid = 0) {
-  $output = '';
-
-  $vocabularies = recipe_get_vocabularies();
-  foreach ($vocabularies as $vocab) {
-    $max_depth = variable_get('recipe_index_depth', 0);
-    $vocab_tree = module_invoke('taxonomy', 'get_tree', $vocab->vid, $tid, -1, ($max_depth <= 0) ? NULL : $max_depth);
-    $content = '';
-
-    while (current($vocab_tree) != NULL) {
-      $content .= recipe_build_index($vocab_tree, recipe_get_current_url());
-    }
-
-    if ($content != '') {
-      $output .= theme('recipe_index', $vocab->name, $content);
-    }
-  }
-
-  return $output;
-}
+ 
 
 /**
  * Custom version of node_prepare().
@@ -1266,21 +1084,6 @@ function recipe_node_prepare($node, $teaser = FALSE) {
 }
 
 /**
- * Get all the terms in a given vocabulary.
- *
- * @return
- *   An array of unique term ids.
- */
-function recipe_tax_get_terms($vid) {
-  $result = db_query("SELECT tid FROM {term_data} WHERE vid = %d", $vid);
-  $tids = array();
-  while ($term = db_fetch_array($result)) {
-    $tids[] = $term['tid'];
-  }
-  return array_unique($tids);
-}
-
-/**
  * Hook into generic node creation/update and check if the added node
  * fixes any links in existing recipes.
  */
@@ -1293,18 +1096,6 @@ function recipe_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       }
       break;
   }
-}
-
-/**
- * Helper function for array map purposes.
- *
- * @param term
- *   The term object from which the tid will be extracted.
- * @return
- *   The tid member of $term.
- */
-function _recipe_get_tid_from_term($term) {
-  return $term->tid;
 }
 
 /**
@@ -1326,9 +1117,30 @@ function recipe_theme() {
     'recipe_list' => array(
       'arguments' => array('output' => NULL),
     ),
+
+
     'recipe_more_info' => array(
       'arguments' => array('content' => NULL),
+      'file' => 'recipe_index.inc',
     ),
+    'recipe_index_page_form' => array(
+      'arguments' => array('element' => NULL),
+      'file' => 'recipe_index.inc',
+    ),
+    'recipe_index_category' => array(
+      'arguments' => array('element' => NULL),
+      'file' => 'recipe_index.inc',
+    ),
+    'recipe_index_category_children' => array(
+      'arguments' => array('element' => NULL),
+      'file' => 'recipe_index.inc',
+    ),
+    'recipe_index_append' => array(
+      'arguments' => array('link' => NULL),
+      'file' => 'recipe_index.inc',
+    ),
+
+
   );
 }
 
@@ -1494,59 +1306,6 @@ function recipe_custom_yield_form($form_id, $node) {
 
   return $form;
 }
-
-/**
- * Controls the output of the rendered index list.
- *
- * @return
- *   String the output for the index list.
- */
-function theme_recipe_index(&$name, &$index_list) {
-  if ($index_list != '') {
-    return "<div class='recipe-item-list'>\n" . $index_list . "\n</div>\n";
-  }
-  return '';
-}
-
-/**
- * Displays a single index item.
- *
- * @return
- *   String the output for this item.
- */
-function theme_recipe_index_item(&$term) {
-  $description = ($term->description != '') ? '<p class="recipe-desc">' . $term->description . '</p>' : '';
-  if ($term->count > 0) {
-    return '<li><div class="recipe-title">' . l(t('@term-name (@term-count)', array('@term-name' => $term->name, '@term-count' => $term->count)), $term->link) . '</div>' . $description . $term->children . '</li>';
-  }
-  else {
-    return '<li><div class="recipe-title">'. t('@term-name (@term-count)', array('@term-name' => $term->name, '@term-count' => $term->count)) . '</div>' . $description . $term->children . '</li>';
-  }
-}
-
-/**
- * Displays a single one level list. Called for each group of items at the same depth.
- *
- * @return
- *   String the output for this list.
- */
-function theme_recipe_list(&$output) {
-  if ($output != '') {
-    return '<ul>' . $output . "</ul>\n";
-  }
-  return '';
-}
-
-/**
- * Displays more information content, such as "more" links, and feed images.
- *
- * @return
- *   Formatted string containing the output.
- */
-function theme_recipe_more_info($content) {
-  return '<div class="recipe-more-link">' . $content . '</div>';
-}
-
 
 /**
  * Form recipe_import_form
@@ -1820,4 +1579,12 @@ function recipe_import_multi_access($string, $account = NULL, $reset = FALSE) {
   }
   // we have a format so continue to user_access
   return user_access($string, $account, $reset);
+}
+
+
+function recipe_io_page() {
+  $item = menu_get_item();
+  $content = system_admin_menu_block($item);
+  return theme('node_add_list', $content);
+
 }

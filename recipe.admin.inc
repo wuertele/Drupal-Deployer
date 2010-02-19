@@ -15,36 +15,6 @@
  * Settings form for menu callback
  */
 function recipe_admin_settings() {
-  $form['recipe_index_depth'] = array(
-    '#type' => 'select',
-    '#title' => t('Index depth'),
-    '#default_value' => variable_get('recipe_index_depth', 0),
-    '#options' => array(0 => t('All Terms'), 1 => "1", 2 => "2", 3 => "3", 4 => "4", 5 => "5", 6 => "6"),
-    '#description' => t('Defines how many levels of terms should be displayed on any given recipe index page. For example, if you select 1 then only one level of the recipe index tree will be displayed at a time.'),
-  );
-  $form['recipe_recent_box_enable'] = array(
-    '#type' => 'radios',
-    '#title' => t('Recent recipes box'),
-    '#default_value' => variable_get('recipe_recent_box_enable', 1),
-    '#options' => array(t('Disabled'), t('Enabled')),
-    '#description' => t('Enables or disables the recent recipes box on the recipes index page.'),
-    '#required' => FALSE,
-  );
-  $form['recipe_recent_box_title'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Box title'),
-    '#default_value' => variable_get('recipe_recent_box_title', t('Latest recipes')),
-    '#size' => 35,
-    '#maxlength' => 255,
-    '#description' => t('Title of the recent recipes box on the recipes index page.'),
-  );
-  $form['recipe_recent_display'] = array(
-    '#type' => 'select',
-    '#title' => t('Recipes to display'),
-    '#default_value' => variable_get('recipe_recent_display', 5),
-    '#options' => drupal_map_assoc(array(0, 5, 10, 15)),
-    '#description' => t('Sets the number of recent recipes that will be displayed in the Recent Recipes box. (0 = not displayed).'),
-  );
   $form['recipe_help'] = array(
     '#type' => 'textarea',
     '#title' => t('Explanation or submission guidelines'),
@@ -80,5 +50,89 @@ function recipe_admin_settings() {
     '#description' => t('Hides or shows the Summary/Yield form.'),
     '#required' => FALSE,
   );
+  return system_settings_form($form);
+}
+
+
+/**
+ * Implementation of hook_settings()
+ */
+function recipe_index_settings_form() {
+  $form = array();
+  if (!module_exists('recipe')) {
+    drupal_set_message(t('The &quot;recipe&quot; module is disabled or not installed. Recipes will not function until this is corrected. Check the availability of that module, and enable if needed, in the %modules.',array('%modules'=>l(t('modules administration page'),'admin/modules'))),'error');
+  }
+
+  $form['recipe_catalog'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Recipe index settings'),
+  );
+
+  $form['recipe_catalog']['recipe_index_enable'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable recipes index'),
+    '#return_value' => 1,
+    '#default_value' => variable_get('recipe_index_enable','1'),
+  );
+
+  $form['recipe_catalog']['recipe_index_category_cols'] = array(
+    '#type' => 'select',
+    '#title' => t('Category display columns'),
+    '#default_value' => variable_get('recipe_index_category_cols','2'),
+    '#options' => array(1=>1, 2=>2, 3=>3, 4=>4, 5=>5),
+    '#description' => t('If the recipe index is enabled, this setting controls the number of columns in the table of catagories that appears at the top.'),
+  );
+
+  $form['recipe_recent_box'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Recent recipe box'),
+  );
+
+  $form['recipe_recent_box']['recipe_recent_box_enable'] = array(
+    '#type' => 'radios',
+    '#title' => t('Recent recipes box'),
+    '#default_value' => variable_get('recipe_recent_box_enable', 1),
+    '#options' => array(t('Disabled'), t('Enabled')),
+    '#description' => t('Enables or disables the recent recipes box on the recipes index page.'),
+    '#required' => FALSE,
+  );
+  $form['recipe_recent_box']['recipe_recent_box_title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Box title'),
+    '#default_value' => variable_get('recipe_recent_box_title', t('Latest recipes')),
+    '#size' => 35,
+    '#maxlength' => 255,
+    '#description' => t('Title of the recent recipes box on the recipes index page.'),
+  );
+  $form['recipe_recent_box']['recipe_recent_display'] = array(
+    '#type' => 'select',
+    '#title' => t('Recipes to display'),
+    '#default_value' => variable_get('recipe_recent_display', 5),
+    '#options' => drupal_map_assoc(array(0, 5, 10, 15)),
+    '#description' => t('Sets the number of recent recipes that will be displayed in the Recent Recipes box. (0 = not displayed).'),
+  );
+
+/* CURRENTLY REFACTORING LEVELS
+
+  $form['recipe_catalog']['recipe_index_depth'] = array(
+    '#type' => 'select',
+    '#title' => t('Index depth'),
+    '#default_value' => variable_get('recipe_index_depth', 0),
+    '#options' => array(0 => t('All Terms'), 1 => "1", 2 => "2", 3 => "3", 4 => "4", 5 => "5", 6 => "6"),
+    '#description' => t('Defines how many levels of terms should be displayed on any given recipe index page. For example, if you select 1 then only one level of the recipe index tree will be displayed at a time.'),
+  );
+*/
+
+  $form['recipe_catalog']['recipe_index_catalog_show_child_category_links'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show recipes in child categories'),
+    '#return_value' => 1,
+    '#default_value' => variable_get('recipe_index_catalog_show_child_category_links','1'),
+    '#description' => t('If enabled, the recipe index will list recipes in both the selected category and its children (if the vocabulary in use is hierarchical).'),
+  );
+
+  // The setting above affect the menu system.
+  menu_rebuild();
+
   return system_settings_form($form);
 }
