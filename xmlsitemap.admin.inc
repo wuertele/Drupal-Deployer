@@ -416,6 +416,7 @@ function xmlsitemap_link_bundle_settings_form(array $form_state, $entity, $bundl
     $form['submit'] = array(
       '#type' => 'submit',
       '#value' => t('Save'),
+      '#weight' => 100,
     );
     if (!empty($form_state['ajax'])) {
       $form['submit']['#attributes']['class'] = 'ctools-dialog-button';

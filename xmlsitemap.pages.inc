@@ -78,7 +78,7 @@ function xmlsitemap_get_current_chunk(array $context) {
  * @see xmlsitemap_get_current_context()
  * @see xmlsitemap_get_current_chunk()
  * @see xmlsitemap_get_file_from_context()
- * @see xmlsitemap_file_transfer()
+ * @see xmlsitemap_output_file()
  */
 function xmlsitemap_output_chunk() {
   $original_context = xmlsitemap_get_current_context();
