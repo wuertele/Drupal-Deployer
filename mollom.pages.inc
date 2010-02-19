@@ -13,7 +13,17 @@
  */
 function mollom_captcha_js($type, $session_id) {
   $output = '';
-  $data = array('author_ip' => ip_address(), 'session_id' => $session_id);
+
+  // Extract Mollom session id from form element value.
+  @list($timestamp, $mollom_session_id) = explode('-', $session_id, 2);
+  if (empty($mollom_session_id)) {
+    watchdog('mollom', 'Bogus session id %session.', array('%session' => $session_id), WATCHDOG_WARNING);
+    drupal_json();
+    exit();
+  }
+
+  // Prepare common request data for both CAPTCHA types.
+  $data = array('author_ip' => ip_address(), 'session_id' => $mollom_session_id);
   if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') {
     $data['ssl'] = TRUE;
   }
@@ -37,7 +47,7 @@ function mollom_captcha_js($type, $session_id) {
         $output .= '<embed src="' . $source . '" loop="false" menu="false" quality="high" wmode="transparent" bgcolor="#ffffff" width="110" height="50" align="baseline" allowScriptAccess="sameDomain" allowFullScreen="false" type="application/x-shockwave-flash" pluginspage="http://www.adobe.com/go/getflashplayer_de" />';
         $output .= '</object>';
 
-        $output = '<span class="mollom-captcha">' . $output . '</span>';
+        $output = '<span class="mollom-captcha-content">' . $output . '</span>';
         $output .= ' (<a href="#" class="mollom-image-captcha">' . t('use image CAPTCHA') . '</a>)';
       }
       break;
@@ -47,13 +57,29 @@ function mollom_captcha_js($type, $session_id) {
       if ($response) {
         $output .= '<img src="' . check_plain(url($response['url'])) . '" alt="Mollom CAPTCHA" />';
 
-        $output = '<a href="http://mollom.com" class="mollom-captcha">' . $output . '</a>';
+        $output = '<a href="http://mollom.com" class="mollom-captcha-content">' . $output . '</a>';
         $output .= ' (<a href="#" class="mollom-audio-captcha">' . t('play audio CAPTCHA') . '</a>)';
       }
       break;
   }
 
-  print $output;
+  // Update cached session id for the form.
+  if (!empty($response['session_id'])) {
+    if ($cache = cache_get($mollom_session_id, 'cache_mollom')) {
+      $form_state['mollom'] = $cache->data;
+      $form_state['mollom']['session_id'] = $response['session_id'];
+      cache_set($form_state['mollom']['session_id'], $form_state['mollom'], 'cache_mollom', $timestamp + 21600);
+      // After successfully updating the cache, replace the original session id.
+      $mollom_session_id = $response['session_id'];
+    }
+  }
+
+  // Return new content and new session_id via JSON.
+  $data = array(
+    'content' => $output,
+    'session_id' => $timestamp . '-' . $mollom_session_id,
+  );
+  drupal_json($data);
   exit();
 }
 
