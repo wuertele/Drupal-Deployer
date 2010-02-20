@@ -125,6 +125,10 @@ function user_service_logout() {
  *   Object. The user object with all user data.
  */
 function user_service_save($account) {
+  // Load the required includes for saving profile information
+  // with drupal_execute().
+  module_load_include('inc', 'user', 'user.pages');
+  
   // if uid is present then update, otherwise insert
   $update = user_load($account['uid']);	
   $form_state = array();
