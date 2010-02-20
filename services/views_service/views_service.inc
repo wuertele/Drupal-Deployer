@@ -44,6 +44,16 @@ function views_service_get($view_name, $display_id = 'default', $args = array(),
     $view->set_display($display_id);
     $view->execute();
     $result = $view->result;
+
+    $row_plugin = $view->display_handler->get_option('row_plugin');
+    // If row plugin is node, then we should load each node
+    if ($row_plugin == 'node') {
+      $nodes = array();
+      foreach ($view->result as $row) {
+        $nodes[] = services_node_load(node_load($row->nid));
+      }
+      $result = $nodes;
+    }
   }
   else {
     // We want to keep the result an array.
