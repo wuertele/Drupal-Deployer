@@ -132,6 +132,15 @@ function user_service_save($account) {
   // if uid is present then update, otherwise insert
   $update = user_load($account['uid']);	
   $form_state = array();
+
+  // Any logged in user is by default authenticated,
+  // and leaving this role set in the user's roles array
+  // causes big problems because of a FAPI hack that controls
+  // this checkbox. Therefore we just force it to 0 here.
+  if (isset($account['roles'][2])) {
+    $account['roles'][2] = 0;
+  }
+
   if (!isset($update->uid)) {
     // register a new user
     $form_state['values'] = $account;
@@ -151,14 +160,6 @@ function user_service_save($account) {
       unset($account['category']);
     }
     
-    // Any logged in user is by default authenticated,
-    // and leaving this role set in the user's roles array
-    // causes big problems because of a FAPI hack that controls
-    // this checkbox. Therefore we just force it to 0 here.
-    if (isset($account['roles'][2])) {
-      $account['roles'][2] = 0;
-    }
-
     // Drop any passed in values into the $account var. Anything
     // unused by the form just gets ignored.
     foreach ($account as $key => $value) {
