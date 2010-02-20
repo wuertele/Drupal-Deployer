@@ -18,7 +18,7 @@ $(document).ready(function() {
       $('ul.tabs.primary li').each(function() {
         $(this).addClass('admin-menu-tab').appendTo('#admin-menu > ul');
       });
-      $('ul.tabs.secondary').appendTo('#admin-menu > ul > li.admin-menu-tab.active');
+      $('ul.tabs.secondary').appendTo('#admin-menu > ul > li.admin-menu-tab.active').removeClass('secondary');
     }
     // Collapse fieldsets on Modules page. For why multiple selectors see #111719.
     if (Drupal.settings.admin_menu.tweak_modules) {
