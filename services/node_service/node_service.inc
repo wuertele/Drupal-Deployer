@@ -143,14 +143,14 @@ function node_service_save($edit) {
     // If the submitted node has no author (for instance if it was
     // created programmatically by hand) then set the currently logged 
     // in user as the author. 
-    if (!$edit['uid']) {
+    if (!$edit->uid) {
       global $user;
-      $edit['uid'] = $user->uid;
+      $edit->uid = $user->uid;
     }
 
     // Setup form_state
     $form_state = array();
-    $form_state['values'] = $edit;
+    $form_state['values'] = (array) $edit;
     $form_state['values']['op'] = t('Save');
 
     $ret = drupal_execute($edit['type'] .'_node_form', $form_state, (object)$edit);
