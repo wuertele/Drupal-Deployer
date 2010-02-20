@@ -19,8 +19,8 @@
  */
 function comment_service_save($comment) {
   // If the submitted comment does not contain a uid, set it to anonymous.
-  if (isset($comment->uid)) {
-    $uid = 0;
+  if (!isset($comment->uid)) {
+    $comment->uid = 0;
   }
 
   // If the submitted comment does not contain a nid, then return an error.
