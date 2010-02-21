@@ -11,9 +11,10 @@
  * Returns the given resource as a set of services methods.
  *
  * @param array $resource
- *  A resource definition.
+ *   A resource definition.
+ *
  * @return array
- *  An array of services method definitions
+ *   An array of services method definitions
  */
 function _services_resource_as_services($resource) {
   static $controllers = array(
@@ -75,9 +76,10 @@ function _services_resource_controller_as_service($resource, $name, $controller,
  * the resource 'service_menu'.
  *
  * @param array $services
- *  An array of service methods.
+ *   An array of service methods.
+ *
  * @return array
- *  An array of resource definitions.
+ *   An array of resource definitions.
  */
 function _services_services_as_resources($services) {
   $resources = array();
