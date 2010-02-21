@@ -12,8 +12,7 @@
  * If a cid is specified in $comment->cid then that comment is edited.
  *
  * @param $comment
- *   An array matching the form values that would be submitted in the comment
- *   edit form.
+ *   An object as would be returned from comment_load().
  * @return
  *   Unique identifier for the comment (cid) or FALSE if there was a problem.
  */
