@@ -1460,7 +1460,7 @@ function recipe_import_form_submit($form, &$form_state) {
       $ingredient = new stdClass();
       $ingredient->quantity = $i['quantity'];
       if ($i['unit_obj'] != FALSE) {
-        $ingredient->unit_id = $i['unit_obj']['id'];
+        $ingredient->unit_id = $i['unit_obj']->id;
       }
       $ingredient->name = $i['ingredient_name'];
 
@@ -1492,7 +1492,7 @@ function recipe_import_form_submit($form, &$form_state) {
  *    'quantity' =>
  *    'ingredient_name' =>
  *    'unit_name' =>
- *    'unit_obj' => comes from database lookup: see recipe_unit_fuzzymatch().  ==FALSE if no-match
+ *    'unit_obj' => stdClass, comes from database lookup: see recipe_unit_fuzzymatch().  ==FALSE if no-match
  *    'ingre_obj' => comes from database lookup: see recipe_ingredient_match().  ==FALSE if no-match
  * );
  *
@@ -1517,32 +1517,67 @@ function recipe_import_parse($form, &$form_state) {
  * Fetch a recipe_unit.
  *
  * @param $recipe_name_or_abbrev
- *   A string representing an approximation of a unit abbreviation or a unit name.
+ *   A string representing a unit of measure abbreviation or a unit name.
  * @return
- *   A recipe_unit array upon successful load or FALSE
+ *   A recipe_unit stdClass upon successful load or FALSE
  */
 function recipe_unit_fuzzymatch($recipe_name_or_abbrev, $reset = FALSE) {
   static $units;
 
   if (!isset($units) || $reset) {
-    // get all units to prepare for fuzzy match
+    // Get all units to prepare for fuzzy match.
     $units = array();
-    $result = db_query("SELECT id, name, abbreviation FROM {recipe_unit}");
+    $order_by = '';
+    // US measure preferred.
+    if ( variable_get('recipe_preferred_system_of_measure', 0) == 0 ) {
+      $order_by = 'order by metric asc';
+    }
+    // Metric measure preferred.
+    else {
+      $order_by = 'order by metric desc';
+    }
+    $result = db_query("SELECT id, name, abbreviation, aliases FROM {recipe_unit} $order_by");
     while ($row = db_fetch_object($result)) {
       $units[] = $row;
     }
   }
+
+  // First pass unit case must match exactly( T=Tbsp, t=tsp ).
   foreach ($units as $u) {
-    $name_pat = '^'. $u->name . 's{0,1}$';
-    $abbrev_pat = '^'. $u->abbreviation . 's{0,1}\.{0,1}$';
-    if (preg_match("/$name_pat|$abbrev_pat/i", $recipe_name_or_abbrev)) {
-      return array(
-        'id' => $u->id,
-        'name' => $u->name,
-        'abbreviation' => $u->abbreviation
-      );
+    $pats = array();
+    // Add name pattern.
+    $pats[] = '^'. $u->name . 's{0,1}$';
+    // Add abbreviation pattern.
+    $pats[] = '^'. $u->abbreviation . 's{0,1}\.{0,1}$';
+    // Add comma separated alias patterns.
+    $aliases = explode(',', $u->aliases);
+    foreach ($aliases as $alias) {
+      $pats[] = '^'. trim($alias) . 's{0,1}\.{0,1}$';
+    }
+    $search_pat = implode('|', $pats);
+    if (preg_match("/$search_pat/", $recipe_name_or_abbrev)) {
+      return $u;
     }
   }
+
+  // Second pass unit case doesn't matter.
+  foreach ($units as $u) {
+    $pats = array();
+    // Add name pattern.
+    $pats[] = '^'. $u->name . 's{0,1}$';
+    // Add abbreviation pattern.
+    $pats[] = '^'. $u->abbreviation . 's{0,1}\.{0,1}$';
+    // Add comma separated alias patterns.
+    $aliases = explode(',', $u->aliases);
+    foreach ($aliases as $alias) {
+      $pats[] = '^'. trim($alias) . 's{0,1}\.{0,1}$';
+    }
+    $search_pat = implode('|', $pats);
+    if (preg_match("/$search_pat/i", $recipe_name_or_abbrev)) {
+      return $u;
+    }
+  }
+
   return FALSE;
 }
 

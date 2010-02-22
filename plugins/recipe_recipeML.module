@@ -226,7 +226,7 @@ function recipe_import_element_end($parser, $name) {
         if (!$recipe->notes) $recipe->notes = "Imported from RecipeML file";
         if (!$recipe->title) {
           $recipe->title = "RecipeML autotitle";
-        } 
+        }
         else {
           if (!$recipe->teaser) {
             $recipe->teaser = $recipe->title ." recipe";
@@ -251,11 +251,28 @@ function recipe_import_element_end($parser, $name) {
         else $ingredient->quantity = trim($data_string);
         break;
       case 'UNIT':
-        if ($unit = recipe_unit_from_name(trim($data_string)))
+        if ($unit = recipe_unit_fuzzymatch(trim($data_string))) {
           $ingredient->unit_id = $unit->id;
+        }
+        else {
+          if ($unit = recipe_unit_from_name('Unit')) {
+            $ingredient->unit_id = $unit->id;
+            if (strlen($ingredient->name) > 0) {
+              $ingredient->name = $ingredient->name .' '. trim($data_string);
+            }
+            else {
+              $ingredient->name = trim($data_string);
+            }
+          }
+        }
         break;
       case 'ITEM':
-        $ingredient->name = trim($data_string);
+        if (strlen($ingredient->name) > 0) {
+          $ingredient->name = trim($data_string) .' '. $ingredient->name;
+        }
+        else {
+          $ingredient->name = trim($data_string);
+        }
         break;
       case 'YIELD':
         $yield = FALSE;

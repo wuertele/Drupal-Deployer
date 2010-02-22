@@ -53,12 +53,22 @@ function recipe_admin_settings() {
 
   $form['recipe_unit_display'] = array(
     '#type' => 'radios',
-    '#title' => t('Ingredient Unit Display'),
+    '#title' => t('Ingredient unit display'),
     '#default_value' => variable_get('recipe_unit_display', 0),
     '#options' => array(t('Abbreviation'), t('Full name')),
     '#description' => t('Display ingredient units like Tbsp or Tablespoon.'),
-    '#required' => FALSE,
+    '#required' => TRUE,
   );
+
+  $form['recipe_preferred_system_of_measure'] = array(
+    '#type' => 'radios',
+    '#title' => t('Preferred system of measure'),
+    '#default_value' => variable_get('recipe_preferred_system_of_measure', 0),
+    '#options' => array(t('U.S. customary units'), t('Metric')),
+    '#description' => t('Which system of measure should be preferred where it is ambiguous.'),
+    '#required' => TRUE,
+  );
+
   return system_settings_form($form);
 }
 
