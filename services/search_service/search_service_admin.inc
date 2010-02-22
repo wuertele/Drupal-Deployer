@@ -7,7 +7,7 @@
  */
 
 /**
- * Form to choose which search services
+ * Menu callback to set content search service settings.
  */
 function search_service_admin() {
 
