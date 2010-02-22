@@ -125,8 +125,9 @@ function recipe_index_page_form() {
   );
   $i = 0;
   if (count($terms_to_list)) {
-    $sql = "SELECT DISTINCT n.nid, n.title FROM {node} n, {term_node} tn WHERE n.nid=tn.nid AND tn.tid IN (%s) AND n.type='recipe' AND n.status=1 ORDER BY n.title";
-    $result = db_query($sql, implode(',', array_keys($terms_to_list)));
+    $placeholders = implode(',', array_fill(0, count(array_keys($terms_to_list)), "%d"));
+    $sql = "SELECT DISTINCT n.nid, n.title FROM {node} n, {term_node} tn WHERE n.nid=tn.nid AND tn.tid IN ($placeholders) AND n.type='recipe' AND n.status=1 ORDER BY n.title";
+    $result = db_query($sql, array_keys($terms_to_list));
     while ($node = db_fetch_object($result)) {
       $node_html = node_view(node_load($node->nid), true, false, true);
       $form['nodes'][$i++] = array(
