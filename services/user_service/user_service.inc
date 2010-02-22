@@ -7,10 +7,12 @@
  */
 
 /**
- * Delete an user.
+ * Delete a user.
  *
  * @param $uid
- *   Number. The user ID.
+ *   UID of the user to be deleted.
+ *
+ * @see user_delete()
  */
 function user_service_delete($uid) {
   $account = user_load($uid);
@@ -24,10 +26,10 @@ function user_service_delete($uid) {
 }
 
 /**
- * Check if the user is allowed to delete the user.
+ * Check to see if the services account is allowed to delete a user.
  *
  * @param $uid
- *   Number. The user ID.
+ *   UID of the user to be deleted.
  */
 function user_service_delete_access($uid) {
   global $user;
@@ -39,7 +41,12 @@ function user_service_delete_access($uid) {
  * Get user details.
  *
  * @param $uid
- *   Number. The user ID.
+ *   UID of the user to be loaded.
+ *
+ * @return
+ *   A user object.
+ *
+ * @see user_load()
  */
 function user_service_get($uid) {
   $account = user_load($uid);
@@ -63,12 +70,17 @@ function user_service_get_access($uid) {
 }
 
 /**
- * Login a user
+ * Login a user using the specified credentials.
+ *
+ * Note this will transfer a plaintext password.
  *
  * @param $username
- *   String. The username.
+ *   Username to be logged in.
  * @param $password
- *   String. The user password.
+ *   Password, must be plain text and not hashed.
+ *
+ * @return
+ *   A valid session object.
  */
 function user_service_login($username, $password) {
   global $user;
@@ -96,7 +108,7 @@ function user_service_login($username, $password) {
 }
 
 /**
- * Logout user
+ * Logout the current user.
  */
 function user_service_logout() {
   global $user;
@@ -119,10 +131,17 @@ function user_service_logout() {
 }
 
 /**
- * Save user details.
+ * Save user data.
  *
- * @param $user_data
- *   Object. The user object with all user data.
+ * This can create a new user or modify an existing user, depending on the
+ * information passed to the function. This function uses drupal_execute()
+ * and as such exepects all input to match the submitting form in question.
+ *
+ * @param $account
+ *   An array of account information.
+ *
+ * @return
+ *   The UID of the user whose information was saved.
  */
 function user_service_save($account) {
   // Load the required includes for saving profile information
@@ -182,10 +201,11 @@ function user_service_save($account) {
 }
 
 /**
- * Check if the user is allowed to get the user data.
+ * Check if the services account is allowed to create or edit user data.
  *
- * @param $uid
- *   Number. The user ID.
+ * @param $account
+ *   An array of user account information (note that UID is the only
+ *   property used.)
  */
 function user_service_save_access($account) {
   global $user;
