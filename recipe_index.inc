@@ -141,15 +141,6 @@ function recipe_index_page_form() {
   return $form;
 }
 
-/**
- * Display a view of the recipes
- */
-function recipe_index_page() {
-  $html = "";
-  $html .= drupal_get_form('recipe_index_page_form');
-  return $html;
-}
-
 function theme_recipe_index_category_children($children) {
   $kids = "";
   foreach ($children as $i=>$kid) {
