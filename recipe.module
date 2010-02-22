@@ -1118,6 +1118,10 @@ function recipe_theme() {
       'function' => 'theme_recipe_node',
       'arguments' => array('node' => NULL, 'yield_form' => TRUE, 'yield_arg' => NULL),
     ),
+    'recipe_ingredients' => array(
+      'function' => 'theme_recipe_ingredients',
+      'arguments' => array('ingredients' => NULL, 'factor' => 1),
+    ),
     'recipe_index' => array(
       'function' => 'theme_recipe_index',
       'arguments' => array('name' => NULL, 'index_list' => NULL),
@@ -1206,35 +1210,6 @@ function theme_recipe_node($node, $display_yield_form = TRUE, $yield_arg = NULL)
     $yield = $node->yield;
   }
 
-  // Construct the $ingredients[] array.
-  if ($node->ingredients) {
-    foreach ($node->ingredients as $ingredient) {
-      $ingredient = (object)$ingredient;
-      if (isset($ingredient->quantity) && $ingredient->name) {
-        if (!$ingredient->abbreviation) {
-          $ingredient->abbreviation = recipe_unit_abbreviation($ingredient->unit_id);
-        }
-        if ($ingredient->abbreviation == '') {
-          $ingredient->abbreviation = '&nbsp;';
-        }
-        if ($ingredient->quantity > 0) {
-          $ingredient->quantity *= $factor;
-        }
-        else {
-          $ingredient->quantity = '&nbsp;';
-        }
-        if (variable_get('recipe_fraction_display', t('{%d} %d&frasl;%d'))) {
-          $ingredient->quantity = recipe_ingredient_quantity_from_decimal($ingredient->quantity);
-        }
-        if (!empty($ingredient->link)) {
-          $ingredient->name = l($ingredient->name, 'node/'. $ingredient->link);
-        }
-
-        $ingredients[] = '<div class="qty">'. $ingredient->quantity .'</div><div class="acronym-wrap"><acronym ' . drupal_attributes(array('title' => recipe_unit_name($ingredient->unit_id))) . '">' . $ingredient->abbreviation .'</acronym></div> '. $ingredient->name;
-      }
-    }
-  }
-
   // Construct the summary
   $summary = '<table>';
   $summary .= '<tr><th>'. t('Yield') .'</th><td>'. $yield .'</td></tr>';
@@ -1277,7 +1252,7 @@ function theme_recipe_node($node, $display_yield_form = TRUE, $yield_arg = NULL)
     $output .= '<div class="recipe-summary" style="display:none">'. theme('box', t('Summary'), $summary ) .'</div>';
   }
   $output .= '<div class="recipe-description">'. theme('box', t('Description'), $node->body) .'</div>';
-  $output .= '<div class="recipe-ingredients">'. theme('box', t('Ingredients'), theme('item_list', $ingredients)) .'</div>';
+  $output .= '<div class="recipe-ingredients">'. theme('box', t('Ingredients'), theme('recipe_ingredients', $node->ingredients, $factor)) .'</div>';
   $output .= '<div class="recipe-instructions">'. theme('box', t('Instructions'), $node->instructions) .'</div>';
   if ($node->notes !== '') {
     $output .= '<div class="recipe-notes">'. theme('box', t('Notes'), $node->notes) .'</div>';
@@ -1285,6 +1260,43 @@ function theme_recipe_node($node, $display_yield_form = TRUE, $yield_arg = NULL)
 
   return $output;
 }
+
+
+function theme_recipe_ingredients($ingredients = NULL, $factor = 1) {
+  $output = '';
+  // Construct the $ingredients[] array.
+  if ($ingredients != NULL) {
+    $output .= '<table>';
+    foreach ($ingredients as $ingredient) {
+      $ingredient = (object)$ingredient;
+      if (isset($ingredient->quantity) && $ingredient->name) {
+        if (!$ingredient->abbreviation) {
+          $ingredient->abbreviation = recipe_unit_abbreviation($ingredient->unit_id);
+        }
+        if ($ingredient->abbreviation == '') {
+          $ingredient->abbreviation = '&nbsp;';
+        }
+        if ($ingredient->quantity > 0) {
+          $ingredient->quantity *= $factor;
+        }
+        else {
+          $ingredient->quantity = '&nbsp;';
+        }
+        if (variable_get('recipe_fraction_display', t('{%d} %d&frasl;%d'))) {
+          $ingredient->quantity = recipe_ingredient_quantity_from_decimal($ingredient->quantity);
+        }
+        if (!empty($ingredient->link)) {
+          $ingredient->name = l($ingredient->name, 'node/'. $ingredient->link);
+        }
+
+        $output .= '<tr><td class="qty">'. $ingredient->quantity .'</td><td class="acronym"><acronym ' . drupal_attributes(array('title' => recipe_unit_name($ingredient->unit_id))) . '">' . $ingredient->abbreviation .'</acronym></td><td  class="ingredient">'. $ingredient->name . '</td></tr>';
+      }
+    }
+    $output .= '</table>';
+  }
+  return $output;
+}
+
 
 function recipe_custom_yield_form($form_id, $node) {
   $form['custom_yield_container'] = array(
