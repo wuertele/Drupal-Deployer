@@ -50,6 +50,15 @@ function recipe_admin_settings() {
     '#description' => t('Hides or shows the Summary/Yield form.'),
     '#required' => FALSE,
   );
+
+  $form['recipe_unit_display'] = array(
+    '#type' => 'radios',
+    '#title' => t('Ingredient Unit Display'),
+    '#default_value' => variable_get('recipe_unit_display', 0),
+    '#options' => array(t('Abbreviation'), t('Full name')),
+    '#description' => t('Display ingredient units like Tbsp or Tablespoon.'),
+    '#required' => FALSE,
+  );
   return system_settings_form($form);
 }
 
