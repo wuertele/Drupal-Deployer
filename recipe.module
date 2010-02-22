@@ -573,7 +573,16 @@ function recipe_unit_options() {
   static $unit_rs;
 
   if (!isset($unit_rs)) {
-    $unit_rs = db_query("SELECT id, type, name, abbreviation FROM {recipe_unit} ORDER BY type ASC, metric");
+    $order_by = '';
+    // US measure preferred.
+    if ( variable_get('recipe_preferred_system_of_measure', 0) == 0 ) {
+      $order_by = 'type asc, metric asc, name';
+    }
+    // Metric measure preferred.
+    else {
+      $order_by = 'type asc, metric desc, name';
+    }
+    $unit_rs = db_query("SELECT id, type, name, abbreviation FROM {recipe_unit} ORDER BY $order_by");
     $options = array();
 
     while ($r = db_fetch_object($unit_rs)) {
@@ -1526,9 +1535,9 @@ function recipe_unit_fuzzymatch($recipe_name_or_abbrev, $reset = FALSE) {
 
   // Don't match empty strings.
   if ( $recipe_name_or_abbrev == '' ) {
-  	return FALSE;
+    return FALSE;
   }
-  
+
   if (!isset($units) || $reset) {
     // Get all units to prepare for fuzzy match.
     $units = array();
