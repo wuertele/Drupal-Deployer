@@ -249,7 +249,7 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
     $maxsize=128;   //default max name length
 
     $res=array();
-    $pat = "/^(?<name>.*?)_(?<n>[0-9]*)$/";
+    $pat = "/^(?P<name>.*?)_(?P<n>[0-9]*)$/";
     if (preg_match_all($pat, $oldname, $res)) {     // oldname like 'name_nr'
       $name=$res['name'][0];
       $num=$res['n'][0]+1;
