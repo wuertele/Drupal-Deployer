@@ -91,15 +91,7 @@ function recipe_index_settings_form() {
     '#type' => 'checkbox',
     '#title' => t('Enable recipes index'),
     '#return_value' => 1,
-    '#default_value' => variable_get('recipe_index_enable','1'),
-  );
-
-  $form['recipe_catalog']['recipe_index_category_cols'] = array(
-    '#type' => 'select',
-    '#title' => t('Category display columns'),
-    '#default_value' => variable_get('recipe_index_category_cols','2'),
-    '#options' => array(1=>1, 2=>2, 3=>3, 4=>4, 5=>5),
-    '#description' => t('If the recipe index is enabled, this setting controls the number of columns in the table of catagories that appears at the top.'),
+    '#default_value' => variable_get('recipe_index_enable',1),
   );
 
   $form['recipe_recent_box'] = array(
@@ -131,23 +123,20 @@ function recipe_index_settings_form() {
     '#description' => t('Sets the number of recent recipes that will be displayed in the Recent Recipes box. (0 = not displayed).'),
   );
 
-/* CURRENTLY REFACTORING LEVELS
-
   $form['recipe_catalog']['recipe_index_depth'] = array(
     '#type' => 'select',
     '#title' => t('Index depth'),
-    '#default_value' => variable_get('recipe_index_depth', 0),
-    '#options' => array(0 => t('All Terms'), 1 => "1", 2 => "2", 3 => "3", 4 => "4", 5 => "5", 6 => "6"),
-    '#description' => t('Defines how many levels of terms should be displayed on any given recipe index page. For example, if you select 1 then only one level of the recipe index tree will be displayed at a time.'),
+    '#default_value' => variable_get('recipe_index_depth', 4),
+    '#options' => array(1 => "1", 2 => "2", 3 => "3", 4 => "4", 5 => "5", 6 => "6", 1000 => t('All Levels')),
+    '#description' => t('Defines how many levels of terms should be displayed on any given recipe index page.'),
   );
-*/
 
   $form['recipe_catalog']['recipe_index_catalog_show_child_category_links'] = array(
     '#type' => 'checkbox',
     '#title' => t('Show recipes in child categories'),
     '#return_value' => 1,
-    '#default_value' => variable_get('recipe_index_catalog_show_child_category_links','1'),
-    '#description' => t('If enabled, the recipe index will list recipes in both the selected category and its children (if the vocabulary in use is hierarchical).'),
+    '#default_value' => variable_get('recipe_index_catalog_show_child_category_links', 1),
+    '#description' => t('If enabled, the recipe index will list recipes in the current category and its children down to the selected Index Depth.'),
   );
 
   // The setting above affect the menu system.

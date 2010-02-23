@@ -2,260 +2,168 @@
 // $Id$
 
 
-function recipe_index_page_form() {
+function recipe_index_page() {
   drupal_add_css(drupal_get_path('module', 'recipe') .'/recipe_index.css', 'module');
-  $form = array();
-  $form['#theme'] = 'recipe_index_page_form';
 
-  // This array will hold the level we are showing
-  // as $tid => $name
-  $terms = array();
-  $args = explode(',',arg(1));
-  foreach ($args as $i=>$term) {
-    if (intval($term)) {
-      $tid = intval($term);
-      $term = taxonomy_get_term($tid);
-      $terms[$tid] = $term->name;
-    }
-  }
-  if (count($terms)) {
-    $top_level = false;
-  } else {
-    $top_level = true;
-    // Go get all the top-level terms for applicable vocabs
+  // You are viewing a term
+  $tree = array('current_term' => FALSE, 'term_tree'=>array(), 'node_list' => FALSE, 'recent_list' => FALSE);
+  $term = NULL;
+  if ($tid = intval(arg(1))) {
+    $term = taxonomy_get_term($tid);
     $vocabs = taxonomy_get_vocabularies('recipe');
-    // If no vocabs are defined, we can't go any further, so abort out
-    // with an administrator warning.
-    if (! count($vocabs)) {
-      $vars = array();
-      $msg = "No categories are defined for the recipe module.";
-      if (user_access('administer taxonomy')) {
-        $vars['!admin_link'] = l(t('category administration'),'admin/content/taxonomy');
-        $msg .= " (go to !admin_link)";
-      }
-      $form['message'] = array(
-        '#type'=>'markup',
-        '#value'=>t($msg, $vars),
-      );
-      watchdog('recipe', $msg, $vars, WATCHDOG_WARNING, l(t('administer'), 'admin/content/taxonomy'));
-      return $form;
+    if (isset($vocabs[$term->vid])) {
+      $tree['current_term'] = $term;
+      $tree['term_tree'][] = taxonomy_get_tree($term->vid, $tid, -1, variable_get('recipe_index_depth', 1));
     }
-    foreach ($vocabs as $vocab) {
-      $tree = taxonomy_get_tree($vocab->vid, 0, -1, 1);
-      foreach ($tree as $term) {
-        $terms[$term->tid] = $term->name;
+  }
+  // You are in the top level.
+  else {
+    if ($vocabs = taxonomy_get_vocabularies('recipe')) {
+      foreach ($vocabs as $vocab) {
+        $tree['term_tree'][] = taxonomy_get_tree($vocab->vid, 0, -1, variable_get('recipe_index_depth', 1));
       }
     }
   }
 
-  // At this point, the array $terms contains $tid=>$name for all of the
-  // terms at the current level. For the top level, it will often have
-  // multiple elements. For lower levels, typically only one unless the
-  // search specified a comma-separated list in the URL, e.g.,
-  // path "links/weblink/2,5,7" .
-
-  $all_parents = array();
-  $weight = 0;
-  foreach ($terms as $tid=>$name) {
-    $node_count = taxonomy_term_count_nodes($tid);
-    $node_count = '('. $node_count .')';
-    $element = array('#tree'=>true, '#theme'=>'recipe_index_category', '#weight'=>$weight++);
-    $element['term'] = array(
-      '#type' => 'markup',
-      '#tree' => true,
-      '#value' => l($name . $node_count, 'recipe/'.$tid),
-    );
-    $term_nodes[$tid] = array();
-    $result = db_query("SELECT n.nid, n.title FROM {node} n, {term_node} tn WHERE n.nid=tn.tid AND tn.tid=%d AND n.type='recipe' AND n.status=1 ORDER BY n.title", $tid);
-    while ($node = db_fetch_object($result)) {
-      $term_nodes[$tid][] = $node;
+  // You are on the top level, don't display every recipe.
+  if ( $term == NULL ) {
+    if (variable_get('recipe_recent_box_enable', 1) == 1) {
+      $tree['recent_list'] = recipe_get_latest(variable_get('recipe_recent_display', 5));
     }
-    $children = taxonomy_get_children($tid);
-    $element['children'] = array(
-      '#theme' => 'recipe_index_category_children',
-      '#tree' => true,
-    );
-    $weight2 = 0;
-    foreach ($children as $child) {
-      $node_count = taxonomy_term_count_nodes($child->tid);
-      $node_count = '('. $node_count .')';
-      $element['children'][] = array(
-        '#type' => 'markup',
-        '#value' => l($child->name . $node_count, 'recipe/'.$child->tid),
-        '#weight' => $weight2++,
-        '#prefix' => '<li class="recipe_index_category_child">',
-        '#suffix' => '</li>',
-      );
+  }
+  // You are view a term, build the node list.
+  else {
+    if ( variable_get('recipe_index_catalog_show_child_category_links', 0) == 0 ) {
+      $tree['node_list'] = recipe_get_nodes_for_terms(array($term->tid));
     }
-    $parents = taxonomy_get_parents($tid);
-    foreach ($parents as $parent) {
-      $all_parents[$parent->tid] = l($parent->name, 'recipe/'.$parent->tid);
+    else {
+      $term_list = array($term->tid);
+      foreach ($tree['term_tree'] as $vocab) {
+          foreach ($vocab as $t) {
+            $term_list[] = $t->tid;
+          }
+      }
+      $tree['node_list'] = recipe_get_nodes_for_terms($term_list);
     }
-    $form[$tid] = $element;
   }
 
-  if ($top_level) {
-    $title = t('Recipes');
-  } else {
-    $title = t('Recipes: %topics', array('%topics'=>implode(', ',$terms)));
-    $breadcrumbs = drupal_get_breadcrumb();
-    $breadcrumbs[] = l(t('Recipes'), 'recipe/index');
-    if (count($all_parents)) {
-      $breadcrumbs[] = implode(', ', $all_parents);
-    }
-    drupal_set_breadcrumb($breadcrumbs);
-  }
-  drupal_set_title($title);
-
-  // List the nodes at the current level
-
-  $terms_to_list = array();
-  if(variable_get('recipe_index_catalog_show_child_category_links','1')) {
-    $terms_to_list = $terms;
-    if (!$top_level) {
-      $terms_to_list += $children;
-    }
-  } else {
-    if (!$top_level)
-      $terms_to_list[$tid] = $term;
-  }
-
-  $form['nodes'] = array(
-    '#tree' => true,
-  );
-  $i = 0;
-  if (count($terms_to_list)) {
-    $placeholders = implode(',', array_fill(0, count(array_keys($terms_to_list)), "%d"));
-    $sql = "SELECT DISTINCT n.nid, n.title FROM {node} n, {term_node} tn WHERE n.nid=tn.nid AND tn.tid IN ($placeholders) AND n.type='recipe' AND n.status=1 ORDER BY n.title";
-    $result = db_query($sql, array_keys($terms_to_list));
-    while ($node = db_fetch_object($result)) {
-      $node_html = node_view(node_load($node->nid), true, false, true);
-      $form['nodes'][$i++] = array(
-        '#type' => 'markup',
-        '#value' => $node_html,
-      );
-    }
-  } else {
-    $html .= t("<p>There are no recipes defined at this level of the category tree.</p>\n");
-  }
-
-  return $form;
+  return theme('recipe_index_page', $tree);
 }
 
-function theme_recipe_index_category_children($children) {
-  $kids = "";
-  foreach ($children as $i=>$kid) {
-    if (is_int($i)) {
-      $kids .= drupal_render($kid);
-    }
-  }
-  if (! empty($kids)) {
-    $output = '<ul class="recipe_index_category_children">';
-    $output .= $kids;
-    $output .= '</ul>';
-  }
-  return $output;
-}
 
-function theme_recipe_index_category($element) {
-//print("_category<br>");
-  $output = '<div class="recipe_index_category">';
-  $output .= '<div class="recipe_index_category_parent">' . drupal_render($element['term']) . '</div>';
-  if (count($element['children'])) {
-    $output .= drupal_render($element['children']);
-  }
-  $output .= '</div>';
-  return $output;
-}
+function theme_recipe_index_page($tree = NULL) {
 
-function theme_recipe_index_page_form($form) {
-  // First, check for a message. If that's set, then nothing else applies.
-  if (is_array($form['message'])) {
-    return drupal_render($form['message']);
-  }
-  $output = "<div class='recipe_links_section'>";
-  if (user_access('create recipes')) {
-    $output .= l('Add a new Recipe', 'node/add/recipe');
-  }
-  $output .= "</div>";
-  $output .= '<h3 class="recipe_index_section">' . t('Categories') . '</h3>';
-
-  $columns = variable_get('recipe_index_category_cols','2');
-  // Current column (0, 1,...$columns-1)
-  $col = 0;
-  $row = 0;
-  $table = array();
-  foreach ($form as $i=>$element) {
-    if (is_int($i)) {
-      if (! is_array($table[$row])) {
-        $table[$row] = array();
-        $table[$row]['data'] = array();
+  // Render the term tree first.
+  $output = '<div class="recipe_index_category_list">';
+  $output1 = '';
+  foreach ($tree['term_tree'] as $vocab) {
+    $output1 .= '<ul class="recipe_index_category_parents">';
+    $depth = -1;
+    foreach ($vocab as $term) {
+      // You are just starting.
+      if ( $depth == -1 ) {
+        // Do nothing but prevent further checks
       }
-      $table[$row]['data'][$col++] = drupal_render($element);
-      if ($col >= $columns) {
-        $col = 0;
-        $row++;
+      // You need to close the previous list item
+      elseif ($term->depth == $depth) {
+        $output1 .= '</li>';
       }
-    }
-  }
-  // Finish out a row
-  while ($col < $columns) {
-    $table[$row]['data'][$col++] = '';
-  }
-  // Apply row attributes
-  foreach (array_keys($table) as $i) {
-    $table[$i]['class'] = 'recipe_index_category_row';
-    $table[$i]['valign'] = 'top';   // STUB for testing without CSS file
-  }
-  $output .= theme('table',NULL,$table);
+      // Go down a level.
+      elseif ($term->depth > $depth) {
+        $output1 .= '<ul class="recipe_index_category_children">';
+      }
+      // Go up some levels.
+      while ($term->depth < $depth) {
+        $output1 .=  '</li></ul>';
+        $depth--;
+      }
 
-  if ( strlen(arg(1)) == 0 ) {
-    if (variable_get('recipe_recent_box_enable', 1)) {
-      // Add latest recipes and xml feed icon.
-      $output .= theme('box', variable_get('recipe_recent_box_title', t('Latest recipes')), node_title_list(recipe_get_latest(variable_get('recipe_recent_display', '5'))) . theme('recipe_more_info', theme('feed_icon', url("recipe/feed"), t('Syndicate'))));
+      $output1 .=  '<li>' . l($term->name, 'recipe/' . $term->tid);
+      $depth = $term->depth;
     }
+    // Clean up if you ended at a lower level.
+    while ($depth > 0) {
+      $output1 .=  '</li></ul>';
+      $depth--;
+    }
+    $output1 .=  '</li></ul>';
+  }
+  if ($tree['current_term']) {
+    $output .= theme('box', t('Categories: %term_name', array('%term_name' => $tree['current_term']->name)), $output1);
   }
   else {
-    // Add the recipes at this level and (optionally) child level
-    $node_html = '';
-    if (is_array($form['nodes']) && count($form['nodes']) > 0) {
-      foreach ($form['nodes'] as $i=>$element) {
-        if (is_int($i)) {
-          $node_html .= drupal_render($element);
-        }
-      }
-    }
+    $output .= theme('box', t('Categories'), $output1);
+  }
+  $output .=  '</div>';
 
-    if ($node_html != '') {
-      $output .= '<h3 class="recipe_index_section">' . t('Recipes') . '</h3>';
-      $output .= $node_html;
-    } else {
-      $output .= '<p>' . t('(No recipes in this category)') . '</p>';
+  // Set-up the right column.
+  $output .= '<div class="recipe_index_node_lists">';
+
+  // Render the recent_list second.
+  if ($tree['recent_list']) {
+    $output .= theme('box', variable_get('recipe_recent_box_title', t('Latest recipes')), node_title_list($tree['recent_list']));
+  }
+
+  // Render the node_list third.
+  if ($tree['node_list']) {
+    $list = node_title_list($tree['node_list']);
+    if ( strlen($list) > 0 ) {
+      $output .= theme('box', t('Matching recipes'), $list);
+    }
+    else {
+      $output .= theme('box', t('No matching recipes'));
     }
   }
 
+
+  $output .= "</div>";
+
+  // Set-up the breadcrumb tail.
+  if ($tree['current_term']) {
+    drupal_set_title(t('%term', array('%term' => $tree['current_term']->name)));
+    // Make the breadcrumbs pretty.
+    $breadcrumb = array();
+    $breadcrumb[] = l(t('Home'), NULL);
+    $breadcrumb[] = l(t('Recipes'), 'recipe');
+    if ($parents = taxonomy_get_parents_all($tree['current_term']->tid)) {
+      // You don't want the current term to show up in the breadcrumbs.
+      array_shift($parents);
+      $parents = array_reverse($parents);
+      foreach ($parents as $p) {
+        $breadcrumb[] = l($p->name, 'recipe/'. $p->tid);
+      }
+    }
+    drupal_set_breadcrumb($breadcrumb);
+  }
+
+  drupal_set_title(t('Recipe Index'));
   return $output;
 }
 
 
 /**
- * Get the latest recipes.
+ * Get the latest recipes by created date.
  *
  * @return
- *   A database query result.
+ *   A database query result suitable for use the node_title_list.
  */
 function recipe_get_latest($count = 0) {
-  $sql = "SELECT nid, title, sticky, created FROM {node} n WHERE status = 1 AND type = 'recipe' ORDER BY sticky DESC, created DESC";
+  $sql = "SELECT n.nid, n.title, n.sticky, n.created FROM {node} n WHERE status = 1 AND type = 'recipe' ORDER BY sticky DESC, created DESC";
   return db_query_range($sql, 0, $count);
 }
 
 
 /**
- * Displays more information content, such as "more" links, and feed images.
+ * Get recipes that match these terms.
  *
  * @return
- *   Formatted string containing the output.
+ *   A database query result suitable for use the node_title_list.
  */
-function theme_recipe_more_info($content) {
-  return '<div class="recipe-more-link">' . $content . '</div>';
+function recipe_get_nodes_for_terms($terms = array()) {
+  if ( count($terms) == 0 ) {
+    return FALSE;
+  }
+  $placeholders = implode(',', array_fill(0, count($terms), "%d"));
+  $sql = "SELECT DISTINCT n.nid, n.title, n.sticky FROM {node} n, {term_node} tn WHERE n.nid=tn.nid AND tn.tid IN ($placeholders) AND n.type='recipe' AND n.status=1 ORDER BY n.sticky DESC, n.title";
+  return db_query($sql, $terms);
 }
