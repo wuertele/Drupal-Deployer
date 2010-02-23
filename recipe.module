@@ -552,7 +552,22 @@ function recipe_block($op = 'list', $delta = 0, $edit = array()) {
  */
 function recipe_view($node, $teaser = FALSE, $page = FALSE) {
   if ($page) {
-    drupal_set_breadcrumb(array(l(t('Home'), ''), l(t('Recipes'), 'recipe')));
+    $breadcrumb = array();
+    $breadcrumb[] = l(t('Home'), NULL);
+    $breadcrumb[] = l(t('Recipes'), 'recipe');
+    if ($vocabs = taxonomy_get_vocabularies('recipe')) {
+      $vocab = array_shift($vocabs);
+      if ($terms = taxonomy_node_get_terms_by_vocabulary($node, $vocab->vid)) {
+        $term = array_shift($terms);
+        if ($parents = taxonomy_get_parents_all($term->tid)) {
+          $parents = array_reverse($parents);
+          foreach ($parents as $p) {
+            $breadcrumb[] = l($p->name, 'recipe/'. $p->tid);
+          }
+        }
+      }
+    }
+    drupal_set_breadcrumb($breadcrumb);
     drupal_add_css(drupal_get_path('module', 'recipe') .'/recipe.css');
   }
   $node = recipe_node_prepare($node, $teaser);
