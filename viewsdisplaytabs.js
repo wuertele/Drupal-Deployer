@@ -53,7 +53,7 @@ viewsDisplayTabs.behavior = function() {
 
     // Get the id of the view whose header the tabs reside in through
     // its class attribute
-    var parentView = $(elem).parents().find('div.view').attr('class');
+    var parentView = $(elem).parents().filter('div.view').attr('class');
     var parentViewName = parentView.match(/view-id-(\w*)\s/);
     parentViewName = parentViewName[1];
 
