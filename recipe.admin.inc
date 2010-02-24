@@ -79,7 +79,7 @@ function recipe_admin_settings() {
 function recipe_index_settings_form() {
   $form = array();
   if (!module_exists('recipe')) {
-    drupal_set_message(t('The &quot;recipe&quot; module is disabled or not installed. Recipes will not function until this is corrected. Check the availability of that module, and enable if needed, in the %modules.',array('%modules'=>l(t('modules administration page'),'admin/modules'))),'error');
+    drupal_set_message(t('The &quot;recipe&quot; module is disabled or not installed. Recipes will not function until this is corrected. Check the availability of that module, and enable if needed, in the %modules.', array('%modules' => l(t('modules administration page'), 'admin/modules'))), 'error');
   }
 
   $form['recipe_catalog'] = array(
@@ -91,7 +91,7 @@ function recipe_index_settings_form() {
     '#type' => 'checkbox',
     '#title' => t('Enable recipes index'),
     '#return_value' => 1,
-    '#default_value' => variable_get('recipe_index_enable',1),
+    '#default_value' => variable_get('recipe_index_enable', 1),
   );
 
   $form['recipe_recent_box'] = array(

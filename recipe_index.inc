@@ -1,12 +1,16 @@
 <?php
 // $Id$
 
+/**
+ * @file
+ * recipe_index.inc - This is an include file containing most all of the recipe index page functionality.
+ */
 
 function recipe_index_page() {
   drupal_add_css(drupal_get_path('module', 'recipe') .'/recipe_index.css', 'module');
 
   // You are viewing a term
-  $tree = array('current_term' => FALSE, 'term_tree'=>array(), 'node_list' => FALSE, 'recent_list' => FALSE);
+  $tree = array('current_term' => FALSE, 'term_tree' => array(), 'node_list' => FALSE, 'recent_list' => FALSE);
   $term = NULL;
   if ($tid = intval(arg(1))) {
     $term = taxonomy_get_term($tid);
