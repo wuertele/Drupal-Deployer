@@ -70,6 +70,7 @@ viewsDisplayTabs.behavior = function() {
         var view = $('div.view-id-' + settings.view_name);
 
         // Activate the tab that is the default active tab if no tab matches active the display
+        $(elem).removeClass('viewsdisplaytabs-active');
         var default_display = Drupal.settings.viewsdisplaytabs.default_display[settings.view_name];
         var activetab = $('a[rel="' + settings.view_display_id + '"]', view).addClass('viewsdisplaytabs-active');
         if ($(activetab).length < 1) {
