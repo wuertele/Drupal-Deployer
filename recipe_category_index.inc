@@ -3,16 +3,16 @@
 
 /**
  * @file
- * recipe_index.inc - This is an include file containing most all of the recipe index page functionality.
+ * recipe_category_index.inc - This is an include file containing most all of the recipe category index page functionality.
  */
 
-function recipe_index_page() {
-  drupal_add_css(drupal_get_path('module', 'recipe') .'/recipe_index.css', 'module');
+function recipe_category_index_page() {
+  drupal_add_css(drupal_get_path('module', 'recipe') .'/recipe_category_index.css', 'module');
 
   // You are viewing a term
   $tree = array('current_term' => FALSE, 'term_tree' => array(), 'node_list' => FALSE, 'recent_list' => FALSE);
   $term = NULL;
-  if ($tid = intval(arg(1))) {
+  if ($tid = intval(arg(2))) {
     $term = taxonomy_get_term($tid);
     $vocabs = taxonomy_get_vocabularies('recipe');
     if (isset($vocabs[$term->vid])) {
@@ -51,11 +51,11 @@ function recipe_index_page() {
     }
   }
 
-  return theme('recipe_index_page', $tree);
+  return theme('recipe_category_index_page', $tree);
 }
 
 
-function theme_recipe_index_page($tree = NULL) {
+function theme_recipe_category_index_page($tree = NULL) {
 
   // Render the term tree first.
   $output = '<div class="recipe_index_category_list">';
@@ -82,7 +82,7 @@ function theme_recipe_index_page($tree = NULL) {
         $depth--;
       }
 
-      $output1 .=  '<li>' . l($term->name, 'recipe/' . $term->tid);
+      $output1 .=  '<li>' . l($term->name, 'recipe/bycat/' . $term->tid);
       $depth = $term->depth;
     }
     // Clean up if you ended at a lower level.
@@ -128,19 +128,19 @@ function theme_recipe_index_page($tree = NULL) {
     // Make the breadcrumbs pretty.
     $breadcrumb = array();
     $breadcrumb[] = l(t('Home'), NULL);
-    $breadcrumb[] = l(t('Recipes'), 'recipe');
+    $breadcrumb[] = l(t('Recipes'), 'recipe/bycat');
     if ($parents = taxonomy_get_parents_all($tree['current_term']->tid)) {
       // You don't want the current term to show up in the breadcrumbs.
       array_shift($parents);
       $parents = array_reverse($parents);
       foreach ($parents as $p) {
-        $breadcrumb[] = l($p->name, 'recipe/'. $p->tid);
+        $breadcrumb[] = l($p->name, 'recipe/bycat/'. $p->tid);
       }
     }
     drupal_set_breadcrumb($breadcrumb);
   }
 
-  drupal_set_title(t('Recipe Index'));
+  drupal_set_title(t('Find by'));
   return $output;
 }
 

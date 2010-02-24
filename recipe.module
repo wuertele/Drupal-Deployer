@@ -416,9 +416,22 @@ function recipe_menu() {
   if (variable_get('recipe_index_enable', 1)) {
     $items['recipe'] = array(
       'title' => 'Recipes',
-      'page callback' => 'recipe_index_page',
+      'page callback' => 'recipe_indexes_page',
+      'access arguments' => array('access content')
+    );
+    $items['recipe/bycat'] = array(
+      'title' => 'By category',
+      'description' => 'Find individual recipes by using the category list.',
+      'page callback' => 'recipe_category_index_page',
       'access arguments' => array('access content'),
-      'file' => 'recipe_index.inc',
+      'file' => 'recipe_category_index.inc'
+    );
+    $items['recipe/bying'] = array(
+      'title' => 'By ingredient',
+      'description' => 'Find individual recipes by their ingredients.',
+      'page callback' => 'recipe_ingredient_index_page',
+      'access arguments' => array('access content'),
+      'file' => 'recipe_ingredient_index.inc'
     );
   }
 
@@ -437,6 +450,8 @@ function recipe_menu() {
 
 
 
+  // Admin menus below here.
+
   $items['admin/content/recipe'] = array(
     'title' => 'Recipes',
     'description' => 'Import and export recipes.',
@@ -445,7 +460,6 @@ function recipe_menu() {
     'type' => MENU_NORMAL_ITEM,
     //'file'  => 'recipe.pages.inc',
   );
-
   $items['admin/content/recipe/export_multi'] = array(
     'title' => 'Export',
     'description' => 'Export all recipes from this site into a supported output format.  The data is returned directly to your web browser.  You can enable output formats on the modules screen.',
@@ -455,7 +469,6 @@ function recipe_menu() {
     'type' => MENU_NORMAL_ITEM,
     //'file'  => 'recipe.pages.inc',
   );
-
   $items['admin/content/recipe/import_multi'] = array(
     'title' => 'Import',
     'description' => 'Import recipes in a supported input format into this site.  The data is uploaded as a file to the server.  You can enable input formats on the modules screen.',
@@ -553,7 +566,7 @@ function recipe_view($node, $teaser = FALSE, $page = FALSE) {
   if ($page) {
     $breadcrumb = array();
     $breadcrumb[] = l(t('Home'), NULL);
-    $breadcrumb[] = l(t('Recipes'), 'recipe');
+    $breadcrumb[] = l(t('Recipes'), 'recipe/bycat');
     if ($vocabs = taxonomy_get_vocabularies('recipe')) {
       $vocab = array_shift($vocabs);
       if ($terms = taxonomy_node_get_terms_by_vocabulary($node, $vocab->vid)) {
@@ -561,7 +574,7 @@ function recipe_view($node, $teaser = FALSE, $page = FALSE) {
         if ($parents = taxonomy_get_parents_all($term->tid)) {
           $parents = array_reverse($parents);
           foreach ($parents as $p) {
-            $breadcrumb[] = l($p->name, 'recipe/'. $p->tid);
+            $breadcrumb[] = l($p->name, 'recipe/bycat/'. $p->tid);
           }
         }
       }
@@ -1150,9 +1163,13 @@ function recipe_theme() {
       'function' => 'theme_recipe_ingredients',
       'arguments' => array('ingredients' => NULL, 'factor' => 1),
     ),
-    'recipe_index_page' => array(
+    'recipe_category_index_page' => array(
       'arguments' => array('tree' => NULL),
-      'file' => 'recipe_index.inc',
+      'file' => 'recipe_category_index.inc',
+    ),
+    'recipe_ingredient_index_page' => array(
+      'arguments' => array('tree' => NULL),
+      'file' => 'recipe_ingredient_index.inc',
     ),
   );
 }
@@ -1645,10 +1662,29 @@ function recipe_import_multi_access($string, $account = NULL, $reset = FALSE) {
   return user_access($string, $account, $reset);
 }
 
+function recipe_indexes_page() {
+  $item = menu_get_item();
+  $content = system_admin_menu_block($item);
+  return theme('node_add_list', $content);
+}
 
 function recipe_io_page() {
   $item = menu_get_item();
   $content = system_admin_menu_block($item);
   return theme('node_add_list', $content);
+}
 
+
+function recipe_get_ingredients($iid = NULL) {
+  if ( $iid == NULL ) {
+    $result = db_query("SELECT * FROM {recipe_ingredient} ORDER BY name");
+  }
+  else {
+    $result = db_query("SELECT * FROM {recipe_ingredient} WHERE id=%d ORDER BY name", $iid);
+  }
+  $list = array();
+  while ($row = db_fetch_object($result)) {
+    $list[] = $row;
+  }
+  return $list;
 }
