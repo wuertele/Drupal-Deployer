@@ -22,7 +22,6 @@ function recipe_views_api() {
  * Implementation of hook_perm().
  */
 function recipe_perm() {
-  // register permissions. TODO: probably need individual types for each import/export -> "might be too many-jv").
   return array(t('create recipes'), t('edit own recipes'), t('edit any recipes'), t('export recipes'), t('import recipes'));
 }
 
@@ -43,9 +42,10 @@ function recipe_link($type, $node = NULL, $teaser = FALSE) {
 
   if ($type == 'node' && $node->type == 'recipe') {
     if (!$teaser) {
-      if (user_access('export recipes')) {
-        $formats = module_invoke_all('recipeio', 'export_single');
-        foreach ($formats as $key => $format) {
+      $formats = module_invoke_all('recipeio', 'export_single');
+      foreach ($formats as $key => $format) {
+        $perm = isset($format['access arguments']) ? $format['access arguments'] : 'export recipes';
+        if (user_access($perm)) {
           $links[$key] = array(
             'title' => t('Export to ') . $format['format_name'],
             'href' => "recipe/export/$key/$node->nid/$node->yield",
@@ -432,7 +432,7 @@ function recipe_menu() {
   $items['recipe/export'] = array(
     'page callback' => 'recipe_export',
     'type' => MENU_CALLBACK,
-    'access arguments' => array('export recipes'),
+    'access arguments' => array('access content'),  // lower level permissions are handled in recipe_export
   );
 
 
@@ -906,6 +906,11 @@ function recipe_export($type = 'html', $nid = NULL, $yield = NULL) {
 
   // load supported formats
   $formats = module_invoke_all('recipeio', 'export_single');
+  $perm = isset($formats[$type]['access arguments']) ? $formats[$type]['access arguments'] : 'export recipes';
+  if (!user_access($perm)) {
+    drupal_access_denied();
+    return;
+  }
 
   // If callback exists, call it, otherwise error out.
   if (isset($formats[$type]) && function_exists($formats[$type]['callback'])) {
