@@ -1,11 +1,11 @@
 Views Display Tabs
 ------------------
 
-Views Display Tabs exposes a view's displays as links which you can then style
-as tabs if you so choose.
+Views Display Tabs exposes a view's displays as tabs.
 
-The module requires an AJAX-capable browser. There's no fallback or graceful
-degradation for non-AJAX-capable browser at this point.
+NEW: This module now degrades gracefully. The tabs will work regardless of
+whether the client supports JavaScript or not. This also means that the displays
+exposed by this module will be indexed by search engines spidering your site.
 
 How to install and use
 ----------------------
@@ -21,8 +21,7 @@ How to install and use
       show a throbber (loading animation) while the view is loading.
    4. Your view's header will now contain the displays as simple tabs.
       Clicking a display's link will update the view and replace the current
-      display with the one you clicked. This only works with AJAX at the moment
-      (no graceful degradation for browsers with poor JavaScript).
+      display with the one you clicked.
 
 NOTE: If your view uses exposed filters and you want these to show regardless
 of what tab is selected you have to add these filters to every display.
@@ -50,4 +49,4 @@ http://drupal.org/project/issues/viewsdisplaytabs
 The author may be contacted through his contact form:
 http://drupal.org/user/37564
 
-Copyright @ imBridge NodeOne AB 2009
+Copyright @ imBridge NodeOne AB 2010

@@ -1,7 +1,7 @@
 // $Id$
 
 /**
- * Copyright (C) 2009 imBridge NodeOne AB
+ * Copyright (C) 2010 imBridge NodeOne AB
  *
  * @file
  * Views Display Tabs - A module that exposes a view's displays as tabs.

@@ -2,7 +2,7 @@
 // $Id$
 
 /**
- * Copyright (C) 2009 imBridge NodeOne AB
+ * Copyright (C) 2010 imBridge NodeOne AB
  * 
  * @file
  * Views Display Tabs - A module that exposes a view's displays as tabs.
@@ -88,8 +88,19 @@ function viewsdisplaytabs_preprocess_views_view(&$vars) {
           $group = 0;
         }
 
+        // Set current tab as active based on URL query params
+        $current_view_display = _viewsdisplaytabs_get_current_views_display_from_url();
+        if ($current_view_display && $view->name == $current_view_display->view_name) {
+          $active = ( $display_name == $current_view_display->display_name );
+        }
+        else {
+          $active = ( $display_name == $settings['view_displays_default'][$view->name] );
+        }
+
         // Build a grouping array for later
-        $displays[$group][] = theme('viewsdisplaytabs_tab', $title, $_GET['q'], $display_name);
+        // @TODO: Pass the path of the display as well, provided it has been set
+        // (true for page displays).
+        $displays[$group][] = theme('viewsdisplaytabs_tab', $title, $_GET['q'], $view->name, $display_name, $active);
       }
     }
 
@@ -109,6 +120,23 @@ function viewsdisplaytabs_preprocess_views_view(&$vars) {
     drupal_add_js('misc/jquery.form.js');
   }
 }
+
+/**
+ * Implementation of hook_views_pre_view()
+ *
+ * This allows us to set the display prior to executing and rendering our view.
+ *
+ * @param <type> $view
+ * @param <type> $display_id
+ * @param <type> $args 
+ */
+function viewsdisplaytabs_views_pre_view(&$view, &$display_id, &$args) {
+  $vdt = _viewsdisplaytabs_get_current_views_display_from_url();
+  if ($vdt && $view->name == $vdt->view_name) {
+    $view->set_display($vdt->display_name);
+  }
+}
+
 
 /*******************************************************************************
  * THEME FUNCTIONS
@@ -164,13 +192,16 @@ function theme__viewsdisplaytabs_admin($form) {
 /**
  * Theme a tab
  *
- * @param <type> $title
- * @param <type> $url
- * @param <type> $display_name
- * @return <type>
+ * @param string $title
+ * @param string $url
+ * @param string $view_name
+ * @param string $display_name
+ * @param bool $active
+ * 
+ * @return string A themed tab.
  */
-function theme_viewsdisplaytabs_tab($title, $url, $display_name, $active = false) {
-  return l(t($title), $url, array('attributes' => array('class' => 'viewsdisplaytabs-tab', 'rel' => $display_name)));
+function theme_viewsdisplaytabs_tab($title, $url, $view_name, $display_name, $active = false) {
+  return l(t($title), $url, array('attributes' => array('class' => 'viewsdisplaytabs-tab'. ( $active ? ' viewsdisplaytabs-active' : ''), 'rel' => $display_name), 'query' => array('vdt' => "$view_name|$display_name")));
 }
 
 /**
@@ -411,4 +442,20 @@ function _viewsdisplaytabs_admin_submit($form, $form_state) {
     'view_throbber' => $view_throbber
     )
   );
+}
+
+/**
+ * Get current display and view from URL
+ *
+ * @return Object An object with keys view_name and display_name
+ */
+function _viewsdisplaytabs_get_current_views_display_from_url() {
+  if ($vdt = $_GET['vdt']) {
+    $vdt = urldecode($vdt);
+    $elements = explode('|', $vdt);
+    $return->view_name = $elements[0];
+    $return->display_name = $elements[1];
+    return $return;
+  }
+  return false;
 }
