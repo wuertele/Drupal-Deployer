@@ -17,14 +17,14 @@ function recipe_category_index_page() {
     $vocabs = taxonomy_get_vocabularies('recipe');
     if (isset($vocabs[$term->vid])) {
       $tree['current_term'] = $term;
-      $tree['term_tree'][] = taxonomy_get_tree($term->vid, $tid, -1, variable_get('recipe_index_depth', 1));
+      $tree['term_tree'][] = taxonomy_get_tree($term->vid, $tid, -1, variable_get('recipe_index_depth', 4));
     }
   }
   // You are in the top level.
   else {
     if ($vocabs = taxonomy_get_vocabularies('recipe')) {
       foreach ($vocabs as $vocab) {
-        $tree['term_tree'][] = taxonomy_get_tree($vocab->vid, 0, -1, variable_get('recipe_index_depth', 1));
+        $tree['term_tree'][] = taxonomy_get_tree($vocab->vid, 0, -1, variable_get('recipe_index_depth', 4));
       }
     }
   }
