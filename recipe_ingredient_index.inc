@@ -9,7 +9,7 @@
 function recipe_ingredient_index_page() {
   drupal_add_css(drupal_get_path('module', 'recipe') .'/recipe_ingredient_index.css', 'module');
 
-  $tree = array('current_ingredient' => NULL, 'ingredient_list' => array(), 'node_list' => array());
+  $tree = array('current_ingredient' => FALSE, 'ingredient_list' => array(), 'node_list' => array());
   // This is the incoming ingredient id.
   // You are viewing an ingredient, don't get the ingredient list
   if ($iid = intval(arg(2))) {
@@ -21,7 +21,7 @@ function recipe_ingredient_index_page() {
   }
 
   // You are on the top level, don't display every recipe.
-  if ( $tree['current_ingredient'] == NULL ) {
+  if ( $tree['current_ingredient'] ) {
 
   }
   // You have an ingredient id, build the node list.
@@ -41,7 +41,7 @@ function theme_recipe_ingredient_index_page($tree = NULL) {
     $output1 .= '<li>' . l($ingredient->name, 'recipe/bying/'.$ingredient->id) . '</li>';
   }
   $output1 .= '</ul>';
-  if ($tree['current_ingredient'] != NULL) {
+  if ($tree['current_ingredient']) {
     $output .= theme('box', t('Ingredients: %ingredient_name', array('%ingredient_name' => $tree['current_ingredient']->name)), $output1);
   }
   else {
@@ -66,7 +66,13 @@ function theme_recipe_ingredient_index_page($tree = NULL) {
   $output .= "</div>";
 
   // Set-up the breadcrumb tail.
-
+  if ($tree['current_ingredient']) {
+    $breadcrumb = array();
+    $breadcrumb[] = l(t('Home'), NULL);
+    $breadcrumb[] = l(t('Recipes'), 'recipe');
+    $breadcrumb[] = l(t('By ingredient'), 'recipe/bying');
+    drupal_set_breadcrumb($breadcrumb);
+  }
 
   drupal_set_title(t('Find by'));
   return $output;

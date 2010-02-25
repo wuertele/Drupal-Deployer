@@ -128,7 +128,8 @@ function theme_recipe_category_index_page($tree = NULL) {
     // Make the breadcrumbs pretty.
     $breadcrumb = array();
     $breadcrumb[] = l(t('Home'), NULL);
-    $breadcrumb[] = l(t('Recipes'), 'recipe/bycat');
+    $breadcrumb[] = l(t('Recipes'), 'recipe');
+    $breadcrumb[] = l(t('By category'), 'recipe/bycat');
     if ($parents = taxonomy_get_parents_all($tree['current_term']->tid)) {
       // You don't want the current term to show up in the breadcrumbs.
       array_shift($parents);
