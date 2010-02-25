@@ -51,7 +51,7 @@ FCKConfig.ToolbarSets['DrupalFull'] = [
 ] ;
 
 FCKConfig.ToolbarSets['DrupalBasic'] = [
-['FontFormat','-','Bold','Italic','-','OrderedList','UnorderedList','-','Link','Unlink', 'Image']
+['FontFormat','-','Bold','Italic','-','OrderedList','UnorderedList','-','Link','Unlink','Image']
 ] ;
 
 //This toolbar should work fine with "Filtered HTML" filter
@@ -72,10 +72,10 @@ FCKConfig.ToolbarSets['DrupalFiltered'] = [
 ['FontFormat'],
 ['Bold','Italic','Underline','StrikeThrough','-','Subscript','Superscript'],
 ['OrderedList','UnorderedList','-','Outdent','Indent','Blockquote'],
-//uncomment this line to the enable page break button
+//uncomment this line to enable the page break button
 //remember to load appropriate plugin with FCKConfig.Plugins.Add
-//['JustifyLeft','JustifyCenter','JustifyRight','DrupalBreak','DrupalPageBreak','ShowBlocks'],
-['JustifyLeft','JustifyCenter','JustifyRight','DrupalBreak','ShowBlocks'],
+//['JustifyLeft','JustifyCenter','JustifyRight','DrupalBreak','DrupalPageBreak','ShowBlocks']
+['JustifyLeft','JustifyCenter','JustifyRight','DrupalBreak','ShowBlocks']
 ] ;
 
 //helper function to add button at the end of the toolbar
