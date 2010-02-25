@@ -24,16 +24,6 @@ function recipe_admin_settings() {
     '#description' => t('This text will be displayed at the top of the recipe submission form. Useful for helping or instructing your users.'),
   );
 
-  $form['recipe_ingredient_system'] = array(
-    '#type' => 'radios',
-    '#title' => t('Ingredient entering system'),
-    '#default_value' => variable_get('recipe_ingredient_system', 'complex'),
-    '#options' => array(
-      'simple' => t('Simple [deprecated]'),
-      'complex' => t('Complex'),
-    ),
-    '#description' => t('WARNING: \'Simple\' mode is deprecated due to data corruption bugs. Simple is scheduled for removal in a future release. Please set to \'Complex\'.'),
-  );
   $form['recipe_fraction_display'] = array(
     '#type' => 'textfield',
     '#title' => t('Fractions display string'),

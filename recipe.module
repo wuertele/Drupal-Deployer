@@ -125,15 +125,17 @@ function recipe_delete($node) {
 * Implementation of hook_form().
 */
 function recipe_form(&$node, $form_state) {
+  $type = node_get_types('type', $node);
 
+  // Title.
   $form['title'] = array(
     '#type' => 'textfield',
-    '#title' => t('Title'),
-    '#size' => 60,
-    '#maxlength' => 128,
-    '#required' => TRUE,
+    '#title' => check_plain($type->title_label),
     '#default_value' => $node->title,
+    '#required' => TRUE,
+    '#weight' => -10,
   );
+
 
   // Now we define the form elements specific to our node type.
   $form['body'] = array(
@@ -187,219 +189,88 @@ function recipe_form(&$node, $form_state) {
     '#description' => t('Optional. Does anyone else deserve credit for this recipe?'),
   );
 
-  // Table of existing ingredients
-  $form['ingredients']['#tree'] = TRUE;
-  $system = variable_get('recipe_ingredient_system', 'complex');
-  if ($system == 'complex') {
-    $form['ingredients']['headings'] = array(
-      '#value' => '<div><table ><thead><tr><th>'. t('Quantity') .'</th><th>'.
-                  t('Units') .'</th><th>'. t('Ingredient name') .
-                  '</th><th>'. t('Processing/Notes') .'</tr></thead>'."\n".'<tbody>',
-    );
-  }
-  else {
-    $form['ingredients']['headings'] = array(
-      '#value' => '<div><table ><thead><tr><th>'. t('Ingredients') .'</th></tr></thead>'."\n".'<tbody>',
-    );
-  }
-  $rows = array();
+  $form['ingredients'] = array(
+    '#type' => 'fieldset',
+    '#collapsible' => FALSE,
+    '#title' => t('Ingredients'),
+    '#tree' => TRUE,
+  );
+
+  $form['ingredients']['headings'] = array(
+    '#value' => '<div><table ><thead><tr><th>'. t('Quantity') .'</th><th>'.
+                t('Units') .'</th><th>'. t('Ingredient name') .
+                '</th><th>'. t('Processing/Notes') .'</tr></thead>'."\n".'<tbody>',
+  );
+
   $callback = 'recipe/ingredient/autocomplete';
-  $num_ingredients = 0;
+
+  if (isset($form_state['add_ingredients_count'])) {
+  	for ($delta = 0; $delta < $form_state['add_ingredients_count']; $delta++) {
+  		array_push($node->ingredients, array('quantity' => '', 'unit_id' => '', 'name' => '', 'note' => ''));
+  	}
+  }
+
   if ($node->ingredients) {
     foreach ($node->ingredients as $id => $ingredient) {
-      $num_ingredients = $id+1;
-      if ($id == 0) {
-        $j = '0';
-      }
-      else {
-        $j = $id;
-      }
+    	// Sometimes $ingredient is an array.
+      $ingredient = (object)$ingredient;
 
-      // For preview, node->ingredients is an array, for actual display, it's an object
-      $name = '';
-      $note = '';
-      $unit_id = '';
-      $abbreviation = '';
-      $quantity = 0;
-      if (is_array($ingredient)) {
-        $name = $ingredient['name'];
-        $note = $ingredient['note'];
-        $unit_id = $ingredient['unit_id'];
-        $abbreviation = $ingredient['abbreviation'];
-        $quantity = $ingredient['quantity'];
-      }
-      else {
-        $name = $ingredient->name;
-        $note = $ingredient->note;
-        $unit_id = $ingredient->unit_id;
-        $abbreviation = $ingredient->abbreviation;
-        $quantity = $ingredient->quantity;
-      }
-
-      if ($name && isset($quantity)) {
-        // When can the following statement be true?
-        if (!$ingredient) {
-          drupal_set_message(t('Recipe module: An error has occurred. Please report this error to the system administrator.'), 'error');
-          if (is_array($ingredient)) {
-            $ingredient['quantity'] = '';
-            $ingredient['unit_id'] = 21;
-            $ingredient['name'] = '';
-          }
-          else {
-            $ingredient->quantity = '';
-            $ingredient->unit_id = 21;
-            $ingredient->name = '';
-          }
-        }
-        if ($system == 'complex') {
-          $form['ingredients'][$j]['open_tags'] = array(
-            '#value' => '<tr><th>',
-          );
-          $form['ingredients'][$j]['quantity'] = array(
-            '#type' => 'textfield',
-            '#title' => '',
-            '#default_value' => preg_replace('/\&frasl;/', '/', recipe_ingredient_quantity_from_decimal($quantity)),
-            '#size' => 8,
-            '#maxlength' => 8,
-          );
-          $form['ingredients'][$j]['mid1_tags'] = array(
-            '#value' => '</th><th>',
-          );
-          $form['ingredients'][$j]['unit_id'] = array(
-            '#type' => 'select',
-            '#title' => '',
-            '#default_value' => $unit_id,
-            '#options' => recipe_unit_options(),
-          );
-          $form['ingredients'][$j]['mid2_tags'] = array(
-            '#value' => '</th><th>',
-          );
-          $form['ingredients'][$j]['name'] = array(
-            '#type' => 'textfield',
-            '#title' => '',
-            '#default_value' => $name,
-            '#size' => 40,
-            '#maxlength' => 128,
-            '#autocomplete_path' => $callback,
-          );
-          $form['ingredients'][$j]['mid3_tags'] = array(
-            '#value' => '</th><th>',
-          );
-          $form['ingredients'][$j]['note'] = array(
-            '#type' => 'textfield',
-            '#title' => '',
-            '#default_value' => $note,
-            '#size' => 20,
-            '#maxlength' => 256
-          );
-          $form['ingredients'][$j]['close_tags'] = array(
-            '#value' => '</th></tr>',
-          );
-        }
-
-        // Simple system, deprecated.
-        else {
-          if ($name) {
-            if ($quantity == 0) {
-              $quantity = '';
-            }
-            else {
-              $quantity .= ' ';
-            }
-            if ($abbreviation != '') {
-              $abbreviation .= ' ';
-            }
-            $name = $quantity . $abbreviation . $name;
-          }
-          $form['ingredients'][$j]['open_tags'] = array(
-            '#value' => '<tr><th>',
-            '#tree' => TRUE,
-          );
-          $form['ingredients'][$j]['name'] = array(
-            '#type' => 'textfield',
-            '#title' => '',
-            '#default_value' => $name,
-            '#size' => 64,
-            '#maxlength' => 128,
-            '#autocomplete_path' => $callback,
-          );
-          $form['ingredients'][$j]['close_tags'] = array(
-            '#value' => '</th></tr>',
-          );
-        } // else
-      } // if ($ingredient->name && isset($ingredient->quantity))
-    } // foreach ($node->ingredients as $id => $ingredient)
-  } // if ($node->ingredients)
-
-  // Add ten more spots for ingredients than are already used
-  for ($i = $num_ingredients; $i < $num_ingredients+10; $i++) {
-    if ($i == 0) {
-      $j = '0';
-    }
-    else {
-      $j = $i;
-    }
-    if ($system == 'complex') {
-      $form['ingredients'][$j]['open_tags'] = array(
+      $form['ingredients'][$id]['open_tags'] = array(
         '#value' => '<tr><th>',
       );
-      $form['ingredients'][$j]['quantity'] = array(
+      $form['ingredients'][$id]['quantity'] = array(
         '#type' => 'textfield',
         '#title' => '',
+        '#default_value' => preg_replace('/\&frasl;/', '/', recipe_ingredient_quantity_from_decimal($ingredient->quantity)),
         '#size' => 8,
         '#maxlength' => 8,
       );
-      $form['ingredients'][$j]['mid1_tags'] = array(
+      $form['ingredients'][$id]['mid1_tags'] = array(
         '#value' => '</th><th>',
       );
-      $form['ingredients'][$j]['unit_id'] = array(
+      $form['ingredients'][$id]['unit_id'] = array(
         '#type' => 'select',
         '#title' => '',
+        '#default_value' => $ingredient->unit_id,
         '#options' => recipe_unit_options(),
-        '#default_value' => 2,
       );
-      $form['ingredients'][$j]['mid2_tags'] = array(
+      $form['ingredients'][$id]['mid2_tags'] = array(
         '#value' => '</th><th>',
       );
-      $form['ingredients'][$j]['name'] = array(
+      $form['ingredients'][$id]['name'] = array(
         '#type' => 'textfield',
         '#title' => '',
-        '#size' => 64,
+        '#default_value' => $ingredient->name,
+        '#size' => 40,
         '#maxlength' => 128,
         '#autocomplete_path' => $callback,
       );
-      $form['ingredients'][$j]['mid3_tags'] = array(
+      $form['ingredients'][$id]['mid3_tags'] = array(
         '#value' => '</th><th>',
       );
-      $form['ingredients'][$j]['note'] = array(
+      $form['ingredients'][$id]['note'] = array(
         '#type' => 'textfield',
         '#title' => '',
-        '#default_value' => $note,
+        '#default_value' => $ingredient->note,
         '#size' => 20,
         '#maxlength' => 256
       );
-      $form['ingredients'][$j]['close_tags'] = array(
+      $form['ingredients'][$id]['close_tags'] = array(
         '#value' => '</th></tr>',
       );
-    }
 
-    // Simple system, deprecated.
-    else {
-      $form['ingredients'][$j]['open_tags'] = array(
-        '#value' => '<tr><th>',
-      );
-      $form['ingredients'][$j]['name'] = array(
-        '#type' => 'textfield',
-        '#title' => '',
-        '#size' => 64,
-        '#maxlength' => 128,
-        '#autocomplete_path' => $callback,
-      );
-      $form['ingredients'][$j]['close_tags'] = array(
-        '#value' => '</th></tr>',
-      );
     }
   }
+
+  $form['ingredients']['recipe_more_ingredients'] = array(
+    '#type' => 'submit',
+    '#value' => t('More ingredients'),
+    '#description' => t("If the amount of boxes above isn't enough, click here to add more ingredients."),
+    '#weight' => 1,
+    '#submit' => array('recipe_more_ingredients_submit'),
+  );
+
+
   $form['ingredients']['end'] = array(
     '#value' => '</tbody>' . "\n" . '</table></div>' . "\n",
   );
@@ -425,6 +296,20 @@ function recipe_form(&$node, $form_state) {
   return $form;
 }
 
+/**
+ * Submit handler to add more ingredient rows.  It makes changes to the form state and the
+ * entire form is rebuilt during the page reload.
+ */
+function recipe_more_ingredients_submit($form, &$form_state) {
+  // Set the form to rebuild and run submit handlers.
+  node_form_submit_build_node($form, $form_state);
+  $form_state['node_preview'] = '';
+
+  // Make the changes we want to the form state.
+  if ($form_state['values']['ingredients']['recipe_more_ingredients']) {
+    $form_state['add_ingredients_count'] = 5;
+  }
+}
 
 /**
  * Implementation of hook_menu().
