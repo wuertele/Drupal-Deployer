@@ -192,7 +192,7 @@ function recipe_form(&$node, $form_state) {
     $form['ingredients']['headings'] = array(
       '#value' => '<div><table ><thead><tr><th>'. t('Quantity') .'</th><th>'.
                   t('Units') .'</th><th>'. t('Ingredient name') .
-                  '</th></tr></thead>'."\n".'<tbody>',
+                  '</th><th>'. t('Processing/Notes') .'</tr></thead>'."\n".'<tbody>',
     );
   }
   else {
@@ -215,17 +215,20 @@ function recipe_form(&$node, $form_state) {
 
       // For preview, node->ingredients is an array, for actual display, it's an object
       $name = '';
+      $note = '';
       $unit_id = '';
       $abbreviation = '';
       $quantity = 0;
       if (is_array($ingredient)) {
         $name = $ingredient['name'];
+        $note = $ingredient['note'];
         $unit_id = $ingredient['unit_id'];
         $abbreviation = $ingredient['abbreviation'];
         $quantity = $ingredient['quantity'];
       }
       else {
         $name = $ingredient->name;
+        $note = $ingredient->note;
         $unit_id = $ingredient->unit_id;
         $abbreviation = $ingredient->abbreviation;
         $quantity = $ingredient->quantity;
@@ -273,14 +276,26 @@ function recipe_form(&$node, $form_state) {
             '#type' => 'textfield',
             '#title' => '',
             '#default_value' => $name,
-            '#size' => 64,
+            '#size' => 40,
             '#maxlength' => 128,
             '#autocomplete_path' => $callback,
+          );
+          $form['ingredients'][$j]['mid3_tags'] = array(
+            '#value' => '</th><th>',
+          );
+          $form['ingredients'][$j]['note'] = array(
+            '#type' => 'textfield',
+            '#title' => '',
+            '#default_value' => $note,
+            '#size' => 20,
+            '#maxlength' => 256
           );
           $form['ingredients'][$j]['close_tags'] = array(
             '#value' => '</th></tr>',
           );
         }
+
+        // Simple system, deprecated.
         else {
           if ($name) {
             if ($quantity == 0) {
@@ -351,10 +366,22 @@ function recipe_form(&$node, $form_state) {
         '#maxlength' => 128,
         '#autocomplete_path' => $callback,
       );
+      $form['ingredients'][$j]['mid3_tags'] = array(
+        '#value' => '</th><th>',
+      );
+      $form['ingredients'][$j]['note'] = array(
+        '#type' => 'textfield',
+        '#title' => '',
+        '#default_value' => $note,
+        '#size' => 20,
+        '#maxlength' => 256
+      );
       $form['ingredients'][$j]['close_tags'] = array(
         '#value' => '</th></tr>',
       );
     }
+
+    // Simple system, deprecated.
     else {
       $form['ingredients'][$j]['open_tags'] = array(
         '#value' => '<tr><th>',
@@ -774,13 +801,13 @@ function recipe_save_ingredients($node) {
   foreach ($changes->add as $ingredient) {
     $ingredient->id = recipe_ingredient_id_from_name($ingredient->name);
     $ingredient->quantity = recipe_ingredient_quantity_from_fraction($ingredient->quantity);
-    db_query("INSERT INTO {recipe_node_ingredient} (nid, ingredient_id, quantity, unit_id, weight) VALUES (%d, %d, %f, %d, %d)", $node->nid, $ingredient->id, $ingredient->quantity, $ingredient->unit_id, $ingredient->weight);
+    db_query("INSERT INTO {recipe_node_ingredient} (nid, ingredient_id, quantity, unit_id, weight, note) VALUES (%d, %d, %f, %d, %d, '%s')", $node->nid, $ingredient->id, $ingredient->quantity, $ingredient->unit_id, $ingredient->weight, $ingredient->note);
   }
 
   foreach ($changes->update as $ingredient) {
     $ingredient->id = recipe_ingredient_id_from_name($ingredient->name);
     $ingredient->quantity = recipe_ingredient_quantity_from_fraction($ingredient->quantity);
-    db_query("UPDATE {recipe_node_ingredient} SET quantity = %f, unit_id = %d, weight = %d WHERE nid = %d AND ingredient_id = %d", $ingredient->quantity, $ingredient->unit_id, $ingredient->weight, $node->nid, $ingredient->id);
+    db_query("UPDATE {recipe_node_ingredient} SET quantity = %f, unit_id = %d, weight = %d, note = '%s' WHERE nid = %d AND ingredient_id = %d", $ingredient->quantity, $ingredient->unit_id, $ingredient->weight, $ingredient->note, $node->nid, $ingredient->id);
   }
 }
 
@@ -847,6 +874,7 @@ function recipe_load_ingredients($node) {
   SELECT
     ri.id,
     i.name,
+    ri.note,
     i.link,
     ri.quantity,
     ri.unit_id,
@@ -1312,7 +1340,8 @@ function theme_recipe_ingredients($ingredients = NULL, $factor = 1) {
         else {
           $units = recipe_unit_name($ingredient->unit_id);
         }
-        $output .= '<tr><td class="qty">'. $ingredient->quantity .'</td><td class="units">'. $units .'</td><td class="ingredient">'. $ingredient->name . '</td></tr>';
+        $fullingredient = strlen($ingredient->note) > 0 ? $ingredient->name . ' (' . $ingredient->note .')' : $ingredient->name;
+        $output .= '<tr><td class="qty">'. $ingredient->quantity .'</td><td class="units">'. $units .'</td><td class="ingredient">'. $fullingredient . '</td></tr>';
       }
     }
     $output .= '</table>';
