@@ -20,12 +20,8 @@ function recipe_ingredient_index_page() {
     $tree['ingredient_list'] = recipe_get_ingredients();
   }
 
-  // You are on the top level, don't display every recipe.
-  if ( $tree['current_ingredient'] ) {
-
-  }
   // You have an ingredient id, build the node list.
-  else {
+  if ( $tree['current_ingredient'] ) {
     $tree['node_list'] = recipe_get_nodes_for_ingredients(array($iid));
   }
 
