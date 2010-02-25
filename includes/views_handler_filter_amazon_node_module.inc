@@ -68,7 +68,7 @@ class views_handler_field_amazon_title extends views_handler_field {
         return l($title, 'node/'. $values->nid, array('html' => TRUE));
         break;
       case 'amazon':
-        return l($title, check_url($values->{$this->table_alias . '_detailpageurl'}), array('html' => TRUE));
+        return l($title, check_url($values->{$this->table_alias . '_detailpageurl'}), array('html' => TRUE, 'attributes' => array('rel' => 'nofollow')));
         break;
     }
   }

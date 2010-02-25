@@ -20,7 +20,6 @@ function amazon_settings_form($form_state) {
     '#default_value' => variable_get('amazon_associate_setting', 'association'),
     '#options' => array(
       'association' => t('Use the Drupal Association\'s associate ID'),
-      'author' => t('Use the module developer\'s associate ID'),
       'custom' => t('Use your own associate ID'),
       'none' => t('Do not use any associate ID')
     ),
@@ -35,7 +34,7 @@ function amazon_settings_form($form_state) {
     '#prefix' => '<div id="amazon-associate-id-wrapper">',
     '#suffix' => '</div>',
   );
-  if (variable_get('amazon_associate_setting', 'author') != 'custom') {
+  if (variable_get('amazon_associate_setting', 'association') != 'custom') {
     $form['amazon_custom_associate_id']['#prefix'] = '<div id="amazon-associate-id-wrapper" class="js-hide">';
   }
 
@@ -80,6 +79,7 @@ function amazon_storage_settings_form() {
       'creators' => t('Book authors, film actors, etc.'),
       'images' => t('Product images'),
       'editorial_reviews' => t('Editorial reviews'),
+      'customer_reviews' => t('Customer reviews'),
     ),
   );
 
@@ -96,7 +96,7 @@ function amazon_test_form($form_state) {
   $form['asin'] = array(
     '#type' => 'textfield',
     '#title' => t('Amazon Product ID'),
-    '#description' => t('The ASIN of a product listed on Amazon.com. For books, this is generally the ISBN number.'),
+    '#description' => t('The ASIN, ISBN-10, or ISBN-13 of a product listed on Amazon.'),
     '#required' => TRUE,
   );
   $form['submit'] = array(
@@ -117,7 +117,10 @@ function amazon_test_form($form_state) {
 }
 
 function amazon_test_form_submit($form, &$form_state) {
-  $items = amazon_item_lookup($form_state['values']['asin'], TRUE);
+  $asin = $form_state['values']['asin'];
+  $asin = amazon_convert_to_asin($asin); // Normalize to an asin. ISBN-13 OK.
+
+  $items = amazon_item_lookup($asin, TRUE);
   if (!empty($items) && is_array($items)) {
     $item = array_pop($items);
     amazon_item_delete($item['asin']);

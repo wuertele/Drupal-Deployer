@@ -6,6 +6,6 @@ if ($output = theme($alt_theme, $item)) {
 else {
 ?>
 <span class="<?php print _amazon_item_classes($item) ?> amazon-item-inline">
-  <?php print l($item['title'], $item['detailpageurl']); ?>
+  <?php print l($item['title'], $item['detailpageurl'], array('html' => TRUE, 'attributes' => array('rel' => 'nofollow'))); ?>
 </span>
 <?php } ?>

@@ -45,6 +45,12 @@ function asin_update_6001() {
     return $abort;
   }
 
+  // The name of the widget type has changed from asin to asin_text.
+  $ret[] = update_sql("UPDATE {" . content_instance_tablename() . "} SET widget_type = 'asin_text' WHERE widget_type = 'asin'");
+  // All CCK fields are disabled by Content module during the D6 upgrade.
+  // Re-enable the 'asin' field.
+  content_associate_fields('asin');
+
   // Build a list of fields that need data updating.
   module_load_install('content');
   module_load_include('inc', 'content', 'includes/content.admin');
@@ -54,14 +60,14 @@ function asin_update_6001() {
   $fields = array();
 
   content_clear_type_cache(TRUE);
- 
+
   // Grab the list of fields to update.
-  foreach (content_field_instance_read() as $field) {
-    if ($field['type'] == 'asin' && $field['widget']['type'] == 'asin') {
+  foreach (content_field_instance_read(NULL, TRUE) as $field) {
+    if ($field['type'] == 'asin' && $field['widget']['type'] == 'asin_text') {
       $fields[] = $field;
     }
   }
-  
+
   content_clear_type_cache(TRUE);
 
   // Update database storage (add data column, since the D5 version assumed all control).
@@ -79,7 +85,7 @@ function asin_update_6001() {
 
     $ret[] = array('success' => TRUE, 'query' => 'Updated database schema and widget settings for ' . $field['field_name']);
   }
-  
+
   content_clear_type_cache(TRUE);
 
   return $ret;

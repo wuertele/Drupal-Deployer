@@ -67,7 +67,7 @@ function amazon_media_preprocess_amazon_item(&$variables) {
 }
 
 
-function amazon_media_amazon_item_load(&$item) {
+function amazon_media_amazon_item_load($item) {
   switch ($item['producttypename']) {
     case 'ABIS_BOOK':
       $additions = db_fetch_array(db_query("SELECT * FROM {amazon_book} WHERE asin = '%s'", $item['asin']));
@@ -100,6 +100,10 @@ function amazon_media_amazon_item_insert($item) {
       drupal_write_record('amazon_dvd', $item);
       break;
     case 'ABIS_MUSIC':
+      // Often the artist is an array.
+      if (!empty($item['artist']) && is_array($item['artist'])) {
+        $item['artist'] = join(",", $item['artist']);
+      }
       drupal_write_record('amazon_music', $item);
       break;
     case 'CONSOLE_VIDEO_GAMES':

@@ -9,7 +9,25 @@
  * Implementation of hook_filter_tips().
  */
 function amazon_filter_filter_tips($delta, $format, $long = FALSE) {
-  return t('Link to Amazon products with: [amazon product_id inline|full|thumbnail]. Example: [amazon 1590597559 thumbnail]');
+  if ($long) {
+    return t('Get Amazon product data using [amazon ASIN selector], for example, [amazon 0399155341 thumbnail],
+    [amazon 0399155341 full], or [amazon 0399155341 inline].
+    In addition, you can grab various data items from the item description using selectors like
+    author, title, asin, isbn, ean, detailpageurl, salesrank, publisher, manufacturer, studio,
+    label, binding, listpriceamount, listpricecurrencycode, listpriceformattedprice,
+    lowestpriceamount, lowestpricecurrencycode, lowestpriceformattedprice,
+    amazonpriceamount, amazonpricecurrencycode, amazonpriceformattedprice,
+    productgroup, producttypename, invalid_asin, deweydecimalnumber, edition, numberofpages,
+    publicationyear, type, releaseyear, publicationyear, smallimage, smallimageurl, smallimageheight,
+    smallimagewidth, mediumimage, mediumimageurl, mediumimageheight, mediumimagewidth,
+    largeimage, largeimageurl, largeimageheight, largeimagewidth.
+
+    For example, [amazon 0596515804 title] will provide the title of the item, and
+    [amazon 0596515804 largeimage] will be replaced with an img tag giving the large image.
+    A complete description of filters is <a href="http://drupal.org/node/595464#filters">on the Amazon module handbook page</a>.');
+  } else {
+    return t('Link to Amazon products with: [amazon product_id inline|full|thumbnail|datadescriptor]. Example: [amazon 1590597559 thumbnail] or [amazon 1590597559 author]. Details are <a href="http://drupal.org/node/595464#filters" target="_blank">on the Amazon module handbook page</a>.');
+  }
 }
 
 /**
@@ -42,6 +60,7 @@ function _amazon_filter_process_text($text) {
     $replace = array();
     foreach ($matches[0] as $key => $value) {
       $asin = $matches[1][$key];
+      $asin = amazon_convert_to_asin($asin);
       $action = $matches[2][$key];
       $items = amazon_item_lookup($asin);
       $item = "";

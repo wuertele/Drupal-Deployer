@@ -28,7 +28,9 @@ function amazon_media_views_data() {
     ),
   );
 
-  _amazon_make_simple_text_field($data, 'amazon_book', 'deweydecimalnumber', 'Dewey decimal number');
+  _amazon_make_simple_text_field($data, 'amazon_book', 'deweydecimalnumber', 'Dewey decimal number', 'Dewey decimal number (used by libraries)');
+  _amazon_make_simple_text_field($data, 'amazon_book', 'isbn', 'ISBN number (10-digit)', 'Library of Congress ISBN number (10-digit)');
+  _amazon_make_simple_text_field($data, 'amazon_book', 'ean', 'EAN (13-digit ISBN number)', 'The newer, longer 13-digit EAN or 13-digit ISBN number');
   _amazon_make_simple_number_field($data, 'amazon_book', 'edition', 'Edition', 'The edition of an Amazon book product.');
   _amazon_make_simple_number_field($data, 'amazon_book', 'numberofpages', 'Pages', 'The number of pages in an Amazon book product.');
   _amazon_make_simple_date_field($data, 'amazon_book', 'publicationdate', 'Publication date', 'The publication date of the item');
