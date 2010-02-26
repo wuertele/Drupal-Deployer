@@ -75,14 +75,7 @@ function recipe_index_settings_form() {
   $form['recipe_catalog'] = array(
     '#type' => 'fieldset',
     '#title' => t('Recipe index settings'),
-  );
-
-  $form['recipe_catalog']['recipe_index_enable'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Enable recipes index'),
-    '#return_value' => 1,
-    '#default_value' => variable_get('recipe_index_enable', 1),
-    '#description' => t('It is recommended you leave this enabled.  If you don\'t want the menu item, you could go to admin/build/menu and disable the menu item.'),
+    '#description' => t('If you don\'t want the menu items, you can go to admin/build/menu and disable them.'),
   );
 
   $form['recipe_recent_box'] = array(
