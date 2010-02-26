@@ -133,9 +133,8 @@ function recipe_form(&$node, $form_state) {
     '#title' => check_plain($type->title_label),
     '#default_value' => $node->title,
     '#required' => TRUE,
-    '#weight' => -10,
+    '#weight' => -6,
   );
-
 
   // Now we define the form elements specific to our node type.
   $form['body'] = array(
@@ -143,50 +142,20 @@ function recipe_form(&$node, $form_state) {
     '#title' => t('Description'),
     '#default_value' => $node->body,
     '#cols' => 60,
-    '#rows' => 2,
+    '#rows' => 1,
     '#description' => t('A short description or "teaser" for the recipe.'),
     '#required' => TRUE,
+    '#weight' => -5,
   );
   $form['yield'] = array(
     '#type' => 'textfield',
     '#title' => t('Yield'),
     '#default_value' => $node->yield,
-    '#size' => 10,
-    '#maxlength' => 10,
-    '#description' => t('The number of servings the recipe will make.'),
-    '#attributes' => NULL,
+    '#size' => 4,
+    '#maxlength' => 4,
+    '#description' => t('The number of servings the recipe will make (whole number integer, ie 5 or 6).'),
     '#required' => TRUE,
-  );
-  $form['preptime'] = array(
-    '#type' => 'select',
-    '#title' => t('Preparation time'),
-    '#default_value' => $node->preptime,
-    '#options' => array(
-      5 => t('5 minutes'),
-      10 => t('10 minutes'),
-      15 => t('15 minutes'),
-      20 => t('20 minutes'),
-      30 => t('30 minutes'),
-      45 => t('45 minutes'),
-      60 => t('1 hour'),
-      90 => t('1 1/2 hours'),
-      120 => t('2 hours'),
-      150 => t('2 1/2 hours'),
-      180 => t('3 hours'),
-      210 => t('3 1/2 hours'),
-      240 => t('4 hours'),
-      300 => t('5 hours'),
-      360 => t('6 hours'),
-    ),
-    '#description' => t('How long does this recipe take to prepare (i.e. elapsed time)'),
-  );
-  $form["source"] = array(
-    '#type' => 'textfield',
-    '#title' => t('Source'),
-    '#default_value' => $node->source,
-    '#size' => 60,
-    '#maxlength' => 127,
-    '#description' => t('Optional. Does anyone else deserve credit for this recipe?'),
+    '#weight' => -4,
   );
 
   $form['ingredients'] = array(
@@ -194,6 +163,7 @@ function recipe_form(&$node, $form_state) {
     '#collapsible' => FALSE,
     '#title' => t('Ingredients'),
     '#tree' => TRUE,
+    '#weight' => -3,
   );
 
   $form['ingredients']['headings'] = array(
@@ -204,62 +174,65 @@ function recipe_form(&$node, $form_state) {
 
   $callback = 'recipe/ingredient/autocomplete';
 
-  if (isset($form_state['add_ingredients_count'])) {
-  	for ($delta = 0; $delta < $form_state['add_ingredients_count']; $delta++) {
-  		array_push($node->ingredients, array('quantity' => '', 'unit_id' => '', 'name' => '', 'note' => ''));
-  	}
+  if ( !is_array($node->ingredients) ) {
+    $node->ingredients = array();
+  }
+  if (isset($form_state['add_ingredients']) || count($node->ingredients) == 0) {
+    unset($form_state['add_ingredients']);
+    $add_count = 5;
+    for ($delta = 0; $delta < $add_count; $delta++) {
+      array_push($node->ingredients, array('quantity' => '', 'unit_id' => '', 'name' => '', 'note' => ''));
+    }
   }
 
-  if ($node->ingredients) {
-    foreach ($node->ingredients as $id => $ingredient) {
-    	// Sometimes $ingredient is an array.
-      $ingredient = (object)$ingredient;
+  foreach ($node->ingredients as $id => $ingredient) {
+    // Sometimes $ingredient is an array.
+    $ingredient = (object)$ingredient;
 
-      $form['ingredients'][$id]['open_tags'] = array(
-        '#value' => '<tr><th>',
-      );
-      $form['ingredients'][$id]['quantity'] = array(
-        '#type' => 'textfield',
-        '#title' => '',
-        '#default_value' => preg_replace('/\&frasl;/', '/', recipe_ingredient_quantity_from_decimal($ingredient->quantity)),
-        '#size' => 8,
-        '#maxlength' => 8,
-      );
-      $form['ingredients'][$id]['mid1_tags'] = array(
-        '#value' => '</th><th>',
-      );
-      $form['ingredients'][$id]['unit_id'] = array(
-        '#type' => 'select',
-        '#title' => '',
-        '#default_value' => $ingredient->unit_id,
-        '#options' => recipe_unit_options(),
-      );
-      $form['ingredients'][$id]['mid2_tags'] = array(
-        '#value' => '</th><th>',
-      );
-      $form['ingredients'][$id]['name'] = array(
-        '#type' => 'textfield',
-        '#title' => '',
-        '#default_value' => $ingredient->name,
-        '#size' => 40,
-        '#maxlength' => 128,
-        '#autocomplete_path' => $callback,
-      );
-      $form['ingredients'][$id]['mid3_tags'] = array(
-        '#value' => '</th><th>',
-      );
-      $form['ingredients'][$id]['note'] = array(
-        '#type' => 'textfield',
-        '#title' => '',
-        '#default_value' => $ingredient->note,
-        '#size' => 20,
-        '#maxlength' => 256
-      );
-      $form['ingredients'][$id]['close_tags'] = array(
-        '#value' => '</th></tr>',
-      );
+    $form['ingredients'][$id]['open_tags'] = array(
+      '#value' => '<tr><th>',
+    );
+    $form['ingredients'][$id]['quantity'] = array(
+      '#type' => 'textfield',
+      '#title' => '',
+      '#default_value' => preg_replace('/\&frasl;/', '/', recipe_ingredient_quantity_from_decimal($ingredient->quantity)),
+      '#size' => 8,
+      '#maxlength' => 8,
+    );
+    $form['ingredients'][$id]['mid1_tags'] = array(
+      '#value' => '</th><th>',
+    );
+    $form['ingredients'][$id]['unit_id'] = array(
+      '#type' => 'select',
+      '#title' => '',
+      '#default_value' => $ingredient->unit_id,
+      '#options' => recipe_unit_options(),
+    );
+    $form['ingredients'][$id]['mid2_tags'] = array(
+      '#value' => '</th><th>',
+    );
+    $form['ingredients'][$id]['name'] = array(
+      '#type' => 'textfield',
+      '#title' => '',
+      '#default_value' => $ingredient->name,
+      '#size' => 40,
+      '#maxlength' => 128,
+      '#autocomplete_path' => $callback,
+    );
+    $form['ingredients'][$id]['mid3_tags'] = array(
+      '#value' => '</th><th>',
+    );
+    $form['ingredients'][$id]['note'] = array(
+      '#type' => 'textfield',
+      '#title' => '',
+      '#default_value' => $ingredient->note,
+      '#size' => 20,
+      '#maxlength' => 256
+    );
+    $form['ingredients'][$id]['close_tags'] = array(
+      '#value' => '</th></tr>',
+    );
 
-    }
   }
 
   $form['ingredients']['recipe_more_ingredients'] = array(
@@ -282,7 +255,19 @@ function recipe_form(&$node, $form_state) {
     '#cols' => 60,
     '#rows' => 10,
     '#description' => t('Step by step instructions on how to prepare and cook the recipe.'),
+    '#weight' => -2,
   );
+
+  $form["source"] = array(
+    '#type' => 'textfield',
+    '#title' => t('Source'),
+    '#default_value' => $node->source,
+    '#size' => 60,
+    '#maxlength' => 127,
+    '#description' => t('Optional. Does anyone else deserve credit for this recipe?'),
+    '#weight' => -2,
+  );
+
   $form['notes'] = array(
     '#type' => 'textarea',
     '#title' => t('Additional notes'),
@@ -290,7 +275,35 @@ function recipe_form(&$node, $form_state) {
     '#cols' => 60,
     '#rows' => 5,
     '#description' => t('Optional. Describe a great dining experience relating to this recipe, or note which wine or other dishes complement this recipe.'),
+    '#weight' => -2,
   );
+
+  $form['preptime'] = array(
+    '#type' => 'select',
+    '#title' => t('Preparation time'),
+    '#default_value' => $node->preptime,
+    '#options' => array(
+      5 => t('5 minutes'),
+      10 => t('10 minutes'),
+      15 => t('15 minutes'),
+      20 => t('20 minutes'),
+      30 => t('30 minutes'),
+      45 => t('45 minutes'),
+      60 => t('1 hour'),
+      90 => t('1 1/2 hours'),
+      120 => t('2 hours'),
+      150 => t('2 1/2 hours'),
+      180 => t('3 hours'),
+      210 => t('3 1/2 hours'),
+      240 => t('4 hours'),
+      300 => t('5 hours'),
+      360 => t('6 hours'),
+    ),
+    '#description' => t('How long does this recipe take to prepare (i.e. elapsed time)'),
+    '#weight' => -1,
+  );
+
+
   $form['filter'] = filter_form($node->format);
 
   return $form;
@@ -303,11 +316,14 @@ function recipe_form(&$node, $form_state) {
 function recipe_more_ingredients_submit($form, &$form_state) {
   // Set the form to rebuild and run submit handlers.
   node_form_submit_build_node($form, $form_state);
+
+  // Fake an empty preview.
+  // #341136: Taxonomy selection loses value on button click
   $form_state['node_preview'] = '';
 
   // Make the changes we want to the form state.
   if ($form_state['values']['ingredients']['recipe_more_ingredients']) {
-    $form_state['add_ingredients_count'] = 5;
+    $form_state['add_ingredients'] = 1;
   }
 }
 
