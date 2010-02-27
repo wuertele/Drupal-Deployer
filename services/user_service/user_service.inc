@@ -155,7 +155,9 @@ function user_service_save($account) {
   // Any logged in user is by default authenticated,
   // and leaving this role set in the user's roles array
   // causes big problems because of a FAPI hack that controls
-  // this checkbox. Therefore we just force it to 0 here.
+  // this checkbox on the user create and edit form (and thus
+  // causes problems with drupal_execute()). Therefore we just
+  // force it to 0 here.
   if (isset($account['roles'][2])) {
     $account['roles'][2] = 0;
   }
