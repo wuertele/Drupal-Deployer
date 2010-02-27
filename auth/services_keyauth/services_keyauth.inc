@@ -105,8 +105,13 @@ function _services_keyauth_alter_methods(&$methods) {
         $method['auth'] = FALSE;
         break;
       default:
-        $method['key'] = isset($method['key']) ? FALSE : TRUE;
-        $method['auth'] = isset($method['auth']) ? FALSE : TRUE;
+        if (!isset($method['key'])) {
+          $method['key'] = TRUE;
+        }
+
+        if (!isset($method['auth'])) {
+          $method['auth'] = TRUE;
+        }
         break;
     }
 
