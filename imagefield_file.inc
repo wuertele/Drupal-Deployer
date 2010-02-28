@@ -86,7 +86,13 @@ function imagefield_create_admin_thumb($source, $destination) {
   if ($info['width'] <= $size[0] && $info['height'] <= $size[1]) {
     file_copy($source, $destination);
   }
-  elseif (image_get_toolkit() && @image_scale($source, $destination, $size[0], $size[1])) {
+  // Use ImageAPI, if installed.
+  elseif (module_exists('imageapi') && imageapi_default_toolkit()) {
+    $res = imageapi_image_open($source);
+    imageapi_image_scale($res, $size[0], $size[1]);
+    imageapi_image_close($res, $destination);
+  }
+  elseif (image_get_toolkit() && image_scale($source, $destination, $size[0], $size[1])) {
     // Set permissions. This is done for us when using file_copy().
     @chmod($destination, 0664);
   }
