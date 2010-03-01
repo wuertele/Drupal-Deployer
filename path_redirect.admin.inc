@@ -341,7 +341,7 @@ function path_redirect_edit_form(&$form_state, $redirect = array()) {
   $form['source'] = array(
     '#type' => 'textfield',
     '#title' => t('From'),
-    '#description' => t("Enter an interal Drupal path or path alias to redirect (e.g. %example1 or %example2). Fragment anchors (e.g. %anchor) are <strong>not</strong> allowed.", array('%example1' => 'node/123', '%example2' => 'taxonomy/term/123', '%anchor' => '#anchor')),
+    '#description' => t("Enter an internal Drupal path or path alias to redirect (e.g. %example1 or %example2). Fragment anchors (e.g. %anchor) are <strong>not</strong> allowed.", array('%example1' => 'node/123', '%example2' => 'taxonomy/term/123', '%anchor' => '#anchor')),
     '#size' => 42,
     '#maxlength' => 255,
     '#default_value' => path_redirect_build_url($redirect['source'], $redirect['source_query']),
@@ -453,17 +453,17 @@ function path_redirect_edit_form_validate($form, &$form_state) {
   if ($existing = path_redirect_load_by_source($redirect['source'], $redirect['language'])) {
     if ($redirect['rid'] != $existing['rid']) {
       // The "from" path should not conflict with another redirect
-      form_set_error($form_parents . 'source', t('The source path %source is already being redirected. Do you want to <a href="@edit-page">edit the existing redirect</a>?', array('%source' => $redirect['source'], '@edit-page' => url('admin/build/path-redirect/edit/'. $existing['rid']))));
+      form_set_error('source', t('The source path %source is already being redirected. Do you want to <a href="@edit-page">edit the existing redirect</a>?', array('%source' => $redirect['source'], '@edit-page' => url('admin/build/path-redirect/edit/'. $existing['rid']))));
     }
   }
 
   if (!valid_url($redirect['redirect']) && !valid_url($redirect['redirect'], TRUE) && $redirect['redirect'] != '<front>') {
-    form_set_error($form_parents . 'redirect', t('The redirect <strong>to</strong> path does not appear valid.'));
+    //form_set_error('redirect', t('The redirect <strong>to</strong> path does not appear valid.'));
   }
 
   // check that there there are no redirect loops
   if (url($redirect['source']) == url($redirect['redirect'])) {
-    form_set_error($form_parents . 'redirect', t('You are attempting to redirect the page to itself. This will result in an infinite loop.'));
+    form_set_error('redirect', t('You are attempting to redirect the page to itself. This will result in an infinite loop.'));
   }
 }
 
@@ -549,7 +549,7 @@ function path_redirect_status_code_options() {
  */
 function path_redirect_js_autocomplete_404() {
   $args = func_get_args();
-  $string = implode('/', $args);
+  $string = drupal_strtolower(implode('/', $args));
   $matches = array();
 
   // Get a list of 404s, sorted by the number of times each 404 was processed.
