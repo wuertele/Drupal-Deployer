@@ -147,17 +147,13 @@ function xmlsitemap_file_transfer($source, $headers) {
   }
 
   foreach ($headers as $header) {
-    // To prevent HTTP header injection, we delete new lines that are
-    // not followed by a space or a tab.
-    // See http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
-    $header = preg_replace('/\r?\n(?!\t| )/', '', $header);
     drupal_set_header($header);
   }
 
-  // Transfer file in 1024 byte chunks to save memory usage.
+  // Transfer file in 16 KB chunks to save memory usage.
   if ($handle = fopen($source, 'rb')) {
     while (!feof($handle)) {
-      print fread($handle, 1024);
+      print fread($handle, 1024*16);
     }
     fclose($handle);
   }
