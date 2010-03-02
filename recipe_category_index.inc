@@ -31,9 +31,7 @@ function recipe_category_index_page() {
 
   // You are on the top level, don't display every recipe.
   if ( $term == NULL ) {
-    if (variable_get('recipe_recent_box_enable', 1) == 1) {
-      $tree['recent_list'] = recipe_get_latest(variable_get('recipe_recent_display', 5));
-    }
+    // Nothing right now.
   }
   // You are view a term, build the node list.
   else {
@@ -103,12 +101,7 @@ function theme_recipe_category_index_page($tree = NULL) {
   // Set-up the right column.
   $output .= '<div class="recipe_index_node_lists">';
 
-  // Render the recent_list second.
-  if ($tree['recent_list']) {
-    $output .= theme('box', variable_get('recipe_recent_box_title', t('Latest recipes')), node_title_list($tree['recent_list']));
-  }
-
-  // Render the node_list third.
+  // Render the node_list.
   if ($tree['node_list']) {
     $list = node_title_list($tree['node_list']);
     if ( strlen($list) > 0 ) {
@@ -143,18 +136,6 @@ function theme_recipe_category_index_page($tree = NULL) {
 
   drupal_set_title(t('Find by'));
   return $output;
-}
-
-
-/**
- * Get the latest recipes by created date.
- *
- * @return
- *   A database query result suitable for use the node_title_list.
- */
-function recipe_get_latest($count = 0) {
-  $sql = "SELECT n.nid, n.title, n.sticky, n.created FROM {node} n WHERE status = 1 AND type = 'recipe' ORDER BY sticky DESC, created DESC";
-  return db_query_range($sql, 0, $count);
 }
 
 
