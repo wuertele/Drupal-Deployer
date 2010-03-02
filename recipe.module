@@ -382,11 +382,11 @@ function recipe_menu() {
 
   $items['admin/content/recipe'] = array(
     'title' => 'Recipes',
-    'description' => 'Import and export recipes.',
+    'description' => 'Configure the recipe module and do bulk import and export of recipes.',
     'page callback' => 'recipe_io_page',
     'access arguments' => array('administer site configuration'),
     'type' => MENU_NORMAL_ITEM,
-    //'file'  => 'recipe.pages.inc',
+    'file' => 'recipe.admin.inc',
   );
   $items['admin/content/recipe/export_multi'] = array(
     'title' => 'Export',
@@ -395,7 +395,7 @@ function recipe_menu() {
     'access callback' => 'recipe_export_multi_access',
     'access arguments' => array('administer site configuration'),
     'type' => MENU_NORMAL_ITEM,
-    //'file'  => 'recipe.pages.inc',
+    'file' => 'recipe.admin.inc',
   );
   $items['admin/content/recipe/import_multi'] = array(
     'title' => 'Import',
@@ -404,36 +404,27 @@ function recipe_menu() {
     'access callback' => 'recipe_import_multi_access',
     'access arguments' => array('administer site configuration'),
     'type' => MENU_NORMAL_ITEM,
-    //'file'  => 'recipe.pages.inc',
+    'file' => 'recipe.admin.inc',
   );
 
-  // For tabs you need this duplication of recipe_admin_settings.
-  $items['admin/settings/recipe'] = array(
-    'title' => 'Recipe module',
+  $items['admin/content/recipe/settings'] = array(
+    'title' => 'Settings',
     'description' => 'Settings that control how the recipe module functions.',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('recipe_admin_settings'),
     'access arguments' => array('administer site configuration'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => -1,
     'file' => 'recipe.admin.inc',
   );
-  $items['admin/settings/recipe/settings'] = array(
-    'title' => 'Recipe',
-    'description' => 'Settings that control how the recipe module functions.',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('recipe_admin_settings'),
-    'access arguments' => array('administer site configuration'),
-    'file' => 'recipe.admin.inc',
-    'type' => MENU_DEFAULT_LOCAL_TASK,
-    'weight' => -10,
-  );
-  $items['admin/settings/recipe/recipe_index'] = array(
-    'title' => 'Index page',
+  $items['admin/content/recipe/recipe_index'] = array(
+    'title' => 'Indexes',
     'description' => t('Configure settings for the recipe index page.'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('recipe_index_settings_form'),
     'access arguments' => array('administer site configuration'),
-    'file' => 'recipe.admin.inc',
     'type' => MENU_LOCAL_TASK,
+    'file' => 'recipe.admin.inc',
   );
 
   return $items;
@@ -864,60 +855,6 @@ function recipe_export($type = 'html', $nid = NULL, $yield = NULL) {
   }
 }
 
-function recipe_export_multi($type = NULL) {
-
-  // load supported formats
-  $formats = module_invoke_all('recipeio', 'export_multi');
-  $o = 'Supported Output Formats:<br/>';
-  if ( $type === NULL ) {
-    foreach ( $formats as $key => $format ) {
-      if ($format) {
-        $o .= l($format['format_name'], "admin/content/recipe/export_multi/$key") . "<br/>";
-      }
-    }
-    return $o;
-  }
-
-  // normalize typed urls
-  $type = drupal_strtolower($type);
-
-  // If callback exists, call it, otherwise error out.
-  if (isset($formats[$type]) && function_exists($formats[$type]['callback'])) {
-    echo call_user_func($formats[$type]['callback']);
-  }
-  else {
-    drupal_set_message(t('Unknown export format(%the_format).', array('%the_format' => $type)), 'error');
-    drupal_not_found();
-  }
-}
-
-function recipe_import_multi($type = NULL) {
-
-  // load supported formats
-  $formats = module_invoke_all('recipeio', 'import_multi');
-  $o = 'Supported Input Formats:<br/>';
-  if ( $type === NULL ) {
-    foreach ( $formats as $key => $format ) {
-      if ($format) {
-        $o .= l($format['format_name'], "admin/content/recipe/import_multi/$key") . "<br/>";
-      }
-    }
-    return $o;
-  }
-
-  // normalize typed urls
-  $type = drupal_strtolower($type);
-
-  // If callback exists, call it, otherwise error out.
-  if (isset($formats[$type]) && function_exists($formats[$type]['callback'])) {
-    echo call_user_func($formats[$type]['callback']);
-  }
-  else {
-    drupal_set_message(t('Unknown export format(%the_format).', array('%the_format' => $type)), 'error');
-    drupal_not_found();
-  }
-}
-
 
 /**
  * Callback function for ingredient autocomplete
@@ -1189,8 +1126,8 @@ function theme_recipe_node($node, $display_yield_form = TRUE, $yield_arg = NULL)
 
   // Create the output
   $output = '';
-  if (variable_get('recipe_hide_summary', 0) == 0) {
-    $output .= '<div class="recipe-summary">'. theme('box', t('Summary'), $summary ) .'</div>';
+  if (variable_get('recipe_summary_box_enable', 1) == 1) {
+    $output .= '<div class="recipe-summary">'. theme('box', variable_get('recipe_summary_box_title', t('Summary')), $summary ) .'</div>';
   }
   else {
     $output .= '<div class="recipe-summary" style="display:none">'. theme('box', t('Summary'), $summary ) .'</div>';
@@ -1625,12 +1562,6 @@ function recipe_indexes_page() {
   drupal_set_title(t("Recipes Menu"));
 
   return $output;
-}
-
-function recipe_io_page() {
-  $item = menu_get_item();
-  $content = system_admin_menu_block($item);
-  return theme('node_add_list', $content);
 }
 
 

@@ -32,14 +32,6 @@ function recipe_admin_settings() {
     '#maxlength' => 255,
     '#description' => t('How fractions should be displayed. Leave blank to display as decimals. Each incidence of %d will be replaced by the whole number, the numerator, and the denominator in that order. Anything between curly braces will not be displayed when the whole number is equal to 0. Recommended settings are "{%d }%d&amp;frasl;%d" or "{%d }&lt;sup&gt;%d&lt;/sup&gt;/&lt;sub&gt;%d&lt;/sub&gt;"'),
   );
-  $form['recipe_hide_summary'] = array(
-    '#type' => 'radios',
-    '#title' => t('Hide Summary'),
-    '#default_value' => variable_get('recipe_hide_summary', 0),
-    '#options' => array(t('Disabled'), t('Enabled')),
-    '#description' => t('Hides or shows the Summary/Yield form.'),
-    '#required' => FALSE,
-  );
 
   $form['recipe_unit_display'] = array(
     '#type' => 'radios',
@@ -57,6 +49,56 @@ function recipe_admin_settings() {
     '#options' => array(t('U.S. customary units'), t('Metric')),
     '#description' => t('Which system of measure should be preferred where it is ambiguous.'),
     '#required' => TRUE,
+  );
+
+  $form['recipe_summary_box'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Recipe summary box'),
+  );
+  $form['recipe_summary_box']['recipe_summary_box_enable'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show recipe summary box'),
+    '#return_value' => 1,
+    '#default_value' => variable_get('recipe_summary_box_enable', 1),
+    '#description' => t('Show the recipe summary box on recipe view pages.  Contains the yield, source, and prep time values.'),
+    '#required' => FALSE,
+  );
+  $form['recipe_summary_box']['recipe_summary_box_title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Box title'),
+    '#default_value' => variable_get('recipe_summary_box_title', t('Summary')),
+    '#size' => 35,
+    '#maxlength' => 255,
+    '#description' => t('Title of the recipe summary box on recipe view pages.'),
+  );
+
+
+  $form['recipe_recent_box'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Recent recipe box'),
+  );
+  $form['recipe_recent_box']['recipe_recent_box_enable'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Show recent recipes box'),
+    '#return_value' => 1,
+    '#default_value' => variable_get('recipe_recent_box_enable', 1),
+    '#description' => t('Show the recent recipes box on the recipes menu page.'),
+    '#required' => FALSE,
+  );
+  $form['recipe_recent_box']['recipe_recent_box_title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Box title'),
+    '#default_value' => variable_get('recipe_recent_box_title', t('Latest recipes')),
+    '#size' => 35,
+    '#maxlength' => 255,
+    '#description' => t('Title of the recent recipes box on the recipes index page.'),
+  );
+  $form['recipe_recent_box']['recipe_recent_display'] = array(
+    '#type' => 'select',
+    '#title' => t('Recipes to display'),
+    '#default_value' => variable_get('recipe_recent_display', 5),
+    '#options' => drupal_map_assoc(array(0, 5, 10, 15)),
+    '#description' => t('Sets the number of recent recipes that will be displayed in the Recent Recipes box. (0 = not displayed).'),
   );
 
   return system_settings_form($form);
@@ -92,39 +134,71 @@ function recipe_index_settings_form() {
     '#description' => t('List recipes in the current category and its children down to the selected Term Depth(above).'),
   );
 
-
-  $form['recipe_recent_box'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Recent recipe box'),
-  );
-
-  $form['recipe_recent_box']['recipe_recent_box_enable'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Show recent recipes box'),
-    '#return_value' => 1,
-    '#default_value' => variable_get('recipe_recent_box_enable', 1),
-    '#description' => t('Show the recent recipes box on the recipes menu page.'),
-    '#required' => FALSE,
-  );
-  $form['recipe_recent_box']['recipe_recent_box_title'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Box title'),
-    '#default_value' => variable_get('recipe_recent_box_title', t('Latest recipes')),
-    '#size' => 35,
-    '#maxlength' => 255,
-    '#description' => t('Title of the recent recipes box on the recipes index page.'),
-  );
-  $form['recipe_recent_box']['recipe_recent_display'] = array(
-    '#type' => 'select',
-    '#title' => t('Recipes to display'),
-    '#default_value' => variable_get('recipe_recent_display', 5),
-    '#options' => drupal_map_assoc(array(0, 5, 10, 15)),
-    '#description' => t('Sets the number of recent recipes that will be displayed in the Recent Recipes box. (0 = not displayed).'),
-  );
-
-
   // The setting above affect the menu system.
   menu_rebuild();
 
   return system_settings_form($form);
 }
+
+
+function recipe_io_page() {
+  $item = menu_get_item();
+  $content = system_admin_menu_block($item);
+  return theme('node_add_list', $content);
+}
+
+
+function recipe_export_multi($type = NULL) {
+
+  // load supported formats
+  $formats = module_invoke_all('recipeio', 'export_multi');
+  $o = 'Supported Output Formats:<br/>';
+  if ( $type === NULL ) {
+    foreach ( $formats as $key => $format ) {
+      if ($format) {
+        $o .= l($format['format_name'], "admin/content/recipe/export_multi/$key") . "<br/>";
+      }
+    }
+    return $o;
+  }
+
+  // normalize typed urls
+  $type = drupal_strtolower($type);
+
+  // If callback exists, call it, otherwise error out.
+  if (isset($formats[$type]) && function_exists($formats[$type]['callback'])) {
+    echo call_user_func($formats[$type]['callback']);
+  }
+  else {
+    drupal_set_message(t('Unknown export format(%the_format).', array('%the_format' => $type)), 'error');
+    drupal_not_found();
+  }
+}
+
+function recipe_import_multi($type = NULL) {
+
+  // load supported formats
+  $formats = module_invoke_all('recipeio', 'import_multi');
+  $o = 'Supported Input Formats:<br/>';
+  if ( $type === NULL ) {
+    foreach ( $formats as $key => $format ) {
+      if ($format) {
+        $o .= l($format['format_name'], "admin/content/recipe/import_multi/$key") . "<br/>";
+      }
+    }
+    return $o;
+  }
+
+  // normalize typed urls
+  $type = drupal_strtolower($type);
+
+  // If callback exists, call it, otherwise error out.
+  if (isset($formats[$type]) && function_exists($formats[$type]['callback'])) {
+    echo call_user_func($formats[$type]['callback']);
+  }
+  else {
+    drupal_set_message(t('Unknown export format(%the_format).', array('%the_format' => $type)), 'error');
+    drupal_not_found();
+  }
+}
+
