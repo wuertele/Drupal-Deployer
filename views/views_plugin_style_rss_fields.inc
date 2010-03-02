@@ -2,10 +2,8 @@
 // $Id$
 
 /**
- * @file
- * Extending the view_plugin_style class to provide a kml view style.
+ * Extend the view_plugin_style class to provide an RSS view style.
  */
-
 class views_plugin_style_rss_fields extends views_plugin_style {
 
   /**
