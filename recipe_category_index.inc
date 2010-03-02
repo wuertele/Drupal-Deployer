@@ -35,7 +35,7 @@ function recipe_category_index_page() {
   }
   // You are view a term, build the node list.
   else {
-    if ( variable_get('recipe_index_catalog_show_child_category_links', 0) == 0 ) {
+    if ( variable_get('recipe_index_catalog_show_child_category_links', 1) == 0 ) {
       $tree['node_list'] = recipe_get_nodes_for_terms(array($term->tid));
     }
     else {
