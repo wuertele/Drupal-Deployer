@@ -111,6 +111,9 @@ class views_plugin_style_rss_fields extends views_plugin_style {
     }
   }
 
+  /**
+   * Map views row result to an RSS item.
+   */
   function map_rows($rows) {
     // Fields must be rendered in order as of Views 2.3, so we will pre-render everything.
     $renders = array();

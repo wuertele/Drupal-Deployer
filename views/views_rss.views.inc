@@ -1,9 +1,9 @@
 <?php
-// $Id$ 
+// $Id$
 
 /**
  * @file
- * Views plugins definition for views_kml
+ * Views plugins definition for views_rss.
  */
 
 /**

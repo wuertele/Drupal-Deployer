@@ -1,6 +1,9 @@
 <?php
 // $Id$
 
+/**
+ * Template preprocessor for views-view-views-rss-fields.tpl.php.
+ */
 function template_preprocess_views_view_views_rss_fields(&$vars) {
   $view = $vars['view'];
 
@@ -47,7 +50,7 @@ function template_preprocess_views_view_views_rss_fields(&$vars) {
 }
 
 /**
- * Preprocess for theme('views_rss_item').
+ * Template preprocessor for views-rss-fields-item.tpl.php.
  */
 function template_preprocess_views_rss_fields_item(&$vars) {
   $item = $vars['item'];
@@ -79,7 +82,7 @@ function theme_views_rss_feed_icon($url, $title, $icon) {
 }
 
 /**
- * Theme function for feed description
+ * Theme function for feed description.
  */
 function theme_views_rss_feed_description($description, $view) {
   return $description;
