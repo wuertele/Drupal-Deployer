@@ -1,5 +1,5 @@
 <?php
-// $Id$ 
+// $Id$
 
 /**
  * @file
@@ -17,7 +17,7 @@ class views_plugin_style_rss_fields extends views_plugin_style {
     parent::init($view, $display, $options = NULL);
     $this->feed_image = drupal_get_path('module', 'views_kml') . '/images/kml.png';
   }
-  
+
   /**
    * Attach this view to another display as a feed.
    *
@@ -29,17 +29,17 @@ class views_plugin_style_rss_fields extends views_plugin_style {
     $image = theme('image', $this->feed_image);
     $this->view->feed_icon .= l($image, $path, $url_options);
   }
-  
+
   /**
    * Provide a form for setting options.
    *
    * @param array $form
    * @param array $form_state
    */
-  function options_form(&$form, &$form_state) { 
-    parent::options_form($form, $form_state);                  
+  function options_form(&$form, &$form_state) {
+    parent::options_form($form, $form_state);
     $options = parent::option_definition();
-                           
+
     $handlers = $this->display->handler->get_handlers('field');
     if (empty($handlers)) {
       $form['error_markup'] = array(
@@ -52,7 +52,7 @@ class views_plugin_style_rss_fields extends views_plugin_style {
       // Feed Description
       $form['description'] = array(
         '#type' => 'fieldset',
-        '#title' => t('Feed Description'), 
+        '#title' => t('Feed Description'),
         '#collapsible' => TRUE,
         '#collapsed' => TRUE,
         '#weight' => -5,
@@ -72,15 +72,6 @@ class views_plugin_style_rss_fields extends views_plugin_style {
           $field_names[$field] = $handler->ui_name();
         }
       }
-      $field_options = array(
-        'title' => t('Title'),
-        'description' => t('Description'),
-        'link' => t('Link'),
-        'author' => t('Author'),
-        'category' => t('category'),
-        'guid' => t('guid'),
-        'pubDate' => t('pubDate'),
-      );
       $form['fields'] = array(
         '#type' => 'fieldset',
         '#title' => 'Field usage',
@@ -89,10 +80,11 @@ class views_plugin_style_rss_fields extends views_plugin_style {
         '#collapsed' => TRUE,
         '#weight' => 0,
       );
-      foreach ($field_options as $k => $v) {
+      foreach ($this->xml_fields() as $k => $option) {
         $form['fields'][$k] = array(
           '#type' => 'select',
-          '#title' => $v,
+          '#title' => $option['title'],
+          '#description' => isset($option['description']) ? $option['description'] : '',
           '#options' => $field_names,
           '#default_value' => $this->options['fields'][$k],
         );
@@ -100,7 +92,7 @@ class views_plugin_style_rss_fields extends views_plugin_style {
       // GeoRSS
       $form['georss'] = array(
         '#type' => 'fieldset',
-        '#title' => t('GeoRSS'), 
+        '#title' => t('GeoRSS'),
         '#description' => t('Select fields that provide the latitude and longitude values'),
         '#collapsible' => TRUE,
         '#collapsed' => TRUE,
@@ -111,7 +103,7 @@ class views_plugin_style_rss_fields extends views_plugin_style {
         '#title' => t('Latitude'),
         '#options' => $field_names,
         '#default_value' => $this->options['georss']['lat'],
-      ); 
+      );
       $form['georss']['lon'] = array(
         '#type' => 'select',
         '#title' => t('Longitude'),
@@ -120,7 +112,7 @@ class views_plugin_style_rss_fields extends views_plugin_style {
       );
     }
   }
-  
+
   function map_rows($rows) {
     // Fields must be rendered in order as of Views 2.3, so we will pre-render everything.
     $renders = array();
@@ -130,7 +122,7 @@ class views_plugin_style_rss_fields extends views_plugin_style {
       foreach ($keys as $id) {
         $renders[$count][$id] = $this->view->field[$id]->theme($row);
       }
-    }  
+    }
 
     $items = array();
     foreach ($renders as $id => $row) {
@@ -142,5 +134,80 @@ class views_plugin_style_rss_fields extends views_plugin_style {
       $items[] = $item;
     }
     return $items;
+  }
+
+  /**
+   * An array of available XML fields to map to.
+   */
+  function xml_fields() {
+    return array(
+      'title' => array(
+        'title' => t('Title'),
+        'description' => t('RSS 2.0 title element'),
+      ),
+      'description' => array(
+        'title' => t('Description'),
+        'description' => t('RSS 2.0 description element'),
+      ),
+      'link' => array(
+        'title' => t('Link'),
+        'description' => t('RSS 2.0 link element'),
+      ),
+      'author' => array(
+        'title' => t('Author e-mail'),
+        'description' => t('RSS 2.0 author element'),
+      ),
+      'dc:creator' => array(
+        'title' => t('Author name'),
+        'description' => t('Dublin core creator element'),
+      ),
+      'category' => array(
+        'title' => t('category'),
+        'description' => t('RSS 2.0 category element'),
+      ),
+      'guid' => array(
+        'title' => t('guid'),
+        'description' => t('RSS 2.0 guid element'),
+      ),
+      'pubDate' => array(
+        'title' => t('pubDate'),
+        'description' => t('RSS 2.0 pubDate element'),
+      ),
+    );
+  }
+
+  /**
+   * Return an array of all known XML namespaces.
+   */
+  function xml_namespaces() {
+    return array(
+      'dc' => 'http://purl.org/dc/elements/1.1/',
+      'georss' => 'http://www.georss.org/georss',
+    );
+  }
+
+  /**
+   * Convenience method: return an XML Namespace for a given element.
+   *
+   * @param $elem
+   *   An XML element like 'title' or 'dc:creator'
+   *
+   * @return
+   *   An array where with a local and a global namespace identifier. Returns
+   *   FALSE if no corresponding namespace could be found.
+   */
+  function xml_namespace($elem) {
+    $e = explode(':', $elem);
+    if (is_array($e)) {
+      $local = array_shift($e);
+      $namespaces = $this->xml_namespaces($local);
+      if (isset($namespaces[$local])) {
+        return array(
+          'local' => $local,
+          'namespace' => $namespaces[$local],
+        );
+      }
+    }
+    return FALSE;
   }
 }

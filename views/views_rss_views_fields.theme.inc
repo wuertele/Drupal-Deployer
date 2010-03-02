@@ -1,36 +1,47 @@
 <?php
-// $Id$ 
+// $Id$
 
 function template_preprocess_views_view_views_rss_fields(&$vars) {
   $view = $vars['view'];
-      
+
   // Set basic info - title, description - about the feed
   $vars['viewtitle'] = variable_get('site_name', array()) . ' | ' . $view->display[$view->current_display]->display_title;
-    
+
   if ($view->style_options['description']['feed_description']) {
     $description = $view->style_options['description']['feed_description'];
-  }   
+  }
   else {
     $description = variable_get('site_mission', array());
   }
   $vars['description'] = theme_views_rss_feed_description($description, $view);
-  
+
   // Base URL for link tag
   global $base_url;
   $vars['link'] = $base_url;
-    
-  // Grab the rows, push to field mapping function
+
+  // Grab the rows, push to field mapping function, gather namespaces.
+  $elements = $namespaces = array();
   $items = $view->style_plugin->map_rows($vars['rows']);
   foreach($items as $item) {
+    // Special handling for GeoRSS.
+    if ($item['lat'] && $item['lon']) {
+      $item['georss:point'] = $item['lat'] .' '.  $item['lon'];
+      unset($item['lat']);
+      unset($item['lon']);
+    }
     $rows .= theme('views_rss_fields_item', $item);
+    foreach ($item as $k => $v) {
+      $elements[$k] = $k;
+    }
   }
   $vars['rows'] = $rows;
-  
-  //GeoRSS
-  if ($view->style_options['georss']['lat'] && $view->style_options['georss']['lon']) {
-   $vars['georss'] = TRUE;
+  foreach ($elements as $e) {
+    if ($namespace = $view->style_plugin->xml_namespace($e)) {
+      $namespaces[] = "xmlns:{$namespace['local']}=\"{$namespace['namespace']}\"";
+    }
   }
-  
+  $vars['namespaces'] = implode(' ', $namespaces);
+
   // Set Headers
   drupal_set_header('Content-Type: application/rss+xml; charset=utf-8');
 }
@@ -38,21 +49,20 @@ function template_preprocess_views_view_views_rss_fields(&$vars) {
 /**
  * Preprocess for theme('views_rss_item').
  */
-function template_preprocess_views_rss_fields_item(&$vars) { 
+function template_preprocess_views_rss_fields_item(&$vars) {
   $item = $vars['item'];
-        
+
   // GeoRSS
   if ($item['lat'] && $item['lon']) {
     $item['georss:point'] = check_plain($item['lat'] . ' ' .  $item['lon']);
     unset($item['lat']);
     unset($item['lon']);
   }
-  
+
   // Loop through key=>value pairs
   foreach ($item as $key => $value) {
     if ($value) {
-      $row .= '<' . $key . '>' . check_plain($value) . '</' . $key . '>
-      ';
+      $row .= "<$key>". check_plain($value) ."</$key>\n";
     }
   }
 
