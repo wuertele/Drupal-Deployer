@@ -53,8 +53,8 @@
 
 
 <div id="footer">
-  <?php print $footer_message ?>
-  <?php print $footer ?>
+  <?php print $footer_message; ?>
+  <?php print $footer; ?>
 </div><!-- end footer -->
 <div id="notice">Theme provided by <a href="http://www.danetsoft.com">Danang Probo Sayekti</a>.</div>
 </div> <!-- end wrapper -->
