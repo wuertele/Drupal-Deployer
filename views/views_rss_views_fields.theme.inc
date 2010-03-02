@@ -24,6 +24,7 @@ function template_preprocess_views_view_views_rss_fields(&$vars) {
 
   // Grab the rows, push to field mapping function, gather namespaces.
   $elements = $namespaces = array();
+  $rows = '';
   $items = $view->style_plugin->map_rows($vars['rows']);
   foreach($items as $item) {
     // Special handling for GeoRSS.
@@ -56,13 +57,14 @@ function template_preprocess_views_rss_fields_item(&$vars) {
   $item = $vars['item'];
 
   // GeoRSS
-  if ($item['lat'] && $item['lon']) {
+  if (isset($item['lat']) && isset($item['lon'])) {
     $item['georss:point'] = check_plain($item['lat'] . ' ' .  $item['lon']);
     unset($item['lat']);
     unset($item['lon']);
   }
 
   // Loop through key=>value pairs
+  $row = '';
   foreach ($item as $key => $value) {
     if ($value) {
       $row .= "<$key>". check_plain($value) ."</$key>\n";
