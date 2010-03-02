@@ -139,7 +139,7 @@ function recipe_recipeML_import_form($form_state) {
     '#title' => t('RecipeML File'),
     '#default_value' => $object['foo'],
     '#size' => 34,
-    '#description' => t("A Recipe in RecipeML format, see http://www.formatdata.com/recipeml"),
+    '#description' => t("A Recipe in RecipeML format, see http://www.formatdata.com/recipeml.  Note: This will add taxonomy terms to the lightest weight recipe taxonomy."),
   );
   $form['submit'] = array(
     '#type' => 'submit',
@@ -188,7 +188,33 @@ function recipe_recipeML_import_form_submit($form, &$form_state) {
     file_delete($file->filepath);
 
     if ($_POST['op'] == t('Import')) {
+
+      $vocabs = taxonomy_get_vocabularies('recipe');
+      list($first_vid, $vocab) = each($vocabs);
+      reset($vocabs);
+
       foreach ($recipes as $recipe) {
+        $recipe->taxonomy = array();
+        foreach ($recipe->_categories as $category) {
+
+          // Search the lightest weight recipe vocab for this term.
+          $term = recipe_get_term_by_name($category, $vocab->vid);
+
+          // You didn't find that term, so add it.
+          if ( $term == FALSE && isset($first_vid) ) {
+            $term = array('name' => $category, 'vid' => $first_vid);
+            drupal_set_message(t('Adding term %term_name', array('%term_name' => $category)));
+            taxonomy_save_term($term);
+          }
+
+          // You have the term now (existing or new), link it ink.
+          if ( isset($term) ) {
+            $recipe->taxonomy[] = $term->tid;
+          }
+
+        }
+
+        // Save the recipe into its proper tables.
         node_save($recipe);
       }
     }
@@ -310,3 +336,13 @@ function recipe_import_element_data($parser, $data) {
   $data_string .= $data;
 }
 
+
+
+function recipe_get_term_by_name($name, $vocab_id) {
+  $db_result = db_query(db_rewrite_sql("SELECT t.tid, t.* FROM {term_data} t WHERE t.vid=%d and LOWER(t.name) = LOWER('%s')", 't', 'tid'), $vocab_id, trim($name));
+  $result = array();
+  while ($term = db_fetch_object($db_result)) {
+    return $term;
+  }
+  return FALSE;
+}
