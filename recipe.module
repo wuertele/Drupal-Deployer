@@ -169,7 +169,7 @@ function recipe_form(&$node, $form_state) {
   $form['ingredients']['headings'] = array(
     '#value' => '<div><table ><thead><tr><th>'. t('Quantity') .'</th><th>'.
                 t('Units') .'</th><th>'. t('Ingredient name') .
-                '</th><th>'. t('Processing/Notes') .'</tr></thead>'."\n".'<tbody>',
+                '</th><th>'. t('Processing/Notes') .'</th><th>'. t('Sort Weight') .'</th></tr></thead>'."\n".'<tbody>',
   );
 
   $callback = 'recipe/ingredient/autocomplete';
@@ -181,9 +181,14 @@ function recipe_form(&$node, $form_state) {
     unset($form_state['add_ingredients']);
     $add_count = 5;
     for ($delta = 0; $delta < $add_count; $delta++) {
-      array_push($node->ingredients, array('quantity' => '', 'unit_id' => '', 'name' => '', 'note' => ''));
+      array_push($node->ingredients, array('quantity' => '', 'unit_id' => '', 'name' => '', 'note' => '', 'weight' => 0));
     }
   }
+
+  // Weights range from -delta to +delta, so delta should be at least half
+  // of the amount of blocks present. This makes sure all blocks in the same
+  // region get an unique weight.
+  $weight_delta = count($node->ingredients);
 
   foreach ($node->ingredients as $id => $ingredient) {
     // Sometimes $ingredient is an array.
@@ -229,6 +234,15 @@ function recipe_form(&$node, $form_state) {
       '#size' => 40,
       '#maxlength' => 256
     );
+    $form['ingredients'][$id]['mid4_tags'] = array(
+      '#value' => '</th><th>',
+    );
+    $form['ingredients'][$id]['weight'] = array(
+      '#type' => 'weight',
+      '#default_value' => $ingredient->weight,
+      '#delta' => $weight_delta,
+    );
+    
     $form['ingredients'][$id]['close_tags'] = array(
       '#value' => '</th></tr>',
     );
@@ -706,30 +720,28 @@ function recipe_save_ingredients($node) {
 /**
  * Compares two arrays of ingredients and returns the differences.
  */
-function recipe_ingredients_diff($a1, $a2) {
+function recipe_ingredients_diff($node_ingredients, $db_ingredients) {
   $return->add = array();
   $return->remove = array();
   $return->update = array();
-
-  foreach ($a1 as $key => $pl) {
-    $pl = (object)$pl;
-    $pl->weight = $key;
-    $pl->name = trim($pl->name);
-    if ($pl->name) {
-      if (!_in_array($pl, $return->add)) {
+  foreach ($node_ingredients as $ni) {
+    $ni = (object)$ni;
+    $ni->name = trim($ni->name);
+    if ($ni->name) {
+      if (!_in_array($ni, $return->add)) {
         // Duplicate entries for the same ingredient are ignored.
-        if (!_in_array($pl, $a2)) {
-          $return->add[] = $pl;
+        if (!_in_array($ni, $db_ingredients)) {
+          $return->add[] = $ni;
         }
-        elseif (!_in_array($pl, $return->update)) {
-          $return->update[] = $pl;
+        elseif (!_in_array($ni, $return->update)) {
+          $return->update[] = $ni;
         }
       }
     }
   }
 
-  foreach ($a2 as $k => $pl) {
-    if (!_in_array($pl, $a1)) {
+  foreach ($db_ingredients as $k => $pl) {
+    if (!_in_array($pl, $node_ingredients)) {
       $return->remove[] = $pl->id;
     }
   }
