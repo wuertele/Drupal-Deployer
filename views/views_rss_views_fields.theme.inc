@@ -28,11 +28,11 @@ function template_preprocess_views_view_views_rss_fields(&$vars) {
   $items = $view->style_plugin->map_rows($vars['rows']);
   foreach($items as $item) {
     // Special handling for GeoRSS.
-    if ($item['lat'] && $item['lon']) {
+    if (isset($item['lat']) && isset($item['lon'])) {
       $item['georss:point'] = $item['lat'] .' '.  $item['lon'];
-      unset($item['lat']);
-      unset($item['lon']);
     }
+    unset($item['lat']);
+    unset($item['lon']);
     $rows .= theme('views_rss_fields_item', $item);
     foreach ($item as $k => $v) {
       $elements[$k] = $k;
