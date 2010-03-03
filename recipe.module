@@ -163,15 +163,11 @@ function recipe_form(&$node, $form_state) {
     '#collapsible' => FALSE,
     '#title' => t('Ingredients'),
     '#tree' => TRUE,
+    '#theme' => 'ingredients_form',
     '#weight' => -3,
   );
 
-  $form['ingredients']['headings'] = array(
-    '#value' => '<div><table ><thead><tr><th>'. t('Quantity') .'</th><th>'.
-                t('Units') .'</th><th>'. t('Ingredient name') .
-                '</th><th>'. t('Processing/Notes') .'</th><th>'. t('Sort Weight') .'</th></tr></thead>'."\n".'<tbody>',
-  );
-
+  // This is the autocomplete callback url.
   $callback = 'recipe/ingredient/autocomplete';
 
   if ( !is_array($node->ingredients) ) {
@@ -194,9 +190,6 @@ function recipe_form(&$node, $form_state) {
     // Sometimes $ingredient is an array.
     $ingredient = (object)$ingredient;
 
-    $form['ingredients'][$id]['open_tags'] = array(
-      '#value' => '<tr><th>',
-    );
     $form['ingredients'][$id]['quantity'] = array(
       '#type' => 'textfield',
       '#title' => '',
@@ -204,17 +197,11 @@ function recipe_form(&$node, $form_state) {
       '#size' => 8,
       '#maxlength' => 8,
     );
-    $form['ingredients'][$id]['mid1_tags'] = array(
-      '#value' => '</th><th>',
-    );
     $form['ingredients'][$id]['unit_id'] = array(
       '#type' => 'select',
       '#title' => '',
       '#default_value' => $ingredient->unit_id,
       '#options' => recipe_unit_options(),
-    );
-    $form['ingredients'][$id]['mid2_tags'] = array(
-      '#value' => '</th><th>',
     );
     $form['ingredients'][$id]['name'] = array(
       '#type' => 'textfield',
@@ -224,9 +211,6 @@ function recipe_form(&$node, $form_state) {
       '#maxlength' => 128,
       '#autocomplete_path' => $callback,
     );
-    $form['ingredients'][$id]['mid3_tags'] = array(
-      '#value' => '</th><th>',
-    );
     $form['ingredients'][$id]['note'] = array(
       '#type' => 'textfield',
       '#title' => '',
@@ -234,19 +218,11 @@ function recipe_form(&$node, $form_state) {
       '#size' => 40,
       '#maxlength' => 256
     );
-    $form['ingredients'][$id]['mid4_tags'] = array(
-      '#value' => '</th><th>',
-    );
     $form['ingredients'][$id]['weight'] = array(
       '#type' => 'weight',
       '#default_value' => $ingredient->weight,
       '#delta' => $weight_delta,
     );
-    
-    $form['ingredients'][$id]['close_tags'] = array(
-      '#value' => '</th></tr>',
-    );
-
   }
 
   $form['ingredients']['recipe_more_ingredients'] = array(
@@ -255,11 +231,6 @@ function recipe_form(&$node, $form_state) {
     '#description' => t("If the amount of boxes above isn't enough, click here to add more ingredients."),
     '#weight' => 1,
     '#submit' => array('recipe_more_ingredients_submit'),
-  );
-
-
-  $form['ingredients']['end'] = array(
-    '#value' => '</tbody>' . "\n" . '</table></div>' . "\n",
   );
 
   $form['instructions'] = array(
@@ -317,11 +288,37 @@ function recipe_form(&$node, $form_state) {
     '#weight' => -1,
   );
 
-
   $form['filter'] = filter_form($node->format);
 
   return $form;
 }
+
+
+function theme_ingredients_form($form) {
+
+  $header = array('', t('Quantity'), t('Units'), t('Ingredient name'), t('Processing/Notes'), t('Sort Weight'));
+  drupal_add_tabledrag('ingredient-list', 'order', 'sibling', 'ingredient-weight');
+
+  foreach (element_children($form) as $key) {
+    // Skip the more ingredients button
+    if ( is_numeric($key) ) {
+      // Add class to ingredient weight fields for drag and drop.
+      $form[$key]['weight']['#attributes']['class'] = 'ingredient-weight';
+
+      $row = array('');
+      $row[] = drupal_render($form[$key]['quantity']);
+      $row[] = drupal_render($form[$key]['unit_id']);
+      $row[] = drupal_render($form[$key]['name']);
+      $row[] = drupal_render($form[$key]['note']);
+      $row[] = drupal_render($form[$key]['weight']);
+      $rows[] = array('data' => $row, 'class' => 'draggable');
+    }
+  }
+  $output = theme('table', $header, $rows, array('id' => 'ingredient-list'));
+  $output .= drupal_render($form);
+  return $output;
+}
+
 
 /**
  * Submit handler to add more ingredient rows.  It makes changes to the form state and the
@@ -1037,6 +1034,11 @@ function recipe_theme() {
       'function' => 'theme_recipe_node',
       'arguments' => array('node' => NULL, 'yield_form' => TRUE, 'yield_arg' => NULL),
     ),
+    // The ingredients sub-form on the recipe edit screen.
+    'ingredients_form' => array(
+      'arguments' => array('form' => NULL),
+    ),
+
     'recipe_ingredients' => array(
       'function' => 'theme_recipe_ingredients',
       'arguments' => array('ingredients' => NULL, 'factor' => 1),
