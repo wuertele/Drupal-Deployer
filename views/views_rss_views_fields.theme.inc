@@ -14,9 +14,9 @@ function template_preprocess_views_view_views_rss_fields(&$vars) {
     $description = $view->style_options['description']['feed_description'];
   }
   else {
-    $description = variable_get('site_mission', array());
+    $description = variable_get('site_mission', '');
   }
-  $vars['description'] = theme_views_rss_feed_description($description, $view);
+  $vars['description'] = theme('views_rss_feed_description', $description, $view);
 
   // Base URL for link tag
   global $base_url;
