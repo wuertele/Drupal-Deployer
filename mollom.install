@@ -273,7 +273,7 @@ function mollom_update_6105() {
     if (!empty($mode) && isset($form_info[$form_id])) {
       $info = $form_info[$form_id];
       $info['mode'] = $mode;
-      $info['enabled_fields'] = array_keys($info['elements']);
+      $info['enabled_fields'] = ($mode == MOLLOM_MODE_ANALYSIS ? array_keys($info['elements']) : array());
       mollom_form_save($info);
     }
     variable_del($row->name);
@@ -368,6 +368,21 @@ function mollom_update_6109() {
 function mollom_update_6110() {
   $ret = array();
   _mollom_status(TRUE);
+  return $ret;
+}
+
+/**
+ * Fix enabled_fields array for CAPTCHA-only protected forms.
+ *
+ * mollom_update_6105() incorrectly stored enabled_fields values for forms
+ * protected by CAPTCHAs only.
+ */
+function mollom_update_6111() {
+  $ret = array();
+  // @see update_sql()
+  $sql = "UPDATE {mollom_form} SET enabled_fields = '%s' WHERE mode = %d";
+  $result = db_query($sql, array(serialize(array()), MOLLOM_MODE_CAPTCHA));
+  $ret[] = array('success' => $result !== FALSE, 'query' => check_plain($sql));
   return $ret;
 }
 
