@@ -462,7 +462,7 @@ function xmlsitemap_rebuild_batch_clear(array $entities, $save_custom, &$context
 /**
  * Batch callback; fetch and add the sitemap links for a specific entity.
  */
-function xmlsitemap_rebuild_batch_fetch($entity, &$context) {
+ function xmlsitemap_rebuild_batch_fetch($entity, &$context) {
   if (!isset($context['sandbox']['info'])) {
     $context['sandbox']['info'] = xmlsitemap_get_link_info($entity);
     $context['sandbox']['progress'] = 0;
@@ -486,7 +486,6 @@ function xmlsitemap_rebuild_batch_fetch($entity, &$context) {
     $query['WHERE'] .= " AND $bundle_key IN (" . db_placeholders($bundles, $bundle_type) . ")";
     $args = array_merge($args, $bundles);
   }
-  $query['ORDER BY'] = "ORDER BY $id_key";
 
   if (!isset($context['sandbox']['max'])) {
     $count_query = $query;
@@ -494,6 +493,9 @@ function xmlsitemap_rebuild_batch_fetch($entity, &$context) {
     $sql = implode(' ', $count_query);
     $context['sandbox']['max'] = (int) db_result(db_query($sql, $args));
   }
+
+  // PostgreSQL cannot have the ORDERED BY in the count query.
+  $query['ORDER BY'] = "ORDER BY $id_key";
 
   $sql = implode(' ', $query);
   $query = db_query_range($sql, $args, 0, variable_get('xmlsitemap_batch_limit', 100));
