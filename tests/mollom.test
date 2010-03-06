@@ -284,7 +284,8 @@ class MollomWebTestCase extends DrupalWebTestCase {
         $edit['mollom[enabled_fields][' . rawurlencode($field) . ']'] = TRUE;
       }
     }
-    $form_info = mollom_get_form_info($form_id);
+    $form_list = mollom_form_list();
+    $form_info = mollom_form_info($form_id, $form_list[$form_id]['module']);
     foreach (array_keys($form_info['elements']) as $field) {
       // Due to SimpleTest's form handling of checkboxes, we need to disable all
       // remaining checkboxes manually.
@@ -846,6 +847,10 @@ class MollomAccessTestCase extends MollomWebTestCase {
    * Tests 'bypass access' property of registered forms.
    */
   function testBypassAccess() {
+    $this->drupalLogin($this->admin_user);
+    $this->setProtection('comment_form');
+    $this->drupalLogout();
+
     $node = $this->drupalCreateNode(array('body' => 'node body', 'type' => 'story'));
 
     // Create a regular user and post a comment.
@@ -955,6 +960,10 @@ class MollomFallbackTestCase extends MollomWebTestCase {
    * @todo Test mail sending with assertMail() now that it is available.
    */
   function testFailoverMechanism() {
+    $this->drupalLogin($this->admin_user);
+    $this->setProtection('user_pass');
+    $this->drupalLogout();
+
     // Set the fallback strategy to 'blocking mode', so that if the failover
     // mechanism does not work, we would expect to get a warning.
     variable_set('mollom_fallback', MOLLOM_FALLBACK_BLOCK);
@@ -1300,7 +1309,7 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
 
     // Verify that field configuration contains only available elements.
     $this->drupalGet('admin/settings/mollom/manage/mollom_test_form');
-    $form_info = mollom_get_form_info('mollom_test_form');
+    $form_info = mollom_form_info('mollom_test_form', 'mollom_test');
     $fields = $this->xpath('//input[starts-with(@name, "mollom[enabled_fields]")]');
     $elements = array();
     foreach ($fields as $field) {
@@ -1383,29 +1392,15 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
    * Tests default configuration, protecting, and unprotecting forms.
    */
   function testFormAdministration() {
-    // @todo Figure out why we need to reset the static cache here.
-    mollom_get_form_info(NULL, TRUE);
-    $form_info = mollom_get_form_info();
-
-    // Verify that all registered forms specifying a default mode are
-    // auto-protected after installation.
-    // @todo During Drupal installation, modules are installed in an arbitrary
-    //   order, so module_list() only returns modules that were installed before
-    //   this module. Registered forms for Contact and Node modules are not
-    //   contained. Uncomment these assertions in D7.
-    /*
-    $this->drupalGet('admin/settings/mollom');
+    $form_info = mollom_form_list();
     foreach ($form_info as $form_id => $info) {
-      if (!empty($info['mode'])) {
-        $this->assertText($info['title']);
-      }
+      $form_info[$form_id] += mollom_form_info($form_id, $info['module']);
     }
-    */
 
-    // Unprotect user_register form.
-    $this->drupalPost('admin/settings/mollom/unprotect/user_register', array(), t('Confirm'));
+    // Verify that user_register form is not protected.
+    $this->drupalGet('admin/settings/mollom');
     $this->assertNoText($form_info['user_register']['title']);
-    $this->assertFalse(mollom_form_load('user_register'), t('Form configuration no longer exists.'));
+    $this->assertFalse(mollom_form_load('user_register'), t('Form configuration does not exist.'));
 
     // Re-protect user_register form.
     $this->drupalGet('admin/settings/mollom/add');
@@ -1925,11 +1920,8 @@ class MollomDataTestCase extends MollomWebTestCase {
    * Test submitted post and author information for textual analysis.
    */
   function testAnalysis() {
-    // Verify that comment form is protected.
     $this->drupalLogin($this->admin_user);
-    $this->drupalGet('admin/settings/mollom');
-    $this->assertText(t('Comment form'));
-    $this->drupalGet('admin/settings/mollom/manage/comment_form');
+    $this->setProtection('comment_form');
 
     // Make comment preview optional.
     $edit = array(
@@ -2087,6 +2079,10 @@ class MollomReportTestCase extends MollomWebTestCase {
    * Tests reporting comments.
    */
   function testReportComment() {
+    $this->drupalLogin($this->admin_user);
+    $this->setProtection('comment_form');
+    $this->drupalLogout();
+
     $this->node = $this->drupalCreateNode(array('type' => 'story'));
     variable_set('comment_preview_story', COMMENT_PREVIEW_OPTIONAL);
 
@@ -2121,6 +2117,10 @@ class MollomReportTestCase extends MollomWebTestCase {
    * Tests mass-reporting comments.
    */
   function testMassReportComments() {
+    $this->drupalLogin($this->admin_user);
+    $this->setProtection('comment_form');
+    $this->drupalLogout();
+
     $this->node = $this->drupalCreateNode(array('type' => 'story'));
     variable_set('comment_preview_story', COMMENT_PREVIEW_OPTIONAL);
 

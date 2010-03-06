@@ -46,16 +46,16 @@ function mollom_admin_form_list() {
  */
 function mollom_admin_form_options() {
   // Retrieve all registered forms.
-  $form_info = mollom_get_form_info();
+  $form_list = mollom_form_list();
 
   // Remove already configured form ids.
   $result = db_query("SELECT form_id FROM {mollom_form}");
   while ($form_id = db_result($result)) {
-    unset($form_info[$form_id]);
+    unset($form_list[$form_id]);
   }
   // If all registered forms are configured already, output a message, and
   // redirect the user back to overview.
-  if (empty($form_info)) {
+  if (empty($form_list)) {
     drupal_set_message(t('All available forms are protected already.'));
     drupal_goto('admin/settings/mollom');
   }
@@ -71,13 +71,13 @@ function mollom_admin_form_options() {
   }
 
   // Transform form information into an associative array suitable for #options.
-  foreach ($form_info as $form_id => $info) {
-    $form_info[$form_id] = $modules[$info['module']] . ': ' . $info['title'];
+  foreach ($form_list as $form_id => $info) {
+    $form_list[$form_id] = $modules[$info['module']] . ': ' . $info['title'];
   }
   // Sort form options by title.
-  asort($form_info);
+  asort($form_list);
 
-  return $form_info;
+  return $form_list;
 }
 
 /**
@@ -181,7 +181,9 @@ function mollom_admin_configure_form_next_submit($form, &$form_state) {
   $form_id = $form_state['values']['mollom']['form_id'];
 
   // Load form information into $form_state for configuration.
-  $mollom_form = mollom_get_form_info($form_id);
+  $form_list = mollom_form_list();
+  $mollom_form = mollom_form_info($form_id, $form_list[$form_id]['module']);
+
   // Enable all fields for textual analysis by default.
   if (!empty($mollom_form['mode']) && !empty($mollom_form['elements'])) {
     $mollom_form['enabled_fields'] = array_keys($mollom_form['elements']);

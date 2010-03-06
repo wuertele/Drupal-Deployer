@@ -285,7 +285,7 @@ function mollom_report_access($entity, $id) {
   // Retrieve information about all protectable forms. We use the first valid
   // definition, because we assume that multiple form definitions just denote
   // variations of the same entity (e.g. node content types).
-  foreach (mollom_get_form_info() as $form_id => $info) {
+  foreach (mollom_form_list() as $form_id => $info) {
     if (!isset($info['entity']) || $info['entity'] != $entity) {
       continue;
     }
@@ -404,10 +404,20 @@ function mollom_data_delete($entity, $id) {
  * necessary.
  */
 function mollom_form_alter(&$form, &$form_state, $form_id) {
+  static $protected_forms;
+
   // Site administrators don't have their content checked with Mollom.
   if (!user_access('bypass mollom protection') && _mollom_status() === TRUE) {
+    // Retrieve a list of all protected forms once.
+    if (!isset($protected_forms)) {
+      $result = db_query("SELECT form_id, module FROM {mollom_form}");
+      $protected_forms = array();
+      while ($row = db_fetch_array($result)) {
+        $protected_forms[$row['form_id']] = $row['module'];
+      }
+    }
     // Retrieve configuration for this form.
-    if ($mollom_form = mollom_form_load($form_id)) {
+    if (isset($protected_forms[$form_id]) && $mollom_form = mollom_form_load($form_id)) {
       // Determine whether to bypass validation for the current user.
       foreach ($mollom_form['bypass access'] as $permission) {
         if (user_access($permission)) {
@@ -477,53 +487,53 @@ function mollom_get_mode($form_id) {
 }
 
 /**
- * Returns information about protectable forms registered via hook_mollom_form_info().
+ * Returns a list of protectable forms registered via hook_mollom_form_info().
+ */
+function mollom_form_list() {
+  $form_list = array();
+  foreach (module_implements('mollom_form_list') as $module) {
+    $function = $module . '_mollom_form_list';
+    $module_forms = $function();
+    foreach ($module_forms as $form_id => $info) {
+      $form_list[$form_id] = $info;
+      $form_list[$form_id] += array(
+        'form_id' => $form_id,
+        'module' => $module,
+      );
+    }
+  }
+  return $form_list;
+}
+
+/**
+ * Returns information about a form registered via hook_mollom_form_info().
  *
  * @param $form_id
- *   (optional) The form id to return information for. If omitted, information
- *   for all registered forms is returned.
- * @param $reset
- *   (optional) Boolean whether to reset the static cache and do nothing. Only
- *   used for tests.
+ *   The form id to return information for.
+ * @param $module
+ *   The module name $form_id belongs to.
  */
-function mollom_get_form_info($form_id = NULL, $reset = FALSE) {
-  static $form_info;
-
-  if ($reset) {
-    $form_info = NULL;
-    return;
-  }
-
-  if (!isset($form_info)) {
+function mollom_form_info($form_id, $module) {
+  $form_info = module_invoke($module, 'mollom_form_info', $form_id);
+  if (empty($form_info)) {
     $form_info = array();
-    foreach (module_implements('mollom_form_info') as $module) {
-      $function = $module . '_mollom_form_info';
-      $module_forms = $function();
-      if (isset($module_forms) && is_array($module_forms)) {
-        foreach ($module_forms as $id => $info) {
-          // Ensure basic properties for all forms.
-          $module_forms[$id] += array(
-            'form_id' => $id,
-            'module' => $module,
-            'entity' => NULL,
-            'title' => $id,
-            'mode' => NULL,
-            'bypass access' => array(),
-            'elements' => array(),
-            'mapping' => array(),
-          );
-        }
-        $form_info = array_merge_recursive($form_info, $module_forms);
-      }
-    }
-
-    // Allow modules to alter the default form information.
-    drupal_alter('mollom_form_info', $form_info);
   }
 
-  if (isset($form_id)) {
-    return isset($form_info[$form_id]) ? $form_info[$form_id] : array();
-  }
+  // Ensure basic properties for all forms.
+  $form_info += array(
+    'form_id' => $form_id,
+    'module' => $module,
+    'entity' => NULL,
+    'title' => $form_id,
+    'mode' => NULL,
+    'bypass access' => array(),
+    'elements' => array(),
+    'mapping' => array(),
+  );
+
+  // Allow modules to alter the default form information.
+  drupal_alter('mollom_form_info', $form_info, $form_id);
+
   return $form_info;
 }
 
@@ -536,7 +546,7 @@ function mollom_form_load($form_id) {
     $mollom_form['enabled_fields'] = unserialize($mollom_form['enabled_fields']);
 
     // Attach form registry information.
-    $mollom_form += mollom_get_form_info($form_id);
+    $mollom_form += mollom_form_info($form_id, $mollom_form['module']);
 
     // Ensure default values (partially for administrative configuration).
     $mollom_form += array(
@@ -1511,47 +1521,63 @@ function mollom_content_extra_fields($type_name) {
  */
 
 /**
- * Implements hook_mollom_form_info().
+ * Implements hook_mollom_form_list().
  */
-function node_mollom_form_info() {
-  $types = node_get_types('types');
+function node_mollom_form_list() {
   $forms = array();
+  $types = node_get_types('types');
   foreach ($types as $type) {
     $form_id = $type->type . '_node_form';
     $forms[$form_id] = array(
       'title' => t('@name form', array('@name' => $type->name)),
-      // @todo This is incompatible with node access.
-      'bypass access' => array('administer nodes', 'edit any ' . $type->type . ' content'),
+      'entity' => 'node',
       'report access callback' => 'node_mollom_report_access',
       'report delete callback' => 'node_mollom_report_delete',
-      'entity' => 'node',
-      'elements' => array(),
-      'mapping' => array(
-        'post_id' => 'nid',
-        'author_name' => 'name',
-      ),
     );
-    // @see node_content_form()
-    if ($type->has_title) {
-      $forms[$form_id]['elements']['title'] = check_plain($type->title_label);
-      $forms[$form_id]['mapping']['post_title'] = 'title';
-    }
-    if ($type->has_body) {
-      $forms[$form_id]['elements']['body'] = check_plain($type->body_label);
-    }
-    // Add CCK fields by default.
-    if (module_exists('content')) {
-      $content_info = content_types($type->type);
-      foreach ($content_info['fields'] as $field_name => $field) {
-        // We only consider text fields for text analysis.
-        if ($field['type'] == 'text') {
-          $forms[$form_id]['elements'][$field_name] = check_plain(t($field['widget']['label']));
-        }
+  }
+  return $forms;
+}
+
+/**
+ * Implements hook_mollom_form_info().
+ */
+function node_mollom_form_info($form_id) {
+  // Retrieve internal type from $form_id.
+  $nodetype = drupal_substr($form_id, 0, -10);
+
+  $type = node_get_types('type', $nodetype);
+  $form_info = array(
+    'title' => t('@name form', array('@name' => $type->name)),
+    // @todo This is incompatible with node access.
+    'bypass access' => array('administer nodes', 'edit any ' . $type->type . ' content'),
+    'entity' => 'node',
+    'elements' => array(),
+    'mapping' => array(
+      'post_id' => 'nid',
+      'author_name' => 'name',
+    ),
+  );
+  // @see node_content_form()
+  if ($type->has_title) {
+    $form_info['elements']['title'] = check_plain($type->title_label);
+    $form_info['mapping']['post_title'] = 'title';
+  }
+  if ($type->has_body) {
+    $form_info['elements']['body'] = check_plain($type->body_label);
+  }
+
+  // Add CCK fields by default.
+  if (module_exists('content')) {
+    $content_info = content_types($type->type);
+    foreach ($content_info['fields'] as $field_name => $field) {
+      // We only consider text fields for text analysis.
+      if ($field['type'] == 'text') {
+        $form_info['elements'][$field_name] = check_plain(t($field['widget']['label']));
       }
     }
   }
 
-  return $forms;
+  return $form_info;
 }
 
 /**
@@ -1606,15 +1632,26 @@ function node_mollom_report_delete($entity, $id) {
  */
 
 /**
+ * Implements hook_mollom_form_list().
+ */
+function comment_mollom_form_list() {
+  $forms['comment_form'] = array(
+    'title' => t('Comment form'),
+    'entity' => 'comment',
+    'report access' => array('administer comments'),
+    'report delete callback' => 'comment_mollom_report_delete',
+  );
+  return $forms;
+}
+
+/**
  * Implements hook_mollom_form_info().
  */
-function comment_mollom_form_info() {
-  $forms['comment_form'] = array(
+function comment_mollom_form_info($form_id) {
+  $form_info = array(
     'title' => t('Comment form'),
     'mode' => MOLLOM_MODE_ANALYSIS,
     'bypass access' => array('administer comments'),
-    'report access' => array('administer comments'),
-    'report delete callback' => 'comment_mollom_report_delete',
     'entity' => 'comment',
     'elements' => array(
       'subject' => t('Subject'),
@@ -1631,7 +1668,7 @@ function comment_mollom_form_info() {
     ),
   );
 
-  return $forms;
+  return $form_info;
 }
 
 /**
@@ -1734,33 +1771,54 @@ function comment_mollom_report_delete($entity, $id) {
  */
 
 /**
- * Implements hook_mollom_form_info().
+ * Implements hook_mollom_form_list().
  */
-function user_mollom_form_info() {
+function user_mollom_form_list() {
   $forms['user_register'] = array(
     'title' => t('User registration form'),
-    'mode' => MOLLOM_MODE_CAPTCHA,
-    'bypass access' => array('administer users'),
     'entity' => 'user',
-    'mapping' => array(
-      'post_id' => 'uid',
-      'author_name' => 'name',
-      'author_mail' => 'mail',
-    ),
   );
   $forms['user_pass'] = array(
     'title' => t('User password request form'),
-    'mode' => MOLLOM_MODE_CAPTCHA,
-    'bypass access' => array('administer users'),
     'entity' => 'user',
-    'mapping' => array(
-      'post_id' => 'uid',
-      'author_name' => 'name',
-      'author_mail' => 'name',
-    ),
   );
-
   return $forms;
+}
+
+/**
+ * Implements hook_mollom_form_info().
+ */
+function user_mollom_form_info($form_id) {
+  switch ($form_id) {
+    case 'user_register':
+      $form_info = array(
+        'title' => t('User registration form'),
+        'mode' => MOLLOM_MODE_CAPTCHA,
+        'bypass access' => array('administer users'),
+        'entity' => 'user',
+        'mapping' => array(
+          'post_id' => 'uid',
+          'author_name' => 'name',
+          'author_mail' => 'mail',
+        ),
+      );
+      return $form_info;
+
+    case 'user_pass':
+      $form_info = array(
+        'title' => t('User password request form'),
+        'mode' => MOLLOM_MODE_CAPTCHA,
+        'bypass access' => array('administer users'),
+        'entity' => 'user',
+        'mapping' => array(
+          'post_id' => 'uid',
+          'author_name' => 'name',
+          // The 'name' form element accepts either a username or mail address.
+          'author_mail' => 'name',
+        ),
+      );
+      return $form_info;
+  }
 }
 
 /**
@@ -1773,35 +1831,55 @@ function user_mollom_form_info() {
  */
 
 /**
- * Implements hook_mollom_form_info().
+ * Implements hook_mollom_form_list().
  */
-function contact_mollom_form_info() {
+function contact_mollom_form_list() {
   $forms['contact_mail_page'] = array(
     'title' => t('Site-wide contact form'),
-    'mode' => MOLLOM_MODE_ANALYSIS,
-    'bypass access' => array('administer site-wide contact form'),
-    'elements' => array(
-      'subject' => t('Subject'),
-      'message' => t('Message'),
-    ),
-    'mapping' => array(
-      'post_title' => 'subject',
-      'author_name' => 'name',
-      'author_mail' => 'mail',
-    ),
   );
   $forms['contact_mail_user'] = array(
     'title' => t('User contact form'),
-    'mode' => MOLLOM_MODE_ANALYSIS,
-    'bypass access' => array('administer users'),
-    'elements' => array(
-      'subject' => t('Subject'),
-      'message' => t('Message'),
-    ),
-    'mapping' => array(
-      'post_title' => 'subject',
-    ),
   );
+  return $forms;
+}
+
+/**
+ * Implements hook_mollom_form_info().
+ */
+function contact_mollom_form_info($form_id) {
+  switch ($form_id) {
+    case 'contact_mail_page':
+      $form_info = array(
+        'title' => t('Site-wide contact form'),
+        'mode' => MOLLOM_MODE_ANALYSIS,
+        'bypass access' => array('administer site-wide contact form'),
+        'elements' => array(
+          'subject' => t('Subject'),
+          'message' => t('Message'),
+        ),
+        'mapping' => array(
+          'post_title' => 'subject',
+          'author_name' => 'name',
+          'author_mail' => 'mail',
+        ),
+      );
+      return $form_info;
+
+    case 'contact_mail_user':
+      $form_info = array(
+        'title' => t('User contact form'),
+        'mode' => MOLLOM_MODE_ANALYSIS,
+        'bypass access' => array('administer users'),
+        'elements' => array(
+          'subject' => t('Subject'),
+          'message' => t('Message'),
+        ),
+        'mapping' => array(
+          'post_title' => 'subject',
+        ),
+      );
+      return $form_info;
+  }
 
   return $forms;
 }
