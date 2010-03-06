@@ -23,6 +23,11 @@ function node_token_values($type, $object = NULL, $options = array()) {
     case 'node':
       $node = $object;
       $account = db_fetch_object(db_query("SELECT name, mail FROM {users} WHERE uid = %d", $node->uid));
+      
+      // Adjust for the anonymous user name.
+      if (!$node->uid && !$account->name) {
+        $account->name = variable_get('anonymous', t('Anonymous'));
+      }
 
       $values['nid']                = $node->nid;
       $values['type']               = $node->type;
