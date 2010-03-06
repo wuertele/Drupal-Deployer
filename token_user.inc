@@ -33,11 +33,11 @@ function user_token_values($type, $object = NULL, $options = array()) {
       $values['user-raw']           = $account->uid ? $account->name : variable_get('anonymous', 'Anonymous');
       $values['uid']            = $account->uid;
       $values['mail']           = $account->uid ? $account->mail : '';
-      $values['reg-date']       = $account->uid ? format_date($account->created, 'short') : '';
+      $values['reg-date']       = $account->uid ? format_date($account->created, 'small') : '';
       $values['reg-since']      = $account->uid ? format_interval($account->created) : '';
-      $values['log-date']       = $account->uid ? format_date($account->access, 'short') : '';
+      $values['log-date']       = $account->uid ? format_date($account->access, 'small') : '';
       $values['log-since']      = $account->uid ? format_interval($account->access) : '';
-      $values['date-in-tz']     = $account->uid ? format_date(time(), 'short', '', $account->timezone) : '';
+      $values['date-in-tz']     = $account->uid ? format_date(time(), 'small', '', $account->timezone) : '';
       $values['account-url']    = $account->uid ? url("user/$account->uid") : '';
       $values['account-edit']   = $account->uid ? url("user/$account->uid/edit") : '';
 
