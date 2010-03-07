@@ -261,11 +261,12 @@ class MollomWebTestCase extends DrupalWebTestCase {
    *   (optional) A list of form elements to enable for text analysis.
    */
   protected function setProtection($form_id, $fields = NULL) {
+    // Always start from overview page, also to make debugging easier.
+    $this->drupalGet('admin/settings/mollom');
     // Determine whether the form is already protected.
     $exists = db_result(db_query_range("SELECT 1 FROM {mollom_form} WHERE form_id = '%s'", $form_id, 0, 1));
     // Add a new form.
     if (!$exists) {
-      $this->drupalGet('admin/settings/mollom');
       $this->clickLink(t('Add form'));
       $edit = array(
         'mollom[form_id]' => $form_id,
@@ -676,7 +677,6 @@ class MollomStatusTestCase extends MollomWebTestCase {
     );
     $this->drupalPost(NULL, $edit, t('Preview'));
     $this->drupalPost(NULL, array(), t('Save'));
-    // @todo Replace with status message assertion in D7.
     $this->assertRaw('<p>' . $edit['comment'] . '</p>', t('Comment found.'));
 
     // Verify requirements error about missing API keys.
@@ -1435,6 +1435,7 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
           // all possible elements preselected.
           elseif ($info['mode'] == MOLLOM_MODE_ANALYSIS && !empty($info['elements'])) {
             foreach ($info['elements'] as $field => $label) {
+              $field = rawurlencode($field);
               $this->assertFieldByName("mollom[enabled_fields][$field]", TRUE);
             }
           }
@@ -1540,11 +1541,6 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
    * Make sure that the comment submission form can be unprotected.
    */
   function testUnprotectedCommentForm() {
-    // Disable Mollom for comments.
-    $this->drupalLogin($this->admin_user);
-    $this->delProtection('comment_form');
-    $this->drupalLogout();
-
     // Request the comment reply form. There should be no CAPTCHA.
     $this->drupalLogin($this->web_user);
     $this->drupalGet('comment/reply/'. $this->node->nid);
