@@ -67,7 +67,7 @@ if (Drupal.jsEnabled) {
     var poundIdx = currentURI.indexOf('#');
     if (poundIdx > -1) { // Ensure a fragment is set.
       var fragment = currentURI.substr(poundIdx);
-      var tabsetDiv = $('a[@href*="'+ fragment +'"]')
+      var tabsetDiv = $('a[href*="'+ fragment +'"]')
       .parent() // the parent li
       .parent() // the parent ul
       .parent(); // the parent div (the actual tabset div!)
