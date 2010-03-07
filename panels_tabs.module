@@ -69,7 +69,13 @@ function theme_panels_tabs_style_render_panel($display, $owner_id, $panes, $sett
       $index++;
     }
   }
-  $output = tabs_render($tabs);
+
+  // See if an optional title was added.
+  if (!empty($settings['title'])) {
+    $output .= theme('panels_tabs_title', $settings['title']);
+  }
+
+  $output .= tabs_render($tabs);
 
   return $output;
 }
@@ -78,6 +84,11 @@ function theme_panels_tabs_style_render_panel($display, $owner_id, $panes, $sett
  * Settings form callback.
  */
 function panels_tabs_style_settings_form($settings) {
+  $form['title'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Optional Title'),
+    '#default_value' => (isset($settings['title'])) ? $settings['title'] : '',
+  );
   $form['filling_tabs'] = array(
     '#type' => 'radios',
     '#title' => t('Horizontally filling tabs'),
@@ -109,6 +120,26 @@ function panels_tabs_style_settings_validate($form, &$form_state) {
   if (!in_array($form_state['values']['filling_tabs'], array('disabled', 'equal', 'smart'))) {
     form_error($form_state['values']['filling_tabs'], t('Invalid value detected.'));
   }
+}
+
+/**
+ * Implementation of hook_theme()
+ */
+function panels_tabs_theme() {
+  return array(
+    'panels_tabs_title' => array(
+      'arguments' => array('title' => NULL),
+    ),
+  );
+}
+
+/**
+ * Return rendered title.
+ *
+ * @themable
+ */
+function theme_panels_tabs_title($title) {
+  return "<h3 class=\"pane-title\">". $title ."</h3>\n";
 }
 
 
