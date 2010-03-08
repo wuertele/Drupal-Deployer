@@ -34,7 +34,7 @@ function theme_recipe_ingredient_index_page($tree = NULL) {
   $output = '<div class="recipe_ingredient_list">';
   $output1 = '<ul>';
   foreach ($tree['ingredient_list'] as $ingredient) {
-    $output1 .= '<li>'. l($ingredient->name, 'recipe/bying/'.$ingredient->id) .'</li>';
+    $output1 .= '<li>'. l($ingredient->name, 'recipe/bying/'. $ingredient->id) .'</li>';
   }
   $output1 .= '</ul>';
   if ($tree['current_ingredient']) {
