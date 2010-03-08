@@ -519,6 +519,17 @@ function recipe_view($node, $teaser = FALSE, $page = FALSE) {
     '#weight' => 1,
   );
 
+  // If you are showing the summary box, don't show taxo at the bottom as well.
+  if (variable_get('recipe_summary_box_enable', 1) == 1) {
+    // Remove each node term that is from a recipe vocab.
+    $recipe_vocabs = taxonomy_get_vocabularies('recipe');
+    foreach ($node->taxonomy as $tid => $term) {
+      if (isset($recipe_vocabs[$term->vid])) {
+        unset($node->taxonomy[$tid]);
+      }
+    }
+  }
+
   return $node;
 }
 
