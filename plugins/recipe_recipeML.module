@@ -41,7 +41,7 @@ function recipe_recipeML_export_multi() {
 
   $o = '<?xml version="1.0" encoding="UTF-8"?>'."\n".
   '<!DOCTYPE recipeml PUBLIC "-//FormatData//DTD RecipeML 0.5//EN" "http://www.formatdata.com/recipeml/recipeml.dtd">'."\n".
-  '<recipeml version="0.5">'."\n";
+  '<recipeml version="0.5" generator="http://drupal.org/project/recipe">'."\n";
 
   while ($row = db_fetch_object($rs)) {
     $o .= recipe_recipeML_export_single($row->nid, FALSE);
@@ -82,14 +82,19 @@ function recipe_recipeML_export_single($nid = NULL, $add_content_header = TRUE) 
   if ( $add_content_header == TRUE ) {
     $output .= '<?xml version="1.0" encoding="UTF-8"?>'."\n".
     '<!DOCTYPE recipeml PUBLIC "-//FormatData//DTD RecipeML 0.5//EN" "http://www.formatdata.com/recipeml/recipeml.dtd">'."\n".
-    '<recipeml version="0.5">'."\n";
+    '<recipeml version="0.5" generator="http://drupal.org/project/recipe">'."\n";
   }
 
   $output .= '<recipe>'."\n".
     '<head>'."\n".
-    '<title>'. my_xml_escape($node->title) ."</title>\n$cat_string".
+    '<title>'. my_xml_escape($node->title) ."</title>\n".
+    '      <version>'. date('m-d-Y', $node->changed) .'</version>'."\n".
+    '      <source>'. my_xml_escape((($node->source == '') ? $base_url.'/node/'.$node->nid : $node->source)) .'</source>'."\n".
+    '      <yield><qty>'. floatval($node->yield) .'</qty><unit>'. ((substr(strchr($node->yield, ' '), 1 ) == '') ? 'servings' : substr(strchr($node->yield, ' '), 1 )) .'</unit></yield>'."\n".
+    '      <preptime type="cooking"><time><qty>'. $node->preptime .'</qty><timeunit>minutes</timeunit></time></preptime>'.
+    "\n$cat_string".
     '</head>'."\n".
-    '<yield><qty>'. $node->yield ."</qty></yield>\n".
+    '<description>'. my_xml_escape($node->body) .'</description>'."\n".
     '<ingredients>';
 
   foreach ($node->ingredients as $ingredient) {
@@ -103,6 +108,7 @@ function recipe_recipeML_export_single($nid = NULL, $add_content_header = TRUE) 
   $output .= "\n".
     '</ingredients>'."\n".
     '<directions>'. my_xml_escape($node->instructions) .'</directions>'."\n".
+    '<note>'. my_xml_escape($node->notes) .'</note>'."\n".
     '</recipe>'."\n";
 
 
@@ -153,7 +159,7 @@ function recipe_recipeML_import_form_validate($form, &$form_state) {
   //}
 }
 function recipe_recipeML_import_form_submit($form, &$form_state) {
-  global $ingredient, $yield, $data_string, $recipes, $recipe, $user;
+  global $ingredient, $yield, $data_string, $recipes, $recipe, $user, $preptime;
 
   // save to a temp files
   if ($file = file_save_upload('recipe_import_file', array(), 'files', FILE_EXISTS_RENAME)) {
@@ -227,7 +233,7 @@ function recipe_recipeML_import_form_submit($form, &$form_state) {
  * Call-back function used by the XML parser.
  */
 function recipe_import_element_start($parser, $name, $attributes) {
-  global $recipe, $yield, $ingredient;
+  global $recipe, $yield, $ingredient, $preptime;
 
   switch ($name) {
     case 'RECIPE':
@@ -242,6 +248,9 @@ function recipe_import_element_start($parser, $name, $attributes) {
       break;
     case 'YIELD':
       $yield = TRUE;
+      break;
+    case 'PREPTIME':
+      $preptime = TRUE;
       break;
   }
 }
@@ -288,22 +297,27 @@ function recipe_import_element_end($parser, $name) {
           $recipe->_categories[] = trim($xmlterm);
         }
         break;
+      // QTY tag appears in more than one container tag.
       case 'QTY':
         if ($yield) $recipe->yield = trim($data_string);
+        elseif ($preptime) $recipe->preptime = trim($data_string);
         else $ingredient->quantity = trim($data_string);
         break;
       case 'UNIT':
-        if ($unit = recipe_unit_fuzzymatch(trim($data_string))) {
-          $ingredient->unit_id = $unit->id;
-        }
-        else {
-          if ($unit = recipe_unit_from_name('Unit')) {
+        // UNIT is contained in preptime, yield, as well as amt(ingredient).
+        if (!$preptime) {
+          if ($unit = recipe_unit_fuzzymatch(trim($data_string))) {
             $ingredient->unit_id = $unit->id;
-            if (strlen($ingredient->name) > 0) {
-              $ingredient->name = $ingredient->name .' '. trim($data_string);
-            }
-            else {
-              $ingredient->name = trim($data_string);
+          }
+          else {
+            if ($unit = recipe_unit_from_name('Unit')) {
+              $ingredient->unit_id = $unit->id;
+              if (strlen($ingredient->name) > 0) {
+                $ingredient->name = $ingredient->name .' '. trim($data_string);
+              }
+              else {
+                $ingredient->name = trim($data_string);
+              }
             }
           }
         }
@@ -324,6 +338,16 @@ function recipe_import_element_end($parser, $name) {
         break;
       case 'STEP':
         $recipe->instructions .= trim($data_string) ."\n";
+        break;
+      case 'NOTE':
+        $recipe->notes = trim($data_string);
+        break;
+      case 'SOURCE':
+        $recipe->source = trim($data_string);
+        break;
+      case 'PREPTIME':
+        $preptime = FALSE;
+        break;
   }
   $data_string = '';
 }
