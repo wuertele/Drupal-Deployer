@@ -260,3 +260,26 @@ function fckeditor_load_lang_options() {
 
   return $arr;
 }
+
+/**
+ * Determines if the supplied text doesn't contain
+ * any HTML
+ *
+ * @param string $text 
+ * @return bool
+ */
+function fckeditor_is_plaintext($text) {
+  if(strpos($element['#value'], '<p>') !== FALSE) {
+    return FALSE;
+  }
+
+  if(strpos($element['#value'], '<div>') !== FALSE) {
+    return FALSE;
+  }
+
+  if(strpos($element['#value'], '<br') !== FALSE) {
+    return FALSE;
+  }
+
+  return TRUE;
+}

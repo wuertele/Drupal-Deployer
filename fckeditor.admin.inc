@@ -601,6 +601,21 @@ function fckeditor_admin_profile_form($form_state, $profile = NULL) {
       )),
   );
 
+  $form['output']['autofixplaintext'] = array(
+    '#type' => 'radios',
+    '#title' => t('Automatically detect and convert plain text'),
+    '#default_value' => !empty($profile->settings['autofixplaintext']) ? $profile->settings['autofixplaintext'] : 'f',
+    '#options' => array(
+      't' => t('Yes'),
+      'f' => t('No')
+    ),
+    '#description' =>
+      t('When set to %true the editor will try to detect if a field was created using the plain text editor and convert line breaks to &lt;br /&gt; and &lt;p&gt; tags. This will alter the field contents and is not reversible.',
+      array(
+        '%true' => t('Yes'),
+      )),
+  );
+
   $form['css'] = array(
     '#type' => 'fieldset',
     '#title' => t('Style and template files'),
