@@ -1,0 +1,272 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * recipe_pdf35.module - Enables exporting of 3x5" cards in pdf format.
+ * This is incredibly rudimentary at this point.  1 and only 1 card and if you go over, the text is lost.
+ */
+
+/**
+ * Implementation of hook_recipeio($type).
+ */
+function recipe_pdf35_recipeio($type) {
+  $supported = array(
+    'export_single' => array(
+      'format_name' => t('PDF-3x5'),
+      'callback' => 'recipe_pdf35_export_single',
+      'format_help' => t('Export 3"x5" cards in pdf format.'),
+      // No special permissions for pdf export.
+      'access arguments' => 'access content',
+    )
+  );
+
+  if ( isset($supported[$type]) ) {
+    return array('pdf35' => $supported[$type]);
+  }
+  else {
+    return FALSE;
+  }
+}
+
+function recipe_pdf35_export_single($nid = NULL) {
+  if ( $nid === NULL ) {
+    drupal_set_message(t('Recipe not found.'));
+    drupal_not_found();
+  }
+
+  $node = node_load(array('nid' => $nid, 'type' => 'recipe'));
+
+  // you should not be able to export unpublished recipes
+  if ( $node->status == 0 ) {
+    drupal_access_denied();
+    return;
+  }
+
+
+  // Preprocess the datafields to clean up the pdf generation later.
+
+  // Preprocess the ingredients.
+
+  $ingredients = '';
+  foreach ( $node->ingredients as $key => $i ) {
+    $fullingredient = strlen($i->note) > 0 ? $i->name . ' (' . $i->note .')' : $i->name;
+    $quantity = recipe_ingredient_quantity_from_decimal($i->quantity);
+    $quantity = trim(str_replace('&frasl;', '/', $quantity));
+    $lines = wordwrap($quantity . ' ' . $i->abbreviation . ' ' . $fullingredient, 35, "\n   ");
+    foreach (split("\n", $lines) as $line) {
+      $line = str_replace(array("\\", "(", ")"), array("\\\\", "\\(", "\\)"), $line);
+      $ingredients .= "($line)'\n";
+    }
+  }
+
+  // Preprocess the instructions.
+  $instructions = '';
+  $i_str = filter_xss($node->instructions, array());
+  $i_str = str_replace("&deg;", "\xB0", $i_str);
+  // The wrap at 50 is just approximate because this is rendered with a proportional font.
+  $i_str = wordwrap($i_str, 50);
+  $i_list = split("\n", $i_str);
+  foreach ( $i_list as $i ) {
+    $i = str_replace(array("\\", "(", ")"), array("\\\\", "\\(", "\\)"), $i);
+    $instructions .= "($i)'\n";
+  }
+
+
+
+
+
+// This is a non-indented section for ease of making byte-accurate pdf strings.
+// The newlines and spacing is pretty critical for this to work.
+$objects = array("we won't use array index 0 so I'm filling it up.");
+
+// Object 1 0, Root
+$obj = <<<EOS
+<< /Type /Catalog
+/Outlines 2 0 R
+/Pages 3 0 R
+>>
+EOS;
+array_push($objects, $obj);
+
+// Object 2 0, Outlines
+$obj = <<<EOS
+<< /Type /Outlines
+/Count 0
+>>
+EOS;
+array_push($objects, $obj);
+
+// Object 3 0, Pages
+$obj = <<<EOS
+<< /Type /Pages
+/Kids [7 0 R]
+/Count 1
+>>
+EOS;
+array_push($objects, $obj);
+
+// Object 4 0, resource
+$obj = <<<EOS
+[/PDF /Text]
+EOS;
+array_push($objects, $obj);
+
+// Object 5 0, font
+$obj = <<<EOS
+<< /Type /Font
+/Subtype /Type1
+/Name /F1
+/BaseFont /Arial
+/Encoding /WinAnsiEncoding
+>>
+EOS;
+array_push($objects, $obj);
+
+// Object 6 0, font
+$obj = <<<EOS
+<< /Type /Font
+/Subtype /Type1
+/Name /F2
+/BaseFont /Courier
+/Encoding /WinAnsiEncoding
+>>
+EOS;
+array_push($objects, $obj);
+
+// Object 7 0, page
+$obj = <<<EOS
+<< /Type /Page
+/Parent 3 0 R
+/MediaBox [0 0 360 216]
+/Contents [8 0 R 9 0 R 10 0 R 11 0 R 12 0 R]
+/Resources << /ProcSet 4 0 R
+/Font << /F1 5 0 R /F2 6 0 R >>
+>>
+>>
+EOS;
+array_push($objects, $obj);
+
+// Object 8 0, The recipe title.
+$obj = <<<EOS
+BT
+/F1 14 Tf
+12 TL 20 200 Td
+($node->title)'
+ET
+
+EOS;
+$obj_length = strlen($obj);
+$obj = "<< /Length $obj_length >>\nstream\n${obj}endstream";
+array_push($objects, $obj);
+
+
+
+
+
+
+
+
+// Object 9 0, The recipe ingredients header.
+$obj = <<<EOS
+BT
+/F1 10 Tf
+12 TL 20 188 Td
+(Ingredients)'
+ET
+
+EOS;
+$obj_length = strlen($obj);
+$obj = "<< /Length $obj_length >>\nstream\n${obj}endstream";
+array_push($objects, $obj);
+
+
+// Object 12 0, The Instructions list.
+$obj = <<<EOS
+BT
+/F1 8 Tf
+10 TL 20 175 Td
+${ingredients}ET
+
+EOS;
+$obj_length = strlen($obj);
+$obj = "<< /Length $obj_length >>\nstream\n${obj}endstream";
+array_push($objects, $obj);
+
+
+
+
+
+
+
+// Object 11 0, The Instructions header.
+$obj = <<<EOS
+BT
+/F1 10 Tf
+12 TL 150 188 Td
+(Instructions)'
+ET
+
+EOS;
+$obj_length = strlen($obj);
+$obj = "<< /Length $obj_length >>\nstream\n${obj}endstream";
+array_push($objects, $obj);
+
+
+// Object 12 0, The Instructions list.
+$obj = <<<EOS
+BT
+/F1 8 Tf
+10 TL 155 175 Td
+${instructions}ET
+
+EOS;
+$obj_length = strlen($obj);
+$obj = "<< /Length $obj_length >>\nstream\n${obj}endstream";
+array_push($objects, $obj);
+
+
+
+
+
+
+  // Back to normal indent.
+  $xref = array();
+  $pdf = "%PDF-1.4\n";
+  foreach ($objects as $obj_num => $o) {
+    // We skip array index 0.
+    if ( $obj_num != 0 ) {
+      // Save the xref byte offset.
+      $xref[$obj_num] = strlen($pdf);
+      $pdf .= "$obj_num 0 obj\n";
+      $pdf .= "$o\n";
+      $pdf .= "endobj\n";
+    }
+  }
+
+  $xref_start_pos = strlen($pdf);
+  $xref_entry_count = count($xref)+1;
+  $pdf .= "xref\n";
+  $pdf .= "0 $xref_entry_count\n";
+  $pdf .= "0000000000 65535 f\n";
+  foreach ($xref as $obj_num => $offset) {
+    $pdf .= sprintf("%010u 00000 n\n", $offset);
+  }
+
+  // Start of trailer section.
+  $pdf .= "trailer\n";
+  $pdf .= "<< /Size $xref_entry_count\n";
+  // Hard coded warning, /Root is the 1 0 object in this module.
+  $pdf .= "/Root 1 0 R\n";
+  $pdf .= ">>\n";
+  $pdf .= "startxref\n";
+  $pdf .= "$xref_start_pos\n";
+  $pdf .= '%%EOF';
+
+
+  $file_name = strtolower($node->title) . '.pdf';
+  $file_name = str_replace(' ', '_', $file_name);
+  drupal_set_header('Content-type: application/pdf');
+  drupal_set_header($header = "Content-Disposition: attachment; filename=$file_name");
+  return $pdf;
+}
