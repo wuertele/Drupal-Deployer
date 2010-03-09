@@ -24,7 +24,11 @@ function recipe_admin_settings() {
     '#description' => t('This text will be displayed at the top of the recipe submission form. Useful for helping or instructing your users.'),
   );
 
-  $form['recipe_fraction_display'] = array(
+  $form['recipe_ingredients'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Recipe ingredient section'),
+  );
+  $form['recipe_ingredients']['recipe_fraction_display'] = array(
     '#type' => 'textfield',
     '#title' => t('Fractions display string'),
     '#default_value' => variable_get('recipe_fraction_display', t('{%d }%d&frasl;%d')),
@@ -32,8 +36,7 @@ function recipe_admin_settings() {
     '#maxlength' => 255,
     '#description' => t('How fractions should be displayed. Leave blank to display as decimals. Each incidence of %d will be replaced by the whole number, the numerator, and the denominator in that order. Anything between curly braces will not be displayed when the whole number is equal to 0. Recommended settings are "{%d }%d&amp;frasl;%d" or "{%d }&lt;sup&gt;%d&lt;/sup&gt;/&lt;sub&gt;%d&lt;/sub&gt;"'),
   );
-
-  $form['recipe_unit_display'] = array(
+  $form['recipe_ingredients']['recipe_unit_display'] = array(
     '#type' => 'radios',
     '#title' => t('Ingredient unit display'),
     '#default_value' => variable_get('recipe_unit_display', 0),
@@ -41,8 +44,7 @@ function recipe_admin_settings() {
     '#description' => t('Display ingredient units like Tbsp or Tablespoon.'),
     '#required' => TRUE,
   );
-
-  $form['recipe_preferred_system_of_measure'] = array(
+  $form['recipe_ingredients']['recipe_preferred_system_of_measure'] = array(
     '#type' => 'radios',
     '#title' => t('Preferred system of measure'),
     '#default_value' => variable_get('recipe_preferred_system_of_measure', 0),
@@ -50,6 +52,15 @@ function recipe_admin_settings() {
     '#description' => t('Which system of measure should be preferred where it is ambiguous.'),
     '#required' => TRUE,
   );
+  $form['recipe_ingredients']['recipe_ingredient_name_normalize'] = array(
+    '#type' => 'radios',
+    '#title' => t('Ingredient name normalization'),
+    '#default_value' => variable_get('recipe_ingredient_name_normalize', 0),
+    '#options' => array(t('Leave as entered'), t('Convert to lowercase')),
+    '#description' => t('When recipes are entered, should ingredient names be converted or left alone.'),
+    '#required' => TRUE,
+  );
+
 
   $form['recipe_summary_box'] = array(
     '#type' => 'fieldset',
