@@ -269,15 +269,15 @@ function fckeditor_load_lang_options() {
  * @return bool
  */
 function fckeditor_is_plaintext($text) {
-  if(strpos($element['#value'], '<p>') !== FALSE) {
+  if (strpos($text, '<p>') !== FALSE) {
     return FALSE;
   }
 
-  if(strpos($element['#value'], '<div>') !== FALSE) {
+  if (strpos($text, '<div>') !== FALSE) {
     return FALSE;
   }
 
-  if(strpos($element['#value'], '<br') !== FALSE) {
+  if (strpos($text, '<br') !== FALSE) {
     return FALSE;
   }
 
