@@ -4,8 +4,6 @@
 /**
  * @file
  * Main Mollom integration module functions.
- *
- * @todo Increase module weight to catch form alterations by other modules.
  */
 
 /**
@@ -327,6 +325,15 @@ function mollom_flush_caches() {
 }
 
 /**
+ * Implements hook_cron().
+ */
+function mollom_cron() {
+  // Mollom session data auto-expires after 6 months.
+  $expired = REQUEST_TIME - 86400 * 30 * 6;
+  db_query("DELETE FROM {mollom} WHERE changed < %d", array($expired));
+}
+
+/**
  * Load a Mollom data record from the database.
  *
  * @param $entity
@@ -368,6 +375,7 @@ function mollom_data_save($entity, $id) {
   $data['session'] = $data['session_id'];
   $data['entity'] = $entity;
   $data['did'] = $id;
+  $data['changed'] = time();
 
   // Convert languages into a string.
   if (!empty($data['languages'])) {
@@ -386,15 +394,114 @@ function mollom_data_save($entity, $id) {
 }
 
 /**
- * Delete a Mollom data record from the database.
+ * Deletes a Mollom session data record from the database.
  *
  * @param $entity
- *   The entity type to retrieve data for.
+ *   The entity type to delete data for.
  * @param $id
- *   The entity id to retrieve data for.
+ *   The entity id to delete data for.
  */
 function mollom_data_delete($entity, $id) {
-  return db_query("DELETE FROM {mollom} WHERE entity = '%s' AND did = '%s'", array($entity, $id));
+  return mollom_data_delete_multiple($entity, array($id));
+}
+
+/**
+ * Deletes multiple Mollom session data records from the database.
+ *
+ * @param $entity
+ *   The entity type to delete data for.
+ * @param $ids
+ *   An array of entity ids to delete data for.
+ */
+function mollom_data_delete_multiple($entity, $ids) {
+  $placeholders = db_placeholders($ids, 'varchar');
+  return db_query("DELETE FROM {mollom} WHERE entity = '%s' AND did IN ($placeholders)", array_merge(array($entity), $ids));
+}
+
+/**
+ * Helper function to add Mollom feedback options to confirmation forms.
+ */
+function mollom_data_delete_form_alter(&$form, &$form_state) {
+  if (!isset($form['actions']['#weight'])) {
+    $form['actions']['#weight'] = 100;
+  }
+  if (!isset($form['description']['#weight'])) {
+    $form['description']['#weight'] = 90;
+  }
+  $form['mollom'] = array(
+    '#tree' => TRUE,
+    '#weight' => 80,
+  );
+  $form['mollom']['feedback'] = array(
+    '#type' => 'radios',
+    '#title' => t('Report as inappropriate'),
+    '#options' => array(
+      0 => t('Do no report'),
+      'spam' => t('Spam, unsolicited advertising'),
+      'profanity' => t('Obscene, violent, profane'),
+      'low-quality' => t('Low-quality'),
+      'unwanted' => t('Unwanted, taunting, off-topic'),
+    ),
+    '#default_value' => 0,
+    '#description' => t('Sending feedback to <a href="@mollom-url">Mollom</a> improves the automated moderation of new submissions.', array('@mollom-url' => 'http://mollom.com')),
+  );
+}
+
+/**
+ * Send feedback to Mollom and delete Mollom data.
+ *
+ * @see mollom_form_alter()
+ */
+function mollom_data_delete_form_submit($form, &$form_state) {
+  $forms = mollom_delete_form_list();
+  $mollom_form = mollom_form_load($forms[$form_state['values']['form_id']]);
+  $data = mollom_form_get_values($form_state['values'], $mollom_form['enabled_fields'], $mollom_form['mapping']);
+
+  $entity = $mollom_form['entity'];
+  $id = $data['post_id'];
+
+  if (!empty($form_state['values']['mollom']['feedback'])) {
+    if (mollom_data_report($entity, $id, $form_state['values']['mollom']['feedback']) === TRUE) {
+      drupal_set_message(t('The content was successfully reported as inappropriate.'));
+    }
+  }
+
+  // Remove Mollom session data.
+  mollom_data_delete($entity, $id);
+}
+
+/**
+ * Sends feedback for a Mollom session data record.
+ *
+ * @param $entity
+ *   The entity type to send feedback for.
+ * @param $id
+ *   The entity id to send feedback for.
+ */
+function mollom_data_report($entity, $id, $feedback) {
+  return mollom_data_report_multiple($entity, array($id), $feedback);
+}
+
+/**
+ * Sends feedback for multiple Mollom session data records.
+ *
+ * @param $entity
+ *   The entity type to send feedback for.
+ * @param $ids
+ *   An array of entity ids to send feedback for.
+ */
+function mollom_data_report_multiple($entity, $ids, $feedback) {
+  $return = TRUE;
+  foreach ($ids as $id) {
+    // Load the Mollom session data.
+    $data = mollom_data_load($entity, $id);
+    // Send feedback, if we have session data.
+    if (isset($data->session)) {
+      $result = _mollom_send_feedback($data->session, $feedback);
+      $return = $return && $result;
+    }
+  }
+  return $return;
 }
 
 /**
@@ -406,8 +513,14 @@ function mollom_data_delete($entity, $id) {
 function mollom_form_alter(&$form, &$form_state, $form_id) {
   static $protected_forms;
 
+  // Verify global Mollom configuration status.
+  $status = _mollom_status();
+  if ($status !== TRUE) {
+    return;
+  }
+
   // Site administrators don't have their content checked with Mollom.
-  if (!user_access('bypass mollom protection') && _mollom_status() === TRUE) {
+  if (!user_access('bypass mollom protection')) {
     // Retrieve a list of all protected forms once.
     if (!isset($protected_forms)) {
       $result = db_query("SELECT form_id, module FROM {mollom_form}");
@@ -448,6 +561,7 @@ function mollom_form_alter(&$form, &$form_state, $form_id) {
         '#type' => 'mollom',
         '#mollom_form' => $mollom_form,
         '#weight' => $weight,
+        '#tree' => TRUE,
       );
       // Add Mollom form validation handlers.
       $form['#validate'][] = 'mollom_validate_analysis';
@@ -470,6 +584,73 @@ function mollom_form_alter(&$form, &$form_state, $form_id) {
       }
     }
   }
+  // Integrate with delete confirmation forms to send feedback to Mollom.
+  $forms = mollom_delete_form_list();
+  if (isset($forms[$form_id])) {
+    mollom_data_delete_form_alter($form, $form_state);
+    // Report before deletion.
+    array_unshift($form['#submit'], 'mollom_data_delete_form_submit');
+  }
+}
+
+/**
+ * Returns a mapping of entity delete forms to registered Mollom form ids.
+ *
+ * @param $reset
+ *   (optional) Boolean whether to reset the static cache and flush the database
+ *   cache and return nothing. Defaults to FALSE.
+ *
+ * @return
+ *   An associative array whose keys are 'delete form' ids and whose values are
+ *   registered Mollom form ids, e.g.
+ *   @code
+ *     array(
+ *       'node_delete_confirm' => 'article_node_form',
+ *     )
+ *   @endcode
+ *   Note that a single delete form id can map to multiple registered $form_ids,
+ *   and only the first actively protected $form_id that defines a delete form
+ *   is taken into account. As in the example above, we presume that all
+ *   '$type_node_form' definitions belong to the same 'entity' and use the same
+ *   'post_id' mapping.
+ */
+function mollom_delete_form_list($reset = FALSE) {
+  static $forms;
+
+  if ($reset) {
+    $forms = NULL;
+    cache_clear_all('mollom', 'cache', TRUE);
+    return;
+  }
+
+  if (!isset($forms)) {
+    // Try to fetch from database cache first.
+    $cache = cache_get('mollom:delete_form_list');
+    if ($cache) {
+      $forms = $cache->data;
+    }
+    else {
+      $forms = array();
+      foreach (mollom_form_list() as $form_id => $info) {
+        // Skip forms that neither define 'delete form' nor 'entity'.
+        if (!isset($info['delete form']) || !isset($info['entity'])) {
+          continue;
+        }
+        // Process multiple 'delete form' definitions only once.
+        if (!isset($forms[$info['delete form']])) {
+          // Check whether this form is protected and whether it defines a
+          // 'post_id' mapping.
+          $mollom_form = mollom_form_load($form_id);
+          if (isset($mollom_form['mapping']['post_id'])) {
+            $forms[$info['delete form']] = $form_id;
+          }
+        }
+      }
+      cache_set('mollom:delete_form_list', $forms);
+    }
+  }
+
+  return $forms;
 }
 
 /**
@@ -578,6 +759,10 @@ function mollom_form_save(&$mollom_form) {
       module_invoke_all('mollom_form_update', $mollom_form);
     }
   }
+
+  // Flush cache of delete form mappings.
+  mollom_delete_form_list(TRUE);
+
   return $status;
 }
 
@@ -658,6 +843,9 @@ function mollom_form_get_values($form_values, $fields, $mapping) {
       }
       // Recurse into nested values (e.g. multiple value fields).
       elseif (!empty($value)) {
+        // Ensure we have a flat array to implode(); form values of
+        // field_attach_form() use several subkeys.
+        _mollom_flatten_form_values($value);
         $post_body[$field] = implode("\n", $value);
       }
     }
@@ -755,6 +943,21 @@ function mollom_form_get_values($form_values, $fields, $mapping) {
   $data['author_ip'] = ip_address();
 
   return $data;
+}
+
+/**
+ * Recursive helper function to flatten nested form values.
+ *
+ * Takes a potentially nested array and moves all nested keys to the top-level.
+ */
+function _mollom_flatten_form_values(&$values) {
+  foreach ($values as $key => $value) {
+    if (is_array($value)) {
+      $values += _mollom_flatten_form_values($value);
+      unset($values[$key]);
+    }
+  }
+  return $values;
 }
 
 /**
@@ -952,8 +1155,6 @@ function theme_mollom($element) {
  * replayed.
  */
 function mollom_process_mollom($element, $input, &$form_state, $complete_form) {
-  $element['#tree'] = TRUE;
-
   // Setup initial Mollom session and form information.
   if (empty($form_state['mollom'])) {
     $form_state['mollom'] = array(
@@ -1435,7 +1636,7 @@ function _mollom_watchdog($messages, $severity) {
  * Send feedback to Mollom.
  */
 function _mollom_send_feedback($session_id, $feedback = 'spam') {
-  mollom('mollom.sendFeedback', array(
+  $result = mollom('mollom.sendFeedback', array(
     'session_id' => $session_id,
     'feedback' => $feedback,
   ));
@@ -1443,6 +1644,7 @@ function _mollom_send_feedback($session_id, $feedback = 'spam') {
     '%session' => $session_id,
     '%feedback' => $feedback,
   ));
+  return $result;
 }
 
 /**

@@ -69,6 +69,12 @@ function mollom_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
+      'changed' => array(
+        'description' => 'The Unix timestamp when the data was changed.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
       'quality' => array(
         'description' => "A quality rating assigned to the content to tell whether or not it's spam. Experimental; Mollom might return inconsistent values.",
         'type' => 'varchar',
@@ -361,3 +367,18 @@ function mollom_update_6111() {
   return $ret;
 }
 
+/**
+ * Add {mollom}.changed column to auto-flush expired entries.
+ */
+function mollom_update_6112() {
+  $ret = array();
+  if (!db_column_exists('mollom', 'changed')) {
+    db_add_field($ret, 'mollom', 'changed', array(
+      'type' => 'int',
+      'not null' => TRUE,
+      'default' => 0,
+    ));
+    db_query("UPDATE {mollom} SET changed = %d", array(time()));
+  }
+  return $ret;
+}
