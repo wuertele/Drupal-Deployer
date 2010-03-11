@@ -51,35 +51,11 @@ function node_token_values($type, $object = NULL, $options = array()) {
       }
 
       if (isset($node->created)) {
-        $date = (int)$node->created;
-        $values['yyyy']           = date('Y', $date);
-        $values['yy']             = date('y', $date);
-        $values['month']          = date('F', $date);
-        $values['mon']            = date('M', $date);
-        $values['mm']             = date('m', $date);
-        $values['m']              = date('n', $date);
-        $values['ww']             = date('W', $date);
-        $values['date']           = date('N', $date);
-        $values['day']            = date('l', $date);
-        $values['ddd']            = date('D', $date);
-        $values['dd']             = date('d', $date);
-        $values['d']              = date('j', $date);
+        $values += token_get_date_token_values($node->created);
       }
 
       if (isset($node->changed)) {
-        $date = (int)$node->changed;
-        $values['mod-yyyy']       = date('Y', $date);
-        $values['mod-yy']         = date('y', $date);
-        $values['mod-month']      = date('F', $date);
-        $values['mod-mon']        = date('M', $date);
-        $values['mod-mm']         = date('m', $date);
-        $values['mod-m']          = date('n', $date);
-        $values['mod-ww']         = date('W', $date);
-        $values['mod-date']       = date('N', $date);
-        $values['mod-day']        = date('l', $date);
-        $values['mod-ddd']        = date('D', $date);
-        $values['mod-dd']         = date('d', $date);
-        $values['mod-d']          = date('j', $date);
+        $values += token_get_date_token_values($node->changed, 'mod-');
       }
 
       // Try to get the menu data.
@@ -210,18 +186,7 @@ function node_token_list($type = 'all') {
     // Temporarily disabled -- see notes in node_token_values.
     // $tokens['node']['catpath']        = t("Full taxonomy tree for the topmost term");
 
-    $tokens['node']['yyyy']            = t("Node creation year (four digit)");
-    $tokens['node']['yy']              = t("Node creation year (two digit)");
-    $tokens['node']['month']           = t("Node creation month (full word)");
-    $tokens['node']['mon']             = t("Node creation month (abbreviated)");
-    $tokens['node']['mm']              = t("Node creation month (two digit, zero padded)");
-    $tokens['node']['m']               = t("Node creation month (one or two digit)");
-    $tokens['node']['ww']              = t("Node creation week (two digit)");
-    $tokens['node']['date']            = t("Node creation date (day of month)");
-    $tokens['node']['day']             = t("Node creation day (full word)");
-    $tokens['node']['ddd']             = t("Node creation day (abbreviation)");
-    $tokens['node']['dd']              = t("Node creation day (two digit, zero-padded)");
-    $tokens['node']['d']               = t("Node creation day (one or two digit)");
+    $tokens['node'] += token_get_date_token_info(t('Node creation'));
     $tokens['node']['mod-????']        = t('All tokens for node creation dates can also be used with with the "mod-" prefix; doing so will use the modification date rather than the creation date.');
 
     $tokens['node']['menu']                = t("The name of the menu the node belongs to.");
