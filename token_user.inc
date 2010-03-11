@@ -63,9 +63,9 @@ function user_token_list($type = 'all') {
     $tokens['user']['mail']           = t("User's email address");
 
     $tokens['user']['reg-date']       = t("User's registration date");
-    $tokens['user']['reg-since']      = t("Days since the user registered");
+    $tokens['user']['reg-since']      = t("User's registration date in 'time-since' format. (40 years 2 months)");
     $tokens['user']['log-date']       = t("User's last login date");
-    $tokens['user']['log-since']      = t("Days since the user's last login");
+    $tokens['user']['log-since']      = t("User's last login date in 'time-since' format. (40 years 2 months)");
     $tokens['user']['date-in-tz']     = t("The current date in the user's timezone");
     $tokens['user']['account-url']    = t("The URL of the user's profile page.");
     $tokens['user']['account-edit']   = t("The URL the user's account editing page.");
