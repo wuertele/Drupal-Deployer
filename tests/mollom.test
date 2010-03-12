@@ -1210,16 +1210,16 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
     // Add a word to the text blacklist.
     $text = $this->randomName();
     $edit = array(
-      'entry[match]' => 'contains',
+      'entry[context]' => 'everything',
       'entry[text]' => $text,
       'entry[reason]' => 'spam',
     );
     $this->drupalPost(NULL, $edit, t('Add'));
-    $this->assertText(t('The text has been added to the blacklist.'));
+    $this->assertText(t('The entry was added to the blacklist.'));
     $this->assertText($text);
 
     // Remove the word from the text blacklist.
-    $delete_url = 'admin/settings/mollom/blacklist/delete/text/' . base64_encode($text);
+    $delete_url = 'admin/settings/mollom/blacklist/delete/' . base64_encode($text);
     $this->drupalGet($delete_url);
     $this->drupalPost(NULL, array(), t('Delete'));
     $this->assertEqual($this->getUrl(), url('admin/settings/mollom/blacklist', array('absolute' => TRUE)), t('Correct page redirection.'));
@@ -1228,19 +1228,20 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
     // Add an URL to the text blacklist.
     $domain = drupal_strtolower($this->randomName() . '.com');
     $edit = array(
-      'entry[url]' => $domain,
+      'entry[context]' => 'links',
+      'entry[text]' => $domain,
     );
     $this->drupalPost(NULL, $edit, t('Add'));
-    $this->assertText(t('The URL has been added to the blacklist.'));
-    $this->assertText('http://' . $domain);
+    $this->assertText(t('The entry was added to the blacklist.'));
+    $this->assertText($domain);
 
     // Remove the URL from the text blacklist.
-    $delete_url = 'admin/settings/mollom/blacklist/delete/url/' . base64_encode('http://' . $domain . '/');
+    $delete_url = 'admin/settings/mollom/blacklist/delete/' . base64_encode($domain);
     $this->drupalGet($delete_url);
     $this->drupalPost(NULL, array(), t('Delete'));
     $this->assertEqual($this->getUrl(), url('admin/settings/mollom/blacklist', array('absolute' => TRUE)), t('Correct page redirection.'));
-    $this->assertText(t('The item has been removed from the blacklist.'));
-    $this->assertNoText('http://' . $domain, 'URL blacklist removed.');
+    $this->assertText(t('The entry was removed from the blacklist.'));
+    $this->assertNoText($domain, 'URL blacklist removed.');
   }
 }
 

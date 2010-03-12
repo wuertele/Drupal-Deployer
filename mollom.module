@@ -95,7 +95,7 @@ function mollom_help($path, $arg) {
   }
 
   if ($path == 'admin/settings/mollom/blacklist') {
-    return t('Mollom automatically blocks unwanted content, and learns from all participating sites to make its filters better. On top of automatic spam blocking, you can provide custom blacklists.');
+    return t('Mollom automatically blocks unwanted content and learns from all participating sites to improve its filters. On top of automatic filtering, you can define a custom blacklist.');
   }
 
   if ($path == 'admin/help#mollom') {
@@ -112,8 +112,6 @@ function mollom_help($path, $arg) {
     $output .= t("<strong>Text analysis and CAPTCHA backup</strong>: Mollom analyzes the data submitted on the form and presents a CAPTCHA challenge if necessary. This option is strongly recommended, as it takes full advantage of the Mollom anti-spam service to categorize your posts into ham (not spam) and spam.");
     $output .= '</li><li>';
     $output .= t("<strong>CAPTCHA only</strong>: the form's data is not sent to Mollom for analysis, and a remotely-hosted CAPTCHA challenge is always presented. This option is useful when you wish to always display a CAPTCHA or want to send less data to the Mollom network. Note, however, that forms displayed with a CAPTCHA are never cached, so always displaying a CAPTCHA challenge may reduce performance.");
-    $output .= '</li><li>';
-    $output .= t('<strong>No protection</strong>: Mollom is not used with this form.');
     $output .= '</li></ul><p>';
     $output .= t("Data is processsed and stored as explained in our <a href=\"@mollom-privacy\">Web Service Privacy Policy</a>. It is your responsibility to provide any necessary notices and obtain the appropriate consent regarding Mollom's use of your data. For more information, see <a href=\"@mollom-works\">How Mollom Works</a> and the <a href=\"@mollom-faq\">Mollom FAQ</a>.", array(
       '@mollom-privacy' => 'http://mollom.com/service-agreement-free-subscriptions',
@@ -121,6 +119,23 @@ function mollom_help($path, $arg) {
       '@mollom-faq' => 'http://mollom.com/faq')
     );
     $output .= '</p>';
+    $output .= '<h3>' . t('Mollom blacklist') . '</h3>';
+    $output .= '<p>';
+    $output .= t("Mollom's filters are shared and trained globally over all participating sites. Due to this, unwanted content might still be accepted on your site, even after sending feedback to Mollom. By using the site-specific blacklist, the filters can be customized to your specific needs. Each entry specifies a reason for why it has been blacklisted, which further helps in improving Mollom's automated filtering.");
+    $output .= '</p>';
+    $output .= '<p>';
+    $output .= t("All blacklist entries are applied to a context: the entire submitted post, or only links in the post. When limiting the context to links, both the link URL and the link text is taken into account.");
+    $output .= '</p>';
+    $output .= '<p>';
+    $output .= t("If a blacklist entry contains multiple words, various combinations will be matched. For example, when adding \"<code>replica&nbsp;watches</code>\" limited to links, the following links will be blocked:");
+    $output .= '</p>';
+    $output .= '<ul>
+<li><code>http://replica-watches.com</code></li>
+<li><code>http://replica-watches.com/some/path</code></li>
+<li><code>http://replicawatches.net</code></li>
+<li><code>http://example.com/replica/watches</code></li>
+<li><code>&lt;a href="http://example.com"&gt;replica watches&lt;/a&gt;</code></li>
+</ul>';
     return $output;
   }
 }
@@ -203,7 +218,7 @@ function mollom_menu() {
   );
   $items['admin/settings/mollom/blacklist'] = array(
     'title' => 'Blacklist',
-    'description' => 'Configure word and URL blacklists.',
+    'description' => 'Configure blacklist.',
     'page callback' => 'mollom_admin_blacklist',
     'access arguments' => array('administer mollom'),
     'type' => MENU_LOCAL_TASK,
@@ -212,7 +227,7 @@ function mollom_menu() {
   $items['admin/settings/mollom/blacklist/delete'] = array(
     'title' => 'Delete',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('mollom_admin_blacklist_delete', 5, 6),
+    'page arguments' => array('mollom_admin_blacklist_delete', 5),
     'access arguments' => array('administer mollom'),
     'type' => MENU_CALLBACK,
     'file' => 'mollom.admin.inc',
@@ -1119,11 +1134,7 @@ function mollom_theme() {
     'mollom' => array(
       'arguments' => array('element' => NULL),
     ),
-    'mollom_admin_blacklist_text_form' => array(
-      'arguments' => array('form' => NULL),
-      'file' => 'mollom.admin.inc',
-    ),
-    'mollom_admin_blacklist_url_form' => array(
+    'mollom_admin_blacklist_form' => array(
       'arguments' => array('form' => NULL),
       'file' => 'mollom.admin.inc',
     ),
