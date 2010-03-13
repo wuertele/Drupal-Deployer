@@ -23,7 +23,7 @@ function node_token_values($type, $object = NULL, $options = array()) {
     case 'node':
       $node = $object;
       $account = db_fetch_object(db_query("SELECT name, mail FROM {users} WHERE uid = %d", $node->uid));
-      
+
       // Adjust for the anonymous user name.
       if (!$node->uid && !$account->name) {
         $account->name = variable_get('anonymous', t('Anonymous'));
@@ -104,7 +104,7 @@ function node_token_values($type, $object = NULL, $options = array()) {
               if (!$vid) {
                 continue;
               }
-              $term = db_fetch_object(db_query_range("SELECT t.tid, t.name FROM {term_data} t INNER JOIN {term_node} r ON r.tid = t.tid WHERE t.vid = %d AND r.vid = %d ORDER BY weight", $vid, $object->vid, 0, 1));
+              $term = db_fetch_object(db_query_range("SELECT t.tid, t.name FROM {term_data} t INNER JOIN {term_node} r ON r.tid = t.tid WHERE t.vid = %d AND r.vid = %d ORDER BY t.weight", $vid, $object->vid, 0, 1));
               $term->vid = $vid;
             }
 
