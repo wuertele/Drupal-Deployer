@@ -153,28 +153,7 @@ function recipe_plaintext_export($nid = NULL) {
 
   $output = $node->title ."\n\n";
   $output .= t('Ingredients:') ."\n";
-  foreach ( $node->ingredients as $key => $i ) {
-    $fullingredient = strlen($i->note) > 0 ? $i->name . ' (' . $i->note .')' : $i->name;
-    // Translate decimal quantity to text fraction.
-    $quantity = recipe_ingredient_quantity_from_decimal($i->quantity);
-    // no html entities
-    $quantity = str_replace('&frasl;', '/', $quantity);
-
-    // Display units or abbreviation.
-    $units = '';
-    // Print the abbreviation if recipe_unit_display says too or the abbreviation is blank (ie = Unit, which we don't print).
-    if ( variable_get('recipe_unit_display', 0) == 0 || $i->abbreviation == '&nbsp;') {
-      $units = $i->abbreviation;
-      $output .= wordwrap(sprintf("%8s %-6s %s\n", $quantity, $units, $fullingredient), 75, "\n                ");
-    }
-    else {
-      $units = recipe_unit_name($i->unit_id);
-      $output .= wordwrap(sprintf("%8s %-12s %s\n", $quantity, $units, $fullingredient), 75, "\n                      ");
-    }
-
-
-  }
-  $output .= "\n";
+  $output .= format_plaintext_ingredients($node) ."\n";
   $output .= t('Instructions:') ."\n";
   $node->instructions = wordwrap(strip_html_and_encode_entities($node->instructions), 75, "\n");
   $output .= $node->instructions ."\n\n";
@@ -186,5 +165,46 @@ function recipe_plaintext_export($nid = NULL) {
   $output .= $node->notes ."\n";
 
   drupal_set_header('Content-type: text');
+  return $output;
+}
+
+
+function format_plaintext_ingredients($node = NULL) {
+
+  $col_widths = array('quantity' => 0, 'unit' => 0);
+  foreach ( $node->ingredients as $key => $i ) {
+    // Translate decimal quantity to text fraction.
+    $i->str_quantity = recipe_ingredient_quantity_from_decimal($i->quantity);
+    // Strip html entities.
+    $i->str_quantity = str_replace('&frasl;', '/', $i->str_quantity);
+    // Collect column widths.
+    if ( strlen($i->str_quantity) > $col_widths['quantity'] ) {
+      $col_widths['quantity'] = strlen($i->str_quantity);
+    }
+
+    $i->str_ingredient = strlen($i->note) > 0 ? $i->name . ' (' . $i->note .')' : $i->name;
+
+    // Display units or abbreviation.
+    // Print the abbreviation if recipe_unit_display says too or the abbreviation is blank (ie = Unit, which we don't print).
+    if ( variable_get('recipe_unit_display', 0) == 0 || $i->abbreviation == '&nbsp;') {
+      $i->str_unit = $i->abbreviation;
+    }
+    else {
+      $i->str_unit = recipe_unit_name($i->unit_id);
+    }
+    if ( strlen($i->str_unit) > $col_widths['unit'] ) {
+      $col_widths['unit'] = strlen($i->str_unit);
+    }
+
+  }
+
+  $wrap_pad = str_repeat(" ", $col_widths['unit'] + $col_widths['quantity'] + 2);
+
+  // Render output with the correct column padding.
+  $output = '';
+  foreach ( $node->ingredients as $key => $i ) {
+    $output .= wordwrap(sprintf("%". $col_widths['quantity'] ."s %-". $col_widths['unit'] . "s %s\n", $i->str_quantity, $i->str_unit, $i->str_ingredient), 75, "\n$wrap_pad");
+  }
+
   return $output;
 }
