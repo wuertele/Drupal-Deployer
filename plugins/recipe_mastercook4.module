@@ -100,10 +100,10 @@ function merge_template($node = NULL) {
   // merge ingredients
   $template = str_replace("<<ingredients>>", $ingredients, $template);
   // merge instructions
-  $template = str_replace("<<instructions>>", $node->instructions, $template);
+  $template = str_replace("<<instructions>>", strip_html_and_encode_entities($node->instructions), $template);
   // merge notes
   if ( $node->notes != '' ) {
-    $node->notes = "NOTES : " . $node->notes;
+    $node->notes = "NOTES : " . strip_html_and_encode_entities($node->notes);
   }
   $template = str_replace("<<notes>>", $node->notes, $template);
 
@@ -139,6 +139,7 @@ function format_mastercook4_ingredient($ingredient = NULL) {
   $ingredient->quantity = str_replace('&frasl;', '/', $ingredient->quantity);
   $ingredient->unit_name = recipe_unit_name($ingredient->unit_id);
   $fullingredient = strlen($ingredient->note) > 0 ? $ingredient->name . ' -- ' . $ingredient->note : $ingredient->name;
+  $fullingredient = strip_html_and_encode_entities($fullingredient);
   $fullingredient = wordwrap($fullingredient, 66, "\n                        ");
   $o = sprintf("%8s  %-12s  %s\n", $ingredient->quantity, $ingredient->unit_name, $fullingredient);
   return $o;
