@@ -151,16 +151,37 @@ function recipe_plaintext_export($nid = NULL) {
     return;
   }
 
-  $output = $node->title;
-  $output .= "\n\n";
+  $output = $node->title ."\n\n";
+  $output .= t('Ingredients:') ."\n";
   foreach ( $node->ingredients as $key => $i ) {
     $fullingredient = strlen($i->note) > 0 ? $i->name . ' (' . $i->note .')' : $i->name;
-    $output .= $i->quantity .' '. $i->abbreviation .' '. $fullingredient ."\n";
+    // Translate decimal quantity to text fraction.
+    $quantity = recipe_ingredient_quantity_from_decimal($i->quantity);
+    // no html entities
+    $quantity = str_replace('&frasl;', '/', $quantity);
+
+    // Display units or abbreviation.
+    $units = '';
+    // Print the abbreviation if recipe_unit_display says too or the abbreviation is blank (ie = Unit, which we don't print).
+    if ( variable_get('recipe_unit_display', 0) == 0 || $i->abbreviation == '&nbsp;') {
+      $units = $i->abbreviation;
+    }
+    else {
+      $units = recipe_unit_name($i->unit_id);
+    }
+
+    $output .= sprintf("%8s %s %s\n", $quantity, $units, $fullingredient);
   }
   $output .= "\n";
-  $tmp = "Instructions:\n". $node->instructions ."\n\nDescription:\n". $node->body ."\n\nNotes:\n". $node->notes;
-  $tmp = str_replace('<p>', '', $tmp);
-  $output .= $tmp;
+  $output .= t('Instructions:') ."\n";
+  $node->instructions = wordwrap(strip_html_and_encode_entities($node->instructions), 75, "\n");
+  $output .= $node->instructions ."\n\n";
+  $output .= t('Description:') ."\n";
+  $node->body = strip_html_and_encode_entities($node->body);
+  $output .= $node->body ."\n\n";
+  $output .= t('Notes:') ."\n";
+  $node->notes = strip_html_and_encode_entities($node->notes);
+  $output .= $node->notes ."\n";
 
   drupal_set_header('Content-type: text');
   return $output;
