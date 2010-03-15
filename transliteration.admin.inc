@@ -81,24 +81,18 @@ function transliteration_retroactive_submit($form, &$form_state) {
  *   Set to TRUE to return a count query.
  */
 function transliteration_file_query($count = FALSE) {
-  // Regular expressions are not supported by Drupal's database layer. Operators
-  // differ between manufacturers.
+  // Regular expressions are not supported by Drupal's database layer and
+  // operators differ between manufacturers.
   switch ($GLOBALS['db_type']) {
     case 'mysql':
     case 'mysqli':
-      $operator = 'REGEXP';
-      $regex = '[^a-z0-9_./-]';
+      $operator = 'NOT REGEXP';
+      $regex = '/[a-z0-9_.-]+$';
       break;
 
     case 'pgsql':
-      $operator = '~*';
-      $regex = '[^a-z0-9_./-]';
-      break;
-
-    case 'mssql':
-      // LIKE is case-sensitive.
-      $operator = 'LIKE';
-      $regex = '%[^A-Za-z0-9_./-]%';
+      $operator = '!~*';
+      $regex = '/[a-z0-9_.-]+$';
       break;
 
     default:
