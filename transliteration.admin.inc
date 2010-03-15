@@ -15,20 +15,20 @@
 function transliteration_retroactive() {
   if (!$query = transliteration_file_query(TRUE)) {
     drupal_set_message(t('Database not supported.'), 'error');
-    $form['description']['#value'] = t('Retroactive transliteration is currently not supported on the database system this Drupal installation uses. If you think this should be fixed please <a href="@issues-url">file an issue</a> in the project issue queue.', array('@issues-url' => 'http://drupal.org/project/issues/search/transliteration'));
+    $form['description']['#value'] = t('Retroactive transliteration is currently not supported for the database system of this Drupal installation. If you think this should be fixed please <a href="@issues-url">file an issue</a> in the project issue queue.', array('@issues-url' => 'http://drupal.org/project/issues/transliteration'));
     return $form;
   }
 
   $count = db_result(db_query($query));
   if (!$count) {
     drupal_set_message(t('Transliteration not required.'), 'status');
-    $form['description']['#value'] = t('There are currently no files containing non-ASCII characters in their name.');
+    $form['description']['#value'] = t('There are currently no files names containing non-ASCII characters.');
     return $form;
   }
 
   $form['#redirect'] = 'admin/settings/file-system/transliteration';
   $question = t('Are you sure you want to transliterate existing file names?');
-  $description = t('The database currently lists @filenames containing non-ASCII characters. This count might be inaccurate, though, since it is possible that not all of them actually need to be renamed. Only local files will be processed, while off-site files will never be changed. Note that changing the file name might render references to these files void. Since there is currently no way to fix manually inserted links in contents, it is a good idea to create a database backup beforehand. This action cannot be undone.', array('@filenames' => format_plural($count, '1 file name', '@count file names')));
+  $description = t('The database currently lists @x_filenames containing non-ASCII characters. This count might be inaccurate, though, since it is possible that not all of them actually need to be renamed. Only local files will be processed, while off-site files will never be changed. Note that changing the file name might render references to these files void. Since there is currently no way to fix manually inserted links in contents, it is a good idea to create a database backup beforehand. This action cannot be undone.', array('@x_filenames' => format_plural($count, '1 file name', '@count file names')));
   return confirm_form($form, $question, '<front>', $description, t('Transliterate'));
 }
 
