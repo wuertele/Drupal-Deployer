@@ -45,16 +45,22 @@ function recipe_html_export_single($nid = NULL, $yield = NULL) {
   }
 
   $node = node_load(array('nid' => $nid, 'type' => 'recipe'));
+
+  // Set the custom yield so we can scale up/down the recipe quantities.
+  $node->custom_yield = $yield;
+
+  // Set yield_form_off to remove buttons.
+  $node->yield_form_off = 1;
+
   // you should not be able to export unpublished recipes
   if ( $node->status == 0 ) {
     drupal_access_denied();
     return;
   }
 
-
   $node = recipe_node_prepare($node, FALSE);
 
-  $output = theme('recipe_node', $node, FALSE, $yield);
+  $output = theme('node', $node, FALSE, TRUE);
 
   $html = theme('recipe_export_html', check_plain($node->title), $output);
 
