@@ -76,7 +76,7 @@ function image_import_form() {
 
     $form['delete_directories'] = array(
       '#type' => 'checkbox',
-      '#title' => 'Delete empty directories after import',
+      '#title' => t('Delete empty directories after import'),
       '#description' => '',
     );
 
