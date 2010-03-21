@@ -5,17 +5,6 @@
  * Extend the view_plugin_style class to provide an RSS view style.
  */
 class views_plugin_style_rss_fields extends views_plugin_style {
-
-  /**
-   * Initialize plugin.
-   *
-   * Set feed image for shared rendering later.
-   */
-  function init(&$view, &$display, $options = NULL) {
-    parent::init($view, $display, $options = NULL);
-    $this->feed_image = drupal_get_path('module', 'views_kml') . '/images/kml.png';
-  }
-
   /**
    * Attach this view to another display as a feed.
    *
