@@ -90,12 +90,12 @@ function node_token_values($type, $object = NULL, $options = array()) {
       }
 
       // And now taxonomy, which is a bit more work. This code is adapted from
-      // pathauto's handling code; it's intended for compatability with it.
+      // pathauto's handling code; it's intended for compatibility with it.
       if (module_exists('taxonomy') && !empty($node->taxonomy) && is_array($node->taxonomy)) {
         foreach ($node->taxonomy as $term) {
           $original_term = $term;
           if ((object)$term) {
-            // With freetagging it's somewhat hard to get the tid, vid, name values
+            // With free-tagging it's somewhat hard to get the tid, vid, name values
             // Rather than duplicating taxonomy.module code here you should make sure your calling module
             // has a weight of at least 1 which will run after taxonomy has saved the data which allows us to
             // pull it out of the db here.
