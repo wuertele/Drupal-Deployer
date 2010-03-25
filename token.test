@@ -149,6 +149,66 @@ class TokenCommentTestCase extends TokenTestHelper {
   }
 }
 
+class TokenTaxonomyTestCase extends TokenTestHelper {
+  protected $vocabulary;
+
+  public static function getInfo() {
+    return array(
+      'name' => 'Taxonomy token tests',
+      'description' => 'Test the taxonomy tokens.',
+      'group' => 'Token',
+    );
+  }
+
+  function setUp() {
+    parent::setUp('taxonomy');
+    // Reset the static taxonomy.module caches.
+    taxonomy_vocabulary_load(0, TRUE);
+    taxonomy_get_term(0, TRUE);
+  }
+
+  function addVocabulary(array $vocabulary = array()) {
+    $vocabulary += array(
+      'name' => drupal_strtolower($this->randomName(5)),
+      'nodes' => array('story' => 'story'),
+    );
+    taxonomy_save_vocabulary($vocabulary);
+    return (object) $vocabulary;
+  }
+
+  function addTerm(stdClass $vocabulary, array $term = array()) {
+    $term += array(
+      'name' => drupal_strtolower($this->randomName(5)),
+      'vid' => $vocabulary->vid,
+    );
+    taxonomy_save_term($term);
+    return (object) $term;
+  }
+
+  function testTaxonomyTokens() {
+    $vocabulary = $this->addVocabulary(array(
+      'name' => '<blink>Vocab Name</blink>',
+      'description' => '<blink>Vocab Description</blink>',
+    ));
+    $term = $this->addTerm($vocabulary, array(
+      'name' => '<blink>Term Name</blink>',
+      'description' => '<blink>Term Description</blink>',
+    ));
+
+    $tokens = array(
+      'tid' => $term->tid,
+      'cat' => check_plain($term->name),
+      'cat-raw' => $term->name,
+      'cat-description' => 'Term Description',
+      'vid' => $vocabulary->vid,
+      'vocab' => check_plain($vocabulary->name),
+      'vocab-raw' => $vocabulary->name,
+      'vocab-description' => 'Vocab Description',
+    );
+    $this->assertTokens('taxonomy', $term, $tokens);
+  }
+}
+
 class TokenTestCase extends DrupalWebTestCase {
   public static function getInfo() {
     return array(
