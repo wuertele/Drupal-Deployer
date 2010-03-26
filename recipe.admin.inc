@@ -163,12 +163,17 @@ function recipe_export_multi($type = NULL) {
 
   // load supported formats
   $formats = module_invoke_all('recipeio', 'export_multi');
-  $o = 'Supported Output Formats:<br/>';
+  $o = t('Supported bulk output formats:');
   if ( $type === NULL ) {
     foreach ( $formats as $key => $format ) {
+      $format_count = 0;
       if ($format) {
-        $o .= l($format['format_name'], "admin/content/recipe/export_multi/$key") . "<br/>";
+        $o .= '<br/>'. l($format['format_name'], "admin/content/recipe/export_multi/$key");
+        $format_count++;
       }
+    }
+    if ( $format_count == 0 ) {
+      $o .= '<br/>'. t('NONE') .'<p>'. t('You have no export formats available with the bulk export feature.  If you would like to enable one, please go to the <a href="@modules-page">modules page</a>.', array('@modules-page' => url('admin/build/modules'))) .'</p>';
     }
     return $o;
   }
@@ -190,12 +195,17 @@ function recipe_import_multi($type = NULL) {
 
   // load supported formats
   $formats = module_invoke_all('recipeio', 'import_multi');
-  $o = 'Supported Input Formats:<br/>';
+  $o = t('Supported bulk input formats:');
   if ( $type === NULL ) {
+    $format_count = 0;
     foreach ( $formats as $key => $format ) {
       if ($format) {
-        $o .= l($format['format_name'], "admin/content/recipe/import_multi/$key") . "<br/>";
+        $o .= '<br/>'. l($format['format_name'], "admin/content/recipe/import_multi/$key");
+        $format_count++;
       }
+    }
+    if ( $format_count == 0 ) {
+      $o .= '<br/>'. t('NONE') .'<p>'. t('You have no import formats available with the bulk import feature.  If you would like to enable one, please go to the <a href="@modules-page">modules page</a>.', array('@modules-page' => url('admin/build/modules'))) .'</p>';
     }
     return $o;
   }
