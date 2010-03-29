@@ -9,6 +9,23 @@
 
 
 /**
+ * Implementation of hook_help().
+ */
+function recipe_help($path, $arg) {
+  switch ($path) {
+    case 'node/add/recipe':
+      return variable_get('recipe_help', '');
+    case 'admin/content/recipe/export_multi':
+      $output = '<p>' . t('You can enable/disable bulk export formats on the <a href="@modules-page">modules page</a> in the recipes section.', array('@modules-page' => url('admin/build/modules'))) .'</p>';
+      return $output;
+    case 'admin/content/recipe/import_multi':
+      $output = '<p>' . t('You can enable/disable bulk import formats on the <a href="@modules-page">modules page</a> in the recipes section.', array('@modules-page' => url('admin/build/modules'))) .'</p>';
+      return $output;
+  }
+}
+
+
+/**
  * Implementation of hook_theme().
  */
 function recipe_theme($existing, $type, $theme, $path) {
@@ -117,15 +134,6 @@ function recipe_node_info() {
   );
 }
 
-/**
- * Implementation of hook_help().
- */
-function recipe_help($path, $arg) {
-  switch ($path) {
-    case 'node/add/recipe':
-      return variable_get('recipe_help', '');
-  }
-}
 
 /**
  * Implementation of hook_insert().
@@ -443,12 +451,19 @@ function recipe_menu() {
 
   $items['admin/content/recipe'] = array(
     'title' => 'Recipes',
-    'description' => 'Configure the recipe module and do bulk import and export of recipes.',
-    'page callback' => 'recipe_io_page',
+    'description' => 'Settings that control how the recipe module functions.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('recipe_admin_settings'),
     'access arguments' => array('administer site configuration'),
-    'type' => MENU_NORMAL_ITEM,
     'file' => 'recipe.admin.inc',
   );
+
+  $items['admin/content/recipe/settings'] = array(
+    'title' => 'Settings',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -1,
+  );
+
   $items['admin/content/recipe/export_multi'] = array(
     'title' => 'Bulk export',
     'description' => 'Export all recipes from this site into a supported output format.  The data is returned directly to your web browser.  You can enable output formats on the modules screen.',
@@ -468,16 +483,6 @@ function recipe_menu() {
     'file' => 'recipe.admin.inc',
   );
 
-  $items['admin/content/recipe/settings'] = array(
-    'title' => 'Settings',
-    'description' => 'Settings that control how the recipe module functions.',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('recipe_admin_settings'),
-    'access arguments' => array('administer site configuration'),
-    'type' => MENU_LOCAL_TASK,
-    'weight' => -1,
-    'file' => 'recipe.admin.inc',
-  );
   $items['admin/content/recipe/recipe_index'] = array(
     'title' => 'Indexes',
     'description' => t('Configure settings for the recipe index page.'),

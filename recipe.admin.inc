@@ -152,12 +152,6 @@ function recipe_index_settings_form() {
 }
 
 
-function recipe_io_page() {
-  $item = menu_get_item();
-  $content = system_admin_menu_block($item);
-  return theme('node_add_list', $content);
-}
-
 
 function recipe_export_multi($type = NULL) {
 
@@ -173,7 +167,7 @@ function recipe_export_multi($type = NULL) {
       }
     }
     if ( $format_count == 0 ) {
-      $o .= '<br/>'. t('NONE') .'<p>'. t('You have no export formats available with the bulk export feature.  If you would like to enable one, please go to the <a href="@modules-page">modules page</a>.', array('@modules-page' => url('admin/build/modules'))) .'</p>';
+      $o .= '<br/><p>'. t('You have no export formats available with the bulk export feature.') . '</p>';
     }
     return $o;
   }
@@ -205,7 +199,7 @@ function recipe_import_multi($type = NULL) {
       }
     }
     if ( $format_count == 0 ) {
-      $o .= '<br/>'. t('NONE') .'<p>'. t('You have no import formats available with the bulk import feature.  If you would like to enable one, please go to the <a href="@modules-page">modules page</a>.', array('@modules-page' => url('admin/build/modules'))) .'</p>';
+      $o .= '<br/><p>'. t('You have no import formats available with the bulk export feature.') . '</p>';
     }
     return $o;
   }
