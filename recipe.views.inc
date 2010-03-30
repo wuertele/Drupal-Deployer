@@ -1,29 +1,17 @@
 <?php
-
 // $Id$
-// views2 integration with Recipe 1.x for Drupal 6
 
 /**
  * @file
- * recipe.views.inc - Views2 support for recipe 1.x under Drupal 6.x.
+ * recipe.views.inc - Views2 support for Recipe.
+ *
+ * Views support for the recipe module includes recipe lists, ingredient lists, and unit lists.
  *
  * Added by Scott Prive Dec 2009
- *
  */
 
-/* TODO:
-  1) Impliment a  pre_render_list based handler function, to get all recipe ingredients based on a recipe nid.
-  The idea is to have that fetch the ingredients, so I avoid the duplicate fields.
-  (Anything that's not an ingredient should appear once, but gets duplicated).
-  views_handler_field_amazon_participant.inc contains an example solution.
 
-
-/**
- * Implementation of hook_views_data().
- */
-
-function recipe_views_data() {
-    /* joins
+/* Recipe Schema: This will probably get out of date(it already is!), but once this works better let's remove this.
 
 node.nid +--------------+     +------------------+     +-------------+     +--------------+
      ^   | recipe       |     | _node_ingredient |     | _ingredient |     | _unit        |
@@ -35,463 +23,270 @@ node.nid +--------------+     +------------------+     +-------------+     +----
          | notes        |     | ingredient_id    |<-|+                  |  | type         |
          | preptime     |     +------------------+  +-------------------+  +--------------+
          +--------------+
-    */
 
+ TODO:
+  1) Impliment a  pre_render_list based handler function, to get all recipe ingredients based on a recipe nid.
+  The idea is to have that fetch the ingredients, so I avoid the duplicate fields.
+  (Anything that's not an ingredient should appear once, but gets duplicated).
+  views_handler_field_amazon_participant.inc contains an example solution.
 
-    // The 'group' index will be used as a prefix in the UI for any of this
-    // table's fields, sort criteria, etc. so it's easy to tell where they came from.
-    $data['recipe']['table']['group'] = t('Recipe');
-
-
-    // This is the recipe table description.
-    $data['recipe']['table']['base'] = array(
-        'field' => 'nid',
-        'title' => t('Recipe table'),
-        'help' => t("The recipe table contains more information relating to recipes and can be related to nodes."),
-        'weight' => -10,
-    );
-    // This table references the {node} table.
-    $data['recipe']['table']['join']['node'] = array(
-        'left_field'    => 'nid',
-        'field'         => 'nid',
-    );
-
-
-    // This is the table which contains the "how much" of which ingredient goes
-    // with this node.
-    $data['recipe_node_ingredient']['table']['base'] = array(
-        'field' => 'nid',
-        'title' => t('Recipe ingredients'),
-        'help' => t("The ingredients list for a recipe."),
-        'weight' => -10,
-    );
-    //join Recipe Node Ingredient's nid to Node.nid
-    $data['recipe_node_ingredient']['table']['join']['recipe'] = array(
-        'left_field'    => 'nid',
-        'field'         => 'nid',
-    );
-    $data['recipe_ingredient']['table']['join']['recipe'] = array(
-        'left_table'    => 'recipe_node_ingredient',
-        'left_field'    => 'ingredient_id',
-        'field'         => 'id',
-    );
-    $data['recipe_unit']['table']['join']['recipe'] = array(
-        'left_table'    => 'recipe_node_ingredient',
-        'left_field'    => 'unit_id',
-        'field'         => 'id',
-    );
+*/
 
 
 
-    // ----------------------------------------------------------------
-    // recipe table
-    //mysql> desc recipe
-    //+--------------+------------------+------+-----+---------+----------------+
-    //| Field        | Type             | Null | Key | Default | Extra          |
-    //+--------------+------------------+------+-----+---------+----------------+
-    //| nid          | int(10) unsigned | NO   | PRI | NULL    | auto_increment |
-    //| source       | varchar(255)     | YES  |     | NULL    |                |
-    //| yield        | int(11)          | NO   |     | NULL    |                |
-    //| instructions | text             | YES  |     | NULL    |                |
-    //| notes        | text             | YES  |     | NULL    |                |
-    //| preptime     | int(10) unsigned | YES  |     | 0       |                |
-    //+--------------+------------------+------+-----+---------+----------------+
-    //mysql> select * from recipe;
-    //+-----+-----------------------------+-------+----------------------------+------------------+----------+
-    //| nid | source                      | yield | instructions               | notes            | preptime |
-    //+-----+-----------------------------+-------+----------------------------+------------------+----------+
-    //|   2 | This is an original recipe. |     5 | Instructions go here...... | Notes go here... |        5 |
-    //+-----+-----------------------------+-------+----------------------------+------------------+----------+
-    //1 row in set (0.00 sec)
-
-    // table recipe
-    $data['recipe']['nid'] = array(
-        'title' => t('Recipe NID'),
-        'help' => t("The node id for this recipe."), // The help that appears on the UI,
-        'field' => array(
-            'handler' => 'views_handler_field',
-            'click sortable' => TRUE,
-            'name field' => 'title', // the field to display in the summary.
-            'numeric' => TRUE,
-            'validate type' => 'nid',
-        ),
-        // Information for accepting a nid as an argument
-        'argument' => array(
-            'handler' => 'views_handler_argument_node_nid',
-        ),
-        // Information for accepting a nid as a filter
-        'filter' => array(
-            'handler' => 'views_handler_filter_numeric',
-        ),
-        'sort' => array(
-            'handler' => 'views_handler_sort',
-        ),
-    );
-
-    $data['recipe']['source'] = array(
-        'title' => t('Source'),
-        'help' => t("Optional. Does anyone else deserve credit for this recipe?"), // The help that appears on the UI,
-        'field' => array(
-            'handler' => 'views_handler_field',
-        ),
-        'argument' => array(
-            'handler' => 'views_handler_argument_string',
-        ),
-        'filter' => array(
-            'handler' => 'views_handler_filter_string',
-        ),
-        'sort' => array(
-            'handler' => 'views_handler_sort',
-        ),
-    );
-
-    $data['recipe']['yield'] = array(
-        'title' => t('Yield'),
-        'help' => t("The number of servings for this recipe."), // The help that appears on the UI,
-        'field' => array(
-            'handler' => 'views_handler_field',
-        ),
-        'argument' => array(
-            'handler' => 'views_handler_argument_numeric',
-        ),
-        'filter' => array(
-            'handler' => 'views_handler_filter_numeric',
-        ),
-        'sort' => array(
-            'handler' => 'views_handler_sort',
-        ),
-    );
-
-    $data['recipe']['instructions'] = array(
-        'title' => t('Instructions'),
-        'help' => t("The instructions for this recipe."), // The help that appears on the UI,
-        'field' => array(
-            'handler' => 'views_handler_field',
-        ),
-        'argument' => array(
-            'handler' => 'views_handler_argument_string',
-        ),
-        'filter' => array(
-            'handler' => 'views_handler_filter_string',
-        ),
-        'sort' => array(
-            'handler' => 'views_handler_sort',
-        ),
-    );
-
-    $data['recipe']['notes'] = array(
-        'title' => t('Notes'),
-        'help' => t("The notes for this recipe."), // The help that appears on the UI,
-        'field' => array(
-            'handler' => 'views_handler_field',
-        ),
-        'argument' => array(
-            'handler' => 'views_handler_argument_string',
-        ),
-        'filter' => array(
-            'handler' => 'views_handler_filter_string',
-        ),
-        'sort' => array(
-            'handler' => 'views_handler_sort',
-        ),
-    );
-
-    $data['recipe']['preptime'] = array(
-        'title' => t('Preptime'),
-        'help' => t("The preptime for this recipe."), // The help that appears on the UI,
-        'field' => array(
-            'handler' => 'views_handler_field',
-        ),
-        'argument' => array(
-            'handler' => 'views_handler_argument_numeric',
-        ),
-        'filter' => array(
-            'handler' => 'views_handler_filter_numeric',
-        ),
-        'sort' => array(
-            'handler' => 'views_handler_sort',
-        ),
-    );
-
-    //    mysql> desc recipe_node_ingredient;
-    //+---------------+------------------+------+-----+---------+----------------+
-    //| Field         | Type             | Null | Key | Default | Extra          |
-    //+---------------+------------------+------+-----+---------+----------------+
-    //| id            | int(10) unsigned | NO   | PRI | NULL    | auto_increment |
-    //| nid           | int(10) unsigned | NO   |     | NULL    |                |
-    //| unit_id       | int(10) unsigned | NO   |     | NULL    |                |
-    //| quantity      | float            | YES  |     | NULL    |                |
-    //| ingredient_id | int(10) unsigned | NO   |     | NULL    |                |
-    //+---------------+------------------+------+-----+---------+----------------+
-    //+----+-----+---------+----------+---------------+
-    //| id | nid | unit_id | quantity | ingredient_id |
-    //+----+-----+---------+----------+---------------+
-    //|  1 |   2 |      15 |        1 |             1 |
-    //|  2 |   2 |      14 |        6 |             2 |
-    //|  3 |   2 |      18 |        5 |             3 |
-    //+----+-----+---------+----------+---------------+
-
-    $data['recipe_node_ingredient']['table']['group'] = t('RecipeNodeIngredient');
-
-    //not needed? raises join error if used
-    $data['recipe_node_ingredient']['id'] = array(
-        'title' => t('Ingredient ID (recipe_node_ingredient.id)'),
-        'help' => t('The unique ID (recipe_node_ingredient.id) of the ingredient.'), // The help that appears on the UI,
-        // Information for displaying the id
-        'field' => array(
-            'handler' => 'views_handler_field_node',
-            'click sortable' => TRUE,
-        ),
-        'sort' => array(
-            'handler' => 'views_handler_sort',
-        ),
-    );
-
-    $data['recipe_node_ingredient']['nid'] = array(
-        'title' => t('Ingredient NID'),
-        'help' => t('The recipe NID using this ingredient.'), // The help that appears on the UI,
-        // Information for displaying the id
-        'field' => array(
-            'handler' => 'views_handler_field_node',
-            'click sortable' => TRUE,
-        ),
-        'sort' => array(
-            'handler' => 'views_handler_sort',
-        ),
-    );
-
-    $data['recipe_node_ingredient']['unit_id'] = array(
-        'title' => t('Unit ID'),
-        'help' => t('The measurement type this ingredient was measured with.'), // The help that appears on the UI,
-        // Information for displaying the id
-        'field' => array(
-            'handler' => 'views_handler_field_node',
-            'click sortable' => TRUE,
-        ),
-        'sort' => array(
-            'handler' => 'views_handler_sort',
-        ),
-    );
-
-    $data['recipe_node_ingredient']['quantity'] = array(
-        'title' => t('Quantity'),
-        'help' => t('The amount used of a given measurement.'), // The help that appears on the UI,
-        // Information for displaying the id
-        'field' => array(
-            'handler' => 'views_handler_field_node',
-            'click sortable' => TRUE,
-        ),
-        'sort' => array(
-            'handler' => 'views_handler_sort',
-        ),
-    );
-
-    // todo: this can sometimes cause an error if used as a Field
-    $data['recipe_node_ingredient']['ingredient_id'] = array(
-        'title' => t('Recipie node ing. id'),
-        'help' => t('The particular ingredient id (recipe_node_ingredient.ingredient_id).'), // The help that appears on the UI,
-        // Information for displaying the id
-        'field' => array(
-            'handler' => 'views_handler_field_node',
-            'click sortable' => TRUE,
-        ),
-        'sort' => array(
-            'handler' => 'views_handler_sort',
-        ),
-    );
+/**
+ * Implementation of hook_views_data().
+ */
+function recipe_views_data() {
 
 
+  /*
+   * Recipe table section.
+   */
 
-    // table recipe_ingredient
-    //    mysql> desc recipe_ingredient;
-    //+-------+------------------+------+-----+---------+----------------+
-    //| Field | Type             | Null | Key | Default | Extra          |
-    //+-------+------------------+------+-----+---------+----------------+
-    //| id    | int(10) unsigned | NO   | PRI | NULL    | auto_increment |
-    //| name  | varchar(255)     | YES  |     | NULL    |                |
-    //| link  | int(10) unsigned | NO   |     | NULL    |                |
-    //+-------+------------------+------+-----+---------+----------------+
-    //3 rows in set (0.00 sec)
+  // Group
+  $data['recipe']['table']['group'] = t('Recipe');
 
-    $data['recipe_ingredient']['table']['group'] = t('RecipeIngredient');
+  /* Base
+   * It doesn't really make sense to include the recipe table by itself.  It doesn't even include the recipe title.
+   * Since we include the recipe table joined to node you get all of the recipe fields anyway.
+   */
 
-    $data['recipe_ingredient']['id'] = array(
-        'title' => t('Ingredient ID (recipe_ingredient.id)'),
-        'help' => t('The id (recipe_ingredient.id) of the ingredient.'), // The help that appears on the UI,
-        // Information for displaying the nid
-        'field' => array(
-            'handler' => 'views_handler_field_node',
-            'click sortable' => TRUE,
-        ),
-        // Information for accepting a nid as an argument
-        'argument' => array(
-            'handler' => 'views_handler_argument_node_nid',
-            'name field' => 'name', // the field to display in the summary.
-            'numeric' => TRUE,
-            'validate type' => 'id',
-        ),
-        'filter' => array(
-            'handler' => 'views_handler_filter_numeric',
-        ),
-        'sort' => array(
-            'handler' => 'views_handler_sort',
-        ),
-    );
+  // Joins
+  $data['recipe']['table']['join']['node'] = array(
+      'left_field'    => 'nid',
+      'field'         => 'nid',
+  );
 
-    $data['recipe_ingredient']['name'] = array(
-        'title' => t('Ingredient Name'),
-        'help' => t("An ingredient name."), // The help that appears on the UI,
-        'field' => array(
-            'handler' => 'views_handler_field',
-        ),
-        'argument' => array(
-            'handler' => 'views_handler_argument_string',
-        ),
-        'filter' => array(
-            'handler' => 'views_handler_filter_string',
-        ),
-        'sort' => array(
-            'handler' => 'views_handler_sort',
-        ),
-    );
+  // Fields
+  $data['recipe']['source'] = array(
+    'title' => t('Source'),
+    'help' => t("Optional. Does anyone else deserve credit for this recipe?"),
+    'field' => array(
+      'handler' => 'views_handler_field',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
 
+  $data['recipe']['yield'] = array(
+    'title' => t('Yield'),
+    'help' => t("The number of servings for this recipe."),
+    'field' => array(
+      'handler' => 'views_handler_field',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_numeric',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
 
+  $data['recipe']['instructions'] = array(
+    'title' => t('Instructions'),
+    'help' => t("The instructions for this recipe."),
+    'field' => array(
+      'handler' => 'views_handler_field',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
 
-    // mysql> desc recipe_unit;
-    //+--------------+------------------+------+-----+---------+----------------+
-    //| Field        | Type             | Null | Key | Default | Extra          |
-    //+--------------+------------------+------+-----+---------+----------------+
-    //| id           | int(10) unsigned | NO   | PRI | NULL    | auto_increment |
-    //| name         | varchar(255)     | YES  |     | NULL    |                |
-    //| abbreviation | varchar(8)       | YES  |     | NULL    |                |
-    //| metric       | int(10) unsigned | NO   |     | 0       |                |
-    //| type         | varchar(6)       | NO   |     | Mass    |                |
-    //+--------------+------------------+------+-----+---------+----------------+
-    // mysql> select * from recipe_unit;
-    //+----+---------------------+--------------+--------+--------+
-    //| id | name                | abbreviation | metric | type   |
-    //+----+---------------------+--------------+--------+--------+
-    //|  1 | Slice               | sli          |      0 | Unit   |
-    //|  2 | Unit                |              |      0 | Unit   |
-    //|  3 | Clove               | clv          |      0 | Unit   |
-    //|  4 | Pinch               | pn           |      0 | Unit   |
-    //|  5 | Package             | pk           |      0 | Unit   |
-    //|  6 | Can                 | cn           |      0 | Unit   |
-    //|  7 | Drop                | dr           |      0 | Unit   |
-    //|  8 | Bunch               | bn           |      0 | Unit   |
-    //|  9 | Dash                | ds           |      0 | Unit   |
-    //| 10 | Carton              | ct           |      0 | Unit   |
-    //| 11 | Cup                 | c            |      0 | Unit   |
-    //| 12 | Tablespoon          | T            |      0 | Volume |
-    //| 13 | Teaspoon            | t            |      0 | Volume |
-    //| 14 | Pound               | lb           |      0 | Mass   |
-    //| 15 | Ounce               | oz           |      0 | Mass   |
-    //| 16 | Pint                | pt           |      0 | Volume |
-    //| 17 | Quart               | q            |      0 | Volume |
-    //| 18 | Gallon              | gal          |      0 | Volume |
-    //| 19 | Milligram           | mg           |      1 | Mass   |
-    //| 20 | Centigram           | cg           |      1 | Mass   |
-    //| 21 | Gram                | g            |      1 | Mass   |
-    //| 22 | Kilogram            | kg           |      1 | Mass   |
-    //| 23 | Millilitre          | ml           |      1 | Volume |
-    //| 24 | Centilitre          | cl           |      1 | Volume |
-    //| 25 | Litre               | l            |      1 | Volume |
-    //| 26 | Decilitre           | dl           |      1 | Volume |
-    //| 27 | Tablespoon (Metric) | tbsp         |      1 | Volume |
-    //| 28 | Teaspoon (Metric)   | tsp          |      1 | Volume |
-    //| 29 | Unknown             |              |      0 | Unit   |
-    //+----+---------------------+--------------+--------+--------+
+  $data['recipe']['notes'] = array(
+    'title' => t('Notes'),
+    'help' => t("The notes for this recipe."),
+    'field' => array(
+      'handler' => 'views_handler_field',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
 
-
-    $data['recipe_unit']['table']['group'] = t('RecipeUnit');
-    $data['recipe_unit']['id'] = array(
-        'title' => t('Recipie unit ID (recipe_unit.id)'),
-        'help' => t('The id (recipe_unit.id) of the recipe unit.'), // The help that appears on the UI,
-        'field' => array(
-            'handler' => 'views_handler_field_node',
-            'click sortable' => TRUE,
-        ),
-        'argument' => array(
-            'handler' => 'views_handler_argument_node_nid',
-            'name field' => 'name', // the field to display in the summary.
-            'numeric' => TRUE,
-            'validate type' => 'id',
-        ),
-        'filter' => array(
-            'handler' => 'views_handler_filter_numeric',
-        ),
-        'sort' => array(
-            'handler' => 'views_handler_sort',
-        ),
-    );
-
-    $data['recipe_unit']['name'] = array(
-        'title' => t('Unit Name'),
-        'help' => t("The recipe measurement unit name."), // The help that appears on the UI,
-        'field' => array(
-            'handler' => 'views_handler_field',
-        ),
-        'argument' => array(
-            'handler' => 'views_handler_argument_string',
-        ),
-        'filter' => array(
-            'handler' => 'views_handler_filter_string',
-        ),
-        'sort' => array(
-            'handler' => 'views_handler_sort',
-        ),
-    );
-
-    $data['recipe_unit']['abbreviation'] = array(
-        'title' => t('Unit Abbreviation'),
-        'help' => t("The abbreviation for the recipe unit."), // The help that appears on the UI,
-        'field' => array(
-            'handler' => 'views_handler_field',
-        ),
-        'argument' => array(
-            'handler' => 'views_handler_argument_string',
-        ),
-        'filter' => array(
-            'handler' => 'views_handler_filter_string',
-        ),
-        'sort' => array(
-            'handler' => 'views_handler_sort',
-        ),
-    );
-
-    $data['recipe_unit']['metric'] = array(
-        'title' => t('Is Metric?'),
-        'help' => t('Denotes if measurement unit is metric.'), // The help that appears on the UI,
-        // Information for displaying the id
-        'field' => array(
-            'handler' => 'views_handler_field_node',
-            'click sortable' => TRUE,
-        ),
-        'argument' => array(
-            'handler' => 'views_handler_argument_numeric',
-        ),
-        'sort' => array(
-            'handler' => 'views_handler_sort',
-        ),
-    );
-
-    $data['recipe_unit']['type'] = array(
-        'title' => t('Type'),
-        'help' => t("The unittype for this ingredient."), // The help that appears on the UI,
-        'field' => array(
-            'handler' => 'views_handler_field',
-        ),
-        'argument' => array(
-            'handler' => 'views_handler_argument_numeric',
-        ),
-        'filter' => array(
-            'handler' => 'views_handler_filter_numeric',
-        ),
-        'sort' => array(
-            'handler' => 'views_handler_sort',
-        ),
-    );
+  $data['recipe']['preptime'] = array(
+    'title' => t('Preptime'),
+    'help' => t("The preptime for this recipe."),
+    'field' => array(
+      'handler' => 'views_handler_field',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_numeric',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
 
 
-    return $data;
+  /*
+   * Ingredient table section.
+   */
+
+  // Group
+  $data['recipe_ingredient']['table']['group'] = t('Recipe');
+
+  // Base
+  $data['recipe_ingredient']['table']['base'] = array(
+    'field' => 'id',
+    'title' => t('Recipe ingredient'),
+    'help' => t("The recipe ingredients list."),
+    'weight' => -10,
+  );
+
+  // Joins
+
+  // Fields
+  $data['recipe_ingredient']['name'] = array(
+    'title' => t('Ingredient Name'),
+    'help' => t("An ingredient name."),
+    'field' => array(
+      'handler' => 'views_handler_field',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+
+
+  /*
+   * Unit table section.
+   */
+
+  // Group
+  $data['recipe_unit']['table']['group'] = t('Recipe');
+
+  // Base
+  $data['recipe_unit']['table']['base'] = array(
+    'field' => 'id',
+    'title' => t('Recipe Unit'),
+    'help' => t("The recipe unit list."),
+    'weight' => -10,
+  );
+
+  // Joins
+
+  // Fields
+  $data['recipe_unit']['id'] = array(
+    'title' => t('Recipie unit ID (recipe_unit.id)'),
+    'help' => t('The id (recipe_unit.id) of the recipe unit.'),
+    'field' => array(
+      'handler' => 'views_handler_field_node',
+      'click sortable' => TRUE,
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_node_nid',
+      'name field' => 'name',
+      'numeric' => TRUE,
+      'validate type' => 'id',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+
+  $data['recipe_unit']['name'] = array(
+    'title' => t('Unit Name'),
+    'help' => t("The recipe measurement unit name."),
+    'field' => array(
+      'handler' => 'views_handler_field',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+
+  $data['recipe_unit']['abbreviation'] = array(
+    'title' => t('Unit Abbreviation'),
+    'help' => t("The abbreviation for the recipe unit."),
+    'field' => array(
+      'handler' => 'views_handler_field',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_string',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_string',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+
+  $data['recipe_unit']['metric'] = array(
+    'title' => t('Is Metric?'),
+    'help' => t('Denotes if measurement unit is metric.'),
+    // Information for displaying the id
+    'field' => array(
+      'handler' => 'views_handler_field_node',
+      'click sortable' => TRUE,
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_numeric',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+
+  $data['recipe_unit']['type'] = array(
+    'title' => t('Type'),
+    'help' => t("The unittype for this ingredient."),
+    'field' => array(
+      'handler' => 'views_handler_field',
+    ),
+    'argument' => array(
+      'handler' => 'views_handler_argument_numeric',
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_numeric',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+  );
+
+
+  return $data;
 }
