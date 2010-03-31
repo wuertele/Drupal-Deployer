@@ -34,10 +34,10 @@ function recipe_ingredient_index_page() {
 function theme_recipe_ingredient_index_page($page_args = NULL) {
   $output = '';
 
-  
+
   if (!$page_args['current_ingredient']) {
-  	
-  	// Render the alpha pager.
+
+    // Render the alpha pager.
     $output .= '<div class="recipe-ingredient-alpha">';
     $list = array();
     foreach (range('a', 'z') as $letter ) {
@@ -52,43 +52,43 @@ function theme_recipe_ingredient_index_page($page_args = NULL) {
     $output .= implode(" - ", $list);
     $output .=  '</div>';
 
-	  // Render the ingredient_list.
-	  if ($page_args['ingredient_list'] != NULL) {
-	    if ( count($page_args['ingredient_list']) > 0 ) {
-	      $output1 = '<div class="recipe-ingredient-list">';
-	      $last_alpha = '-';
-	      foreach ($page_args['ingredient_list'] as $ingredient) {
-	        if ( $ingredient->letter != $last_alpha ) {
-	          if ( $last_alpha != '-' ) {
-	            $output1 .= "</p></fieldset>";
-	          }
-	          $output1 .= '<fieldset><legend><a name="alpha_'. $ingredient->letter . '">'. strtoupper($ingredient->letter) .'</a></legend><p>';
-	          $last_alpha = $ingredient->letter;
-	        }
-	        $output1 .= l($ingredient->name, 'recipe/bying/'. $ingredient->id) . '<br/>';
-	      }
-	      $output1 .= "</p></fieldset>";
-	      $output1 .= '</div>';
-	      $output .= $output1;
-	    }
-	    else {
-	      $output .= theme('box', t('No matching ingredients'));
-	    }
-	  }
+    // Render the ingredient_list.
+    if ($page_args['ingredient_list'] != NULL) {
+      if ( count($page_args['ingredient_list']) > 0 ) {
+        $output1 = '<div class="recipe-ingredient-list">';
+        $last_alpha = '-';
+        foreach ($page_args['ingredient_list'] as $ingredient) {
+          if ( $ingredient->letter != $last_alpha ) {
+            if ( $last_alpha != '-' ) {
+              $output1 .= "</p></fieldset>";
+            }
+            $output1 .= '<fieldset><legend><a name="alpha_'. $ingredient->letter . '">'. strtoupper($ingredient->letter) .'</a></legend><p>';
+            $last_alpha = $ingredient->letter;
+          }
+          $output1 .= l($ingredient->name, 'recipe/bying/'. $ingredient->id) . '<br/>';
+        }
+        $output1 .= "</p></fieldset>";
+        $output1 .= '</div>';
+        $output .= $output1;
+      }
+      else {
+        $output .= theme('box', t('No matching ingredients'));
+      }
+    }
   }
-  
+
   else {
-	  // render the matching node list.
-	  if ($page_args['node_list']) {
-	  	$output .= '<div class="recipe-ingredient-nodes">';
-	  	$output .= '<fieldset><legend>'. $page_args['current_ingredient']->name .'</legend><p>';
-	  	foreach ($page_args['node_list'] as $node) {
-	  		$output .= l($node->title, 'node/'. $node->nid) . '<br/>';
-	  	}
-	  	$output .= '</p></fieldset>';
-		  $output .= "</div>";
-	  }
-	}
+    // render the matching node list.
+    if ($page_args['node_list']) {
+      $output .= '<div class="recipe-ingredient-nodes">';
+      $output .= '<fieldset><legend>'. $page_args['current_ingredient']->name .'</legend><p>';
+      foreach ($page_args['node_list'] as $node) {
+        $output .= l($node->title, 'node/'. $node->nid) . '<br/>';
+      }
+      $output .= '</p></fieldset>';
+      $output .= "</div>";
+    }
+  }
 
   // Set-up the breadcrumb tail.
   if ($page_args['current_ingredient']) {
