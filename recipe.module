@@ -646,7 +646,8 @@ function recipe_ingredient_id_from_name($name) {
       if (!$node_link) {
         $node_link = 0;
       }
-      if (variable_get('recipe_ingredient_name_normalize', 0) == 1) {
+      // Don't convert to lowercase if there is a &reg; (registered trademark symbol).
+      if (variable_get('recipe_ingredient_name_normalize', 0) == 1 && !preg_match('/&reg;/', $name)) {
         $name = trim(strtolower($name));
       }
       db_query("INSERT INTO {recipe_ingredient} (name, link) VALUES ('%s', %d)", $name, $node_link);
@@ -1270,7 +1271,7 @@ function recipe_yield_form($form_id, $node) {
       '#value' => ($node->yield_unit == '')?t('Servings'):$node->yield_unit,
     );
   }
-  
+
   // Render the custom yield textbox and submit buttons.
   else {
     $form['custom_yield'] = array(
