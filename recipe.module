@@ -142,7 +142,7 @@ function recipe_node_info() {
  * database inserts.
  */
 function recipe_insert($node) {
-  db_query("INSERT INTO {recipe} (nid, source, yield, notes, instructions, preptime) VALUES (%d, '%s', '%s', '%s', '%s', %d)", $node->nid, $node->source, $node->yield, $node->notes, $node->instructions, $node->preptime);
+  db_query("INSERT INTO {recipe} (nid, source, yield, yield_unit, notes, instructions, preptime) VALUES (%d, '%s', '%s', '%s', '%s', '%s', %d)", $node->nid, $node->source, $node->yield, $node->yield_unit, $node->notes, $node->instructions, $node->preptime);
   recipe_save_ingredients($node);
 }
 
@@ -153,7 +153,7 @@ function recipe_insert($node) {
  * database updates.
  */
 function recipe_update($node) {
-  db_query("UPDATE {recipe} SET source = '%s', yield = %d, notes = '%s', instructions = '%s', preptime = %d WHERE nid = %d", $node->source, $node->yield, $node->notes, $node->instructions, $node->preptime, $node->nid);
+  db_query("UPDATE {recipe} SET source = '%s', yield = %d, yield_unit = '%s', notes = '%s', instructions = '%s', preptime = %d WHERE nid = %d", $node->source, $node->yield, $node->yield_unit, $node->notes, $node->instructions, $node->preptime, $node->nid);
   if (!db_affected_rows()) {
     recipe_insert($node);
     return;
@@ -207,7 +207,16 @@ function recipe_form(&$node, $form_state) {
     '#required' => TRUE,
     '#weight' => -4,
   );
-
+  $form['yield_unit'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Yield Units'),
+    '#default_value' => ($node->yield_unit == '')?t('Servings'):$node->yield_unit,
+    '#size' => 16,
+    '#maxlength' => 64,
+    '#description' => t('The units for the yield field(ie servings, people, cans, cookies, etc).'),
+    '#required' => FALSE,
+    '#weight' => -4,
+  );
   $form['ingredients'] = array(
     '#type' => 'fieldset',
     '#collapsible' => FALSE,
@@ -1164,14 +1173,8 @@ function theme_recipe_summary($node = NULL) {
   // Construct the summary
   $output = '<table>';
 
-  // yield_form_off comes from single recipe export.
-  if ( $node->yield_form_off != 1 ) {
-    $output .= '<tr><th class="summary-title">'. t('Yield') .'</th><td class="summary-data">'. drupal_get_form('recipe_custom_yield_form', $node) .'</td></tr>';
-  }
-  else {
-    $output .= '<tr><th class="summary-title">'. t('Yield') .'</th><td class="summary-data">'. $node->yield .'</td></tr>';
-  }
-
+  // Render the yield.
+  $output .= '<tr><th class="summary-title">'. t('Yield') .'</th><td class="summary-data">'. drupal_get_form('recipe_yield_form', $node) .'</td></tr>';
 
   if ($node->source) {
     $output .= '<tr><th>'. t('Source') .'</th><td>'. $node->source .'</td></tr>';
@@ -1252,29 +1255,50 @@ function theme_recipe_ingredients($node = NULL) {
 }
 
 
-function recipe_custom_yield_form($form_id, $node) {
-  $form['custom_yield'] = array(
-    '#type' => 'textfield',
-    '#default_value' => $node->yield,
-    '#size' => 2,
-    '#maxlength' => 4,
-  );
-  $form['submit'] = array(
-    '#type' => 'submit',
-    '#value' => t('Change'),
-  );
-  $form['reset'] = array(
-    '#type' => 'submit',
-    '#value' => t('Reset'),
-  );
-  $form['halve'] = array(
-    '#type' => 'submit',
-    '#value' => t('Halve'),
-  );
-  $form['double'] = array(
-    '#type' => 'submit',
-    '#value' => t('Double'),
-  );
+function recipe_yield_form($form_id, $node) {
+
+  // Don't render the custom yield textbox and submit buttons.
+  if ( $node->yield_form_off == 1 ) {
+    $form['yield'] = array(
+      '#value' => $node->yield,
+    );
+    // An html space is useful here since we don't have a separate theme function for this form.
+    $form['_space'] = array(
+      '#value' => '&nbsp;',
+    );
+    $form['yield_unit'] = array(
+      '#value' => ($node->yield_unit == '')?t('Servings'):$node->yield_unit,
+    );
+  }
+  
+  // Render the custom yield textbox and submit buttons.
+  else {
+    $form['custom_yield'] = array(
+      '#type' => 'textfield',
+      '#default_value' => $node->yield,
+      '#size' => 2,
+      '#maxlength' => 4,
+    );
+    $form['yield_unit'] = array(
+      '#value' => ($node->yield_unit == '')?t('Servings'):$node->yield_unit,
+    );
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Change'),
+    );
+    $form['reset'] = array(
+      '#type' => 'submit',
+      '#value' => t('Reset'),
+    );
+    $form['halve'] = array(
+      '#type' => 'submit',
+      '#value' => t('Halve'),
+    );
+    $form['double'] = array(
+      '#type' => 'submit',
+      '#value' => t('Double'),
+    );
+  }
 
   return $form;
 }
