@@ -43,6 +43,7 @@ class views_handler_field_amazon_participant extends views_handler_field_prerend
     $this->field_alias = $this->aliases['asin'];
     $this->items = array();
 
+    $asins = array();
     foreach ($values as $result) {
       if (!empty($result->{$this->aliases['asin']})) {
         $asins[] = $result->{$this->aliases['asin']};
