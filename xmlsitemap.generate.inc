@@ -292,8 +292,8 @@ function xmlsitemap_generate_chunk($handle, &$status, $chunk, array $context) {
   $url_options += array(
     'absolute' => TRUE,
     'base_url' => xmlsitemap_var('base_url'),
-    'alias' => TRUE,
     'language' => language_default(),
+    'alias' => variable_get('xmlsitemap_prefetch_aliases', TRUE),
   );
 
   $last_url = '';

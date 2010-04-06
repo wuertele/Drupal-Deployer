@@ -63,6 +63,12 @@ function xmlsitemap_settings_form() {
     // @todo This description is not clear.
     '#description' => t('If there are problems with rebuilding the sitemap, you may want to manually set this value. If you have more than 50,000 links, an index with multiple sitemap pages will be generated. There is a maximum of 1000 sitemap pages.'),
   );
+  $form['advanced']['xmlsitemap_prefetch_aliases'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Prefetch URL aliases during sitemap generation.'),
+    '#description' => t('This will help increase performance for sitemap generation on sites with a small to medium number of URL alises.'),
+    '#default_value' => variable_get('xmlsitemap_prefetch_aliases', TRUE),
+  );
   $form['advanced']['xmlsitemap_batch_limit'] = array(
     '#type' => 'select',
     '#title' => t('Maximum number of sitemap links to process at once'),
