@@ -360,8 +360,10 @@ function mollom_update_6110() {
  */
 function mollom_update_6111() {
   $ret = array();
-  $empty_array = db_escape_string(serialize(array()));
-  $ret[] = update_sql("UPDATE {mollom_form} SET enabled_fields = '{$empty_array}' WHERE mode = 1");
+  // @see update_sql()
+  $sql = "UPDATE {mollom_form} SET enabled_fields = '%s' WHERE mode = %d";
+  $result = db_query($sql, array(serialize(array()), 1));
+  $ret[] = array('success' => $result !== FALSE, 'query' => check_plain($sql));
   return $ret;
 }
 
