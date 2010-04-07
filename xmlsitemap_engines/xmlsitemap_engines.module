@@ -47,10 +47,22 @@ function xmlsitemap_engines_cron() {
   }
 }
 
-function xmlsitemap_engines_submit_access() {
+function xmlsitemap_engines_can_submit() {
   // Skip if the site is offline since search engines will not be able to
   // access the site's content.
   if (variable_get('site_offline', 0)) {
+    return FALSE;
+  }
+
+  if (!variable_get('xmlsitemap_engines_engines', array()) && !variable_get('xmlsitemap_engines_custom_urls', '')) {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+function xmlsitemap_engines_submit_access() {
+  if (!xmlsitemap_engines_can_submit()) {
     return FALSE;
   }
 
@@ -78,9 +90,17 @@ function xmlsitemap_engines_submit_access() {
 
 /**
  * Submit the sitemaps to all the specified search engines.
+ *
+ * @param $smids
+ *   An optional array of XML sitemap IDs. If not provided, it will load all
+ *   existing XML sitemaps.
  */
-function xmlsitemap_engines_submit_engines() {
-  $sitemaps = xmlsitemap_get_sitemaps();
+function xmlsitemap_engines_submit_engines(array $smids = array()) {
+  if (empty($smids)) {
+    $smids = xmlsitemap_sitemap_get_all_smids();
+  }
+
+  $sitemaps = xmlsitemap_sitemap_load_multiple($smids);
   $engines = variable_get('xmlsitemap_engines_engines', array());
   $engine_info = xmlsitemap_engines_get_engine_info();
 
@@ -105,9 +125,10 @@ function xmlsitemap_engines_submit_engines() {
  * @param $sitemaps
  *   An array of URLs of the sitemaps to submit.
  */
-function xmlsitemap_engines_submit_sitemaps($url, $sitemaps = array()) {
+function xmlsitemap_engines_submit_sitemaps($url, array $sitemaps = array()) {
   foreach ($sitemaps as $sitemap) {
-    $submit_url = xmlsitemap_engines_prepare_url($url, $sitemap);
+    $sitemap_url = xmlsitemap_sitemap_uri($sitemap);
+    $submit_url = xmlsitemap_engines_prepare_url($url, $sitemap_url['url']);
     $request = drupal_http_request($submit_url);
     watchdog('xmlsitemap', 'Submitted the sitemap to %url and received response @code.', array('%url' => $submit_url, '@code' => $request->code));
   }
@@ -138,24 +159,22 @@ function xmlsitemap_engines_prepare_url($url, $sitemap) {
  * @see hook_xmlsitemap_engines_info()
  * @see hook_xmlsitemap_engines_info_alter()
  */
-function xmlsitemap_engines_get_engine_info($engine = NULL, $reset = FALSE) {
+function xmlsitemap_engines_get_engine_info($engine = NULL) {
   global $language;
-  static $engines;
-
-  if ($reset) {
-    $engines = NULL;
-  }
-  elseif ($cached = cache_get('xmlsitemap:engines:' . $language->language)) {
-    $engines = $cached->data;
-  }
+  $engines = &xmlsitemap_static(__FUNCTION__);
 
   if (!isset($engines)) {
-    // Fetch the results of all hook_xmlsitemap_engine_info() implementations.
-    $engines = module_invoke_all('xmlsitemap_engine_info');
-    // Allow other modulse to alter the engine info.
-    drupal_alter('xmlsitemap_engine_info', $engines);
-    // Cache by language since engine names are translated.
-    cache_set('xmlsitemap:engines:' . $language->language, $engines);
+    if ($cached = cache_get('xmlsitemap:engines:' . $language->language)) {
+      $engines = $cached->data;
+    }
+    else {
+      // Fetch the results of all hook_xmlsitemap_engine_info() implementations.
+      $engines = module_invoke_all('xmlsitemap_engine_info');
+      // Allow other modulse to alter the engine info.
+      drupal_alter('xmlsitemap_engine_info', $engines);
+      // Cache by language since engine names are translated.
+      cache_set('xmlsitemap:engines:' . $language->language, $engines);
+    }
   }
 
   if (isset($engine)) {
@@ -209,4 +228,18 @@ function xmlsitemap_engines_variables() {
     'xmlsitemap_engines_submit_updated' => TRUE,
   );
   return $variables;
+}
+
+/**
+ * Implements hook_xmlsitemap_sitemap_operations().
+ */
+function xmlsitemap_engines_xmlsitemap_sitemap_operations() {
+  if (xmlsitemap_engines_can_submit()) {
+    $operations['xmlsitemap_engines_submit'] = array(
+      'label' => t('Submit to search engines'),
+      'action past' => t('Submitted'),
+      'callback' => 'xmlsitemap_engines_submit_engines',
+    );
+    return $operations;
+  }
 }

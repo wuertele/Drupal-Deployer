@@ -15,13 +15,16 @@
 
 /**
  * Provide information on the type of links this module provides.
+ *
+ * @see hook_entity_info()
+ * @see hook_entity_info_alter()
  */
 function hook_xmlsitemap_link_info() {
   return array(
     'mymodule' => array(
       'label' => 'My module',
       'base table' => 'mymodule',
-      'object keys' => array(
+      'entity keys' => array(
         // Primary ID key on {base table}
         'id' => 'myid',
         // Subtype key on {base table}
