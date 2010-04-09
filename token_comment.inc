@@ -27,7 +27,7 @@ function comment_token_values($type, $object = NULL, $options = array()) {
       $values['comment-cid']             = $comment->cid;
       $values['comment-nid']             = $comment->nid;
       $values['comment-title']           = check_plain($comment->subject);
-      $values['comment-body']            = check_markup($comment->comment, $comment->format);
+      $values['comment-body']            = check_markup($comment->comment, $comment->format, FALSE);
       $values['comment-author-name']     = check_plain($comment->name);
       $values['comment-author-uid']      = $comment->uid;
       $values['comment-author-homepage'] = check_url($comment->homepage);
