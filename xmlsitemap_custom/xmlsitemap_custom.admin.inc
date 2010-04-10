@@ -65,6 +65,7 @@ function xmlsitemap_custom_list_links() {
 
 function xmlsitemap_custom_edit_link_form($form_state, $link = array()) {
   module_load_include('inc', 'xmlsitemap', 'xmlsitemap.admin');
+  _xmlsitemap_set_breadcrumb('admin/settings/xmlsitemap/custom');
 
   $link += array(
     'id' => db_result(db_query("SELECT MAX(id) FROM {xmlsitemap} WHERE type = 'custom'")) + 1,
@@ -163,6 +164,9 @@ function xmlsitemap_custom_edit_link_form_submit($form, &$form_state) {
 }
 
 function xmlsitemap_custom_delete_link_form($form_state, array $link) {
+  module_load_include('inc', 'xmlsitemap', 'xmlsitemap.admin');
+  _xmlsitemap_set_breadcrumb('admin/settings/xmlsitemap/custom');
+
   $form['link'] = array(
     '#type' => 'value',
     '#value' => $link,
