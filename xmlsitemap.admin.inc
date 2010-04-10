@@ -8,22 +8,23 @@
  * @ingroup xmlsitemap
  */
 
-function xmlsitemap_local_actions() {
-  $links = array(
+/**
+ * Render a tableselect list of XML sitemaps for the main admin page.
+ */
+function xmlsitemap_sitemap_list_form() {
+  $destination = drupal_get_destination();
+
+  // Add the local actions.
+  $local_actions = array(
     'add' => array(
       'title' => t('Add new XML sitemap'),
       'href' => 'admin/settings/xmlsitemap/add',
-      'query' => drupal_get_destination(),
+      'query' => $destination,
     ),
   );
-  return theme('links', $links, array('class' => 'item-list action-links'));
-}
-
-function xmlsitemap_sitemap_list_form() {
-  // Add the local actions and filter form.
   $form['actions'] = array(
     '#type' => 'markup',
-    '#value' => xmlsitemap_local_actions(),
+    '#value' => theme('links', $local_actions, array('class' => 'item-list action-links')),
   );
 
   // Build the 'Update options' form.
@@ -34,23 +35,23 @@ function xmlsitemap_sitemap_list_form() {
   }
   asort($operations);
 
-  $form['options'] = array(
+  $form['operations'] = array(
     '#type' => 'fieldset',
     '#title' => t('Update options'),
     '#prefix' => '<div class="container-inline">',
     '#suffix' => '</div>',
     '#access' => module_exists('elements'),
   );
-  $form['options']['operation'] = array(
+  $form['operations']['operation'] = array(
     '#type' => 'select',
     '#options' => $operations,
     '#default_value' => 'update',
   );
-  $form['options']['submit'] = array(
+  $form['operations']['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Update'),
-    '#validate' => array('xmlsitemap_sitemap_list_validate'),
-    '#submit' => array('xmlsitemap_sitemap_list_submit'),
+    //'#validate' => array('xmlsitemap_sitemap_list_form_validate'),
+    //'#submit' => array('xmlsitemap_sitemap_list_form_submit'),
   );
 
   $contexts = xmlsitemap_get_context_info();
@@ -74,7 +75,6 @@ function xmlsitemap_sitemap_list_form() {
   }
 
   $options = array();
-  $destination = drupal_get_destination();
   foreach ($smids as $smid) {
     $sitemap = xmlsitemap_sitemap_load($smid);
     $sitemap['uri'] = xmlsitemap_sitemap_uri($sitemap);
@@ -138,9 +138,9 @@ function xmlsitemap_sitemap_list_form() {
 }
 
 /**
- * Validate xmlsitemap_sitemap_list_form form submissions.
+ * Validate xmlsitemap_sitemap_list_form submissions.
  */
-function xmlsitemap_sitemap_list_validate($form, &$form_state) {
+function xmlsitemap_sitemap_list_form_validate($form, &$form_state) {
   $form_state['values']['sitemaps'] = array_filter($form_state['values']['sitemaps']);
 
   // Error if there are no items to select.
@@ -150,11 +150,11 @@ function xmlsitemap_sitemap_list_validate($form, &$form_state) {
 }
 
 /**
- * Process xmlsitemap_sitemap_list_form form submissions.
+ * Process xmlsitemap_sitemap_list_form submissions.
  *
  * Execute the chosen 'Update option' on the selected sitemaps.
  */
-function xmlsitemap_sitemap_list_submit($form, &$form_state) {
+function xmlsitemap_sitemap_list_form_submit($form, &$form_state) {
   $operation = $form['#operations'][$form_state['values']['operation']];
 
   // Filter out unchecked sitemaps.
@@ -184,7 +184,24 @@ function xmlsitemap_sitemap_list_submit($form, &$form_state) {
   }
 }
 
+/**
+ * Workaround for missing breadcrumbs on callback and action paths.
+ */
+function _xmlsitemap_set_breadcrumb($path = 'admin/settings/xmlsitemap') {
+  $breadcrumb = array();
+  $path = explode('/', $path);
+  do {
+    $menu_path = implode('/', $path);
+    $menu_item = menu_get_item($menu_path);
+    array_unshift($breadcrumb, l($menu_item['title'], $menu_path));
+  } while (array_pop($path) && !empty($path));
+  array_unshift($breadcrumb, l(t('Home'), NULL));
+  drupal_set_breadcrumb($breadcrumb);
+}
+
 function xmlsitemap_sitemap_edit_form($form_state, array $sitemap = array()) {
+  _xmlsitemap_set_breadcrumb();
+
   $sitemap += array(
     'smid' => NULL,
     'context' => array(),
@@ -251,6 +268,8 @@ function xmlsitemap_sitemap_edit_form_submit($form, &$form_state) {
 }
 
 function xmlsitemap_sitemap_delete_form($form_state, array $sitemap) {
+  _xmlsitemap_set_breadcrumb();
+
   $count = (int) db_result(db_query("SELECT COUNT(smid) FROM {xmlsitemap_sitemap}"));
   if ($count === 1 && empty($_POST)) {
     drupal_set_message('It is not recommended to delete the only XML sitemap.', 'error');
