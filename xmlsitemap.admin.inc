@@ -73,14 +73,14 @@ function xmlsitemap_sitemap_list_form() {
   while ($smid = db_result($query)) {
     $smids[] = $smid;
   }
+  $sitemaps = xmlsitemap_sitemap_load_multiple($smids);
 
   $options = array();
-  foreach ($smids as $smid) {
-    $sitemap = xmlsitemap_sitemap_load($smid);
-    $sitemap['uri'] = xmlsitemap_sitemap_uri($sitemap);
+  foreach ($sitemaps as $smid => $sitemap) {
+    $sitemap['url'] = url($sitemap['uri']['path'], $sitemap['uri']['options']);
 
     $options[$smid]['url'] = array(
-      'data' => l($sitemap['uri']['url'], $sitemap['uri']['url']),
+      'data' => l($sitemap['url'], $sitemap['url']),
     );
 
     foreach ($contexts as $context_key => $context_info) {
@@ -90,6 +90,9 @@ function xmlsitemap_sitemap_list_form() {
     $options[$smid]['updated'] = $sitemap['updated'] ? format_date($sitemap['updated'], 'short') : t('Never');
     $options[$smid]['links'] = $sitemap['updated'] ? $sitemap['links'] : '-';
     $options[$smid]['chunks'] = $sitemap['updated'] ? $sitemap['chunks'] : '-';
+
+    // @todo Highlight sitemaps that need updating.
+    //$options[$smid]['#attributes']['class'] = 'warning';
 
     $operations = array();
     $operations['edit'] = array(
@@ -262,9 +265,9 @@ function xmlsitemap_sitemap_edit_form_validate($form, &$form_state) {
 
 function xmlsitemap_sitemap_edit_form_submit($form, &$form_state) {
   xmlsitemap_sitemap_save($form_state['values']);
-  $uri = xmlsitemap_sitemap_uri($form_state['values']);
-  drupal_set_message(t('The sitemap %sitemap was saved.', array('%sitemap' => $uri['url'])));
+  drupal_set_message(t('The sitemap has been saved.'));
   $form_state['redirect'] = 'admin/settings/xmlsitemap';
+  // @todo If context was changed, needs to be regenerated.
 }
 
 function xmlsitemap_sitemap_delete_form($form_state, array $sitemap) {
@@ -291,9 +294,8 @@ function xmlsitemap_sitemap_delete_form($form_state, array $sitemap) {
 }
 
 function xmlsitemap_sitemap_delete_form_submit($form, $form_state) {
-  xmlsitemap_sitemap_delete($form_state['values']['smid']);
-  $uri = xmlsitemap_sitemap_uri($form['#sitemap']);
-  drupal_set_message(t('The sitemap %sitemap was deleted.', array('%sitemap' => $uri['url'])));
+  xmlsitemap_sitemap_delete($form['#sitemap']);
+  drupal_set_message(t('The sitemap has been deleted.'));
   $form_state['redirect'] = 'admin/settings/xmlsitemap';
 }
 
@@ -367,7 +369,7 @@ function xmlsitemap_settings_form() {
   $form['advanced']['xmlsitemap_base_url'] = array(
     '#type' => 'textfield',
     '#title' => t('Default base URL'),
-    '#default_value' => xmlsitemap_var('base_url'),
+    '#default_value' => variable_get('xmlsitemap_base_url', $GLOBALS['base_url']),
     '#size' => 30,
     '#description' => t('This is the default base URL used for sitemaps and sitemap links.'),
     '#required' => TRUE,
@@ -399,7 +401,7 @@ function xmlsitemap_settings_form() {
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
       '#group' => 'xmlsitemap_settings',
-      '#weight' => 30,
+      '#weight' => 20,
     );
 
     if (!empty($entity_info['bundles'])) {

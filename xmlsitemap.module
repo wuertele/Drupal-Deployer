@@ -62,6 +62,9 @@ function xmlsitemap_help($path, $arg) {
     case 'admin/help#xmlsitemap':
       break;
     case 'admin/settings/xmlsitemap':
+      if (!module_exists('elements')) {
+        $output .= '<p>' . t('In order to perform bulk operations on the sitemaps listed below, it is highly recommended to download and install the <a href="@elements">Elements module</a>.', array('@elements' => 'http://drupal.org/project/elements')) . '</p>';
+      }
       break;
     case 'admin/settings/xmlsitemap/rebuild':
       $output .= '<p>' . t("This action rebuilds your site's XML sitemap and regenerates the cached files, and may be a lengthy process. If you just installed XML sitemap, this can be helpful to import all your site's content into the sitemap. Otherwise, this should only be used in emergencies.") . '</p>';
@@ -90,11 +93,14 @@ function xmlsitemap_perm() {
 
 function xmlsitemap_sitemap_load_multiple(array $smids) {
   $sitemaps = array();
-  $query = db_query("SELECT * FROM {xmlsitemap_sitemap} WHERE smid IN (" . db_placeholders($smids) . ")", $smids);
-  while ($sitemap = db_fetch_array($query)) {
-    $smid = $sitemap['smid'];
-    $sitemaps[$smid] = $sitemap;
-    $sitemaps[$smid]['context'] = unserialize($sitemap['context']);
+  if ($smids) {
+    $query = db_query("SELECT * FROM {xmlsitemap_sitemap} WHERE smid IN (" . db_placeholders($smids) . ")", $smids);
+    while ($sitemap = db_fetch_array($query)) {
+      $smid = $sitemap['smid'];
+      $sitemaps[$smid] = $sitemap;
+      $sitemaps[$smid]['context'] = unserialize($sitemap['context']);
+      $sitemaps[$smid]['uri'] = xmlsitemap_sitemap_uri($sitemaps[$smid]);
+    }
   }
   return $sitemaps;
 }
@@ -113,18 +119,38 @@ function xmlsitemap_sitemap_load_by_context(array $context = NULL) {
   return xmlsitemap_sitemap_load($smid);
 }
 
+/**
+ * Return the expected file path for a specific sitemap chunk.
+ *
+ * @param $sitemap
+ *   An XML sitemap array.
+ * @param $chunk
+ *   An optional specific chunk in the sitemap. Defaults to the index page.
+ */
+function xmlsitemap_sitemap_get_file(array $sitemap, $chunk = 'index') {
+  return xmlsitemap_get_directory($sitemap) . "/{$chunk}.xml";
+}
+
+/**
+ * Returns the uri elements of an XML sitemap.
+ *
+ * @param $sitemap
+ *   An unserialized data array for an XML sitemap.
+ * @return
+ *   An array containing the 'path' and 'options' keys used to build the uri of
+ *   the XML sitemap, and matching the signature of url().
+ */
 function xmlsitemap_sitemap_uri(array $sitemap) {
-  $uri = array();
   $uri['path'] = 'sitemap.xml';
   $uri['options'] = module_invoke_all('xmlsitemap_context_url_options', $sitemap['context']);
   $uri['options'] += array(
     'absolute' => TRUE,
-    'base_url' => xmlsitemap_var('base_url'),
+    'base_url' => variable_get('xmlsitemap_base_url', $GLOBALS['base_url']),
   );
-  $uri['url'] = url($uri['path'], $uri['options']);
   return $uri;
 }
 
+// @todo Save $sitemap['url']?
 function xmlsitemap_sitemap_save(array $sitemap) {
   asort($sitemap['context']);
   $sitemap['context_hash'] = md5(serialize($sitemap['context']));
@@ -137,9 +163,9 @@ function xmlsitemap_sitemap_save(array $sitemap) {
   }
 }
 
-function xmlsitemap_sitemap_delete($smid) {
-  db_query("DELETE FROM {xmlsitemap_sitemap} WHERE smid = %d", $smid);
-  // @todo Delete context files.
+function xmlsitemap_sitemap_delete(array $sitemap) {
+  db_query("DELETE FROM {xmlsitemap_sitemap} WHERE smid = %d", $sitemap['smid']);
+  xmlsitemap_clear_directory($sitemap, TRUE);
 }
 
 /**
@@ -252,11 +278,8 @@ function xmlsitemap_cron() {
  * Implements hook_robotstxt().
  */
 function xmlsitemap_robotstxt() {
-  // @todo Simplify this down to one function somehow?
-  $context = xmlsitemap_get_current_context();
-  if ($sitemap = xmlsitemap_sitemap_load_by_context($context)) {
-    $uri = xmlsitemap_sitemap_uri($sitemap);
-    $robotstxt[] = 'Sitemap: ' . $uri['url'];
+  if ($sitemap = xmlsitemap_sitemap_load_by_context()) {
+    $robotstxt[] = 'Sitemap: ' . url($sitemap['uri']['path'], $sitemap['uri']['options']);
     return $robotstxt;
   }
 }
@@ -820,30 +843,26 @@ function xmlsitemap_get_link_info($type = NULL, $reset = FALSE) {
   return $link_info;
 }
 
-function xmlsitemap_get_file_from_context(array $context, $chunk = 'index') {
-  return xmlsitemap_get_directory() . '/' . md5(serialize($context)) . "-{$chunk}.xml";
-}
-
-function xmlsitemap_get_directory() {
+function xmlsitemap_get_directory(array $sitemap = NULL) {
   $directory = &xmlsitemap_static(__FUNCTION__);
 
   if (!isset($directory)) {
     $directory = file_create_path(variable_get('xmlsitemap_path', 'xmlsitemap'));
   }
 
-  return $directory;
+  return $directory . (!empty($sitemap) ? '/' . $sitemap['context_hash'] : '');
 }
 
 /**
  * Check that the sitemap files directory exists and is writable.
  */
-function xmlsitemap_check_directory() {
-  $directory = xmlsitemap_get_directory();
+function xmlsitemap_check_directory(array $sitemap = NULL) {
+  $directory = xmlsitemap_get_directory($sitemap);
   return file_check_directory($directory, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS);
 }
 
-function xmlsitemap_clear_directory($delete = FALSE) {
-  $directory = xmlsitemap_get_directory();
+function xmlsitemap_clear_directory(array $sitemap = NULL, $delete = FALSE) {
+  $directory = xmlsitemap_get_directory($sitemap);
   return _xmlsitemap_delete_recursive($directory, $delete);
 }
 
@@ -1234,14 +1253,6 @@ function xmlsitemap_sitemap_multiple_update(array $smids) {
   module_load_include('generate.inc', 'xmlsitemap');
   $batch = xmlsitemap_regenerate_batch($smids);
   batch_set($batch);
-}
-
-/**
- * Implements hook_xmlsitemap_context_url_options().
- */
-function xmlsitemap_xmlsitemap_context_url_options(array $context) {
-  $options['absolute'] = TRUE;
-  return $options;
 }
 
 function _xmlsitemap_sitemap_context_summary(array $sitemap, $context_key, array $context_info) {

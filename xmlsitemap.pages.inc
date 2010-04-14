@@ -11,11 +11,10 @@
 /**
  * Get the sitemap chunk/page of the current request.
  */
-function xmlsitemap_get_current_chunk(array $context) {
+function xmlsitemap_get_current_chunk(array $sitemap) {
   // Check if we should be displaing the index.
   if (!isset($_GET['page']) || !is_numeric($_GET['page'])) {
-    $index_file = xmlsitemap_get_file_from_context($context, 'index');
-    if (file_exists($index_file)) {
+    if ($sitemap['chunks'] > 1) {
       return 'index';
     }
     else {
@@ -30,21 +29,25 @@ function xmlsitemap_get_current_chunk(array $context) {
 /**
  * Output a sitemap page.
  *
- * @see xmlsitemap_get_current_context()
+ * @see xmlsitemap_sitemap_load_by_context()
  * @see xmlsitemap_get_current_chunk()
- * @see xmlsitemap_get_file_from_context()
+ * @see xmlsitemap_sitemap_get_file()
  * @see xmlsitemap_output_file()
  */
 function xmlsitemap_output_chunk() {
-  $context = xmlsitemap_get_current_context();
-  $chunk = xmlsitemap_get_current_chunk($context);
-  $file = xmlsitemap_get_file_from_context($context, $chunk);
+  $sitemap = xmlsitemap_sitemap_load_by_context();
+  if (!$sitemap) {
+    return drupal_not_found();
+  }
+
+  $chunk = xmlsitemap_get_current_chunk($sitemap);
+  $file = xmlsitemap_sitemap_get_file($sitemap, $chunk);
 
   // Provide debugging information if enabled.
   if (variable_get('xmlsitemap_developer_mode', 0) || isset($_GET['debug'])) {
     $output = array();
+    $output[] = "Sitemap: " . print_r($sitemap, TRUE);
     $output[] = "Chunk: $chunk";
-    $output[] = "Context: " . print_r($context, TRUE);
     $output[] = "Cache file location: $file";
     $output[] = "Cache file exists: " . (file_exists($file) ? 'Yes' : 'No');
     return implode('<br />', $output);

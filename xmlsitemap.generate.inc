@@ -75,10 +75,6 @@ function _xmlsitemap_regenerate_before() {
   // Get the current memory usage so we can track how much memory is used.
   _xmlsitemap_get_memory_usage(TRUE);
 
-  // Clear all cached sitemap files.
-  xmlsitemap_clear_directory();
-  xmlsitemap_check_directory();
-
   // Clear the maximum chunk and file size variables.
   variable_set('xmlsitemap_max_chunks', 0);
   variable_set('xmlsitemap_max_filesize', 0);
@@ -168,7 +164,7 @@ function xmlsitemap_generate(array $sitemap, $chunk) {
     return FALSE;
   }
 
-  $file = xmlsitemap_get_file_from_context($sitemap['context'], $chunk);
+  $file = xmlsitemap_sitemap_get_file($sitemap, $chunk);
 
   if (!$handle = fopen($file, 'wb')) {
     trigger_error(t('Could not open file @file for writing.', array('@file' => $file)));
@@ -220,7 +216,6 @@ function xmlsitemap_generate_chunk_header($type, array $sitemap, $handle, &$stat
   // Add the stylesheet link.
   if (variable_get('xmlsitemap_xsl', 1)) {
     $url_options = xmlsitemap_get_url_options_from_context($sitemap['context']);
-    unset($url_options['absolute']);
     $url_options['alias'] = TRUE;
     $xsl_url = url('sitemap.xsl', $url_options);
     $output .= '<?xml-stylesheet type="text/xsl" href="' . $xsl_url . '"?>' . PHP_EOL;
@@ -258,12 +253,13 @@ function xmlsitemap_generate_chunk(array $sitemap, $handle, &$status, $chunk) {
   $url_options = xmlsitemap_get_url_options_from_context($sitemap['context']);
   $url_options += array(
     'absolute' => TRUE,
-    'base_url' => xmlsitemap_var('base_url'),
+    'base_url' => variable_get('xmlsitemap_base_url', $GLOBALS['base_url']),
     'language' => language_default(),
     'alias' => variable_get('xmlsitemap_prefetch_aliases', TRUE),
   );
 
   $last_url = '';
+  $link_count = 0;
 
   $query = array(
     'SELECT'   => 'SELECT x.loc, x.lastmod, x.changefreq, x.changecount, x.priority, x.language',
@@ -355,7 +351,7 @@ function xmlsitemap_generate_index(array $sitemap, $handle, &$status) {
   $url_options = xmlsitemap_get_url_options_from_context($sitemap['context']);
   $url_options += array(
     'absolute' => TRUE,
-    'base_url' => xmlsitemap_var('base_url'),
+    'base_url' => variable_get('xmlsitemap_base_url', $GLOBALS['base_url']),
     'language' => language_default(),
     'alias' => TRUE,
   );
@@ -422,20 +418,26 @@ function xmlsitemap_regenerate_batch_generate($smid, array &$context) {
     $context['sandbox']['sitemap']['chunks'] = 1;
     $context['sandbox']['sitemap']['links'] = 0;
     $context['sandbox']['max'] = XMLSITEMAP_MAX_SITEMAP_LINKS;
+
+    // Clear the cache directory for this sitemap before generating any files.
+    xmlsitemap_check_directory($context['sandbox']['sitemap']);
+    xmlsitemap_clear_directory($context['sandbox']['sitemap']);
   }
 
   $sitemap = &$context['sandbox']['sitemap'];
   $links = xmlsitemap_generate($sitemap, $sitemap['chunks']);
-  $context['message'] = t('Now generating sitemap page @chunk.', array('@chunk' => $sitemap['chunks']));
+  $context['message'] = t('Now generating %sitemap-url.', array('%sitemap-url' => url('sitemap.xml', $sitemap['uri']['options'] + array('query' => array('page' => $sitemap['chunks'])))));
 
   if ($links) {
     $sitemap['links'] += $links;
     $sitemap['chunks']++;
   }
   else {
-    // Account for the 'extra' chunk here.
-    // @todo Delete the extra file?
+    // Cleanup the 'extra' empty file.
+    $file = xmlsitemap_sitemap_get_file($sitemap, $sitemap['chunks']);
+    file_delete($file);
     $sitemap['chunks']--;
+
     // Save the updated chunks and links values.
     $context['sandbox']['max'] = $sitemap['chunks'];
     $sitemap['updated'] = REQUEST_TIME;
@@ -454,7 +456,7 @@ function xmlsitemap_regenerate_batch_generate_index($smid, array &$context) {
   $sitemap = xmlsitemap_sitemap_load($smid);
   if ($sitemap['chunks'] > 1) {
     xmlsitemap_generate($sitemap, 'index');
-    $context['message'] = t('Now generating sitemap index for @count pages.', array('@count' => $sitemap['chunks']));
+    $context['message'] = t('Now generating sitemap index %sitemap-url.', array('%sitemap-url' => url('sitemap.xml', $sitemap['uri']['options'])));
   }
 }
 
@@ -602,6 +604,7 @@ function xmlsitemap_rebuild_batch_finished($success, $results, $operations) {
     drupal_set_message(t('The sitemap was not successfully rebuilt.'), 'error');
   }
 }
+
 function xmlsitemap_get_rebuildable_link_types() {
   $rebuild_types = array();
   $entities = xmlsitemap_get_link_info();
