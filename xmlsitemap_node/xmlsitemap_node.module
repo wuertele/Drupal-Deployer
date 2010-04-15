@@ -242,8 +242,116 @@ function xmlsitemap_node_create_link(stdClass &$node) {
 
   // The following values must always be checked because they are volatile.
   $node->xmlsitemap['lastmod'] = isset($node->changed) ? $node->changed : REQUEST_TIME;
-  $node->xmlsitemap['access'] = $node->nid ? (bool) node_access('view', $node, drupal_anonymous_user()) : 1;
+  $node->xmlsitemap['access'] = $node->nid ? xmlsitemap_node_view_access('view', $node, drupal_anonymous_user()) : 1;
   $node->xmlsitemap['language'] = isset($node->language) ? $node->language : '';
 
   return $node->xmlsitemap;
+}
+
+/**
+ * Determine whether the anonymous user may view the specified node.
+ *
+ * @param $node
+ *   The node object (or node array) on which the operation is to be performed,
+ *   or node type (e.g. 'forum') for "create" operation.
+ * @param $account
+ *   Optional, a user object representing the user for whom the operation is to
+ *   be performed. Determines access for a user other than the current user.
+ * @return
+ *   TRUE if the operation may be performed, or FALSE otherwise.
+ *
+ * This is for all intesive purposes a copy of Drupal 7's node_access function.
+ * It invokes a backport of Drupal 7's hook_node_grants_alter() specifically
+ * for use with XML sitemap.
+ */
+function xmlsitemap_node_view_access($node, $account = NULL) {
+  global $user;
+
+  $op = 'view';
+  $rights = &xmlsitemap_static(__FUNCTION__, array());
+
+  if (!$node || !in_array($op, array('view', 'update', 'delete', 'create'), TRUE)) {
+    // If there was no node to check against, or the $op was not one of the
+    // supported ones, we return access denied.
+    return FALSE;
+  }
+  // If no user object is supplied, the access check is for the current user.
+  if (empty($account)) {
+    $account = $user;
+  }
+
+  // $node may be either an object or a node type. Since node types cannot be
+  // an integer, use either nid or type as the static cache id.
+  //$cid = is_object($node) ? $node->nid : $node;
+
+  // If we've already checked access for this node, user and op, return from
+  // cache.
+  if (isset($rights[$account->uid][$node->nid])) {
+    return $rights[$account->uid][$node->nid];
+  }
+
+  if (user_access('administer nodes', $account)) {
+    $rights[$account->uid][$node->nid] = TRUE;
+    return TRUE;
+  }
+
+  if (!user_access('access content', $account)) {
+    $rights[$account->uid][$node->nid] = FALSE;
+    return FALSE;
+  }
+
+  // Can't use node_invoke(), because the access hook takes the $op parameter
+  // before the $node parameter.
+  $module = node_get_types('module', $node);
+  if ($module == 'node') {
+    $module = 'node_content'; // Avoid function name collisions.
+  }
+  $access = module_invoke($module, 'access', $op, $node, $account);
+  if (!is_null($access)) {
+    $rights[$account->uid][$node->nid] = $access;
+    return $access;
+  }
+
+  // If the module did not override the access rights, use those set in the
+  // node_access table.
+  if ($op != 'create' && $node->nid && $node->status) {
+    // Fetch the node grants and allow other modules to alter them (D7 backport).
+    $grants = &xmlsitemap_static(__FUNCTION__ . ':grants', array());
+    if (!isset($grants[$account->uid][$op])) {
+      $grants = node_access_grants($op, $account);
+      // Indicate that this is our special function in the grants.
+      $grants['xmlsitemap_node_access'] = array(0);
+      // Call hook_node_grants_alter(). This is a backport from Drupal 7.
+      drupal_alter('node_grants', $grants, $op, $account);
+      // Remove the special indicator.
+      unset($grants['xmlsitemap_node_access']);
+      $grants[$account->uid][$op] = $grants;
+    }
+
+    $where = array();
+    foreach ($grants[$account->uid][$op] as $realm => $gids) {
+      foreach ($gids as $gid) {
+        $where[] = "(gid = $gid AND realm = '$realm')";
+      }
+    }
+
+    $grants_sql = '';
+    if (count($where)) {
+      $grants_sql = 'AND ('. implode(' OR ', $where) .')';
+    }
+
+    $sql = "SELECT 1 FROM {node_access} WHERE (nid = 0 OR nid = %d) $grants_sql AND grant_$op >= 1";
+    $result = db_query_range($sql, $node->nid, 0, 1);
+    $rights[$account->uid][$node->nid] = $access = (bool) db_result($result);
+    return $access;
+  }
+
+  // Let authors view their own nodes.
+  if ($op == 'view' && $account->uid == $node->uid && $account->uid != 0) {
+    $rights[$account->uid][$node->nid] = TRUE;
+    return TRUE;
+  }
+
+  $rights[$account->uid][$node->nid] = FALSE;
+  return FALSE;
 }
