@@ -242,14 +242,14 @@ function xmlsitemap_node_create_link(stdClass &$node) {
 
   // The following values must always be checked because they are volatile.
   $node->xmlsitemap['lastmod'] = isset($node->changed) ? $node->changed : REQUEST_TIME;
-  $node->xmlsitemap['access'] = $node->nid ? xmlsitemap_node_view_access('view', $node, drupal_anonymous_user()) : 1;
+  $node->xmlsitemap['access'] = $node->nid ? xmlsitemap_node_view_access($node, drupal_anonymous_user()) : 1;
   $node->xmlsitemap['language'] = isset($node->language) ? $node->language : '';
 
   return $node->xmlsitemap;
 }
 
 /**
- * Determine whether the anonymous user may view the specified node.
+ * Determine whether a user may view the specified node.
  *
  * @param $node
  *   The node object (or node array) on which the operation is to be performed,
@@ -260,7 +260,7 @@ function xmlsitemap_node_create_link(stdClass &$node) {
  * @return
  *   TRUE if the operation may be performed, or FALSE otherwise.
  *
- * This is for all intesive purposes a copy of Drupal 7's node_access function.
+ * This is for all intesive purposes a copy of Drupal 7's node_access() function.
  * It invokes a backport of Drupal 7's hook_node_grants_alter() specifically
  * for use with XML sitemap.
  */
@@ -318,32 +318,33 @@ function xmlsitemap_node_view_access($node, $account = NULL) {
     // Fetch the node grants and allow other modules to alter them (D7 backport).
     $grants = &xmlsitemap_static(__FUNCTION__ . ':grants', array());
     if (!isset($grants[$account->uid][$op])) {
-      $grants = node_access_grants($op, $account);
       // Indicate that this is our special function in the grants.
-      $grants['xmlsitemap_node_access'] = array(0);
+      $account->xmlsitemap_node_access = TRUE;
+      $grants = node_access_grants($op, $account);
       // Call hook_node_grants_alter(). This is a backport from Drupal 7.
       drupal_alter('node_grants', $grants, $op, $account);
-      // Remove the special indicator.
-      unset($grants['xmlsitemap_node_access']);
       $grants[$account->uid][$op] = $grants;
+      // Remove the special indicator.
+      unset($account->xmlsitemap_node_access);
     }
 
-    $where = array();
+    $grant_condition = array();
     foreach ($grants[$account->uid][$op] as $realm => $gids) {
       foreach ($gids as $gid) {
-        $where[] = "(gid = $gid AND realm = '$realm')";
+        $grant_condition[] = "(gid = $gid AND realm = '$realm')";
       }
     }
-
-    $grants_sql = '';
-    if (count($where)) {
-      $grants_sql = 'AND ('. implode(' OR ', $where) .')';
+    if (count($grant_condition)) {
+      $grant_condition = 'AND ('. implode(' OR ', $where) .')';
+    }
+    else {
+      $grant_condition = '';
     }
 
-    $sql = "SELECT 1 FROM {node_access} WHERE (nid = 0 OR nid = %d) $grants_sql AND grant_$op >= 1";
-    $result = db_query_range($sql, $node->nid, 0, 1);
-    $rights[$account->uid][$node->nid] = $access = (bool) db_result($result);
-    return $access;
+    $sql = "SELECT 1 FROM {node_access} WHERE (nid = 0 OR nid = %d) $grant_condition AND grant_$op >= 1";
+    $result = (bool) db_result(db_query_range($sql, $node->nid, 0, 1));
+    $rights[$account->uid][$node->nid] = $result;
+    return $result;
   }
 
   // Let authors view their own nodes.
@@ -352,6 +353,5 @@ function xmlsitemap_node_view_access($node, $account = NULL) {
     return TRUE;
   }
 
-  $rights[$account->uid][$node->nid] = FALSE;
   return FALSE;
 }
