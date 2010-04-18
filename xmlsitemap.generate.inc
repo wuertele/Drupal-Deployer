@@ -72,12 +72,26 @@ function _xmlsitemap_regenerate_before() {
   // Set a timer so we can track how long this takes.
   timer_start('xmlsitemap_regenerate');
 
-  // Get the current memory usage so we can track how much memory is used.
-  _xmlsitemap_get_memory_usage(TRUE);
+  if (variable_get('xmlsitemap_developer_mode', 0)) {
+    watchdog('xmlsitemap', 'Starting XML sitemap generation. Memory usage: @memory-peak.', array(
+        '@memory-peak' => format_size(_xmlsitemap_memory_get_peak_usage()),
+      ),
+      WATCHDOG_DEBUG
+    );
+  }
 
   // Clear the maximum chunk and file size variables.
   variable_set('xmlsitemap_max_chunks', 0);
   variable_set('xmlsitemap_max_filesize', 0);
+}
+
+function _xmlsitemap_memory_get_peak_usage() {
+  if (function_exists('memory_get_peak_usage')) {
+    return memory_get_peak_usage(TRUE);
+  }
+  else {
+    return 'N/A';
+  }
 }
 
 function _xmlsitemap_get_memory_usage($start = FALSE) {
@@ -95,8 +109,14 @@ function _xmlsitemap_get_memory_usage($start = FALSE) {
   return $current - $memory_start;
 }
 
+/**
+ * Calculate the optimal PHP memory limit for sitemap generation.
+ *
+ * This function just makes a guess. It does not take into account
+ * the currently loaded modules.
+ */
 function _xmlsitemap_get_optimal_memory_limit() {
-  static $optimal_limit;
+  $optimal_limit = &xmlsitemap_static(__FUNCTION__);
   if (!isset($optimal_limit)) {
     // Set the base memory amount from the provided core constant.
     $optimal_limit = parse_size(DRUPAL_MINIMUM_PHP_MEMORY_LIMIT);
@@ -105,21 +125,29 @@ function _xmlsitemap_get_optimal_memory_limit() {
     $optimal_limit += xmlsitemap_get_chunk_size() * 500;
 
     // Add memory for storing the url aliases.
-    $aliases = db_result(db_query("SELECT COUNT(pid) FROM {url_alias}"));
-    $optimal_limit += $aliases * 250;
+    if (variable_get('xmlsitemap_prefetch_aliases', 1)) {
+      $aliases = db_result(db_query("SELECT COUNT(pid) FROM {url_alias}"));
+      $optimal_limit += $aliases * 250;
+    }
   }
   return $optimal_limit;
 }
 
 /**
  * Calculate the optimal memory level for sitemap generation.
+ *
+ * @param $new_limit
+ *   An optional PHP memory limit in bytes. If not provided, the value of
+ *   _xmlsitemap_get_optimal_memory_limit() will be used.
  */
-function _xmlsitemap_set_memory_limit() {
-  $memory_limit = @ini_get('memory_limit');
-  if ($memory_limit && $memory_limit != -1) {
-    $optimal_limit = _xmlsitemap_get_optimal_memory_limit();
-    if (parse_size($memory_limit) < $optimal_limit) {
-      @ini_set('memory_limit', $optimal_limit);
+function _xmlsitemap_set_memory_limit($new_limit = NULL) {
+  $current_limit = @ini_get('memory_limit');
+  if ($current_limit && $current_limit != -1) {
+    if (!is_null($new_limit)) {
+      $new_limit = _xmlsitemap_get_optimal_memory_limit();
+    }
+    if (parse_size($current_limit) < $new_limit) {
+      return @ini_set('memory_limit', $new_limit);
     }
   }
 }
@@ -130,13 +158,12 @@ function _xmlsitemap_set_memory_limit() {
 function _xmlsitemap_regenerate_after() {
   // Show a watchdog message that the sitemap was regenerated.
   watchdog('xmlsitemap',
-    'XML sitemap files regenerated in @timer ms. Peak memory usage: @memory-peak.',
+    'Finished XML sitemap generation in @timer ms. Memory usage: @memory-peak.',
     array(
       '@timer' => timer_read('xmlsitemap_regenerate'),
-      '@memory-peak' => format_size(memory_get_peak_usage(TRUE)),
+      '@memory-peak' => format_size(_xmlsitemap_memory_get_peak_usage()),
     ),
-    WATCHDOG_NOTICE,
-    l(t('View sitemap'), 'sitemap.xml')
+    WATCHDOG_NOTICE
   );
 
   // Unset the regenerate flag.
