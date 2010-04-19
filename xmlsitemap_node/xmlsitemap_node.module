@@ -315,36 +315,38 @@ function xmlsitemap_node_view_access($node, $account = NULL) {
   // If the module did not override the access rights, use those set in the
   // node_access table.
   if ($op != 'create' && $node->nid && $node->status) {
-    // Fetch the node grants and allow other modules to alter them (D7 backport).
-    $grants = &xmlsitemap_static(__FUNCTION__ . ':grants', array());
-    if (!isset($grants[$account->uid][$op])) {
-      // Indicate that this is our special function in the grants.
-      $account->xmlsitemap_node_access = TRUE;
-      $grants = node_access_grants($op, $account);
-      // Call hook_node_grants_alter(). This is a backport from Drupal 7.
-      drupal_alter('node_grants', $grants, $op, $account);
-      $grants[$account->uid][$op] = $grants;
-      // Remove the special indicator.
-      unset($account->xmlsitemap_node_access);
-    }
-
-    $grant_condition = array();
-    foreach ($grants[$account->uid][$op] as $realm => $gids) {
-      foreach ($gids as $gid) {
-        $grant_condition[] = "(gid = $gid AND realm = '$realm')";
+    if (module_implements('node_grants')) {
+      // Fetch the node grants and allow other modules to alter them (D7 backport).
+      $grants = &xmlsitemap_static(__FUNCTION__ . ':grants', array());
+      if (!isset($grants[$account->uid][$op])) {
+        // Indicate that this is our special function in the grants.
+        $account->xmlsitemap_node_access = TRUE;
+        $grants = node_access_grants($op, $account);
+        // Call hook_node_grants_alter(). This is a backport from Drupal 7.
+        drupal_alter('node_grants', $grants, $op, $account);
+        $grants[$account->uid][$op] = $grants;
+        // Remove the special indicator.
+        unset($account->xmlsitemap_node_access);
       }
-    }
-    if (count($grant_condition)) {
-      $grant_condition = 'AND ('. implode(' OR ', $grant_condition) .')';
-    }
-    else {
-      $grant_condition = '';
-    }
 
-    $sql = "SELECT 1 FROM {node_access} WHERE (nid = 0 OR nid = %d) $grant_condition AND grant_$op >= 1";
-    $result = (bool) db_result(db_query_range($sql, $node->nid, 0, 1));
-    $rights[$account->uid][$node->nid] = $result;
-    return $result;
+      $grant_condition = array();
+      foreach ($grants[$account->uid][$op] as $realm => $gids) {
+        foreach ($gids as $gid) {
+          $grant_condition[] = "(gid = $gid AND realm = '$realm')";
+        }
+      }
+      if (count($grant_condition)) {
+        $grant_condition = 'AND ('. implode(' OR ', $grant_condition) .')';
+      }
+      else {
+        $grant_condition = '';
+      }
+
+      $sql = "SELECT 1 FROM {node_access} WHERE (nid = 0 OR nid = %d) $grant_condition AND grant_$op >= 1";
+      $result = (bool) db_result(db_query_range($sql, $node->nid, 0, 1));
+      $rights[$account->uid][$node->nid] = $result;
+      return $result;
+    }
   }
 
   // Let authors view their own nodes.
