@@ -45,9 +45,5 @@
     <div class="recipe-notes"><?php print $recipe_notes ?></div>
   <?php endif;?>
 
-  <?php if ($content): ?>
-    <div class="content"><?php print $content ?></div>
-  <?php endif;?>
-
   <?php print $links; ?>
 </div>
