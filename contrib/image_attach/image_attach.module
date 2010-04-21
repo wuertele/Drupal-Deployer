@@ -134,7 +134,7 @@ function image_attach_form_node_type_form_alter(&$form, $form_state) {
     foreach (image_get_sizes() as $key => $size) {
       $image_sizes[$key] = $size['label'];
     }
-    
+
     $form['image_attach'] = array(
       '#type' => 'fieldset',
       '#title' => t('Image Attach settings'),
@@ -189,7 +189,7 @@ function image_attach_form_node_type_form_alter(&$form, $form_state) {
     if (module_exists('content')) {
       $link = l(t('Manage fields'), $_GET['q'] .'/fields');
       $form['image_attach']['#description'] = t('Since you installed CCK module, you can change the image weight in the !link page.', array('!link' => $link));
-    } 
+    }
   }
 }
 
@@ -207,10 +207,10 @@ function image_attach_form_alter(&$form, $form_state, $form_id) {
       $value = !empty($node->new_image) ? '#value' : '#default_value';
       $form['#attributes'] = array("enctype" => "multipart/form-data");
       // Add a custom submit handler so we can handle image creation on-the-fly
-      $form['#validate'][] = 'image_attach_validate'; 
+      $form['#validate'][] = 'image_attach_validate';
       // Add a custom submit handler so we can clean up the selection box items.
-      $form['#submit'][] = 'image_attach_node_form_submit'; 
-      
+      $form['#submit'][] = 'image_attach_node_form_submit';
+
       // Check permissions and settings
       $may_attach           = user_access('attach images');
       $may_attach_existing  = variable_get('image_attach_existing', 1);
@@ -219,7 +219,7 @@ function image_attach_form_alter(&$form, $form_state, $form_id) {
       $maximum_images       = variable_get('image_attach_maximum_' . $type, 0);
 
       // Display the image attach form only if user can attach images, AND
-      // it is allowed to attach existing images or the user is allowed to create new images 
+      // it is allowed to attach existing images or the user is allowed to create new images
       if ($may_attach && ($may_attach_existing || $may_upload)) {
         $form['image_attach'] = array(
           '#type' => 'fieldset',
@@ -246,7 +246,7 @@ function image_attach_form_alter(&$form, $form_state, $form_id) {
             );
           }
         }
-        
+
         // Only show selection box of image nodes if the user may attach some,
         // or if there are existings ones that may be removed.
         if ($may_attach_existing || $has_existing_images) {
@@ -257,7 +257,7 @@ function image_attach_form_alter(&$form, $form_state, $form_id) {
             '#size' => 6,
             // Title, options and description are set just below.
           );
-  
+
           // User may attach already existing images: show a selection box containing all images.
           if ($may_attach_existing) {
             $form['image_attach']['iids']['#title'] = t('Existing images');
@@ -348,23 +348,23 @@ function image_attach_validate(&$form, &$form_state) {
   if ($maximum_images = variable_get('image_attach_maximum_' . $form['#node']->type, 0)) {
     $uploading_new_image = ($form_state['clicked_button']['#value'] == t('Attach'));
     $num_images = count(array_filter($form_state['values']['iids']));
-    
+
     $node_type_label = node_get_types('name', $form['#node']->type);
     if ($num_images >= $maximum_images && $uploading_new_image) {
-      // This error will be set when attempting to upload a new image. 
-      // The number already selected may be equal to the maximum, in which case 
+      // This error will be set when attempting to upload a new image.
+      // The number already selected may be equal to the maximum, in which case
       // the error is just to alert the user that their upload has not been performed, and allow
       // them to unselect an image and proceed to upload the new one.
       form_set_error('iids', t('You have selected @count_images but the maximum for a %type is @maximum. The new image has not been uploaded.', array(
-        '@count_images' => format_plural($num_images, '1 image', '@count images'), 
-        '@maximum'      => $maximum_images, 
+        '@count_images' => format_plural($num_images, '1 image', '@count images'),
+        '@maximum'      => $maximum_images,
         '%type'         => $node_type_label,
       )));
     }
     elseif ($num_images > $maximum_images) {
       form_set_error('iids', t('You have selected @count_images but the maximum for a %type is @maximum.', array(
-        '@count_images' => format_plural($num_images, '1 image', '@count images'), 
-        '@maximum'      => $maximum_images, 
+        '@count_images' => format_plural($num_images, '1 image', '@count images'),
+        '@maximum'      => $maximum_images,
         '%type'         => $node_type_label,
       )));
     }
@@ -398,7 +398,7 @@ function image_attach_validate(&$form, &$form_state) {
  * Extra submit handler for node forms.
  */
 function image_attach_node_form_submit(&$form, &$form_state) {
-  // Clear the 0 key in the iids array that arises from selecting the 'None' 
+  // Clear the 0 key in the iids array that arises from selecting the 'None'
   // option. We do this here so image_attach_nodeapi() gets clean data.
   unset($form_state['values']['iids'][0]);
 }
@@ -457,7 +457,7 @@ function image_attach_nodeapi(&$node, $op, $teaser, $page) {
 
         // Set weight, either from CCK or our own settings. Cribbed from signup!
         if (module_exists('content')) {
-          // Due to a bug in CCK (http://drupal.org/node/363456), we need 
+          // Due to a bug in CCK (http://drupal.org/node/363456), we need
           // to call this function twice to ensure we get the real value.
           // The bug is present when you first enable the setting to
           // display in the node instead of a separate tab, or when you
@@ -467,7 +467,7 @@ function image_attach_nodeapi(&$node, $op, $teaser, $page) {
         }
         else {
           $weight = variable_get("image_attach_weight_{$teaser_or_body}_{$node->type}", 0);
-        }        
+        }
         $node->content['image_attach'] = array(
           '#weight' => $weight,
           '#value'  => theme('image_attach_node_attached', $node, $node->image_attach, $img_size, $teaser),
@@ -514,11 +514,11 @@ function _image_attach_node_load_attached($attached_nids, $teaser = FALSE) {
 }
 
 /**
- * Fetch an array of all candidate referenced nodes, for use in presenting the 
+ * Fetch an array of all candidate referenced nodes, for use in presenting the
  * selection form to the user.
  *
  * @param $nids
- *  A list of nids to filter on. If not passed, all image nids are returned. 
+ *  A list of nids to filter on. If not passed, all image nids are returned.
  */
 function _image_attach_get_image_nodes($nids = array()) {
   $placeholder = '';
@@ -540,7 +540,7 @@ function _image_attach_get_image_nodes($nids = array()) {
 
 /**
  * Views 2 API handler
- * 
+ *
  */
 
 function image_attach_views_api() {
