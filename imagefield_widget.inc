@@ -274,5 +274,6 @@ function imagefield_widget_process($element, $edit, &$form_state, $form) {
  */
 function theme_imagefield_widget($element) {
   drupal_add_css(drupal_get_path('module', 'imagefield') .'/imagefield.css');
+  $element['#id'] .= '-upload'; // Link the label to the upload field.
   return theme('form_element', $element, $element['#children']);
 }
