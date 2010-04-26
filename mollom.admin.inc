@@ -104,8 +104,6 @@ function mollom_admin_configure_form(&$form_state, $mollom_form = NULL) {
 
   switch ($form_state['storage']['step']) {
     case 'select':
-      drupal_add_js(drupal_get_path('module', 'mollom') . '/mollom.js');
-
       $form['mollom']['form_id'] = array(
         '#type' => 'select',
         '#title' => t('Form'),
