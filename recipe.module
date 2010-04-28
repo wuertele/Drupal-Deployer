@@ -558,7 +558,7 @@ function recipe_block($op = 'list', $delta = 0, $edit = array()) {
  */
 function recipe_view($node, $teaser = FALSE, $page = FALSE) {
 
-  // Prepare and sanitize normal node fields.
+  // Prepare and sanitize node fields.
   $node = recipe_node_prepare($node, $teaser);
 
   if ($page) {
@@ -579,21 +579,180 @@ function recipe_view($node, $teaser = FALSE, $page = FALSE) {
     }
     drupal_set_breadcrumb($breadcrumb);
     drupal_add_css(drupal_get_path('module', 'recipe') .'/recipe.css');
-  }
 
-  // If you are showing the summary box, don't show taxo at the bottom as well.
-  if (variable_get('recipe_summary_box_enable', 1) == 1) {
-    // Remove each node term that is from a recipe vocab.
-    $recipe_vocabs = taxonomy_get_vocabularies('recipe');
-    foreach ($node->taxonomy as $tid => $term) {
-      if (isset($recipe_vocabs[$term->vid])) {
-        unset($node->taxonomy[$tid]);
+    // Calculate yield and ingredient factor.
+
+    // Get custom yield or default to a factor of 1.
+    $node->yield = intval($node->yield);
+    // Factor is calculated and added into the $node variable.
+    $node->factor = 1;
+
+    // check post variable to see if the yield form was posted.
+    if ( $node->yield != 0 ) {
+      if ($_POST['op'] == t('Change')) {
+        $node->factor = $_POST['custom_yield'] / $node->yield;
+        $node->yield = $_POST['custom_yield'];
+        $_POST = array();
+      }
+      elseif ($_POST['op'] == t('Halve')) {
+        $node->factor = $_POST['custom_yield']/2 / $node->yield;
+        $node->yield = $_POST['custom_yield']/2;
+        $_POST = array();
+      }
+      elseif ($_POST['op'] == t('Double')) {
+        $node->factor = $_POST['custom_yield']*2 / $node->yield;
+        $node->yield = $_POST['custom_yield']*2;
+        $_POST = array();
+      }
+      // Reset yield back to recipe default
+      elseif ($_POST['op'] == t('Reset')) {
+        $_POST = array();
+      }
+
+      // Custom_yield comes from export single urls currently.
+      elseif (isset($node->custom_yield)) {
+        $node->factor = $node->custom_yield / $node->yield;
+        $node->yield = $node->custom_yield;
       }
     }
+
+
+    // Begin filling the node->content array with with recipe items.
+
+    $node->content['recipe_description'] = array(
+        '#value' => theme('box', t('Description'), $node->body),
+        '#weight' => -4,
+    );
+    // Clear the normal node body value.
+    $node->content['body']['#value'] = '';
+
+    $node->content['recipe_ingredients'] = array(
+        '#value' => theme('box', t('Ingredients'), theme('recipe_ingredients', $node)),
+        '#weight' => -2,
+    );
+
+    $node->content['recipe_instructions'] = array(
+        '#value' => theme('box', t('Instructions'), $node->instructions),
+        '#weight' => 0,
+    );
+
+    // Don't show the notes box at all it there are no notes.
+    if ( $node->notes ) {
+      $node->content['recipe_notes'] = array(
+          '#value' => theme('box', t('Notes'), $node->notes),
+          '#weight' => 2,
+      );
+    }
+
+    if (variable_get('recipe_summary_box_enable', 1) == 1) {
+      $node->content['recipe_summary_box'] = array(
+          '#value' => theme('recipe_summary', $node),
+          '#weight' => -6,
+      );
+
+      // If you are showing the summary box, don't show taxo at the bottom as well.
+      // Remove each node term that is from a recipe vocab.
+      $recipe_vocabs = taxonomy_get_vocabularies('recipe');
+      foreach ($node->taxonomy as $tid => $term) {
+        if (isset($recipe_vocabs[$term->vid])) {
+          unset($node->taxonomy[$tid]);
+        }
+      }
+
+    }
+
+
   }
 
   return $node;
 }
+
+
+function theme_recipe_ingredients($node = NULL) {
+  $output = '';
+
+  // Construct the $ingredients[] array.
+  if ($node->ingredients != NULL) {
+    $output .= '<table>';
+    foreach ($node->ingredients as $ingredient) {
+      $ingredient = (object)$ingredient;
+      if (isset($ingredient->quantity) && $ingredient->name) {
+        if (!$ingredient->abbreviation) {
+          $ingredient->abbreviation = recipe_unit_abbreviation($ingredient->unit_id);
+        }
+        if ($ingredient->abbreviation == '') {
+          $ingredient->abbreviation = '&nbsp;';
+        }
+        if ($ingredient->quantity > 0) {
+          $ingredient->quantity *= $node->factor;
+        }
+        else {
+          $ingredient->quantity = '&nbsp;';
+        }
+        if (variable_get('recipe_fraction_display', t('{%d} %d&frasl;%d'))) {
+          $ingredient->quantity = recipe_ingredient_quantity_from_decimal($ingredient->quantity);
+        }
+        if (!empty($ingredient->link)) {
+          $ingredient->name = l($ingredient->name, 'node/'. $ingredient->link);
+        }
+
+        $units = '';
+        // Print the abbreviation if recipe_unit_display says too or the abbreviation is blank (ie = Unit, which we don't print).
+        if ( variable_get('recipe_unit_display', 0) == 0 || $ingredient->abbreviation == '&nbsp;') {
+          $units = '<acronym ' . drupal_attributes(array('title' => recipe_unit_name($ingredient->unit_id))) . '">' . $ingredient->abbreviation .'</acronym>';
+        }
+        else {
+          $units = recipe_unit_name($ingredient->unit_id);
+        }
+        $fullingredient = strlen($ingredient->note) > 0 ? $ingredient->name . ' (' . $ingredient->note .')' : $ingredient->name;
+        $output .= '<tr><td class="qty">'. $ingredient->quantity .'</td><td class="units">'. $units .'</td><td class="ingredient">'. $fullingredient . '</td></tr>';
+      }
+    }
+    $output .= '</table>';
+  }
+  return $output;
+}
+
+
+function theme_recipe_summary($node = NULL) {
+  // Construct the summary
+  $output = '<table>';
+
+  // Render the yield.
+  $output .= '<tr><th class="summary-title">'. t('Yield') .'</th><td class="summary-data">'. drupal_get_form('recipe_yield_form', $node) .'</td></tr>';
+
+  if ($node->source) {
+    $output .= '<tr><th>'. t('Source') .'</th><td>'. $node->source .'</td></tr>';
+  }
+  if ($node->preptime) {
+    if ($node->preptime < 60) {
+      $node->preptime = format_plural($node->preptime, '1 minute', '@count minutes');
+    }
+    elseif ($node->preptime % 60 == 0) {
+      $node->preptime = format_plural($node->preptime / 60, '1 hour', '@count hours');
+    }
+    else {
+      $node->preptime = t('!time hours', array('!time' => recipe_ingredient_quantity_from_decimal($node->preptime / 60)));
+    }
+    $output .= '<tr><th>'. t('Prep time') .'</th><td>'. $node->preptime .'</td></tr>';
+  }
+
+  $vocabs = taxonomy_get_vocabularies('recipe');
+  if (count($vocabs) > 0) {
+    foreach ($vocabs as $vocab) {
+      $output .= '<tr><th>'. $vocab->name .'</th><td>';
+      $terms = taxonomy_node_get_terms_by_vocabulary($node, $vocab->vid);
+      foreach ($terms as $term) {
+        $term = array_shift($terms);
+        $output .= l($term->name, 'taxonomy/term/'. $term->tid) .' ';
+      }
+      $output .= '</td></tr>';
+    }
+  }
+  $output .= '</table>';
+  return theme('box', variable_get('recipe_summary_box_title', t('Summary')), $output);
+}
+
 
 /**
  * Returns a cached array of recipe unit types
@@ -1115,141 +1274,8 @@ function recipe_preprocess_node(&$variables) {
     return;
   }
 
-  $node = $variables['node'];
-
-  // Get custom yield or default to a factor of 1.
-  $node->yield = intval($node->yield);
-  // Factor is calculated and added into the $node variable.
-  $node->factor = 1;
-
-  // check post variable to see if the yield form was posted.
-  if ( $node->yield != 0 ) {
-    if ($_POST['op'] == t('Change')) {
-      $node->factor = $_POST['custom_yield'] / $node->yield;
-      $node->yield = $_POST['custom_yield'];
-      $_POST = array();
-    }
-    elseif ($_POST['op'] == t('Halve')) {
-      $node->factor = $_POST['custom_yield']/2 / $node->yield;
-      $node->yield = $_POST['custom_yield']/2;
-      $_POST = array();
-    }
-    elseif ($_POST['op'] == t('Double')) {
-      $node->factor = $_POST['custom_yield']*2 / $node->yield;
-      $node->yield = $_POST['custom_yield']*2;
-      $_POST = array();
-    }
-    // Reset yield back to recipe default
-    elseif ($_POST['op'] == t('Reset')) {
-      $_POST = array();
-    }
-
-    // Custom_yield comes from export single urls currently.
-    elseif (isset($node->custom_yield)) {
-      $node->factor = $node->custom_yield / $node->yield;
-      $node->yield = $node->custom_yield;
-    }
-  }
-
-  if (variable_get('recipe_summary_box_enable', 1) == 1) {
-    $variables['recipe_summary_box'] = theme('recipe_summary', $node);
-  }
-
-  $variables['recipe_description'] = theme('box', t('Description'), $node->content['body']['#value']);
-  $variables['recipe_ingredients'] = theme('box', t('Ingredients'), theme('recipe_ingredients', $node));
-  $variables['recipe_instructions'] = theme('box', t('Instructions'), $node->instructions);
-
-  if ( $node->notes ) {
-    $variables['recipe_notes'] = theme('box', t('Notes'), $node->notes);
-  }
-
-  $variables['links'] = str_replace('__yield__', $node->yield, $variables['links']);
-}
-
-
-function theme_recipe_summary($node = NULL) {
-  // Construct the summary
-  $output = '<table>';
-
-  // Render the yield.
-  $output .= '<tr><th class="summary-title">'. t('Yield') .'</th><td class="summary-data">'. drupal_get_form('recipe_yield_form', $node) .'</td></tr>';
-
-  if ($node->source) {
-    $output .= '<tr><th>'. t('Source') .'</th><td>'. $node->source .'</td></tr>';
-  }
-  if ($node->preptime) {
-    if ($node->preptime < 60) {
-      $node->preptime = format_plural($node->preptime, '1 minute', '@count minutes');
-    }
-    elseif ($node->preptime % 60 == 0) {
-      $node->preptime = format_plural($node->preptime / 60, '1 hour', '@count hours');
-    }
-    else {
-      $node->preptime = t('!time hours', array('!time' => recipe_ingredient_quantity_from_decimal($node->preptime / 60)));
-    }
-    $output .= '<tr><th>'. t('Prep time') .'</th><td>'. $node->preptime .'</td></tr>';
-  }
-
-  $vocabs = taxonomy_get_vocabularies('recipe');
-  if (count($vocabs) > 0) {
-    foreach ($vocabs as $vocab) {
-      $output .= '<tr><th>'. $vocab->name .'</th><td>';
-      $terms = taxonomy_node_get_terms_by_vocabulary($node, $vocab->vid);
-      foreach ($terms as $term) {
-        $term = array_shift($terms);
-        $output .= l($term->name, 'taxonomy/term/'. $term->tid) .' ';
-      }
-      $output .= '</td></tr>';
-    }
-  }
-  $output .= '</table>';
-  return theme('box', variable_get('recipe_summary_box_title', t('Summary')), $output);
-}
-
-
-function theme_recipe_ingredients($node = NULL) {
-  $output = '';
-
-  // Construct the $ingredients[] array.
-  if ($node->ingredients != NULL) {
-    $output .= '<table>';
-    foreach ($node->ingredients as $ingredient) {
-      $ingredient = (object)$ingredient;
-      if (isset($ingredient->quantity) && $ingredient->name) {
-        if (!$ingredient->abbreviation) {
-          $ingredient->abbreviation = recipe_unit_abbreviation($ingredient->unit_id);
-        }
-        if ($ingredient->abbreviation == '') {
-          $ingredient->abbreviation = '&nbsp;';
-        }
-        if ($ingredient->quantity > 0) {
-          $ingredient->quantity *= $node->factor;
-        }
-        else {
-          $ingredient->quantity = '&nbsp;';
-        }
-        if (variable_get('recipe_fraction_display', t('{%d} %d&frasl;%d'))) {
-          $ingredient->quantity = recipe_ingredient_quantity_from_decimal($ingredient->quantity);
-        }
-        if (!empty($ingredient->link)) {
-          $ingredient->name = l($ingredient->name, 'node/'. $ingredient->link);
-        }
-
-        $units = '';
-        // Print the abbreviation if recipe_unit_display says too or the abbreviation is blank (ie = Unit, which we don't print).
-        if ( variable_get('recipe_unit_display', 0) == 0 || $ingredient->abbreviation == '&nbsp;') {
-          $units = '<acronym ' . drupal_attributes(array('title' => recipe_unit_name($ingredient->unit_id))) . '">' . $ingredient->abbreviation .'</acronym>';
-        }
-        else {
-          $units = recipe_unit_name($ingredient->unit_id);
-        }
-        $fullingredient = strlen($ingredient->note) > 0 ? $ingredient->name . ' (' . $ingredient->note .')' : $ingredient->name;
-        $output .= '<tr><td class="qty">'. $ingredient->quantity .'</td><td class="units">'. $units .'</td><td class="ingredient">'. $fullingredient . '</td></tr>';
-      }
-    }
-    $output .= '</table>';
-  }
-  return $output;
+  // Links at the bottom of the node view need to have the __yield__ placeholder updated with the current dynamic yield.
+  $variables['links'] = str_replace('__yield__', $variables['node']->yield, $variables['links']);
 }
 
 
