@@ -134,7 +134,12 @@ function imagefield_widget_settings_form($widget) {
  * to the $form_state variable.
  */
 function _imagefield_widget_settings_default_validate($element, &$form_state) {
-  // Verify the destination exists
+  // Skip this validation if there isn't a default file uploaded at all.
+  if (!is_uploaded_file($_FILES['files']['tmp_name']['default_image_upload'])) {
+    return;
+  }
+
+  // Verify the destination exists.
   $destination = file_directory_path() .'/imagefield_default_images';
   if (!field_file_check_directory($destination, FILE_CREATE_DIRECTORY)) {
     form_set_error('default_image', t('The default image could not be uploaded. The destination %destination does not exist or is not writable by the server.', array('%destination' => dirname($destination))));
@@ -155,7 +160,7 @@ function _imagefield_widget_settings_default_validate($element, &$form_state) {
   $old_default = $form_state['values']['default_image'];
   if (!empty($old_default['fid'])) {
     if (file_delete(file_create_path($old_default['filepath']))) {
-      db_query('DELETE FROM {files} WHERE fid=%d', $old_default['fid']);
+      db_query('DELETE FROM {files} WHERE fid = %d', $old_default['fid']);
     }
   }
 
