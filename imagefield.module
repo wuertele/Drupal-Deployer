@@ -126,6 +126,33 @@ function imagefield_file_download($filepath) {
 }
 
 /**
+ * Implementation of hook_nodeapi().
+ *
+ * Add ALT and title texts to the search index.
+ */
+function imagefield_nodeapi($node, $op) {
+  if ($op == 'update index') {
+    static $fields;
+    if (!isset($fields)) {
+      $fields = filefield_get_field_list();
+    }
+
+    $texts = array();
+    foreach ($fields as $field) {
+      $name = $field['field_name'];
+      // Check this node for ImageField alt and title data.
+      if (isset($node->$name) && is_array($node->$name)) {
+        foreach ($node->$name as $item) {
+          $texts[] = isset($item['data']['alt']) ? $item['data']['alt'] : '';
+          $texts[] = isset($item['data']['title']) ? $item['data']['title'] : '';
+        }
+      }
+    }
+    return implode(' ', $texts);
+  }
+}
+
+/**
  * Implementation of CCK's hook_widget_info().
  */
 function imagefield_widget_info() {
