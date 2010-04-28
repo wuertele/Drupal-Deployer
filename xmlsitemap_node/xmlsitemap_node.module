@@ -314,7 +314,7 @@ function xmlsitemap_node_view_access($node, $account = NULL) {
 
   // If the module did not override the access rights, use those set in the
   // node_access table.
-  if ($op != 'create' && $node->nid && $node->status) {
+  if ($op != 'create' && $node->nid) {
     if (module_implements('node_grants')) {
       // Fetch the node grants and allow other modules to alter them (D7 backport).
       $grants = &xmlsitemap_static(__FUNCTION__ . ':grants', array());
@@ -347,11 +347,17 @@ function xmlsitemap_node_view_access($node, $account = NULL) {
       $rights[$account->uid][$node->nid] = $result;
       return $result;
     }
+    elseif ($op == 'view' && $node->status) {
+      // If no modules implement hook_node_grants(), the default behaviour is to
+      // allow all users to view published nodes, so reflect that here.
+      $rights[$account->uid][$op] = TRUE;
+      return TRUE;
+    }
   }
 
-  // Let authors view their own nodes.
-  if ($op == 'view' && $account->uid == $node->uid && $account->uid != 0) {
-    $rights[$account->uid][$node->nid] = TRUE;
+  // Check if authors can view their own unpublished nodes.
+  if ($op == 'view' && !$node->status && $account->uid == $node->uid && $account->uid) {
+    $rights[$account->uid][$op] = TRUE;
     return TRUE;
   }
 
