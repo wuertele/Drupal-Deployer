@@ -18,8 +18,8 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
   function setUp() {
     // Call parent::setUp() allowing test cases to pass further modules.
     $modules = func_get_args();
-    $modules = array_merge(array('xmlsitemap'), $modules);
-    call_user_func_array(array('parent', 'setUp'), $modules);
+    $modules[] = 'xmlsitemap';
+    call_user_func_array(array($this, 'parent::setUp'), $modules);
 
     // Ensure the files directory is created and writable during testing.
     // @todo This can be removed when http://drupal.org/node/654752 is fixed.
@@ -62,9 +62,15 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
   protected function regenerateSitemap() {
     variable_set('xmlsitemap_regenerate_needed', TRUE);
     variable_set('xmlsitemap_generated_last', 0);
-    module_load_include('inc', 'xmlsitemap', 'xmlsitemap.generate');
-    xmlsitemap_regenerate();
+    $this->cronRun();
     $this->assertTrue(variable_get('xmlsitemap_generated_last', 0) && !variable_get('xmlsitemap_regenerate_needed', FALSE), t('XML sitemaps regenerated and flag cleared.'));
+  }
+
+  /**
+   * Runs cron in the Drupal installed by Simpletest.
+   */
+  protected function cronRun() {
+    $this->drupalGet($GLOBALS['base_url'] . '/cron.php', array('external' => TRUE));
   }
 
   protected function assertSitemapLink($entity_type, $entity_id = NULL) {
@@ -161,12 +167,14 @@ class XMLSitemapTestHelper extends DrupalWebTestCase {
     $link += array(
       'type' => 'testing',
       'id' => $last_id,
+      'access' => 1,
+      'status' => 1,
     );
 
     // Make the default path easier to read than a random string.
     $link += array('loc' => $link['type'] . '-' . $link['id']);
 
-    $last_id = $link['id'] + 1;
+    $last_id = max($last_id, $link['id']) + 1;
     xmlsitemap_save_link($link);
     return $link;
   }

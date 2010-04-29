@@ -280,18 +280,16 @@ function xmlsitemap_install() {
   // xmlsitemap_x_cron() runs.
   db_query("UPDATE {system} SET weight = 1 WHERE type = 'module' AND name = 'xmlsitemap'");
 
-  // Load the module and clear the schema cache.
+  // Load the module.
   drupal_load('module', 'xmlsitemap');
-  drupal_get_schema(NULL, TRUE);
 
   // Insert the homepage link into the {xmlsitemap} table so we do not show an
   // empty sitemap after install.
-  // @todo Use xmlsitemap_save_link()?
   db_query("INSERT INTO {xmlsitemap} (type, id, loc, priority, changefreq) VALUES ('frontpage', 0, '', %f, %d)", variable_get('xmlsitemap_frontpage_priority', 1.0), variable_get('xmlsitemap_frontpage_changefreq', XMLSITEMAP_FREQUENCY_DAILY));
 
   // Insert the default context sitemap.
-  $sitemap = array('context' => array());
-  xmlsitemap_sitemap_save($sitemap);
+  $context = serialize(array());
+  db_query("INSERT INTO {xmlsitemap_sitemap} (context, context_hash) VALUES ('%s', '%s')", $context, md5($context));
 
   // @todo Does the sitemap show up on first install or is it a 404 page?
 }
@@ -300,8 +298,7 @@ function xmlsitemap_install() {
  * Implements hook_enable().
  */
 function xmlsitemap_enable() {
-  // Load the module and ensure the file cache directory is available and ready.
-  drupal_load('module', 'xmlsitemap');
+  // Ensure the file cache directory is available and ready.
   xmlsitemap_check_directory();
 
   variable_set('xmlsitemap_regenerate_needed', TRUE);
@@ -323,50 +320,6 @@ function xmlsitemap_uninstall() {
 
   // Remove the file cache directory.
   xmlsitemap_clear_directory(NULL, TRUE);
-}
-
-/**
- * Check the status of all hook_requirements() from xmlsitemap modules.
- */
-function xmlsitemap_check_status() {
-  static $messages;
-
-  if (!isset($messages)) {
-    // Cache the list of modules that are checked.
-    if ($cache = cache_get('xmlsitemap:status:modules')) {
-      $modules = $cache->data;
-    }
-    else {
-      $modules = array();
-      foreach (module_implements('requirements') as $module) {
-        if (strpos($module, 'xmlsitemap') !== FALSE) {
-          $modules[] = $module;
-        }
-      }
-      cache_set('xmlsitemap:status:modules', $modules);
-    }
-
-    $messages = array();
-    foreach ($modules as $module) {
-      module_load_install($module);
-      $requirements = module_invoke($module, 'requirements', 'runtime');
-      foreach ($requirements as $requirement) {
-        if (isset($requirement['severity']) && max(REQUIREMENT_OK, $requirement['severity'])) {
-          $messages[] = $requirement['description'];
-        }
-      }
-    }
-
-    if ($messages) {
-      $message = t('One or more problems were detected with your XML sitemap configuration: !messages', array('!messages' => theme('item_list', $messages)));
-      if (user_access('access site reports')) {
-        $message .= t('Check the <a href="@status-report">status report</a> for more information.', array('@status-report' => url('admin/reports/status')));
-      }
-      drupal_set_message($message, 'warning', FALSE);
-    }
-  }
-
-  return !empty($messages);
 }
 
 /**
@@ -583,6 +536,7 @@ function xmlsitemap_update_6202() {
         'smid' => array(
           'description' => 'Sitemap ID',
           'type' => 'serial',
+          'unsigned' => TRUE,
           'not null' => TRUE,
         ),
         'context_hash' => array(
@@ -626,8 +580,9 @@ function xmlsitemap_update_6202() {
 
   // Add the default sitemap(s) and use language contexts if possible.
   if (!db_result(db_query("SELECT COUNT(smid) FROM {xmlsitemap_sitemap}"))) {
-    // Refresh the schema.
+    // Refresh the schema and load the module if it's disabled.
     drupal_get_schema(NULL, TRUE);
+    drupal_load('module', 'xmlsitemap');
 
     if (module_exists('xmlsitemap_i18n') && $languages = variable_get('xmlsitemap_languages', array())) {
       foreach ($languages as $language) {

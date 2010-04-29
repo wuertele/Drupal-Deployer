@@ -12,6 +12,7 @@
  * Render a tableselect list of XML sitemaps for the main admin page.
  */
 function xmlsitemap_sitemap_list_form() {
+  xmlsitemap_load_all_includes();
   $destination = drupal_get_destination();
 
   // Add the local actions.
@@ -187,21 +188,6 @@ function xmlsitemap_sitemap_list_form_submit($form, &$form_state) {
   }
 }
 
-/**
- * Workaround for missing breadcrumbs on callback and action paths.
- */
-function _xmlsitemap_set_breadcrumb($path = 'admin/settings/xmlsitemap') {
-  $breadcrumb = array();
-  $path = explode('/', $path);
-  do {
-    $menu_path = implode('/', $path);
-    $menu_item = menu_get_item($menu_path);
-    array_unshift($breadcrumb, l($menu_item['title'], $menu_path));
-  } while (array_pop($path) && !empty($path));
-  array_unshift($breadcrumb, l(t('Home'), NULL));
-  drupal_set_breadcrumb($breadcrumb);
-}
-
 function xmlsitemap_sitemap_edit_form($form_state, array $sitemap = array()) {
   _xmlsitemap_set_breadcrumb();
 
@@ -223,7 +209,7 @@ function xmlsitemap_sitemap_edit_form($form_state, array $sitemap = array()) {
 
   $form['actions'] = array(
     //'#type' => 'container',
-    '#attributes' => array('class' => 'form-actions'),
+    //'#attributes' => array('class' => array('form-actions')),
     '#weight' => 100,
   );
   $form['actions']['save'] = array(
@@ -242,7 +228,6 @@ function xmlsitemap_sitemap_edit_form($form_state, array $sitemap = array()) {
 }
 
 function xmlsitemap_sitemap_edit_form_pre_render($form) {
-  module_load_include('inc', 'xmlsitemap');
   $visible_children = xmlsitemap_element_get_visible_children($form['context']);
   if (empty($visible_children)) {
     $form['context']['empty'] = array(
@@ -294,7 +279,7 @@ function xmlsitemap_sitemap_delete_form($form_state, array $sitemap) {
 }
 
 function xmlsitemap_sitemap_delete_form_submit($form, $form_state) {
-  xmlsitemap_sitemap_delete($form['#sitemap']);
+  xmlsitemap_sitemap_delete($form_state['values']['smid']);
   drupal_set_message(t('The sitemap has been deleted.'));
   $form_state['redirect'] = 'admin/settings/xmlsitemap';
 }
@@ -416,7 +401,6 @@ function xmlsitemap_settings_form() {
 
     // Ensure that the entity fieldset is not shown if there are no accessible
     // sub-elements.
-    module_load_include('inc', 'xmlsitemap');
     $form[$entity]['#access'] = (bool) xmlsitemap_element_get_visible_children($form[$entity]);
   }
 
@@ -657,13 +641,17 @@ function xmlsitemap_link_bundle_settings_form(array $form_state, $entity, $bundl
   }
 
   if ($buttons) {
-    $form['submit'] = array(
-      '#type' => 'submit',
-      '#value' => t('Save'),
+    $form['actions'] = array(
+      //'#type' => 'container',
+      //'#attributes' => array('class' => array('form-actions')),
       '#weight' => 100,
     );
+    $form['actions']['save'] = array(
+      '#type' => 'submit',
+      '#value' => t('Save'),
+    );
     if (!empty($form_state['ajax'])) {
-      $form['submit']['#attributes']['class'] = 'ctools-dialog-button';
+      $form['actions']['submit']['#attributes']['class'] = 'ctools-dialog-button';
     }
   }
 

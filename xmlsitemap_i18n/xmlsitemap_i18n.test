@@ -19,7 +19,7 @@ class XMLSitemapI18nWebTestCase extends XMLSitemapTestHelper {
     // Call parent::setUp() allowing test cases to pass further modules.
     $modules = func_get_args();
     $modules = array_merge(array('locale', 'translation', 'i18n', 'xmlsitemap_i18n'), $modules);
-    call_user_func_array(array('parent', 'setUp'), $modules);
+    call_user_func_array(array($this, 'parent::setUp'), $modules);
 
     // Add predefined language and reset the locale cache.
     require_once './includes/locale.inc';
@@ -29,6 +29,12 @@ class XMLSitemapI18nWebTestCase extends XMLSitemapTestHelper {
 
     variable_set('xmlsitemap_languages', array('en', 'fr'));
     variable_set('language_negotiation', LANGUAGE_NEGOTIATION_PATH);
+    //variable_set('language_default', xmlsitemap_language_load('en'));
+
+    // Create the two different language-context sitemaps.
+    db_query("DELETE FROM {xmlsitemap_sitemap}");
+    xmlsitemap_sitemap_save(array('context' => array('language' => 'en')));
+    xmlsitemap_sitemap_save(array('context' => array('language' => 'fr')));
   }
 }
 

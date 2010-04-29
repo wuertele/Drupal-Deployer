@@ -40,8 +40,8 @@ function hook_xmlsitemap_link_info() {
             'access arguments' => array('administer mymodule'),
           ),
           'xmlsitemap' => array(
-            'status' => 1,
-            'priority' => 0.5,
+            'status' => XMLSITEMAP_STATUS_DEFAULT,
+            'priority' => XMLSITEMAP_PRIORITY_DEFAULT,
           ),
         ),
       ),
@@ -71,6 +71,72 @@ function hook_xmlsitemap_link_alter(&$link) {
 }
 
 /**
+ * Index links for the XML sitemaps.
+ */
+function hook_xmlsitemap_index_links($limit) {
+}
+
+/**
+ * Provide information about contexts available to XML sitemap.
+ *
+ * @see hook_xmlsitemap_context_info_alter().
+ */
+function hook_xmlsitemap_context_info() {
+  $info['vocabulary'] = array(
+    'label' => t('Vocabulary'),
+    'summary callback' => 'mymodule_xmlsitemap_vocabulary_context_summary',
+    'settings callback' => 'mymodule_xmlsitemap_vocabulary_context_settings',
+    'default' => 0,
+  );
+  return $info;
+}
+
+/**
+ * Alter XML sitemap context info.
+ *
+ * @see hook_xmlsitemap_context_info().
+ */
+function hook_xmlsitemap_context_info_alter(&$info) {
+  $info['vocabulary']['label'] = t('Site vocabularies');
+}
+
+/**
+ * Provide information about the current context on the site.
+ *
+ * @see hook_xmlsitemap_context_alter()
+ */
+function hook_xmlsitemap_context() {
+  $context = array();
+  if ($vid = mymodule_get_current_vocabulary()) {
+    $context['vocabulary'] = $vid;
+  }
+  return $context;
+}
+
+/**
+ * Alter the current context information.
+ *
+ * @see hook_xmlsitemap_context()
+ */
+function hook_xmlsitemap_context_alter(&$context) {
+  if (user_access('administer taxonomy')) {
+    unset($context['vocabulary']);
+  }
+}
+
+/**
+ * Provide options for the url() function based on an XML sitemap context.
+ */
+function hook_xmlsitemap_context_url_options(array $context) {
+}
+
+/**
+ * Alter the url() options based on an XML sitemap context.
+ */
+function hook_xmlsitemap_context_url_options_alter(array &$options, array $context) {
+}
+
+/**
  * Alter the query selecting data from {xmlsitemap} during sitemap generation.
  *
  * Do not alter LIMIT or OFFSET as the query will be passed through
@@ -80,14 +146,33 @@ function hook_xmlsitemap_link_alter(&$link) {
  *   An array of a query object, keyed by SQL keyword (SELECT, FROM, WHERE, etc).
  * @param $args
  *   An array of arguments to be passed to db_query() with $query.
- * @param $context
- *   An array of sitemap context being used for generation.
+ * @param $sitemap
+ *   An XML sitemap array.
  */
-function hook_xmlsitemap_query_alter(array &$query, array &$args, array $context) {
-  if (isset($context['language'])) {
-    $query['WHERE'] .= " AND x.language = '%s'";
-    $args[] = $context['language'];
+function hook_query_xmlsitemap_generate_alter(array &$query, array &$args, array $sitemap) {
+  if (!empty($sitemap['context']['vocabulary'])) {
+    $query['WHERE'] .= " AND ((x.type = 'taxonomy_term' AND x.subtype = '%s') OR (x.type <> 'taxonomy_term')";
+    $args[] = $sitemap['context']['vocabulary'];
   }
+}
+
+/**
+ * Provide information about XML sitemap bulk operations.
+ */
+function hook_xmlsitemap_sitemap_operations() {
+}
+
+/**
+ * Respond to XML sitemap deletion.
+ *
+ * This hook is invoked from xmlsitemap_sitemap_delete_multiple() after the XML
+ * siteamp has been removed from the table in the database.
+ *
+ * @param $sitemap
+ *   The XML sitemap array that was deleted.
+ */
+function hook_xmlsitemap_siteamp_delete(array $sitemap) {
+  db_query("DELETE FROM {mytable} WHERE smid = '%s'", $sitemap['smid']);
 }
 
 /**

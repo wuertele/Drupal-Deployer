@@ -44,8 +44,10 @@ function xmlsitemap_output_chunk() {
   $file = xmlsitemap_sitemap_get_file($sitemap, $chunk);
 
   // Provide debugging information if enabled.
-  if (variable_get('xmlsitemap_developer_mode', 0) || isset($_GET['debug'])) {
+  if (variable_get('xmlsitemap_developer_mode', 0) && isset($_GET['debug'])) {
     $output = array();
+    $context = xmlsitemap_get_current_context();
+    $output[] = "Current context: " . print_r($context, TRUE);
     $output[] = "Sitemap: " . print_r($sitemap, TRUE);
     $output[] = "Chunk: $chunk";
     $output[] = "Cache file location: $file";

@@ -53,15 +53,6 @@ function xmlsitemap_get_path_alias($path, $language) {
 }
 
 /**
- * @todo Move to xmlsitemap.context.inc
- */
-function xmlsitemap_get_url_options_from_context(array $context) {
-  $options = module_invoke_all('xmlsitemap_context_url_options', $context);
-  drupal_alter('xmlsitemap_context_url_options', $options, $context);
-  return $options;
-}
-
-/**
  * Perform operations before rebuilding the sitemap.
  */
 function _xmlsitemap_regenerate_before() {
@@ -85,6 +76,9 @@ function _xmlsitemap_regenerate_before() {
   variable_set('xmlsitemap_max_filesize', 0);
 }
 
+/**
+ * Wrapper function for memory_get_peak_usage() for PHP versions below 5.2.
+ */
 function _xmlsitemap_memory_get_peak_usage() {
   if (function_exists('memory_get_peak_usage')) {
     return memory_get_peak_usage(TRUE);
@@ -242,9 +236,7 @@ function xmlsitemap_generate_chunk_header($type, array $sitemap, $handle, &$stat
 
   // Add the stylesheet link.
   if (variable_get('xmlsitemap_xsl', 1)) {
-    $url_options = xmlsitemap_get_url_options_from_context($sitemap['context']);
-    $url_options['alias'] = TRUE;
-    $xsl_url = url('sitemap.xsl', $url_options);
+    $xsl_url = url('sitemap.xsl', $sitemap['uri']['options'] + array('alias' => TRUE));
     $output .= '<?xml-stylesheet type="text/xsl" href="' . $xsl_url . '"?>' . PHP_EOL;
   }
 
@@ -277,7 +269,7 @@ function xmlsitemap_generate_chunk_header($type, array $sitemap, $handle, &$stat
 function xmlsitemap_generate_chunk(array $sitemap, $handle, &$status, $chunk) {
   $lastmod_format = variable_get('xmlsitemap_lastmod_format', XMLSITEMAP_LASTMOD_MEDIUM);
 
-  $url_options = xmlsitemap_get_url_options_from_context($sitemap['context']);
+  $url_options = $sitemap['uri']['options'];
   $url_options += array(
     'absolute' => TRUE,
     'base_url' => variable_get('xmlsitemap_base_url', $GLOBALS['base_url']),
@@ -300,12 +292,13 @@ function xmlsitemap_generate_chunk(array $sitemap, $handle, &$status, $chunk) {
   static $alter;
   if (!isset($alter)) {
     // Skip altering if there are no modules to invoke.
-    $alter = (bool) module_implements('xmlsitemap_query_alter');
+    xmlsitemap_load_all_includes();
+    $alter = (bool) module_implements('query_xmlsitemap_generate_alter');
   }
   if ($alter) {
     $data = &$query;
     $data['__drupal_alter_by_ref'] = array(&$args);
-    drupal_alter('xmlsitemap_query', $data, $sitemap['context']);
+    drupal_alter('query_xmlsitemap_generate', $data, $sitemap);
   }
 
   $sql = implode($query, ' ');
@@ -375,7 +368,7 @@ function xmlsitemap_generate_chunk(array $sitemap, $handle, &$status, $chunk) {
 function xmlsitemap_generate_index(array $sitemap, $handle, &$status) {
   $lastmod_format = variable_get('xmlsitemap_lastmod_format', XMLSITEMAP_LASTMOD_MEDIUM);
 
-  $url_options = xmlsitemap_get_url_options_from_context($sitemap['context']);
+  $url_options = $sitemap['uri']['options'];
   $url_options += array(
     'absolute' => TRUE,
     'base_url' => variable_get('xmlsitemap_base_url', $GLOBALS['base_url']),

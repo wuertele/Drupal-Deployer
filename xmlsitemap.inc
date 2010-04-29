@@ -155,27 +155,6 @@ function xmlsitemap_write_record($table, &$object, $update = array()) {
 }
 
 /**
- * Backport of element_get_visible_children() from Drupal 7.
- */
-function xmlsitemap_element_get_visible_children(array $elements) {
-  foreach (element_children($elements) as $key) {
-    // Skip un-accessible children.
-    if (isset($elements[$key]['#access']) && !$elements[$key]['#access']) {
-      continue;
-    }
-
-    // Skip value and hidden elements, since they are not rendered.
-    if (isset($elements[$key]['#type']) && in_array($elements[$key]['#type'], array('value', 'hidden'))) {
-      continue;
-    }
-
-    return TRUE;
-  }
-
-  return FALSE;
-}
-
-/**
  * Fetch a short blurb string about module maintainership and sponsors.
  *
  * This message will be FALSE in 'official' releases.
@@ -209,4 +188,49 @@ function _xmlsitemap_get_version() {
     $version = $modules['xmlsitemap']->info['version'];
   }
   return $version;
+}
+
+/**
+ * Check the status of all hook_requirements() from any xmlsitemap modules.
+ */
+function xmlsitemap_check_status() {
+  $messages = &xmlsitemap_static(__FUNCTION__);
+
+  if (!isset($messages)) {
+    // Cache the list of modules that are checked.
+    if ($cache = cache_get('xmlsitemap:registry:requirements')) {
+      $modules = $cache->data;
+    }
+    else {
+      $modules = array();
+      module_load_all_includes('install');
+      foreach (module_implements('requirements') as $module) {
+        if (strpos($module, 'xmlsitemap') !== FALSE) {
+          $modules[] = $module;
+        }
+      }
+      cache_set('xmlsitemap:registry:requirements', $modules);
+    }
+
+    $messages = array();
+    foreach ($modules as $module) {
+      module_load_install($module);
+      $requirements = module_invoke($module, 'requirements', 'runtime');
+      foreach ($requirements as $requirement) {
+        if (isset($requirement['severity']) && max(REQUIREMENT_OK, $requirement['severity'])) {
+          $messages[] = $requirement['description'];
+        }
+      }
+    }
+
+    if ($messages) {
+      $message = t('One or more problems were detected with your XML sitemap configuration: !messages', array('!messages' => theme('item_list', $messages)));
+      if (user_access('access site reports')) {
+        $message .= t('Check the <a href="@status-report">status report</a> for more information.', array('@status-report' => url('admin/reports/status')));
+      }
+      drupal_set_message($message, 'warning', FALSE);
+    }
+  }
+
+  return !empty($messages);
 }
