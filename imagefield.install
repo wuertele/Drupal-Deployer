@@ -307,37 +307,6 @@ function imagefield_update_6004(&$context) {
 }
 
 /**
- * Add default values and convert Views field styles.
- */
-function imagefield_update_6006() {
-  $ret = array();
-  module_load_install('content');
-  foreach (content_types_install() as $type_name => $fields) {
-    foreach ($fields as $field) {
-      if ($field['type'] == 'filefield' && $field['widget']['type'] == 'imagefield_widget') {
-        $field['widget']['file_extensions'] = isset($field['widget']['file_extensions']) ? $field['widget']['file_extensions'] : NULL;
-        $field['widget']['max_filesize_per_file'] = isset($field['widget']['max_filesize_per_file']) ? $field['widget']['max_filesize_per_file'] : NULL;
-        $field['widget']['max_filesize_per_node'] = isset($field['widget']['max_filesize_per_node']) ? $field['widget']['max_filesize_per_node'] : NULL;
-        content_field_instance_update($field);
-      }
-    }
-  }
-  $formatters = array(
-    'default' => 'image_plain',
-    'imagefield_nodelink' => 'image_nodelink',
-    'imagefield_imagelink' => 'image_imagelink',
-    'imagefield_path' => 'path_plain',
-    'imagefield_url' => 'url_plain',
-  );
-  $result = db_query("SELECT v.vid, v.tablename, v.field, v.options FROM {" . content_instance_tablename() . "} c INNER JOIN {view_tablefield} v ON v.field = CONCAT(c.field_name, '_fid') WHERE c.widget_module = 'imagefield' OR c.widget_type = 'imagefield_widget'");
-  while ($field = db_fetch_object($result)) {
-    $ret[] = update_sql("UPDATE {view_tablefield} SET options = '{$formatters[$field->options]}' WHERE vid = $field->vid AND tablename = '$field->tablename' AND field = '$field->field'");
-  }
-  return $ret;
-}
-
-
-/**
  * Delete thumbnails spread throughout the files directory.
  */
 function imagefield_update_6005() {
@@ -360,6 +329,26 @@ function imagefield_update_6005() {
   }
 
   $ret[] = array('success' => TRUE, 'query' => t('Deleted admin thumbnails distributed throughout files directory. All thumbnails are now stored in the "imagefield_thumbs" directory.'));
+
+  return $ret;
+}
+
+/**
+ * Add default values to all ImageFields.
+ */
+function imagefield_update_6006() {
+  $ret = array();
+  module_load_install('content');
+  foreach (content_types_install() as $type_name => $fields) {
+    foreach ($fields as $field) {
+      if ($field['type'] == 'filefield' && $field['widget']['type'] == 'imagefield_widget') {
+        $field['widget']['file_extensions'] = isset($field['widget']['file_extensions']) ? $field['widget']['file_extensions'] : NULL;
+        $field['widget']['max_filesize_per_file'] = isset($field['widget']['max_filesize_per_file']) ? $field['widget']['max_filesize_per_file'] : NULL;
+        $field['widget']['max_filesize_per_node'] = isset($field['widget']['max_filesize_per_node']) ? $field['widget']['max_filesize_per_node'] : NULL;
+        content_field_instance_update($field);
+      }
+    }
+  }
 
   return $ret;
 }
