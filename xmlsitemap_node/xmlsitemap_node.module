@@ -321,10 +321,9 @@ function xmlsitemap_node_view_access($node, $account = NULL) {
       if (!isset($grants[$account->uid][$op])) {
         // Indicate that this is our special function in the grants.
         $account->xmlsitemap_node_access = TRUE;
-        $grants = node_access_grants($op, $account);
+        $grants[$account->uid][$op] = node_access_grants($op, $account);
         // Call hook_node_grants_alter(). This is a backport from Drupal 7.
-        drupal_alter('node_grants', $grants, $op, $account);
-        $grants[$account->uid][$op] = $grants;
+        drupal_alter('node_grants', $grants[$account->uid][$op], $account, $op);
         // Remove the special indicator.
         unset($account->xmlsitemap_node_access);
       }
