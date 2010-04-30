@@ -440,7 +440,7 @@ function xmlsitemap_settings_form_validate($form, &$form_state) {
  */
 function xmlsitemap_settings_form_submit($form, $form_state) {
   // Save any changes to the frontpage link.
-  xmlsitemap_save_link(array('type' => 'frontpage', 'id' => 0, 'loc' => ''));
+  xmlsitemap_link_save(array('type' => 'frontpage', 'id' => 0, 'loc' => ''));
 }
 
 /**

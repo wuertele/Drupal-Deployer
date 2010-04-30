@@ -163,7 +163,7 @@ function xmlsitemap_custom_edit_link_form_validate($form, &$form_state) {
 
 function xmlsitemap_custom_edit_link_form_submit($form, &$form_state) {
   $link = $form_state['values'];
-  xmlsitemap_save_link($link);
+  xmlsitemap_link_save($link);
   drupal_set_message(t('The custom link for %loc was saved.', array('%loc' => $link['loc'])));
   $form_state['redirect'] = 'admin/settings/xmlsitemap/custom';
 }
