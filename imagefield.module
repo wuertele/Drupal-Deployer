@@ -104,7 +104,7 @@ function imagefield_file_download($filepath) {
     // Allow access to temporary thumbnails, since they're not yet associated
     // with a node. If not temporary, check access on the original file.
     $status = db_result(db_query("SELECT status FROM {files} WHERE filepath = '%s'", $original_full_path));
-    $access = ($status == 0 || module_invoke_all('file_download', $original_path));
+    $access = ($status == 0 || !in_array(-1, module_invoke_all('file_download', $original_path)));
     if ($access && $info = getimagesize($thumb_full_path)) {
       return array(
         'Content-Type: ' . $info['mime'],
@@ -216,8 +216,13 @@ function imagefield_widget(&$form, &$form_state, $field, $items, $delta = 0) {
 function imagefield_widget_upload_validators($field) {
   $validators = array();
 
+  // Match the default value if no file extensions have been saved at all.
+  if (!isset($field['widget']['file_extensions'])) {
+    $field['widget']['file_extensions'] = 'png gif jpg jpeg';
+  }
+
   // Ensure that only web images are supported.
-  $web_extensions = array('jpg', 'jpeg', 'gif', 'png');
+  $web_extensions = array('png', 'gif', 'jpg', 'jpeg');
   $extensions = array_filter(explode(' ', $field['widget']['file_extensions']));
   if (empty($extensions)) {
     $extensions = $web_extensions;
