@@ -47,7 +47,7 @@ function node_export_menu() {
     'access callback' => 'node_export_access',
     'access arguments' => array(1),
     'page callback' => 'node_export_node_export',
-    'page arguments' => array(1),
+    'page arguments' => array(1, 3),
     'title' => 'Export',
     'weight' => 5,
     'type' => MENU_LOCAL_TASK,
@@ -138,7 +138,7 @@ function node_export_node_operations() {
 /**
  * Callback for 'node_export' node operation.
  */
-function node_export_node_bulk($nids, $return_code = FALSE) {
+function node_export_node_bulk($nids, $return_code = FALSE, $format = NULL) {
 
   $nodes = array();
   foreach ($nids as $nid) {
@@ -150,12 +150,20 @@ function node_export_node_bulk($nids, $return_code = FALSE) {
   // Where $op is 'export'.
   drupal_alter('node_export_node_bulk', $nodes, 'export');
 
-  $node_codes = array();
-  foreach ($nodes as $node) {
-    $node_codes[] = node_export_node_export($node, TRUE, 1);
+  // Allow other modules to take over this entire process. Typically the module 
+  // would respond if $format was set to something it recognises.
+  $node_code = FALSE;
+  drupal_alter('node_export_node_bulk', $node_code, 'export', $nodes, $format);
+
+  // Default handling of bulk node code.
+  if ($node_code === FALSE) {
+    $node_codes = array();
+    foreach ($nodes as $node) {
+      $node_codes[] = node_export_node_export($node, TRUE, 1);
+    }
+    $node_code = "array(\n  ". implode(",\n  ", $node_codes) .",\n)";
   }
 
-  $node_code = "array(\n  ". implode(",\n  ", $node_codes) .",\n)";
   if ($return_code) {
     return $node_code;
   }
@@ -362,8 +370,10 @@ function node_export_settings() {
 /**
  *  Exports a node - populate a node code form
  *  set $return_code to TRUE to not return form but the code instead.
+ *  set $format to some string if encoding should be handled by some module that 
+ *  will recognise the string.
  */
-function node_export_node_export($original_node, $return_code = FALSE, $iteration = 0) {
+function node_export_node_export($original_node, $return_code = FALSE, $iteration = 0, $format = NULL) {
   if (isset($original_node->nid)) {
     global $user;
 
@@ -400,8 +410,8 @@ function node_export_node_export($original_node, $return_code = FALSE, $iteratio
       // Let other modules do special fixing up.
       // The function signature is: hook_node_export_node_alter(&$node, $original_node, $method)
       // Where $method is 'export'
-      drupal_alter('node_export_node', $node, $original_node, 'export');
-      $node_code = node_export_node_encode($node, $iteration);
+      drupal_alter('node_export_node', $node, $original_node, 'export', $format);
+      $node_code = node_export_node_encode($node, $iteration, $format);
       if ($return_code) {
         return $node_code;
       }
@@ -834,7 +844,20 @@ function node_export_node_clone($original_node, $mode) {
 /**
  * Build node code string recursively
  */
-function node_export_node_encode($var, $iteration = 0) {
+function node_export_node_encode($var, $iteration = 0, $format = NULL) {
+  
+  // Allow other modules to take over this entire process before the first 
+  // iteration.  Typically the module would respond if $format was set to
+  // something it recognises.
+  if ($iteration == 0) {
+    $return = FALSE;
+    drupal_alter('node_export_node_encode', $return, $var, $format);
+    if ($return !== FALSE) {
+      return $return;
+    }
+  }
+
+  // Default node encoding.
   $tab = '';
   for ($i = 0; $i < $iteration; $i++) {
     $tab = $tab ."  ";
@@ -875,6 +898,15 @@ function node_export_node_encode($var, $iteration = 0) {
  * Evaluate and return decoded string.
  */
 function node_export_node_decode($string) {
+  
+  // Allow other modules to take over this entire process.
+  $return = FALSE;
+  drupal_alter('node_export_node_decode', $return, $string);
+  if ($return !== FALSE) {
+    return $return;
+  }
+
+  // Default node decoding.
   $array = eval('return '. $string .';');
   $return = node_export_node_decode_objects($array);
   return $return;
