@@ -12,20 +12,20 @@
 function node_export_drush_command() {
   $items = array();
 
-  $items['node-export'] = array(
+  $items['node-export-export'] = array(
     'callback' => 'node_export_drush_callback_export',
     'description' => "Export nodes by Node ID.",
     'arguments' => array(
       'nids' => "A list of space-separated node IDs to export.",
     ),    
     'options' => array(
-      '--file' => "The filename of the output file.  If supplied, the node code will be exported here.",
+      '--file' => "The filename of the output file.  If supplied, the node code will be exported to that file, otherwise it will export to stdout.",
     ),
     'examples' => array(
       'drush node-export 45 46 47 --file=filename' => 
         "Export nodes with node IDs 45, 46, and 47 to the file with the supplied filename.",
-      'drush node-export 45 46 47 > filename' => 
-        "Export nodes with node IDs 45, 46, and 47 to the file with the supplied filename.  NOTE: Error messages may be output to the file.",
+      //'drush node-export 45 46 47 > filename' => 
+      //  "Export nodes with node IDs 45, 46, and 47 to the file with the supplied filename.  NOTE: Error messages may be output to the file.",
     ),
   );
   $items['node-export-import'] = array(
@@ -33,15 +33,15 @@ function node_export_drush_command() {
     'description' => "Import nodes from a previous export.",
     'options' => array(
       '--uid' => "User ID of user to save nodes as. If not given will use the user with an ID of 1. You may specify 0 for the Anonymous user.",
-      '--file' => "The filename of the input file.",
+      '--file' => "The filename of the input file.  If supplied, the node code will be imported from that file, otherwise it will import to stdin.",
     ),
     'examples' => array(
       'drush node-export-import --file=filename' => 
         'Import nodes from the file with the given filename.',
       'drush node-export-import --uid=2 --file=filename' => 
         "Import nodes from the file with the given filename.  The author of the nodes will be set to the user that has the user ID of 2.",
-      'drush node-export-import < filename' => 
-        'Import nodes from the file with the given filename.',
+      //'drush node-export-import < filename' => 
+      //  'Import nodes from the file with the given filename.',
     ),
   );
   $items['node-export-type'] = array(
@@ -51,17 +51,38 @@ function node_export_drush_command() {
       'type' => "The node type to export.",
     ),    
     'options' => array(
-      '--file' => "The filename of the output file.  If supplied, the node code will be exported here.",
+      '--file' => "The filename of the output file.  If supplied, the node code will be exported to that file, otherwise it will export to stdout.",
     ),
     'examples' => array(
       'drush node-export-type story --file=filename' => 
         "Export all nodes of type 'story' to the file with supplied filename.",
-      'drush node-export-type story > filename' => 
-        "Export all nodes of type 'story' to the file with supplied filename.  NOTE: Error messages may be output to the file.",
+      //'drush node-export-type story > filename' => 
+      //  "Export all nodes of type 'story' to the file with supplied filename.  NOTE: Error messages may be output to the file.",
     ),
   );
 
+  // Add aliases for usability.
+  node_export_drush_command_add_alias($items, 'node-export-export', 'node-export');
+  node_export_drush_command_add_alias($items, 'node-export-export', 'ne-export');
+  node_export_drush_command_add_alias($items, 'node-export-import', 'ne-import');
+
   return $items;
+}
+
+/**
+ * A function to help alias commands as other commands.
+ */
+function node_export_drush_command_add_alias(&$items, $command, $alias) {
+   // Create a property on the command for adding aliases, if not there.
+   if (!isset($items[$command]['node_export command aliases'])) {
+      $items[$command]['node_export command aliases'] = array();
+   }
+   // Record the alias into that property.
+   $items[$command]['node_export command aliases'][] = $alias;
+   // Create the alias as a new command.
+   $items[$alias] = $items[$command];
+   // Indicate what this new command is an alias for.
+   $items[$alias]['node_export alias for'] = $command;
 }
 
 /**
@@ -82,6 +103,22 @@ function node_export_drush_help($section) {
   foreach ($commands as $command => $command_info) {
     if ($section == 'drush:'. $command) {
       $out = $command_info['description'];
+      if (isset($command_info['node_export alias for'])) {
+        $output .= "\nThis command is an alias for ";
+        $output .= $command_info['node_export alias for'] .".";
+      }
+      if (isset($command_info['node_export command aliases'])) {
+        if (count($command_info['node_export command aliases']) == 1) {
+          $output .= "\nThis command can be called by it's alias; ";
+          $output .= $command_info['node_export command aliases'] .".";
+        }
+        else {
+          $last_alias = array_pop($command_info['node_export command aliases']);
+          $output .= "\nThis command can be called by it's aliases; "
+          $output .= implode(", ", $command_info['node_export command aliases']);
+          $output .= ", or ". $last_alias .".";
+        }
+      }
       $out .= "\n\nArguments:";
       if (isset($command_info['arguments'])) {
         foreach ($command_info['arguments'] as $k => $v) {
