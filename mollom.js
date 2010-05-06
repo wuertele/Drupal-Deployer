@@ -17,18 +17,23 @@ Drupal.behaviors.mollomPrivacy = function (context) {
  * Attach click event handlers for CAPTCHA links.
  */
 Drupal.behaviors.mollomCaptcha = function (context) {
-  $('a.mollom-audio-captcha', context).click(getAudioCaptcha);
-  $('a.mollom-image-captcha', context).click(getImageCaptcha);
+  $('a.mollom-switch-captcha', context).click(getMollomCaptcha);
 };
 
-function getAudioCaptcha() {
+/**
+ * Fetch a Mollom CAPTCHA and output the image or audio into the form.
+ */
+function getMollomCaptcha() {
+  // Get the current requested CAPTCHA type from the clicked link.
+  var newCaptchaType = $(this).hasClass('mollom-audio-captcha') ? 'audio' : 'image';
+
   var context = $(this).parents('form');
 
   // Extract the Mollom session ID from the form:
   var mollomSessionId = $('input.mollom-session-id', context).val();
 
   // Retrieve an audio CAPTCHA:
-  $.getJSON(Drupal.settings.basePath + 'mollom/captcha/audio/' + mollomSessionId,
+  $.getJSON(Drupal.settings.basePath + 'mollom/captcha/' + newCaptchaType + '/' + mollomSessionId,
     function (data) {
       if (!(data && data.content)) {
         return;
@@ -38,30 +43,9 @@ function getAudioCaptcha() {
       // Update session id.
       $('input.mollom-session-id', context).val(data.session_id);
       // Add an onclick-event handler for the new link.
-      $('a.mollom-image-captcha', context).click(getImageCaptcha);
-    }
-  );
-  return false;
-}
-
-function getImageCaptcha() {
-  var context = $(this).parents('form');
-
-  // Extract the Mollom session ID from the form:
-  var mollomSessionId = $('input.mollom-session-id', context).val();
-
-  // Retrieve an image CAPTCHA:
-  $.getJSON(Drupal.settings.basePath + 'mollom/captcha/image/' + mollomSessionId,
-    function (data) {
-      if (!(data && data.content)) {
-        return;
-      }
-      // Inject new image CAPTCHA.
-      $('.mollom-captcha-content', context).parent().html(data.content);
-      // Update session id.
-      $('input.mollom-session-id', context).val(data.session_id);
-      // Add an onclick-event handler for the new link.
-      $('a.mollom-audio-captcha', context).click(getAudioCaptcha);
+      Drupal.attachBehaviors(context);
+      // Focus on the CATPCHA input.
+      $('input[name="mollom[captcha]"]', context).focus();
     }
   );
   return false;

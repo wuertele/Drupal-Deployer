@@ -1388,26 +1388,19 @@ function mollom_pre_render_mollom($element) {
     // Prevent the page cache from storing a form containing a CAPTCHA element.
     $GLOBALS['conf']['cache'] = CACHE_DISABLED;
 
-    $data['author_ip'] = ip_address();
+    $data = array();
     if (!empty($form_state['mollom']['session_id'])) {
       $data['session_id'] = $form_state['mollom']['session_id'];
     }
-    if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') {
-      $data['ssl'] = TRUE;
-    }
-    $result = mollom('mollom.getImageCaptcha', $data);
+    $captcha = mollom_get_captcha('image', $data);
 
     // If we get a response, add the image CAPTCHA to the form element.
-    if (isset($result['session_id']) && isset($result['url'])) {
-      $captcha = '<a href="http://mollom.com" class="mollom-captcha-content">';
-      $captcha .= '<img src="' . url($result['url']) . '" alt="Mollom CAPTCHA" />';
-      // @todo This suffix needs to be injected via JavaScript.
-      $captcha .= '</a> (<a href="#" class="mollom-audio-captcha">' . t('play audio CAPTCHA') . '</a>)';
-      $element['captcha']['#field_prefix'] = $captcha;
+    if (isset($captcha['response']['session_id']) && !empty($captcha['markup'])) {
+      $element['captcha']['#field_prefix'] = $captcha['markup'];
 
       // Assign the session ID returned by Mollom.
-      $form_state['mollom']['session_id'] = $result['session_id'];
-      $form_state['mollom']['response']['session_id'] = $result['session_id'];
+      $form_state['mollom']['session_id'] = $captcha['response']['session_id'];
+      $form_state['mollom']['response']['session_id'] = $captcha['response']['session_id'];
     }
     // Otherwise, we have a communication or configuration error.
     // @todo Short-cut form processing entirely in this case; see also
@@ -1732,6 +1725,71 @@ function mollom_content_extra_fields($type_name) {
     );
     return $extras;
   }
+}
+
+/**
+ * Get the HTML markup for a Mollom CAPTCHA.
+ *
+ * @param $type
+ *   The CAPTCHA type to retrieve, e.g. 'image' or 'audio'.
+ * @param $data
+ *   An optional array of parameters to send to Mollom when requesting the
+ *   CAPTCHA.
+ *
+ * @return
+ *   An array with the following key/value pairs:
+ *     - 'data': An array of parameters sent to Mollom when requesting the
+ *       CAPTCHA.
+ *     - 'response': An array with the response from Mollom.
+ *     - 'markup': The markup of the CAPTCHA HTML.
+ */
+function mollom_get_captcha($type, array $data = array()) {
+  $data += array(
+    'author_ip' => ip_address(),
+    'ssl' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on',
+  );
+
+  // @todo Convert these to actual theme functions?
+  $output = '';
+  switch ($type) {
+    case 'audio':
+      $response = mollom('mollom.getAudioCaptcha', $data);
+      if ($response) {
+        $source = url(base_path() . drupal_get_path('module', 'mollom') . '/mollom-captcha-player.swf', array(
+          'query' => array('url' => $response['url']),
+          'external' => TRUE,
+        ));
+        $output = '<object classid="clsid:d27cdb6e-ae6d-11cf-96b8-444553540000" codebase="http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=9,0,0,0" width="110" height="50">';
+        $output .= '<param name="allowFullScreen" value="false" />';
+        $output .= '<param name="movie" value="' . $source . '" />';
+        $output .= '<param name="loop" value="false" />';
+        $output .= '<param name="menu" value="false" />';
+        $output .= '<param name="quality" value="high" />';
+        $output .= '<param name="wmode" value="transparent" />';
+        $output .= '<param name="bgcolor" value="#ffffff" />';
+        $output .= '<embed src="' . $source . '" loop="false" menu="false" quality="high" wmode="transparent" bgcolor="#ffffff" width="110" height="50" align="baseline" allowScriptAccess="sameDomain" allowFullScreen="false" type="application/x-shockwave-flash" pluginspage="http://www.adobe.com/go/getflashplayer_de" />';
+        $output .= '</object>';
+
+        $output = '<span class="mollom-captcha-content mollom-audio-captcha">' . $output . '</span>';
+        $output .= ' (<a href="#" class="mollom-switch-captcha mollom-image-captcha">' . t('use image CAPTCHA') . '</a>)';
+      }
+      break;
+
+    case 'image':
+      $response = mollom('mollom.getImageCaptcha', $data);
+      if ($response) {
+        $output .= '<img src="' . check_plain(url($response['url'])) . '" alt="Mollom CAPTCHA" />';
+        $output = '<a href="http://mollom.com" class="mollom-captcha-content mollom-image-captcha">' . $output . '</a>';
+        $output .= ' (<a href="#" class="mollom-switch-captcha mollom-audio-captcha">' . t('play audio CAPTCHA') . '</a>)';
+      }
+      break;
+  }
+
+  return array(
+    'data' => $data,
+    'response' => $response,
+    'markup' => $output,
+  );
 }
 
 /**
