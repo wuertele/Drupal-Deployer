@@ -67,6 +67,11 @@ function hook_mollom_form_list() {
  *     current user to determine whether to protect the form with Mollom or do
  *     not validate submitted form values. If the current user has at least one
  *     of the listed permissions, the form will not be protected.
+ *   - mail ids: (optional) An array of mail IDs that will be sent as a result
+ *     of this form being submitted. When these mails are sent, a 'report to
+ *     Mollom' link will be included at the bottom of the mail body. Be sure to
+ *     include only user-submitted mails and not any mails sent by Drupal since
+ *     they should never be reported as spam.
  *   - entity: (optional) The internal name of the entity type the form is for,
  *     e.g. 'node' or 'comment'. This is required for all forms that will store
  *     the submitted content persistently. It is only optional for forms that do
@@ -118,6 +123,7 @@ function hook_mollom_form_info($form_id) {
         'title' => t('Comment form'),
         'mode' => MOLLOM_MODE_ANALYSIS,
         'bypass access' => array('administer comments'),
+        'mail ids' => array('mymodule_comment_mail'),
         'entity' => 'comment',
         'elements' => array(
           'subject' => t('Subject'),
@@ -165,4 +171,3 @@ function hook_mollom_form_info_alter(&$form_info, $form_id) {
     $form_info['elements']['mymodule_field'] = t('My additional field');
   }
 }
-

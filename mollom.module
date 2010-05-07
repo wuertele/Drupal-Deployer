@@ -731,6 +731,7 @@ function mollom_form_info($form_id, $module) {
     'bypass access' => array(),
     'elements' => array(),
     'mapping' => array(),
+    'mail ids' => array(),
   );
 
   // Allow modules to alter the default form information.
@@ -1291,6 +1292,7 @@ function mollom_validate_analysis($form, &$form_state) {
   $form_state['mollom']['response'] = $result;
   // @todo Only used for Contact module and mail integration in general.
   $GLOBALS['mollom_response'] = $form_state['mollom']['response'];
+  $GLOBALS['mollom_form'] = $form['mollom']['#mollom_form'];
 
   switch ($result['spam']) {
     case MOLLOM_ANALYSIS_HAM:
@@ -1342,8 +1344,8 @@ function mollom_validate_captcha($form, &$form_state) {
   // Store the response for #submit handlers.
   $form_state['mollom']['response']['session_id'] = $form_state['mollom']['session_id'];
   $form_state['mollom']['response']['spam'] = (int) $result;
-  // @todo Only used for Contact module and mail integration in general.
   $GLOBALS['mollom_response'] = $form_state['mollom']['response'];
+  $GLOBALS['mollom_form'] = $form['mollom']['#mollom_form'];
 
   // Explictly check for TRUE, since mollom.checkCaptcha() can also return an
   // error message (e.g. expired or invalid session_id).
@@ -1793,6 +1795,41 @@ function mollom_get_captcha($type, array $data = array()) {
 }
 
 /**
+ * Implements hook_mail_alter().
+ *
+ * Adds a "report as inappropriate" link to e-mails sent after Mollom-protected
+ * form submissions.
+ */
+function mollom_mail_alter(&$message) {
+  // Attached the Mollom report link to any mails with IDs specified from the
+  // submitted form's hook_mollom_form_info(). This should ensure that the
+  // report link is added to mails sent by actual users and not any mails sent
+  // by Drupal since they should never be reported as spam.
+  if (!empty($GLOBALS['mollom_form']['mail ids']) && in_array($message['id'], $GLOBALS['mollom_form']['mail ids'])) {
+    mollom_mail_add_report_link($message);
+  }
+}
+
+/**
+ * Add the 'Report as innapropriate' link to an e-mail message.
+ */
+function mollom_mail_add_report_link(&$message) {
+  if (isset($GLOBALS['mollom_response']['session_id'])) {
+    mollom_data_save('mail', $message['id']);
+    $report_link = t('Report as inappropriate: @link', array(
+      '@link' => url('mollom/report/session/' . $GLOBALS['mollom_response']['session_id'], array('absolute' => TRUE)),
+    ));
+    // Until D7, hook_mail_alter() accepts both arrays and strings.
+    if (is_array($message['body'])) {
+      $message['body'][] = $report_link;
+    }
+    else {
+      $message['body'] .= "\n\n" . $report_link;
+    }
+  }
+}
+
+/**
  * @name mollom_node Node module integration for Mollom.
  * @{
  */
@@ -2130,6 +2167,7 @@ function contact_mollom_form_info($form_id) {
         'title' => t('Site-wide contact form'),
         'mode' => MOLLOM_MODE_ANALYSIS,
         'bypass access' => array('administer site-wide contact form'),
+        'mail ids' => array('contact_page_mail', 'contact_page_copy'),
         'elements' => array(
           'subject' => t('Subject'),
           'message' => t('Message'),
@@ -2147,6 +2185,7 @@ function contact_mollom_form_info($form_id) {
         'title' => t('User contact form'),
         'mode' => MOLLOM_MODE_ANALYSIS,
         'bypass access' => array('administer users'),
+        'mail ids' => array('contact_user_mail', 'contact_user_copy'),
         'elements' => array(
           'subject' => t('Subject'),
           'message' => t('Message'),
@@ -2156,30 +2195,6 @@ function contact_mollom_form_info($form_id) {
         ),
       );
       return $form_info;
-  }
-}
-
-/**
- * Implements hook_mail_alter().
- *
- * Adds a "report as inappropriate" link to e-mails sent by Contact module.
- */
-function mollom_mail_alter(&$message) {
-  // Only attach the Mollom report link to mails sent by actual users and not
-  // any mails sent by Drupal since they should never be reported as spam.
-  $valid_ids = array('contact_page_mail', 'contact_page_copy', 'contact_user_mail', 'contact_user_copy');
-  if (isset($GLOBALS['mollom_response']['session_id']) && in_array($message['id'], $valid_ids)) {
-    mollom_data_save('contact', $message['id']);
-    $report_link = t('Report as inappropriate: @link', array(
-      '@link' => url('mollom/report/session/' . $GLOBALS['mollom_response']['session_id'], array('absolute' => TRUE)),
-    ));
-    // Until D7, hook_mail_alter() accepts both arrays and strings.
-    if (is_array($message['body'])) {
-      $message['body'][] = $report_link;
-    }
-    else {
-      $message['body'] .= "\n\n" . $report_link;
-    }
   }
 }
 
