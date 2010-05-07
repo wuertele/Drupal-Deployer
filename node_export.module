@@ -880,7 +880,8 @@ function node_export_node_encode($var, $iteration = 0, $format = NULL) {
   }
   else {
     if (is_string($var)) {
-      return "'". addslashes($var) ."'";
+      // Escape single quotes so we dont' accidently exit the string.
+      return "'". strtr($var, array("'" => "\\'")) ."'";
     }
     elseif (is_numeric($var)) {
       return $var;
@@ -919,9 +920,6 @@ function node_export_node_decode_objects($array) {
   foreach ($array as $k => $v) {
     if (is_array($v)) {
       $array[$k] = node_export_node_decode_objects($v);
-    }
-    if (is_string($v)) {
-      $array[$k] = stripslashes($v);
     }
   }
   if ($array['#_export_node_encode_object']) {
