@@ -17,6 +17,10 @@
  *   Unique identifier for the comment (cid) or FALSE if there was a problem.
  */
 function comment_service_save($comment) {
+  if (!is_object($comment)) {
+    $comment = (object) $comment;
+  }
+
   // If the submitted comment does not contain a uid, set it to anonymous.
   if (!isset($comment->uid)) {
     $comment->uid = 0;
