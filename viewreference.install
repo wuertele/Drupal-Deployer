@@ -5,7 +5,6 @@
  * Implementation of hook_install().
  */
 function viewreference_install() {
-  drupal_install_schema('viewreference');
   content_notify('install', 'viewreference');
 }
 
@@ -13,7 +12,6 @@ function viewreference_install() {
  * Implementation of hook_uninstall().
  */
 function viewreference_uninstall() {
-  drupal_uninstall_schema('viewreference');
   content_notify('uninstall', 'viewreference');
 }
 
@@ -36,38 +34,41 @@ function viewreference_disable() {
 }
 
 /**
- * Implementation of hook_schema().
- *
- * Create a table of views we can easily query.
- */
-function viewreference_schema() {
-  $schema['viewreference'] = array(
-    'fields' => array(
-      'view_id'     => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
-      'name'        => array('type' => 'varchar','length' => '32','default' => '','not null' => TRUE),
-      'position'    => array('type' => 'varchar','length' => '64','default' => '','not null' => TRUE),
-      'title'       => array('type' => 'varchar', 'length' => '255', 'not null' => TRUE, 'default' => ''),
-    ),
-    'primary key' => array('view_id'),
-  );
-  return $schema;
-}
-
-/**
  * Implementation of hook_update_N().
  *
- * Change view_id field's 'not null' value to FALSE.
+ * Update CCK view_id fields to strings and drop viewreference table.
  */
-function viewreference_update_6212() {
+function viewreference_update_6300() {
   $ret = array();
-  db_drop_primary_key($ret, 'viewreference');
-  db_change_field(
-    $ret, 
-    'viewreference', 
-    'view_id', 
-    'view_id',
-    array('type' => 'int', 'unsigned' => TRUE, 'not null' => FALSE, 'default' => 0),
-    array('primary key' => array('view_id'))
-  );
+  $fields = content_fields();
+  foreach ($fields as $field) {
+    if ($field['type'] == "viewreference") {
+      $db_info = content_database_info($field);
+      if (isset($db_info['columns']['view_id'])) {
+        // Update the field definition
+        db_change_field(
+          $ret, 
+          $db_info['table'], 
+          'view_id', 
+          'view_id',
+          array('type' => 'varchar', 'length' => '255')
+        );
+        // Change values in fields
+        $result = db_query("SELECT DISTINCT view_id FROM {". $db_info['table'] ."}");
+        while($row = db_fetch_array($result)) {
+          $new_value = "";
+          if ($row['view_id']) {
+              // Select the 2 values from the {view_reference} table
+              $replace = db_query("SELECT view, position FROM {viewreference} WHERE view_id = %d", $row['view_id']);
+              $replace_values = db_fetch_array($replace);
+              $new_value = $replace_values['view'] .":". $replace_values['position'];
+          }
+          db_query("UPDATE {". $db_info['table'] ."} SET view_id = '%s' WHERE view_id = '%s'", array($new_value, $row['view_id']));
+        }
+      }
+    }
+  }
+  // Remove the old table.
+  db_query("DROP TABLE {viewreference}");
   return $ret;
 }
