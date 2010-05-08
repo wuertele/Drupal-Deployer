@@ -27,8 +27,6 @@ function taxonomy_service_get_tree($vid, $parent = 0, $max_depth = NULL) {
  *   An array of node objects.
  */
 function taxonomy_service_select_nodes($tids = array(), $fields = array(), $operator = 'or', $depth = 0, $pager = TRUE, $order = 'n.sticky DESC, n.created DESC') {
-  $nodes = array();
-
   $result = taxonomy_select_nodes($tids, $operator, $depth, $pager, $order);
   while ($node = db_fetch_object($result)) {
     $nodes[] = services_node_load(node_load($node->nid), $fields);
