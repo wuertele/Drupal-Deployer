@@ -7,6 +7,9 @@
  * recipe.module - share recipes
  */
 
+// $block_delta constants.
+define('RECIPE_BLOCK_RECENT', 0);
+define('RECIPE_BLOCK_SUMMARY', 1);
 
 /**
  * Implementation of hook_help().
@@ -44,7 +47,7 @@ function recipe_theme($existing, $type, $theme, $path) {
 
     'recipe_summary' => array(
       'function' => 'theme_recipe_summary',
-      'arguments' => array('node' => NULL),
+      'arguments' => array('node' => NULL, 'options' => array('show_title' => TRUE)),
     ),
 
     'recipe_ingredients' => array(
@@ -532,14 +535,19 @@ function recipe_block($op = 'list', $delta = 0, $edit = array()) {
       // If $op is "list", we just need to return a list of block descriptions.
       // This is used to provide a list of possible blocks to the administrator,
       // end users will not see these descriptions.
-      $blocks[0]['info'] = t('Newest recipes');
+      $blocks[RECIPE_BLOCK_RECENT]['info'] = t('Recipe: Newest recipes');
+
+      if ( variable_get('recipe_summary_location', 0) == 1 ) {
+        $blocks[RECIPE_BLOCK_SUMMARY]['info'] = t('Recipe: Recipe summary');
+      }
+
       return $blocks;
 
     case 'view':
       // If $op is "view", then we need to generate the block for display
       // purposes. The $delta parameter tells us which block is being requested.
       switch ($delta) {
-        case 0:
+        case RECIPE_BLOCK_RECENT:
           // The subject is displayed at the top of the block. Note that it
           // should be passed through t() for translation.
           $block['subject'] = t('Newest Recipes');
@@ -548,10 +556,30 @@ function recipe_block($op = 'list', $delta = 0, $edit = array()) {
           $result = db_query_range(db_rewrite_sql("SELECT n.nid, n.title, n.uid, u.name FROM {node} n INNER JOIN {node_revisions} r ON n.vid = r.vid INNER JOIN {users} u ON n.uid = u.uid WHERE n.type='recipe' AND n.status =1 ORDER BY n.created DESC"), 0, 5);
           $block["content"] = node_title_list($result);
           break;
+
+        case RECIPE_BLOCK_SUMMARY:
+          if ( variable_get('recipe_summary_location', 0) == 1 ) {
+            if (user_access('access content')) {
+              if (arg(0) == 'node' && is_numeric(arg(1)) && (arg(2) == '' || arg(2) == 'view')) {
+                $node = node_load(arg(1));
+                // Don't show the yield form, it doesn't fit.
+                $node->yield_form_off = 1;
+                if ( $node->type == 'recipe' ) {
+                  $block['subject'] = variable_get('recipe_summary_title', t('Summary'));
+                  $block['content'] = theme('recipe_summary', $node, array('show_title' => FALSE));
+                  return $block;
+                }
+              }
+            }
+          }
+          break;
+
+
       }
       return $block;
   }
 }
+
 
 /**
  * Implementation of hook_view().
@@ -644,12 +672,16 @@ function recipe_view($node, $teaser = FALSE, $page = FALSE) {
       );
     }
 
-    if (variable_get('recipe_summary_box_enable', 1) == 1) {
+    // If you are showing the summary in the node content.
+    if (variable_get('recipe_summary_location', 0) == 0) {
       $node->content['recipe_summary_box'] = array(
           '#value' => theme('recipe_summary', $node),
           '#weight' => -6,
       );
+    }
 
+    // If you are showing the summary at ALL (could be in a block).
+    if (variable_get('recipe_summary_location', 0) < 2) {
       // If you are showing the summary box, don't show taxo at the bottom as well.
       // Remove each node term that is from a recipe vocab.
       $recipe_vocabs = taxonomy_get_vocabularies('recipe');
@@ -714,7 +746,7 @@ function theme_recipe_ingredients($node = NULL) {
 }
 
 
-function theme_recipe_summary($node = NULL) {
+function theme_recipe_summary($node = NULL, $options = array('show_title' => TRUE)) {
   // Construct the summary
   $output = '<table>';
 
@@ -750,7 +782,11 @@ function theme_recipe_summary($node = NULL) {
     }
   }
   $output .= '</table>';
-  return theme('box', variable_get('recipe_summary_box_title', t('Summary')), $output);
+  if ( $options['show_title'] ) {
+    return theme('box', variable_get('recipe_summary_title', t('Summary')), $output);
+  } else {
+    return $output;
+  }
 }
 
 
@@ -1280,9 +1316,8 @@ function recipe_preprocess_node(&$variables) {
 
 
 function recipe_yield_form($form_id, $node) {
-
-  // Don't render the custom yield textbox and submit buttons.
-  if ( $node->yield_form_off == 1 ) {
+  // Don't render the custom yield textbox and submit buttons if disabled or shown in a block.
+  if ($node->yield_form_off == 1 || variable_get('recipe_summary_location', 0) == 1) {
     $form['yield'] = array(
       '#value' => $node->yield,
     );

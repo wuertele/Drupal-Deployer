@@ -62,25 +62,27 @@ function recipe_admin_settings() {
   );
 
 
-  $form['recipe_summary_box'] = array(
+  $form['recipe_summary'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Recipe summary box'),
+    '#title' => t('Recipe summary'),
+    '#description' => t('The recipe summary contains the yield, source, and prep time values.')
   );
-  $form['recipe_summary_box']['recipe_summary_box_enable'] = array(
-    '#type' => 'checkbox',
-    '#title' => t('Show recipe summary box'),
+  $form['recipe_summary']['recipe_summary_location'] = array(
+    '#type' => 'radios',
+    '#title' => t('Recipe summary location'),
     '#return_value' => 1,
-    '#default_value' => variable_get('recipe_summary_box_enable', 1),
-    '#description' => t('Show the recipe summary box on recipe view pages.  Contains the yield, source, and prep time values.'),
-    '#required' => FALSE,
+    '#default_value' => variable_get('recipe_summary_location', 0),
+    '#options' => array(t('Node content'), t('Block'), t('Hidden')),
+    '#description' => t('Where to show the recipe summary information.'),
+    '#required' => TRUE
   );
-  $form['recipe_summary_box']['recipe_summary_box_title'] = array(
+  $form['recipe_summary']['recipe_summary_title'] = array(
     '#type' => 'textfield',
-    '#title' => t('Box title'),
-    '#default_value' => variable_get('recipe_summary_box_title', t('Summary')),
+    '#title' => t('Recipe summary title'),
+    '#default_value' => variable_get('recipe_summary_title', t('Summary')),
     '#size' => 35,
     '#maxlength' => 255,
-    '#description' => t('Title of the recipe summary box on recipe view pages.'),
+    '#description' => t('The title shown above the recipe summary.'),
   );
 
 
