@@ -29,6 +29,16 @@ function theme_recipe_name_index_page($alpha_list = NULL, $node_list = NULL) {
     }
 
   }
+
+  if (isset($alpha_list['0-9'])) {
+    $list[] = l('[0-9]', 'recipe/byname', array('fragment' => 'alpha_0-9'));
+  }
+  else {
+    $list[] = '[0-9]';
+  }
+
+
+
   $output .= implode(" - ", $list);
   $output .=  '</div>';
 
@@ -83,9 +93,38 @@ function recipe_get_alpha_nodes() {
 function recipe_get_node_alpha_list(&$node_list = NULL) {
   $alpha_list = array();
   foreach ($node_list as $n) {
-    $letter = strtolower(substr($n->title, 0, 1));
+    $letter = '';
+    if ( preg_match('/([A-Za-z0-9])/', $n->title, $matches) ) {
+      $letter = strtolower($matches[1]);
+    }
+    else {
+      $letter = strtolower(substr($n->title, $i, 1));
+    }
+
+    if ( is_numeric($letter) ) {
+      $letter = '0-9';
+    }
+
     $n->letter = $letter;
     $alpha_list[$letter] = 1;
   }
+
+  usort($node_list,'node_list_cmp');
   return $alpha_list;
+}
+
+
+function node_list_cmp($a, $b) {
+  // Sort first by letter.
+  if( $a->letter !=  $b->letter ) {
+    return ($a->letter < $b->letter) ? -1 : 1;
+  }
+
+  // Next by title
+  if( $a->title !=  $b->title ) {
+    return ($a->title < $b->title) ? -1 : 1;
+  }
+
+  // They are the same.
+  return 0;
 }
