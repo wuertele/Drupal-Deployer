@@ -238,7 +238,8 @@ function recipe_mastercook4_import_single($recipe_txt = NULL) {
     'title' => '',
     'ingredients' => array(),
     'instructions' => '',
-    'notes' => ''
+    'notes' => '', 
+    'source' => ''
   );
 
   $region = HEAD;
@@ -269,6 +270,10 @@ function recipe_mastercook4_import_single($recipe_txt = NULL) {
     }
 
     if ( $region == META ) {
+
+			if ( preg_match('/Recipe +By *: *(.*)/i', $line, $matches) ) {
+				$recipe['source'] = $matches[1];
+			}
 
       // blank line in meta section, move to next section.
       if ( $trimmed_line == '' ) {
@@ -310,6 +315,11 @@ function recipe_mastercook4_import_single($recipe_txt = NULL) {
       }
     }
     elseif ( $region == DIRECTIONS ) {
+    	if ( preg_match('/- - - - - - - - - - - - - - - - - -/', $line) ) {
+        $region++;
+        continue;
+    	}
+    	
       if ( preg_match('/^Notes: +(.*)/i', $line, $matches) ) {
         $recipe['notes'] .= $matches[1] ."\n";
         $region++;
@@ -322,13 +332,6 @@ function recipe_mastercook4_import_single($recipe_txt = NULL) {
     elseif ( $region == NOTES ) {
       $recipe['notes'] .= $line ."\n";
     }
-
-    // End of recipe.
-    if ( preg_match('/- - - - - - - - - - - - - - - - - -/', $line) ) {
-      $region = EOR;
-      continue;
-    }
-
 
   }
 
