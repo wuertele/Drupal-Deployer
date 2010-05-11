@@ -6,20 +6,31 @@
  * recipe_mastercook4.module - Enables importing and exporting of MasterCook4 format recipes.
  */
 
+
 /**
  * Implementation of hook_recipeio($type).
  */
 function recipe_mastercook4_recipeio($type) {
   $supported = array(
+    'import_single' => array(
+      'format_name' => t('MasterCook4'),
+      'callback' => 'recipe_mastercook4_import_single',
+      'format_help' => ''
+    ),
     'export_single' => array(
       'format_name' => t('MasterCook4'),
       'callback' => 'recipe_mastercook4_export_single',
-      'format_help' => t('Export to a recipe to MasterCook4 based text format.')
+      'format_help' => t('Export to a recipe to a MasterCook(1-4 .mxp) based text format.')
     ),
     'export_multi' => array(
       'format_name' => t('MasterCook4'),
       'callback' => 'recipe_mastercook4_export_multi',
-      'format_help' => t('Export all recipes to MasterCook4 based text format.')
+      'format_help' => t('Export all recipes to a MasterCook(1-4 .mxp) based text format.')
+    ),
+    'import_multi' => array(
+      'format_name' => t('MasterCook4'),
+      'callback' => 'recipe_mastercook4_import_multi',
+      'format_help' => t('Import recipes from a MasterCook(1-4 .mxp) based text file.')
     )
   );
   if ( isset($supported[$type]) ) {
@@ -29,6 +40,7 @@ function recipe_mastercook4_recipeio($type) {
     return FALSE;
   }
 }
+
 
 function recipe_mastercook4_export_multi() {
   // you should not be able to export unpublished recipes
@@ -143,4 +155,182 @@ function format_mastercook4_ingredient($ingredient = NULL) {
   $fullingredient = wordwrap($fullingredient, 66, "\n                        ");
   $o = sprintf("%8s  %-12s  %s\n", $ingredient->quantity, $ingredient->unit_name, $fullingredient);
   return $o;
+}
+
+
+function recipe_mastercook4_import_multi() {
+  $o = drupal_get_form('recipe_mastercook4_import_form');
+  return theme('page', $o);
+}
+
+
+function recipe_mastercook4_import_form($form_state) {
+  $form = array();
+  $form['#attributes'] = array('enctype' => "multipart/form-data");
+  $form['recipe_import_file'] = array(
+    '#type' => 'file',
+    '#title' => t('MasterCook(1-4 .mxp) File'),
+    '#default_value' => $object['foo'],
+    '#size' => 64,
+    '#description' => t("Note: This will add taxonomy terms to the lightest weight recipe taxonomy."),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Import'),
+  );
+  return $form;
+}
+
+
+function recipe_mastercook4_import_form_submit($form, &$form_state) {
+
+  // save to a temp files
+  if ($file = file_save_upload('recipe_import_file', array(), 'files', FILE_EXISTS_RENAME)) {
+    drupal_set_message(t('The attached file was successfully uploaded'));
+  }
+  else {
+    drupal_set_message(t('The attched file failed to upload.'), 'error');
+    return;
+  }
+
+  if ($file) {
+    // Load the file into a string.
+    $fp = fopen($file->filepath, "r");
+    if ($fp) {
+        $recipe_txt = '';
+        while (!feof($fp)) {
+          $buf = fgets($fp);
+          if ( preg_match("/\* +Exported +from/i", $buf) ) {
+            $recipe_txt = trim($recipe_txt);
+            // Save recipe
+            if ( strlen($recipe_txt) > 0 ) {
+              $parsed_recipe_object = recipe_mastercook4_import_single($recipe_txt);
+              if ( strlen($parsed_recipe_object['title']) > 0 ) {
+                recipe_import_node_save($parsed_recipe_object);
+              }
+            }
+            // Clear recipe buffer.
+            $recipe_txt = '';
+          }
+          $recipe_txt .= $buf;
+        }
+        fclose($fp);
+
+        // Handle the last one needed.
+        if ( strlen($parsed_recipe_object['title']) > 0 ) {
+          recipe_import_node_save($parsed_recipe_object);
+        }
+    }
+  }
+}
+
+function recipe_mastercook4_import_single($recipe_txt = NULL) {
+  // region constants
+  define('HEAD', 0);
+  define('TITLE', 1);
+  define('META', 2);
+  define('INGREDIENTS', 3);
+  define('DIRECTIONS', 4);
+  define('NOTES', 5);
+  define('EOR', 6);
+
+  $recipe = array(
+    'title' => '',
+    'ingredients' => array(),
+    'instructions' => '',
+    'notes' => ''
+  );
+
+  $region = HEAD;
+  foreach (split("\n", $recipe_txt) as $line) {
+    $trimmed_line = trim($line);
+
+    // Head
+    if ( $region == HEAD) {
+
+      // blank line in head section, move to next section.
+      if ( $trimmed_line == '' ) {
+        $region++;
+        continue;
+      }
+    }
+
+    // Title
+    if ( $region == TITLE ) {
+      // Capture title.
+      if ( $trimmed_line != '' ) {
+        $recipe['title'] = $trimmed_line;
+      }
+      else {
+        // blank line in title section, move to next section.
+        $region++;
+        continue;
+      }
+    }
+
+    if ( $region == META ) {
+
+      // blank line in meta section, move to next section.
+      if ( $trimmed_line == '' ) {
+        $region++;
+        continue;
+      }
+    }
+
+    if ( $region == INGREDIENTS ) {
+
+      if ( preg_match('/Amount +Measure +Ingredient +-- +Preparation Method/i', $line) ) {
+        // Do nothing.
+      } else if ( preg_match('/-------- +------------ +--------------------------------/', $line) ) {
+        // Do nothing.
+      } else if ( $trimmed_line != '' ) {
+
+        $q = trim(substr($line, 0, 8));
+        $u = trim(substr($line, 10, 12));
+        $i = trim(substr($line, 24));
+
+        $ing = array();
+        $ing['quantity'] = $q;
+        $ing['unit_name'] = $u;
+        $ing['ingredient_name'] = $i;
+
+        // FALSE if no-match
+        $ing['unit_obj'] = recipe_unit_fuzzymatch($ing['unit_name']);
+
+        // FALSE if no-match
+        $ing['ingred_obj'] = recipe_ingredient_match($ing['ingredient_name']);
+
+        $recipe['ingredients'][] = $ing;
+
+      }
+      else {
+        // blank line in ingredient section, move to next section.
+        $region++;
+        continue;
+      }
+    }
+    elseif ( $region == DIRECTIONS ) {
+      if ( preg_match('/^Notes: +(.*)/i', $line, $matches) ) {
+        $recipe['notes'] .= $matches[1] ."\n";
+        $region++;
+        continue;
+      }
+      else {
+        $recipe['instructions'] .= $line ."\n";
+      }
+    }
+    elseif ( $region == NOTES ) {
+      $recipe['notes'] .= $line ."\n";
+    }
+
+    // End of recipe.
+    if ( preg_match('/- - - - - - - - - - - - - - - - - -/', $line) ) {
+      $region = EOR;
+      continue;
+    }
+
+
+  }
+
+  return $recipe;
 }

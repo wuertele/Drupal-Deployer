@@ -592,8 +592,7 @@ function recipe_block($op = 'list', $delta = 0, $edit = array()) {
  */
 function recipe_view($node, $teaser = FALSE, $page = FALSE) {
 
-  // Prepare and sanitize node fields.
-  $node = recipe_node_prepare($node, $teaser);
+  drupal_add_css(drupal_get_path('module', 'recipe') .'/recipe.css');
 
   if ($page) {
     $breadcrumb = array();
@@ -612,94 +611,93 @@ function recipe_view($node, $teaser = FALSE, $page = FALSE) {
       }
     }
     drupal_set_breadcrumb($breadcrumb);
-    drupal_add_css(drupal_get_path('module', 'recipe') .'/recipe.css');
+  }
 
-    // Calculate yield and ingredient factor.
+  // Prepare and sanitize node fields.
+  $node = recipe_node_prepare($node, $teaser);
 
-    // Get custom yield or default to a factor of 1.
-    $node->yield = intval($node->yield);
-    // Factor is calculated and added into the $node variable.
-    $node->factor = 1;
+  // Calculate yield and ingredient factor.
 
-    // check post variable to see if the yield form was posted.
-    if ( $node->yield != 0 ) {
-      if ($_POST['op'] == t('Change')) {
-        $node->factor = $_POST['custom_yield'] / $node->yield;
-        $node->yield = $_POST['custom_yield'];
-        $_POST = array();
-      }
-      elseif ($_POST['op'] == t('Halve')) {
-        $node->factor = $_POST['custom_yield']/2 / $node->yield;
-        $node->yield = $_POST['custom_yield']/2;
-        $_POST = array();
-      }
-      elseif ($_POST['op'] == t('Double')) {
-        $node->factor = $_POST['custom_yield']*2 / $node->yield;
-        $node->yield = $_POST['custom_yield']*2;
-        $_POST = array();
-      }
-      // Reset yield back to recipe default
-      elseif ($_POST['op'] == t('Reset')) {
-        $_POST = array();
-      }
+  // Get custom yield or default to a factor of 1.
+  $node->yield = intval($node->yield);
+  // Factor is calculated and added into the $node variable.
+  $node->factor = 1;
 
-      // Custom_yield comes from export single urls currently.
-      elseif (isset($node->custom_yield)) {
-        $node->factor = $node->custom_yield / $node->yield;
-        $node->yield = $node->custom_yield;
-      }
+  // check post variable to see if the yield form was posted.
+  if ( $node->yield != 0 ) {
+    if ($_POST['op'] == t('Change')) {
+      $node->factor = $_POST['custom_yield'] / $node->yield;
+      $node->yield = $_POST['custom_yield'];
+      $_POST = array();
+    }
+    elseif ($_POST['op'] == t('Halve')) {
+      $node->factor = $_POST['custom_yield']/2 / $node->yield;
+      $node->yield = $_POST['custom_yield']/2;
+      $_POST = array();
+    }
+    elseif ($_POST['op'] == t('Double')) {
+      $node->factor = $_POST['custom_yield']*2 / $node->yield;
+      $node->yield = $_POST['custom_yield']*2;
+      $_POST = array();
+    }
+    // Reset yield back to recipe default
+    elseif ($_POST['op'] == t('Reset')) {
+      $_POST = array();
     }
 
+    // Custom_yield comes from export single urls currently.
+    elseif (isset($node->custom_yield)) {
+      $node->factor = $node->custom_yield / $node->yield;
+      $node->yield = $node->custom_yield;
+    }
+  }
 
-    // Begin filling the node->content array with with recipe items.
 
-    $node->content['recipe_description'] = array(
-        '#value' => theme('box', t('Description'), $node->body),
-        '#weight' => -4,
+  // Begin filling the node->content array with with recipe items.
+
+  $node->content['recipe_description'] = array(
+      '#value' => theme('box', t('Description'), $node->body),
+      '#weight' => -4,
+  );
+  // Clear the normal node body value.
+  $node->content['body']['#value'] = '';
+
+  $node->content['recipe_ingredients'] = array(
+      '#value' => theme('box', t('Ingredients'), theme('recipe_ingredients', $node)),
+      '#weight' => -2,
+  );
+
+  $node->content['recipe_instructions'] = array(
+      '#value' => theme('box', t('Instructions'), $node->instructions),
+      '#weight' => 0,
+  );
+
+  // Don't show the notes box at all it there are no notes.
+  if ( $node->notes ) {
+    $node->content['recipe_notes'] = array(
+        '#value' => theme('box', t('Notes'), $node->notes),
+        '#weight' => 2,
     );
-    // Clear the normal node body value.
-    $node->content['body']['#value'] = '';
+  }
 
-    $node->content['recipe_ingredients'] = array(
-        '#value' => theme('box', t('Ingredients'), theme('recipe_ingredients', $node)),
-        '#weight' => -2,
+  // If you are showing the summary in the node content.
+  if (variable_get('recipe_summary_location', 0) == 0) {
+    $node->content['recipe_summary_box'] = array(
+        '#value' => theme('recipe_summary', $node),
+        '#weight' => -6,
     );
+  }
 
-    $node->content['recipe_instructions'] = array(
-        '#value' => theme('box', t('Instructions'), $node->instructions),
-        '#weight' => 0,
-    );
-
-    // Don't show the notes box at all it there are no notes.
-    if ( $node->notes ) {
-      $node->content['recipe_notes'] = array(
-          '#value' => theme('box', t('Notes'), $node->notes),
-          '#weight' => 2,
-      );
-    }
-
-    // If you are showing the summary in the node content.
-    if (variable_get('recipe_summary_location', 0) == 0) {
-      $node->content['recipe_summary_box'] = array(
-          '#value' => theme('recipe_summary', $node),
-          '#weight' => -6,
-      );
-    }
-
-    // If you are showing the summary at ALL (could be in a block).
-    if (variable_get('recipe_summary_location', 0) < 2) {
-      // If you are showing the summary box, don't show taxo at the bottom as well.
-      // Remove each node term that is from a recipe vocab.
-      $recipe_vocabs = taxonomy_get_vocabularies('recipe');
-      foreach ($node->taxonomy as $tid => $term) {
-        if (isset($recipe_vocabs[$term->vid])) {
-          unset($node->taxonomy[$tid]);
-        }
+  // If you are showing the summary at ALL (could be in a block).
+  if (variable_get('recipe_summary_location', 0) < 2) {
+    // If you are showing the summary box, don't show taxo at the bottom as well.
+    // Remove each node term that is from a recipe vocab.
+    $recipe_vocabs = taxonomy_get_vocabularies('recipe');
+    foreach ($node->taxonomy as $tid => $term) {
+      if (isset($recipe_vocabs[$term->vid])) {
+        unset($node->taxonomy[$tid]);
       }
-
     }
-
-
   }
 
   return $node;
@@ -1463,17 +1461,32 @@ function recipe_import_form_preview($form, &$form_state) {
   }
 }
 
+
 /**
- * Import preview routine that allows that users to see what actually will be imported before doing so.
+ * Submit handler for the bulk import form.
  */
 function recipe_import_form_submit($form, &$form_state) {
   global $user;
-  $recipe = recipe_import_parse($form, $form_state);
-  if ($recipe) {
+  $parsed_recipe_object = recipe_import_parse($form, $form_state);
+  if ( ($nid = recipe_import_node_save($parsed_recipe_object)) != FALSE ) {
+    $form_state['redirect'] = 'node/'. $nid .'/edit';
+    drupal_set_message(t('Recipe Imported'));
+  }
+
+}
+
+
+/**
+ * Save the recipe node.
+ */
+function recipe_import_node_save($parsed_recipe_object = FALSE) {
+  global $user;
+
+  if ($parsed_recipe_object) {
     //node stuff
     $node = new stdClass();
-    $node->title = $recipe['title'];
-    $node->body = $recipe['title'] . ' imported from Recipe Import';
+    $node->title = $parsed_recipe_object['title'];
+    $node->body = $parsed_recipe_object['title'] . ' imported from Recipe Import';
     $node->type = 'recipe';
     $node->uid = $user->uid;
     // Promote is usually handled by a moderator.
@@ -1484,13 +1497,13 @@ function recipe_import_form_submit($form, &$form_state) {
     //recipe stuff
     $node->source = $user->name;
     $node->yield = 1;
-    $node->notes = '';
-    $node->instructions = $recipe['instructions'];
+    $node->notes = $parsed_recipe_object['notes'];
+    $node->instructions = $parsed_recipe_object['instructions'];
     $node->preptime = 60;
 
     //ingredients, have to change them into node->ingredients format
     $ingredient_list = array();
-    foreach ($recipe['ingredients'] as $i) {
+    foreach ($parsed_recipe_object['ingredients'] as $i) {
       $ingredient = new stdClass();
       $ingredient->quantity = $i['quantity'];
       if ($i['unit_obj'] != FALSE) {
@@ -1502,12 +1515,11 @@ function recipe_import_form_submit($form, &$form_state) {
     }
     $node->ingredients = $ingredient_list;
     node_save($node);
-    $form_state['redirect'] = 'node/'. $node->nid .'/edit';
-    drupal_set_message(t('Recipe Imported'));
+    return $node->nid;
   }
 
+  return FALSE;
 }
-
 
 
 
