@@ -164,7 +164,19 @@ function _htmlpurifier_process($text, $format, $cache = TRUE) {
 function _htmlpurifier_load() {
   if (class_exists('HTMLPurifier')) return;
   $module_path = drupal_get_path('module', 'htmlpurifier');
-  require_once "$module_path/library/HTMLPurifier.auto.php";
+  $library_path = $module_path;
+  if (function_exists('libraries_get_path')) {
+    $library_path = libraries_get_path('htmlpurifier');
+    // This may happen if the user has HTML Purifier installed under the
+    // old configuration, but also installed libraries and forgot to
+    // move it over.  There is code for emitting errors in
+    // htmlpurifier.install when this is the case.
+    if (!file_exists("$library_path/library/HTMLPurifier.auto.php")) {
+      $library_path = $module_path;
+    }
+  }
+
+  require_once "$library_path/library/HTMLPurifier.auto.php";
   require_once "$module_path/HTMLPurifier_DefinitionCache_Drupal.php";
   $factory = HTMLPurifier_DefinitionCacheFactory::instance();
   $factory->register('Drupal', 'HTMLPurifier_DefinitionCache_Drupal');
