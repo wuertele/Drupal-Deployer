@@ -42,35 +42,6 @@ function htmlpurifier_cron() {
   variable_set('htmlpurifier_version_current', $version);
 }
 
-/**
- * Implementation of hook_init().
- * @note
- *    Displays any need to update the HTML Purifier library.
- */
-function htmlpurifier_init() {
-  if (user_access('access administration pages')) {
-    $current = variable_get('htmlpurifier_version_current', FALSE);
-    if (!$current) {
-      htmlpurifier_cron();
-      $current = variable_get('htmlpurifier_version_current', FALSE);
-    }
-    $ours = variable_get('htmlpurifier_version_ours', FALSE);
-    if (!$ours || version_compare($current, $ours, '>')) {
-      // Update our version number if it can't be found, or there's a mismatch.
-      _htmlpurifier_load();
-      $ours = variable_get('htmlpurifier_version_ours', FALSE);
-    }
-    if ($current && $ours && version_compare($current, $ours, '>')) {
-      drupal_set_message(
-        t('Your version of HTML Purifier is currently out of date; '.
-        'the most recent version is %version. You can download the latest '.
-        'version at <a href="http://htmlpurifier.org">htmlpurifier.org</a>. '.
-        'To update, place the contents of HTML Purifier\'s <code>library/</code> folder in '.
-        '<code>modules/htmlpurifier/library/</code>.',
-        array('%version' => $current)), 'warning', FALSE);
-    }
-  }
-}
 
 /**
  * Implementation of hook_filter().
