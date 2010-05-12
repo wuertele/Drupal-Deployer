@@ -611,6 +611,18 @@ function recipe_view($node, $teaser = FALSE, $page = FALSE) {
       }
     }
     drupal_set_breadcrumb($breadcrumb);
+
+    // Remove taxo links if you are showing the summary.
+    if (variable_get('recipe_summary_location', 0) < 2) {
+      // Remove each node term that is from a recipe vocab.
+      $recipe_vocabs = taxonomy_get_vocabularies('recipe');
+      foreach ($node->taxonomy as $tid => $term) {
+        if (isset($recipe_vocabs[$term->vid])) {
+          unset($node->taxonomy[$tid]);
+        }
+      }
+    }
+
   }
 
   // Prepare and sanitize node fields.
@@ -688,18 +700,6 @@ function recipe_view($node, $teaser = FALSE, $page = FALSE) {
     );
   }
 
-  // If you are showing the summary at ALL (could be in a block).
-  if (variable_get('recipe_summary_location', 0) < 2) {
-    // If you are showing the summary box, don't show taxo at the bottom as well.
-    // Remove each node term that is from a recipe vocab.
-    $recipe_vocabs = taxonomy_get_vocabularies('recipe');
-    foreach ($node->taxonomy as $tid => $term) {
-      if (isset($recipe_vocabs[$term->vid])) {
-        unset($node->taxonomy[$tid]);
-      }
-    }
-  }
-
   return $node;
 }
 
@@ -719,15 +719,20 @@ function theme_recipe_ingredients($node = NULL) {
         if ($ingredient->abbreviation == '') {
           $ingredient->abbreviation = '&nbsp;';
         }
-        if ($ingredient->quantity > 0) {
-          $ingredient->quantity *= $node->factor;
+
+        // In preview mode the quantity are plain text fractions and should not be multiplied.
+        if ( $node->build_mode != NODE_BUILD_PREVIEW ) {
+          if ($ingredient->quantity > 0) {
+            $ingredient->quantity *= $node->factor;
+          }
+          else {
+            $ingredient->quantity = '&nbsp;';
+          }
+          if (variable_get('recipe_fraction_display', t('{%d} %d&frasl;%d'))) {
+            $ingredient->quantity = recipe_ingredient_quantity_from_decimal($ingredient->quantity);
+          }
         }
-        else {
-          $ingredient->quantity = '&nbsp;';
-        }
-        if (variable_get('recipe_fraction_display', t('{%d} %d&frasl;%d'))) {
-          $ingredient->quantity = recipe_ingredient_quantity_from_decimal($ingredient->quantity);
-        }
+
         if (!empty($ingredient->link)) {
           $ingredient->name = l($ingredient->name, 'node/'. $ingredient->link);
         }
@@ -925,7 +930,7 @@ function recipe_ingredient_quantity_from_decimal($ingredient_quantity) {
     }
   }
 
-  return filter_xss_admin($ingredient_quantity);
+  return filter_xss_admin(trim($ingredient_quantity));
 }
 
 /**
@@ -1321,7 +1326,7 @@ function recipe_preprocess_node(&$variables) {
 
 function recipe_yield_form($form_id, $node) {
   // Don't render the custom yield textbox and submit buttons if disabled or shown in a block.
-  if ($node->yield_form_off == 1 || variable_get('recipe_summary_location', 0) == 1) {
+  if ($node->yield_form_off == 1 || variable_get('recipe_summary_location', 0) == 1 || $node->build_mode == NODE_BUILD_PREVIEW) {
     $form['yield'] = array(
       '#value' => $node->yield,
     );
@@ -1378,8 +1383,8 @@ function recipe_import_form($form_state) {
     $options[$format['callback']] = $format['format_name'];
   }
 
-  if (isset($form_state['values']['recipe_preview'])) {
-    $form['#prefix'] = $form_state['values']['recipe_preview'];
+  if (isset($form_state['node_preview'])) {
+    $form['#prefix'] = $form_state['node_preview'];
   }
 
   $form['recipe_format'] = array(
@@ -1405,7 +1410,7 @@ function recipe_import_form($form_state) {
     '#type' => 'submit',
     '#value' => t('Preview'),
     '#weight' => 1,
-    '#submit' => array('recipe_import_form_preview'),
+    '#submit' => array('recipe_import_form_build_preview'),
   );
 
   $form['buttons']['import'] = array(
@@ -1422,54 +1427,31 @@ function recipe_import_form($form_state) {
 /**
  * Import preview routine that allows that users to see what actually will be imported before doing so.
  */
-function recipe_import_form_preview($form, &$form_state) {
+function recipe_import_form_build_preview($form, &$form_state) {
   drupal_add_css(drupal_get_path('module', 'recipe') .'/recipe.css');
-  $recipe = recipe_import_parse($form, $form_state);
 
-  if ($recipe != FALSE) {
-    $preview = 'Recipe Name: ' . $recipe['title'] . "<br/><br/>";
-
-    $preview .= 'Ingredients:<br/>=====<br/>';
-    foreach ($recipe['ingredients'] as $i) {
-      $preview .= $i['quantity'] . " ";
-      if ($i['unit_obj'] == FALSE) {
-        $preview .= '<span class="recipe-new-item" title="New, unit not found in database">' . $i['unit_name'] . "*</span> ";
-      }
-      else {
-        $preview .= '<span class="recipe-matched-item" title="Found, unit in database">' . $i['unit_name'] . "&radic;</span> ";
-      }
-
-      if ($i['ingred_obj'] == FALSE) {
-        if (preg_match('/^failed:/i', $i['ingredient_name'])) {
-          $preview .= '<span class="recipe-error-item" title="Error, ingredient line unreadable">' . $i['ingredient_name'] . '</span>';
-        }
-        else {
-          $preview .= '<span class="recipe-new-item" title="New, ingredient not found in database">' . $i['ingredient_name'] . '*</span>';
-        }
-      }
-      else {
-        $preview .= '<span class="recipe-matched-item" title="Found, ingredient in database">' . $i['ingredient_name'] . "&radic;</span>";
-      }
-      $preview .= '<br/>';
-    }
-
-    $preview .= '<br/>Instructions:<br/>=====<br/>' . $recipe['instructions'] . "<br/>";
-
-    $form_state['values']['recipe_preview'] = '<div class="recipe-preview">' . $preview . '</div>';
+  $parsed_recipe_object = recipe_import_parse($form, $form_state);
+  if ($parsed_recipe_object != FALSE) {
+    //$node = node_form_submit_build_node($form, $form_state);
+    $node = recipe_import_get_node($parsed_recipe_object);
+    $cloned_node = drupal_clone($node);
+    $cloned_node->build_mode = NODE_BUILD_PREVIEW;
+    $form_state['node_preview'] = theme('node_preview', $cloned_node);
     $form_state['rebuild'] = TRUE;
-    drupal_set_title(t('Import Preview'));
+    drupal_set_title(t('Preview'));
   }
 }
 
 
 /**
- * Submit handler for the bulk import form.
+ * Submit handler for the single recipe import form.
  */
 function recipe_import_form_submit($form, &$form_state) {
   global $user;
   $parsed_recipe_object = recipe_import_parse($form, $form_state);
-  if ( ($nid = recipe_import_node_save($parsed_recipe_object)) != FALSE ) {
-    $form_state['redirect'] = 'node/'. $nid .'/edit';
+  if ( ($node = recipe_import_get_node($parsed_recipe_object)) != FALSE ) {
+    node_save($node);
+    $form_state['redirect'] = 'node/'. $node->nid .'/edit';
     drupal_set_message(t('Recipe Imported'));
   }
 
@@ -1477,11 +1459,10 @@ function recipe_import_form_submit($form, &$form_state) {
 
 
 /**
- * Save the recipe node.
+ * Get a node-like stdClass object suitable for node_save and preview.
  */
-function recipe_import_node_save($parsed_recipe_object = FALSE) {
+function recipe_import_get_node($parsed_recipe_object = FALSE) {
   global $user;
-
   if ($parsed_recipe_object) {
     //node stuff
     $node = new stdClass();
@@ -1514,13 +1495,10 @@ function recipe_import_node_save($parsed_recipe_object = FALSE) {
       $ingredient_list[] = $ingredient;
     }
     $node->ingredients = $ingredient_list;
-    node_save($node);
-    return $node->nid;
+    return $node;
   }
-
   return FALSE;
 }
-
 
 
 /**
