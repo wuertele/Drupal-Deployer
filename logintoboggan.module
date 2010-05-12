@@ -1041,17 +1041,11 @@ function _logintoboggan_process_validation($account) {
 
 function logintoboggan_process_login($account, $edit, $redirect = array()){
   global $user;
-  $user = $account;
 
-  watchdog('user', 'Session opened for %name.', array('%name' => $user->name));
+  $user = user_load($account->uid);
 
-  // Update the user table timestamp noting user has logged in.
-  db_query("UPDATE {users} SET login = %d WHERE uid = %d", time(), $user->uid);
-
-  // user has new permissions, so we clear their menu cache
-  cache_clear_all($user->uid .':', 'cache_menu', TRUE);
-
-  user_module_invoke('login', $edit, $user);
+  // Call core's function to finalize the login.
+  user_authenticate_finalize($edit);
 
   // In the special case where a user is validating but they did not create their
   // own password, show a user message letting them know to change their password.
