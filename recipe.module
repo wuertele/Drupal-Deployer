@@ -412,16 +412,6 @@ function recipe_more_ingredients_submit($form, &$form_state) {
  * Note: when editing this function you must visit 'admin/menu' to reset the cache
  */
 function recipe_menu() {
-  $items['node/add/recipe_import'] = array(
-    'title' => 'Recipe Import',
-    'description' => 'Allows you to create a recipe by pasting various formats into a big text box.',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('recipe_import_form'),
-    'access callback' => 'recipe_import_access',
-    'access arguments' => array('import recipes'),
-    'type' => MENU_NORMAL_ITEM
-  );
-
   $items['recipe'] = array(
     'title' => 'Recipes',
     'page callback' => 'recipe_indexes_page',
@@ -513,6 +503,29 @@ function recipe_menu() {
 
   return $items;
 }
+
+
+
+function recipe_menu_alter(&$items) {
+
+  // Add a tab on the recipe add screen for Recipe Import.
+  $items['node/add/recipe/std'] = array(
+    'title' => 'Standard entry',
+    'weight' => 0,
+    'type' => MENU_DEFAULT_LOCAL_TASK
+  );
+  $items['node/add/recipe/import'] = array(
+    'title' => 'Recipe Import',
+    'description' => 'Allows you to create a recipe by pasting various formats into a big text box.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('recipe_import_form'),
+    'access callback' => 'recipe_import_access',
+    'access arguments' => array('import recipes'),
+    'weight' => 1,
+    'type' => MENU_LOCAL_TASK
+  );
+}
+
 
 /**
  * Implementation of hook_access().
@@ -1684,9 +1697,6 @@ function recipe_indexes_page() {
 
   if (user_access('create recipes')) {
     $output .= '<dl class="node-type-list"><dt>'. l('Add a new Recipe', 'node/add/recipe') .'</dt><dd>' . t('Add a new recipe to the site.') .'</dd></dl>';
-  }
-  if (recipe_import_access('import recipes')) {
-    $output .= '<dl class="node-type-list"><dt>'. l('Import a Recipe', 'node/add/recipe_import') .'</dt><dd>' . t('Create a new recipe using an import format.') .'</dd></dl>';
   }
 
   $output .= '</div>';
