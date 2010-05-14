@@ -122,17 +122,6 @@ function tablefield_field($op, &$node, $field, &$items, $teaser, $page) {
         // Multivalue fields will have one row in the db, so make sure that it isn't empty 
         if (isset($tabledata)) {
 
-          // Run the table head through input filters
-          foreach ($tabledata[0] as $header_key => $header_data) {
-            if (!empty($field['cell_processing'])) {
-              $header[$header_key] = array('data' => check_markup($header_data, $table['format']), 'class' => 'row_0' . ' col_' . $header_key);
-            }
-            else {
-              $header[$header_key] = array('data' => check_plain($header_data), 'class' => 'row_0' . ' col_' . $header_key);
-            }
-          }
-          unset($tabledata[0]);
-  
           // Run the table body through input filters
           if (!empty($tabledata)) {
             foreach ($tabledata as $row_key => $row) {
@@ -146,6 +135,8 @@ function tablefield_field($op, &$node, $field, &$items, $teaser, $page) {
               }
             }
           }
+
+          $header = array_shift($tabledata);
 
           $items[$delta]['value'] = theme('tablefield_view', $header, $tabledata, $node->nid, $delta);
         }
@@ -350,12 +341,12 @@ function tablefield_process($element, $edit, $form_state, $form) {
   }
 
   // Render the form table
-  $element['tablefield']['break' . $i] = array(
+  $element['tablefield']['a_break'] = array(
     '#type' => 'markup',
     '#value' => '<table>',
   );
   for ($i = 0; $i < $count_rows; $i++) {
-    $element['tablefield']['break' . $i] = array(
+    $element['tablefield']['b_break' . $i] = array(
       '#type' => 'markup',
       '#value' => '<tr>',
     );
@@ -369,12 +360,12 @@ function tablefield_process($element, $edit, $form_state, $form) {
         '#suffix' => '</td>',
       );
     }
-    $element['tablefield']['break' . $i] = array(
+    $element['tablefield']['d_break' . $i] = array(
       '#type' => 'markup',
       '#value' => '</tr>',
     );
   }
-  $element['tablefield']['break' . $i] = array(
+  $element['tablefield']['t_break' . $i] = array(
     '#type' => 'markup',
     '#value' => '</table>',
   );
