@@ -149,9 +149,11 @@ function _services_keyauth_alter_browse_form(&$form, $method) {
         );
         break;
       case 'sessid':
+        $form['arg'][$key]['#title']  = 'Session ID';
         $form['arg'][$key]['#default_value']  = session_id();
         break;
       case 'domain_name':
+        $form['arg'][$key]['#title']  = 'Domain name';
         $form['arg'][$key]['#default_value'] = $_SERVER['HTTP_HOST'];
         break;
       case 'domain_time_stamp':
@@ -163,6 +165,7 @@ function _services_keyauth_alter_browse_form(&$form, $method) {
         );
         break;
       case 'nonce':
+        $form['arg'][$key]['#title']  = 'Nonce';
         $form['arg'][$key]['#default_value'] = user_password();
         break;
     }
