@@ -94,7 +94,7 @@ function _services_keyauth_alter_methods(&$methods) {
   $arg_api_key = array(
     'name' => 'hash',
     'type' => 'string',
-    'description' => t('A valid API key.'),
+    'description' => t('An SHA-256 hash of the timestamp, domain, nonce, and method name delimited by semicolons and using the remote API key as the shared key.'),
   );
 
   foreach ($methods as $key => &$method) {
