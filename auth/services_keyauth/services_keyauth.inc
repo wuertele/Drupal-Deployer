@@ -80,7 +80,7 @@ function _services_keyauth_alter_methods(&$methods) {
   $arg_nonce = array(
     'name' => 'nonce',
     'type' => 'string',
-    'description' => t('One time use nonce also used hash key.'),
+    'description' => t('One-time-use nonce also used to hash key.'),
   );
 
   // domain arg
