@@ -84,7 +84,7 @@ function services_admin_browse_method($method) {
   foreach ($method['args'] as $arg) {
     $count++;
     $output .= '<dt><em class="type">'. $arg['type'] .'</em><strong class="name">'.
-      $arg['name'] .'</strong> ('. (($arg['optional']) ? t('optional') : t('required')) .')</dt>';
+      ' '. $arg['name'] .'</strong> ('. (($arg['optional']) ? t('optional') : t('required')) .')</dt>';
     $output .= '<dd>'. $arg['description'] .'</dd>';
   }
 
