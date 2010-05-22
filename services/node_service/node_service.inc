@@ -55,6 +55,15 @@ function node_service_get($nid, $fields = array()) {
 function node_service_get_access($nid) {
   global $user;
   $node = node_load($nid);
+  
+  // If the node doesn't exist, we want to report a 'node not found' services
+  // error, but if we return FALSE here services will report an 'access denied'
+  // error. So we just return TRUE here and let everything move to fail in the
+  // callback function.
+  if (!$node) {
+    return TRUE;
+  }
+
   return (node_access('view', $node) && user_access('load node data'));
 }
 
