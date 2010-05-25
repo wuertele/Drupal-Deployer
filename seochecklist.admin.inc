@@ -106,6 +106,11 @@ function seochecklist_admin_settings() {
     '#default_value' => variable_get('seo_checklist_book_references', 1),
     '#description' => t('<a href="@book-purchase">Purchase from Packt Publishing</a>', array('@book-purchase' => SEOCHECKLIST_BOOK_PURCHASE)),
   );
+  $form['extras']['buy_seo_book'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Buy Drupal 6 Search Engine Optimization by Ben Finklea from <a href="@amazon">Amazon</a> or <a href="@packt">Packt</a>.', array('@amazon' => 'http://www.amazon.com/gp/product/1847198228?ie=UTF8&tag=dvdcentral02&linkCode=as2&camp=1789&creative=390957&creativeASIN=1847198228', '@packt' => 'https://www.packtpub.com/drupal-6-search-engine-optimization-seo/book?mid/170909568gh3')),
+    '#default_value' => variable_get('seo_checklist_buy_book', 1),
+  );
 
   $form['save'] = array(
     '#type' => 'submit',
