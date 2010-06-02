@@ -13,11 +13,6 @@ $plugin = array(
   'render panel' => 'panels_tabs_style_render_panel',
   'settings form'     => 'panels_tabs_style_settings_form',
   'settings validate' => 'panels_tabs_style_settings_validate',
-  'hook theme' => array(
-    'panels_tabs_style_render_panel' => array(
-      'arguments' => array('content' => NULL),
-    ),
-  ),
 );
 
 
