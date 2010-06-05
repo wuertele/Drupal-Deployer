@@ -114,19 +114,19 @@ function token_token_list($type = 'all') {
 
 /**
  * General function to include the files that token relies on for the real work.
- *
  */
 function token_include() {
-  $path = drupal_get_path('module', 'token');
-  require_once("$path/token_node.inc");
-  require_once("$path/token_user.inc");
-  if (module_exists('taxonomy')) {
-    require_once("$path/token_taxonomy.inc");
-  }
-  if (module_exists('comment')) {
-    require_once("$path/token_comment.inc");
-  }
+  static $run = FALSE;
 
+  if (!$run) {
+    $run = TRUE;
+    $modules_enabled = array_keys(module_list());
+    $modules = array('node', 'user', 'taxonomy', 'comment');
+    $modules = array_intersect($modules, $modules_enabled);
+    foreach ($modules as $module) {
+      module_load_include('inc', 'token', "token_$module");
+    }
+  }
 }
 
 /**
@@ -324,6 +324,10 @@ function token_get_list($types = 'all') {
       if (is_array($result)) {
         foreach ($result as $category => $tokens) {
           foreach ($tokens as $token => $title) {
+            // Automatically append a raw token warning.
+            if (substr($token, -4) === '-raw' && strpos($title, t('raw user input')) === FALSE && strpos($title, '1269441371') === FALSE) {
+              $title .= ' <em>' . t('Warning: Token value contains raw user input.') . '</em>';
+            }
             $return[$category][$token] = $title;
           }
         }

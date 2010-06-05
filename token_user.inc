@@ -57,7 +57,7 @@ function user_token_values($type, $object = NULL, $options = array()) {
 function user_token_list($type = 'all') {
   if ($type == 'user' || $type == 'all') {
     $tokens['user']['user']           = t("User's name");
-    $tokens['user']['user-raw']       = t("User's unfiltered name. WARNING - raw user input.");
+    $tokens['user']['user-raw']       = t("User's unfiltered name.");
 
     $tokens['user']['uid']            = t("User's ID");
     $tokens['user']['mail']           = t("User's email address");

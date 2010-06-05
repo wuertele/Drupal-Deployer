@@ -67,17 +67,17 @@ function comment_token_list($type = 'all') {
     $tokens['comment']['comment-cid']             = t('Comment ID');
     $tokens['comment']['comment-nid']             = t("Comment's node ID");
     $tokens['comment']['comment-title']           = t('Comment title');
-    $tokens['comment']['comment-title-raw']       = t('Comment title. WARNING - raw user input');
+    $tokens['comment']['comment-title-raw']       = t('Comment title.');
     $tokens['comment']['comment-body']            = t('Comment body');
-    $tokens['comment']['comment-body-raw']        = t('Comment body. WARNING - raw user input');
+    $tokens['comment']['comment-body-raw']        = t('Comment body.');
 
     $tokens['comment']['comment-author-uid']      = t("Comment author's user id");
     $tokens['comment']['comment-author-name']     = t("Comment author's user name");
-    $tokens['comment']['comment-author-name-raw'] = t("Comment author's user name. WARNING - raw user input");
+    $tokens['comment']['comment-author-name-raw'] = t("Comment author's user name.");
     $tokens['comment']['comment-author-homepage'] = t("Comment author's home page.");
 
     $tokens['comment']['comment-author-mail']     = t("Comment author's e-mail.");
-    $tokens['comment']['comment-author-mail-raw'] = t("Comment author's e-mail. WARNING - raw user input.");
+    $tokens['comment']['comment-author-mail-raw'] = t("Comment author's e-mail.");
 
     $tokens['comment'] += token_get_date_token_info(t('Comment creation'), 'comment-');
 

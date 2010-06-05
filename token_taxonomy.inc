@@ -46,11 +46,11 @@ function taxonomy_token_list($type = 'all') {
   if ($type == 'taxonomy' || $type == 'all') {
     $tokens['taxonomy']['tid'] = t('The id number of the category.');
     $tokens['taxonomy']['cat'] = t('The name of the category.');
-    $tokens['taxonomy']['cat-raw'] = t('The unfiltered name of the category. WARNING - raw user input.');
+    $tokens['taxonomy']['cat-raw'] = t('The unfiltered name of the category.');
     $tokens['taxonomy']['cat-description'] = t('The optional description of the taxonomy term.');
     $tokens['taxonomy']['vid'] = t("The id number of the category's parent vocabulary.");
     $tokens['taxonomy']['vocab'] = t("The vocabulary that the page's first category belongs to.");
-    $tokens['taxonomy']['vocab-raw'] = t("The unfiltered vocabulary that the page's first category belongs to. WARNING - raw user input.");
+    $tokens['taxonomy']['vocab-raw'] = t("The unfiltered vocabulary that the page's first category belongs to.");
     $tokens['taxonomy']['vocab-description'] = t('The optional description of the taxonomy vocabulary.');
 
     return $tokens;

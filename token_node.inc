@@ -166,21 +166,21 @@ function node_token_list($type = 'all') {
     $tokens['node']['type-name']       = t('Node type (user-friendly version)');
     $tokens['node']['language']        = t('Node language');
     $tokens['node']['title']           = t('Node title');
-    $tokens['node']['title-raw']       = t('Unfiltered node title. WARNING - raw user input.');
+    $tokens['node']['title-raw']       = t('Unfiltered node title.');
 
     $tokens['node']['author-uid']      = t("Node author's user id");
     $tokens['node']['author-name']     = t("Node author's user name");
-    $tokens['node']['author-name-raw'] = t("Node author's user name. WARNING - raw user input.");
+    $tokens['node']['author-name-raw'] = t("Node author's user name.");
     $tokens['node']['author-mail']     = t("Node author's e-mail.");
-    $tokens['node']['author-mail-raw'] = t("Node author's e-mail. WARNING - raw user input.");
+    $tokens['node']['author-mail-raw'] = t("Node author's e-mail.");
     $tokens['node']['node_comment_count'] = t("The number of comments on a node.");
     $tokens['node']['unread_comment_count'] = t("The number of new comments on a node.");
 
     $tokens['node']['term']            = t("Name of top taxonomy term");
-    $tokens['node']['term-raw']        = t("Unfiltered name of top taxonomy term. WARNING - raw user input.");
+    $tokens['node']['term-raw']        = t("Unfiltered name of top taxonomy term.");
     $tokens['node']['term-id']         = t("ID of top taxonomy term");
     $tokens['node']['vocab']           = t("Name of top term's vocabulary");
-    $tokens['node']['vocab-raw']       = t("Unfiltered name of top term's vocabulary. WARNING - raw user input.");
+    $tokens['node']['vocab-raw']       = t("Unfiltered name of top term's vocabulary.");
     $tokens['node']['vocab-id']        = t("ID of top term's vocabulary");
 
     // Temporarily disabled -- see notes in node_token_values.
@@ -190,11 +190,11 @@ function node_token_list($type = 'all') {
     $tokens['node']['mod-????']        = t('All tokens for node creation dates can also be used with with the "mod-" prefix; doing so will use the modification date rather than the creation date.');
 
     $tokens['node']['menu']                = t("The name of the menu the node belongs to.");
-    $tokens['node']['menu-raw']            = t("The name of the menu the node belongs to. WARNING - raw user input.");
+    $tokens['node']['menu-raw']            = t("The name of the menu the node belongs to.");
     $tokens['node']['menupath']            = t("The menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /.");
-    $tokens['node']['menupath-raw']        = t("The unfiltered menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /. WARNING - raw user input.");
+    $tokens['node']['menupath-raw']        = t("The unfiltered menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /.");
     $tokens['node']['menu-link-title']     = t("The text used in the menu as link text for this item.");
-    $tokens['node']['menu-link-title-raw'] = t("The unfiltered text used in the menu as link text for this item. WARNING - raw user input.");
+    $tokens['node']['menu-link-title-raw'] = t("The unfiltered text used in the menu as link text for this item.");
 
     return $tokens;
   }
@@ -284,8 +284,8 @@ function book_token_list($type) {
     $list['book']['book_id']        = t("The id of the node's book parent.");
     $list['book']['bookpath']       = t("The titles of all parents in the node's book hierarchy.");
 
-    $list['book']['book-raw']       = t("The unfiltered title of the node's book parent. WARNING - raw user input.");
-    $list['book']['bookpath-raw']   = t("The unfiltered titles of all parents in the node's book hierarchy. WARNING - raw user input.");
+    $list['book']['book-raw']       = t("The unfiltered title of the node's book parent.");
+    $list['book']['bookpath-raw']   = t("The unfiltered titles of all parents in the node's book hierarchy.");
 
     return $list;
   }
