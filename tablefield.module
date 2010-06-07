@@ -340,6 +340,32 @@ function tablefield_process($element, $edit, $form_state, $form) {
     $count_rows = $edit['tablefield']['count_rows'];
   }
 
+  // Allow the user to import a csv file
+  $element['tablefield']['import'] = array(
+    '#type' => 'fieldset',
+    '#tree' => FALSE,
+    '#title' => t('Import from CSV'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+  $element['tablefield']['import']['tablefield_csv_' . $field['field_name'] . '_' . $delta] = array(
+    '#title' => 'File upload',
+    '#type' => 'file',
+  );
+  $element['tablefield']['import']['rebuild_' . $field['field_name'] . '_' . $delta] = array(
+    '#type' => 'button',
+    '#validate' => array(),
+    '#limit_validation_errors' => array('title'),
+    '#executes_submit_callback' => TRUE,
+    '#validate' => array('tablefield_import_csv'),
+    '#submit' => array('tablefield_rebuild_form', 'node_form_build_preview'),
+    '#value' => 'Import File to: ' . $field['field_name'] . '-' . $delta,
+    '#attributes' => array(
+      'class' => array('tablefield-rebuild'),
+      'id' => 'tablefield-import-button-' . $field['field_name'] . '-' . $delta,
+    ),
+  );
+
   // Render the form table
   $element['tablefield']['a_break'] = array(
     '#type' => 'markup',
@@ -424,3 +450,70 @@ function tablefield_rationalize_table($tablefield) {
 
   return $tabledata;
 }
+
+/**
+ * Validation function to help import data from a CSV file
+ * @param array $form
+ * @param array $form_state
+ */
+function tablefield_import_csv($form, &$form_state) {
+  // Look for the field name by checking on the clicked button
+  if(preg_match('/edit-rebuild-(.*)/', $form_state['clicked_button']['#id'], $id)) {
+    // Extract the field and file name from the id of the clicked button
+    $file_name = preg_replace('/\-/', '_', $id[1]);
+    preg_match('/_([0-9]+)$/', $file_name, $field_delta);
+    // Extract the field delta from the field name
+    $delta = $field_delta[1];
+    $field_name = preg_replace('/' . $field_delta[0] . '/', '', $file_name);
+
+    // @todo fail out if no file
+    // @todo validate file type
+    $file = file_save_upload('tablefield_csv_' . $file_name);
+
+    if (is_object($file)) {
+      $csv = file($file->filepath);
+
+      tablefield_delete_table_values($form_state['values'][$field_name][$delta]['tablefield']);
+
+      // Populate CSV values
+      $max_col_count = 0;
+      $row_count = 0;
+      foreach ($csv as $row_id => $row_csv) {
+        $row = explode(',', $row_csv);
+        $col_count = 0; 
+        foreach ($row as $col_id => $col) {
+          $form_state['values'][$field_name][$delta]['tablefield']['cell_' . $row_id . '_' . $col_id] = check_plain($col);
+          $col_count++;
+        }
+        $max_col_count = $col_count > $max_col_count ? $col_count : $max_col_count;
+        $row_count++;
+      }
+      
+      $form_state['values'][$field_name][$delta]['tablefield']['count_cols'] = $max_col_count;
+      $form_state['values'][$field_name][$delta]['tablefield']['count_rows'] = $row_count;
+      $form_state['values']['tablefield_import'] = TRUE;
+      //$form_state['rebuild'] = TRUE;
+
+      drupal_set_message(t('Successfully imported @file. Please preview the result before saving.', array('@file' => $file->filename)));
+    }
+
+    // Remove the temporary file
+    db_query("DELETE FROM {files} WHERE fid = %d", $file->fid);
+    file_delete($file->filepath);
+  }
+}
+
+/**
+ * Helper function to remove all values in a particular table
+ * @param array $tablefield
+ */
+function tablefield_delete_table_values(&$tablefield) {
+  // Empty out previously entered values
+  foreach ($tablefield as $key => $value) {
+    if (strpos($key, 'cell_') === 0) {
+      $tablefield[$key] = '';
+    }
+  }
+}
+
+
