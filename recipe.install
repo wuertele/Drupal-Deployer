@@ -195,6 +195,41 @@ function recipe_install() {
 
 
 /**
+ * Implementation of hook_enable().
+ * Remember last used recipe vocabs.
+ */
+function recipe_enable() {
+  $vocab_ids = variable_get('recipe_last_vocab_ids', FALSE);
+  if ( $vocab_ids ) {
+    foreach ($vocab_ids as $vid) {
+      if ($vocabulary = taxonomy_vocabulary_load($vid)) {
+        // Existing install. Add back recipe node type, if the recipe
+        // vocabulary still exists. Keep all other node types intact there.
+        $vocabulary = (array) $vocabulary;
+        $vocabulary['nodes']['recipe'] = 1;
+        taxonomy_save_vocabulary($vocabulary);
+      }
+    }
+  }
+}
+
+
+/**
+ * Implementation of hook_disable().
+ * Reinstate last used recipe vocabs.
+ */
+function recipe_disable() {
+  if ($vocabs = taxonomy_get_vocabularies('recipe')) {
+    $vocab_ids = array();
+    foreach ($vocabs as $v) {
+      $vocab_ids[] = $v->vid;
+    }
+    variable_set('recipe_last_vocab_ids', $vocab_ids);
+  }
+}
+
+
+/**
  * Load the recipe_units table.
  */
 function recipe_populate_units() {
