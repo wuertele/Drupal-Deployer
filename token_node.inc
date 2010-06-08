@@ -82,6 +82,8 @@ function node_token_values($type, $object = NULL, $options = array()) {
         $values['menu-raw']            = $menu;
         $values['menu-link-title']     = check_plain($menu_link['title']);
         $values['menu-link-title-raw'] = $menu_link['link_title'];
+        $values['menu-link-mlid']      = $menu_link['mlid'];
+        $values['menu-link-plid']      = $menu_link['plid'];
       }
       else {
         $values['menu']                = '';
@@ -90,6 +92,8 @@ function node_token_values($type, $object = NULL, $options = array()) {
         $values['menupath-raw']        = '';
         $values['menu-link-title']     = '';
         $values['menu-link-title-raw'] = '';
+        $values['menu-link-mlid']      = '';
+        $values['menu-link-plid']      = '';
       }
 
       // And now taxonomy, which is a bit more work. This code is adapted from
@@ -201,6 +205,8 @@ function node_token_list($type = 'all') {
     $tokens['node']['menupath-raw']        = t("The unfiltered menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /.");
     $tokens['node']['menu-link-title']     = t("The text used in the menu as link text for this item.");
     $tokens['node']['menu-link-title-raw'] = t("The unfiltered text used in the menu as link text for this item.");
+    $tokens['node']['menu-link-mlid']      = t("The unique ID of the node's menu link.");
+    $tokens['node']['menu-link-plid']      = t("The unique ID of the node's menu link parent.");
 
     return $tokens;
   }

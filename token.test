@@ -212,6 +212,47 @@ class TokenTaxonomyTestCase extends TokenTestHelper {
   }
 }
 
+class TokenMenuTestCase extends TokenTestHelper {
+  public static function getInfo() {
+    return array(
+      'name' => 'Menu token tests',
+      'description' => 'Test the menu tokens.',
+      'group' => 'Token',
+    );
+  }
+
+  function setUp() {
+    parent::setUp('menu');
+  }
+
+  function testMenuTokens() {
+    $root_link = array(
+      'link_path' => '<front>',
+      'link_title' => 'Front link',
+      'menu_name' => 'primary-links',
+    );
+    menu_link_save($root_link);
+
+    $node_link = array(
+      'enabled' => TRUE,
+      'link_title' => 'Node link',
+      'plid' => $root_link['mlid'],
+      'customized' => 0,
+    );
+    $node = $this->drupalCreateNode(array('menu' => $node_link));
+
+    // Test [node:menu] tokens.
+    $tokens = array(
+      'menu' => 'Primary links',
+      'menu-link-title' => 'Node link',
+      'menu-link-mlid' => $node->menu['mlid'],
+      'menu-link-plid' => $node->menu['plid'],
+      'menu-link-plid' => $root_link['mlid'],
+    );
+    $this->assertTokens('node', $node, $tokens);
+  }
+}
+
 class TokenTestCase extends DrupalWebTestCase {
   public static function getInfo() {
     return array(
