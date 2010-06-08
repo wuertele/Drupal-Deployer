@@ -35,11 +35,6 @@ function recipe_theme($existing, $type, $theme, $path) {
 
   return array(
 
-    'node' => array(
-      'arguments' => array('node' => NULL, 'teaser' => FALSE, 'page' => FALSE),
-      'template' => 'node-recipe',
-    ),
-
     // The ingredients sub-form on the recipe edit screen.
     'ingredients_form' => array(
       'arguments' => array('form' => NULL),
@@ -67,6 +62,22 @@ function recipe_theme($existing, $type, $theme, $path) {
       'file' => 'recipe_name_index.inc',
     ),
   );
+}
+
+
+/**
+ * Implementation of theme_registry_alter().
+ * 'theme paths' for the node template doesn't include the recipe module directory.
+ * Add it so that the node-recipe template is found.
+ */
+function recipe_theme_registry_alter(&$theme_registry) {
+
+  // modules/node is first, pop it off.
+  $top_path = array_shift($theme_registry['node']['theme paths']);
+  // Get the path to this module
+  $module_path = drupal_get_path('module', 'recipe');
+  // Stick the top path with the module path back on top
+  array_unshift($theme_registry['node']['theme paths'], $top_path, $module_path);
 }
 
 
