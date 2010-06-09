@@ -83,9 +83,8 @@ function token_token_values($type, $object = NULL) {
       $values['site-slogan']  = variable_get('site_slogan', '');
       $values['site-mission'] = filter_xss_admin(variable_get('site_mission', ''));
       $values['site-mail']    = variable_get('site_mail', '');
-      $time = time(); $tz = variable_get('date_default_timezone', 0);
-      $values['site-date']    = format_date($time, 'small', '', $tz);
-      $values += token_get_date_token_values($time, 'site-date-');
+      $values += token_get_date_token_values(NULL, 'site-date-');
+      $values['site-date'] = $values['site-date-small'];
       // The page number may or may not be present. If it is, it may be comma separated values in which case grab the first.
       $page = isset($_GET['page']) ? $_GET['page'] : '';
       $values['page-number']  = 1 + (int)(($p = strpos($page, ',')) ? substr($page, 0, $p) : $page);
@@ -117,7 +116,6 @@ function token_token_list($type = 'all') {
   $tokens['global']['site-slogan']  = t('The slogan of the current Drupal website.');
   $tokens['global']['site-mission'] = t('The mission of the current Drupal website.');
   $tokens['global']['site-mail']    = t('The contact email address for the current Drupal website.');
-  $tokens['global']['site-date']    = t("The current date on the site's server.");
   $tokens['global'] += token_get_date_token_info(t('The current'), 'site-date-');
   return $tokens;
 }
@@ -396,6 +394,7 @@ function _token_get_id($type = 'global', $object = NULL) {
  * @param $description
  */
 function token_get_date_token_info($description, $token_prefix = '') {
+  $tokens[$token_prefix . 'small']   = t("!description date in 'small' format. <em>(06/07/2010 - 23:28)</e>", array('!description' => $description));
   $tokens[$token_prefix . 'yyyy']   = t("!description year (four digit)", array('!description' => $description));
   $tokens[$token_prefix . 'yy']     = t("!description year (two digit)", array('!description' => $description));
   $tokens[$token_prefix . 'month']  = t("!description month (full word)", array('!description' => $description));
@@ -411,6 +410,7 @@ function token_get_date_token_info($description, $token_prefix = '') {
   $tokens[$token_prefix . 'dd']     = t("!description day (two digits with leading zeros)", array('!description' => $description));
   $tokens[$token_prefix . 'd']      = t("!description day (one or two digits without leading zeros)", array('!description' => $description));
   $tokens[$token_prefix . 'raw']    = t("!description in UNIX timestamp format (1269441371)", array('!description' => $description));
+  $tokens[$token_prefix . 'since']  = t("!description in 'time-since' format. (40 years 3 months)", array('!description' => $description));
   return $tokens;
 }
 
@@ -419,8 +419,12 @@ function token_get_date_token_info($description, $token_prefix = '') {
  *
  * @param $description
  */
-function token_get_date_token_values($timestamp, $token_prefix = '') {
+function token_get_date_token_values($timestamp = NULL, $token_prefix = '') {
   $tokens = array();
+  $time = time();
+  if (!isset($timestamp)) {
+    $timestamp = $time;
+  }
   $timezone = variable_get('date_default_timezone', 0);
 
   $formats = array(
@@ -441,7 +445,9 @@ function token_get_date_token_values($timestamp, $token_prefix = '') {
     $tokens[$token_prefix . $token] = format_date($timestamp, 'custom', $format, $timezone);
   }
 
+  $tokens[$token_prefix . 'small'] = format_date($timestamp, 'small', '', $timezone);
   $tokens[$token_prefix . 'raw'] = $timestamp;
+  $tokens[$token_prefix . 'since'] = format_interval($time - $timestamp);
 
   $timestamp += $timezone;
   if (version_compare(PHP_VERSION, '5.1.0', '>=')) {

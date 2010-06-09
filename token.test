@@ -25,7 +25,7 @@ class TokenTestHelper extends DrupalWebTestCase {
     $values = token_get_values($type, $object, TRUE, $options);
     $values = array_combine($values->tokens, $values->values);
     foreach ($tokens as $token => $expected) {
-      $this->assertIdentical($values[$token], $expected, t("Token value for [@token] was '!actual', expected value '!expected'.", array('@token' => $token, '!actual' => $values[$token], '!expected' => $expected)));
+      $this->assertIdentical($values[$token], $expected, t("Token value for [@token] was '@actual', expected value '@expected'.", array('@token' => $token, '@actual' => $values[$token], '@expected' => $expected)));
     }
   }
 }
@@ -48,7 +48,7 @@ class TokenUnitTestCase extends TokenTestHelper {
       'valid tokens' => array(
         '[title-raw]',
         '[yyyy]',
-        //'[mod-yyyy]',
+        '[mod-yyyy]',
         '[site-name]',
         '[site-slogan]',
       ),
@@ -85,13 +85,14 @@ class TokenNodeTestCase extends TokenTestHelper {
   }
 
   function testNodeTokens() {
+    $time = time();
     $created = gmmktime(0, 0, 0, 11, 19, 1978);
     $changed = gmmktime(0, 0, 0, 7, 4, 1984);
     $node = $this->drupalCreateNode(array(
       'type' => 'page',
       'language' => 'und',
       'created' => $created,
-      'log' => '<blink>' . $this->randomString() . '</blink>',
+      'log' => '<blink>' . $this->randomName() . '</blink>',
     ));
     $node->changed = $changed;
 
@@ -100,6 +101,7 @@ class TokenNodeTestCase extends TokenTestHelper {
       'type' => 'page',
       'type-name' => 'Page',
       'language' => 'und',
+      'small' => '11/19/1978 - 00:00',
       'yyyy' => '1978',
       'yy' => '78',
       'month' => 'November',
@@ -113,6 +115,8 @@ class TokenNodeTestCase extends TokenTestHelper {
       'dd' => '19',
       'd' => '19',
       'raw' => 280281600,
+      'since' => format_interval($time - 280281600),
+      'mod-small' => '07/04/1984 - 00:00',
       'mod-yyyy' => '1984',
       'mod-yy' => '84',
       'mod-month' => 'July',
@@ -126,6 +130,7 @@ class TokenNodeTestCase extends TokenTestHelper {
       'mod-dd' => '04',
       'mod-d' => '4',
       'mod-raw' => 457747200,
+      'mod-since' => format_interval($time - 457747200),
       'log' => filter_xss($node->log),
       'log-raw' => $node->log,
     );
@@ -171,6 +176,7 @@ class TokenCommentTestCase extends TokenTestHelper {
   }
 
   function testCommentTokens() {
+    $time = time();
     $comment = $this->createComment(array(
       'timestamp' => gmmktime(0, 0, 0, 7, 4, 1984),
     ));
@@ -191,6 +197,7 @@ class TokenCommentTestCase extends TokenTestHelper {
       'comment-dd' => '04',
       'comment-d' => '4',
       'comment-raw' => '457747200',
+      'comment-since' => format_interval($time - 457747200),
     );
     $this->assertTokens('comment', $comment, $tokens);
 

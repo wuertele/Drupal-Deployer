@@ -38,13 +38,18 @@ function user_token_values($type, $object = NULL, $options = array()) {
       $values['user-raw']       = $account->name;
       $values['uid']            = $account->uid;
       $values['mail']           = $account->uid ? $account->mail : '';
-      $values['reg-date']       = $account->uid ? format_date($account->created, 'small') : '';
-      $values['reg-since']      = $account->uid ? format_interval(time() - $account->created) : '';
-      $values['log-date']       = $account->uid ? format_date($account->access, 'small') : '';
-      $values['log-since']      = $account->uid ? format_interval(time() - $account->access) : '';
       $values['date-in-tz']     = $account->uid ? format_date(time(), 'small', '', $account->timezone) : '';
       $values['account-url']    = $account->uid ? url("user/$account->uid") : '';
       $values['account-edit']   = $account->uid ? url("user/$account->uid/edit") : '';
+
+      if ($account->uid) {
+        $values += token_get_date_token_values($account->created, 'user-created-');
+        $values += token_get_date_token_values($account->access, 'user-last-login-');
+        $values['reg-date'] = $values['user-created-small'];
+        $values['reg-since'] = $values['user-created-since'];
+        $values['log-date'] = $values['user-last-login-small'];
+        $values['log-since'] = $values['user-last-login-since'];
+      }
 
       break;
   }
@@ -62,10 +67,8 @@ function user_token_list($type = 'all') {
     $tokens['user']['uid']            = t("User's ID");
     $tokens['user']['mail']           = t("User's email address");
 
-    $tokens['user']['reg-date']       = t("User's registration date");
-    $tokens['user']['reg-since']      = t("User's registration date in 'time-since' format. (40 years 2 months)");
-    $tokens['user']['log-date']       = t("User's last login date");
-    $tokens['user']['log-since']      = t("User's last login date in 'time-since' format. (40 years 2 months)");
+    $tokens['user'] += token_get_date_token_info(t("User's registration"), 'user-created-');
+    $tokens['user'] += token_get_date_token_info(t("User's last login"), 'user-last-login-');
     $tokens['user']['date-in-tz']     = t("The current date in the user's timezone");
     $tokens['user']['account-url']    = t("The URL of the user's profile page.");
     $tokens['user']['account-edit']   = t("The URL the user's account editing page.");

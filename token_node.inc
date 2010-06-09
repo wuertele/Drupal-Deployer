@@ -197,7 +197,7 @@ function node_token_list($type = 'all') {
     // $tokens['node']['catpath']        = t("Full taxonomy tree for the topmost term");
 
     $tokens['node'] += token_get_date_token_info(t('Node creation'));
-    $tokens['node']['mod-????']        = t('All tokens for node creation dates can also be used with with the "mod-" prefix; doing so will use the modification date rather than the creation date.');
+    $tokens['node'] += token_get_date_token_info(t('Node modification'), 'mod-');
 
     $tokens['node']['menu']                = t("The name of the menu the node belongs to.");
     $tokens['node']['menu-raw']            = t("The name of the menu the node belongs to.");
