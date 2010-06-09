@@ -133,7 +133,11 @@ function _htmlpurifier_process($text, $format, $cache = TRUE) {
  * Loads the HTML Purifier library, and performs global initialization.
  */
 function _htmlpurifier_load() {
-  if (class_exists('HTMLPurifier')) return;
+  static $done = false;
+  if ($done) {
+    return;
+  }
+  $done = true;
   $module_path = drupal_get_path('module', 'htmlpurifier');
   $library_path = $module_path;
   if (function_exists('libraries_get_path')) {
@@ -149,17 +153,12 @@ function _htmlpurifier_load() {
 
   require_once "$library_path/library/HTMLPurifier.auto.php";
   require_once "$module_path/HTMLPurifier_DefinitionCache_Drupal.php";
+
   $factory = HTMLPurifier_DefinitionCacheFactory::instance();
   $factory->register('Drupal', 'HTMLPurifier_DefinitionCache_Drupal');
-  
+
   // Register the version as a variable:
-  if (!defined('HTMLPurifier::VERSION')) {
-    $purifier = new HTMLPurifier;
-    $version = $purifier->version;
-  } else {
-    $version = HTMLPurifier::VERSION;
-  }
-  variable_set('htmlpurifier_version_ours', $version);
+  variable_set('htmlpurifier_version_ours', HTMLPurifier::VERSION);
 }
 
 /**

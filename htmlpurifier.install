@@ -72,25 +72,6 @@ function htmlpurifier_requirements($phase) {
     return $requirements;
   }
 
-  require_once "$library_path/library/HTMLPurifier.auto.php";
-  if (!defined('HTMLPurifier::VERSION') || version_compare($old = HTMLPurifier::VERSION, $req_version, '<')) {
-
-    $requirements['htmlpurifier_library'] = array (
-      'title' => $t('HTML Purifier library'),
-      'severity' => REQUIREMENT_ERROR,
-      'description' => $t("HTML Purifier @old is not compatible
-        with this module: HTML Purifier <strong>@required</strong> or later is required.
-        If the required version is a dev version, you will need to
-        <a href=\"http://htmlpurifier.org/download.html#Subversion\">check
-        code out of Subversion</a> or
-        <a href=\"http://htmlpurifier.org/download.html#NightlyBuilds\">download a nightly</a>
-        to use this module.", array('@old' => $old, '@required' => $req_version)
-      ),
-    );
-
-    return $requirements;
-  }
-
   if ($complain_loc) {
     $requirements['htmlpurifier_library_loc'] = array(
       'title' => $t('HTML Purifier library location'),
@@ -119,6 +100,36 @@ function htmlpurifier_requirements($phase) {
       $current = variable_get('htmlpurifier_version_current', FALSE);
     }
     $ours = variable_get('htmlpurifier_version_ours', FALSE);
+    if (!$ours || version_compare($ours, $req_version, '<')) {
+      // Can't use _htmlpurifier_load(), since it assumes a later
+      // version
+      require_once "$library_path/library/HTMLPurifier.auto.php";
+      if (defined('HTMLPurifier::VERSION')) {
+        $version = HTMLPurifier::VERSION;
+      } else {
+        $purifier = new HTMLPurifier;
+        $version = $purifier->version;
+      }
+      variable_set('htmlpurifier_version_ours', $version);
+      if (version_compare($version, $req_version, '<')) {
+
+        $requirements['htmlpurifier_library'] = array (
+          'title' => $t('HTML Purifier library'),
+          'severity' => REQUIREMENT_ERROR,
+          'description' => $t("HTML Purifier @old is not compatible
+            with this module: HTML Purifier <strong>@required</strong> or later is required.
+            If the required version is a dev version, you will need to
+            <a href=\"http://htmlpurifier.org/download.html#Git\">check
+            code out of Git</a> or
+            <a href=\"http://htmlpurifier.org/download.html#NightlyBuilds\">download a nightly</a>
+            to use this module.", array('@old' => $version, '@required' => $req_version)
+          ),
+        );
+
+        return $requirements;
+      }
+    }
+
     if (!$ours || version_compare($current, $ours, '>')) {
       // Update our version number if it can't be found, or there's a
       // mismatch.  This won't do anything if _htmlpurifier_load() has
