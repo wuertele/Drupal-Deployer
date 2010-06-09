@@ -19,7 +19,7 @@
  *    The suffix your module will use when parsing tokens. Defaults to ']'
  * @return An HTML table containing the formatting docs.
  */
-function theme_token_help($types = 'all', $prefix = '[', $suffix = ']') {
+function theme_token_help($types = 'all', $prefix = TOKEN_PREFIX, $suffix = TOKEN_SUFFIX) {
   token_include();
   $full_list = token_get_list($types);
 

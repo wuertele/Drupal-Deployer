@@ -13,6 +13,16 @@
  */
 
 /**
+ * The default token prefix string.
+ */
+define('TOKEN_PREFIX', '[');
+
+/**
+ * The default token suffix string.
+ */
+define('TOKEN_SUFFIX', ']');
+
+/**
  * Implements hook_help().
  */
 function token_help($path, $arg) {
@@ -31,7 +41,7 @@ function token_help($path, $arg) {
 function token_theme() {
   return array(
     'token_help' => array(
-      'arguments' => array('type' => 'all', 'prefix' => '[', 'suffix' => ']'),
+      'arguments' => array('type' => 'all', 'prefix' => TOKEN_PREFIX, 'suffix' => TOKEN_SUFFIX),
       'file' => 'token.pages.inc',
     ),
     'token_tree' => array(
@@ -161,7 +171,7 @@ function token_include() {
  * @return The modified version of $original, with all substitutions
  *   made.
  */
-function token_replace($original, $type = 'global', $object = NULL, $leading = '[', $trailing = ']', $options = array(), $flush = FALSE) {
+function token_replace($original, $type = 'global', $object = NULL, $leading = TOKEN_PREFIX, $trailing = TOKEN_SUFFIX, $options = array(), $flush = FALSE) {
   $full = token_get_values($type, $object, $flush, $options);
   return _token_replace_tokens($original, $full->tokens, $full->values, $leading, $trailing);
 }
@@ -196,7 +206,7 @@ function token_replace($original, $type = 'global', $object = NULL, $leading = '
  * @return The modified version of $original, with all substitutions
  *   made.
  */
-function token_replace_multiple($original, $types = array('global' => NULL), $leading = '[', $trailing = ']', $options = array(), $flush = FALSE) {
+function token_replace_multiple($original, $types = array('global' => NULL), $leading = TOKEN_PREFIX, $trailing = TOKEN_SUFFIX, $options = array(), $flush = FALSE) {
   $full = new stdClass();
   $full->tokens = $full->values = array();
   foreach ($types as $type => $object) {
@@ -354,7 +364,7 @@ function token_get_list($types = 'all') {
  *    The array of token keys, each wrapped in the specified
  *    delimiter style.
  */
-function token_prepare_tokens($tokens = array(), $leading = '[', $trailing = ']') {
+function token_prepare_tokens($tokens = array(), $leading = TOKEN_PREFIX, $trailing = TOKEN_SUFFIX) {
   foreach ($tokens as $key => $value) {
     $tokens[$key] = $leading . $value . $trailing;
   }
@@ -457,7 +467,7 @@ function token_get_date_token_values($timestamp, $token_prefix = '') {
  * @return
  *   An array with the invalid tokens in their original raw forms.
  */
-function token_get_invalid_tokens_by_context($text, $valid_types = array(), $leading = '[', $trailing = ']') {
+function token_get_invalid_tokens_by_context($text, $valid_types = array(), $leading = TOKEN_PREFIX, $trailing = TOKEN_SUFFIX) {
   // Add the token types that are always valid in global context.
   $valid_types[] = 'global';
 
@@ -495,7 +505,7 @@ function token_get_invalid_tokens_by_context($text, $valid_types = array(), $lea
  * @return
  *   An array of discovered tokens.
  */
-function token_scan($text, $leading = '[', $trailing = ']') {
+function token_scan($text, $leading = TOKEN_PREFIX, $trailing = TOKEN_SUFFIX) {
   // Matches tokens with the following pattern: [$token]
   $leading = preg_quote($leading, '/');
   $trailing = preg_quote($trailing, '/');
