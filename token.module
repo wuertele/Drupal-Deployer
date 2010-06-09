@@ -440,3 +440,65 @@ function token_get_date_token_values($timestamp, $token_prefix = '') {
 
   return $tokens;
 }
+
+/**
+ * Validate an tokens in raw text based on possible contexts.
+ *
+ * @param $text
+ *   A string with the raw text containing the raw tokens.
+ * @param $valid_types
+ *   An array of token types to validage against.
+ * @param leading
+ *    Character(s) to prepend to the token key before searching for
+ *    matches. Defaults to an open-bracket.
+ * @param trailing
+ *    Character(s) to append to the token key before searching for
+ *    matches. Defaults to a close-bracket.
+ * @return
+ *   An array with the invalid tokens in their original raw forms.
+ */
+function token_get_invalid_tokens_by_context($text, $valid_types = array(), $leading = '[', $trailing = ']') {
+  // Add the token types that are always valid in global context.
+  $valid_types[] = 'global';
+
+  $invalid_tokens = array();
+  $valid_tokens = token_get_list($valid_types);
+  foreach (token_scan($text, $leading, $trailing) as $token) {
+    $found = FALSE;
+    foreach ($valid_tokens as $category => $tokens) {
+      if (isset($tokens[$token])) {
+        $found = TRUE;
+        break;
+      }
+    }
+    if (!$found) {
+      $invalid_tokens[] = $token;
+    }
+  }
+
+  array_unique($invalid_tokens);
+  $invalid_tokens = token_prepare_tokens($invalid_tokens, $leading, $trailing);
+  return $invalid_tokens;
+}
+
+/**
+ * Build a list of all token-like patterns that appear in the text.
+ *
+ * @param $text
+ *   The text to be scanned for possible tokens.
+ * @param leading
+ *    Character(s) to prepend to the token key before searching for
+ *    matches. Defaults to an open-bracket.
+ * @param trailing
+ *    Character(s) to append to the token key before searching for
+ *    matches. Defaults to a close-bracket.
+ * @return
+ *   An array of discovered tokens.
+ */
+function token_scan($text, $leading = '[', $trailing = ']') {
+  // Matches tokens with the following pattern: [$token]
+  $leading = preg_quote($leading, '/');
+  $trailing = preg_quote($trailing, '/');
+  preg_match_all("/{$leading}([^\s]+?){$trailing}/", $text, $matches);
+  return $matches[1];
+}

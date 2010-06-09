@@ -30,6 +30,51 @@ class TokenTestHelper extends DrupalWebTestCase {
   }
 }
 
+class TokenUnitTestCase extends TokenTestHelper {
+  public static function getInfo() {
+    return array(
+      'name' => 'Token unit tests',
+      'description' => 'Test basic, low-level token functions.',
+      'group' => 'Token',
+    );
+  }
+
+  /**
+   * Test token_get_invalid_tokens() and token_get_invalid_tokens_by_context().
+   */
+  public function testGetInvalidTokens() {
+    $tests = array();
+    $tests[] = array(
+      'valid tokens' => array(
+        '[title-raw]',
+        '[small]',
+        '[mod-yyyy]',
+        '[site-name]',
+        '[site-slogan]',
+      ),
+      'invalid tokens' => array(
+        '[title-invalid]',
+        '[invalid]',
+        '[mod-invalid]',
+        '[invalid-title]',
+        '[site-invalid]',
+      ),
+      'types' => array('node'),
+    );
+
+    foreach ($tests as $test) {
+      $tokens = array_merge($test['valid tokens'], $test['invalid tokens']);
+      shuffle($tokens);
+
+      $invalid_tokens = token_get_invalid_tokens_by_context(implode(' ', $tokens), $test['types']);
+
+      sort($invalid_tokens);
+      sort($test['invalid tokens']);
+      $this->assertEqual($invalid_tokens, $test['invalid tokens'], 'Invalid tokens detected properly.');
+    }
+  }
+}
+
 class TokenNodeTestCase extends TokenTestHelper {
   public static function getInfo() {
     return array(
