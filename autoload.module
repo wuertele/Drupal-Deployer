@@ -19,11 +19,7 @@ function autoload_flush_caches() {
  * Autoload function for registered classes.
  */
 function autoload_class($class) {
-  static $lookup;
-
-  if (!isset($lookup)) {
-    $lookup = autoload_get_lookup();
-  }
+  $lookup = autoload_get_lookup();
 
    if (!empty($lookup[$class])) {
     // require() is safe because if the file were already included
@@ -42,6 +38,12 @@ function autoload_class($class) {
  *   The lookup table for what classes are stored where.
  */
 function autoload_get_lookup($reset = FALSE) {
+
+  static $lookup;
+
+  if (isset($lookup) && !$reset) {
+    return $lookup;
+  }
 
   if (!$reset && ($cache = cache_get('autoload:')) && isset($cache->data)) {
     return $cache->data;
