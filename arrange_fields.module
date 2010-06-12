@@ -1,0 +1,454 @@
+<?php
+// $Id$
+
+
+/**
+ * Implementation of hook_menu().
+ *
+ * @return array
+ */
+function arrange_fields_menu() {
+  $items = array();
+  
+  $items["arrange-fields"] = array(
+    "title" => t("Arrange fields"),
+    "page callback" => "arrange_fields_display_main",
+    "access arguments" => array("administer arrange fields"),
+    "type" => MENU_NORMAL_ITEM,
+  );
+
+  $items["arrange-fields/%"] = array(
+    "title" => t("Arrange fields - Form"),
+    "page callback" => "arrange_fields_display_form",
+    "page arguments" => array(1),
+    "access arguments" => array("administer arrange fields"),
+    "type" => MENU_CALLBACK,
+  );
+  
+
+  $items["arrange-fields/popup-edit-field"] = array(
+    "title" => t("Arrange fields - Form"),
+    "page callback" => "arrange_fields_popup_edit_field",
+    "access arguments" => array("administer arrange fields"),
+    "type" => MENU_CALLBACK,
+  );
+  
+  $items["arrange-fields/popup-close-window"] = array(
+    "title" => t("Arrange fields - Form"),
+    "page callback" => "arrange_fields_popup_close_window",
+    "access arguments" => array("administer arrange fields"),
+    "type" => MENU_CALLBACK,
+  );  
+  
+  return $items;
+}
+
+
+function arrange_fields_perm() {
+  return array("administer arrange fields");
+}
+
+/**
+ * In this function, we are going to add div's around elements we wish to make
+ * draggable on the page.  The jQuery can then grab onto those divs to make
+ * them draggable.
+ *
+ * @param array $form
+ * @param string $form_type
+ * @param bool $disable_buttons
+ */
+function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_buttons = FALSE) {
+  
+  $form["buttons"]["#prefix"] = "<div id='edit-buttons-wrapper' class='draggable-form-item'>";
+  $form["buttons"]["#suffix"] = "</div>";
+
+  // If we are arranging the buttons, then disable these buttons!
+  if ($disable_buttons) {
+    $form["buttons"]["submit"]["#attributes"]["disabled"] = "disabled";
+    $form["buttons"]["submit"]["#attributes"]["class"] .= " disabled-button ";
+    $form["buttons"]["preview"]["#attributes"]["disabled"] = "disabled";
+    $form["buttons"]["preview"]["#attributes"]["class"] .= " disabled-button ";
+  }
+
+  // Go through every element in $form to find which items need to be draggable.
+  foreach ($form as $field => $value) {
+    if (is_array($form[$field]) && $form[$field]["#type"] == "fieldset") {
+      $form[$field]["#prefix"] .= "<div id='edit-$field-fieldset-wrapper' class='draggable-form-item af-draggable-form-item-fieldset'>";
+      $form[$field]["#suffix"] .= "</div>";        
+    }
+    
+    if (is_array($form[$field]) && 
+        ($form[$field]["#type"] == "textfield" 
+        || $form[$field][0]["#type"] == "text_textfield"
+        || $form[$field][0]["#type"] == "text_textarea"
+        || $form[$field]["body"]["#type"] == "textarea"
+        || strstr($form[$field]["#type"], "option")        
+        )) {
+      
+      // Only add the edit field link if this is a CCK field, and
+      // we are currently arranging it.
+      if ($GLOBALS["arrange_fields_editing_type"] == $form_type 
+          && $form_type != ""
+          && substr($field, 0, 6) == "field_") {
+        $edit_link = "<div class='arrange-fields-control-handle' 
+                        style='font-size: 0.8em;'>
+                        <a href='javascript: arrangeFieldsPopupEditField(\"$form_type\", \"$field\");'>config</a>                        
+                      </div>";
+      }
+      else {     
+         $edit_link = "";
+      }
+      
+      $form[$field]["#prefix"] .= "<div id='edit-$field-draggable-wrapper' class='draggable-form-item'>$edit_link";
+      $form[$field]["#suffix"] .= "</div>"; 
+      $form[$field]["#attributes"]["tabindex"] = "55";         
+      
+      
+    }
+    
+  }
+  
+  // We set this global so latter on we can easily tell if we've already performed this opperation.
+  $GLOBALS["arrange_fields_added_wrappers_" . $form["form_id"]["#value"]] =  TRUE;    
+}
+
+/**
+ * This function, which is meant to be displayed in the popup, will just take
+ * CCK's field_edit_form and display it for us.  This is to make it more
+ * convienent for the user, so they do not have to go to another page.
+ *
+ * @return string
+ */
+function arrange_fields_popup_edit_field() {
+  
+  $type_name = $_REQUEST["type_name"];
+  $field_name = $_REQUEST["field"];
+  
+  // Make sure this CCK include has been loaded.
+  module_load_include('inc', 'content', 'includes/content.admin');
+  
+  $GLOBALS["arrange_fields_editing_field"] = TRUE;  
+  $rtn = drupal_get_form('content_field_edit_form', $type_name, $field_name);  
+  
+  return $rtn;
+}
+
+
+/**
+ * After the popup_edit_field has been submitted, the user comes to this page,
+ * which simply instructs them to click a button which will make the opener page
+ * save itself.  This is necessary, or the changes the user made in the popup
+ * will not be reflected on the page!
+ *
+ * @return string
+ */
+function arrange_fields_popup_close_window() {
+  drupal_add_js(drupal_get_path("module", "arrange_fields") . "/js/arrange_fields.js");    
+  
+  $rtn .= "<div style='text-align: center;'>
+            <input type='button' value='" . t("Close and Save/Reload Main Window") . "'
+            onClick='arrangeFieldsClosePopup()'>
+           </div>";
+  
+  return $rtn;
+}
+
+
+
+/**
+ * Implementation of hook_form_alter().
+ *
+ */
+function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
+  
+  $form_type = $GLOBALS["arrange_fields_editing_type"];
+  if ($GLOBALS["arrange_fields_editing"] == $form_id) {
+    // meaning, we are arranging the fields on the current form_id...
+    // Let's unset the various elements which will just get in the
+    // way of the fields.
+    unset($form["#submit"]);
+    
+    $form["#attributes"]["class"] = "arrange-fields-container";
+    
+    if (!$GLOBALS["arrange_fields_added_wrappers_" . $form["form_id"]["#value"]]) {
+      arrange_fields_add_draggable_wrappers($form, $form_type, TRUE);
+    }
+  }
+
+  
+  // Do we have position data for the content type (form) currently being displayed?
+  // If we do, then let's add styles to the page which contain the position data.
+  if ($position_data = variable_get("arrange_fields_position_data_$form_id", FALSE)) {
+    drupal_add_css(drupal_get_path("module", "arrange_fields") . "/css/arrange_fields.css");    
+    drupal_add_js(drupal_get_path("module", "arrange_fields") . "/js/arrange_fields_node_edit.js");    
+
+    $form["#attributes"]["class"] .= " arrange-fields-container ";
+    
+    if (!$GLOBALS["arrange_fields_added_wrappers_" . $form["form_id"]["#value"]]) {
+      arrange_fields_add_draggable_wrappers($form, $form_type);
+    }
+    
+    // Let's go through and assign the positions.
+    $css_markup = "";
+    $lines = explode(";", $position_data);
+    foreach ($lines as $line) {
+      if (trim($line) == "") continue; // skip blanks
+      
+      $temp = explode(",", $line);
+      $wrapper_id = trim($temp[0]);
+      $pos_top = trim($temp[1]);
+      $pos_left = trim($temp[2]);
+      $element_type = trim($temp[3]);
+      $width = trim($temp[4]);
+      $height = trim($temp[5]);
+      
+      if ($wrapper_id == "~~maxBottom~~") {
+        // This is actually the height of the container.  Let's set that,
+        // then continue.
+        $css_markup .= " .arrange-fields-container{
+                      height: $pos_top;
+                        }";
+        continue;
+      }
+      
+          
+      // Add to our CSS markup value...
+      $css_markup .= "
+            
+      #$wrapper_id{        
+        top: $pos_top;
+        left: $pos_left; 
+      }
+      ";
+      if ($width != "0px" && $element_type != "") {
+        $css_markup .= "
+        
+        #$wrapper_id $element_type{
+          width: $width;
+          height: $height;
+        }
+          ";
+      }
+      
+            
+      
+      
+    }
+    
+    if ($GLOBALS["arrange_fields_editing"] != $form_id) {
+      // Meaning, we are not currently arranging this form.  The user
+      // must actually be putting data into it on the node/edit page.  
+      // Let's remove the extra
+      // styles around the various divs so that it looks more natural.
+      $css_markup .= "
+      
+      .arrange-fields-container {
+        border: 0;
+        background: none;
+      }
+      
+      .arrange-fields-container .draggable-form-item {
+        border: 0;
+        background-color: transparent;
+      }
+      
+      ";
+    }
+    
+    // Now, add in our css markup...
+    $form["arrange_fields_css_markup"] = array(
+      "#value" => "<style>$css_markup</style>",
+    );
+    
+  }
+  
+  
+  // The user is trying to configure a field, and we want to show
+  // it to them in the custom popup.  When they submit that form, we don't
+  // want it to go to CCK's normal destination, so we set it to our
+  // other popup function.
+  if ($form_id == "content_field_edit_form" && $GLOBALS["arrange_fields_editing_field"] == TRUE) {
+    $form["#redirect"] = "arrange-fields/popup-close-window";
+  }
+  
+  
+  
+}
+
+
+/**
+ * This is the "main menu" for arrange_fields.  Simply displays a list of
+ * content types the user make arrange the fields of.
+ *
+ * @return string
+ */
+function arrange_fields_display_main() {
+  $rtn = "";
+  
+  $rtn .= t("Select a content type to arrange fields") . "...
+          <ul>";
+  
+  foreach (node_get_types() as $type) {
+      $rtn .= "<li>" . l($type->name, "arrange-fields/$type->type") . "</li>";
+  }
+  
+  $rtn .= "</ul>";
+  
+  return $rtn;
+}
+
+
+/**
+ * This function displays the arrangement form, where the user will be able
+ * to actually drag and drop to arrange fields.  In it, we actually load the
+ * form which they are arranging, but we will be saving our data to
+ * our own form.
+ *
+ * @param string $form_type
+ * @return string
+ */
+function arrange_fields_display_form($form_type) {
+
+  drupal_set_title("Arrange fields - $form_type");
+  $rtn = "";
+    
+  $form_id = $form_type . "_node_form";
+  $position_data = variable_get("arrange_fields_position_data_$form_id", FALSE);
+  if ($position_data) {
+    // Meaning, we have position data already for this form, so it is NOT
+    // a brand-new form.  So, we should not pass "true" to the javascript
+    // function arrangeFieldsRepositionToGrid.  Let's add a drupal
+    // setting so we know that is the case.
+    drupal_add_js(array("arrangeFieldsNotNewForm" => TRUE), "setting");
+  }
+  
+  module_load_include('inc', 'node', 'node.pages');
+  jquery_ui_add(array('ui.draggable', 'ui.resizable'));
+  drupal_add_js(drupal_get_path("module", "arrange_fields") . "/js/arrange_fields.js");    
+  drupal_add_js(drupal_get_path("module", "arrange_fields") . "/js/arrange_fields_node_edit.js");  
+  drupal_add_css(drupal_get_path("module", "arrange_fields") . "/css/arrange_fields.css");    
+  
+  // We want to get the form which will let us save the position
+  // information.  
+  $rtn .= drupal_get_form("arrange_fields_position_form", $form_id, $form_type);
+
+   $rtn .= "<div>" . t("Use this form to drag-and-drop fields into the order which
+          you want them to appear on the node/edit page.") . "</div>
+          <div>" . t("You may resize text fields by dragging the right-size
+              of the field.") . "</div>";
+
+  // The form we will be rearranging...
+  $GLOBALS["arrange_fields_editing"] = $form_id;
+  $GLOBALS["arrange_fields_editing_type"] = $form_type;
+  
+  $node_form = new stdClass();
+  $node_form->type = $form_type;
+  $rtn .= drupal_get_form($form_id, $node_form);
+
+  $rtn .= "<div>" . t("If you need more room, move a field close to the bottom.  The
+          container will resize, adding more room.") . "</div>";
+  
+  
+  return $rtn;
+}
+
+
+/**
+ * This is the form which we will use to store the position data for the fields.
+ *
+ * @param array $form_state
+ * @param string $form_id
+ * @param string $form_type
+ * @return array
+ */
+function arrange_fields_position_form($form_state, $form_id, $form_type) {
+  $form = array();
+
+  $form["arrange_fields_form_id"] = array(
+    "#type" => "hidden",
+    "#value" => $form_id,
+  );
+
+  $form["arrange_fields_form_type"] = array(
+    "#type" => "hidden",
+    "#value" => $form_type,
+  );
+  
+  // This field ends up being hidden in CSS.
+  $form["arrange_fields_position_data"] = array(
+    "#type" => "textarea",
+  );
+  
+  $form["save"] = array(
+    "#type" => "submit",
+    "#value" => "Save position data",
+    "#attributes" => array("onClick" => "return arrangeFieldsSavePositions()"),
+  );
+  
+  $form["reset"] = array(
+    "#type" => "button",
+    "#value" => "Reset position data",
+    "#attributes" => array("onClick" => "return arrangeFieldsConfirmReset()"),
+  );
+  
+  
+  return $form;
+}
+
+
+/**
+ * The primary purpose of this validator is to find out of the user is trying
+ * to reset the form (and restore the form to its orignal state).
+ *
+ */
+function arrange_fields_position_form_validate($form, $form_state) {
+
+  $form_id = $form_state["values"]["arrange_fields_form_id"];
+  if (stristr($form_state["values"]["op"], "reset")) {
+    variable_set("arrange_fields_position_data_$form_id", "");
+    drupal_set_message(t("Position data for this form has been reset."));
+    
+    // Need to refresh the page in order for the positions to be
+    // fully reset.
+    $path = isset($_GET['q']) ? $_GET['q'] : '<front>';
+    $link = url($path, array('absolute' => TRUE));
+    drupal_goto($link);    
+  }
+}
+
+/**
+ * We will save the position data into a variable using variable_set.
+ *
+ */
+function arrange_fields_position_form_submit($form, $form_state) {
+ $form_id = $form_state["values"]["arrange_fields_form_id"];
+ $form_type = $form_state["values"]["arrange_fields_form_type"];
+ $position_data = $form_state["values"]["arrange_fields_position_data"];
+ 
+ variable_set("arrange_fields_position_data_$form_id", $position_data);
+ drupal_set_message(t("Position data saved.") . " " . l(t("See demo of most recent save (loads in new window)"), "node/add/" . str_replace("_", "-", $form_type), array("attributes" => array("target" => "_blank"))));
+}
+
+
+/**
+ * Theme registry alter hook
+ * 
+ * Register this modules path as a search location for tpl files.
+ * We want it to look for the special popup page.tpl file in the module's
+ * directory.
+ *
+ */
+function arrange_fields_theme_registry_alter(&$theme_registry) {
+  if (is_array($theme_registry['page'])) {
+    // store a reference to the first theme path entry (normally this should be 'modules/system')
+    $first_path = array_shift($theme_registry['page']['theme paths']);
+    
+    // get the path to our module's page template files
+    $template_path = drupal_get_path('module', 'arrange_fields');
+    
+    // now change the array to have the first entry first, then our template path, and then any other theme paths
+    array_unshift($theme_registry['page']['theme paths'], $first_path, $template_path);
+  }
+  
+}
+
