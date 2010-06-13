@@ -76,13 +76,17 @@ function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_butt
       $form[$field]["#prefix"] .= "<div id='edit-$field-fieldset-wrapper' class='draggable-form-item af-draggable-form-item-fieldset'>";
       $form[$field]["#suffix"] .= "</div>";        
     }
-    
+
+    // Kludgy method of figuring out if this field should be draggable or not
+    // (basically, if it is a field at all).
     if (is_array($form[$field]) && 
         ($form[$field]["#type"] == "textfield" 
         || $form[$field][0]["#type"] == "text_textfield"
         || $form[$field][0]["#type"] == "text_textarea"
+        || strstr($form[$field][0]["#type"], "image")
         || $form[$field]["body"]["#type"] == "textarea"
-        || strstr($form[$field]["#type"], "option")        
+        || strstr($form[$field]["#type"], "option") 
+        || $field == "taxonomy"       
         )) {
       
       // Only add the edit field link if this is a CCK field, and
@@ -175,7 +179,6 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
     }
   }
 
-  
   // Do we have position data for the content type (form) currently being displayed?
   // If we do, then let's add styles to the page which contain the position data.
   if ($position_data = variable_get("arrange_fields_position_data_$form_id", FALSE)) {
@@ -187,7 +190,7 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
     if (!$GLOBALS["arrange_fields_added_wrappers_" . $form["form_id"]["#value"]]) {
       arrange_fields_add_draggable_wrappers($form, $form_type);
     }
-    
+      
     // Let's go through and assign the positions.
     $css_markup = "";
     $lines = explode(";", $position_data);
@@ -259,6 +262,10 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
     $form["arrange_fields_css_markup"] = array(
       "#value" => "<style>$css_markup</style>",
     );
+    
+    // Let's add our modified form back to the cache (needed to get the preview
+    // button to work correctly).
+    form_set_cache($form["#build_id"], $form, $form_state);
     
   }
   
