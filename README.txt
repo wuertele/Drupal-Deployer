@@ -18,6 +18,16 @@ Restrictions
  - Fields within fieldsets cannot be arranged (yet).  But, the fieldset itself
    can be re-arranged.
    
+ - jQuery is used to properly specify the height of the container 
+   div on the node/edit page, after you have arranged fields. As such, 
+   the person editing the form will need javascript enabled in order for it 
+   to show up correctly. (If anyone out there knows a better way to do this, 
+   please open an issue!)
+ 
+ - Field positions will not change the node view page for the created 
+   content. That information will still be displayed the traditional 
+   way (straight down the page). This may be something that gets fixed 
+   in the future.
    
 ======================
 Directions
@@ -30,3 +40,8 @@ Directions
 - Visit your admin/user/permissions and give authorized users the
   "administer arrange fields" permission, if desired.  (Otherwise, only the
   admin user will be able to use it).
+
+- To begin arranging fields, visit Administer -> Content Types (the link
+  is at the top of the page, as a tab).  You can also select "manage fields" 
+  for a content type, and then there will be a new tab at the top of 
+  this page as well.

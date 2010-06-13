@@ -10,12 +10,14 @@
 function arrange_fields_menu() {
   $items = array();
   
+/*
   $items["arrange-fields"] = array(
     "title" => t("Arrange fields"),
     "page callback" => "arrange_fields_display_main",
     "access arguments" => array("administer arrange fields"),
     "type" => MENU_NORMAL_ITEM,
   );
+*/
 
   $items["arrange-fields/%"] = array(
     "title" => t("Arrange fields - Form"),
@@ -24,6 +26,35 @@ function arrange_fields_menu() {
     "access arguments" => array("administer arrange fields"),
     "type" => MENU_CALLBACK,
   );
+  
+
+  $items["admin/content/types/arrange-fields"] = array(
+    "title" => t("Arrange form fields"),
+    "page callback" => "arrange_fields_display_main",
+    "access arguments" => array("administer arrange fields"),
+    "type" => MENU_LOCAL_TASK,
+    "weight" => 5,
+  );
+  
+  // Get a list of content types and create menu hooks for them.
+  foreach (node_get_types() as $type) {
+    
+    $type_name = $type->type;
+    $content_type = content_types($type_name);
+    $type_url_str = $content_type['url_str'];
+    
+    $items["admin/content/node-type/$type_url_str/arrange-fields"] = array(
+      "title" => "Arrange fields",
+      "page callback" => "arrange_fields_display_form",
+      "page arguments" => array($type_name),
+      "access arguments" => array("administer arrange fields"),
+      "type" => MENU_LOCAL_TASK,
+      "weight" => 3,
+    );
+    
+  
+  }  
+  
   
 
   $items["arrange-fields/popup-edit-field"] = array(
@@ -73,7 +104,7 @@ function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_butt
   // Go through every element in $form to find which items need to be draggable.
   foreach ($form as $field => $value) {
     if (is_array($form[$field]) && $form[$field]["#type"] == "fieldset") {
-      $form[$field]["#prefix"] .= "<div id='edit-$field-fieldset-wrapper' class='draggable-form-item af-draggable-form-item-fieldset'>";
+      $form[$field]["#prefix"] .= "<div id='edit-$field-fieldset-wrapper' class='draggable-form-item draggable-form-item-fieldset'>";
       $form[$field]["#suffix"] .= "</div>";        
     }
 
