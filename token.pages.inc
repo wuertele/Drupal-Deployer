@@ -43,18 +43,23 @@ function theme_token_help($types = 'all', $prefix = TOKEN_PREFIX, $suffix = TOKE
  * Provide a 'tree' display of nested tokens.
  */
 function theme_token_tree($token_types = array(), $global_types = TRUE, $click_insert = TRUE, $recursion_limit = 4) {
-  $info = token_get_list('all');
+  //$info = token_get_list('all');
+  $info = token_get_list($token_types);
 
   if ($token_types == 'all') {
-    $token_types = array_keys($info);
+  //  $token_types = array('all');
   }
   elseif ($global_types) {
-    $token_types[] = 'global';
-    $token_types = array_unique($token_types);
+  //  $token_types[] = 'global';
+  //  $token_types = array_unique($token_types);
+  }
+  else {
+    unset($info['global']);
   }
 
   // Check for token type validity and sort.
-  $token_types = array_intersect($token_types, array_keys($info));
+  //$token_types = array_intersect($token_types, array_keys($info));
+  $token_types = array_keys($info);
   sort($token_types);
 
   $header = array(
