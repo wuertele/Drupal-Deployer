@@ -1039,10 +1039,12 @@ function _image_file_remove($file) {
  *   String to be used as the node's body.
  * @param $taxonomy
  *   Taxonomy terms to assign to the node if the taxonomy.module is installed.
+ * @param $keep_original
+ *   Boolean to indicate whether the original file should be deleted
  * @return
  *   A node object if the node is created successfully or FALSE on error.
  */
-function image_create_node_from($filepath, $title = NULL, $body = '', $taxonomy = NULL) {
+function image_create_node_from($filepath, $title = NULL, $body = '', $taxonomy = NULL, $keep_original = FALSE) {
   global $user;
 
   if (!user_access('create images')) {
@@ -1099,8 +1101,10 @@ function image_create_node_from($filepath, $title = NULL, $body = '', $taxonomy 
   $node = node_submit($node);
   node_save($node);
 
-  // Remove the original image now that the import has completed.
-  file_delete($original_path);
+  // By default, remove the original image now that the import has completed.
+  if ($keep_original !== TRUE) {
+    file_delete($original_path);
+  }
 
   return $node;
 }
