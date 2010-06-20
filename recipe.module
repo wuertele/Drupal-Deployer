@@ -679,37 +679,36 @@ function recipe_view($node, $teaser = FALSE, $page = FALSE) {
 
 
   // Begin filling the node->content array with with recipe items.
-
   $node->content['recipe_description'] = array(
-      '#value' => theme('box', t('Description'), $node->body),
-      '#weight' => -4,
+      '#value' => '<div class="recipe-description">' . theme('box', t('Description'), $node->body) . '</div>',
+      '#weight' => recipe_content_extra_field_weight('body')
   );
   // Clear the normal node body value.
   $node->content['body']['#value'] = '';
 
   $node->content['recipe_ingredients'] = array(
-      '#value' => theme('box', t('Ingredients'), theme('recipe_ingredients', $node)),
-      '#weight' => -2,
+      '#value' => '<div class="recipe-ingredients">' . theme('box', t('Ingredients'), theme('recipe_ingredients', $node)) . '</div>',
+      '#weight' => recipe_content_extra_field_weight('ingredients')
   );
 
   $node->content['recipe_instructions'] = array(
-      '#value' => theme('box', t('Instructions'), $node->instructions),
-      '#weight' => 0,
+      '#value' => '<div class="recipe-instructions">' . theme('box', t('Instructions'), $node->instructions) . '</div>',
+      '#weight' => recipe_content_extra_field_weight('instructions')
   );
 
   // Don't show the notes box at all it there are no notes.
   if ( $node->notes ) {
     $node->content['recipe_notes'] = array(
-        '#value' => theme('box', t('Notes'), $node->notes),
-        '#weight' => 2,
+        '#value' => '<div class="recipe-notes">' . theme('box', t('Notes'), $node->notes) . '</div>',
+        '#weight' => recipe_content_extra_field_weight('notes')
     );
   }
 
   // If you are showing the summary in the node content.
   if (variable_get('recipe_summary_location', 0) == 0) {
     $node->content['recipe_summary_box'] = array(
-        '#value' => theme('recipe_summary', $node),
-        '#weight' => -6,
+        '#value' => '<div class="recipe-summary">' . theme('recipe_summary', $node) . '</div>',
+        '#weight' => recipe_content_extra_field_weight('summary_box')
     );
   }
 
@@ -1758,56 +1757,67 @@ function recipe_content_extra_fields($type_name) {
   }
 
   $extra = array();
-
+  $extra['summary_box'] = array(
+    'label' => t('Summary Box'),
+    'description' => t('Recipe module form.'),
+    'weight' => -5,
+  );
   $extra['body'] = array(
     'label' => t('Description'),
     'description' => t('Recipe module form.'),
     'weight' => -5,
   );
-
   $extra['yield'] = array(
     'label' => t('Yield'),
     'description' => t('Recipe module form.'),
     'weight' => -4,
   );
-
   $extra['yield_unit'] = array(
     'label' => t('Yield units'),
     'description' => t('Recipe module form.'),
     'weight' => -4,
   );
-
   $extra['ingredients'] = array(
     'label' => t('Ingredients'),
     'description' => t('Recipe module form.'),
     'weight' => -3,
   );
-
   $extra['instructions'] = array(
     'label' => t('Instructions'),
     'description' => t('Recipe module form.'),
     'weight' => -2,
   );
-
   $extra['notes'] = array(
     'label' => t('Additional notes'),
     'description' => t('Recipe module form.'),
     'weight' => -2,
   );
-
   $extra["source"] = array(
     'label' => t('Source'),
     'description' => t('Recipe module form.'),
     'weight' => -2,
   );
-
   $extra['preptime'] = array(
     'label' => t('Preparation time'),
     'description' => t('Recipe module form.'),
     'weight' => -1,
   );
 
-
   return $extra;
 }
 
+
+function recipe_content_extra_field_weight($pseudo_field_name) {
+  if (function_exists('content_extra_field_weight')) {
+    return content_extra_field_weight('recipe', $pseudo_field_name);
+  }
+  else {
+    $recipe_fields = recipe_content_extra_fields('recipe');
+    if ( isset($recipe_fields[$pseudo_field_name]['weight']) ) {
+      return $recipe_fields[$pseudo_field_name]['weight'];
+    }
+    else {
+      return 0;
+    }
+  }
+}
