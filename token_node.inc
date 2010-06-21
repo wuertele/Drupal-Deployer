@@ -35,6 +35,10 @@ function node_token_values($type, $object = NULL, $options = array()) {
       $values['language']           = filter_xss_admin($node->language);
       $values['title']              = check_plain($node->title);
       $values['title-raw']          = $node->title;
+      $values['node-path-raw']      = drupal_get_path_alias('node/'. $node->nid);
+      $values['node-path']          = check_plain($values['node-path-raw']);
+      $values['node-url-raw']       = url('node/' . $node->nid, array('absolute' => TRUE));
+      $values['node-url']           = check_plain($values['node-url-raw']);
       $values['author-uid']         = $node->uid;
       $values['author-name']        = check_plain($account->name);
       $values['author-name-raw']    = $account->name;
@@ -174,6 +178,10 @@ function node_token_list($type = 'all') {
     $tokens['node']['language']        = t('Node language');
     $tokens['node']['title']           = t('Node title');
     $tokens['node']['title-raw']       = t('Unfiltered node title.');
+    $tokens['node']['node-path']       = t('The URL alias of the node.');
+    $tokens['node']['node-path-raw']   = t('The URL alias of the node.');
+    $tokens['node']['node-url']        = t('The URL of the node.');
+    $tokens['node']['node-url-raw']    = t('The URL of the node.');
 
     $tokens['node']['author-uid']      = t("Node author's user id");
     $tokens['node']['author-name']     = t("Node author's user name");
