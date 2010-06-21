@@ -115,7 +115,7 @@ function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_butt
   if ($form_type == "webform") {
     return arrange_fields_add_draggable_webform_wrappers($form, $disable_buttons);
   }
-  
+   
   $form["buttons"]["#prefix"] = "<div id='edit-buttons-wrapper' class='draggable-form-item'>";
   $form["buttons"]["#suffix"] = "</div>";
 
@@ -150,7 +150,8 @@ function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_butt
         || strstr($form[$field]["#type"], "nodereference") 
         || strstr($form[$field]["#type"], "userreference") 
         || strstr($form[$field][0]["#type"], "date") 
-        || $field == "taxonomy"       
+        || $field == "taxonomy"   
+        || (substr($field, 0, 6) == "field_")
         )) {
       
       // Only add the edit field link if this is a CCK field, and
@@ -338,10 +339,16 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
         left: $pos_left; 
       }
       ";
-      if ($width != "0px" && $element_type != "") {
+      
+      // We do not want to try to resize any input fields if this
+      // is the buttons wrapper.  Otherwise it will mess up our buttons.
+      // This usually happens when you have CAPTCHA installed.
+      if ($width != "0px" && $element_type != ""
+          ) {
         $css_markup .= "
         
-        #$wrapper_id $element_type{
+        #$wrapper_id $element_type.form-text, 
+        #$wrapper_id $element_type.form-textarea {
           width: $width;
           height: $height;
         }
@@ -497,8 +504,9 @@ function arrange_fields_display_form($form_type) {
   
   module_load_include('inc', 'node', 'node.pages');
   jquery_ui_add(array('ui.draggable', 'ui.resizable'));
-  drupal_add_js(drupal_get_path("module", "arrange_fields") . "/js/arrange_fields.js");    
+  // arrange_fields_node_edit.js needs to be included first!
   drupal_add_js(drupal_get_path("module", "arrange_fields") . "/js/arrange_fields_node_edit.js");  
+  drupal_add_js(drupal_get_path("module", "arrange_fields") . "/js/arrange_fields.js");    
   drupal_add_css(drupal_get_path("module", "arrange_fields") . "/css/arrange_fields.css");    
   
   // We want to get the form which will let us save the position
@@ -507,7 +515,7 @@ function arrange_fields_display_form($form_type) {
 
    $rtn .= "<div>" . t("Use this form to drag-and-drop fields into the order which
           you want them to appear on the node/edit page.") . "</div>
-          <div>" . t("You may resize text fields by dragging the right-size
+          <div>" . t("You may resize text fields by dragging the right side
               of the field.") . "</div>";
 
   // The form we will be rearranging...
@@ -561,7 +569,7 @@ function arrange_fields_display_webform($nid) {
 
    $rtn .= "<div>" . t("Use this form to drag-and-drop fields into the order which
           you want them to appear on the webform entry page.") . "</div>
-          <div>" . t("You may resize text fields by dragging the right-size
+          <div>" . t("You may resize text fields by dragging the right side
               of the field.") . "</div>";
 
   // The form we will be rearranging...

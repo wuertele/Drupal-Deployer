@@ -26,11 +26,10 @@ Drupal.behaviors.arrangeFieldsStartup = function() {
 
   // Let's make the text areas and input fields resizable.  
   $(".arrange-fields-container .draggable-form-item:not(.draggable-form-item-fieldset) textarea").resizable();
-  $(".arrange-fields-container .draggable-form-item .form-text").resizable({
+  $(".arrange-fields-container .draggable-form-item:not(.draggable-form-item-fieldset) .form-text").resizable({
         handles: 'e'
   });
 
-  
   // This actually makes the draggable items draggable.
   $(".arrange-fields-container .draggable-form-item").draggable({
     stop: function(event, ui) { arrangeFieldsRepositionToGrid(false); },

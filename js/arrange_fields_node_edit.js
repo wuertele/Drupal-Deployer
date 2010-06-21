@@ -11,6 +11,11 @@ var tabval;
 
 Drupal.behaviors.arrangeFieldsNodeEditStartup = function() {
 
+
+  // If vertical tabs is installed, we want to wrap a div around them and
+  // give it an ID we can use later when specifying position.
+  $(".arrange-fields-container .vertical-tabs").wrap("<div class='draggable-form-item' id='arrange-fields-vertical-tabs'></div>");
+  
   // Make it so when you click on a fieldset, it's z-index goes up (so it
   // is in the foreground).
   arrangeFieldsFSZI = 9999;  
