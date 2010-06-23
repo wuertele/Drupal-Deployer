@@ -1,5 +1,5 @@
 // $Id$ 
-
+  
 var arrangeFieldsStartupHeight;
 var arrangeFieldsGreatestHeight;
 var arrangeFieldsDragging;

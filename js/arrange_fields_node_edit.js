@@ -3,7 +3,7 @@
 
 /*
   This js file is meant to be used on the node/edit page of the form.  Meaning, this is not
-  a user who is arranging fields, but is actually entering data into the form.
+  a user who is arranging fields, but is actually entering data into the form.  
 */
 
 var arrangeFieldsFSZI;
