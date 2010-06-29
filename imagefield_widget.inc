@@ -57,7 +57,7 @@ function imagefield_widget_settings_form($widget) {
     '#title' => t('Default ALT text'),
     '#default_value' => !empty($widget['alt']) ? $widget['alt'] : '',
     '#description' => t('This value will be used for alternate text by default.'),
-    '#suffix' => theme('token_help', 'file'),
+    '#suffix' => theme('token_help', array('user')),
   );
 
   $form['title_settings'] = array(
@@ -87,7 +87,7 @@ function imagefield_widget_settings_form($widget) {
     '#title' => t('Default Title text'),
     '#default_value' => !empty($widget['title']) ? $widget['title'] : '',
     '#description' => t('This value will be used as the image title by default.'),
-    '#suffix' =>  theme('token_help', 'file'),
+    '#suffix' => theme('token_help', array('user')),
   );
 
   // Default image settings.
