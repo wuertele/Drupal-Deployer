@@ -10,7 +10,6 @@
 function arrange_fields_menu() {
   $items = array();
   
-
   $items["arrange-fields/%"] = array(
     "title" => t("Arrange fields - Form"),
     "page callback" => "arrange_fields_display_form",
@@ -27,6 +26,14 @@ function arrange_fields_menu() {
     "type" => MENU_CALLBACK,
   );  
 
+  $items["arrange-fields/other/%"] = array(
+    "title" => t("Arrange fields - Other Forms"),
+    "page callback" => "arrange_fields_display_otherform",
+    "page arguments" => array(2),
+    "access arguments" => array("administer arrange fields"),
+    "type" => MENU_CALLBACK,
+  );  
+  
   $items["admin/content/types/arrange-fields"] = array(
     "title" => t("Arrange form fields"),
     "page callback" => "arrange_fields_display_main",
@@ -43,7 +50,32 @@ function arrange_fields_menu() {
     "type" => MENU_NORMAL_ITEM,
   );
   
+  // Admin settings menu...
+  $items["admin/settings/arrange-fields"] = array(
+    "title" => t("Arrange fields"),
+    "description" => t("Arrange fields and components on your forms."),
+    "page callback" => "arrange_fields_display_main",
+    "access arguments" => array("administer arrange fields"),
+    "type" => MENU_NORMAL_ITEM,
+  );
+  $items["admin/settings/arrange-fields/forms"] = array(
+    "title" => t("Forms"),
+    "type" => MENU_DEFAULT_LOCAL_TASK,
+    "weight" => 1,
+  );
+  $items["admin/settings/arrange-fields/settings"] = array(
+    "title" => t("Settings"),
+    "page callback" => "drupal_get_form",
+    "page arguments" => array("arrange_fields_settings_form"),
+    "access arguments" => array("administer arrange fields"),
+    "type" => MENU_LOCAL_TASK,
+    "weight" => 2,
+  );
   
+  
+  
+  
+  // CCK/Content type menu......
   // Get a list of content types and create menu hooks for them.
   foreach (node_get_types() as $type) {
     
@@ -79,13 +111,13 @@ function arrange_fields_menu() {
     
   
 
+  // Menu hooks for the two popups used with CCK fields...
   $items["arrange-fields/popup-edit-field"] = array(
     "title" => t("Arrange fields - Form"),
     "page callback" => "arrange_fields_popup_edit_field",
     "access arguments" => array("administer arrange fields"),
     "type" => MENU_CALLBACK,
-  );
-  
+  );  
   $items["arrange-fields/popup-close-window"] = array(
     "title" => t("Arrange fields - Form"),
     "page callback" => "arrange_fields_popup_close_window",
@@ -102,6 +134,45 @@ function arrange_fields_perm() {
 }
 
 /**
+ * This function returns a form which we will use to configure
+ * the arrange_fields module.  It is called
+ * from menu item:  admin/settings/arrange-fields/settings
+ *
+ * @return array
+ */
+function arrange_fields_settings_form() {
+  $form = array();
+
+  $form["arrange_fields_other_form_ids"] = array(
+    "#type" => "textarea",
+    "#title" => "Additional form_id's",
+    "#default_value" => variable_get("arrange_fields_other_form_ids", ""),
+    "#description" => "Enter any additional form_id's you would like to be
+                      able to arrange, <strong>one per line</strong>.  
+                      Be aware that
+                      this module (Arrange Fields) may not be able to
+                      arrange forms with complex structures.  Also, form_ids that
+                      are longer than 100 characters are allowed, but may not work 
+                      correctly if the first 100 characters are identical between two
+                      or more ids.
+                      <br>
+                      After you enter complete form_id's here and hit Save,
+                      you will be able to arrange them by clicking on them
+                      at the bottom of the " . l("Arrange Fields admin settings page", "admin/settings/arrange-fields") . ".
+                      <br>
+                      Example: <br>
+                      &nbsp;&nbsp;<strong>user_register</strong>
+                      <br>
+                      &nbsp;&nbsp;<strong>my_custom_form_id_1</strong>
+                      ",
+  );
+  
+  return system_settings_form($form);
+}
+
+
+
+/**
  * In this function, we are going to add div's around elements we wish to make
  * draggable on the page.  The jQuery can then grab onto those divs to make
  * them draggable.
@@ -115,24 +186,19 @@ function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_butt
   if ($form_type == "webform") {
     return arrange_fields_add_draggable_webform_wrappers($form, $disable_buttons);
   }
-   
-  $form["buttons"]["#prefix"] = "<div id='edit-buttons-wrapper' class='draggable-form-item'>";
-  $form["buttons"]["#suffix"] = "</div>";
 
   // If we are arranging the buttons, then disable these buttons!
   if ($disable_buttons) {
-    $form["buttons"]["submit"]["#attributes"]["disabled"] = "disabled";
-    $form["buttons"]["submit"]["#attributes"]["class"] .= " disabled-button ";
-    $form["buttons"]["preview"]["#attributes"]["disabled"] = "disabled";
-    $form["buttons"]["preview"]["#attributes"]["class"] .= " disabled-button ";
+    if (is_array($form["buttons"])) {
+      $form["buttons"]["submit"]["#attributes"]["disabled"] = "disabled";
+      $form["buttons"]["submit"]["#attributes"]["class"] .= " disabled-button ";
+      $form["buttons"]["preview"]["#attributes"]["disabled"] = "disabled";
+      $form["buttons"]["preview"]["#attributes"]["class"] .= " disabled-button ";
+    }
   }
 
   // Go through every element in $form to find which items need to be draggable.
   foreach ($form as $field => $value) {
-    if (is_array($form[$field]) && $form[$field]["#type"] == "fieldset") {
-      $form[$field]["#prefix"] .= "<div id='edit-$field-fieldset-wrapper' class='draggable-form-item draggable-form-item-fieldset'>";
-      $form[$field]["#suffix"] .= "</div>";        
-    }
 
     // Kludgy method of figuring out if this field should be draggable or not
     // (basically, if it is a field at all).  I am positive there is probably
@@ -150,27 +216,58 @@ function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_butt
         || strstr($form[$field]["#type"], "nodereference") 
         || strstr($form[$field]["#type"], "userreference") 
         || strstr($form[$field][0]["#type"], "date") 
-        || $field == "taxonomy"   
-        || (substr($field, 0, 6) == "field_")
+        || $field == "taxonomy"  
+        || $field == "buttons" 
+        || substr($field, 0, 6) == "field_"
+        || (isset($form[$field]["#type"]) 
+            && $form[$field]["#type"] != "hidden")
         )) {
       
-      // Only add the edit field link if this is a CCK field, and
-      // we are currently arranging it.
+          
+      $field_type = $form[$field]["#type"];
+      $edit_link = "";
+      $edit_link = "<div class='arrange-fields-control-handle' 
+                        style='font-size: 0.8em;'>";
+      // If this is a CCK type, give it an extra option.
       if ($GLOBALS["arrange_fields_editing_type"] == $form_type 
-          && $form_type != ""
-          && substr($field, 0, 6) == "field_") {
-        $edit_link = "<div class='arrange-fields-control-handle' 
-                        style='font-size: 0.8em;'>
-                        <a href='javascript: arrangeFieldsPopupEditField(\"$form_type\", \"$field\");'>config</a>                        
-                      </div>";
-      }
-      else {     
-         $edit_link = "";
+        && $form_type != ""
+        && (substr($field, 0, 6) == "field_")
+       ) 
+      {
+          $edit_link .= "<a href='javascript: arrangeFieldsPopupEditField(\"$form_type\", \"$field\");'>cck</a>";
+      }      
+
+      $edit_link .= "<span class='arrange-fields-handle-region'> &nbsp; &nbsp; </span>
+                      <a href='javascript: arrangeFieldsPopupConfigField(\"$field\",\"$field_type\");' class='arrange-fields-config-link' 
+                      title='Configure this field'>&nbsp;</a>";
+      $edit_link .= "</div>";
+      
+
+      $css_class = "draggable-form-item";
+      $css_id = "edit-$field-draggable-wrapper";
+
+      // Are we dealing with a fieldset?     
+      if ($form[$field]["#type"] == "fieldset") {
+        // Fieldsets get an extra css_class and the ID changes.
+        $css_class .= " draggable-form-item-fieldset";
+        $css_id = "edit-$field-fieldset-draggable-wrapper";        
       }
       
-      $form[$field]["#prefix"] .= "<div id='edit-$field-draggable-wrapper' class='draggable-form-item'>$edit_link";
+      // Set the prefix and suffix for this field such that we 
+      // wrap a div around it which the jquery can lock onto later to
+      // make it draggable.
+      $form[$field]["#prefix"] .= "<div id='$css_id' class='$css_class'>$edit_link";
       $form[$field]["#suffix"] .= "</div>"; 
-      
+     
+      // If the field is a button, and we have chosen to disable buttons, then
+      // disable this one.
+      if ($form[$field]["#type"] == "submit" || $form[$field]["#type"] == "button") {
+        if ($disable_buttons) {
+            $form[$field]["#attributes"]["disabled"] = "disabled";
+            $form[$field]["#attributes"]["class"] .= " disabled-button ";
+        }        
+      }
+       
     }
     
   }
@@ -208,6 +305,18 @@ function arrange_fields_add_draggable_webform_wrappers(&$form, $disable_buttons 
         $form["submitted"][$field]["#suffix"] .= "</div>";                
       }
       else {
+
+        $field_type = "";  // nothing for now.  May get used later.
+        
+        $edit_link = "";
+        $edit_link = "<div class='arrange-fields-control-handle' 
+                          style='font-size: 0.8em;'>";
+        $edit_link .= "<span class='arrange-fields-handle-region'> &nbsp; &nbsp; </span>
+                        <a href='javascript: arrangeFieldsPopupConfigField(\"$field\", \"$field_type\");' class='arrange-fields-config-link' 
+                        title='Configure this field'>&nbsp;</a>";
+        
+        $edit_link .= "</div>";        
+        
         $form["submitted"][$field]["#prefix"] .= "<div id='edit-$field-draggable-wrapper' class='draggable-form-item'>$edit_link";
         $form["submitted"][$field]["#suffix"] .= "</div>"; 
       }
@@ -308,6 +417,7 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
     }
       
     // Let's go through and assign the positions.
+    $jsConfigArray = array();
     $css_markup = "";
     $lines = explode(";", $position_data);
     foreach ($lines as $line) {
@@ -320,6 +430,10 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
       $element_type = trim($temp[3]);
       $width = trim($temp[4]);
       $height = trim($temp[5]);
+      $wrapper_width = trim($temp[6]);
+      $wrapper_height = trim($temp[7]);
+      $label_display = trim($temp[8]);
+      $label_vertical_align = trim($temp[9]);
       
       if ($wrapper_id == "~~maxBottom~~") {
         // This is actually the height of the container.  Let's set that,
@@ -330,6 +444,10 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
         continue;
       }
       
+      $jsConfigArray[$wrapper_id]["wrapperWidth"] = $wrapper_width;
+      $jsConfigArray[$wrapper_id]["wrapperHeight"] = $wrapper_height;
+      $jsConfigArray[$wrapper_id]["labelDisplay"] = $label_display;
+      $jsConfigArray[$wrapper_id]["labelVerticalAlign"] = $label_vertical_align;
           
       // Add to our CSS markup value...
       $css_markup .= "
@@ -343,10 +461,8 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
       // We do not want to try to resize any input fields if this
       // is the buttons wrapper.  Otherwise it will mess up our buttons.
       // This usually happens when you have CAPTCHA installed.
-      if ($width != "0px" && $element_type != ""
-          ) {
-        $css_markup .= "
-        
+      if ($width != "0px" && $element_type != "") {
+        $css_markup .= "        
         #$wrapper_id $element_type.form-text, 
         #$wrapper_id $element_type.form-textarea {
           width: $width;
@@ -355,10 +471,40 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
           ";
       }
       
-            
-      
-      
+      // Handle any configurations which were set in the configure dialog.
+      if ($wrapper_width != "") {
+        $css_markup .= "#$wrapper_id { width: $wrapper_width; } ";
+      }
+      if ($wrapper_height != "") {
+        $css_markup .= "
+          #$wrapper_id { height: $wrapper_height; } 
+          #$wrapper_id fieldset { height: 100%; } 
+        ";
+      }
+      if ($label_display != "") {
+        $css_markup .= "
+          #$wrapper_id .form-item label { 
+            vertical-align: $label_vertical_align; 
+          }
+          #$wrapper_id .form-item > input, 
+          #$wrapper_id .form-item > label,
+          #$wrapper_id .form-item > div,
+          #$wrapper_id .form-item > div.form-radios > div,
+          #$wrapper_id .form-item > div.form-checkboxes > div
+          {
+            display: $label_display;
+          }
+          
+          #$wrapper_id .form-item div.ui-resizable-handle,
+          #$wrapper_id .form-item div.description
+          {
+            display: block;
+          }                          
+                ";
+      }
     }
+    
+    drupal_add_js(array("arrangeFieldsDialogConfigObj" => $jsConfigArray), "setting");
     
     if ($GLOBALS["arrange_fields_editing"] != $form_id) {
       // Meaning, we are not currently arranging this form.  The user
@@ -429,6 +575,8 @@ function arrange_fields_add_form_css_js($element) {
 function arrange_fields_display_main() {
   $rtn = "";
   
+  drupal_add_css(drupal_get_path("module", "arrange_fields") . "/css/arrange_fields.css");    
+  
   $rtn .= t("Select a content type to arrange fields") . "...
           <ul>";
   
@@ -464,6 +612,30 @@ function arrange_fields_display_main() {
     $rtn .= "</ul>";
   }
   
+  // Does the user have any additional form_id's specified they'd like to try
+  // to arrange?
+  $other_form_ids = trim(variable_get("arrange_fields_other_form_ids", ""));
+  if ($other_form_ids != "") {
+    $temp = explode("\n", $other_form_ids);
+    $rtn .= t("Additional form_id's you specified on the Settings tab...");
+    $rtn .= "<ul>";
+    foreach($temp as $form_id) {
+      $rtn .= "<li>" . l($form_id, "arrange-fields/other/$form_id") . "</li>";
+    }
+    $rtn .= "</ul>";
+    $rtn .= "<div class='arrange-fields-other-form-caveat'>";
+    $rtn .= t("Some caveats: Arrange Fields may not work correctly on forms
+              with complex structures.  Also, remember that some forms may
+              appear differently depending on if you are admin, an authorized user,
+              or an anonymous user (like user_register).
+              If you need to arrange a form which only appears for anonymous users,
+              temporarily grant anonymous users the \"administer
+              arrange fields\" permission so you can arrange the form how it
+              needs to look.  Just be sure to take this away when you are done as
+              it introduces a major security risk.");
+    $rtn .= "</div>";
+  }
+  
   
   return $rtn;
 }
@@ -475,6 +647,37 @@ function arrange_fields_init() {
     $GLOBALS["arrange_fields_webform_installed"] = TRUE;
   }
     
+}
+
+/**
+ * Simple function, which should only appear on IE browsers.  It will
+ * warn the user that some of the jQuery functions involved might have problems
+ * in IE, and advises them to switch to a different browser when arranging fields.
+ *
+ */
+function arrange_fields_render_ie_warning() {
+  
+  // Since the IE bug seems to be fixed for now, we will not render anything at all.
+  // I want to leave this function in existence, just in case I need to use
+  // it again one day.
+  
+  return "";
+  
+  $rtn = "<!--[if IE]>
+  <div style='color: red; font-size: 0.9em; line-height: 1.1em;' id='arrange-fields-ie-warning'><b>Note for IE users:</b>
+      For reasons that are currently unknown to me, the jQuery UI resizable() function
+      does not work correctly in some installations of IE.  If you
+      receive javascript errors while arranging fields, please try switching
+      to a different browser, like Firefox or Chrome.  
+      These IE problems will not
+      affect IE visitors to your site, only YOU while you are arranging fields!
+      <br>PS: if you figure out how to fix these errors, please open an issue at
+      http://drupal.org/project/arrange_fields
+   </div>
+  <![endif]-->";
+  
+  return $rtn;
+  
 }
 
 
@@ -502,18 +705,15 @@ function arrange_fields_display_form($form_type) {
     drupal_add_js(array("arrangeFieldsNotNewForm" => TRUE), "setting");
   }
   
-  module_load_include('inc', 'node', 'node.pages');
-  jquery_ui_add(array('ui.draggable', 'ui.resizable'));
-  // arrange_fields_node_edit.js needs to be included first!
-  drupal_add_js(drupal_get_path("module", "arrange_fields") . "/js/arrange_fields_node_edit.js");  
-  drupal_add_js(drupal_get_path("module", "arrange_fields") . "/js/arrange_fields.js");    
-  drupal_add_css(drupal_get_path("module", "arrange_fields") . "/css/arrange_fields.css");    
+  arrange_fields_add_arrange_css_js();  
+  
   
   // We want to get the form which will let us save the position
   // information.  
   $rtn .= drupal_get_form("arrange_fields_position_form", $form_id, $form_type);
 
-   $rtn .= "<div>" . t("Use this form to drag-and-drop fields into the order which
+  $rtn .= arrange_fields_render_ie_warning();
+  $rtn .= "<div>" . t("Use this form to drag-and-drop fields into the order which
           you want them to appear on the node/edit page.") . "</div>
           <div>" . t("You may resize text fields by dragging the right side
               of the field.") . "</div>";
@@ -529,8 +729,45 @@ function arrange_fields_display_form($form_type) {
   $rtn .= "<div>" . t("If you need more room, move a field close to the bottom.  The
           container will resize, adding more room.") . "</div>";
   
+  $rtn .= arrange_fields_render_config_dialog();
   
   return $rtn;
+}
+
+
+/**
+ * Renders a div which will be used as the "config" dialog, displayed using
+ * jQuery's .dialog() function.  It will let the administrator manage
+ * details of a field, like width and height of the wrapper.
+ *
+ */
+function arrange_fields_render_config_dialog() {
+  
+  $rtn = "";
+  
+  $rtn .= "<div id='arrange-fields-config-dialog' title='Configure'>
+            <table>
+              <tr>
+                <td width='45%'>Wrapper width:</td><td><input type='input' name='af-dialog-width' size='6'></td>
+              </tr>
+              <tr> 
+                <td>Wrapper height:</td><td><input type='input' name='af-dialog-height' size='6'></td>
+              </tr>
+            </table>
+            <div style='font-size: 0.8em; line-height: 1.0em;'>(remember to specify px, %, etc. Leave blank for default.)</div>
+            <br>
+            Label: 
+            <label><input type='radio' name='af-dialog-label-display' value='' checked> default (block)</label>
+            <label><input type='radio' name='af-dialog-label-display' value='inline-block' > inline</label>
+            
+            
+                  
+            
+           </div>";
+  
+  
+  return $rtn;
+  
 }
 
 
@@ -557,17 +794,14 @@ function arrange_fields_display_webform($nid) {
     drupal_add_js(array("arrangeFieldsNotNewForm" => TRUE), "setting");
   }
   
-  module_load_include('inc', 'node', 'node.pages');
-  jquery_ui_add(array('ui.draggable', 'ui.resizable'));
-  drupal_add_js(drupal_get_path("module", "arrange_fields") . "/js/arrange_fields.js");    
-  drupal_add_js(drupal_get_path("module", "arrange_fields") . "/js/arrange_fields_node_edit.js");  
-  drupal_add_css(drupal_get_path("module", "arrange_fields") . "/css/arrange_fields.css");    
+  arrange_fields_add_arrange_css_js();
   
   // We want to get the form which will let us save the position
   // information.  
   $rtn .= drupal_get_form("arrange_fields_position_form", $form_id, $form_type);
 
-   $rtn .= "<div>" . t("Use this form to drag-and-drop fields into the order which
+  $rtn .= arrange_fields_render_ie_warning();
+  $rtn .= "<div>" . t("Use this form to drag-and-drop fields into the order which
           you want them to appear on the webform entry page.") . "</div>
           <div>" . t("You may resize text fields by dragging the right side
               of the field.") . "</div>";
@@ -581,6 +815,74 @@ function arrange_fields_display_webform($nid) {
   $rtn .= "<div>" . t("If you need more room, move a field close to the bottom, then save positions.  The
           container will resize, adding more room.") . "</div>";
   
+  $rtn .= arrange_fields_render_config_dialog();
+  
+  return $rtn;
+}
+
+
+/**
+ * Meant to be called by the display_form functions, this will make sure
+ * the necessary module inc's are loaded, and the required js and css files
+ * are added for the actual arranging of fields.
+ *
+ */
+function arrange_fields_add_arrange_css_js() {
+
+  module_load_include('inc', 'node', 'node.pages');
+  jquery_ui_add(array('ui.draggable', 'ui.dialog', 'ui.resizable'));
+  drupal_add_js(drupal_get_path("module", "arrange_fields") . "/js/arrange_fields_node_edit.js");  // must be included first.
+  drupal_add_js(drupal_get_path("module", "arrange_fields") . "/js/arrange_fields.js");    
+  drupal_add_css(drupal_get_path("module", "arrange_fields") . "/css/arrange_fields.css");    
+
+}
+
+
+/**
+ * Similar function as arrange_fields_display_form,
+ * but this is specifically for other, more generic forms
+ * on the system.  For example, user_register, or custom
+ * forms which a developer has written.
+ *
+ */
+function arrange_fields_display_otherform($form_id) {
+
+  $form_type = "otherform";
+  
+  drupal_set_title("Arrange fields - Other Forms - $form_id");
+  $rtn = "";
+    
+  $position_data = variable_get("arrange_fields_position_data_$form_id", FALSE);
+  if ($position_data) {
+    // Meaning, we have position data already for this form, so it is NOT
+    // a brand-new form.  So, we should not pass "true" to the javascript
+    // function arrangeFieldsRepositionToGrid.  Let's add a drupal
+    // setting so we know that is the case.
+    drupal_add_js(array("arrangeFieldsNotNewForm" => TRUE), "setting");
+  }
+  
+  arrange_fields_add_arrange_css_js();
+  
+  // We want to get the form which will let us save the position
+  // information.  
+  $rtn .= drupal_get_form("arrange_fields_position_form", $form_id, $form_type);
+
+  $rtn .= arrange_fields_render_ie_warning();
+  $rtn .= "<div>" . t("Use this form to drag-and-drop fields into the order which
+          you want them to appear on the form entry page.") . "</div>
+          <div>" . t("You may resize text fields by dragging the right side
+              of the field.") . "</div>";
+
+  // The form we will be rearranging...
+  $GLOBALS["arrange_fields_editing"] = $form_id;
+  $GLOBALS["arrange_fields_editing_type"] = $form_type;
+  
+  $rtn .= drupal_get_form($form_id);
+
+  $rtn .= "<div>" . t("If you need more room, move a field close to the bottom, then save positions.  The
+          container will resize, adding more room.") . "</div>";
+  
+  $rtn .= arrange_fields_render_config_dialog();
   
   return $rtn;
 }
@@ -639,7 +941,9 @@ function arrange_fields_position_form_validate($form, $form_state) {
   $form_id = $form_state["values"]["arrange_fields_form_id"];
   if (stristr($form_state["values"]["op"], "reset")) {
     variable_set("arrange_fields_position_data_$form_id", "");
-    drupal_set_message(t("Position data for this form has been reset."));
+    drupal_set_message(t("Position data for this form has been reset.  It will 
+                      be displayed to the user without any modifications,
+                      in its original state."));
     
     // Need to refresh the page in order for the positions to be
     // fully reset.
@@ -664,6 +968,10 @@ function arrange_fields_position_form_submit($form, $form_state) {
   if ($form_type == "webform") {
     $nid = str_replace("webform_client_form_", "", $form_id);
     $demo_link = l(t("See demo of most recent save (loads in new window)"), "node/$nid", array("attributes" => array("target" => "_blank")));
+  }
+  
+  if ($form_type == "otherform") {
+    $demo_link = "";
   }
   
   drupal_set_message(t("Position data saved.") . " " . $demo_link);

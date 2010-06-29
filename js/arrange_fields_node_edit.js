@@ -3,7 +3,7 @@
 
 /*
   This js file is meant to be used on the node/edit page of the form.  Meaning, this is not
-  a user who is arranging fields, but is actually entering data into the form.  
+  a user who is arranging fields, but is actually entering data into the form.
 */
 
 var arrangeFieldsFSZI;
@@ -16,9 +16,13 @@ Drupal.behaviors.arrangeFieldsNodeEditStartup = function() {
   // give it an ID we can use later when specifying position.
   $(".arrange-fields-container .vertical-tabs").wrap("<div class='draggable-form-item' id='arrange-fields-vertical-tabs'></div>");
   
+  // In order to get the CSS to work correctly for textareas, we need to wrap a div around them.
+  // Happens when we try to make the labels be inline.
+  $("textarea").wrap("<div></div>");
+  
   // Make it so when you click on a fieldset, it's z-index goes up (so it
   // is in the foreground).
-  arrangeFieldsFSZI = 9999;  
+  arrangeFieldsFSZI = 300;  
   $(".arrange-fields-container .draggable-form-item-fieldset").bind("mousedown", function (event, ui) {
     $(this).css("z-index", arrangeFieldsFSZI);    
     arrangeFieldsFSZI++;
@@ -47,7 +51,6 @@ Drupal.behaviors.arrangeFieldsNodeEditStartup = function() {
     if (tabval == 0) tabval = 1;
     // Now, grab the form element within this element, and assign this tabval.
     $(element).find("input,textarea,select,a").each(function (sindex, sub_element) {
-      //console.log(sub_element);
       tabvalArray.push(tabval);
       elementArray[tabval] = $(sub_element);
       tabval++;  // in case there were more than one here.

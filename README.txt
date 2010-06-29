@@ -38,6 +38,8 @@ Restrictions
 Directions
 ======================
 
+- Make sure you have correctly installed and configured the jquery_ui module!
+
 - Unpack the module files into /sites/all/modules/arrange_fields.
 
 - Visit your admin/build/modules page in Drupal and enable the module.
