@@ -1791,13 +1791,16 @@ class MollomResellerTestCase extends MollomWebTestCase {
         'status' => 0,
         'testing' => 1,
       ));
-      $this->assertEqual(xmlrpc_errno(), FALSE, t('A new site has been registered with Mollom.'));
     }
+
+    // Assert that there were no XML-RPC errors or watchdog messages.
+    $this->assertMollomWatchdogMessages();
 
     $sites = mollom('mollom.listSites');
     foreach ($sites as $site) {
-      // Retrieve the information from the site:
+      // Retrieve the site information:
       $details = mollom('mollom.getSite', array('client_key' => $site));
+
       $this->assertEqual($details['mail'], 'mail@example.com', t('The original information is correctly retrieved from Mollom.'));
       $this->assertEqual($details['status'], 0, t('The original information is correctly retrieved from Mollom.'));
       $this->assertEqual($details['testing'], 1, t('The original information is correctly retrieved from Mollom.'));
@@ -1805,23 +1808,30 @@ class MollomResellerTestCase extends MollomWebTestCase {
       // Perform a safety check to avoid that the tests would delete
       // valid sites in case someone messed up their Mollom settings!
       if ($details['mail'] == 'mail@example.com' || $details['mail'] == 'root@example.com') {
-        // Update the information on the site:
-        $details['mail'] = 'root@example.com';
-        mollom('mollom.updateSite', array('client_key' => $site) + $details);
-        $this->assertEqual(xmlrpc_errno(), FALSE, t('The information has been updated on the Mollom server.'));
-
-        // Retrieve the information from the site and check if it was updated properly:
+        // Update the information on the site and verify that it was updated.
+        mollom('mollom.updateSite', array('client_key' => $site, 'mail' => 'root@example.com'));
         $details = mollom('mollom.getSite', array('client_key' => $site));
         $this->assertEqual($details['mail'], 'root@example.com', t('The updated information is correctly retrieved from Mollom.'));
 
+        // Verify that the existing information did not change (partial updates).
+        $this->assertEqual($details['status'], 0, t('The original information is correctly retrieved from Mollom.'));
+        $this->assertEqual($details['testing'], 1, t('The original information is correctly retrieved from Mollom.'));
+	
         // Delete the test site:
         mollom('mollom.deleteSite', array('client_key' => $site));
-        $this->assertEqual(xmlrpc_errno(), FALSE, t('The Mollom server deleted a site.'));
       }
       else {
         $this->fail(t('We tried to delete a non-test site.'));
       }
     }
+
+    // Assert that there were no XML-RPC errors or watchdog messages.
+    $this->assertMollomWatchdogMessages();
+
+    // Retrieve information about a non-existing site:
+    $details = mollom('mollom.getSite', array('client_key' => 'bogus'));
+    $this->assertEqual(xmlrpc_errno(), TRUE, t('Retrieving information from a non-existing site returned an XML-RPC error.'));
+    $this->assertMollomWatchdogMessages(FALSE);
 
     // Verify that all sites have been deleted:
     $sites = mollom('mollom.listSites');
