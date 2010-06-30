@@ -206,7 +206,9 @@ function recipe_mastercook4_import_form_submit($form, &$form_state) {
             if ( strlen($recipe_txt) > 0 ) {
               $parsed_recipe_object = recipe_mastercook4_import_single($recipe_txt);
               if ( strlen($parsed_recipe_object['title']) > 0 ) {
-                recipe_import_node_save($parsed_recipe_object);
+                if ( ($node = recipe_import_get_node($parsed_recipe_object)) != FALSE ) {
+                  node_save($node);
+                }
               }
             }
             // Clear recipe buffer.
@@ -217,8 +219,11 @@ function recipe_mastercook4_import_form_submit($form, &$form_state) {
         fclose($fp);
 
         // Handle the last one needed.
+        $parsed_recipe_object = recipe_mastercook4_import_single($recipe_txt);
         if ( strlen($parsed_recipe_object['title']) > 0 ) {
-          recipe_import_node_save($parsed_recipe_object);
+          if ( ($node = recipe_import_get_node($parsed_recipe_object)) != FALSE ) {
+            node_save($node);
+          }
         }
     }
   }
@@ -238,9 +243,12 @@ function recipe_mastercook4_import_single($recipe_txt = NULL) {
     'title' => '',
     'ingredients' => array(),
     'instructions' => '',
-    'notes' => '', 
+    'notes' => '',
     'source' => ''
   );
+
+  // A reference to the last ingredient added.
+  $last_ingred_key = NULL;
 
   $region = HEAD;
   foreach (split("\n", $recipe_txt) as $line) {
@@ -271,9 +279,9 @@ function recipe_mastercook4_import_single($recipe_txt = NULL) {
 
     if ( $region == META ) {
 
-			if ( preg_match('/Recipe +By *: *(.*)/i', $line, $matches) ) {
-				$recipe['source'] = $matches[1];
-			}
+      if ( preg_match('/Recipe +By *: *(.*)/i', $line, $matches) ) {
+        $recipe['source'] = $matches[1];
+      }
 
       // blank line in meta section, move to next section.
       if ( $trimmed_line == '' ) {
@@ -294,19 +302,34 @@ function recipe_mastercook4_import_single($recipe_txt = NULL) {
         $u = trim(substr($line, 10, 12));
         $i = trim(substr($line, 24));
 
-        $ing = array();
-        $ing['quantity'] = $q;
-        $ing['unit_name'] = $u;
-        $ing['ingredient_name'] = $i;
+        // If you have an ingredient continuation, add note to previous ingredient.
+        if ($q == '' && $u == '' && $last_ingred_key != NULL) {
+          $recipe['ingredients'][$last_ingred_key]['ingredient_note'] .= ' ' . $i;
 
-        // FALSE if no-match
-        $ing['unit_obj'] = recipe_unit_fuzzymatch($ing['unit_name']);
+        // For non-ingredient continuation, add ingredient like normal.
+        } else {
+          $ing = array();
+          $ing['quantity'] = $q;
+          $ing['unit_name'] = $u;
 
-        // FALSE if no-match
-        $ing['ingred_obj'] = recipe_ingredient_match($ing['ingredient_name']);
+          if ( preg_match('/(.*?) ?-- ?(.*)/', $i, $matches) ) {
+            $ing['ingredient_name'] = $matches[1];
+            $ing['ingredient_note'] = $matches[2];
+          }
+          else {
+            $ing['ingredient_name'] = $i;
+          }
 
-        $recipe['ingredients'][] = $ing;
+          // FALSE if no-match
+          $ing['unit_obj'] = recipe_unit_fuzzymatch($ing['unit_name']);
 
+          // FALSE if no-match
+          $ing['ingred_obj'] = recipe_ingredient_match($ing['ingredient_name']);
+
+          $recipe['ingredients'][] = $ing;
+          end($recipe['ingredients']);
+          $last_ingred_key = key($recipe['ingredients']);
+        }
       }
       else {
         // blank line in ingredient section, move to next section.
@@ -315,11 +338,11 @@ function recipe_mastercook4_import_single($recipe_txt = NULL) {
       }
     }
     elseif ( $region == DIRECTIONS ) {
-    	if ( preg_match('/- - - - - - - - - - - - - - - - - -/', $line) ) {
+      if ( preg_match('/- - - - - - - - - - - - - - - - - -/', $line) ) {
         $region++;
         continue;
-    	}
-    	
+      }
+
       if ( preg_match('/^Notes: +(.*)/i', $line, $matches) ) {
         $recipe['notes'] .= $matches[1] ."\n";
         $region++;
