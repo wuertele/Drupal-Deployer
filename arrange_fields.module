@@ -226,8 +226,7 @@ function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_butt
           
       $field_type = $form[$field]["#type"];
       $edit_link = "";
-      $edit_link = "<div class='arrange-fields-control-handle' 
-                        style='font-size: 0.8em;'>";
+      $edit_link = "<div class='arrange-fields-control-handle'>";
       // If this is a CCK type, give it an extra option.
       if ($GLOBALS["arrange_fields_editing_type"] == $form_type 
         && $form_type != ""
@@ -238,7 +237,7 @@ function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_butt
       }      
 
       $edit_link .= "<span class='arrange-fields-handle-region'> &nbsp; &nbsp; </span>
-                      <a href='javascript: arrangeFieldsPopupConfigField(\"$field\",\"$field_type\");' class='arrange-fields-config-link' 
+                      <a href='javascript: arrangeFieldsDialogConfigureField(\"$field\",\"$field_type\");' class='arrange-fields-config-link' 
                       title='Configure this field'>&nbsp;</a>";
       $edit_link .= "</div>";
       
@@ -309,10 +308,9 @@ function arrange_fields_add_draggable_webform_wrappers(&$form, $disable_buttons 
         $field_type = "";  // nothing for now.  May get used later.
         
         $edit_link = "";
-        $edit_link = "<div class='arrange-fields-control-handle' 
-                          style='font-size: 0.8em;'>";
+        $edit_link = "<div class='arrange-fields-control-handle'>";
         $edit_link .= "<span class='arrange-fields-handle-region'> &nbsp; &nbsp; </span>
-                        <a href='javascript: arrangeFieldsPopupConfigField(\"$field\", \"$field_type\");' class='arrange-fields-config-link' 
+                        <a href='javascript: arrangeFieldsDialogConfigureField(\"$field\", \"$field_type\");' class='arrange-fields-config-link' 
                         title='Configure this field'>&nbsp;</a>";
         
         $edit_link .= "</div>";        
@@ -418,7 +416,8 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
       
     // Let's go through and assign the positions.
     $jsConfigArray = array();
-    $css_markup = "";
+    $jsMarkupArray = array();
+    $css_markup = $markup_elements = "";
     $lines = explode(";", $position_data);
     foreach ($lines as $line) {
       if (trim($line) == "") continue; // skip blanks
@@ -443,6 +442,49 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
                         }";
         continue;
       }
+
+      // Was this actually a markup element which the user added?
+      // If so, add 
+      if ($temp[6] == "~~markup_element~~") {
+
+        $markup_width = $temp[7];
+        $markup_height = $temp[8];
+        $safe_markup_body = trim($temp[9]);
+        $markup_body = arrange_fields_unconvert_unsafe_chars(trim($temp[9]));
+        $safe_wrapper_style = trim($temp[10]);
+        $wrapper_style = arrange_fields_unconvert_unsafe_chars(trim($temp[10]));
+        $z_index = trim($temp[11]);
+        
+        $markup_elements .= "
+        <div class='draggable-form-item arrange-fields-draggable-markup' 
+              id='$wrapper_id'>
+          <div class='arrange-fields-control-handle arrange-fields-control-handle-markup'><span class='arrange-fields-handle-region'> &nbsp; &nbsp; </span>
+            <a href='javascript: arrangeFieldsDialogEditMarkup(\"$wrapper_id\");' class='arrange-fields-config-markup-link' title='Configure this markup'>&nbsp;</a>
+          </div>
+          <div class='arrange-fields-markup-body form-item' 
+              id='{$wrapper_id}_body'>$markup_body</div>
+        </div>";
+        
+        $css_markup .= "
+          #$wrapper_id {
+            top: $pos_top;
+            left: $pos_left;
+            width: $markup_width;
+            height: $markup_height;
+            z-index: $z_index;
+            $wrapper_style
+          }
+        ";
+        
+        // Add this bit of markup to our jsMarkupArray, so it can be
+        // added as a setting later.
+        $jsMarkupArray[$wrapper_id]["markupBody"] = $safe_markup_body;
+        $jsMarkupArray[$wrapper_id]["wrapperStyle"] = $safe_wrapper_style;
+        $jsMarkupArray[$wrapper_id]["zIndex"] = $z_index;
+        
+        continue;
+      }
+      
       
       $jsConfigArray[$wrapper_id]["wrapperWidth"] = $wrapper_width;
       $jsConfigArray[$wrapper_id]["wrapperHeight"] = $wrapper_height;
@@ -505,6 +547,7 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
     }
     
     drupal_add_js(array("arrangeFieldsDialogConfigObj" => $jsConfigArray), "setting");
+    drupal_add_js(array("arrangeFieldsDialogMarkupObj" => $jsMarkupArray), "setting");
     
     if ($GLOBALS["arrange_fields_editing"] != $form_id) {
       // Meaning, we are not currently arranging this form.  The user
@@ -526,9 +569,9 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
       ";
     }
     
-    // Now, add in our css markup...
-    $form["arrange_fields_css_markup"] = array(
-      "#value" => "<style>$css_markup</style>",
+    // Now, add in our css markup and markup elements...
+    $form["arrange_fields_css_markup_and_elements"] = array(
+      "#value" => "<style>$css_markup</style>$markup_elements",
       "#after_build" => array("arrange_fields_add_form_css_js"),  // important if the form fails validation, we still get the CSS and JS added in.
     );
     
@@ -555,6 +598,11 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
  * This function simply adds the CSS and JS files we need when on the node/edit page.
  * I have to do it this way (and set this function in an #after_build on the form)
  * in order to make sure this still gets called, even if the form fails validation.
+ * 
+ * This is not used when actually arranging the fields of a form, but when a user
+ * is entering data into the form.  If they forgot a required field (or whatever)
+ * and failed validation, we need to make sure these files get reloaded for them,
+ * otherwise the field positions will revert back to the default!
  *
  */
 function arrange_fields_add_form_css_js($element) {
@@ -641,12 +689,20 @@ function arrange_fields_display_main() {
 }
 
 
+/**
+ * hook_init()
+ * 
+ * The init function is executed at the beginning of every page
+ * load.  Here, I'm just trying to see if the webform module
+ * has been installed, and if so, I set a global variable I can
+ * access later.
+ *
+ */
 function arrange_fields_init() {
   // is webform installed?
   if (function_exists("webform_menu")) {
     $GLOBALS["arrange_fields_webform_installed"] = TRUE;
-  }
-    
+  }    
 }
 
 /**
@@ -718,6 +774,7 @@ function arrange_fields_display_form($form_type) {
           <div>" . t("You may resize text fields by dragging the right side
               of the field.") . "</div>";
 
+  $rtn .= "<input type='button' value='add markup' onClick='arrangeFieldsDialogEditMarkup(\"new\");'>";
   // The form we will be rearranging...
   $GLOBALS["arrange_fields_editing"] = $form_id;
   $GLOBALS["arrange_fields_editing_type"] = $form_type;
@@ -729,19 +786,39 @@ function arrange_fields_display_form($form_type) {
   $rtn .= "<div>" . t("If you need more room, move a field close to the bottom.  The
           container will resize, adding more room.") . "</div>";
   
-  $rtn .= arrange_fields_render_config_dialog();
+  $rtn .= arrange_fields_render_dialogs();
   
   return $rtn;
 }
 
 
 /**
- * Renders a div which will be used as the "config" dialog, displayed using
- * jQuery's .dialog() function.  It will let the administrator manage
+ * Mirror of the javascript function in arrange_fields_dialog.js,
+ * this will convert our custom codes for unsafe characters back to
+ * what they started off as.
+ *
+ * @param string $str
+ * @return string
+ */
+function arrange_fields_unconvert_unsafe_chars($str) {
+
+  $str = str_replace("_~!co%~_", ",", $str);
+  $str = str_replace("_~!sc%~_", ";", $str);
+  
+  return $str;
+}
+
+/**
+ * Renders the divs which will be used as the jquery dialogs, displayed using
+ * jQuery's .dialog() function.  
+ * 
+ * One will let the administrator manage
  * details of a field, like width and height of the wrapper.
+ * 
+ * The other will let users add or edit bits of arbitrary markup on the form.
  *
  */
-function arrange_fields_render_config_dialog() {
+function arrange_fields_render_dialogs() {
   
   $rtn = "";
   
@@ -759,10 +836,33 @@ function arrange_fields_render_config_dialog() {
             Label: 
             <label><input type='radio' name='af-dialog-label-display' value='' checked> default (block)</label>
             <label><input type='radio' name='af-dialog-label-display' value='inline-block' > inline</label>
-            
-            
-                  
-            
+           </div>";
+  
+
+  $rtn .= "<div id='arrange-fields-markup-dialog' title='Markup'>
+              <div><b>Body:</b></div>
+              <textarea name='af-markup-body' class='af-markup-body'></textarea>
+              <div style='font-size: 0.8em; line-height: 1.0em;'>
+                You may enter any valid HTML here.</div>
+              
+              <div style='padding-top: 10px;'><b>Wrapper style</b>='
+                 <input name='af-wrapper-style' class='af-wrapper-style'>
+                 '
+                 <div style='font-size: 0.8em; line-height: 1.0em;'>
+                  Enter style definitions. Ex: background-color: black;
+                 </div>
+              </div>
+              
+              <div style='padding-top: 10px;'><b>Z-index</b>:
+                <label><input type='radio' name='af-markup-z-index' value='201' checked> foreground (default)</label>
+                <label><input type='radio' name='af-markup-z-index' value='75' > background</label>
+                                 
+              </div>
+
+              
+              <div class='af-delete-button'>
+                <button type='button' onClick='arrangeFieldsDialogMarkupDelete();'>Delete</button>
+              </div>
            </div>";
   
   
@@ -815,7 +915,7 @@ function arrange_fields_display_webform($nid) {
   $rtn .= "<div>" . t("If you need more room, move a field close to the bottom, then save positions.  The
           container will resize, adding more room.") . "</div>";
   
-  $rtn .= arrange_fields_render_config_dialog();
+  $rtn .= arrange_fields_render_dialogs();
   
   return $rtn;
 }
@@ -833,6 +933,7 @@ function arrange_fields_add_arrange_css_js() {
   jquery_ui_add(array('ui.draggable', 'ui.dialog', 'ui.resizable'));
   drupal_add_js(drupal_get_path("module", "arrange_fields") . "/js/arrange_fields_node_edit.js");  // must be included first.
   drupal_add_js(drupal_get_path("module", "arrange_fields") . "/js/arrange_fields.js");    
+  drupal_add_js(drupal_get_path("module", "arrange_fields") . "/js/arrange_fields_dialog.js");    
   drupal_add_css(drupal_get_path("module", "arrange_fields") . "/css/arrange_fields.css");    
 
 }
@@ -882,7 +983,7 @@ function arrange_fields_display_otherform($form_id) {
   $rtn .= "<div>" . t("If you need more room, move a field close to the bottom, then save positions.  The
           container will resize, adding more room.") . "</div>";
   
-  $rtn .= arrange_fields_render_config_dialog();
+  $rtn .= arrange_fields_render_dialogs();
   
   return $rtn;
 }
@@ -909,7 +1010,9 @@ function arrange_fields_position_form($form_state, $form_id, $form_type) {
     "#value" => $form_type,
   );
   
-  // This field ends up being hidden in CSS.
+  // This field ends up being hidden in CSS.  It
+  // is where we will store a semi-serialized string of all our
+  // position data for all our fields.
   $form["arrange_fields_position_data"] = array(
     "#type" => "textarea",
   );
@@ -946,7 +1049,8 @@ function arrange_fields_position_form_validate($form, $form_state) {
                       in its original state."));
     
     // Need to refresh the page in order for the positions to be
-    // fully reset.
+    // fully reset.  This next bit finds out what the current URL is,
+    // then sends the user there again (refreshing the page)
     $path = isset($_GET['q']) ? $_GET['q'] : '<front>';
     $link = url($path, array('absolute' => TRUE));
     drupal_goto($link);    
@@ -965,6 +1069,7 @@ function arrange_fields_position_form_submit($form, $form_state) {
   variable_set("arrange_fields_position_data_$form_id", $position_data);
   
   $demo_link = l(t("See demo of most recent save (loads in new window)"), "node/add/" . str_replace("_", "-", $form_type), array("attributes" => array("target" => "_blank")));
+  
   if ($form_type == "webform") {
     $nid = str_replace("webform_client_form_", "", $form_id);
     $demo_link = l(t("See demo of most recent save (loads in new window)"), "node/$nid", array("attributes" => array("target" => "_blank")));
@@ -981,9 +1086,10 @@ function arrange_fields_position_form_submit($form, $form_state) {
 /**
  * Theme registry alter hook
  * 
- * Register this modules path as a search location for tpl files.
- * We want it to look for the special popup page.tpl file in the module's
- * directory.
+ * Register this module's path as a search location for tpl files.
+ * We want it to look for the special popup page.tpl files in the module's
+ * directory.  Doing this allows us to include template files with the
+ * module which can still be overridden by the end user in their site's theme.
  *
  */
 function arrange_fields_theme_registry_alter(&$theme_registry) {

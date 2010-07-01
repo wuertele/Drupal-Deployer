@@ -6,7 +6,9 @@ var arrangeFieldsGreatestHeight;
 var arrangeFieldsDragging;
 var arrangeFieldsDialogConfigField;
 var arrangeFieldsDialogConfigFieldId;
+var arrangeFieldsDialogMarkupId;
 var arrangeFieldsDialogConfigObj = new Object();  // we will use this later like a 2d assoc array, for keeping up with dialog settings for fields.
+var arrangeFieldsDialogMarkupObj = new Object();  // we will use this later like a 2d assoc array, for keeping up with dialog settings for markup elements.
 
 
 Drupal.behaviors.arrangeFieldsStartup = function() {
@@ -16,6 +18,10 @@ Drupal.behaviors.arrangeFieldsStartup = function() {
   if (Drupal.settings.arrangeFieldsDialogConfigObj != null) {
     arrangeFieldsDialogConfigObj = Drupal.settings.arrangeFieldsDialogConfigObj;
   }
+  if (Drupal.settings.arrangeFieldsDialogMarkupObj != null) {
+    arrangeFieldsDialogMarkupObj = Drupal.settings.arrangeFieldsDialogMarkupObj;
+  }
+  
   
   // This section of code makes the "handle" appear for draggable items, which users
   // may use to drag the item, or for important links to appear there.
@@ -52,6 +58,8 @@ Drupal.behaviors.arrangeFieldsStartup = function() {
   $(".arrange-fields-container .draggable-form-item:not(.draggable-form-item-fieldset) .form-text").resizable({
         handles: 'e'
   });  
+  $(".arrange-fields-container .arrange-fields-draggable-markup").resizable();
+
   
   // We do the "true" if this is a totally fresh new form, with no
   // position data already saved.  
@@ -63,21 +71,6 @@ Drupal.behaviors.arrangeFieldsStartup = function() {
     }
   }
   catch (exception) {}
-
-
-  //Set up the config dialog....
-  $("#arrange-fields-config-dialog").dialog({
-    autoOpen: false,
-    height: 200,
-    width: 300,
-    buttons: {
-      "Apply" : function() {
-        arrangeFieldsApplyDialogChanges();
-      },
-      "Cancel" : function() { $(this).dialog("close"); }
-    }  
-  });
-  
   
   // Make sure everything starts off on a grid line.
   arrangeFieldsRepositionToGrid(startup); 
@@ -89,7 +82,6 @@ Drupal.behaviors.arrangeFieldsStartup = function() {
   * Repositions all the draggable elements to the grid lines.
   */
 function arrangeFieldsRepositionToGrid(startup) {
-
 
   var gridWidth = 10;
   $(".arrange-fields-container .draggable-form-item").each(function (index, element) {
@@ -191,6 +183,17 @@ function arrangeFieldsSavePositions() {
      dataString += arrangeFieldsDialogConfigObj[id]["labelVerticalAlign"] + ",";
    }
    
+   // Is this field a piece of custom markup which the user has added?  If so,
+   // add whatever information we can about it from the object.
+   if (arrangeFieldsDialogMarkupObj[id] != null) {
+     dataString += "~~markup_element~~,";
+     dataString += $(element).width() + "px,";
+     dataString += $(element).height() + "px,";
+     dataString += arrangeFieldsDialogMarkupObj[id]["markupBody"] + ",";
+     dataString += arrangeFieldsDialogMarkupObj[id]["wrapperStyle"] + ",";
+     dataString += arrangeFieldsDialogMarkupObj[id]["zIndex"] + ",";
+   }
+   
    dataString += ";";
    
    var bottom = parseInt(top) + $(element).height();
@@ -230,124 +233,3 @@ function arrangeFieldsClosePopup() {
   window.close();
 }
 
-/**
- * We are opening the config dialog.  Let's reset the values
- *
- **/ 
-function arrangeFieldsPopupConfigField(field, field_type) {
-  var dia = $("#arrange-fields-config-dialog");
-  dia.dialog("option", "title", "Configure " + field);
-  
-  arrangeFieldsDialogConfigField = field;
-  var fieldId = "edit-" + field + "-draggable-wrapper";
-  // if this is a fieldset, the fieldId is slightly different.
-  if (field_type == "fieldset") {
-    fieldId = "edit-" + field + "-fieldset-draggable-wrapper";
-  }
-  arrangeFieldsDialogConfigFieldId = fieldId;
-  
-  
-  // Is this field in the dialog config obj yet?
-  if (arrangeFieldsDialogConfigObj[fieldId] == null) {
-    arrangeFieldsDialogConfigObj[fieldId] = new Object();
-  }
-
-  // Make sure the properties have initial, non-null values.
-  if (arrangeFieldsDialogConfigObj[fieldId]["wrapperHeight"] == null) {
-    arrangeFieldsDialogConfigObj[fieldId]["wrapperHeight"] = "";
-  }
-  if (arrangeFieldsDialogConfigObj[fieldId]["wrapperWidth"] == null) {
-    arrangeFieldsDialogConfigObj[fieldId]["wrapperWidth"] = "";
-  }
-  if (arrangeFieldsDialogConfigObj[fieldId]["labelDisplay"] == null) {
-    arrangeFieldsDialogConfigObj[fieldId]["labelDisplay"] = "";
-  }
-  if (arrangeFieldsDialogConfigObj[fieldId]["labelVerticalAlign"] == null) {
-    arrangeFieldsDialogConfigObj[fieldId]["labelVerticalAlign"] = "";
-  }
-  
-
-  // Let's reset the inputs in the dialog to use whatever is in the
-  // config obj.
-  dia.find("input[name=af-dialog-width]").val(arrangeFieldsDialogConfigObj[fieldId]["wrapperWidth"]);
-  dia.find("input[name=af-dialog-height]").val(arrangeFieldsDialogConfigObj[fieldId]["wrapperHeight"]);
-  dia.find("input[name=af-dialog-label-display]").each(function() {
-    if ($(this).val() == arrangeFieldsDialogConfigObj[fieldId]["labelDisplay"]
-        || $(this).val() == arrangeFieldsDialogConfigObj[fieldId]["labelDisplay"] + "-block") {
-      $(this).attr("checked", "checked");
-    }
-  });
-  
-  
-  
-  dia.dialog('open');
-}
-
-/**
- * Apply the changes the user has entered into the dialog.
- **/
-function arrangeFieldsApplyDialogChanges() {
-  var dia = $("#arrange-fields-config-dialog");
-  
-  var wrapperWidth = dia.find("input[name=af-dialog-width]").val();
-  var wrapperHeight = dia.find("input[name=af-dialog-height]").val();
-  var labelDisplay = dia.find("input[name=af-dialog-label-display]:checked").val();
-  
-  // Remove trouble characters, if they exist.
-  wrapperWidth = wrapperWidth.replace(";", "");
-  wrapperHeight = wrapperHeight.replace(";", "");
-  
-  // Save these values to the config obj
-  var field = arrangeFieldsDialogConfigField;
-  var fieldId = arrangeFieldsDialogConfigFieldId;
-  
-  arrangeFieldsDialogConfigObj[fieldId]["wrapperWidth"] = wrapperWidth;
-  arrangeFieldsDialogConfigObj[fieldId]["wrapperHeight"] = wrapperHeight;
-  arrangeFieldsDialogConfigObj[fieldId]["labelDisplay"] = labelDisplay;
-    
-  if (wrapperWidth == "") { wrapperWidth = "auto"; }
-  if (wrapperHeight == "") { wrapperHeight = "auto"; }
-  if (labelDisplay == "") { labelDisplay = "block"; }  
-  
-  // Let's actually affect these changes on the page.
-  $("#" + fieldId).css("width", wrapperWidth);
-  $("#" + fieldId).css("height", wrapperHeight);
-  
-  
-  var valign = "top";
-  // Because of the way IE handles inline-block displays with radio buttons,
-  // we have to change inline-block to simply inline for radios and checkboxes.
-  // Isn't IE great?
-  var radioDisplay = labelDisplay;
-  if (labelDisplay == "inline-block") { radioDisplay = "inline"; }
-  var boolRadio = false;
-  
-  // Grab all the sibling elements under the wrapper and make them
-  // have this display property.
-  $("#" + fieldId + " .form-item").children(":not(.description)").each(function() {
-    
-    // If these are radios/checkboxes, then also apply this style to the div's there.
-    $("#" + fieldId + " .form-item .form-radios, #" + fieldId + " .form-item .form-checkboxes").children().each(function () {
-      $(this).css("display", radioDisplay);
-      valign = "middle";
-      boolRadio = true;
-    });
-
-    if (!boolRadio) {
-      $(this).css("display", labelDisplay);
-    }
-    else { // we are dealing with radio buttons or checkboxes.
-      $(this).css("display", radioDisplay);
-      arrangeFieldsDialogConfigObj[fieldId]["labelDisplay"] = radioDisplay;
-    }
-       
-  });
-    
-  // Make the label look right...  
-  $("#" + fieldId + " .form-item label").css("vertical-align", valign);
-
-  
-  arrangeFieldsDialogConfigObj[fieldId]["labelVerticalAlign"] = valign;
-
-  dia.dialog('close');
-}
