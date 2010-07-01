@@ -89,7 +89,7 @@ function image_attach_block($op = 'list', $delta = 0, $edit = array()) {
                 $image_nodes[] = $image;
               }
             }
-            $output['content'] = theme('image_attach_block_attached', $nid, $image_nodes);
+            $output['content'] = theme('image_attach_attached_images_block', $nid, $image_nodes);
             return $output;
           }
         }
@@ -470,7 +470,7 @@ function image_attach_nodeapi(&$node, $op, $teaser, $page) {
         }
         $node->content['image_attach'] = array(
           '#weight' => $weight,
-          '#value'  => theme('image_attach_node_attached', $node, $node->image_attach, $img_size, $teaser),
+          '#value'  => theme('image_attach_attached_images_node', $node->nid, $node->image_attach, $img_size, $teaser),
         );
       }
       break;
@@ -555,16 +555,26 @@ return array(
  **/
 function image_attach_theme() {
   return array(
-    'image_attach_node_attached' => array(
+    'image_attach_attached_images' => array(
       'arguments' => array(
-        'node'        => new stdClass(),
-        'image_nodes' => array(),
-        'img_size'    => IMAGE_THUMBNAIL,
-        'teaser'      => FALSE,
+        'nid'             => 0,
+        'image_nodes'     => array(),
+        'options'         =>  array(),
       ),
     ),
-    'image_attach_block_attached' => array(
-      'arguments' => array('nid' => 0, 'image_nodes' => array()),
+    'image_attach_attached_images_node' => array(
+      'arguments' => array(
+        'node'            => new stdClass(),
+        'image_nodes'     => array(),
+        'img_size'        => IMAGE_THUMBNAIL,
+        'teaser'          => FALSE,
+      ),
+    ),
+    'image_attach_attached_images_block' => array(
+      'arguments' => array(
+        'nid'             => 0, 
+        'image_nodes'     => array(),
+      ),
     ),
   );
 }
@@ -572,8 +582,8 @@ function image_attach_theme() {
 /**
  * Theme attached images shown in nodes.
  *
- * @param $node
- *   The node object that is attaching the images.
+ * @param $nid
+ *  The attaching node's id.
  * @param $image_nodes
  *   The node objects of the images to theme.
  * @param $img_size
@@ -584,38 +594,24 @@ function image_attach_theme() {
  * Override this in template.php to include a case statement if you want different node types to appear differently.
  * If you have additional image sizes you defined in image.module, you can use them by theming this function as well.
  */
-function theme_image_attach_node_attached($node, $image_nodes, $img_size, $teaser = FALSE) {
-  $teaser_or_body = $teaser ? 'teaser' : 'body';
-  drupal_add_css(drupal_get_path('module', 'image_attach') .'/image_attach.css');
+function theme_image_attach_attached_images_node($nid, $image_nodes, $img_size, $teaser = FALSE) {
+  drupal_add_css(drupal_get_path('module', 'image_attach') . '/image_attach.css');
 
-  // Output each image node.
-  // We take them in reverse order because they are floated to the right, and we want the
-  // apparent left to right order to be correct.
-  $output = '';
-  foreach (array_reverse($image_nodes) as $image) {
-    if (!node_access('view', $image)) {
-      // If the image is restricted, don't show it as an attachment.
-      continue;
-    }
-    // Build CSS classes.
-    $classes = array();
-    $classes[] = 'image-attach-' . $teaser_or_body;
-    $classes[] = 'image-attach-node-' . $image->nid;
-    if (!$image->status) {
-      $classes[] = 'image-unpublished';
-    }
-    $class = implode(' ', $classes);
-    $info = image_get_info(file_create_path($image->images[$img_size]));
-    $link = $teaser ? "node/$node->nid" : "node/$image->nid";
-
-    $output .= '<div style="width: ' . $info['width'] . 'px" class="' . $class . '">';
-    $output .= l(image_display($image, $img_size), $link, array('html' => TRUE));
-    $output .= '</div>'."\n";
-  }
+  $options = array(
+    'size' => $img_size,
+    'link' => $teaser ? 'node' : 'image',
+    'attributes' => array(
+      'class' => 'image-attach-' . ($teaser ? 'teaser' : 'body'),
+    ),
+  );
+  
+  // We take the images in reverse order because they are floated to the right,
+  // and we want the apparent left to right order to be correct.
+  $output = theme('image_attach_attached_images', $nid, array_reverse($image_nodes), $options);
 
   // Wrap output of potentially multiple images in a DIV.
   if ($output && !$teaser) {
-    $output = '<div class="all-attached-images">' .$output. '</div>';
+    $output = '<div class="all-attached-images">' . $output . '</div>';
   }
 
   return $output;
@@ -629,16 +625,103 @@ function theme_image_attach_node_attached($node, $image_nodes, $img_size, $tease
  * @param $image_nodes
  *  The attached image nodes.
  */
-function theme_image_attach_block_attached($nid, $image_nodes = array()) {
+function theme_image_attach_attached_images_block($nid, $image_nodes = array()) {
   // Only return block content if there are images.
   if (is_array($image_nodes) && count($image_nodes)) {
-    foreach ($image_nodes as $image) {
-      // Render each image from the node.
-      $img = image_display($image, variable_get('image_attach_block_0_size', IMAGE_THUMBNAIL));
-      $content .= '<div class="attached-image">' .l($img, 'node/' . $image->nid, array('html' => TRUE)). '</div>';
-    }
-    return '<div class="all-attached-images">' .$content. '</div>';
+    $options = array(
+      'size' => variable_get('image_attach_block_0_size', IMAGE_THUMBNAIL),
+      'link' => 'image',
+    );
+    
+    $output = theme('image_attach_attached_images', $nid, $image_nodes, $options);
+    $output = '<div class="all-attached-images">' . $output . '</div>';
+
+    return $output;
   }
+}
+
+/**
+ * Generic theme function for any set of attached images.
+ *
+ * @param $nid
+ *  The id of the attaching node.
+ * @param $image_nodes
+ *  The fully loaded image nodes to theme. These do not need to be checked for 
+ *  access: that happens in this function.
+ * @param $options
+ *  An associative array of options, with the following keys:
+ *    - 'size' (default IMAGE_THUMBNAIL)
+ *      The name of the image derivative size at which to show the images,
+ *      eg 'thumbnail'.
+ *    - 'link' (default 'image')
+ *      Whether and where the images should be linked. This should be one of:
+ *        - 'image': link to the image node. Default.
+ *        - 'node': link to the attaching node.
+ *        - 'none': no link.
+ *    - 'attributes'
+ *      Extra attributes for the div around each image.
+ */
+function theme_image_attach_attached_images($nid, $image_nodes = array(), $options = array()) {
+  // Merge in defaults.
+  $options += array(
+      'size' => IMAGE_THUMBNAIL,
+      'link' => 'image',
+  );
+
+  $img_size         = $options['size'];
+  $link_destination = $options['link'];
+
+  // Link images to the attaching node.
+  if ($link_destination == 'node') {
+    $link_path = "node/$nid";
+  }  
+
+  $output = '';
+  foreach ($image_nodes as $image) {
+    if (!node_access('view', $image)) {
+      // If the image is restricted, don't show it as an attachment.
+      continue;
+    }
+
+    // Link images to the image node.
+    if ($link_destination == 'image') {
+      $link_path = "node/$image->nid";
+    }  
+
+    // Get a fresh copy of the attributes for each image node.
+    $div_attributes = $options['attributes'];
+
+    // Create CSS classes.
+    $classes = array();
+    if (isset($div_attributes['class'])) {
+      $classes[] = $div_attributes['class']; // incoming classes.
+    }
+    //$classes[] = 'image-attach-' . $teaser_or_body; // replace with base class in DIV
+    $classes[] = 'image-attach-node-' . $image->nid;
+    if (!$image->status) {
+      $classes[] = 'image-unpublished';
+    }
+    $div_attributes['class'] = implode(' ', $classes);
+
+    // Add the width as inline CSS.
+    $info = image_get_info(file_create_path($image->images[$img_size]));
+    if (!isset($div_attributes['style'])) {
+      $div_attributes['style'] = '';
+    }
+    $div_attributes['style'] .= 'width: ' . $info['width'] . 'px;';
+
+    $output .= '<div' . drupal_attributes($div_attributes) . '>';
+    $image_img = image_display($image, $img_size);
+    if ($link_path) {
+      $output .= l($image_img, $link_path, array('html' => TRUE));
+    }
+    else {
+      $output .= $image_img;
+    }
+    $output .= "</div>\n";
+  }
+
+  return $output;
 }
 
 /**
