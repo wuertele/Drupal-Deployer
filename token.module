@@ -292,7 +292,7 @@ function token_get_values($type = 'global', $object = NULL, $flush = FALSE, $opt
     $tokens['global']['default'] = module_invoke_all('token_values', 'global');
   }
 
-  $all = array_merge($tokens['global']['default'], $tokens[$type][$id]);
+  $all = _token_array_merge($tokens['global']['default'], $tokens[$type][$id]);
 
   $result = new stdClass();
   $result->tokens = array_keys($all);
@@ -301,6 +301,39 @@ function token_get_values($type = 'global', $object = NULL, $flush = FALSE, $opt
   $running = FALSE;
 
   return $result;
+}
+
+/**
+ * Merge two arrays of token values, checking and warning for duplication.
+ *
+ * Because array_merge will combinue elements that have the same key into an
+ * array instead of overriding the existing element, this causes problems since
+ * we need the values to always be a string.
+ *
+ * @param $array1
+ *   An array of token values keyed by token name.
+ * @param $array2
+ *   An array of token values keyed by token name.
+ * @return
+ *   A merged array of token values keyed by token name.
+ */
+function _token_array_merge($array1, $array2) {
+  static $warned = array();
+
+  $merged = array_merge($array1, $array2);
+  foreach ($merged as $key => $value) {
+    if (is_array($value)) {
+      if (empty($warned[$key])) {
+        // Only warn once about duplicate token.
+        watchdog('token', 'More than one module has defined the %key token.', array('%key' => $key), WATCHDOG_WARNING);
+        $warned[$key] = TRUE;
+      }
+      // Use the last-defined value (module with lowest weight).
+      $merged[$key] = array_pop($value);
+    }
+  }
+
+  return $merged;
 }
 
 /**
