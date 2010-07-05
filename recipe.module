@@ -255,10 +255,11 @@ function recipe_form(&$node, $form_state) {
     // Sometimes $ingredient is an array.
     $ingredient = (object)$ingredient;
 
+    // Strange, but html_entity_decode() doesn't handle &frasl;
     $form['ingredients'][$id]['quantity'] = array(
       '#type' => 'textfield',
       '#title' => '',
-      '#default_value' => preg_replace('/\&frasl;/', '/', recipe_ingredient_quantity_from_decimal($ingredient->quantity)),
+      '#default_value' => preg_replace('/\&frasl;/', '/', recipe_ingredient_quantity_from_decimal($ingredient->quantity, TRUE)),
       '#size' => 8,
       '#maxlength' => 8,
     );
@@ -884,7 +885,7 @@ function recipe_ingredient_id_from_name($name) {
 /**
  * Converts an ingredient's quantity from decimal to fraction
  */
-function recipe_ingredient_quantity_from_decimal($ingredient_quantity) {
+function recipe_ingredient_quantity_from_decimal($ingredient_quantity, $edit_mode=FALSE) {
   if (strpos($ingredient_quantity, '.') && variable_get('recipe_fraction_display', t('{%d} %d&frasl;%d'))) {
     $decimal = abs($ingredient_quantity);
     $whole = floor($decimal);
@@ -945,6 +946,11 @@ function recipe_ingredient_quantity_from_decimal($ingredient_quantity) {
     else {
       // Remove just the curly braces, but keep everything between them.
       $ingredient_quantity = preg_replace('/{|}/', '', $ingredient_quantity);
+    }
+    
+    // In edit mode we don't want to show html tags like <sup> and <sub>.
+    if ( $edit_mode ) {
+    	$ingredient_quantity = strip_tags($ingredient_quantity);
     }
   }
 
