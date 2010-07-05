@@ -53,6 +53,9 @@ function comment_token_values($type, $object = NULL, $options = array()) {
       $values['comment-body-format']     = $comment->format;
 
       $values += token_get_date_token_values($comment->timestamp, 'comment-');
+
+      $values['comment-node-title-raw']  = db_result(db_query("SELECT title FROM {node} WHERE nid = %d", $comment->nid));
+      $values['comment-node-title']      = check_plain($values['comment-node-title-raw']);
       break;
   }
 
@@ -80,6 +83,9 @@ function comment_token_list($type = 'all') {
     $tokens['comment']['comment-author-mail-raw'] = t("Comment author's e-mail.");
 
     $tokens['comment'] += token_get_date_token_info(t('Comment creation'), 'comment-');
+
+    $tokens['comment']['comment-node-title']      = t('The title of the node the comment was posted to.');
+    $tokens['comment']['comment-node-title-raw']  = t('The title of the node the comment was posted to.');
 
     return $tokens;
   }
