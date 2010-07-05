@@ -172,49 +172,55 @@ function node_token_values($type, $object = NULL, $options = array()) {
  */
 function node_token_list($type = 'all') {
   if ($type == 'node' || $type == 'all') {
-    $tokens['node']['nid']             = t('Node ID');
-    $tokens['node']['type']            = t('Node type');
-    $tokens['node']['type-name']       = t('Node type (user-friendly version)');
-    $tokens['node']['language']        = t('Node language');
-    $tokens['node']['title']           = t('Node title');
-    $tokens['node']['title-raw']       = t('Unfiltered node title.');
+    $tokens['node']['nid']             = t('The unique ID of the content item, or "node".');
+    $tokens['node']['type']            = t('The type of the node.');
+    $tokens['node']['type-name']       = t('The human-readable name of the node type.');
+    $tokens['node']['language']        = t('The language the node is written in.');
+    $tokens['node']['title']           = t('The title of the node.');
+    $tokens['node']['title-raw']       = t('The title of the node.');
     $tokens['node']['node-path']       = t('The URL alias of the node.');
     $tokens['node']['node-path-raw']   = t('The URL alias of the node.');
     $tokens['node']['node-url']        = t('The URL of the node.');
     $tokens['node']['node-url-raw']    = t('The URL of the node.');
 
-    $tokens['node']['author-uid']      = t("Node author's user id");
-    $tokens['node']['author-name']     = t("Node author's user name");
-    $tokens['node']['author-name-raw'] = t("Node author's user name.");
-    $tokens['node']['author-mail']     = t("Node author's e-mail.");
-    $tokens['node']['author-mail-raw'] = t("Node author's e-mail.");
-    $tokens['node']['node_comment_count'] = t("The number of comments on a node.");
-    $tokens['node']['unread_comment_count'] = t("The number of new comments on a node.");
+    $tokens['node']['author-uid']      = t("The unique ID of the author of the node.");
+    $tokens['node']['author-name']     = t("The login name of the author of the node.");
+    $tokens['node']['author-name-raw'] = t("The login name of the author of the node.");
+    $tokens['node']['author-mail']     = t("The email address of the author of the node.");
+    $tokens['node']['author-mail-raw'] = t("The email address of the author of the node.");
 
-    $tokens['node']['log']     = t('The node revision log message.');
-    $tokens['node']['log-raw'] = t('The node revision log message.');
-
-    $tokens['node']['term']            = t("Name of top taxonomy term");
-    $tokens['node']['term-raw']        = t("Unfiltered name of top taxonomy term.");
-    $tokens['node']['term-id']         = t("ID of top taxonomy term");
-    $tokens['node']['vocab']           = t("Name of top term's vocabulary");
-    $tokens['node']['vocab-raw']       = t("Unfiltered name of top term's vocabulary.");
-    $tokens['node']['vocab-id']        = t("ID of top term's vocabulary");
-
-    // Temporarily disabled -- see notes in node_token_values.
-    // $tokens['node']['catpath']        = t("Full taxonomy tree for the topmost term");
+    $tokens['node']['log']     = t('The explanation of the most recent changes made to the node.');
+    $tokens['node']['log-raw'] = t('The explanation of the most recent changes made to the node.');
 
     $tokens['node'] += token_get_date_token_info(t('Node creation'));
     $tokens['node'] += token_get_date_token_info(t('Node modification'), 'mod-');
 
-    $tokens['node']['menu']                = t("The name of the menu the node belongs to.");
-    $tokens['node']['menu-raw']            = t("The name of the menu the node belongs to.");
-    $tokens['node']['menupath']            = t("The menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /.");
-    $tokens['node']['menupath-raw']        = t("The unfiltered menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /.");
-    $tokens['node']['menu-link-title']     = t("The text used in the menu as link text for this item.");
-    $tokens['node']['menu-link-title-raw'] = t("The unfiltered text used in the menu as link text for this item.");
-    $tokens['node']['menu-link-mlid']      = t("The unique ID of the node's menu link.");
-    $tokens['node']['menu-link-plid']      = t("The unique ID of the node's menu link parent.");
+    if (module_exists('comment')) {
+      $tokens['node']['node_comment_count']   = t("The number of comments posted on a node.");
+      $tokens['node']['unread_comment_count'] = t("The number of comments posted on a node since the reader last viewed it.");
+    }
+
+    if (module_exists('taxonomy')) {
+      $tokens['node']['term']            = t("Name of top taxonomy term");
+      $tokens['node']['term-raw']        = t("Unfiltered name of top taxonomy term.");
+      $tokens['node']['term-id']         = t("ID of top taxonomy term");
+      $tokens['node']['vocab']           = t("Name of top term's vocabulary");
+      $tokens['node']['vocab-raw']       = t("Unfiltered name of top term's vocabulary.");
+      $tokens['node']['vocab-id']        = t("ID of top term's vocabulary");
+      // Temporarily disabled -- see notes in node_token_values.
+      // $tokens['node']['catpath']        = t("Full taxonomy tree for the topmost term");
+    }
+
+    if (module_exists('menu')) {
+      $tokens['node']['menu']                = t("The name of the menu the node belongs to.");
+      $tokens['node']['menu-raw']            = t("The name of the menu the node belongs to.");
+      $tokens['node']['menupath']            = t("The menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /.");
+      $tokens['node']['menupath-raw']        = t("The unfiltered menu path (as reflected in the breadcrumb), not including Home or [menu]. Separated by /.");
+      $tokens['node']['menu-link-title']     = t("The text used in the menu as link text for this item.");
+      $tokens['node']['menu-link-title-raw'] = t("The unfiltered text used in the menu as link text for this item.");
+      $tokens['node']['menu-link-mlid']      = t("The unique ID of the node's menu link.");
+      $tokens['node']['menu-link-plid']      = t("The unique ID of the node's menu link parent.");
+    }
 
     return $tokens;
   }

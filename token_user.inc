@@ -61,17 +61,17 @@ function user_token_values($type, $object = NULL, $options = array()) {
  */
 function user_token_list($type = 'all') {
   if ($type == 'user' || $type == 'all') {
-    $tokens['user']['user']           = t("User's name");
-    $tokens['user']['user-raw']       = t("User's unfiltered name.");
+    $tokens['user']['user']           = t("The login name of the user account.");
+    $tokens['user']['user-raw']       = t("The login name of the user account.");
 
-    $tokens['user']['uid']            = t("User's ID");
-    $tokens['user']['mail']           = t("User's email address");
+    $tokens['user']['uid']            = t("The unique ID of the user account.");
+    $tokens['user']['mail']           = t("The email address of the user account.");
 
     $tokens['user'] += token_get_date_token_info(t("User's registration"), 'user-created-');
     $tokens['user'] += token_get_date_token_info(t("User's last login"), 'user-last-login-');
-    $tokens['user']['date-in-tz']     = t("The current date in the user's timezone");
-    $tokens['user']['account-url']    = t("The URL of the user's profile page.");
-    $tokens['user']['account-edit']   = t("The URL the user's account editing page.");
+    $tokens['user']['date-in-tz']     = t("The current date in the user's timezone.");
+    $tokens['user']['account-url']    = t("The URL of the account profile page.");
+    $tokens['user']['account-edit']   = t("The url of the account edit page.");
 
     return $tokens;
   }

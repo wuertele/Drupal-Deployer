@@ -67,20 +67,20 @@ function comment_token_values($type, $object = NULL, $options = array()) {
  */
 function comment_token_list($type = 'all') {
   if ($type == 'comment' || $type == 'all') {
-    $tokens['comment']['comment-cid']             = t('Comment ID');
-    $tokens['comment']['comment-nid']             = t("Comment's node ID");
-    $tokens['comment']['comment-title']           = t('Comment title');
-    $tokens['comment']['comment-title-raw']       = t('Comment title.');
-    $tokens['comment']['comment-body']            = t('Comment body');
-    $tokens['comment']['comment-body-raw']        = t('Comment body.');
+    $tokens['comment']['comment-cid']             = t('The unique ID of the comment.');
+    $tokens['comment']['comment-nid']             = t('The unique ID of the node the comment was posted to.');
+    $tokens['comment']['comment-title']           = t('The title of the comment.');
+    $tokens['comment']['comment-title-raw']       = t('The title of the comment.');
+    $tokens['comment']['comment-body']            = t('The formatted content of the comment itself.');
+    $tokens['comment']['comment-body-raw']        = t('The formatted content of the comment itself.');
 
-    $tokens['comment']['comment-author-uid']      = t("Comment author's user id");
-    $tokens['comment']['comment-author-name']     = t("Comment author's user name");
-    $tokens['comment']['comment-author-name-raw'] = t("Comment author's user name.");
-    $tokens['comment']['comment-author-homepage'] = t("Comment author's home page.");
+    $tokens['comment']['comment-author-uid']      = t('The unique ID of the author of the comment.');
+    $tokens['comment']['comment-author-name']     = t('The name left by the comment author.');
+    $tokens['comment']['comment-author-name-raw'] = t('The name left by the comment author.');
+    $tokens['comment']['comment-author-homepage'] = t('The home page URL left by the comment author.');
 
-    $tokens['comment']['comment-author-mail']     = t("Comment author's e-mail.");
-    $tokens['comment']['comment-author-mail-raw'] = t("Comment author's e-mail.");
+    $tokens['comment']['comment-author-mail']     = t('The email address left by the comment author.');
+    $tokens['comment']['comment-author-mail-raw'] = t('The email address left by the comment author."');
 
     $tokens['comment'] += token_get_date_token_info(t('Comment creation'), 'comment-');
 
