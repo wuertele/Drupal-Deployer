@@ -117,9 +117,20 @@ function recipe_link($type, $node = NULL, $teaser = FALSE) {
         }
       }
     }
+    if ( count($links) > 0 ) {
+      array_unshift($links, array('title' => '<br/>'. t('Export to') .':', 'html' => TRUE));
+    }
   }
-  if ( count($links) > 0 ) {
-    array_unshift($links, array('title' => '<br/>'. t('Export to') .':', 'html' => TRUE));
+
+  // Hook-up magic 'ingredient' CCK content type and link to the by ingredient index page.
+  elseif ($type == 'node' && $node->type == 'ingredient') {
+    $ing = recipe_ingredient_match(trim(strtolower($node->title)));
+    if ($ing) {
+      $links['where_used'] = array(
+        'title' => t('Recipes where used'),
+        'href' => "recipe/bying/" . $ing['id']
+      );
+    }
   }
   return $links;
 }
