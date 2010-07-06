@@ -109,19 +109,19 @@ function recipe_get_node_alpha_list(&$node_list = NULL) {
     $alpha_list[$letter] = 1;
   }
 
-  usort($node_list,'node_list_cmp');
+  usort($node_list, 'node_list_cmp');
   return $alpha_list;
 }
 
 
 function node_list_cmp($a, $b) {
   // Sort first by letter.
-  if( $a->letter !=  $b->letter ) {
+  if ( $a->letter !=  $b->letter ) {
     return ($a->letter < $b->letter) ? -1 : 1;
   }
 
   // Next by title
-  if( $a->title !=  $b->title ) {
+  if ( $a->title !=  $b->title ) {
     return ($a->title < $b->title) ? -1 : 1;
   }
 
