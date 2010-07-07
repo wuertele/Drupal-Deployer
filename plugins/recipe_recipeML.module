@@ -196,7 +196,7 @@ function recipe_recipeML_import_form_submit($form, &$form_state) {
     if ($_POST['op'] == t('Import')) {
 
       $vocabs = taxonomy_get_vocabularies('recipe');
-      list($first_vid, $vocab) = each($vocabs);
+      list($lightest_vid, $vocab) = each($vocabs);
       reset($vocabs);
 
       foreach ($recipes as $recipe) {
@@ -204,13 +204,15 @@ function recipe_recipeML_import_form_submit($form, &$form_state) {
         foreach ($recipe->_categories as $category) {
 
           // Search the lightest weight recipe vocab for this term.
-          $term = recipe_get_term_by_name($category, $vocab->vid);
+          $term = recipe_get_term_by_name($category, $lightest_vid);
 
           // You didn't find that term, so add it.
-          if ( $term == FALSE && isset($first_vid) ) {
-            $term = array('name' => $category, 'vid' => $first_vid);
+          if ( $term == FALSE && isset($lightest_vid) ) {
+            $term = array('name' => $category, 'vid' => $lightest_vid);
             drupal_set_message(t('Adding term %term_name', array('%term_name' => $category)));
             taxonomy_save_term($term);
+            // Cast back to object so it's like the return value from recipe_get_term_by_name().
+            $term = (object)$term;
           }
 
           // You have the term now (existing or new), link it ink.
