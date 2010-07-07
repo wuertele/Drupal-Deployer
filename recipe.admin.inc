@@ -136,7 +136,7 @@ function recipe_index_settings_form() {
     '#type' => 'select',
     '#title' => t('Term depth'),
     '#default_value' => variable_get('recipe_index_depth', 4),
-    '#options' => array(1 => "1", 2 => "2", 3 => "3", 4 => "4", 5 => "5", 6 => "6", 1000 => t('All Levels')),
+  '#options' => array(0 => t('Choose depth'), 1 => "1", 2 => "2", 3 => "3", 4 => "4", 5 => "5", 6 => "6", 1000 => t('All Levels')),
     '#description' => t('Defines how many levels of terms should be displayed on a category index page.  Applies to hierarchical vocabularies.'),
   );
   $form['recipe_bycat']['recipe_index_catalog_show_child_category_links'] = array(
@@ -153,6 +153,12 @@ function recipe_index_settings_form() {
   return system_settings_form($form);
 }
 
+
+function recipe_index_settings_form_validate($form, &$form_state) {
+  if ( $form_state['values']['recipe_index_depth'] <= 0 ) {
+    form_set_error('recipe_index_depth', t("You must select a 'Term depth'."));
+  }
+}
 
 
 function recipe_export_multi($type = NULL) {
