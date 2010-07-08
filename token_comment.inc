@@ -80,7 +80,7 @@ function comment_token_list($type = 'all') {
     $tokens['comment']['comment-author-homepage'] = t('The home page URL left by the comment author.');
 
     $tokens['comment']['comment-author-mail']     = t('The email address left by the comment author.');
-    $tokens['comment']['comment-author-mail-raw'] = t('The email address left by the comment author."');
+    $tokens['comment']['comment-author-mail-raw'] = t('The email address left by the comment author.');
 
     $tokens['comment'] += token_get_date_token_info(t('Comment creation'), 'comment-');
 
