@@ -94,30 +94,18 @@ class image_attach_views_handler_field_attached_images
    */
   function render($values) {
     if (isset($values->image_attach_iids)) {
-      $derivative = $this->options['image_derivative'];
+      // Images need to loaded as full nodes to check node_access() for each of them.
       foreach ($values->image_attach_iids as $iid) {
-        // Create fake nodes suitable for image_display().
-        $node = new stdClass();
-        $node->nid = $iid;
-        
-        // image_load() will load the files for all derivatives. Derivatives larger
-        // than the original fall back to the original. Stale derivatives will be
-        // regenerated.
-        image_load($node);
-        $image_img = image_display($node, $derivative);
-        
-        switch($this->options['as_link']) {
-          case 'node':
-            $output = l($image_img, 'node/' . $values->{$this->aliases['nid']}, array('html' => true));
-            break;
-          case 'image':
-            $output = l($image_img, 'node/' . $node->nid, array('html' => true));
-            break;
-          default:
-            $output = $image_img;
-            break;
-        }
+        $image_nodes[$iid] = node_load($iid);
       }
+
+      $options = array(
+        'size' => $this->options['image_derivative'],
+        'link' => $this->options['as_link'],
+      );
+
+      $output = theme('image_attach_attached_images', $values->{$this->aliases['image_attach_nid']}, $image_nodes, $options);
+
       return $output;
     }
   }
