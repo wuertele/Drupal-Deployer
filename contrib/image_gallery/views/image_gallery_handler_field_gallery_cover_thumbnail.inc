@@ -58,7 +58,7 @@ class image_gallery_handler_field_gallery_cover_thumbnail extends image_gallery_
     $output = $this->render_link($output, $values);
     // Wrap a common class so the thumbnail can be style no matter what field.
     // TODO: theme function?
-    return '<div class="image-gallery-view-cover-thumbnail">' . $output . '</div>';
+    return '<span class="image-gallery-view-cover-thumbnail">' . $output . '</span>';
   }
 }
 
