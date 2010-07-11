@@ -171,6 +171,59 @@ function arrange_fields_settings_form() {
 }
 
 
+/**
+ * This function uses recursion to go through an array (presumably $form).
+ * It will return back an array of references to fields which we might
+ * want to place wrappers around.
+ * 
+ * It is meant to be used by arrange_fields_add_draggable_wrappers().
+ *
+ * @param array $arr
+ * @param string $previous_key
+ * @return array
+ */
+function arrange_fields_get_form_fields(&$arr, $previous_key = "") {
+  
+  $rtn = array();
+  
+  foreach ($arr as $key => &$element) {
+    if (is_array($element)) {
+      
+      if (isset($element["#type"])
+          && $element["#type"] != "hidden"
+          && $element["#type"] != "token"
+          && $element["#type"] != "value") {
+
+        // We found an element!  Save its reference in our return array.
+        $name = $key;
+        // If the name is numeric (as is the case with some CCK elements), we
+        // actually want to use the previous_key for the name.
+        if (is_numeric($name) && $previous_key != "") {
+          $name = $previous_key;
+        }
+        
+        $rtn[] = array("name" => $name, "element" => &$element);
+
+      }
+      else {
+        // This is not a field, but possibly another level of nesting
+        // in our $form.  So, let's recursively call this function
+        // and explore this new level.                
+        $temp = arrange_fields_get_form_fields($element, $key);
+        // It's possible we did indeed find some fields in the nested sub-array
+        // we just explored.  If so, let's add it to the end of our on-going
+        // return array.
+        $rtn = array_merge($rtn, $temp);
+      }
+    }
+  }
+  
+  return $rtn;
+  
+}
+
+
+
 
 /**
  * In this function, we are going to add div's around elements we wish to make
@@ -182,6 +235,129 @@ function arrange_fields_settings_form() {
  * @param bool $disable_buttons
  */
 function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_buttons = FALSE) {
+
+  // Figure out just what are the fields for this form.
+  if ($form_type == "webform") {    
+    // If we are dealing with a webform, then we need to make sure
+    // we get every element in $form["submitted"], as well as the submit
+    // buttons.  I am doing it this way because webform sometimes represents
+    // its fields in a way that the arrange_fields_get_form_fields cannot
+    // find.
+    $fields = array();
+    $fields[] = array("name" => "submit", "element" => &$form["submit"]);
+    $fields[] = array("name" => "next", "element" => &$form["next"]);
+    $fields[] = array("name" => "previous", "element" => &$form["previous"]);
+    foreach($form["submitted"] as $name => &$element) {
+      if (is_array($element)) {
+        $fields[] = array("name" => $name, "element" => &$element);
+      }
+    }
+  }
+  else {
+    $fields = arrange_fields_get_form_fields($form);
+  }
+    
+  // Make each field draggable by adding wrappers to it.
+  foreach ($fields as $field_arr) {
+
+    $field_name = $field_arr["name"];
+    $element = &$field_arr["element"];
+    
+    if ($element["#arrange_fields_added_wrappers"] == TRUE) {
+      // We have already added wrappers to this element.  This can possibly
+      // happen when we are working on Webforms, based on the way the logic works,
+      // we can have the same elements in there twice.
+      continue;
+    }
+    
+    // Make sure we are not still looking at a hidden or otherwise unwanted
+    // field which might be present because of the way I am doing Webform fields.
+    if ($element["#type"] == "hidden" 
+    || $element["#type"] == "token"
+    || $element["#type"] == "value"){
+      // Just skip to the next one.
+      continue;
+    }
+
+    $field_type = $element["#type"];
+    $edit_link = "";
+    $edit_link = "<div class='arrange-fields-control-handle'>";
+    // If this is a CCK type, give it an extra option.
+    if ($GLOBALS["arrange_fields_editing_type"] == $form_type 
+      && $form_type != ""
+      && (substr($field_name, 0, 6) == "field_")
+     ) 
+    {
+        $edit_link .= "<a href='javascript: arrangeFieldsPopupEditField(\"$form_type\", \"$field_name\");'>cck</a>";
+    }      
+
+    $edit_link .= "<span class='arrange-fields-handle-region'> &nbsp; &nbsp; </span>
+                    <a href='javascript: arrangeFieldsDialogConfigureField(\"$field_name\",\"$field_type\");' class='arrange-fields-config-link' 
+                    title='Configure this field'>&nbsp;</a>";
+    $edit_link .= "</div>";
+    
+
+    $css_class = "draggable-form-item";
+    $css_id = "edit-$field_name-draggable-wrapper";
+
+    // Are we dealing with a fieldset?     
+    if ($element["#type"] == "fieldset") {
+      // Fieldsets get an extra css_class and the ID changes.
+      $css_class .= " draggable-form-item-fieldset";
+      $css_id = "edit-$field_name-fieldset-draggable-wrapper";        
+    }
+    
+    // Set the prefix and suffix for this field such that we 
+    // wrap a div around it which the jquery can lock onto later to
+    // make it draggable.
+    $element["#prefix"] .= "<div id='$css_id' class='$css_class'>$edit_link";
+    $element["#suffix"] .= "</div>"; 
+   
+    // If the field is a button, and we have chosen to disable buttons, then
+    // disable this one.
+    if ($element["#type"] == "submit" || $element["#type"] == "button") {
+      if ($disable_buttons) {
+          $element["#attributes"]["disabled"] = "disabled";
+          $element["#attributes"]["class"] .= " disabled-button ";
+      }        
+    }
+    
+    // Indicate that we have successfully added all the necessary wrappers 
+    // to this element.  This is so we don't do it twice.
+    $element["#arrange_fields_added_wrappers"] = TRUE;
+     
+  }
+  
+  // We set this global so later on we can easily tell if we've already performed this opperation.
+  $GLOBALS["arrange_fields_added_wrappers_" . $form["form_id"]["#value"]] =  TRUE;    
+
+}
+
+
+
+/**
+ * NOTE!!!
+ * 
+ * This function is obsolete and is no longer being used.  It was the
+ * original add_draggable_wrappers function, which I am keeping in the
+ * source code for now in case there are problems and I need to look back
+ * at the old code for some reason.  Yes, I know I can use the CVS, but this
+ * is easier for me.
+ * 
+ * This code will be removed once I am satisfied that the new function
+ * is stable and reliable.
+ * 
+ * ----------------------------------------------------------- * 
+ * 
+ * In this function, we are going to add div's around elements we wish to make
+ * draggable on the page.  The jQuery can then grab onto those divs to make
+ * them draggable.
+ *
+ * @param array $form
+ * @param string $form_type
+ * @param bool $disable_buttons
+ */
+function arrange_fields_add_draggable_wrappers_old(&$form, $form_type, $disable_buttons = FALSE) {
 
   if ($form_type == "webform") {
     return arrange_fields_add_draggable_webform_wrappers($form, $disable_buttons);
@@ -220,7 +396,8 @@ function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_butt
         || $field == "buttons" 
         || substr($field, 0, 6) == "field_"
         || (isset($form[$field]["#type"]) 
-            && $form[$field]["#type"] != "hidden")
+            && $form[$field]["#type"] != "hidden"
+            && $form[$field]["#type"] != "token")
         )) {
       
           
@@ -276,12 +453,27 @@ function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_butt
 }
 
 
+
 /**
+ * NOTE!!!!!!!!
+ * 
+ * This function is obsolete and is no longer being used!  It was originally used
+ * because webforms stored their fields in a different area of $form than what was
+ * expected, so I just made a separate function.  But, because of changes I have
+ * recently made, the function add_draggable_wrappers can now handle webforms
+ * as well as CCK and generic $form's.  So there is no need for this function
+ * any more.
+ * 
+ * I am keeping it here (for now) in case I need to refer back to it for any reason,
+ * but, it is no longer being called by any other function.
+ * 
+ * ------------------------------------------------------
+ * 
  * Similar to add_draggable_wrappers, but specially modified when dealing with webform
  * fields.
  *
  */
-function arrange_fields_add_draggable_webform_wrappers(&$form, $disable_buttons = FALSE) {
+function arrange_fields_add_draggable_webform_wrappers_old(&$form, $disable_buttons = FALSE) {
   
   $form["submit"]["#prefix"] = "<div id='edit-buttons-wrapper' class='draggable-form-item'>";
   $form["submit"]["#suffix"] = "</div>";
@@ -292,7 +484,8 @@ function arrange_fields_add_draggable_webform_wrappers(&$form, $disable_buttons 
     $form["submit"]["#attributes"]["class"] .= " disabled-button ";
   }
   
-  
+
+   
   // Go through every element in $form to find which items need to be draggable.
   foreach ($form["submitted"] as $field => $value) {
 
@@ -328,6 +521,7 @@ function arrange_fields_add_draggable_webform_wrappers(&$form, $disable_buttons 
 }
 
 
+
 /**
  * This function, which is meant to be displayed in the popup, will just take
  * CCK's field_edit_form and display it for us.  This is to make it more
@@ -359,6 +553,7 @@ function arrange_fields_popup_edit_field() {
  * @return string
  */
 function arrange_fields_popup_close_window() {
+  jquery_ui_add(array('ui.draggable', 'ui.dialog', 'ui.resizable'));
   drupal_add_js(drupal_get_path("module", "arrange_fields") . "/js/arrange_fields.js");    
   
   $rtn .= "<div style='text-align: center;'>
@@ -905,7 +1100,9 @@ function arrange_fields_display_webform($nid) {
           you want them to appear on the webform entry page.") . "</div>
           <div>" . t("You may resize text fields by dragging the right side
               of the field.") . "</div>";
-
+  
+  $rtn .= "<input type='button' value='add markup' onClick='arrangeFieldsDialogEditMarkup(\"new\");'>";
+  
   // The form we will be rearranging...
   $GLOBALS["arrange_fields_editing"] = $form_id;
   $GLOBALS["arrange_fields_editing_type"] = $form_type;
@@ -974,6 +1171,8 @@ function arrange_fields_display_otherform($form_id) {
           <div>" . t("You may resize text fields by dragging the right side
               of the field.") . "</div>";
 
+  $rtn .= "<input type='button' value='add markup' onClick='arrangeFieldsDialogEditMarkup(\"new\");'>";
+  
   // The form we will be rearranging...
   $GLOBALS["arrange_fields_editing"] = $form_id;
   $GLOBALS["arrange_fields_editing_type"] = $form_type;
@@ -1039,7 +1238,7 @@ function arrange_fields_position_form($form_state, $form_id, $form_type) {
  * to reset the form (and restore the form to its orignal state).
  *
  */
-function arrange_fields_position_form_validate($form, $form_state) {
+function arrange_fields_position_form_validate($form, &$form_state) {
 
   $form_id = $form_state["values"]["arrange_fields_form_id"];
   if (stristr($form_state["values"]["op"], "reset")) {
@@ -1055,6 +1254,12 @@ function arrange_fields_position_form_validate($form, $form_state) {
     $link = url($path, array('absolute' => TRUE));
     drupal_goto($link);    
   }
+  
+  // This bit is required in order to let javascript submit the form!
+  // (Which happens after you change CCK settings in the popup, then
+  // click the button which says it is going to save and reload your form).
+  $form_state["submitted"] = TRUE;
+  
 }
 
 /**
