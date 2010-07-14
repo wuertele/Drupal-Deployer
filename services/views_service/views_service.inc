@@ -31,10 +31,9 @@ function views_service_get($view_name, $display_id = 'default', $args = array(),
   // Put all arguments and then execute.
   $view->set_arguments($args, FALSE);
   $view->set_offset($offset);
-  // If offset is set we can't have a user pager.
-  if (empty($offset)) {
+  $view->set_items_per_page($limit);
+  if (!empty($limit)) {
     $view->set_use_pager(TRUE);
-    $view->set_items_per_page($limit);
   }
   else {
     // Disable the user pager.
