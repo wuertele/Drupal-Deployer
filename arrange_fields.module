@@ -236,11 +236,18 @@ function arrange_fields_get_form_fields(&$arr, $previous_key = "") {
  */
 function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_buttons = FALSE) {
 
+  
   // If this is a CCK content type, let's add in the "Delete" button
   // so it can be positioned too.
-  if (strstr($form["form_id"]["#value"], "_node_form") && is_array($form["buttons"])) {
+
+  // In this IF statement, what I am trying to say is, if we are *arranging*
+  // a CCK form, then add a delete button, but don't do it under any other
+  // circumstances.
+  if (strstr($form["form_id"]["#value"], "_node_form") 
+      && is_array($form["buttons"])
+      && $GLOBALS["arrange_fields_editing"] == $form["form_id"]["#value"]) {
     // This is most likely a CCK / regular node content-type form.
-    if (!isset($form["buttons"]["delete"]) && $form["nid"]["#value"] != NULL) {
+    if (!isset($form["buttons"]["delete"])) {
       // Just add it in as a placeholder for later.
       $form["buttons"]["delete"] = array(
         "#type" => "submit",
@@ -249,7 +256,7 @@ function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_butt
       );
     }
   }
-  
+
   // Figure out just what are the fields for this form.
   if ($form_type == "webform") {    
     // If we are dealing with a webform, then we need to make sure
