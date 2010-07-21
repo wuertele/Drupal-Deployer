@@ -180,7 +180,6 @@ function node_token_list($type = 'all') {
     $tokens['node']['node-path']       = t('The URL alias of the node.');
     $tokens['node']['node-path-raw']   = t('The URL alias of the node.');
     $tokens['node']['node-url']        = t('The URL of the node.');
-    $tokens['node']['node-url-raw']    = t('The URL of the node.');
 
     $tokens['node']['author-uid']      = t("The unique ID of the author of the node.");
     $tokens['node']['author-name']     = t("The login name of the author of the node.");
