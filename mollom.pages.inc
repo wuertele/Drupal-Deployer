@@ -78,6 +78,11 @@ function mollom_report_form(&$form_state, $entity, $id) {
     '#description' => t("Mollom is a web service that helps you moderate your site's content: see <a href=\"http://mollom.com\">http://mollom.com</a> for more information. By sending feedback to Mollom, you teach Mollom about the content you like and dislike, allowing Mollom to do a better job helping you moderate your site's content. If you want to report multiple posts at once, you can use Mollom's bulk operations on the content and comment administration pages."),
   );
 
+  // @todo "Delete" does not work for reporting mails to Mollom. In D7+, this
+  //   form should be used solely for mails, as other entities are reported
+  //   through existing delete confirmation forms instead. Perhaps there should
+  //   be a dedicated form for reporting mails, as they are not really
+  //   compatible with any of the standard processes either way.
   return confirm_form($form,
     t('Are you sure you want to delete and report the content as inappropriate?'),
     isset($_GET['destination']) ? $_GET['destination'] : '<front>',
