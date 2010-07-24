@@ -44,8 +44,8 @@ function node_token_values($type, $object = NULL, $options = array()) {
       $values['author-mail']        = check_plain($account->mail);
       $values['author-mail-raw']    = $account->mail;
 
-      $values['log']                = filter_xss($node->log);
-      $values['log-raw']            = $node->log;
+      $values['log-raw']            = isset($node->log) ? $node->log : '';
+      $values['log']                = filter_xss($values['log-raw']);
 
       if (module_exists('comment')) {
         $values['node_comment_count'] = isset($node->comment_count) ? $node->comment_count : 0;
