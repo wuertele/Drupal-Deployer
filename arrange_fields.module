@@ -11,7 +11,7 @@ function arrange_fields_menu() {
   $items = array();
   
   $items["arrange-fields/%"] = array(
-    "title" => t("Arrange fields - Form"),
+    "title" => "Arrange fields - Form",
     "page callback" => "arrange_fields_display_form",
     "page arguments" => array(1),
     "access arguments" => array("administer arrange fields"),
@@ -19,7 +19,7 @@ function arrange_fields_menu() {
   );
   
   $items["arrange-fields/webform/%"] = array(
-    "title" => t("Arrange fields - Webform"),
+    "title" => "Arrange fields - Webform",
     "page callback" => "arrange_fields_display_webform",
     "page arguments" => array(2),
     "access arguments" => array("administer arrange fields"),
@@ -27,7 +27,7 @@ function arrange_fields_menu() {
   );  
 
   $items["arrange-fields/other/%"] = array(
-    "title" => t("Arrange fields - Other Forms"),
+    "title" => "Arrange fields - Other Forms",
     "page callback" => "arrange_fields_display_otherform",
     "page arguments" => array(2),
     "access arguments" => array("administer arrange fields"),
@@ -35,7 +35,7 @@ function arrange_fields_menu() {
   );  
   
   $items["admin/content/types/arrange-fields"] = array(
-    "title" => t("Arrange form fields"),
+    "title" => "Arrange form fields",
     "page callback" => "arrange_fields_display_main",
     "access arguments" => array("administer arrange fields"),
     "type" => MENU_LOCAL_TASK,
@@ -43,8 +43,8 @@ function arrange_fields_menu() {
   );
   
   $items["admin/settings/arrange-fields"] = array(
-    "title" => t("Arrange fields"),
-    "description" => t("Arrange fields and components on your forms."),
+    "title" => "Arrange fields",
+    "description" => "Arrange fields and components on your forms.",
     "page callback" => "arrange_fields_display_main",
     "access arguments" => array("administer arrange fields"),
     "type" => MENU_NORMAL_ITEM,
@@ -52,19 +52,19 @@ function arrange_fields_menu() {
   
   // Admin settings menu...
   $items["admin/settings/arrange-fields"] = array(
-    "title" => t("Arrange fields"),
-    "description" => t("Arrange fields and components on your forms."),
+    "title" => "Arrange fields",
+    "description" => "Arrange fields and components on your forms.",
     "page callback" => "arrange_fields_display_main",
     "access arguments" => array("administer arrange fields"),
     "type" => MENU_NORMAL_ITEM,
   );
   $items["admin/settings/arrange-fields/forms"] = array(
-    "title" => t("Forms"),
+    "title" => "Forms",
     "type" => MENU_DEFAULT_LOCAL_TASK,
     "weight" => 1,
   );
   $items["admin/settings/arrange-fields/settings"] = array(
-    "title" => t("Settings"),
+    "title" => "Settings",
     "page callback" => "drupal_get_form",
     "page arguments" => array("arrange_fields_settings_form"),
     "access arguments" => array("administer arrange fields"),
@@ -77,22 +77,26 @@ function arrange_fields_menu() {
   
   // CCK/Content type menu......
   // Get a list of content types and create menu hooks for them.
-  foreach (node_get_types() as $type) {
+  // first, let's make sure that CCK is installed (by checking for the existence
+  // of the content_types() function).
+  if (function_exists("content_types")) {
+    foreach (node_get_types() as $type) {
+      
+      $type_name = $type->type;
+      $content_type = content_types($type_name);
+      $type_url_str = $content_type['url_str'];
+      
+      $items["admin/content/node-type/$type_url_str/arrange-fields"] = array(
+        "title" => "Arrange fields",
+        "page callback" => "arrange_fields_display_form",
+        "page arguments" => array($type_name),
+        "access arguments" => array("administer arrange fields"),
+        "type" => MENU_LOCAL_TASK,
+        "weight" => 3,
+      );
+      
     
-    $type_name = $type->type;
-    $content_type = content_types($type_name);
-    $type_url_str = $content_type['url_str'];
-    
-    $items["admin/content/node-type/$type_url_str/arrange-fields"] = array(
-      "title" => "Arrange fields",
-      "page callback" => "arrange_fields_display_form",
-      "page arguments" => array($type_name),
-      "access arguments" => array("administer arrange fields"),
-      "type" => MENU_LOCAL_TASK,
-      "weight" => 3,
-    );
-    
-  
+    }
   }
 
    
@@ -113,13 +117,13 @@ function arrange_fields_menu() {
 
   // Menu hooks for the two popups used with CCK fields...
   $items["arrange-fields/popup-edit-field"] = array(
-    "title" => t("Arrange fields - Form"),
+    "title" => "Arrange fields - Form",
     "page callback" => "arrange_fields_popup_edit_field",
     "access arguments" => array("administer arrange fields"),
     "type" => MENU_CALLBACK,
   );  
   $items["arrange-fields/popup-close-window"] = array(
-    "title" => t("Arrange fields - Form"),
+    "title" => "Arrange fields - Form",
     "page callback" => "arrange_fields_popup_close_window",
     "access arguments" => array("administer arrange fields"),
     "type" => MENU_CALLBACK,
@@ -186,22 +190,33 @@ function arrange_fields_get_form_fields(&$arr, $previous_key = "") {
   
   $rtn = array();
   
-  foreach ($arr as $key => &$element) {
+  foreach ($arr as $name => &$element) {
     if (is_array($element)) {
-      
-      if (isset($element["#type"])
+ 
+      // Is this the buttons element on a CCK form?  If so, we want
+      // the entire buttons array, NOT each individual button (this was
+      // causing a bug where Diff's View changes and the Delete button
+      // were not arrangeable.
+     if ($name == "buttons" 
+        && $element["#type"] == "" 
+        && $element["submit"]["#type"] == "submit") {
+        // Okay, we found it (most likely, anyway).
+        // Let's add it to our return array.                      
+        $rtn[] = array("name" => $name, "element" => &$element);          
+      }      
+      else if (isset($element["#type"])
           && $element["#type"] != "hidden"
           && $element["#type"] != "token"
           && $element["#type"] != "value") {
-
         // We found an element!  Save its reference in our return array.
-        $name = $key;
+        
         // If the name is numeric (as is the case with some CCK elements), we
         // actually want to use the previous_key for the name.
         if (is_numeric($name) && $previous_key != "") {
           $name = $previous_key;
         }
         
+        // Add to our return array.
         $rtn[] = array("name" => $name, "element" => &$element);
 
       }
@@ -209,7 +224,7 @@ function arrange_fields_get_form_fields(&$arr, $previous_key = "") {
         // This is not a field, but possibly another level of nesting
         // in our $form.  So, let's recursively call this function
         // and explore this new level.                
-        $temp = arrange_fields_get_form_fields($element, $key);
+        $temp = arrange_fields_get_form_fields($element, $name);
         // It's possible we did indeed find some fields in the nested sub-array
         // we just explored.  If so, let's add it to the end of our on-going
         // return array.
@@ -235,27 +250,6 @@ function arrange_fields_get_form_fields(&$arr, $previous_key = "") {
  * @param bool $disable_buttons
  */
 function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_buttons = FALSE) {
-
-  
-  // If this is a CCK content type, let's add in the "Delete" button
-  // so it can be positioned too.
-
-  // In this IF statement, what I am trying to say is, if we are *arranging*
-  // a CCK form, then add a delete button, but don't do it under any other
-  // circumstances.
-  if (strstr($form["form_id"]["#value"], "_node_form") 
-      && is_array($form["buttons"])
-      && $GLOBALS["arrange_fields_editing"] == $form["form_id"]["#value"]) {
-    // This is most likely a CCK / regular node content-type form.
-    if (!isset($form["buttons"]["delete"])) {
-      // Just add it in as a placeholder for later.
-      $form["buttons"]["delete"] = array(
-        "#type" => "submit",
-        "#value" => "Delete",
-        "#weight" => 15,
-      );
-    }
-  }
 
   // Figure out just what are the fields for this form.
   if ($form_type == "webform") {    
@@ -650,6 +644,12 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
       $label_display = trim($temp[8]);
       $label_vertical_align = trim($temp[9]);
       
+      $text_label_display = $label_display;
+      if ($label_display == "inline-block") {
+        $text_label_display = "inline";
+      }
+      
+      
       if ($wrapper_id == "~~maxBottom~~") {
         // This is actually the height of the container.  Let's set that,
         // then continue.
@@ -719,7 +719,7 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
       // We do not want to try to resize any input fields if this
       // is the buttons wrapper.  Otherwise it will mess up our buttons.
       // This usually happens when you have CAPTCHA installed.
-      if ($width != "0px" && $element_type != "") {
+      if ($width != "0px" && $element_type != "") {        
         $css_markup .= "        
         #$wrapper_id $element_type.form-text, 
         #$wrapper_id $element_type.form-textarea {
@@ -751,8 +751,24 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
           #$wrapper_id .form-item > div.form-checkboxes > div
           {
             display: $label_display;
-          }
-          
+          }";
+        
+        if ($element_type == "input") {
+          // Because of IE, we must do something special if the input
+          // is a textfield, which is what this is testing for.
+          // Basically, the label cannot have a display of "inline-block",
+          // it must simply be "inline."  However, the textfield itself still
+          // needs to be "inline-block."  Thanks IE!
+          $css_markup .= "
+            #$wrapper_id .form-item > label
+            {
+              display: $text_label_display;
+            }
+          ";
+        }
+        
+        
+        $css_markup .= "  
           #$wrapper_id .form-item div.ui-resizable-handle,
           #$wrapper_id .form-item div.description
           {
@@ -845,7 +861,13 @@ function arrange_fields_display_main() {
           <ul>";
   
   foreach (node_get_types() as $type) {
-      $rtn .= "<li>" . l($type->name, "arrange-fields/$type->type") . "</li>";
+    // To eleminate confusion, let's not display the "webform" content type, if that module
+    // is installed.
+    if ($GLOBALS["arrange_fields_webform_installed"] && $type->type == "webform") {
+      continue;
+    }
+    
+    $rtn .= "<li>" . l($type->name, "arrange-fields/$type->type") . "</li>";
   }
   
   $rtn .= "</ul>";
@@ -997,8 +1019,8 @@ function arrange_fields_display_form($form_type) {
   
   $node_form = new stdClass();
   $node_form->type = $form_type;
-  $rtn .= drupal_get_form($form_id, $node_form);
-
+  $rtn .= drupal_get_form($form_id, $node_form, $my_form_state);
+  
   $rtn .= "<div>" . t("If you need more room, move a field close to the bottom.  The
           container will resize, adding more room.") . "</div>";
   
@@ -1020,6 +1042,9 @@ function arrange_fields_unconvert_unsafe_chars($str) {
 
   $str = str_replace("_~!co%~_", ",", $str);
   $str = str_replace("_~!sc%~_", ";", $str);
+  $str = str_replace("_~!sq%~_", "'", $str);
+  $str = str_replace("_~!dq%~_", '"', $str);
+  $str = str_replace("_~!nl%~_", "\n", $str);
   
   return $str;
 }
@@ -1234,7 +1259,8 @@ function arrange_fields_position_form($form_state, $form_id, $form_type) {
   // is where we will store a semi-serialized string of all our
   // position data for all our fields.
   $form["arrange_fields_position_data"] = array(
-    "#type" => "textarea",
+    "#type" => "textfield",
+    "#maxlength" => 99999999999999,  // trying to make it basically infinite.
   );
   
   $form["save"] = array(

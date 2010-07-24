@@ -54,6 +54,7 @@ Drupal.behaviors.arrangeFieldsStartup = function() {
   arrangeFieldsStartupHeight = 0;
   arrangeFieldsGreatestHeight = 0; 
 
+  
   $(".arrange-fields-container .draggable-form-item:not(.draggable-form-item-fieldset) textarea").resizable();
   $(".arrange-fields-container .draggable-form-item:not(.draggable-form-item-fieldset) .form-text").resizable({
         handles: 'e'
@@ -148,8 +149,6 @@ function arrangeFieldsSavePositions() {
    var element_type = "";
    // Now, we want to find the element inside...
    
-   //var width = $(element).width();
-   //var height = $(element).height();
    var width = 0;
    var height = 0;
    

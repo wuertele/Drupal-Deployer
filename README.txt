@@ -18,7 +18,7 @@ Restrictions
  
  - Multi-page forms are not currently supported.
  
- - Fields within fieldsets cannot be arranged (yet).  But, the fieldset itself
+ - Fields within fieldsets cannot be arranged.  But, the fieldset itself
    can be re-arranged.
    
  - jQuery is used to properly specify the height of the container 
@@ -40,6 +40,9 @@ Directions
 ======================
 
 - Make sure you have correctly installed and configured the jquery_ui module!
+  Read through it's README.txt file for detailed instructions.  Make sure
+  you get the correct version of the plugin! (NOT the most recent version unless
+  you knoww what you're doing!)
 
 - Unpack the module files into /sites/all/modules/arrange_fields.
 
