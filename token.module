@@ -70,24 +70,36 @@ function token_theme() {
  */
 function token_token_values($type, $object = NULL) {
   global $user;
-  global $base_url;
   $values = array();
 
   switch ($type) {
     case 'global':
+      // Current user tokens.
       $values['user-name']    = $user->uid ? $user->name : variable_get('anonymous', t('Anonymous'));
       $values['user-id']      = $user->uid ? $user->uid : 0;
       $values['user-mail']    = $user->uid ? $user->mail : '';
-      $values['site-url']     = $base_url;
-      $values['site-name']    = variable_get('site_name', t('Drupal'));
-      $values['site-slogan']  = variable_get('site_slogan', '');
+
+      // Site information tokens.
+      $values['site-url']     = url('<front>', array('absolute' => TRUE));
+      $values['site-name']    = check_plain(variable_get('site_name', t('Drupal')));
+      $values['site-slogan']  = check_plain(variable_get('site_slogan', ''));
       $values['site-mission'] = filter_xss_admin(variable_get('site_mission', ''));
       $values['site-mail']    = variable_get('site_mail', '');
       $values += token_get_date_token_values(NULL, 'site-date-');
       $values['site-date'] = $values['site-date-small'];
-      // The page number may or may not be present. If it is, it may be comma separated values in which case grab the first.
+
+      // Current page tokens.
+      $alias = drupal_get_path_alias($_GET['q']);
+      $values['current-page-path'] = $alias;
+      $values['current-page-path-raw'] = check_plain($alias);
+      $values['current-page-url'] = url($_GET['q'], array('absolute' => TRUE));
+
       $page = isset($_GET['page']) ? $_GET['page'] : '';
-      $values['page-number']  = 1 + (int)(($p = strpos($page, ',')) ? substr($page, 0, $p) : $page);
+      $pager_page_array = explode(',', $page);
+      $page = $pager_page_array[0];
+      $values['current-page-number'] = (int) $page + 1;
+      $values['page-number'] = $values['current-page-number'];
+
       break;
   }
   return $values;
@@ -108,15 +120,25 @@ function token_token_values($type, $object = NULL) {
  *   in the form of: $list[$type][$token] = $description
  */
 function token_token_list($type = 'all') {
+  // Current user tokens.
   $tokens['global']['user-name']    = t('The name of the currently logged in user.');
   $tokens['global']['user-id']      = t('The user ID of the currently logged in user.');
   $tokens['global']['user-mail']    = t('The email address of the currently logged in user.');
+
+  // Site information tokens.
   $tokens['global']['site-url']     = t("The URL of the site's front page.");
   $tokens['global']['site-name']    = t('The name of the site.');
   $tokens['global']['site-slogan']  = t('The slogan of the site.');
   $tokens['global']['site-mission'] = t("The optional 'mission' of the site.");
   $tokens['global']['site-mail']    = t('The administrative email address for the site.');
   $tokens['global'] += token_get_date_token_info(t('The current'), 'site-date-');
+
+  // Current page tokens.
+  $tokens['global']['current-page-path']     = t('The URL alias of the current page.');
+  $tokens['global']['current-page-path-raw'] = t('The URL alias of the current page.');
+  $tokens['global']['current-page-url']      = t('The URL of the current page.');
+  $tokens['global']['current-page-number']   = t('The page number of the current page when viewing paged lists.');
+
   return $tokens;
 }
 
