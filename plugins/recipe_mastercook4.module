@@ -198,6 +198,12 @@ function recipe_mastercook4_import_form_submit($form, &$form_state) {
     $fp = fopen($file->filepath, "r");
     if ($fp) {
         $recipe_txt = '';
+
+        // Get the vocabs first.
+        $vocabs = taxonomy_get_vocabularies('recipe');
+        list($lightest_vid, $vocab) = each($vocabs);
+        reset($vocabs);
+
         while (!feof($fp)) {
           $buf = fgets($fp);
           if ( preg_match("/\* +Exported +from/i", $buf) ) {
@@ -207,6 +213,26 @@ function recipe_mastercook4_import_form_submit($form, &$form_state) {
               $parsed_recipe_object = recipe_mastercook4_import_single($recipe_txt);
               if ( strlen($parsed_recipe_object['title']) > 0 ) {
                 if ( ($node = recipe_import_get_node($parsed_recipe_object)) != FALSE ) {
+
+                  // Save the taxonomy.
+                  foreach ($parsed_recipe_object['categories'] as $category) {
+                    // Search the lightest weight recipe vocab for this term.
+                    $term = recipe_get_term_by_name($category, $lightest_vid);
+                    // You didn't find that term, so add it.
+                    if ( $term == FALSE && isset($lightest_vid) ) {
+                      $term = array('name' => $category, 'vid' => $lightest_vid);
+                      drupal_set_message(t('Adding term %term_name', array('%term_name' => $category)));
+                      taxonomy_save_term($term);
+                      // Cast back to object so it's like the return value from recipe_get_term_by_name().
+                      $term = (object)$term;
+                    }
+                    // You have the term now (existing or new), link it ink.
+                    if ( isset($term) ) {
+                      $node->taxonomy[] = $term->tid;
+                    }
+                  }
+
+                  // Save the recipe.
                   node_save($node);
                 }
               }
@@ -241,6 +267,7 @@ function recipe_mastercook4_import_single($recipe_txt = NULL) {
 
   $recipe = array(
     'title' => '',
+    'categories' => array(),
     'ingredients' => array(),
     'instructions' => '',
     'notes' => '',
@@ -279,8 +306,32 @@ function recipe_mastercook4_import_single($recipe_txt = NULL) {
 
     if ( $region == META ) {
 
+      // Get the source.
       if ( preg_match('/Recipe +By *: *(.*)/i', $line, $matches) ) {
         $recipe['source'] = $matches[1];
+      }
+
+      // Get the categories.
+      if ( preg_match('/Categories *: *(.*)/i', $line, $matches) ) {
+        $cat1 = trim(substr($matches[1], 0, 33));
+        $cat2 = trim(substr($matches[1], 33, 33));
+        if ( $cat1 != '' ) {
+          $recipe['categories'][] = $cat1;
+        }
+        if ( $cat2 != '' ) {
+          $recipe['categories'][] = $cat2;
+        }
+      }
+      // Category continuation.
+      if ( count($recipe['categories']) > 0 && preg_match('/^ {16}(.*)/', $line, $matches) ) {
+        $cat1 = trim(substr($matches[1], 0, 33));
+        $cat2 = trim(substr($matches[1], 33, 33));
+        if ( $cat1 != '' ) {
+          $recipe['categories'][] = $cat1;
+        }
+        if ( $cat2 != '' ) {
+          $recipe['categories'][] = $cat2;
+        }
       }
 
       // blank line in meta section, move to next section.
