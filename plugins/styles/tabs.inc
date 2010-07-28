@@ -10,6 +10,8 @@
 $plugin = array(
   'title' => t('Tabs'),
   'description' => t('Presents the panes in tabs.'),
+  'render region' => 'panels_tabs_style_render_region',
+  // Deprecated legacy callback
   'render panel' => 'panels_tabs_style_render_panel',
   'settings form'     => 'panels_tabs_style_settings_form',
   'settings validate' => 'panels_tabs_style_settings_validate',
@@ -20,7 +22,49 @@ $plugin = array(
 // Panels style plugin callbacks.
 
 /**
- * Render callback.
+ * Render region callback.
+ */
+function theme_panels_tabs_style_render_region($display, $owner_id, $panes, $settings) {
+  $output = '';
+
+  // Generate a unique id based on the CSS ID and the name of the panel in the
+  // layout.
+  $pane_id = reset(array_keys($panes));
+  $panel = $display->content[$pane_id]->panel;
+  $id = "$display->css_id-$panel";
+
+  // Add the Javascript to the page, and save the settings for this panel.
+  _panels_tabs_add_js($id, $settings['filling_tabs']);
+
+  $tabs = array();
+  $tabs[$id] = array(
+    '#type' => 'tabset',
+  );
+  $index = 0;
+  foreach ($panes as $pane_id => $pane_content) {
+    if (!empty($pane_content)) {
+      $tabs[$id][$pane_id] = array(
+        '#type'    => 'tabpage',
+        '#title'   => $display->content[$pane_id]->tab_title,
+        '#content' => $pane_content,
+        '#weight'  => $index,
+      );
+      $index++;
+    }
+  }
+
+  // See if an optional title was added.
+  if (!empty($settings['title'])) {
+    $output .= theme('panels_tabs_title', $settings['title']);
+  }
+
+  $output .= tabs_render($tabs);
+
+  return $output;
+}
+
+/**
+ * Render panel callback (legacy).
  */
 function theme_panels_tabs_style_render_panel($display, $owner_id, $panes, $settings) {
   $output = '';
@@ -57,6 +101,7 @@ function theme_panels_tabs_style_render_panel($display, $owner_id, $panes, $sett
   }
 
   // See if an optional title was added.
+  $output = '';
   if (!empty($settings['title'])) {
     $output .= theme('panels_tabs_title', $settings['title']);
   }
