@@ -216,10 +216,10 @@ function mollom_admin_configure_form_submit($form, &$form_state) {
 
   $status = mollom_form_save($mollom_form);
   if ($status === SAVED_NEW) {
-    drupal_set_message('The form protection has been added.');
+    drupal_set_message(t('The form protection has been added.'));
   }
   else {
-    drupal_set_message('The form protection has been updated.');
+    drupal_set_message(t('The form protection has been updated.'));
   }
 
   unset($form_state['storage']);
