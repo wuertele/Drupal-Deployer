@@ -130,7 +130,7 @@ class MollomWebTestCase extends DrupalWebTestCase {
    * @param $no_fail_expected
    *   (optional) Boolean whether a failing watchdog message is expected.
    *   Defaults to TRUE (no fail expected). If FALSE is passed, the logic for
-   *   assertion mesages is flipped.
+   *   assertion messages is flipped.
    *
    * @todo Add this to D7 core.
    */
@@ -771,8 +771,6 @@ class MollomResponseTestCase extends MollomWebTestCase {
 
   /**
    * Tests mollom.getImageCaptcha().
-   *
-   * @todo Add further getImageCaptcha() response assertions.
    */
   function testGetImageCaptcha() {
     // Ensure we get no SSL URL by default.
@@ -1172,7 +1170,7 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
     ));
     $this->assertEqual($result['spam'], MOLLOM_ANALYSIS_SPAM, t('Partial match was blocked.'));
 
-    // To update the work (i.e. to change the 'match' property), we simply 
+    // To update the work (i.e. to change the 'match' property), we simply
     // overwrite it.
     $result = mollom('mollom.addBlacklistText', array(
       'text' => $term,
@@ -1224,24 +1222,6 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
     $this->drupalPost(NULL, array(), t('Delete'));
     $this->assertEqual($this->getUrl(), url('admin/settings/mollom/blacklist', array('absolute' => TRUE)), t('Correct page redirection.'));
     $this->assertNoText($text, 'Text blacklist removed.');
-
-    // Add an URL to the text blacklist.
-    $domain = drupal_strtolower($this->randomName() . '.com');
-    $edit = array(
-      'entry[context]' => 'links',
-      'entry[text]' => $domain,
-    );
-    $this->drupalPost(NULL, $edit, t('Add'));
-    $this->assertText(t('The entry was added to the blacklist.'));
-    $this->assertText($domain);
-
-    // Remove the URL from the text blacklist.
-    $delete_url = 'admin/settings/mollom/blacklist/delete/' . base64_encode($domain);
-    $this->drupalGet($delete_url);
-    $this->drupalPost(NULL, array(), t('Delete'));
-    $this->assertEqual($this->getUrl(), url('admin/settings/mollom/blacklist', array('absolute' => TRUE)), t('Correct page redirection.'));
-    $this->assertText(t('The entry was removed from the blacklist.'));
-    $this->assertNoText($domain, 'URL blacklist removed.');
   }
 }
 
@@ -1810,7 +1790,7 @@ class MollomContactFormTestCase extends MollomWebTestCase {
 class MollomResellerTestCase extends MollomWebTestCase {
   public static function getInfo() {
     return array(
-      'name' => 'Key provisioning for Mollom reseller',
+      'name' => 'Reseller functionality',
       'description' => 'Check that the reseller APIs are working properly.',
       'group' => 'Mollom',
     );
@@ -1858,7 +1838,7 @@ class MollomResellerTestCase extends MollomWebTestCase {
         // Verify that the existing information did not change (partial updates).
         $this->assertEqual($details['status'], 0, t('The original information is correctly retrieved from Mollom.'));
         $this->assertEqual($details['testing'], 1, t('The original information is correctly retrieved from Mollom.'));
-	
+
         // Delete the test site:
         mollom('mollom.deleteSite', array('client_key' => $site));
       }
