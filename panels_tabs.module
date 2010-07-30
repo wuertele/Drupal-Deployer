@@ -40,11 +40,15 @@ function panels_tabs_panels_pre_render($display, $renderer) {
     
     // Check if the tabs style has been applied to entire panel
     $global_style = $renderer->display->panel_settings['style'] == 'tabs';
-    
+
+    // Get the list of regions for the panel
+    $regions = panels_get_regions($renderer->plugins['layout'], $renderer->display);
+
     // Find out which regions are using the tabs style and add to an array
-    foreach ($renderer->plugins['layout']['panels'] as $region_id => $title) {
+    foreach ($regions as $region_id => $title) {
+
       $settings = $renderer->display->panel_settings[$region_id];
-      if ($global_style && empty($settings['style'])) {
+      if ($global_style && (empty($settings['style']) || $settings['style'] == -1)) {
         $tabs_regions[] = $region_id;
       }
       elseif ($settings['style'] == 'tabs') {
