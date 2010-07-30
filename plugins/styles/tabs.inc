@@ -57,12 +57,7 @@ function theme_panels_tabs_style_render_region($display, $owner_id, $panes, $set
   if (empty($index)) {
     return;
   }
-  
-  // No content has been rendered
-  if (empty($index)) {
-    return;
-  }
-  
+
   // See if an optional title was added.
   if (!empty($settings['title'])) {
     $output .= theme('panels_tabs_title', $settings['title']);
@@ -108,6 +103,11 @@ function theme_panels_tabs_style_render_panel($display, $owner_id, $panes, $sett
       );
       $index++;
     }
+  }
+
+  // No content has been rendered
+  if (empty($index)) {
+    return;
   }
 
   // See if an optional title was added.
