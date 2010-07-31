@@ -103,6 +103,12 @@ function arrange_fields_menu() {
   // If webform has been installed, create the menu hooks so it ties in
   // nicely with webform.  
   if ($GLOBALS["arrange_fields_webform_installed"]) {
+    
+    // I will include menu hooks for both major versions of webform I wish
+    // to support.  It doesn't really matter if we have extra menu hooks laying
+    // around, so I will just do them both.
+    
+    // This is for webform 2.9
     $items["node/%/edit/arrange-fields"] = array(
       "title" => "Arrange fields",
       "page callback" => "arrange_fields_display_webform",
@@ -111,6 +117,17 @@ function arrange_fields_menu() {
       "type" => MENU_LOCAL_TASK,
       "weight" => 3,
     );
+    
+    // This is for webform 3.0 (currently in beta).
+    $items["node/%/webform/arrange-fields"] = array(
+      "title" => "Arrange fields",
+      "page callback" => "arrange_fields_display_webform",
+      "page arguments" => array(1),
+      "access arguments" => array("administer arrange fields"),
+      "type" => MENU_LOCAL_TASK,
+      "weight" => 3,
+    );    
+    
   }  
     
   
@@ -211,14 +228,16 @@ function arrange_fields_get_form_fields(&$arr, $previous_key = "") {
         // We found an element!  Save its reference in our return array.
         
         // If the name is numeric (as is the case with some CCK elements), we
-        // actually want to use the previous_key for the name.
+        // actually want to use the previous element.
         if (is_numeric($name) && $previous_key != "") {
-          $name = $previous_key;
+          // Let's use the previous element here, which should be $arr.
+          $rtn[] = array("name" => $previous_key, "element" => &$arr);
+        }
+        else {        
+          // Add to our return array.
+          $rtn[] = array("name" => $name, "element" => &$element);
         }
         
-        // Add to our return array.
-        $rtn[] = array("name" => $name, "element" => &$element);
-
       }
       else {
         // This is not a field, but possibly another level of nesting
@@ -267,11 +286,24 @@ function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_butt
         $fields[] = array("name" => $name, "element" => &$element);
       }
     }
+    
+    // If the user is using webform 3.0, there may also be an "actions"
+    // array element, which contains our buttons.  This is included experimentally,
+    // as I don't want to do too much work for webform 3.0 until it moves
+    // out of beta.
+    if (is_array($form["actions"])) {
+      foreach($form["actions"] as $name => &$element) {
+        if (is_array($element)) {
+          $fields[] = array("name" => $name, "element" => &$element);
+        }
+      }
+    }
+        
   }
   else {
     $fields = arrange_fields_get_form_fields($form);
   }
-    
+
   // Make each field draggable by adding wrappers to it.
   foreach ($fields as $field_arr) {
 
@@ -335,7 +367,18 @@ function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_butt
           $element["#attributes"]["disabled"] = "disabled";
           $element["#attributes"]["class"] .= " disabled-button ";
       }        
+    } 
+    // This is essentially the same disable buttons code, but for CCK content types,
+    // since all those buttons are in a [buttons] element.
+    if ($field_name == "buttons" && !isset($element["#type"]) && $disable_buttons) {
+      foreach ($element as &$e) {  
+        if (is_array($e)) {
+          $e["#attributes"]["disabled"] = "disabled";
+          $e["#attributes"]["class"] .= " disabled-button ";          
+        } 
+      }
     }
+    
     
     // Indicate that we have successfully added all the necessary wrappers 
     // to this element.  This is so we don't do it twice.
@@ -938,6 +981,7 @@ function arrange_fields_display_main() {
  */
 function arrange_fields_init() {
   // is webform installed?
+  
   if (function_exists("webform_menu")) {
     $GLOBALS["arrange_fields_webform_installed"] = TRUE;
   }    

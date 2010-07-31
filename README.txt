@@ -42,7 +42,7 @@ Directions
 - Make sure you have correctly installed and configured the jquery_ui module!
   Read through it's README.txt file for detailed instructions.  Make sure
   you get the correct version of the plugin! (NOT the most recent version unless
-  you knoww what you're doing!)
+  you know what you're doing!)
 
 - Unpack the module files into /sites/all/modules/arrange_fields.
 
@@ -65,3 +65,9 @@ Directions
     - Begin editing a new or existing webform.  There will be a subtab at the top
       of the page that says "Arrange fields".  It should be next to the "Form components"
       subtab.
+
+
+======================
+Notes
+======================
+Included icon(s) are from the "mini" pack at famfamfam.com.
