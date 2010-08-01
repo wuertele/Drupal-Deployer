@@ -180,7 +180,7 @@ class MollomWebTestCase extends DrupalWebTestCase {
       $this->session_id = $session_id;
     }
     else {
-      $this->_assertEqual('session_id', $session_id, $this->session_id);
+      $this->assertSame('session_id', $session_id, $this->session_id);
     }
     return $this->session_id;
   }
@@ -341,7 +341,7 @@ class MollomWebTestCase extends DrupalWebTestCase {
     $data = mollom_data_load($entity, $id);
     $this->assertTrue($data->session, t('Mollom session data for %entity @id exists: <pre>@data</pre>', array('%entity' => $entity, '@id' => $id, '@data' => var_export($data, TRUE))));
     if (isset($session_id)) {
-      $this->_assertEqual(t('Stored session id'), $data->session, $session_id);
+      $this->assertSame(t('Stored session id'), $data->session, $session_id);
     }
     return $data;
   }
@@ -579,9 +579,10 @@ class MollomWebTestCase extends DrupalWebTestCase {
   }
 
   /**
-   * Helper function for assertEqual().
+   * Asserts that two values belonging to the same variable are equal.
    *
-   * Check to see if two values are equal. And provide a meaningful response.
+   * Checks to see whether two values, which belong to the same variable name or
+   * identifier, are equal and logs a readable assertion message.
    *
    * @param $name
    *   A name or identifier to use in the assertion message.
@@ -589,22 +590,30 @@ class MollomWebTestCase extends DrupalWebTestCase {
    *   The first value to check.
    * @param $second
    *   The second value to check.
+   *
    * @return
    *   TRUE if the assertion succeeded, FALSE otherwise.
+   *
+   * @see MollomWebTestCase::assertNotSame()
+   *
+   * @todo D8: Move into core. This improved assertEqual() did not get into D7,
+   *   since the function signature differs and it's plenty of work to manually
+   *   update all assertEqual() invocations throughout all tests.
    */
-  protected function _assertEqual($name, $first, $second) {
-    $message = strtr("@name: '@first' is equal to '@second'.", array(
+  protected function assertSame($name, $first, $second) {
+    $message = t("@name: @first is equal to @second.", array(
       '@name' => $name,
-      '@first' => $first,
-      '@second' => $second,
+      '@first' => var_export($first, TRUE),
+      '@second' => var_export($second, TRUE),
     ));
     $this->assertEqual($first, $second, $message);
   }
 
   /**
-   * Helper function for assertNotEqual().
+   * Asserts that two values belonging to the same variable are not equal.
    *
-   * Check to see if two values are equal. And provide a meaningful response.
+   * Checks to see whether two values, which belong to the same variable name or
+   * identifier, are not equal and logs a readable assertion message.
    *
    * @param $name
    *   A name or identifier to use in the assertion message.
@@ -612,14 +621,17 @@ class MollomWebTestCase extends DrupalWebTestCase {
    *   The first value to check.
    * @param $second
    *   The second value to check.
+   *
    * @return
    *   TRUE if the assertion succeeded, FALSE otherwise.
+   *
+   * @see MollomWebTestCase::assertSame()
    */
-  protected function _assertNotEqual($name, $first, $second) {
-    $message = strtr("@name: '@first' is not equal to '@second'.", array(
+  protected function assertNotSame($name, $first, $second) {
+    $message = t("@name: '@first' is not equal to '@second'.", array(
       '@name' => $name,
-      '@first' => $first,
-      '@second' => $second,
+      '@first' => var_export($first, TRUE),
+      '@second' => var_export($second, TRUE),
     ));
     $this->assertNotEqual($first, $second, $message);
   }
@@ -746,8 +758,8 @@ class MollomResponseTestCase extends MollomWebTestCase {
     $data['post_body'] = 'ham';
     $result = mollom('mollom.checkContent', $data);
     $this->assertMollomWatchdogMessages();
-    $this->_assertEqual('spam', $result['spam'], MOLLOM_ANALYSIS_HAM);
-    $this->_assertEqual('quality', $result['quality'], 1);
+    $this->assertSame('spam', $result['spam'], MOLLOM_ANALYSIS_HAM);
+    $this->assertSame('quality', $result['quality'], 1);
     $session_id = $this->assertSessionID($result['session_id']);
 
     // Ensure proper response for 'spam' submissions, re-using session_id.
@@ -755,8 +767,8 @@ class MollomResponseTestCase extends MollomWebTestCase {
     $data['session_id'] = $session_id;
     $result = mollom('mollom.checkContent', $data);
     $this->assertMollomWatchdogMessages();
-    $this->_assertEqual('spam', $result['spam'], MOLLOM_ANALYSIS_SPAM);
-    $this->_assertEqual('quality', $result['quality'], 0);
+    $this->assertSame('spam', $result['spam'], MOLLOM_ANALYSIS_SPAM);
+    $this->assertSame('quality', $result['quality'], 0);
     $session_id = $this->assertSessionID($result['session_id']);
 
     // Ensure proper response for 'unsure' submissions, re-using session_id.
@@ -764,8 +776,8 @@ class MollomResponseTestCase extends MollomWebTestCase {
     $data['session_id'] = $session_id;
     $result = mollom('mollom.checkContent', $data);
     $this->assertMollomWatchdogMessages();
-    $this->_assertEqual('spam', $result['spam'], MOLLOM_ANALYSIS_UNSURE);
-    $this->_assertEqual('quality', $result['quality'], 0.5);
+    $this->assertSame('spam', $result['spam'], MOLLOM_ANALYSIS_UNSURE);
+    $this->assertSame('quality', $result['quality'], 0.5);
     $session_id = $this->assertSessionID($result['session_id']);
   }
 
@@ -1918,14 +1930,14 @@ class MollomDataTestCase extends MollomWebTestCase {
     );
     $data = mollom_form_get_values($values, $fields, $form_info['mapping']);
 
-    $this->_assertEqual('post_title', $data['post_title'], $values['subject']);
-    $this->_assertEqual('post_body', $data['post_body'], $values['message'] . "\n" . $values['parent']['child']);
-    $this->_assertEqual('author_name', $data['author_name'], $values['name']);
-    $this->_assertEqual('author_mail', $data['author_mail'], $values['mail']);
+    $this->assertSame('post_title', $data['post_title'], $values['subject']);
+    $this->assertSame('post_body', $data['post_body'], $values['message'] . "\n" . $values['parent']['child']);
+    $this->assertSame('author_name', $data['author_name'], $values['name']);
+    $this->assertSame('author_mail', $data['author_mail'], $values['mail']);
     $this->assertFalse(isset($data['author_url']), t('author_url: Undefined.'));
     $this->assertFalse(isset($data['author_openid']), t('author_openid: Undefined.'));
     $this->assertFalse(isset($data['author_id']), t('author_id: Undefined.'));
-    $this->_assertEqual('author_ip', $data['author_ip'], ip_address());
+    $this->assertSame('author_ip', $data['author_ip'], ip_address());
 
     // Verify submitted form values for an registered user.
     $values = array(
@@ -1935,15 +1947,15 @@ class MollomDataTestCase extends MollomWebTestCase {
     );
     $data = mollom_form_get_values($values, $fields, $form_info['mapping']);
 
-    $this->_assertEqual('post_title', $data['post_title'], $values['subject']);
-    $this->_assertEqual('post_body', $data['post_body'], $values['message']);
-    $this->_assertEqual('author_name', $data['author_name'], $this->admin_user->name);
-    $this->_assertEqual('author_mail', $data['author_mail'], $this->admin_user->mail);
+    $this->assertSame('post_title', $data['post_title'], $values['subject']);
+    $this->assertSame('post_body', $data['post_body'], $values['message']);
+    $this->assertSame('author_name', $data['author_name'], $this->admin_user->name);
+    $this->assertSame('author_mail', $data['author_mail'], $this->admin_user->mail);
     $this->assertFalse(isset($data['author_url']), t('author_url: Undefined.'));
     // @todo Test this.
     $this->assertFalse(isset($data['author_openid']), t('author_openid: Undefined.'));
-    $this->_assertEqual('author_id', $data['author_id'], $this->admin_user->uid);
-    $this->_assertEqual('author_ip', $data['author_ip'], ip_address());
+    $this->assertSame('author_id', $data['author_id'], $this->admin_user->uid);
+    $this->assertSame('author_ip', $data['author_ip'], ip_address());
   }
 
   /**
@@ -1982,11 +1994,11 @@ class MollomDataTestCase extends MollomWebTestCase {
 
     // Verify that submitted data equals post data.
     $data = $this->getServerRecord();
-    $this->_assertEqual('post_title', $data['post_title'], $edit['subject']);
-    $this->_assertEqual('post_body', $data['post_body'], $edit['comment']);
-    $this->_assertEqual('author_name', $data['author_name'], $this->web_user->name);
-    $this->_assertEqual('author_mail', $data['author_mail'], $this->web_user->mail);
-    $this->_assertEqual('author_id', $data['author_id'], $this->web_user->uid);
+    $this->assertSame('post_title', $data['post_title'], $edit['subject']);
+    $this->assertSame('post_body', $data['post_body'], $edit['comment']);
+    $this->assertSame('author_name', $data['author_name'], $this->web_user->name);
+    $this->assertSame('author_mail', $data['author_mail'], $this->web_user->mail);
+    $this->assertSame('author_id', $data['author_id'], $this->web_user->uid);
 
     // Allow anonymous users to post comments without approval.
     $this->drupalLogin($this->admin_user);
@@ -2023,11 +2035,11 @@ class MollomDataTestCase extends MollomWebTestCase {
 
     // Verify that submitted data equals post data.
     $data = $this->getServerRecord();
-    $this->_assertEqual('post_title', $data['post_title'], $edit['subject']);
-    $this->_assertEqual('post_body', $data['post_body'], $edit['comment']);
-    $this->_assertEqual('author_name', $data['author_name'], $edit['name']);
-    $this->_assertEqual('author_mail', $data['author_mail'], $edit['mail']);
-    $this->_assertEqual('author_url', $data['author_url'], $edit['homepage']);
+    $this->assertSame('post_title', $data['post_title'], $edit['subject']);
+    $this->assertSame('post_body', $data['post_body'], $edit['comment']);
+    $this->assertSame('author_name', $data['author_name'], $edit['name']);
+    $this->assertSame('author_mail', $data['author_mail'], $edit['mail']);
+    $this->assertSame('author_url', $data['author_url'], $edit['homepage']);
     $this->assertFalse(isset($data['author_id']), t('author_id: Undefined.'));
 
     // Log in admin user and edit comment containing spam.
@@ -2078,10 +2090,10 @@ class MollomDataTestCase extends MollomWebTestCase {
     $new_data = $this->assertMollomData('mollom_test', $mid);
 
     // Verify that only session data was updated.
-    $this->_assertEqual('entity', $data->entity, $new_data->entity);
-    $this->_assertEqual('id', $data->did, $new_data->did);
-    $this->_assertNotEqual('session_id', $data->session, $new_data->session);
-    $this->_assertNotEqual('quality', $data->quality, $new_data->quality);
+    $this->assertSame('entity', $data->entity, $new_data->entity);
+    $this->assertSame('id', $data->did, $new_data->did);
+    $this->assertNotSame('session_id', $data->session, $new_data->session);
+    $this->assertNotSame('quality', $data->quality, $new_data->quality);
     $count = db_result(db_query("SELECT COUNT(1) FROM {mollom}"));
     $this->assertEqual($count, 1, t('Stored data in {mollom} was updated.'));
   }
