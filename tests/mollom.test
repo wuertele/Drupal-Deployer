@@ -1444,6 +1444,25 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
     $this->assertText(t('All available forms are protected already.'));
     $this->assertText(t('Operations'));
   }
+
+  /**
+   * Tests programmatically, conditionally disabling Mollom.
+   */
+  function testFormAlter() {
+    // Enable CAPTCHA-only protection for request user password form.
+    $this->drupalLogin($this->admin_user);
+    $this->setProtection('user_pass', array());
+    $this->drupalLogout();
+
+    // Verify regular form protection.
+    $this->drupalGet('user/password');
+    $this->assertCaptchaField();
+
+    // Conditionally disable protection and verify again.
+    variable_set('mollom_test_disable_mollom', TRUE);
+    $this->drupalGet('user/password');
+    $this->assertNoCaptchaField();
+  }
 }
 
 class MollomUserFormsTestCase extends MollomWebTestCase {
