@@ -10,8 +10,7 @@
  *
  * Inherit from image_handler_field_image_node_image so we get image sizes.
  */
-class image_attach_views_handler_field_attached_images 
-  extends image_handler_field_image_node_image {
+class image_attach_views_handler_field_attached_images extends image_handler_field_image_node_image {
 
   /**
    * Constructor to provide additional fields to add.
@@ -26,10 +25,10 @@ class image_attach_views_handler_field_attached_images
       'field' => 'nid',
     );
   }
-  
+
   /**
    * Define default values for options.
-   * 
+   *
    * We inherit the image size option.
    */
   function option_definition() {
@@ -55,10 +54,10 @@ class image_attach_views_handler_field_attached_images
       '#default_value' => $this->options['as_link'],
     );
   }
-  
+
   /**
    * We don't add to the query (see the parent class).
-   * Instead, run our own query on pre-render. This is the same approach as CCK 
+   * Instead, run our own query on pre-render. This is the same approach as CCK
    * multiple fields.
    */
   function pre_render(&$values) {
@@ -71,7 +70,7 @@ class image_attach_views_handler_field_attached_images
         $nids[$nid] = $nid;
       }
     }
-    
+
     if (count($nids)) {
       $nids_string = implode(',', $nids);
       $result = db_query("SELECT nid, iid FROM {image_attach} WHERE nid IN (" . $nids_string . ") ORDER BY weight");
@@ -79,7 +78,7 @@ class image_attach_views_handler_field_attached_images
         // Store all the attached image nids (iid) keyed by attaching nid.
         $attached_images[$data->nid][] = $data->iid;
       }
-      
+
       // Place the data into the $values array for each result.
       foreach ($values as $id => $v) {
         if (isset($attached_images[$v->{$this->aliases['image_attach_nid']}])) {
@@ -110,3 +109,4 @@ class image_attach_views_handler_field_attached_images
     }
   }
 }
+

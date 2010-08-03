@@ -8,19 +8,9 @@
 define('IMAGE_ATTACH_HIDDEN', 'hidden');
 
 /**
- * Implementation of hook_help().
- */
-function image_attach_help($path, $arg) {
-  switch ($path) {
-  }
-}
-
-/**
  * Implementation of hook_menu()
  */
 function image_attach_menu() {
-  $items = array();
-
   $items['image_attach'] = array(
     'title' => 'Image attachment view',
     'page callback' => 'image_attach_view_image',
@@ -45,19 +35,16 @@ function image_attach_perm() {
   return array('attach images');
 }
 
-
 function image_attach_admin_settings() {
-  $form = array();
-
   $form['image_attach_existing'] = array(
     '#type' => 'radios',
     '#title' => t('Attach existing images'),
     '#default_value' => variable_get('image_attach_existing', 1),
     '#options' => array(
       0 => t('Disabled'),
-      1 => t('Enabled')
+      1 => t('Enabled'),
     ),
-    '#description' => t('When enabled, will allow existing image nodes to be attached instead of uploading new images.')
+    '#description' => t('When enabled, will allow existing image nodes to be attached instead of uploading new images.'),
   );
 
   return system_settings_form($form);
@@ -70,10 +57,10 @@ function image_attach_block($op = 'list', $delta = 0, $edit = array()) {
   switch ($op) {
     case 'list':
       $blocks[0] = array(
-        'info'       => t('Attached images'),
-        'weight'     => 0,
+        'info' => t('Attached images'),
+        'weight' => 0,
         'visibility' => 1,
-        'pages'      => 'node/*',
+        'pages' => 'node/*',
       );
       return $blocks;
 
@@ -127,7 +114,7 @@ function image_attach_block($op = 'list', $delta = 0, $edit = array()) {
  * Add settings to the content type settings form.
  */
 function image_attach_form_node_type_form_alter(&$form, $form_state) {
-  if($form['#node_type']->type != 'image') {
+  if ($form['#node_type']->type != 'image') {
     _image_check_settings();
 
     $image_sizes = array(IMAGE_ATTACH_HIDDEN => t('<Hidden>'));
@@ -144,7 +131,7 @@ function image_attach_form_node_type_form_alter(&$form, $form_state) {
     $form['image_attach']['image_attach'] = array(
       '#type' => 'radios',
       '#title' => t('Attach images'),
-      '#default_value' => variable_get('image_attach_'. $form['#node_type']->type, 0),
+      '#default_value' => variable_get('image_attach_' . $form['#node_type']->type, 0),
       '#options' => array(0 => t('Disabled'), 1 => t('Enabled')),
       '#description' => t('Should this node allows users to upload an image?'),
     );
@@ -158,36 +145,36 @@ function image_attach_form_node_type_form_alter(&$form, $form_state) {
     $form['image_attach']['image_attach_size_teaser'] = array(
       '#type' => 'select',
       '#title' => t('Teaser image size'),
-      '#default_value' => variable_get('image_attach_size_teaser_'. $form['#node_type']->type, IMAGE_THUMBNAIL),
+      '#default_value' => variable_get('image_attach_size_teaser_' . $form['#node_type']->type, IMAGE_THUMBNAIL),
       '#options' => $image_sizes,
-      '#description' => t("This determines the size of the image that appears when the node is displayed as a teaser. 'Hidden' will not show the image.")
+      '#description' => t("This determines the size of the image that appears when the node is displayed as a teaser. 'Hidden' will not show the image."),
     );
     // Hide the weight if CCK is doing the weight for us.
     if (!module_exists('content')) {
       $form['image_attach']['image_attach_weight_teaser'] = array(
         '#type' => 'weight',
         '#title' => t('Teaser image weight'),
-        '#default_value' => variable_get('image_attach_weight_teaser_'. $form['#node_type']->type, 0),
+        '#default_value' => variable_get('image_attach_weight_teaser_' . $form['#node_type']->type, 0),
         '#description' => t('This value determines the order of the image when displayed in the teaser.'),
       );
     }
     $form['image_attach']['image_attach_size_body'] = array(
       '#type' => 'select',
       '#title' => t('Full node image size'),
-      '#default_value' => variable_get('image_attach_size_body_'. $form['#node_type']->type, IMAGE_THUMBNAIL),
+      '#default_value' => variable_get('image_attach_size_body_' . $form['#node_type']->type, IMAGE_THUMBNAIL),
       '#options' => $image_sizes,
-      '#description' => t("This determines the size of the image that appears when the full node is displayed. 'Hidden' will not show the image.")
+      '#description' => t("This determines the size of the image that appears when the full node is displayed. 'Hidden' will not show the image."),
     );
     if (!module_exists('content')) {
       $form['image_attach']['image_attach_weight_body'] = array(
         '#type' => 'weight',
         '#title' => t('Full node image weight'),
-        '#default_value' => variable_get('image_attach_weight_body_'. $form['#node_type']->type, 0),
+        '#default_value' => variable_get('image_attach_weight_body_' . $form['#node_type']->type, 0),
         '#description' => t('This value determines the order of the image when displayed in the body.'),
       );
     }
     if (module_exists('content')) {
-      $link = l(t('Manage fields'), $_GET['q'] .'/fields');
+      $link = l(t('Manage fields'), $_GET['q'] . '/fields');
       $form['image_attach']['#description'] = t('Since you installed CCK module, you can change the image weight in the !link page.', array('!link' => $link));
     }
   }
@@ -201,7 +188,7 @@ function image_attach_form_alter(&$form, $form_state, $form_id) {
   if (isset($form['type']['#value']) && $form['type']['#value'] != 'image') {
     $type = $form['type']['#value'];
     // If enabled adjust the form.
-    if ($form_id == $type .'_node_form' && variable_get('image_attach_'. $type, 0)) {
+    if ($form_id == $type . '_node_form' && variable_get('image_attach_' . $type, 0)) {
       $node = $form['#node'];
       _image_check_settings();
       $value = !empty($node->new_image) ? '#value' : '#default_value';
@@ -212,11 +199,11 @@ function image_attach_form_alter(&$form, $form_state, $form_id) {
       $form['#submit'][] = 'image_attach_node_form_submit';
 
       // Check permissions and settings
-      $may_attach           = user_access('attach images');
-      $may_attach_existing  = variable_get('image_attach_existing', 1);
-      $may_upload           = user_access('create images');
-      $has_existing_images  = !empty($node->iids);
-      $maximum_images       = variable_get('image_attach_maximum_' . $type, 0);
+      $may_attach          = user_access('attach images');
+      $may_attach_existing = variable_get('image_attach_existing', 1);
+      $may_upload          = user_access('create images');
+      $has_existing_images = !empty($node->iids);
+      $maximum_images      = variable_get('image_attach_maximum_' . $type, 0);
 
       // Display the image attach form only if user can attach images, AND
       // it is allowed to attach existing images or the user is allowed to create new images
@@ -271,9 +258,9 @@ function image_attach_form_alter(&$form, $form_state, $form_id) {
           }
           // User may only upload new images: show a selection box containing only attached images.
           else {
-              $form['image_attach']['iids']['#title'] = t('Attached images');
-              $form['image_attach']['iids']['#options'] = _image_attach_get_image_nodes($node->iids);
-              $form['image_attach']['iids']['#description'] = t('You can remove a previously attached image by unselecting it.');
+            $form['image_attach']['iids']['#title'] = t('Attached images');
+            $form['image_attach']['iids']['#options'] = _image_attach_get_image_nodes($node->iids);
+            $form['image_attach']['iids']['#description'] = t('You can remove a previously attached image by unselecting it.');
           }
         }
 
@@ -282,13 +269,13 @@ function image_attach_form_alter(&$form, $form_state, $form_id) {
           $form['image_attach']['image'] = array(
             '#type' => 'file',
             '#size' => 40,
-            '#title' => t('Upload image')
+            '#title' => t('Upload image'),
           );
           $form['image_attach']['image_title'] = array(
             '#type' => 'textfield',
             '#title' => t('Image title'),
             $value => '',
-            '#description' => t('The title the image will be shown with. Leave blank to use the filename.')
+            '#description' => t('The title the image will be shown with. Leave blank to use the filename.'),
           );
           // Provide an additional submit button, which adds an image and redirects
           // the user to the node edit form.
@@ -380,7 +367,7 @@ function image_attach_validate(&$form, &$form_state) {
       // Initialize an image properly.
       $image = image_create_node_from($file->filepath, $image_title, '');
       if ($image && !form_get_errors()) {
-        drupal_set_message(t("Created new image to attach to this node. !image_link", array('!image_link' => l($image_title, 'node/'. $image->nid) )));
+        drupal_set_message(t("Created new image to attach to this node. !image_link", array('!image_link' => l($image_title, 'node/' . $image->nid))));
         // Append image nid to array of images.
         $form_state['values']['iids'][$image->nid] = $image->nid;
       }
@@ -415,7 +402,7 @@ function image_attach_nodeapi(&$node, $op, $teaser, $page) {
     }
     return;
   }
-  else if (variable_get('image_attach_'. $node->type, 0) == 0) {
+  else if (variable_get('image_attach_' . $node->type, 0) == 0) {
     return;
   }
   switch ($op) {
@@ -448,7 +435,7 @@ function image_attach_nodeapi(&$node, $op, $teaser, $page) {
       if (!empty($node->iids)) {
         $node->image_attach = _image_attach_node_load_attached($node->iids, $teaser);
         $teaser_or_body = $teaser ? 'teaser' : 'body';
-        $img_size = variable_get('image_attach_size_' . $teaser_or_body . '_'. $node->type, IMAGE_THUMBNAIL);
+        $img_size = variable_get('image_attach_size_' . $teaser_or_body . '_' . $node->type, IMAGE_THUMBNAIL);
 
         // Don't show anything if the attached images are set to hidden.
         if ($img_size == IMAGE_ATTACH_HIDDEN) {
@@ -470,7 +457,7 @@ function image_attach_nodeapi(&$node, $op, $teaser, $page) {
         }
         $node->content['image_attach'] = array(
           '#weight' => $weight,
-          '#value'  => theme('image_attach_attached_images_node', $node->nid, $node->image_attach, $img_size, $teaser),
+          '#value' => theme('image_attach_attached_images_node', $node->nid, $node->image_attach, $img_size, $teaser),
         );
       }
       break;
@@ -482,16 +469,15 @@ function image_attach_nodeapi(&$node, $op, $teaser, $page) {
         $ret[] = array(
           'key' => 'enclosure',
           'attributes' => array(
-            'url' => url("image/view/{$node->iids[0]}/". IMAGE_PREVIEW, array('absolute' => TRUE)),
+            'url' => url("image/view/{$node->iids[0]}/" . IMAGE_PREVIEW, array('absolute' => TRUE)),
             'length' => $info['file_size'],
             'type' => $info['mime_type'],
-          )
+          ),
         );
       }
       return $ret;
   }
 }
-
 
 /**
  * Helper function for hook_nodeapi: view op.
@@ -499,6 +485,7 @@ function image_attach_nodeapi(&$node, $op, $teaser, $page) {
  *
  * @param $nids: an array of node ids.
  * @param $teaser: if true, only load the first of the node ids.
+ *
  * @return: An numerical array of node objects.
  */
 function _image_attach_node_load_attached($attached_nids, $teaser = FALSE) {
@@ -524,12 +511,12 @@ function _image_attach_get_image_nodes($nids = array()) {
   $placeholder = '';
   // If $nids was passed, build placeholders to put in the query
   if (count($nids)) {
-    $placeholder = 'AND n.nid IN ('. implode(', ', array_fill(0, sizeof($nids), '%d')) .') ';
+    $placeholder = 'AND n.nid IN (' . implode(', ', array_fill(0, sizeof($nids), '%d')) . ') ';
   }
 
   $rows = array(0 => t('- None -'));
 
-  $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, n.sticky FROM {node} n WHERE n.status = 1 AND n.type = 'image' ". $placeholder ."ORDER BY n.sticky DESC, n.title ASC"), $nids);
+  $result = db_query(db_rewrite_sql("SELECT n.nid, n.title, n.sticky FROM {node} n WHERE n.status = 1 AND n.type = 'image' " . $placeholder . "ORDER BY n.sticky DESC, n.title ASC"), $nids);
   while ($node = db_fetch_object($result)) {
     $rows[$node->nid] = $node->title;
   }
@@ -537,43 +524,40 @@ function _image_attach_get_image_nodes($nids = array()) {
   return $rows;
 }
 
-
 /**
  * Views 2 API handler
- *
  */
-
 function image_attach_views_api() {
-return array(
-  'api' => 2,
-  'path' => drupal_get_path('module', 'image_attach'),
-);
+  return array(
+    'api' => 2,
+    'path' => drupal_get_path('module', 'image_attach'),
+  );
 }
 
 /**
  * Implementation of hook_theme() registry.
- **/
+ */
 function image_attach_theme() {
   return array(
     'image_attach_attached_images' => array(
       'arguments' => array(
-        'nid'             => 0,
-        'image_nodes'     => array(),
-        'options'         =>  array(),
+        'nid' => 0,
+        'image_nodes' => array(),
+        'options' => array(),
       ),
     ),
     'image_attach_attached_images_node' => array(
       'arguments' => array(
-        'node'            => new stdClass(),
-        'image_nodes'     => array(),
-        'img_size'        => IMAGE_THUMBNAIL,
-        'teaser'          => FALSE,
+        'node' => new stdClass(),
+        'image_nodes' => array(),
+        'img_size' => IMAGE_THUMBNAIL,
+        'teaser' => FALSE,
       ),
     ),
     'image_attach_attached_images_block' => array(
       'arguments' => array(
-        'nid'             => 0, 
-        'image_nodes'     => array(),
+        'nid' => 0,
+        'image_nodes' => array(),
       ),
     ),
   );
@@ -604,7 +588,7 @@ function theme_image_attach_attached_images_node($nid, $image_nodes, $img_size, 
       'class' => 'image-attach-' . ($teaser ? 'teaser' : 'body'),
     ),
   );
-  
+
   // We take the images in reverse order because they are floated to the right,
   // and we want the apparent left to right order to be correct.
   $output = theme('image_attach_attached_images', $nid, array_reverse($image_nodes), $options);
@@ -632,7 +616,7 @@ function theme_image_attach_attached_images_block($nid, $image_nodes = array()) 
       'size' => variable_get('image_attach_block_0_size', IMAGE_THUMBNAIL),
       'link' => 'image',
     );
-    
+
     $output = theme('image_attach_attached_images', $nid, $image_nodes, $options);
     $output = '<div class="all-attached-images">' . $output . '</div>';
 
@@ -646,7 +630,7 @@ function theme_image_attach_attached_images_block($nid, $image_nodes = array()) 
  * @param $nid
  *  The id of the attaching node.
  * @param $image_nodes
- *  The fully loaded image nodes to theme. These do not need to be checked for 
+ *  The fully loaded image nodes to theme. These do not need to be checked for
  *  access: that happens in this function.
  * @param $options
  *  An associative array of options, with the following keys:
@@ -664,17 +648,17 @@ function theme_image_attach_attached_images_block($nid, $image_nodes = array()) 
 function theme_image_attach_attached_images($nid, $image_nodes = array(), $options = array()) {
   // Merge in defaults.
   $options += array(
-      'size' => IMAGE_THUMBNAIL,
-      'link' => 'image',
+    'size' => IMAGE_THUMBNAIL,
+    'link' => 'image',
   );
 
-  $img_size         = $options['size'];
+  $img_size = $options['size'];
   $link_destination = $options['link'];
 
   // Link images to the attaching node.
   if ($link_destination == 'node') {
     $link_path = "node/$nid";
-  }  
+  }
 
   $output = '';
   foreach ($image_nodes as $image) {
@@ -686,17 +670,18 @@ function theme_image_attach_attached_images($nid, $image_nodes = array(), $optio
     // Link images to the image node.
     if ($link_destination == 'image') {
       $link_path = "node/$image->nid";
-    }  
+    }
 
     // Get a fresh copy of the attributes for each image node.
     $div_attributes = $options['attributes'];
 
-    // Create CSS classes.
+    // Create CSS classes, beginning with those passed in to the function.
     $classes = array();
     if (isset($div_attributes['class'])) {
-      $classes[] = $div_attributes['class']; // incoming classes.
+      $classes[] = $div_attributes['class'];
     }
-    //$classes[] = 'image-attach-' . $teaser_or_body; // replace with base class in DIV
+    // replace with base class in DIV
+    //$classes[] = 'image-attach-' . $teaser_or_body;
     $classes[] = 'image-attach-node-' . $image->nid;
     if (!$image->status) {
       $classes[] = 'image-unpublished';

@@ -9,6 +9,7 @@
  * and the order to get the cover node.
  */
 class image_gallery_handler_field_gallery_cover_thumbnail extends image_gallery_handler_field_gallery_cover {
+
   /**
    * Defines default values for options.
    */
@@ -30,8 +31,8 @@ class image_gallery_handler_field_gallery_cover_thumbnail extends image_gallery_
     $form['descendants']['#description'] = theme('advanced_help_topic', 'image_gallery', 'descendants') .
       t('Whether to go into subgalleries when getting a cover image. Either: consider only this gallery itself, consider subgalleries all together, or recurse into subgalleries one by one if the gallery itself is empty.');
     $form['descendants']['#options'] = array(
-      'single'  => t('Only get cover image from this gallery'),
-      'flat'    => t('Consider subgalleries, flattened.'),
+      'single' => t('Only get cover image from this gallery'),
+      'flat' => t('Consider subgalleries, flattened.'),
       'recurse' => t('Consider subgalleries, recursively. (Warning: this can produce many queries per row if your parent galleries are empty!).'),
     );
 
@@ -43,7 +44,7 @@ class image_gallery_handler_field_gallery_cover_thumbnail extends image_gallery_
       '#title' => t('Image size to show'),
       '#options' => $sizes,
       '#default_value' => $this->options['image_derivative'],
-      '#description' => t('Pick an image derivative to display.')
+      '#description' => t('Pick an image derivative to display.'),
     );
   }
 

@@ -1,5 +1,7 @@
 <?php
 // $Id$
+
+
 /**
  * @file
  *
@@ -12,6 +14,7 @@
 function template_preprocess_image_view_image_gallery(&$vars) {
   // Call the parent preprocess function to get a heap of variables.
   template_preprocess_views_view_list($vars);
-  
-  drupal_add_css(drupal_get_path('module', 'image') .'/image.css');
+
+  drupal_add_css(drupal_get_path('module', 'image') . '/image.css');
 }
+
