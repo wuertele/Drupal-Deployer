@@ -486,6 +486,13 @@ function mollom_admin_settings(&$form_state) {
     )),
   );
 
+  $form['mollom_testing_mode'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable testing mode'),
+    '#default_value' => variable_get('mollom_testing_mode', 0),
+    '#description' => t('Submitting "ham", "unsure", or "spam" on a protected form will trigger the corresponding behavior, and similarly, word verifications will only respond to "correct" and "incorrect", instead of the actual characters asked for. This option should be disabled in production environments.'),
+  );
+
   return system_settings_form($form);
 }
 

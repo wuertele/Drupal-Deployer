@@ -341,6 +341,18 @@ function mollom_report_access($entity, $id) {
 }
 
 /**
+ * Implements hook_init().
+ */
+function mollom_init() {
+  if (empty($_POST) && variable_get('mollom_testing_mode', 0) && user_access('administer mollom')) {
+    $message = t('Mollom testing mode is still enabled. Visit the <a href="@settings-url">Mollom settings page</a> to disable developer mode.', array(
+      '@settings-url' => url('admin/settings/mollom/settings'),
+    ));
+    drupal_set_message($message, 'warning');
+  }
+}
+
+/**
  * Implements hook_perm().
  */
 function mollom_perm() {
@@ -1467,7 +1479,7 @@ function mollom_pre_render_mollom($element) {
 /**
  * Form submit handler to flush Mollom session and form information from cache.
  */
-function mollom_form_submit($form_id, &$form_state) {
+function mollom_form_submit($form, &$form_state) {
   // Some modules are implementing multi-step forms without separate form
   // submit handlers. In case we reach here and the form will be rebuilt, we
   // need to defer our submit handling until final submission.
@@ -1515,6 +1527,11 @@ function mollom($method, $data = array()) {
 
   // Initialize refresh variable.
   $refresh = FALSE;
+
+  // Enable testing mode.
+  if (variable_get('mollom_testing_mode', 0)) {
+    $data['testing'] = TRUE;
+  }
 
   // Retrieve the list of Mollom servers from the database.
   $servers = variable_get('mollom_servers', array());

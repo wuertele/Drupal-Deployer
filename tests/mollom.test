@@ -238,6 +238,9 @@ class MollomWebTestCase extends DrupalWebTestCase {
     variable_set('mollom_public_key', $public);
     variable_set('mollom_private_key', $private);
 
+    // Enable testing mode.
+    variable_set('mollom_testing_mode', 1);
+
     // Delete any previously set Mollom servers to make sure we are using
     // the default ones.
     variable_del('mollom_servers');
@@ -728,6 +731,21 @@ class MollomStatusTestCase extends MollomWebTestCase {
     $this->drupalGet('admin/reports/status', array('watchdog' => FALSE));
     $this->assertText(t('The Mollom servers could not be contacted. Please make sure that your web server can make outgoing HTTP requests.'), t('Requirements error found.'));
     $this->assertNoText($this->fallback_message, t('Fallback message not found.'));
+
+    // Verify that valid keys work.
+    $this->drupalGet('admin/settings/mollom/settings', array('watchdog' => FALSE));
+    $edit = array(
+      'mollom_public_key' => MOLLOM_TEST_PUBLIC_KEY,
+      'mollom_private_key' => MOLLOM_TEST_PRIVATE_KEY,
+      'mollom_testing_mode' => 1,
+    );
+    $this->drupalPost(NULL, $edit, t('Save configuration'));
+    $this->assertText(t('The configuration options have been saved.'));
+    $this->assertText('We are now blocking spam.');
+    $this->assertNoText('your keys do not exist or are no longer valid.');
+
+    // Verify presence of testing mode warning.
+    $this->assertText('Mollom testing mode is still enabled.');
   }
 }
 
