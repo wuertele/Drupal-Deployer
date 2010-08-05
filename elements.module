@@ -2,7 +2,7 @@
 // $Id$
 
 /**
- * Implement hook_elements().
+ * Implements hook_elements().
  */
 function elements_elements() {
   $types['tableselect'] = array(
@@ -17,13 +17,62 @@ function elements_elements() {
     '#input' => TRUE,
     '#button_type' => 'submit',
   );
+  $types['email'] = array(
+    '#input' => TRUE,
+    '#size' => 60,
+    '#maxlength' => 128,
+    '#autocomplete_path' => FALSE,
+    '#process' => array('form_expand_ahah'),
+    '#value_callback' => 'form_type_textfield_value',
+  );
+  $types['search'] = array(
+    '#input' => TRUE,
+    '#size' => 60,
+    '#maxlength' => 255,
+    '#autocomplete_path' => FALSE,
+    '#process' => array('form_expand_ahah'),
+    '#value_callback' => 'form_type_textfield_value',
+  );
+  $types['tel'] = array(
+    '#input' => TRUE,
+    '#size' => 20,
+    '#autocomplete_path' => FALSE,
+    '#process' => array('form_expand_ahah'),
+    '#value_callback' => 'form_type_textfield_value',
+  );
+  $types['url'] = array(
+    '#input' => TRUE,
+    '#size' => 80,
+    '#maxlength' => 128,
+    '#autocomplete_path' => FALSE,
+    '#process' => array('form_expand_ahah'),
+    '#value_callback' => 'form_type_textfield_value',
+  );
+  $types['number'] = array(
+    '#input' => TRUE,
+    '#process' => array('form_expand_ahah'),
+    '#value_callback' => 'form_type_textfield_value',
+  );
+  $types['range'] = array(
+    '#input' => TRUE,
+    '#process' => array('form_expand_ahah'),
+    '#value_callback' => 'form_type_textfield_value',
+  );
+  // Add placeholder support to textfields and textareas.
+  $types['textfield'] = array(
+    '#process' => array('form_process_placeholder'),
+  );
+  $types['textarea'] = array(
+    '#process' => array('form_process_placeholder'),
+  );
   return $types;
 }
 
 /**
- * Implement hook_theme().
+ * Implements hook_theme().
  */
 function elements_theme() {
+  // @todo Move theme functions to elements.theme.inc
   return array(
     'tableselect' => array(
       'arguments' => array('element' => NULL),
@@ -31,16 +80,196 @@ function elements_theme() {
     'imagebutton' => array(
       'arguments' => array('element' => NULL),
     ),
+    'element_html5' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'email' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'search' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'tel' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'url' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'number' => array(
+      'arguments' => array('element' => NULL),
+    ),
+    'range' => array(
+      'arguments' => array('element' => NULL),
+    ),
   );
 }
 
 /**
- * Theme the imagebutton form element.
+ * Element process callback; adds support for the HTML5 placeholder attribute.
  *
- * @param array $element
+ * @param $element
+ *   An associative array containing the properties of the element.
  *
- * @return string
- *   HTML representation of the imagebutton.
+ * @return
+ *   The processed element.
+ */
+function form_process_placeholder($element) {
+  if (isset($element['#placeholder'])) {
+    // If the placeholder FAPI property is set, simply add it to the form's
+    // attributes so it will be output in the HTML tag.
+    $element['#attributes']['placeholder'] = $element['#placeholder'];
+  }
+  return $element;
+}
+
+/**
+ * Helper function to format an HTML 5 form element.
+ *
+ * @param $element
+ *   An associative array containing the properties of the element.
+ *
+ * @return
+ *   A themed HTML string representing the form field.
+ */
+function theme_element_html5($element) {
+  $element['#attributes'] = array_merge(array(
+    'type' => $element['#type'],
+    'name' => $element['#name'],
+    'id' => $element['#id'],
+    'value' => $element['#value'],
+  ), $element['#attributes']);
+
+  if (!empty($element['#size'])) {
+    $element['#attributes'] += array('size' => $element['#size']);
+  }
+  if (!empty($element['#maxlength'])) {
+    $element['#attributes'] += array('maxlength' => $element['#maxlength']);
+  }
+  if (!empty($element['#placeholder'])) {
+    $element['#attributes'] += array('placeholder' => $element['#placeholder']);
+  }
+
+  $class = array('form-' . $element['#type']);
+  $extra = '';
+  $output = '';
+
+  if ($element['#autocomplete_path'] && menu_valid_path(array('link_path' => $element['#autocomplete_path']))) {
+    drupal_add_js('misc/autocomplete.js');
+    $class[] = 'form-autocomplete';
+    $extra =  '<input class="autocomplete" type="hidden" id="'. $element['#id'] .'-autocomplete" value="'. check_url(url($element['#autocomplete_path'], array('absolute' => TRUE))) .'" disabled="disabled" />';
+  }
+  _form_set_class($element, $class);
+
+  if (isset($element['#field_prefix'])) {
+    $output .= '<span class="field-prefix">'. $element['#field_prefix'] .'</span> ';
+  }
+
+  $output .= '<input' . drupal_attributes($element['#attributes']) .' />';
+
+  if (isset($element['#field_suffix'])) {
+    $output .= ' <span class="field-suffix">'. $element['#field_suffix'] .'</span>';
+  }
+
+  return theme('form_element', $element, $output) . $extra;
+}
+
+/**
+ * Format an e-mail form field.
+ *
+ * @param $element
+ *   An associative array containing the properties of the element.
+ *
+ * @return
+ *   A themed HTML string representing the form field.
+ */
+function theme_email($element) {
+  return theme_element_html5($element);
+}
+
+/**
+ * Format a search form field.
+ *
+ * @param $element
+ *   An associative array containing the properties of the element.
+ *
+ * @return
+ *   A themed HTML string representing the form field.
+ */
+function theme_search($element) {
+  return theme_element_html5($element);
+}
+
+/**
+ * Format a mail form field.
+ *
+ * @param $element
+ *   An associative array containing the properties of the element.
+ *
+ * @return
+ *   A themed HTML string representing the form field.
+ */
+function theme_tel($element) {
+  return theme_element_html5($element);
+}
+
+/**
+ * Format an URL form field.
+ *
+ * @param $element
+ *   An associative array containing the properties of the element.
+ *
+ * @return
+ *   A themed HTML string representing the form field.
+ */
+function theme_url($element) {
+  return theme_element_html5($element);
+}
+
+/**
+ * Format a number form field.
+ *
+ * @param $element
+ *   An associative array containing the properties of the element.
+ *
+ * @return
+ *   A themed HTML string representing the form field.
+ */
+function theme_number($element) {
+  if (isset($element['#min'])) {
+    $element['#attributes']['min'] = $element['#min'];
+  }
+  if (isset($element['#max'])) {
+    $element['#attributes']['max'] = $element['#max'];
+  }
+  if (isset($element['#step'])) {
+    $element['#attributes']['step'] = $element['#step'];
+  }
+
+  return theme_element_html5($element);
+}
+
+/**
+ * Format a range form field.
+ *
+ * @param $element
+ *   An associative array containing the properties of the element.
+ *
+ * @return
+ *   A themed HTML string representing the form field.
+ */
+function theme_range($element) {
+  // We can re-use the number element theme since they're basically the same.
+  return theme_number($element);
+}
+
+/**
+ * Format an imagebutton form field.
+ *
+ * @param $element
+ *   An associative array containing the properties of the element.
+ *
+ * @return
+ *   A themed HTML string representing the imagebutton.
  */
 function theme_imagebutton($element) {
   return '<input type="image" class="form-'. $element['#button_type'] .'" name="'. $element['#name'] .'" value="'. check_plain($element['#default_value']) .'" '. drupal_attributes($element['#attributes']) .' src="'. $element['#image'] .'" alt="'. $element['#title'] .'" title="'. $element['#title'] ."\" />\n";
