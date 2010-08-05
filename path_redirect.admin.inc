@@ -428,7 +428,7 @@ function path_redirect_validate_source_field($element, &$form_state) {
 
   // Cannot create redirects for valid paths.
   $menu_item = menu_get_item($element['#value']);
-  if ($menu_item && $menu_item['page_callback'] != 'path_redirect_goto') {
+  if ($menu_item && $menu_item['page_callback'] != 'path_redirect_goto' && $element['#value'] == $menu_item['path']) {
     form_error($element, t('The source path %path is a currently valid path. You cannot override existing paths. You can however, create URL aliases for them.', array('%path' => $element['#value'])));
   }
 
