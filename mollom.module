@@ -592,22 +592,34 @@ function mollom_form_alter(&$form, &$form_state, $form_id) {
         }
       }
       // Compute the weight of the CAPTCHA so we can position it in the form.
-      $weight = 99999;
-      foreach (element_children($form) as $key) {
-        // Scan the top-level form elements for buttons.
-        if (isset($form[$key]['#type']) && in_array($form[$key]['#type'], array('submit', 'button', 'image_button'))) {
-          // For each button, slightly increase the weight to allocate room for
-          // the CAPTCHA.
-          if (isset($form[$key]['#weight'])) {
-            $form[$key]['#weight'] = $form[$key]['#weight'] + 0.0002;
+      // #type 'actions' is new in D7, but contributed modules use the concept
+      // in D6 already. We therefore expect the key without #type.
+      if (isset($form['actions']) && !isset($form['actions']['#type'])) {
+        // D6 code should set a #weight. If none is set, we ensure a default of
+        // 100, like #type 'actions' in D7.
+        if (!isset($form['actions']['#weight'])) {
+          $form['actions']['#weight'] = 100;
+        }
+        $weight = $form['actions']['#weight'] - 1;
+      }
+      else {
+        $weight = 99999;
+        foreach (element_children($form) as $key) {
+          // Scan the top-level form elements for buttons.
+          if (isset($form[$key]['#type']) && in_array($form[$key]['#type'], array('submit', 'button', 'image_button'))) {
+            // For each button, slightly increase the weight to allocate room for
+            // the CAPTCHA.
+            if (isset($form[$key]['#weight'])) {
+              $form[$key]['#weight'] += 0.0002;
+            }
+            else {
+              $form[$key]['#weight'] = 1.0002;
+            }
+            // We want to position the CAPTCHA just before the first button, so
+            // we make the CAPTCHA's weight slightly lighter than the lightest
+            // button's weight.
+            $weight = min($weight, $form[$key]['#weight'] - 0.0001);
           }
-          else {
-            $form[$key]['#weight'] = 1.0002;
-          }
-          // We want to position the CAPTCHA just before the first button, so
-          // we make the CAPTCHA's weight slightly lighter than the lightest
-          // button's weight.
-          $weight = min($weight, $form[$key]['#weight'] - 0.0001);
         }
       }
       // Add Mollom form widget.
