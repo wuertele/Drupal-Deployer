@@ -10,7 +10,6 @@ Elements provided
 =================
 
 1. tableselect
-2. imagebutton (not working properly yet).
 
 
 1. tableselect
