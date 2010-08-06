@@ -131,14 +131,14 @@ class PathRedirectFunctionalTest extends DrupalWebTestCase {
   function testAliasRedirection() {
     $node = $this->drupalCreateNode(array('title' => 'test1'));
     $edit = array(
-      'source' => 'test1',
+      'path' => 'test1',
     );
     $this->drupalPost('node/' . $node->nid . '/edit', $edit, t('Save'));
     $this->assertRaw(t('@type %title has been updated.', array('@type' => 'Page', '%title' => $node->title)), t('Node saved.'));
     $this->assertFalse(path_redirect_load(array('redirect' => 'node/' . $node->nid)), t('No redirects created yet.'));
 
     $edit = array(
-      'source' => 'test2',
+      'path' => 'test2',
     );
     $this->drupalPost('node/' . $node->nid . '/edit', $edit, t('Save'));
     $this->assertRaw(t('@type %title has been updated.', array('@type' => 'Page', '%title' => $node->title)), t('Node saved.'));
@@ -165,12 +165,12 @@ class PathRedirectFunctionalTest extends DrupalWebTestCase {
 
     // Run one of the redirects and test that the last used timestamp was updated.
     $this->drupalGet('test1');
-    $this->assertTrue(db_result(db_query("SELECT last_used FROM {path_redirect} WHERE path = 'test1'")) >= REQUEST_TIME, t('Last used timestamp was updated.'));
+    $this->assertTrue(db_result(db_query("SELECT last_used FROM {path_redirect} WHERE source = 'test1'")) >= REQUEST_TIME, t('Last used timestamp was updated.'));
 
     // Run cron and test that the inactive redirect was removed.
     $this->drupalGet('cron.php');
-    $this->assertTrue(path_redirect_load(array('source' => 'test1')), t('Active redirect not removed.'));
-    $this->assertFalse(path_redirect_load(array('source' => 'test2')), t('Inactive redirect removed.'));
+    $this->assertTrue(path_redirect_load_by_source('test1'), t('Active redirect not removed.'));
+    $this->assertFalse(path_redirect_load_by_source('test2'), t('Inactive redirect removed.'));
   }
 
   function testAutocomplete() {
@@ -190,7 +190,7 @@ class PathRedirectFunctionalTest extends DrupalWebTestCase {
     $this->assertEqual($node->nid, 1, t('Node 1 created'));
 
     // Test that only the valid 404s are found in the autocomplete.
-    $this->drupalGet('js/path-redirect/autocomplete_404/e');
+    $this->drupalGet('js/path_redirect/autocomplete_404/e');
     $this->assertText('test1');
     $this->assertText('test2');
     $this->assertNoText('node');

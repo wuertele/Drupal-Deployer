@@ -147,9 +147,14 @@ function path_redirect_goto($redirect = NULL) {
 function path_redirect_cron() {
   // Purge inactive redirects from the database.
   if ($purge = variable_get('path_redirect_purge_inactive', 0)) {
-    db_query("DELETE FROM {path_redirect} WHERE last_used < %d", time() - $purge);
-    if ($count = db_affected_rows()) {
-      watchdog('path_redirect', format_plural($count, 'Removed 1 inactive redirect from the database.', 'Removed @count inactive redirects from the database.'));
+    $query = db_query("SELECT rid FROM {path_redirect} WHERE last_used < %d", time() - $purge);
+    $rids = array();
+    while ($rid = db_result($query)) {
+      $rids[] = $rid;
+    }
+    if ($rids) {
+      path_redirect_delete_multiple($rids);
+      watchdog('path_redirect', format_plural(count($rids), 'Removed 1 inactive redirect from the database.', 'Removed @count inactive redirects from the database.'));
     }
   }
 }
@@ -227,8 +232,8 @@ function path_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
     case 'delete':
       // When a node is deleted, also delete the redirects to it (they will result in a 404).
       path_redirect_delete_multiple(NULL, array('source' => 'node/'. $node->nid));
-      path_redirect_delete_multiple(NULL, array('source' => 'node/'. $node->nid . '/%%'));
-      //path_redirect_delete_multiple(NULL, array('redirect' => 'node/'. $node->nid));
+      //path_redirect_delete_multiple(NULL, array('source' => 'node/'. $node->nid . '/%%'));
+      path_redirect_delete_multiple(NULL, array('redirect' => 'node/'. $node->nid));
       //path_redirect_delete_multiple(NULL, array('redirect' => 'node/'. $node->nid . '/%%'));
       break;
   }
