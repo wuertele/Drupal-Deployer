@@ -228,6 +228,8 @@ function path_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       // When a node is deleted, also delete the redirects to it (they will result in a 404).
       path_redirect_delete_multiple(NULL, array('source' => 'node/'. $node->nid));
       path_redirect_delete_multiple(NULL, array('source' => 'node/'. $node->nid . '/%%'));
+      //path_redirect_delete_multiple(NULL, array('redirect' => 'node/'. $node->nid));
+      //path_redirect_delete_multiple(NULL, array('redirect' => 'node/'. $node->nid . '/%%'));
       break;
   }
 }
@@ -384,7 +386,7 @@ function path_redirect_load_multiple($rids = NULL, $conditions = array()) {
   return $redirects;
 }
 
-function _path_redirect_build_conditions(&$query = array(), $rids, $conditions) {
+function _path_redirect_build_conditions(&$query, $rids, $conditions) {
   static $schema;
   if (!isset($schema)) {
     $schema = drupal_get_schema('path_redirect');
@@ -423,7 +425,7 @@ function _path_redirect_build_conditions(&$query = array(), $rids, $conditions) 
   return $query;
 }
 
-function path_redirect_post_load_redirect(array &$redirect) {
+function path_redirect_post_load_redirect(&$redirect) {
   if (!isset($redirect['source_query']) || !is_array($redirect['source_query'])) {
     $parsed = parse_url($redirect['source']) + array('query' => '');
     $redirect['source_query'] = path_redirect_get_query_array($parsed['query']);

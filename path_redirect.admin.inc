@@ -95,9 +95,6 @@ function path_redirect_list_redirects($query = array(), $conditions = array(), $
       );
       $row['operations'] = theme('links', $operations, array('class' => 'links inline nowrap'));
     }
-    if ($tableselect) {
-      $row['#weight'] = $weight++;
-    }
     $rows[(string) $rid] = $row;
   }
 
