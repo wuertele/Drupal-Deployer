@@ -44,7 +44,9 @@ function elements_elements() {
     '#process' => array('form_expand_ahah'),
     '#value_callback' => 'form_type_textfield_value',
   );
-  $types['number'] = array(
+  // Due to a name conflict with theme_number that already exists in CCK,
+  // this field needs to be named 'numberfield'.
+  $types['numberfield'] = array(
     '#input' => TRUE,
     '#process' => array('form_expand_ahah'),
     '#value_callback' => 'form_type_textfield_value',
@@ -91,7 +93,7 @@ function elements_theme() {
     'url' => array(
       'arguments' => array('element' => NULL),
     ),
-    'number' => array(
+    'numberfield' => array(
       'arguments' => array('element' => NULL),
     ),
     'range' => array(
@@ -230,7 +232,7 @@ function theme_url($element) {
  * @return
  *   A themed HTML string representing the form field.
  */
-function theme_number($element) {
+function theme_number_field($element) {
   if (isset($element['#min'])) {
     $element['#attributes']['min'] = $element['#min'];
   }
@@ -241,6 +243,7 @@ function theme_number($element) {
     $element['#attributes']['step'] = $element['#step'];
   }
 
+  $element['#type'] = 'number';
   return theme_element_html5($element);
 }
 
@@ -254,8 +257,17 @@ function theme_number($element) {
  *   A themed HTML string representing the form field.
  */
 function theme_range($element) {
-  // We can re-use the number element theme since they're basically the same.
-  return theme_number($element);
+  if (isset($element['#min'])) {
+    $element['#attributes']['min'] = $element['#min'];
+  }
+  if (isset($element['#max'])) {
+    $element['#attributes']['max'] = $element['#max'];
+  }
+  if (isset($element['#step'])) {
+    $element['#attributes']['step'] = $element['#step'];
+  }
+
+  return theme_element_html5($element);
 }
 
 /**
