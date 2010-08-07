@@ -9,11 +9,19 @@
 /**
  * AJAX callback to retrieve a CAPTCHA.
  *
+ * @param $type
+ *   The new CAPTCHA type to retrieve, e.g. 'image' or 'audio'.
+ * @param $session_id
+ *   The last known Mollom session id contained in the form.
+ *
+ * @return
+ *   A JSON array containing:
+ *   - content: The HTML markup for the new CAPTCHA.
+ *   - session_id: The Mollom session id for the new CAPTCHA.
+ *
  * @todo Add error handling.
  */
 function mollom_captcha_js($type, $session_id) {
-  $output = '';
-
   // Extract Mollom session id from form element value.
   @list($timestamp, $mollom_session_id) = explode('-', $session_id, 2);
   if (empty($mollom_session_id)) {
@@ -24,12 +32,12 @@ function mollom_captcha_js($type, $session_id) {
 
   $captcha = mollom_get_captcha($type, array('session_id' => $mollom_session_id));
 
-  // Update cached session id for the form.
+  // Update cached session id in the cached $form_state.
   if (!empty($captcha['response']['session_id'])) {
     if ($cache = cache_get($mollom_session_id, 'cache_mollom')) {
       $form_state['mollom'] = $cache->data;
-      $form_state['mollom']['session_id'] = $captcha['response']['session_id'];
-      cache_set($form_state['mollom']['session_id'], $form_state['mollom'], 'cache_mollom', $timestamp + 21600);
+      $form_state['mollom']['response']['session_id'] = $captcha['response']['session_id'];
+      cache_set($form_state['mollom']['response']['session_id'], $form_state['mollom'], 'cache_mollom', $timestamp + 21600);
       // After successfully updating the cache, replace the original session id.
       $mollom_session_id = $captcha['response']['session_id'];
     }

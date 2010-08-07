@@ -158,6 +158,7 @@ function mollom_admin_configure_form(&$form_state, $mollom_form = NULL) {
       if (empty($form['mollom']['enabled_fields']['#options'])) {
         $form['mollom']['enabled_fields']['#description'] = t('No fields are available.');
       }
+
       $form['actions']['submit'] = array(
         '#type' => 'submit',
         '#value' => t('Save'),
@@ -285,7 +286,7 @@ function mollom_admin_blacklist_form(&$form_state) {
 
   $form['blacklist'] = array();
   // Do not retrieve the current blacklist when submitting the form.
-  $blacklist = (!isset($form_state['input']) ? mollom('mollom.listBlacklistText') : array());
+  $blacklist = (empty($form_state['input']) ? mollom('mollom.listBlacklistText') : array());
   if (is_array($blacklist)) {
     foreach ($blacklist as $id => $entry) {
       $row = array(
