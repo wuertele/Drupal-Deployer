@@ -10,6 +10,9 @@ positions you would like for editing. This makes it super simple to have forms
 with inline fields, which you can change at any point. Tab indexing is also respected, 
 so no matter how you arrange the fields, the users can still tab through them easily.
 
+You can also add arbitrary bits of markup to the form as well, including extra labels,
+images, etc.
+
 =======================
 Restrictions
 =======================
