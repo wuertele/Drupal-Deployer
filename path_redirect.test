@@ -15,7 +15,12 @@ class PathRedirectTestHelper extends DrupalWebTestCase {
     if (isset($args[0]) && is_array($args[0])) {
       $modules = array_merge($modules, $args[0]);
     }
-    call_user_func_array(array('parent', 'setUp'), $modules);
+
+    $parent_callback = 'parent::setUp';
+    if (version_compare(PHP_VERSION, '5.3.0', '<')) {
+      $parent_callback = array($this, 'parent::setUp');
+    }
+    call_user_func_array($parent_callback, $modules);
   }
 
   protected function assertRedirect($request, $redirect, $code = FALSE) {
