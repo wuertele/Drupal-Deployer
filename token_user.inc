@@ -39,8 +39,8 @@ function user_token_values($type, $object = NULL, $options = array()) {
       $values['uid']            = $account->uid;
       $values['mail']           = $account->uid ? $account->mail : '';
       $values['date-in-tz']     = $account->uid ? format_date(time(), 'small', '', $account->timezone) : '';
-      $values['account-url']    = $account->uid ? url("user/$account->uid") : '';
-      $values['account-edit']   = $account->uid ? url("user/$account->uid/edit") : '';
+      $values['account-url']    = $account->uid ? url("user/$account->uid", array('absolute' => TRUE)) : '';
+      $values['account-edit']   = $account->uid ? url("user/$account->uid/edit", array('absolute' => TRUE)) : '';
 
       if ($account->uid) {
         $values += token_get_date_token_values($account->created, 'user-created-');
@@ -71,7 +71,7 @@ function user_token_list($type = 'all') {
     $tokens['user'] += token_get_date_token_info(t("User's last login"), 'user-last-login-');
     $tokens['user']['date-in-tz']     = t("The current date in the user's timezone.");
     $tokens['user']['account-url']    = t("The URL of the account profile page.");
-    $tokens['user']['account-edit']   = t("The url of the account edit page.");
+    $tokens['user']['account-edit']   = t("The URL of the account edit page.");
 
     return $tokens;
   }
