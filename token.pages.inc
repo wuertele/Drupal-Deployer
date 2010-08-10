@@ -42,7 +42,7 @@ function theme_token_help($types = 'all', $prefix = TOKEN_PREFIX, $suffix = TOKE
 /**
  * Provide a 'tree' display of nested tokens.
  */
-function theme_token_tree($token_types = array(), $global_types = TRUE, $click_insert = TRUE, $recursion_limit = 4) {
+function theme_token_tree($token_types = array(), $global_types = TRUE, $click_insert = TRUE) {
   //$info = token_get_list('all');
   $info = token_get_list($token_types);
 
