@@ -236,9 +236,7 @@ function path_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
     case 'delete':
       // When a node is deleted, also delete the redirects to it (they will result in a 404).
       path_redirect_delete_multiple(NULL, array('source' => 'node/'. $node->nid));
-      //path_redirect_delete_multiple(NULL, array('source' => 'node/'. $node->nid . '/%%'));
       path_redirect_delete_multiple(NULL, array('redirect' => 'node/'. $node->nid));
-      //path_redirect_delete_multiple(NULL, array('redirect' => 'node/'. $node->nid . '/%%'));
       break;
   }
 }
@@ -280,10 +278,12 @@ function path_redirect_taxonomy($op, $type, $array = NULL) {
   if ($op == 'delete' && $type == 'term') {
     // Delete any redirects to valid taxonomy paths.
     $term = (object) $array;
-    $term->path = taxonomy_term_path($term);
-    path_redirect_delete_multiple(NULL, array('source' => $term->path));
-    if ($term->path != 'taxonomy/term/' . $term->tid) {
-      path_redirect_delete_multiple(NULL, array('source' => 'taxonomy/term/' . $term->tid));
+    $term_uri = taxonomy_term_path($term);
+    path_redirect_delete_multiple(NULL, array('source' => $term_uri));
+    path_redirect_delete_multiple(NULL, array('redirect' => $term_uri));
+    if ($term_uri != "taxonomy/term/{$term->tid}") {
+      path_redirect_delete_multiple(NULL, array('source' => "taxonomy/term/{$term->tid}"));
+      path_redirect_delete_multiple(NULL, array('redirect' => "taxonomy/term/{$term->tid}"));
     }
   }
 }
@@ -295,7 +295,7 @@ function path_redirect_user($op, &$edit, &$account, $category = NULL) {
   if ($op == 'delete') {
     // Delete any redirects to valid user paths.
     path_redirect_delete_multiple(NULL, array('source' => 'user/'. $account->uid));
-    path_redirect_delete_multiple(NULL, array('source' => 'user/'. $account->uid . '/%%'));
+    path_redirect_delete_multiple(NULL, array('redirect' => 'user/'. $account->uid));
   }
 }
 
