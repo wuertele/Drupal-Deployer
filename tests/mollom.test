@@ -261,10 +261,12 @@ class MollomWebTestCase extends DrupalWebTestCase {
    *
    * @param $form_id
    *   The form id to configure.
+   * @param $mode
+   *   The Mollom protection mode for the form.
    * @param $fields
    *   (optional) A list of form elements to enable for text analysis.
    */
-  protected function setProtection($form_id, $fields = NULL) {
+  protected function setProtection($form_id, $mode = MOLLOM_MODE_ANALYSIS, $fields = NULL) {
     // Always start from overview page, also to make debugging easier.
     $this->drupalGet('admin/settings/mollom');
     // Determine whether the form is already protected.
@@ -282,7 +284,10 @@ class MollomWebTestCase extends DrupalWebTestCase {
       $this->drupalGet('admin/settings/mollom/manage/' . $form_id);
     }
 
-    $edit = array();
+    $edit = array(
+      'mollom[mode]' => $mode,
+    );
+
     // Explicitly enable the passed fields, if $fields were passed.
     if (isset($fields)) {
       foreach ($fields as $field) {
@@ -976,7 +981,7 @@ class MollomFallbackTestCase extends MollomWebTestCase {
   function testFallbackMechanismBlock() {
     // Enable Mollom for the request password form.
     $this->drupalLogin($this->admin_user);
-    $this->setProtection('user_pass');
+    $this->setProtection('user_pass', MOLLOM_MODE_CAPTCHA);
     // Set the fallback strategy to 'blocking mode'.
     $this->drupalPost('admin/settings/mollom/settings', array('mollom_fallback' => MOLLOM_FALLBACK_BLOCK), t('Save configuration'));
     $this->assertText('The configuration options have been saved.');
@@ -1000,7 +1005,7 @@ class MollomFallbackTestCase extends MollomWebTestCase {
   function testFallbackMechanismAccept() {
     // Enable Mollom for the request password form.
     $this->drupalLogin($this->admin_user);
-    $this->setProtection('user_pass');
+    $this->setProtection('user_pass', MOLLOM_MODE_CAPTCHA);
     // Set the fallback strategy to 'accept mode'.
     $this->drupalPost('admin/settings/mollom/settings', array('mollom_fallback' => MOLLOM_FALLBACK_ACCEPT), t('Save configuration'));
     $this->assertText('The configuration options have been saved.');
@@ -1024,7 +1029,7 @@ class MollomFallbackTestCase extends MollomWebTestCase {
    */
   function testFailoverMechanism() {
     $this->drupalLogin($this->admin_user);
-    $this->setProtection('user_pass');
+    $this->setProtection('user_pass', MOLLOM_MODE_CAPTCHA);
     $this->drupalLogout();
 
     // Set the fallback strategy to 'blocking mode', so that if the failover
@@ -1321,6 +1326,7 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
     $this->drupalPost(NULL, $edit, t('Next'));
     $this->assertText('Mollom test form');
     $edit = array(
+      'mollom[mode]' => MOLLOM_MODE_ANALYSIS,
       'mollom[enabled_fields][title]' => TRUE,
       'mollom[enabled_fields][body]' => TRUE,
       'mollom[enabled_fields][exclude]' => FALSE,
@@ -1465,7 +1471,7 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
     );
     $this->drupalPost(NULL, $edit, t('Next'));
     $this->assertText($form_info['user_register']['title']);
-    $this->assertText(t('No fields are available.'));
+    $this->assertNoText(t('Fields to analyze'));
     $this->drupalPost(NULL, array(), t('Save'));
 
     // Verify that user registration form was protected.
@@ -1481,19 +1487,17 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
         );
         $this->drupalPost('admin/settings/mollom/add', $edit, t('Next'));
         $this->assertText($info['title']);
-        if (isset($info['mode'])) {
-          // Verify that CAPTCHA-only forms contain no configurable fields.
-          if ($info['mode'] == MOLLOM_MODE_CAPTCHA) {
-            $this->assertText(t('No fields are available.'));
+        // Verify that forms specifying elements have all possible elements
+        // preselected for textual analysis.
+        if (!empty($info['elements'])) {
+          foreach ($info['elements'] as $field => $label) {
+            $field = rawurlencode($field);
+            $this->assertFieldByName("mollom[enabled_fields][$field]", TRUE);
           }
-          // Verify that forms specifying textual analysis as default mode have
-          // all possible elements preselected.
-          elseif ($info['mode'] == MOLLOM_MODE_ANALYSIS && !empty($info['elements'])) {
-            foreach ($info['elements'] as $field => $label) {
-              $field = rawurlencode($field);
-              $this->assertFieldByName("mollom[enabled_fields][$field]", TRUE);
-            }
-          }
+        }
+        // Verify that CAPTCHA-only forms contain no configurable fields.
+        else {
+          $this->assertNoText(t('Fields to analyze'));
         }
         $this->drupalPost(NULL, array(), t('Save'));
         $this->assertText(t('The form protection has been added.'));
@@ -1512,7 +1516,7 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
   function testFormAlter() {
     // Enable CAPTCHA-only protection for request user password form.
     $this->drupalLogin($this->admin_user);
-    $this->setProtection('user_pass', array());
+    $this->setProtection('user_pass', MOLLOM_MODE_CAPTCHA);
     $this->drupalLogout();
 
     // Verify regular form protection.
@@ -1543,7 +1547,7 @@ class MollomUserFormsTestCase extends MollomWebTestCase {
   function testProtectRequestPassword() {
     // We first enable Mollom for the request password form.
     $this->drupalLogin($this->admin_user);
-    $this->setProtection('user_pass');
+    $this->setProtection('user_pass', MOLLOM_MODE_CAPTCHA);
     $this->drupalLogout();
 
     // Create a new user.
@@ -1567,7 +1571,7 @@ class MollomUserFormsTestCase extends MollomWebTestCase {
   function testProtectRegisterUser() {
     // We first enable Mollom for the user registration form.
     $this->drupalLogin($this->admin_user);
-    $this->setProtection('user_register');
+    $this->setProtection('user_register', MOLLOM_MODE_CAPTCHA);
     $this->drupalLogout();
 
     // Validate that the user registration form has a CAPTCHA text field.
@@ -1637,7 +1641,7 @@ class MollomCommentFormTestCase extends MollomWebTestCase {
   function testCaptchaProtectedCommentForm() {
     // Enable Mollom CAPTCHA protection for comments.
     $this->drupalLogin($this->admin_user);
-    $this->setProtection('comment_form', array());
+    $this->setProtection('comment_form', MOLLOM_MODE_CAPTCHA);
     $this->drupalLogout();
 
     // Request the comment reply form. There should be a CAPTCHA form.

@@ -118,6 +118,8 @@ function mollom_admin_configure_form(&$form_state, $mollom_form = NULL) {
       break;
 
     case 'configure':
+      $form['#after_build'][] = 'mollom_admin_configure_form_after_build';
+
       // Display a list of fields for textual analysis (last step).
       $form['mollom']['form_id'] = array(
         '#type' => 'value',
@@ -128,35 +130,56 @@ function mollom_admin_configure_form(&$form_state, $mollom_form = NULL) {
         '#title' => t('Form'),
         '#value' => $mollom_form['title'],
       );
-      // Form elements defined by hook_mollom_form_info() use the
-      // 'parent][child' syntax, which Form API also uses internally for
-      // form_set_error(), and which allows us to recurse into nested fields
-      // during processing of submitted form values. However, since we are using
-      // those keys also as internal values to configure the fields to use for
-      // textual analysis, we need to encode them. Otherwise, a nested field key
-      // would result in the following checkbox attribute:
-      //   '#name' => 'mollom[enabled_fields][parent][child]'
-      // This would lead to a form validation error, because it is a valid key.
-      // By encoding them, we prevent this from happening:
-      //   '#name' => 'mollom[enabled_fields][parent%5D%5Bchild]'
-      // @todo Use PHP5 functions in D7 (e.g. array_combine()).
-      $elements = array();
-      foreach ($mollom_form['elements'] as $key => $value) {
-        $elements[rawurlencode($key)] = $value;
-      }
-      $enabled_fields = array();
-      foreach ($mollom_form['enabled_fields'] as $value) {
-        $enabled_fields[] = rawurlencode($value);
-      }
-      $form['mollom']['enabled_fields'] = array(
-        '#type' => 'checkboxes',
-        '#title' => t('Fields to analyze'),
-        '#options' => $elements,
-        '#default_value' => $enabled_fields,
-        '#description' => t('If no fields are selected, the form will be protected by a CAPTCHA.'),
+      $form['mollom']['mode'] = array(
+        '#type' => 'radios',
+        '#title' => t('Protection mode'),
+        '#options' => array(
+          MOLLOM_MODE_CAPTCHA => t('CAPTCHA only'),
+        ),
+        '#default_value' => $mollom_form['mode'],
       );
-      if (empty($form['mollom']['enabled_fields']['#options'])) {
-        $form['mollom']['enabled_fields']['#description'] = t('No fields are available.');
+
+      if (!empty($mollom_form['elements'])) {
+        // Add the text analysis protection mode as first, suggested option.
+        $form['mollom']['mode']['#options'] = array(
+          MOLLOM_MODE_ANALYSIS => t('Text analysis and CAPTCHA backup'),
+        ) + $form['mollom']['mode']['#options'];
+        // If not re-configuring an existing protection, make it the default.
+        if (!isset($form['mollom']['mode']['#default_value'])) {
+          $form['mollom']['mode']['#default_value'] = MOLLOM_MODE_ANALYSIS;
+        }
+
+        // @todo Actually belongs to MOLLOM_MODE_ANALYSIS only.
+        $form['mollom']['mode']['#description'] = t('If %text-analysis-option is selected, a CAPTCHA will only be displayed if Mollom is unsure about the content.', array(
+          '%text-analysis-option' => $form['mollom']['mode']['#options'][MOLLOM_MODE_ANALYSIS],
+        ));
+
+        // Form elements defined by hook_mollom_form_info() use the
+        // 'parent][child' syntax, which Form API also uses internally for
+        // form_set_error(), and which allows us to recurse into nested fields
+        // during processing of submitted form values. However, since we are using
+        // those keys also as internal values to configure the fields to use for
+        // textual analysis, we need to encode them. Otherwise, a nested field key
+        // would result in the following checkbox attribute:
+        //   '#name' => 'mollom[enabled_fields][parent][child]'
+        // This would lead to a form validation error, because it is a valid key.
+        // By encoding them, we prevent this from happening:
+        //   '#name' => 'mollom[enabled_fields][parent%5D%5Bchild]'
+        $elements = array();
+        foreach ($mollom_form['elements'] as $key => $value) {
+          $elements[rawurlencode($key)] = $value;
+        }
+        $enabled_fields = array();
+        foreach ($mollom_form['enabled_fields'] as $value) {
+          $enabled_fields[] = rawurlencode($value);
+        }
+        $form['mollom']['enabled_fields'] = array(
+          '#type' => 'checkboxes',
+          '#title' => t('Fields to analyze'),
+          '#options' => $elements,
+          '#default_value' => $enabled_fields,
+          '#required' => $mollom_form['mode'] == MOLLOM_MODE_ANALYSIS,
+        );
       }
 
       $form['actions']['submit'] = array(
@@ -174,6 +197,17 @@ function mollom_admin_configure_form(&$form_state, $mollom_form = NULL) {
 }
 
 /**
+ * #after_build callback for mollom_admin_configure_form().
+ */
+function mollom_admin_configure_form_after_build($form, &$form_state) {
+  // Make field checkboxes required, if protection mode is textual analysis.
+  // Accounts for different add and edit form builds and rebuilds.
+  $form['mollom']['enabled_fields']['#required'] = ($form_state['values']['mollom']['mode'] == MOLLOM_MODE_ANALYSIS);
+
+  return $form;
+}
+
+/**
  * Form submit handler for 'Next' button on Mollom form configuration form.
  */
 function mollom_admin_configure_form_next_submit($form, &$form_state) {
@@ -184,7 +218,7 @@ function mollom_admin_configure_form_next_submit($form, &$form_state) {
   $mollom_form = mollom_form_info($form_id, $form_list[$form_id]['module']);
 
   // Enable all fields for textual analysis by default.
-  if (!empty($mollom_form['mode']) && !empty($mollom_form['elements'])) {
+  if (!empty($mollom_form['elements'])) {
     $mollom_form['enabled_fields'] = array_keys($mollom_form['elements']);
   }
   else {
@@ -211,9 +245,6 @@ function mollom_admin_configure_form_submit($form, &$form_state) {
     $enabled_fields[] = rawurldecode($field);
   }
   $mollom_form['enabled_fields'] = $enabled_fields;
-  // Determine form protection to use; use CAPTCHA-only protection if no fields
-  // were selected, otherwise text analysis.
-  $mollom_form['mode'] = (!empty($mollom_form['enabled_fields']) ? MOLLOM_MODE_ANALYSIS : MOLLOM_MODE_CAPTCHA);
 
   $status = mollom_form_save($mollom_form);
   if ($status === SAVED_NEW) {
