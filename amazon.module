@@ -565,8 +565,38 @@ function amazon_item_insert($item) {
     }
   }
 
-  // Save the product images if they exist.
+
+  // Save the product images if they exist, or provide defaults
   if (in_array('images', variable_get('amazon_core_data', array('creators', 'images')))) {
+
+    // If we have no images, go get default images.
+    // TODO: This is pretty ugly. Find a better way. Store this information as
+    // variable, whatever.  No reason to do this every time.
+    if (empty($item['imagesets'])) {
+      $default_image = variable_get('amazon_default_image', '');
+      foreach (array('small', 'medium', 'large') as $key) {
+        $preset_name = variable_get('amazon_default_image_' . $key . '_preset', '');
+        if (!empty($preset_name)) {
+          $preset = imagecache_preset_by_name($preset_name);
+          $themed_image = theme('imagecache', $preset_name, $default_image, t('No image was provided'));
+          if ($key == 'medium') {
+            $themed_default_image = $themed_image;
+          }
+          preg_match_all('/(src|height|width)=("[^"]*")/i', $themed_image, $tags);
+          foreach ($tags[1] as $tag_index => $tag) {
+            if ($tag == 'src') {
+              $item['imagesets']["{$key}image"]['url'] = str_replace('"', '',$tags[2][$tag_index]);
+            }
+            if ($tag == 'width') {
+              $item['imagesets']["{$key}image"]['width'] = str_replace('"', '',$tags[2][$tag_index]);
+                          }
+            if ($tag == 'height') {
+              $item['imagesets']["{$key}image"]['height'] = str_replace('"', '',$tags[2][$tag_index]);
+            }
+          }
+        }
+      }
+    }
     if (isset($item['imagesets'])) {
       foreach($item['imagesets'] as $size => $data) {
         $image = array('asin' => $item['asin'], 'size' => $size, 'height' => $data['height'], 'width' => $data['width'], 'url' => $data['url']);

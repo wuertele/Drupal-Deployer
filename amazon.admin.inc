@@ -53,6 +53,66 @@ function amazon_settings_form($form_state) {
     '#default_value' => variable_get('amazon_aws_secret_access_key',""),
     '#required' => TRUE,
   );
+  $form['default_image'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Default image to use when Amazon does not provide an image'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+  );
+
+  if (module_exists('imagecache')) {
+    $form['#attributes'] = array('enctype' => "multipart/form-data");
+    $default_image = variable_get('amazon_default_image', '');
+    if (!empty($default_image)) {
+      $preset = variable_get('amazon_default_image_small_preset', '');
+      if (!empty($preset)) {
+        $themed_image = theme('imagecache', $preset, $default_image, t('Amazon default image'));
+      }
+      else {
+        $themed_image = theme('image', $default_image);
+      }
+      $form['default_image']['existing_image'] = array(
+        '#type' => 'markup',
+        '#value' => $themed_image,
+      );
+    }
+    $form['default_image']['amazon_default_image'] = array(
+      '#type' => 'file',
+      '#title' => t('Default image to be used when no image is available'),
+      '#size' => 20,
+      '#default_value' => $default_image,
+    );
+
+    $imagecache_presets = array('' => t('Select a preset'));
+    foreach(imagecache_presets() as $preset) {
+      $imagecache_presets[$preset['presetname']] = $preset['presetname'];
+    };
+    $form['default_image']['amazon_default_image_large_preset'] = array(
+      '#title' => 'Imagecache preset for "large" size',
+      '#type' => 'select',
+      '#options' => $imagecache_presets,
+      '#default_value' => variable_get('amazon_default_image_large_preset', ''),
+    );
+    $form['default_image']['amazon_default_image_medium_preset'] = array(
+      '#title' => 'Imagecache preset for "medium" size',
+      '#type' => 'select',
+      '#options' => $imagecache_presets,
+      '#default_value' => variable_get('amazon_default_image_medium_preset', ''),
+    );
+    $form['default_image']['amazon_default_image_small_preset'] = array(
+      '#title' => 'Imagecache preset for "small" size',
+      '#type' => 'select',
+      '#options' => $imagecache_presets,
+      '#default_value' => variable_get('amazon_default_image_small_preset', ''),
+    );
+
+  }
+  else {
+    $form['default_image']['if_imagecache'] = array(
+      '#type' => 'markup',
+      '#value' => t('If imagecache were installed you could set a default image'),
+    );
+  }
 
   // Now add the Javascript that does the fancy hide/show effects.
   drupal_add_js(drupal_get_path('module', 'amazon') .'/amazon.admin.js');
@@ -60,6 +120,34 @@ function amazon_settings_form($form_state) {
   return system_settings_form($form);
 }
 
+/**
+ * Validation handler for amazon_settings_form().
+ * Handles the file upload and making sure it happens correctly.
+ */
+function amazon_settings_form_validate($form, &$form_state) {
+
+  if ($file = file_save_upload('amazon_default_image')) {
+    $orig_picture = variable_get('amazon_default_image', '');
+    if (!empty($orig_picture) && file_exists($orig_picture)) {
+      file_delete($orig_picture);
+    }
+
+    // The image was saved using file_save_upload() and was added to the
+    // files table as a temporary file. We'll make a copy and let the garbage
+    // collector delete the original upload.
+    $info = image_get_info($file->filepath);
+    if (file_copy($file, 0, FILE_EXISTS_REPLACE)) {
+      $form_state['values']['amazon_default_image'] = $file->filepath;
+    }
+    else {
+      form_set_error('amazon_default_image', t("Failed to upload the picture image."));
+    }
+  }
+}
+
+/**
+ * Form to determine how often cache is refreshed, etc.
+ */
 function amazon_storage_settings_form() {
 
   $period = drupal_map_assoc(array(3600, 7200, 14400, 21600, 43200, 86400), 'format_interval');
@@ -89,7 +177,9 @@ function amazon_storage_settings_form() {
   return system_settings_form($form);
 }
 
-
+/**
+ * Form to allow debugging the actual retrieval from Amazon.
+ */
 function amazon_test_form($form_state) {
   $form = array();
 

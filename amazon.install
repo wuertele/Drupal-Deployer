@@ -15,6 +15,10 @@ function amazon_uninstall() {
   drupal_uninstall_schema('amazon');
   $variables = preg_split('/\s+/',
     "amazon_media_data
+    amazon_default_image
+    amazon_default_image_large_preset
+    amazon_default_image_medium_preset
+    amazon_default_image_small_preset
     amazon_locale
     amazon_associate_setting
     amazon_custom_associate_id
@@ -321,10 +325,20 @@ function amazon_update_6012() {
  * @return unknown_type
  */
 function amazon_update_6013() {
-    db_change_field($ret, 'amazon_item', 'lowestpricecurrencycode', 'lowestpricecurrencycode',
-      array('type' => 'varchar', 'length' => 32));
-    db_change_field($ret, 'amazon_item', 'amazonpricecurrencycode', 'amazonpricecurrencycode',
-      array('type' => 'varchar', 'length' => 32));
-    return $ret;
+  db_change_field($ret, 'amazon_item', 'lowestpricecurrencycode', 'lowestpricecurrencycode',
+  array('type' => 'varchar', 'length' => 32));
+  db_change_field($ret, 'amazon_item', 'amazonpricecurrencycode', 'amazonpricecurrencycode',
+  array('type' => 'varchar', 'length' => 32));
+  return $ret;
 }
 
+/**
+ * Implementation of a default image requires that all the images be updated.
+ * Here we'll just set the timestamp to 0 and then let cron finish the job.
+ */
+function amazon_update_6014() {
+  // Force all data to be updated from Amazon so that images can be properly updated.
+  $ret[] = update_sql('UPDATE {amazon_item} SET timestamp = 0;');
+  drupal_set_message(t('If you have enabled a default image, you may need to wait for a few cron runs (or run cron a few times) before all images are properly set up.'));
+  return $ret;
+}
