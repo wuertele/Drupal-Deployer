@@ -34,6 +34,9 @@ function recipe_help($path, $arg) {
 function recipe_theme($existing, $type, $theme, $path) {
 
   return array(
+    'recipe_landing_page' => array(
+      'file' => 'recipe.landing.page.inc'
+    ),
 
     // The ingredients sub-form on the recipe edit screen.
     'ingredients_form' => array(
@@ -427,8 +430,9 @@ function recipe_more_ingredients_submit($form, &$form_state) {
 function recipe_menu() {
   $items['recipe'] = array(
     'title' => 'Recipes',
-    'page callback' => 'recipe_indexes_page',
-    'access arguments' => array('access content')
+    'page callback' => 'recipe_landing_page',
+    'access arguments' => array('access content'),
+    'file' => 'recipe.landing.page.inc'
   );
   $items['recipe/byname'] = array(
     'title' => 'By name',
@@ -1710,35 +1714,6 @@ function recipe_import_multi_access($string, $account = NULL, $reset = FALSE) {
   }
   // we have a format so continue to user_access
   return user_access($string, $account, $reset);
-}
-
-function recipe_indexes_page() {
-  $item = menu_get_item();
-  $content = system_admin_menu_block($item);
-
-  $output = '<div class="recipe_index_list">';
-  $output .= theme('node_add_list', $content);
-
-  if (user_access('create recipes')) {
-    $output .= '<dl class="node-type-list"><dt>'. l('Add a new Recipe', 'node/add/recipe') .'</dt><dd>' . t('Add a new recipe to the site.') .'</dd></dl>';
-  }
-
-  $output .= '</div>';
-
-
-    // Render the recent_list second.
-  if (variable_get('recipe_recent_box_enable', 1) == 1) {
-    $node_list = recipe_get_latest(variable_get('recipe_recent_display', 5));
-    $output .= '<div class="recipe_index_recent">';
-    $output .= theme('box', variable_get('recipe_recent_box_title', t('Latest recipes')), node_title_list($node_list));
-    $output .= '</div>';
-  }
-
-
-  drupal_add_css(drupal_get_path('module', 'recipe') .'/recipe.css');
-  drupal_set_title(t("Recipes Menu"));
-
-  return $output;
 }
 
 
