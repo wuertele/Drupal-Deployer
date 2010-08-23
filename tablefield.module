@@ -127,10 +127,10 @@ function tablefield_field($op, &$node, $field, &$items, $teaser, $page) {
             foreach ($tabledata as $row_key => $row) {
               foreach ($row as $col_key => $cell) {
                 if (!empty($field['cell_processing'])) {
-                  $tabledata[$row_key][$col_key] = array('data' => check_markup($cell, $table['format']), 'class' => 'row_' . $row_key . ' col_' . $col_key);
+                  $tabledata[$row_key][$col_key] = array('data' => check_markup($cell, $table['format']), 'class' => 'row-' . $row_key . ' col-' . $col_key);
                 }
                 else {
-                  $tabledata[$row_key][$col_key] = array('data' => check_plain($cell), 'class' => 'row_' . $row_key . ' col_' . $col_key);
+                  $tabledata[$row_key][$col_key] = array('data' => check_plain($cell), 'class' => 'row-' . $row_key . ' col-' . $col_key);
                 }
               }
             }
@@ -138,7 +138,7 @@ function tablefield_field($op, &$node, $field, &$items, $teaser, $page) {
 
           $header = array_shift($tabledata);
 
-          $items[$delta]['value'] = theme('tablefield_view', $header, $tabledata, $node->nid, $delta);
+          $items[$delta]['value'] = theme('tablefield_view', $header, $tabledata, $field['field_name'], $delta);
         }
       }
 
@@ -195,8 +195,9 @@ function theme_tablefield($element) {
 /**
  * Theme function for table view 
  */
-function theme_tablefield_view($header, $rows, $nid, $delta) {
-  return '<div id="tablefield-wrapper-' . $nid . '-' . $delta . '" class="tablefield-wrapper">' . theme('table', $header, $rows, array('id' => 'tablefield-' . $nid . '-' . $delta, 'class' => 'tablefield')) . '</div>';
+function theme_tablefield_view($header, $rows, $field_name, $delta) {
+  $class_field_name = str_replace('_', '-', $field_name);
+  return '<div id="tablefield-wrapper-' . $class_field_name . '-' . $delta . '" class="tablefield-wrapper">' . theme('table', $header, $rows, array('id' => 'tablefield-' . $class_field_name . '-' . $delta, 'class' => 'tablefield')) . '</div>';
 }
 
 /**
@@ -303,7 +304,7 @@ function tablefield_process($element, $edit, $form_state, $form) {
   $element['tablefield'] = array(
     '#title' => $field['widget']['label'],
     '#description' => $description,
-    '#attributes' => array('id' => 'node-tablefield-' . $element['#field_name'] .'-'. $delta, 'class' => 'node-tablefield'),
+    '#attributes' => array('id' => 'node-tablefield-' . str_replace('_', '-', $element['#field_name']) .'-'. $delta, 'class' => 'node-tablefield'),
     '#type' => 'fieldset',
     '#tree' => TRUE,
     '#collapsible' => FALSE,
@@ -385,7 +386,7 @@ function tablefield_process($element, $edit, $form_state, $form) {
       $element['tablefield']['cell_' . $i . '_' . $ii] = array(
         '#type' => 'textfield',
         '#size' => 10,
-        '#attributes' => array('id' => 'tablefield_' . $element['#field_name'] .'-'. $delta . '_cell_' . $i . '_' . $ii),
+        '#attributes' => array('id' => 'tablefield-' . str_replace('_', '-', $element['#field_name']) .'-'. $delta . '-cell-' . $i . '-' . $ii),
         '#default_value' => (empty($field_value)) ? $default_value[$i][$ii] : $field_value,
         '#prefix' => '<td>',
         '#suffix' => '</td>',
