@@ -270,15 +270,15 @@ function image_update_5200() {
   $cond = " IN ('" . implode("', '", $args) . "')";
 
   // Upgrade from 5.x-1.x to 5.x-2.x.
-  // Group by clause prevents duplicate insertions from bad data:
+  // IGNORE prevents duplicate insertions from bad data:
   // @see http://drupal.org/node/207557
   if (db_table_exists('file_revisions')) {
-    $ret[] = update_sql("INSERT INTO {image} SELECT DISTINCT f.nid, f.fid, f.filename FROM {files} f INNER JOIN {node} n ON f.nid = n.nid WHERE n.type = 'image' AND f.filename" . $cond . " GROUP BY nid,filename");
+    $ret[] = update_sql("INSERT IGNORE INTO {image} SELECT DISTINCT f.nid, f.fid, f.filename FROM {files} f INNER JOIN {node} n ON f.nid = n.nid WHERE n.type = 'image' AND f.filename" . $cond);
     $ret[] = update_sql("DELETE FROM {file_revisions} WHERE EXISTS (SELECT * FROM {image} WHERE {image}.fid = {file_revisions}.fid)");
   }
   // Upgrade from 5.x to 6.x-1.x.
   else {
-    $ret[] = update_sql("INSERT INTO {image} SELECT DISTINCT u.nid, f.fid, f.filename FROM {upload} u INNER JOIN {files} f ON u.fid = f.fid INNER JOIN {node} n ON u.nid = n.nid WHERE n.type = 'image' AND f.filename" . $cond . " GROUP BY nid,filename");
+    $ret[] = update_sql("INSERT IGNORE INTO {image} SELECT DISTINCT u.nid, f.fid, f.filename FROM {upload} u INNER JOIN {files} f ON u.fid = f.fid INNER JOIN {node} n ON u.nid = n.nid WHERE n.type = 'image' AND f.filename" . $cond);
     $ret[] = update_sql("DELETE FROM {upload} WHERE EXISTS (SELECT * FROM {image} WHERE {image}.fid = {upload}.fid)");
   }
 
