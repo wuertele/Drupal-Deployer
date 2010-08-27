@@ -477,30 +477,33 @@ function tablefield_import_csv($form, &$form_state) {
     $file = file_save_upload('tablefield_csv_' . $file_name);
 
     if (is_object($file)) {
-      $csv = file($file->filepath);
+      if (($handle = fopen($file->filepath, "r")) !== FALSE) {
 
-      tablefield_delete_table_values($form_state['values'][$field_name][$delta]['tablefield']);
+        tablefield_delete_table_values($form_state['values'][$field_name][$delta]['tablefield']);
 
-      // Populate CSV values
-      $max_col_count = 0;
-      $row_count = 0;
-      foreach ($csv as $row_id => $row_csv) {
-        $row = explode(',', $row_csv);
-        $col_count = 0; 
-        foreach ($row as $col_id => $col) {
-          $form_state['values'][$field_name][$delta]['tablefield']['cell_' . $row_id . '_' . $col_id] = check_plain($col);
-          $col_count++;
+        // Populate CSV values
+        $max_col_count = 0;
+        $row_count = 0;
+        while (($csv = fgetcsv($handle, 0, ",")) !== FALSE) {
+          $col_count = count($csv);
+          foreach ($csv as $col_id => $col) {
+            $form_state['values'][$field_name][$delta]['tablefield']['cell_' . $row_count . '_' . $col_id] = $col;
+          }
+          $max_col_count = $col_count > $max_col_count ? $col_count : $max_col_count;
+          $row_count++;
         }
-        $max_col_count = $col_count > $max_col_count ? $col_count : $max_col_count;
-        $row_count++;
-      }
-      
-      $form_state['values'][$field_name][$delta]['tablefield']['count_cols'] = $max_col_count;
-      $form_state['values'][$field_name][$delta]['tablefield']['count_rows'] = $row_count;
-      $form_state['values']['tablefield_import'] = TRUE;
-      //$form_state['rebuild'] = TRUE;
+  
+        fclose($handle);
+     
+        $form_state['values'][$field_name][$delta]['tablefield']['count_cols'] = $max_col_count;
+        $form_state['values'][$field_name][$delta]['tablefield']['count_rows'] = $row_count;
+        $form_state['values']['tablefield_import'] = TRUE;
 
-      drupal_set_message(t('Successfully imported @file. Please preview the result before saving.', array('@file' => $file->filename)));
+        drupal_set_message(t('Successfully imported @file. Please preview the result before saving.', array('@file' => $file->filename)));
+      }
+      else {
+        drupal_set_message(t('There was a problem importing @file.', array('@file' => $file->filename)));
+      }
     }
 
     // Remove the temporary file
