@@ -118,9 +118,7 @@ function arrange_fields_menu() {
     );
     
     
-    // This is for webform 3.0 (currently in beta).
-    // Support for webform 3.0 in this module should be considered
-    // experimental.
+    // This is for webform 3.x.
     $items["node/%/webform/arrange-fields"] = array(
       "title" => "Arrange fields",
       "page callback" => "arrange_fields_display_webform",
@@ -290,10 +288,8 @@ function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_butt
       }
     }
     
-    // If the user is using webform 3.0, there may also be an "actions"
-    // array element, which contains our buttons.  This is included experimentally,
-    // as I don't want to do too much work for webform 3.0 until it moves
-    // out of beta.
+    // If the user is using webform 3.x, there may also be an "actions"
+    // array element, which contains our buttons.
     if (is_array($form["actions"])) {
       foreach ($form["actions"] as $name => &$element) {
         if (is_array($element)) {
@@ -307,9 +303,15 @@ function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_butt
       $webform_nid = $form["details"]["nid"]["#value"];
       $webform_node = node_load($webform_nid);
     }
-       
+
+    // If using the captcha module, add that element as well.
+    if (is_array($form["captcha"])) {
+      $fields[] = array("name" => "captcha", "element" => &$form["captcha"]);
+    }
+    
   }
   else {
+    // Not using webform, so we can use the function "get_form_fields()".
     $fields = arrange_fields_get_form_fields($form);
   }
 
