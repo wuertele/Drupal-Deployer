@@ -236,8 +236,6 @@ function mollom_admin_configure_form_submit($form, &$form_state) {
   $mollom_form = $form_state['values']['mollom'];
   // Merge in form information from $form_state.
   $mollom_form += $form_state['storage']['mollom_form'];
-  // Update form information in $form_state for potential rebuilds.
-  $form_state['storage']['mollom_form'] = $mollom_form;
 
   // Prepare selected fields for storage.
   $enabled_fields = array();
