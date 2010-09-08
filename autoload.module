@@ -12,6 +12,18 @@ define('AUTOLOAD_REGISTRY_RESET_LOOKUP_CACHE', 1);
 define('AUTOLOAD_REGISTRY_WRITE_LOOKUP_CACHE', 2);
 
 /**
+ * Implements hook_menu().
+ */
+function autoload_menu() {
+  $items['autoload/flush-cache'] = array(
+    'page callback' => 'autoload_adminmenu_flush_cache',
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
  * Implements hook_boot().
  */
 function autoload_boot() {
@@ -23,6 +35,7 @@ function autoload_boot() {
  * Implements hook_exit().
  */
 function autoload_exit() {
+  // Check if this is a full bootstrap, and if so, the write the lookup cache.
   if (function_exists('drupal_page_footer')) {
     _autoload_registry_check_code(AUTOLOAD_REGISTRY_WRITE_LOOKUP_CACHE);
   }
@@ -33,6 +46,27 @@ function autoload_exit() {
  */
 function autoload_flush_caches() {
   autoload_registry_rebuild();
+}
+
+/**
+ * Implements hook_admin_menu_output_alter().
+ */
+function autoload_admin_menu_output_alter(&$content) {
+  $content['icon']['icon']['flush-cache']['automodal'] = array(
+    '#title' => t('Class registry'),
+    '#href' => 'autoload/flush-cache',
+    '#options' => array(
+      'query' => drupal_get_destination(),
+    ),
+  );
+}
+
+/**
+ * Administration menu callback; flush the class registry cache.
+ */
+function autoload_adminmenu_flush_cache() {
+  autoload_registry_rebuild();
+  drupal_goto();
 }
 
 /**
