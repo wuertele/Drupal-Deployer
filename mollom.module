@@ -1080,7 +1080,7 @@ function _mollom_status($reset = FALSE) {
 
   // If we have keys and are asked to reset, check whether keys are valid.
   if ($status['keys'] && $reset) {
-    $status['keys valid'] = mollom('mollom.verifyKey');
+    $status['keys valid'] = mollom('mollom.verifyKey', _mollom_get_version());
     variable_set('mollom_status', $status);
   }
 
@@ -1672,6 +1672,57 @@ function _mollom_watchdog($messages, $severity) {
   foreach ($messages as $message) {
     watchdog('mollom', $message['text'], !empty($message['arguments']) ? $message['arguments'] : NULL, $severity);
   }
+}
+
+/**
+ * Returns version information to send with mollom.verifyKey.
+ *
+ * Retrieves platform and module version information for mollom.verifyKey, which
+ * is normally invoked on Mollom's administration pages only.
+ *
+ * This information is solely used to speed up support requests and technical
+ * inquiries. The data may also be aggregated to help the Mollom staff to make
+ * decisions on new features or the necessity of back-porting improved
+ * functionality to older versions.
+ *
+ * @return
+ *   An array containing:
+ *   - platform_name: The name of the Drupal distribution; i.e., "Drupal".
+ *   - platform_version: The version of Drupal; e.g., "7.0".
+ *   - client_name: The module name; i.e., "Mollom".
+ *   - client_version: The version of the module; e.g., "7.x-1.0".
+ *
+ * @see _mollom_status()
+ */
+function _mollom_get_version() {
+  if ($cache = cache_get('mollom_version')) {
+    return $cache->data;
+  }
+
+  // Retrieve Drupal distribution and installation profile information.
+  include_once './includes/install.inc';
+  // Prior to D7, there is no distribution name recorded anywhere, so we have to
+  // use "Drupal".
+  $profile_info['distribution_name'] = 'Drupal';
+  $profile_info['version'] = VERSION;
+
+  // Retrieve Mollom module information.
+  $mollom_info = db_result(db_query("SELECT info FROM {system} WHERE type = 'module' AND name = 'mollom'"));
+  $mollom_info = unserialize($mollom_info);
+  if (empty($mollom_info['version'])) {
+    // Manually build a module version string for repository checkouts.
+    $mollom_info['version'] = DRUPAL_CORE_COMPATIBILITY . '-1.x-dev';
+  }
+
+  $data = array(
+    'platform_name' => $profile_info['distribution_name'],
+    'platform_version' => $profile_info['version'],
+    'client_name' => $mollom_info['name'],
+    'client_version' => $mollom_info['version'],
+  );
+  cache_set('mollom_version', $data);
+
+  return $data;
 }
 
 /**

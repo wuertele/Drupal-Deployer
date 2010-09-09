@@ -2192,6 +2192,23 @@ class MollomDataTestCase extends MollomWebTestCase {
     $count = db_result(db_query("SELECT COUNT(1) FROM {mollom}"));
     $this->assertEqual($count, 1, t('Stored data in {mollom} was updated.'));
   }
+
+  /**
+   * Tests data sent for mollom.verifyKey.
+   */
+  function testVerifyKey() {
+    $this->drupalLogin($this->admin_user);
+    $this->drupalGet('admin/settings/mollom/settings');
+
+    // Verify that we additionally sent version data.
+    $data = $this->getServerRecord('mollom.verifyKey');
+    $info = _mollom_get_version();
+    $this->assertTrue(!empty($info['platform_name']), t('Version information found.'));
+    $this->assertSame('platform_name', $data['platform_name'], $info['platform_name']);
+    $this->assertSame('platform_version', $data['platform_version'], $info['platform_version']);
+    $this->assertSame('client_name', $data['client_name'], $info['client_name']);
+    $this->assertSame('client_version', $data['client_version'], $info['client_version']);
+  }
 }
 
 /**
