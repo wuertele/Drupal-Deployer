@@ -3,12 +3,13 @@
 if (Drupal.jsEnabled) {
   $(document).ready(function(){ 
 
-    // This function can be used to update the links of a pager to contain
-    // the currently selected fragment. This allows you to click a link of a
-    // pager in a panel, and when the page reloads, the correct tab will
+    // This function updates the links of pages, calendar nav, and calendar days
+    // to contain the currently selected fragment. This allows you to click a
+    // link of a pager in a panel, and when the page reloads, the correct tab will
     // be opened.
     updateLinks = function(id, fragment) {
-      $('#tabs-'+ id +' .pager a').each(function() {
+      $('#tabs-'+ id +' .pager a, #tabs-'+ id +' .date-nav a, #tabs-'+ id +' .day a, ').each(function() {
+
         var oldURI = $(this).attr('href');
         if (oldURI.lastIndexOf('#') > 0) {
           oldURI = oldURI.substr(0, oldURI.lastIndexOf('#'));
