@@ -76,7 +76,13 @@ function _mollom_retrieve_server_list() {
       return $result;
     }
     else {
-      watchdog('mollom', 'Error @errno: %server - %message - mollom.getServerList', array('@errno' => xmlrpc_errno(), '%server' => $server, '%message' => xmlrpc_error_msg()), WATCHDOG_ERROR);
+      _mollom_watchdog(array(
+        'Error @errno %message from %server mollom.getServerList' => array(
+          '@errno' => xmlrpc_errno(),
+          '%server' => $server,
+          '%message' => xmlrpc_error_msg(),
+        ),
+      ), WATCHDOG_ERROR);
     }
   }
 

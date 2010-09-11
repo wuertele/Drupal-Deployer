@@ -350,6 +350,9 @@ function mollom_init() {
     ));
     drupal_set_message($message, 'warning');
   }
+  if (strpos($_GET['q'], 'admin/reports/event/') === 0) {
+    drupal_add_css(drupal_get_path('module', 'mollom') . '/mollom.css');
+  }
 }
 
 /**
@@ -1105,12 +1108,10 @@ function _mollom_fallback() {
   }
 
   $servers = variable_get('mollom_servers', array());
-  $variables = array(
-    '%servers' => $servers ? implode(', ', $servers) : '--',
-    '@errno' => xmlrpc_errno(),
-    '%error_msg' => xmlrpc_error_msg(),
-  );
-  watchdog('mollom', 'All servers unavailable: %servers, last error: @errno - %error_msg', $variables, WATCHDOG_ERROR);
+  _mollom_watchdog(array(
+    'All servers unavailable: %servers' => array('%servers' => $servers ? implode(', ', $servers) : '--'),
+    'Last error: @code %message' => array('@code' => xmlrpc_errno(), '%message' => xmlrpc_error_msg()),
+  ), WATCHDOG_ERROR);
 }
 
 /**
@@ -1321,7 +1322,8 @@ function mollom_validate_analysis(&$form, &$form_state) {
   }
 
   // Perform textual analysis.
-  $data = mollom_form_get_values($form_state['values'], $form_state['mollom']['enabled_fields'], $form_state['mollom']['mapping']);
+  $all_data = mollom_form_get_values($form_state['values'], $form_state['mollom']['enabled_fields'], $form_state['mollom']['mapping']);
+  $data = $all_data;
   // Remove 'post_id' property; only used by mollom_form_submit().
   if (isset($data['post_id'])) {
     unset($data['post_id']);
@@ -1330,6 +1332,8 @@ function mollom_validate_analysis(&$form, &$form_state) {
     $data['session_id'] = $form_state['mollom']['response']['session_id'];
   }
   $result = mollom('mollom.checkContent', $data);
+  // Use all available data properties for log messages below.
+  $data += $all_data;
 
   // Trigger global fallback behavior if there is no result.
   if (!isset($result['session_id']) || !isset($result['spam'])) {
@@ -1344,22 +1348,36 @@ function mollom_validate_analysis(&$form, &$form_state) {
   // Store the response returned by Mollom.
   $form_state['mollom']['response'] = $result;
 
+  $teaser = truncate_utf8(strip_tags(isset($data['post_title']) ? $data['post_title'] : isset($data['post_body']) ? $data['post_body'] : '--'), 40);
+
   switch ($result['spam']) {
     case MOLLOM_ANALYSIS_HAM:
       $form_state['mollom']['require_captcha'] = FALSE;
-      watchdog('mollom', 'Ham: <pre>@message</pre>Result: <pre>@result</pre>', array('@message' => print_r($data, TRUE), '@result' => print_r($result, TRUE)));
+      _mollom_watchdog(array(
+        'Ham: %teaser' => array('%teaser' => $teaser),
+        'Data:<pre>@data</pre>' => array('@data' => $data),
+        'Result:<pre>@result</pre>' => array('@result' => $result),
+      ), WATCHDOG_INFO);
       break;
 
     case MOLLOM_ANALYSIS_SPAM:
       $form_state['mollom']['require_captcha'] = FALSE;
       form_set_error('mollom', t('Your submission has triggered the spam filter and will not be accepted.'));
-      watchdog('mollom', 'Spam: <pre>@message</pre>Result: <pre>@result</pre>', array('@message' => print_r($data, TRUE), '@result' => print_r($result, TRUE)));
+      _mollom_watchdog(array(
+        'Spam: %teaser' => array('%teaser' => $teaser),
+        'Data:<pre>@data</pre>' => array('@data' => $data),
+        'Result:<pre>@result</pre>' => array('@result' => $result),
+      ));
       break;
 
     case MOLLOM_ANALYSIS_UNSURE:
       $form_state['mollom']['require_captcha'] = TRUE;
       form_set_error('mollom][captcha', t('To complete this form, please complete the word verification below.'));
-      watchdog('mollom', 'Unsure: <pre>@message</pre>Result: <pre>@result</pre>', array('@message' => print_r($data, TRUE), '@result' => print_r($result, TRUE)));
+      _mollom_watchdog(array(
+        'Unsure: %teaser' => array('%teaser' => $teaser),
+        'Data:<pre>@data</pre>' => array('@data' => $data),
+        'Result:<pre>@result</pre>' => array('@result' => $result),
+      ), WATCHDOG_INFO);
       break;
   }
 }
@@ -1388,13 +1406,17 @@ function mollom_validate_captcha(&$form, &$form_state) {
   // Next to the Mollom session id and captcha result, the Mollom back-end also
   // takes into account the author's IP and local user id (if registered). Any
   // other values are ignored.
-  $data = mollom_form_get_values($form_state['values'], $form_state['mollom']['enabled_fields'], $form_state['mollom']['mapping']);
-  $result = mollom('mollom.checkCaptcha', array(
+  $all_data = mollom_form_get_values($form_state['values'], $form_state['mollom']['enabled_fields'], $form_state['mollom']['mapping']);
+  $data = array(
     'session_id' => $form_state['mollom']['response']['session_id'],
     'captcha_result' => $form_state['values']['mollom']['captcha'],
-    'author_ip' => $data['author_ip'],
-    'author_id' => isset($data['author_id']) ? $data['author_id'] : NULL,
-  ));
+    'author_ip' => $all_data['author_ip'],
+    'author_id' => isset($all_data['author_id']) ? $all_data['author_id'] : NULL,
+  );
+  $result = mollom('mollom.checkCaptcha', $data);
+  // Use all available data properties for log messages below.
+  $data += $all_data;
+
   // Store the response for #submit handlers.
   $form_state['mollom']['response']['captcha'] = $result;
 
@@ -1403,11 +1425,19 @@ function mollom_validate_captcha(&$form, &$form_state) {
   if ($result === TRUE) {
     $form_state['mollom']['passed_captcha'] = TRUE;
 
-    watchdog('mollom', 'Correct CAPTCHA: <pre>@data<pre>', array('@data' => print_r($form_state['values'], TRUE)));
+    _mollom_watchdog(array(
+      'Correct CAPTCHA' => array(),
+      'Data:<pre>@data</pre>' => array('@data' => $form_state['values']),
+      'Result:<pre>@result</pre>' => array('@result' => $result),
+    ), WATCHDOG_INFO);
   }
   else {
     form_set_error('mollom][captcha', t('The word verification was not completed correctly. Please complete this new word verification and try again.'));
-    watchdog('mollom', 'Incorrect CAPTCHA: <pre>@data<pre>', array('@data' => print_r($form_state['values'], TRUE)));
+    _mollom_watchdog(array(
+      'Incorrect CAPTCHA' => array(),
+      'Data:<pre>@data</pre>' => array('@data' => $form_state['values']),
+      'Result:<pre>@result</pre>' => array('@result' => $result),
+    ), WATCHDOG_INFO);
   }
 }
 
@@ -1553,8 +1583,7 @@ function mollom($method, $data = array()) {
     }
 
     $messages[] = array(
-      'text' => 'Refreshed servers: %servers',
-      'arguments' => array('%servers' => implode(', ', $servers)),
+      'Refreshed servers: %servers' => array('%servers' => implode(', ', $servers)),
     );
 
     // Store the list of servers in the database.
@@ -1591,8 +1620,7 @@ function mollom($method, $data = array()) {
             variable_set('mollom_servers', $servers);
 
             $messages[] = array(
-              'text' => 'Refreshed servers: %servers',
-              'arguments' => array('%servers' => implode(', ', $servers)),
+              'Refreshed servers: %servers' => array('%servers' => implode(', ', $servers)),
             );
           }
         }
@@ -1601,25 +1629,23 @@ function mollom($method, $data = array()) {
           $next = next($servers);
 
           $messages[] = array(
-            'text' => 'Server %server redirected to: %next.',
-            'arguments' => array('%server' => $server, '%next' => $next),
+            'Server %server redirected to: %next.' => array('%server' => $server, '%next' => $next),
           );
         }
         else {
           $messages[] = array(
-            'text' => 'Error @errno from %server for %method: %message: <pre>@data</pre>',
-            'arguments' => array(
+            'Error @errno from %server for %method: %message' => array(
               '@errno' => $error->code,
               '%server' => $server,
               '%method' => $method,
               '%message' => $error->message,
-              '@data' => print_r($data, TRUE),
             ),
+            'Data:<pre>@data</pre>' => array('@data' => $data),
           );
 
           // Instantly return upon a 'real' error.
           if ($error->code === MOLLOM_ERROR) {
-            _mollom_watchdog($messages, WATCHDOG_ERROR);
+            _mollom_watchdog_multiple($messages, WATCHDOG_ERROR);
             return MOLLOM_ERROR;
           }
           // Otherwise, try the next server.
@@ -1627,7 +1653,7 @@ function mollom($method, $data = array()) {
         }
       }
       else {
-        _mollom_watchdog($messages, WATCHDOG_DEBUG);
+        _mollom_watchdog_multiple($messages, WATCHDOG_DEBUG);
         return $result;
       }
     }
@@ -1652,11 +1678,70 @@ function mollom($method, $data = array()) {
 
   // Report this error.
   $messages[] = array(
-    'text' => 'All servers unreachable or returning errors. The server list was emptied.',
+    'All servers unreachable or returning errors. The server list was emptied.' => array(),
   );
-  _mollom_watchdog($messages, WATCHDOG_ERROR);
+  _mollom_watchdog_multiple($messages, WATCHDOG_ERROR);
 
   return NETWORK_ERROR;
+}
+
+/**
+ * Log a Mollom system message.
+ *
+ * @param $parts
+ *   A list of message parts. Each item is an associative array whose keys are
+ *   log message strings and whose corresponding values are t()-style
+ *   replacement token arguments. At least one part is required.
+ * @param $severity
+ *   The severity of the message, as per RFC 3164. Possible values are
+ *   WATCHDOG_ERROR, WATCHDOG_WARNING, etc.
+ *
+ * @see watchdog()
+ */
+function _mollom_watchdog(array $parts, $severity = WATCHDOG_NOTICE) {
+  // First message part is required.
+  $message = key($parts);
+  $arguments = $parts[$message];
+  unset($parts[$message]);
+
+  // Hide further message details in the log overview table, if any.
+  // @see theme_dblog_message()
+  if ($parts) {
+    $message = str_pad($message, 56, ' ', STR_PAD_RIGHT);
+    $message .= '<br />';
+  }
+
+  // Each item in $parts is a part of the log message.
+  foreach ($parts as $string => $string_arguments) {
+    $message .= $string . "\n";
+    $arguments += $string_arguments;
+  }
+
+  // Prettify replacement token values, if possible.
+  foreach ($arguments as $token => $array) {
+    $flat_value = FALSE;
+    if (is_array($array)) {
+      $flat_value = '';
+      foreach ($array as $key => $value) {
+        if (is_array($value)) {
+          $flat_value = FALSE;
+          break;
+        }
+        $value = var_export($value, TRUE);
+        // Indent the new value, so there is a visual separation from the last.
+        $flat_value .= "  {$key} = {$value}\n";
+      }
+    }
+    // Only convert one-dimensional arrays, or we would lose debugging data.
+    if ($flat_value !== FALSE) {
+      $arguments[$token] = $flat_value;
+    }
+    else {
+      $arguments[$token] = var_export($array, TRUE);
+    }
+  }
+
+  watchdog('mollom', $message, $arguments, $severity);
 }
 
 /**
@@ -1668,9 +1753,9 @@ function mollom($method, $data = array()) {
  * XML-RPC response with the entire stack of collected messages.
  * This is also required for tests to pass.
  */
-function _mollom_watchdog($messages, $severity) {
+function _mollom_watchdog_multiple($messages, $severity) {
   foreach ($messages as $message) {
-    watchdog('mollom', $message['text'], !empty($message['arguments']) ? $message['arguments'] : NULL, $severity);
+    _mollom_watchdog($message, $severity);
   }
 }
 
@@ -1733,9 +1818,8 @@ function _mollom_send_feedback($session_id, $feedback = 'spam') {
     'session_id' => $session_id,
     'feedback' => $feedback,
   ));
-  watchdog('mollom', 'Reported session id %session as %feedback.', array(
-    '%session' => $session_id,
-    '%feedback' => $feedback,
+  _mollom_watchdog(array(
+    'Reported %feedback for session id %session.' => array('%session' => $session_id, '%feedback' => $feedback),
   ));
   return $result;
 }
