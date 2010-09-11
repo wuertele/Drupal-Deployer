@@ -67,7 +67,7 @@ function _mollom_authentication($public_key = NULL, $private_key = NULL) {
  */
 function _mollom_retrieve_server_list() {
   // Start from a hard-coded list of servers.
-  $servers = array('http://xmlrpc2.mollom.com', 'http://xmlrpc3.mollom.com');
+  $servers = array('http://xmlrpc1.mollom.com', 'http://xmlrpc2.mollom.com', 'http://xmlrpc3.mollom.com');
 
   // Use the list of servers to retrieve a list of servers from mollom.com:
   foreach ($servers as $server) {
