@@ -148,9 +148,6 @@
  *   switch ($form_id) {
  *     case 'im_message_form':
  *       $form_info = array(
- *         // Identical to hook_mollom_form_list():
- *         'title' => t('Instant messaging form'),
- *         'entity' => 'im',
  *         // Optional: User permission list to skip Mollom's protection for.
  *         'bypass access' => array('administer instant messages'),
  *         // Optional: To allow textual analysis of the form values, the form
@@ -226,7 +223,12 @@
  *   protected, keyed by $form_id:
  *   - title: The human-readable name of the form.
  *   - entity: (optional) The internal name of the entity type the form is for,
- *     e.g. 'node' or 'comment'. See hook_mollom_form_info() for details.
+ *     e.g. 'node' or 'comment'. This is required for all forms that will store
+ *     the submitted content persistently. It is only optional for forms that do
+ *     not permanently store the submitted form values, such as contact forms
+ *     that only send an e-mail, but do not store it in the database.
+ *     Note that forms that specify 'entity' also need to specify 'post_id' in
+ *     the 'mapping' (see below).
  *   - report access callback: (optional) A function name to invoke to check
  *     access to Mollom's dedicated "report to Mollom" form, which should return
  *     either TRUE or FALSE (like any other menu "access callback").
@@ -265,7 +267,6 @@ function hook_mollom_form_list() {
  *
  * @return
  *   An associative array describing the form identified by $form_id:
- *   - title: The human-readable name of the form.
  *   - mode: (optional) The default protection mode for the form, which can be
  *     one of:
  *     - MOLLOM_MODE_ANALYSIS: Text analysis of submitted form values with
@@ -280,13 +281,6 @@ function hook_mollom_form_list() {
  *     Mollom' link will be included at the bottom of the mail body. Be sure to
  *     include only user-submitted mails and not any mails sent by Drupal since
  *     they should never be reported as spam.
- *   - entity: (optional) The internal name of the entity type the form is for,
- *     e.g. 'node' or 'comment'. This is required for all forms that will store
- *     the submitted content persistently. It is only optional for forms that do
- *     not permanently store the submitted form values, such as contact forms
- *     that only send an e-mail, but do not store it in the database.
- *     Note that forms that specify 'entity' also need to specify 'post_id' in
- *     the 'mapping' (see below).
  *   - elements: (optional) An associative array of elements in the form that
  *     can be configured for Mollom's text analysis. The site administrator can
  *     only select the form elements to process (and exclude certain elements)
@@ -328,11 +322,9 @@ function hook_mollom_form_info($form_id) {
     // Mymodule's comment form.
     case 'mymodule_comment_form':
       $form_info = array(
-        'title' => t('Comment form'),
         'mode' => MOLLOM_MODE_ANALYSIS,
         'bypass access' => array('administer comments'),
         'mail ids' => array('mymodule_comment_mail'),
-        'entity' => 'comment',
         'elements' => array(
           'subject' => t('Subject'),
           'body' => t('Body'),
@@ -350,9 +342,7 @@ function hook_mollom_form_info($form_id) {
     // Mymodule's user registration form.
     case 'mymodule_user_register':
       $form_info = array(
-        'title' => t('User registration form'),
         'mode' => MOLLOM_MODE_CAPTCHA,
-        'entity' => 'user',
         'mapping' => array(
           'post_id' => 'uid',
           'author_name' => 'name',
