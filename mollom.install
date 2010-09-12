@@ -8,11 +8,26 @@
 
 /**
  * Implements hook_requirements().
+ *
+ * @param $check
+ *   (optional) Boolean whether to re-check the module's installation and
+ *   configuration status. Defaults to TRUE, as this argument is not passed for
+ *   hook_requirements() by default. Passing FALSE allows other run-time code
+ *   to re-generate requirements error messages to be displayed on other pages
+ *   than the site's system status report page.
+ *
+ * @see mollom_init()
+ * @see mollom_admin_settings()
+ * @see _mollom_status()
  */
-function mollom_requirements($phase = 'runtime') {
+function mollom_requirements($phase = 'runtime', $check = TRUE) {
   $requirements = array();
   if ($phase == 'runtime') {
-    $status = _mollom_status(TRUE);
+    // This is invoked from both mollom_install() and mollom_init(); make sure
+    // that mollom.module is loaded.
+    drupal_load('module', 'mollom');
+
+    $status = _mollom_status($check);
     // Immediately return if everything is in order.
     if ($status === TRUE) {
       return $requirements;
@@ -24,18 +39,34 @@ function mollom_requirements($phase = 'runtime') {
       'value' => '',
       'severity' => REQUIREMENT_ERROR,
     );
+    // Append a link to the settings page to the error message on all pages,
+    // except on the settings page itself. These error messages also need to be
+    // shown on the settings page, since Mollom API keys can be entered later.
+    $admin_message = '';
+    if ($_GET['q'] != 'admin/settings/mollom/settings') {
+      $admin_message = t('Visit the <a href="@settings-url">Mollom settings page</a> to configure your keys.', array(
+        '@settings-url' => url('admin/settings/mollom/settings'),
+      ));
+    }
+    // Generate an appropriate error message:
     // Missing API keys.
     if (!$status['keys']) {
       $requirements['mollom']['value'] = t('Not configured');
-      $requirements['mollom']['description'] = t('Mollom API keys are not <a href="@settings-url">configured</a> yet.', array('@settings-url' => url('admin/settings/mollom/settings')));
+      $requirements['mollom']['description'] = t('The Mollom API keys are not configured yet. !admin-message', array(
+        '!admin-message' => $admin_message,
+      ));
     }
+    // Invalid API keys.
+    elseif ($status['keys valid'] === MOLLOM_ERROR) {
+      $requirements['mollom']['value'] = t('Invalid');
+      $requirements['mollom']['description'] = t('The configured Mollom API keys are invalid. !admin-message', array(
+        '!admin-message' => $admin_message,
+      ));
+    }
+    // Communication error.
     elseif ($status['keys valid'] === NETWORK_ERROR) {
       $requirements['mollom']['value'] = t('Network error');
       $requirements['mollom']['description'] = t('The Mollom servers could not be contacted. Please make sure that your web server can make outgoing HTTP requests.');
-    }
-    elseif ($status['keys valid'] === MOLLOM_ERROR) {
-      $requirements['mollom']['value'] = t('Invalid');
-      $requirements['mollom']['description'] = t('The <a href="@settings-url">configured</a> Mollom API keys are invalid.', array('@settings-url' => url('admin/settings/mollom/settings')));
     }
   }
   return $requirements;
@@ -145,6 +176,15 @@ function mollom_schema() {
  */
 function mollom_install() {
   drupal_install_schema('mollom');
+
+  // Point the user to Mollom's settings page after installation.
+  $requirements = mollom_requirements('runtime', FALSE);
+  // When running tests in D6, hook_install() seems to be invoked very (too?)
+  // early, leading to a potentially predefined valid module configuration from
+  // the parent site, therefore throwing a PHP notice here.
+  if (isset($requirements['mollom'])) {
+    drupal_set_message($requirements['mollom']['description'], 'warning');
+  }
 }
 
 /**

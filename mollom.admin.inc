@@ -445,63 +445,66 @@ function mollom_admin_blacklist_delete_submit($form, &$form_state) {
 
 /**
  * Form builder; Global Mollom settings form.
+ *
+ * This form does not validate Mollom API keys, since the fallback method still
+ * needs to be able to be reconfigured in case Mollom services are down.
+ * mollom.verifyKey would invalidate the keys and throw an error; hence,
+ * _mollom_fallback() would invoke form_set_error(), effectively preventing this
+ * form from submitting.
  */
 function mollom_admin_settings(&$form_state) {
-  // When a user visits the Mollom administration page, automatically verify the
-  // keys and output any error messages.
+  // Output a positive status message, since users keep on asking whether
+  // Mollom should work or not. Re-check on every regular visit of this form to
+  // verify the module's configuration.
   if (empty($form_state['post'])) {
-    $status = _mollom_status(TRUE);
+    $status = _mollom_status();
+    // If there is any configuration error, then mollom_init() will have output
+    // it already.
     if ($status === TRUE) {
-      // Output a positive status message, since users keep on asking whether
-      // Mollom should work or not.
       drupal_set_message(t('We contacted the Mollom servers to verify your keys: the Mollom services are operating correctly. We are now blocking spam.'));
-    }
-    elseif ($status['keys valid'] === NETWORK_ERROR) {
-      drupal_set_message(t('We tried to contact the Mollom servers but we encountered a network error. Please make sure that your web server can make outgoing HTTP requests.'), 'error');
-    }
-    elseif ($status['keys valid'] === MOLLOM_ERROR) {
-      drupal_set_message(t('We contacted the Mollom servers to verify your keys: your keys do not exist or are no longer valid. Please visit the <em>Manage sites</em> page on the Mollom website again: <a href="@mollom-user">@mollom-user</a>.', array('@mollom-user' => 'http://mollom.com/user')), 'error');
     }
   }
 
-  $form['server'] = array(
-    '#type' => 'fieldset',
-    '#title' => t('Fallback strategy'),
-    '#description' => t('When the Mollom servers are down or otherwise unreachable, no text analysis is performed and no CAPTCHAs are generated. If this occurs, your site will use the configured fallback strategy. Subscribers to <a href="@pricing-url">Mollom Plus</a> receive access to <a href="@sla-url">Mollom\'s high-availability backend infrastructure</a>, not available to free users, reducing potential downtime.', array(
-      '@pricing-url' => 'http://mollom.com/pricing',
-      '@sla-url' => 'http://mollom.com/standard-service-level-agreement',
-    )),
-  );
-  $form['server']['mollom_fallback'] = array(
-    '#type' => 'radios',
-    // Default to treating everything as inappropriate.
-    '#default_value' => variable_get('mollom_fallback', MOLLOM_FALLBACK_BLOCK),
-    '#options' => array(
-      MOLLOM_FALLBACK_BLOCK => t('Block all submissions of protected forms until the server problems are resolved'),
-      MOLLOM_FALLBACK_ACCEPT => t('Leave all forms unprotected and accept all submissions'),
-    ),
-  );
-
   $form['access-keys'] = array(
     '#type' => 'fieldset',
-    '#title' => t('Mollom access keys'),
+    '#title' => t('Access keys'),
     '#description' => t('To use Mollom, you need a public and private key. To obtain your keys, <a href="@mollom-login-url">register and login on mollom.com</a>, and <a href="@mollom-manager-add-url">create a subscription</a> for your site. Once you created a subscription, copy your private and public access keys from the <a href="@mollom-manager-url">site manager</a> into the form fields below, and you are ready to go.', array(
       '@mollom-login-url' => 'http://mollom.com/user',
       '@mollom-manager-add-url' => 'http://mollom.com/site-manager/add',
       '@mollom-manager-url' => 'http://mollom.com/site-manager',
     )),
+    '#collapsible' => TRUE,
+    // Only show key configuration fields if they are not configured or invalid.
+    '#collapsed' => !isset($status) ? FALSE : $status === TRUE,
   );
+  // Keys are not #required to allow to install this module and configure it
+  // later.
   $form['access-keys']['mollom_public_key'] = array(
     '#type' => 'textfield',
     '#title' => t('Public key'),
     '#default_value' => variable_get('mollom_public_key', ''),
-    '#description' => t('The public key is used to uniquely identify you.'),
+    '#description' => t('Used to uniquely identify you.'),
   );
   $form['access-keys']['mollom_private_key'] = array(
     '#type' => 'textfield',
     '#title' => t('Private key'),
     '#default_value' => variable_get('mollom_private_key', ''),
-    '#description' => t('The private key is used to prevent someone from hijacking your requests. Similar to a password, it should never be shared with anyone.'),
+    '#description' => t('Used to prevent someone else from hijacking your requests. Similar to a password, it should never be shared with anyone.'),
+  );
+
+  $form['mollom_fallback'] = array(
+    '#type' => 'radios',
+    '#title' => t('Fallback strategy for protected forms'),
+    // Default to treating everything as inappropriate.
+    '#default_value' => variable_get('mollom_fallback', MOLLOM_FALLBACK_BLOCK),
+    '#options' => array(
+      MOLLOM_FALLBACK_BLOCK => t('Block all form submissions'),
+      MOLLOM_FALLBACK_ACCEPT => t('Accept all form submissions'),
+    ),
+    '#description' => t('In case the Mollom services are unreachable, no text analysis is performed and no CAPTCHAs are generated. If this occurs, your site will use the configured fallback strategy until the server problems are resolved. Subscribers to <a href="@pricing-url">Mollom Plus</a> receive access to <a href="@sla-url">Mollom\'s high-availability backend infrastructure</a>, not available to free users, reducing potential downtime.', array(
+      '@pricing-url' => 'http://mollom.com/pricing',
+      '@sla-url' => 'http://mollom.com/standard-service-level-agreement',
+    )),
   );
 
   $form['mollom_privacy_link'] = array(

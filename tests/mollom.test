@@ -663,11 +663,11 @@ class MollomWebTestCase extends DrupalWebTestCase {
 /**
  * Tests module installation and global status handling.
  */
-class MollomStatusTestCase extends MollomWebTestCase {
+class MollomInstallationTestCase extends MollomWebTestCase {
   public static function getInfo() {
     return array(
-      'name' => 'Status handling',
-      'description' => 'Tests module installation and global status handling.',
+      'name' => 'Installation and key handling',
+      'description' => 'Tests module installation and key error handling.',
       'group' => 'Mollom',
     );
   }
@@ -690,39 +690,56 @@ class MollomStatusTestCase extends MollomWebTestCase {
 
   /**
    * Tests status handling after installation.
+   *
+   * We walk through a regular installation of the Mollom module instead of using
+   * setUp() to ensure that everything works as expected.
+   *
+   * Note: Partial error messages tested here; hence, no t().
    */
-  function testStatusInstallation() {
-    // Ensure there is no requirements error by default.
+  function testInstallationProcess() {
+    $admin_message = t('Visit the <a href="@settings-url">Mollom settings page</a> to configure your keys.', array(
+      '@settings-url' => url('admin/settings/mollom/settings'),
+    ));
     $this->drupalLogin($this->admin_user);
+
+    // Ensure there is no requirements error by default.
     $this->drupalGet('admin/reports/status');
     $this->clickLink('run cron manually');
 
-    // Install the module.
+    // Install the Mollom module.
     $this->drupalPost('admin/build/modules', array('status[mollom]' => TRUE), t('Save configuration'));
+    $this->assertRaw(t('The Mollom API keys are not configured yet. !admin-message', array(
+      '!admin-message' => $admin_message,
+    )), t('Post installation warning found.'));
 
-    // Verify that forms can be submitted without valid module configuration.
+    // Verify that forms can be submitted without valid Mollom module configuration.
     $node = $this->drupalCreateNode(array('type' => 'story', 'promoted' => TRUE));
     $this->drupalLogin($this->web_user);
     $this->drupalGet('comment/reply/' . $node->nid);
     $edit = array(
-      'comment' => $this->randomName(),
+      'comment' => 'spam',
     );
     $this->drupalPost(NULL, $edit, t('Preview'));
     $this->drupalPost(NULL, array(), t('Save'));
     $this->assertRaw('<p>' . $edit['comment'] . '</p>', t('Comment found.'));
 
-    // Verify requirements error about missing API keys.
+    // Assign the 'administer mollom' permission and log in a user.
     $this->drupalLogin($this->admin_user);
-    $this->drupalGet('admin/reports/status');
-    // @todo Should a user without Mollom administration access see a
-    //   requirement error containing a link to the settings page?
-    $this->assertRaw(t('Mollom API keys are not <a href="@settings-url">configured</a> yet.', array('@settings-url' => url('admin/settings/mollom/settings'))), t('Requirements error found.'));
-
-    // Grant access to Mollom settings.
     $edit = array(
       DRUPAL_AUTHENTICATED_RID . '[administer mollom]' => TRUE,
     );
     $this->drupalPost('admin/user/permissions', $edit, t('Save permissions'));
+
+    // Verify presence of 'empty keys' error message.
+    $this->drupalGet('admin/settings/mollom');
+    $this->assertText('The Mollom API keys are not configured yet.');
+    $this->assertNoText('The configured Mollom API keys are invalid.');
+
+    // Verify requirements error about missing API keys.
+    $this->drupalGet('admin/reports/status');
+    $this->assertRaw(t('The Mollom API keys are not configured yet. !admin-message', array(
+      '!admin-message' => $admin_message,
+    )), t('Requirements error found.'));
 
     // Configure invalid keys.
     $edit = array(
@@ -732,20 +749,29 @@ class MollomStatusTestCase extends MollomWebTestCase {
     $this->drupalPost('admin/settings/mollom/settings', $edit, t('Save configuration'), array('watchdog' => FALSE));
     $this->assertText(t('The configuration options have been saved.'));
     $this->assertNoText($this->fallback_message, t('Fallback message not found.'));
-    $this->assertNoText(t('We tried to contact the Mollom servers but we encountered a network error. Please make sure that your web server can make outgoing HTTP requests.'), t('Network error message not found.'));
-    $this->assertRaw(t('We contacted the Mollom servers to verify your keys: your keys do not exist or are no longer valid. Please visit the <em>Manage sites</em> page on the Mollom website again: <a href="@mollom-user">@mollom-user</a>.', array('@mollom-user' => 'http://mollom.com/user')), t('Invalid keys error message found.'));
+
+    // Verify presence of 'incorrect keys' error message.
+    $this->assertText('The configured Mollom API keys are invalid.');
+    $this->assertNoText('The Mollom API keys are not configured yet.');
+    $this->assertNoText(t('The Mollom servers could not be contacted. Please make sure that your web server can make outgoing HTTP requests.'));
 
     // Verify requirements error about invalid API keys.
     $this->drupalGet('admin/reports/status', array('watchdog' => FALSE));
-    $this->assertRaw(t('The <a href="@settings-url">configured</a> Mollom API keys are invalid.', array('@settings-url' => url('admin/settings/mollom/settings'))), t('Requirements error found.'));
+    $this->assertText('The configured Mollom API keys are invalid.');
 
-    // Replace server list with unreachable servers.
+    // Ensure unreachable servers.
+    variable_set('mollom_servers', array('http://fake-host'));
+
+    // Verify presence of 'network error' message.
+    $this->drupalGet('admin/settings/mollom/settings', array('watchdog' => FALSE));
+    $this->assertText(t('The Mollom servers could not be contacted. Please make sure that your web server can make outgoing HTTP requests.'));
+
+    // Ensure unreachable servers.
     variable_set('mollom_servers', array('http://fake-host'));
 
     // Verify requirements error about network error.
-    // Go directly to the status report, since the server list will be reset.
     $this->drupalGet('admin/reports/status', array('watchdog' => FALSE));
-    $this->assertText(t('The Mollom servers could not be contacted. Please make sure that your web server can make outgoing HTTP requests.'), t('Requirements error found.'));
+    $this->assertText(t('The Mollom servers could not be contacted. Please make sure that your web server can make outgoing HTTP requests.'));
     $this->assertNoText($this->fallback_message, t('Fallback message not found.'));
 
     // Verify that valid keys work.
@@ -758,9 +784,11 @@ class MollomStatusTestCase extends MollomWebTestCase {
     $this->drupalPost(NULL, $edit, t('Save configuration'));
     $this->assertText(t('The configuration options have been saved.'));
     $this->assertText('We are now blocking spam.');
-    $this->assertNoText('your keys do not exist or are no longer valid.');
+    $this->assertNoText('The Mollom API keys are not configured yet.');
+    $this->assertNoText('The configured Mollom API keys are invalid.');
 
     // Verify presence of testing mode warning.
+    $this->drupalGet('admin/settings/mollom/blacklist');
     $this->assertText('Mollom testing mode is still enabled.');
   }
 }
@@ -886,7 +914,7 @@ class MollomAccessTestCase extends MollomWebTestCase {
     );
     $this->drupalPost(NULL, $edit, t('Save configuration'), array('watchdog' => FALSE));
     $this->assertText(t('The configuration options have been saved.'));
-    $this->assertRaw(t('We contacted the Mollom servers to verify your keys: your keys do not exist or are no longer valid. Please visit the <em>Manage sites</em> page on the Mollom website again: <a href="@mollom-user">@mollom-user</a>.', array('@mollom-user' => 'http://mollom.com/user')), t('Invalid keys error message appears.'));
+    $this->assertText('The configured Mollom API keys are invalid.');
   }
 
   /**
