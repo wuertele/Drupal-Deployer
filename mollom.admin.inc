@@ -313,17 +313,12 @@ function mollom_admin_unprotect_form_submit($form, &$form_state) {
 }
 
 /**
- * Menu callback; The blacklist administration page.
+ * Form constructor to configure the blacklist.
+ *
+ * @param $type
+ *   The type of blacklist; i.e., 'spam', 'profanity', or 'unwanted'.
  */
-function mollom_admin_blacklist() {
-  drupal_set_title(t('Mollom blacklist'));
-  return drupal_get_form('mollom_admin_blacklist_form');
-}
-
-/**
- * Form builder; Declares the text blacklist form.
- */
-function mollom_admin_blacklist_form(&$form_state) {
+function mollom_admin_blacklist_form(&$form_state, $type = 'spam') {
   $form['#tree'] = TRUE;
 
   // Select options and translation of internal values for rendering.
@@ -343,6 +338,9 @@ function mollom_admin_blacklist_form(&$form_state) {
   $blacklist = (empty($form_state['input']) ? mollom('mollom.listBlacklistText') : array());
   if (is_array($blacklist)) {
     foreach ($blacklist as $id => $entry) {
+      if ($entry['reason'] != $type) {
+        continue;
+      }
       $row = array(
         'context' => array('#value' => check_plain($contexts[$entry['context']])),
         'text' => array('#value' => check_plain($entry['text'])),
@@ -350,7 +348,7 @@ function mollom_admin_blacklist_form(&$form_state) {
         'text' => array('#value' => check_plain($entry['text'])),
       );
       $row['actions']['delete'] = array(
-        '#value' => l(t('delete'), 'admin/settings/mollom/blacklist/delete/' .  base64_encode($entry['text'])),
+        '#value' => l(t('delete'), 'admin/settings/mollom/blacklist/delete/' .  base64_encode($entry['text']), array('query' => drupal_get_destination())),
       );
       $form['blacklist'][$id] = $row;
     }
@@ -371,7 +369,7 @@ function mollom_admin_blacklist_form(&$form_state) {
   $form['entry']['reason'] = array(
     '#type' => 'select',
     '#options' => $reasons,
-    '#default_value' => 'spam',
+    '#default_value' => $type,
     '#required' => TRUE,
   );
   $form['entry']['actions'] = array(
