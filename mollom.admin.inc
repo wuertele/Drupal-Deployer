@@ -10,6 +10,8 @@
  * Menu callback; Displays a list of forms configured for Mollom.
  */
 function mollom_admin_form_list() {
+  _mollom_testing_mode_warning();
+
   $modes = array(
     MOLLOM_MODE_DISABLED => t('No protection'),
     MOLLOM_MODE_CAPTCHA => t('CAPTCHA only'),

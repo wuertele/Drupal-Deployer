@@ -536,8 +536,8 @@ function mollom_data_delete_form_alter(&$form, &$form_state) {
  * @see mollom_form_alter()
  */
 function mollom_data_delete_form_submit($form, &$form_state) {
-  $forms = mollom_delete_form_list();
-  $mollom_form = mollom_form_load($forms[$form_state['values']['form_id']]);
+  $forms = mollom_form_cache();
+  $mollom_form = mollom_form_load($forms['delete'][$form_state['values']['form_id']]);
   $data = mollom_form_get_values($form_state['values'], $mollom_form['enabled_fields'], $mollom_form['mapping']);
 
   $entity = $mollom_form['entity'];
@@ -594,7 +594,7 @@ function mollom_data_report_multiple($entity, $ids, $feedback) {
  * necessary.
  */
 function mollom_form_alter(&$form, &$form_state, $form_id) {
-  static $protected_forms;
+  static $forms;
 
   // Skip installation and update forms.
   if (defined('MAINTENANCE_MODE')) {
@@ -606,32 +606,20 @@ function mollom_form_alter(&$form, &$form_state, $form_id) {
     return;
   }
 
-  // @todo Show this message on all protected forms, regardless of permissions.
-  if (empty($_POST) && variable_get('mollom_testing_mode', 0)) {
-    $admin_message = '';
-    if (user_access('administer mollom') && $_GET['q'] != 'admin/settings/mollom/settings') {
-      $admin_message = t('Visit the <a href="@settings-url">Mollom settings page</a> to disable it.', array(
-        '@settings-url' => url('admin/settings/mollom/settings'),
-      ));
-    }
-    $message = t('Mollom testing mode is still enabled. !admin-message', array(
-      '!admin-message' => $admin_message,
-    ));
-    drupal_set_message($message, 'warning');
+  // Retrieve a list of all protected forms once.
+  if (!isset($forms)) {
+    $forms = mollom_form_cache();
+  }
+
+  // Remind of enabled testing mode on all protected forms.
+  if (isset($forms['protected'][$form_id]) || strpos($_GET['q'], 'admin/settings/mollom') === 0) {
+    _mollom_testing_mode_warning();
   }
 
   // Site administrators don't have their content checked with Mollom.
   if (!user_access('bypass mollom protection')) {
-    // Retrieve a list of all protected forms once.
-    if (!isset($protected_forms)) {
-      $result = db_query("SELECT form_id, module FROM {mollom_form}");
-      $protected_forms = array();
-      while ($row = db_fetch_array($result)) {
-        $protected_forms[$row['form_id']] = $row['module'];
-      }
-    }
     // Retrieve configuration for this form.
-    if (isset($protected_forms[$form_id]) && $mollom_form = mollom_form_load($form_id)) {
+    if (isset($forms['protected'][$form_id]) && ($mollom_form = mollom_form_load($form_id))) {
       // Determine whether to bypass validation for the current user.
       foreach ($mollom_form['bypass access'] as $permission) {
         if (user_access($permission)) {
@@ -698,70 +686,75 @@ function mollom_form_alter(&$form, &$form_state, $form_id) {
     }
   }
   // Integrate with delete confirmation forms to send feedback to Mollom.
-  $forms = mollom_delete_form_list();
-  if (isset($forms[$form_id])) {
+  if (isset($forms['delete'][$form_id])) {
     mollom_data_delete_form_alter($form, $form_state);
-    // Report before deletion.
+    // Report before deleting. This needs to be handled here, since
+    // mollom_data_delete_form_alter() is re-used for mass-operation forms.
     array_unshift($form['#submit'], 'mollom_data_delete_form_submit');
   }
 }
 
 /**
- * Returns a mapping of entity delete forms to registered Mollom form ids.
+ * Returns a cached mapping of protected and delete confirmation form ids.
  *
  * @param $reset
- *   (optional) Boolean whether to reset the static cache and flush the database
- *   cache and return nothing. Defaults to FALSE.
+ *   (optional) Boolean whether to reset the static cache, flush the database
+ *   cache, and return nothing (TRUE). Defaults to FALSE.
  *
  * @return
- *   An associative array whose keys are 'delete form' ids and whose values are
- *   registered Mollom form ids, e.g.
- *   @code
+ *   An associative array containing:
+ *   - protected: An associative array whose keys are protected form IDs and
+ *     whose values are the corresponding module names the form belongs to.
+ *   - delete: An associative array whose keys are 'delete form' ids and whose
+ *     values are protected form ids; e.g.
+ *     @code
  *     array(
  *       'node_delete_confirm' => 'article_node_form',
  *     )
- *   @endcode
- *   Note that a single delete form id can map to multiple registered $form_ids,
- *   and only the first actively protected $form_id that defines a delete form
- *   is taken into account. As in the example above, we presume that all
- *   '$type_node_form' definitions belong to the same 'entity' and use the same
- *   'post_id' mapping.
+ *     @endcode
+ *     A single delete confirmation form id can map to multiple registered
+ *     $form_ids, but only the first is taken into account. As in above example,
+ *     we assume that all 'TYPE_node_form' definitions belong to the same entity
+ *     and therefore have an identical 'post_id' mapping.
  */
-function mollom_delete_form_list($reset = FALSE) {
-  static $forms;
-
+function mollom_form_cache($reset = FALSE) {
   if ($reset) {
-    $forms = NULL;
+    // This catches both 'mollom_form_cache' as well as mollom_form_load()'s
+    // 'mollom:form:*' entries.
     cache_clear_all('mollom', 'cache', TRUE);
     return;
   }
 
-  if (!isset($forms)) {
-    // Try to fetch from database cache first.
-    $cache = cache_get('mollom:delete_form_list');
-    if ($cache) {
-      $forms = $cache->data;
+  if ($cache = cache_get('mollom_form_cache')) {
+    return $cache->data;
+  }
+
+  $result = db_query("SELECT form_id, module FROM {mollom_form}");
+  $forms['protected'] = array();
+  while ($row = db_fetch_array($result)) {
+    $forms['protected'][$row['form_id']] = $row['module'];
+  }
+
+  // Build a list of delete confirmation forms of entities integrating with
+  // Mollom, so we are able to alter the delete confirmation form to display
+  // our feedback options.
+  $forms['delete'] = array();
+  foreach (mollom_form_list() as $form_id => $info) {
+    if (!isset($info['delete form']) || !isset($info['entity'])) {
+      continue;
     }
-    else {
-      $forms = array();
-      foreach (mollom_form_list() as $form_id => $info) {
-        // Skip forms that neither define 'delete form' nor 'entity'.
-        if (!isset($info['delete form']) || !isset($info['entity'])) {
-          continue;
-        }
-        // Process multiple 'delete form' definitions only once.
-        if (!isset($forms[$info['delete form']])) {
-          // Check whether this form is protected and whether it defines a
-          // 'post_id' mapping.
-          $mollom_form = mollom_form_load($form_id);
-          if (isset($mollom_form['mapping']['post_id'])) {
-            $forms[$info['delete form']] = $form_id;
-          }
-        }
+    // We expect that the same delete confirmation form uses the same form
+    // element mapping, so multiple 'delete form' definitions are only processed
+    // once. Additionally, we only care for protected forms.
+    if (!isset($forms['delete'][$info['delete form']]) && isset($forms['protected'][$form_id])) {
+      // A delete confirmation form integration requires a 'post_id' mapping.
+      $form_info = mollom_form_info($form_id, $info['module']);
+      if (isset($form_info['mapping']['post_id'])) {
+        $forms['delete'][$info['delete form']] = $form_id;
       }
-      cache_set('mollom:delete_form_list', $forms);
     }
   }
+  cache_set('mollom_form_cache', $forms);
 
   return $forms;
 }
@@ -875,17 +868,25 @@ function mollom_form_new($form_id = NULL) {
  * Menu argument loader; Loads Mollom configuration and form information for a given form id.
  */
 function mollom_form_load($form_id) {
-  $mollom_form = db_fetch_array(db_query_range("SELECT * FROM {mollom_form} WHERE form_id = '%s'", $form_id, 0, 1));
-  if ($mollom_form) {
-    $mollom_form['checks'] = unserialize($mollom_form['checks']);
-    $mollom_form['enabled_fields'] = unserialize($mollom_form['enabled_fields']);
+  $cid = 'mollom:form:' . $form_id;
+  if ($cache = cache_get($cid)) {
+    return $cache->data;
+  }
+  else {
+    $mollom_form = db_fetch_array(db_query("SELECT * FROM {mollom_form} WHERE form_id = '%s'", $form_id));
+    if ($mollom_form) {
+      $mollom_form['checks'] = unserialize($mollom_form['checks']);
+      $mollom_form['enabled_fields'] = unserialize($mollom_form['enabled_fields']);
 
-    // Attach form registry information.
-    $form_list = mollom_form_list();
-    if (isset($form_list[$form_id])) {
-      $mollom_form += $form_list[$form_id];
+      // Attach form registry information.
+      $form_list = mollom_form_list();
+      if (isset($form_list[$form_id])) {
+        $mollom_form += $form_list[$form_id];
+      }
+      $mollom_form += mollom_form_info($form_id, $mollom_form['module']);
+
+      cache_set($cid, $mollom_form);
     }
-    $mollom_form += mollom_form_info($form_id, $mollom_form['module']);
   }
   return $mollom_form;
 }
@@ -895,24 +896,18 @@ function mollom_form_load($form_id) {
  */
 function mollom_form_save(&$mollom_form) {
   $exists = db_result(db_query_range("SELECT 1 FROM {mollom_form} WHERE form_id = '%s'", $mollom_form['form_id'], 0, 1));
-  if ($exists) {
-    $status = drupal_write_record('mollom_form', $mollom_form, 'form_id');
+  $status = drupal_write_record('mollom_form', $mollom_form, ($exists ? 'form_id' : array()));
+
+  // Allow modules to react on saved form configurations.
+  if ($status === SAVED_NEW) {
+    module_invoke_all('mollom_form_insert', $mollom_form);
   }
   else {
-    $status = drupal_write_record('mollom_form', $mollom_form);
-  }
-  // Allow modules to react on saved form configurations.
-  if (isset($status) && $status) {
-    if ($status === SAVED_NEW) {
-      module_invoke_all('mollom_form_insert', $mollom_form);
-    }
-    elseif ($status === SAVED_UPDATED) {
-      module_invoke_all('mollom_form_update', $mollom_form);
-    }
+    module_invoke_all('mollom_form_update', $mollom_form);
   }
 
-  // Flush cache of delete form mappings.
-  mollom_delete_form_list(TRUE);
+  // Flush cached Mollom forms and the Mollom form mapping cache.
+  mollom_form_cache(TRUE);
 
   return $status;
 }
@@ -1179,6 +1174,30 @@ function _mollom_status($reset = FALSE) {
   }
 
   return ($status['keys valid'] === TRUE ? TRUE : $status);
+}
+
+/**
+ * Outputs a warning message about enabled testing mode (once).
+ */
+function _mollom_testing_mode_warning() {
+  static $warned;
+  if (isset($warned)) {
+    return;
+  }
+  $warned = TRUE;
+
+  if (variable_get('mollom_testing_mode', 0) && empty($_POST)) {
+    $admin_message = '';
+    if (user_access('administer mollom') && $_GET['q'] != 'admin/settings/mollom/settings') {
+      $admin_message = t('Visit the <a href="@settings-url">Mollom settings page</a> to disable it.', array(
+        '@settings-url' => url('admin/settings/mollom/settings'),
+      ));
+    }
+    $message = t('Mollom testing mode is still enabled. !admin-message', array(
+      '!admin-message' => $admin_message,
+    ));
+    drupal_set_message($message, 'warning');
+  }
 }
 
 /**
