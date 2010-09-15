@@ -1410,24 +1410,43 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
   function testBlacklistUI() {
     // Log in as an administrator and access the blacklist administration page.
     $this->drupalLogin($this->admin_user);
-    $this->drupalGet('admin/settings/mollom/blacklist');
 
-    // Add a word to the text blacklist.
+    // Add a word to the spam blacklist.
+    $this->drupalGet('admin/settings/mollom/blacklist');
     $text = $this->randomName();
     $edit = array(
       'entry[context]' => 'everything',
       'entry[text]' => $text,
-      'entry[reason]' => 'spam',
     );
     $this->drupalPost(NULL, $edit, t('Add'));
     $this->assertText(t('The entry was added to the blacklist.'));
     $this->assertText($text);
 
-    // Remove the word from the text blacklist.
-    $delete_url = 'admin/settings/mollom/blacklist/delete/' . base64_encode($text);
+    // Remove the word from the spam blacklist.
+    $links = $this->xpath('//td[contains(., "' . $text . '")]/following-sibling::td/a');
+    $delete_url = $GLOBALS['base_root'] . (string) $links[0]['href'];
     $this->drupalGet($delete_url);
     $this->drupalPost(NULL, array(), t('Delete'));
     $this->assertEqual($this->getUrl(), url('admin/settings/mollom/blacklist', array('absolute' => TRUE)), t('Correct page redirection.'));
+    $this->assertNoText($text, 'Text blacklist removed.');
+
+    // Add a word to the profanity blacklist.
+    $this->drupalGet('admin/settings/mollom/blacklist/profanity');
+    $text = $this->randomName();
+    $edit = array(
+      'entry[context]' => 'everything',
+      'entry[text]' => $text,
+    );
+    $this->drupalPost(NULL, $edit, t('Add'));
+    $this->assertText(t('The entry was added to the blacklist.'));
+    $this->assertText($text);
+
+    // Remove the word from the profanity blacklist.
+    $links = $this->xpath('//td[contains(., "' . $text . '")]/following-sibling::td/a');
+    $delete_url = $GLOBALS['base_root'] . (string) $links[0]['href'];
+    $this->drupalGet($delete_url);
+    $this->drupalPost(NULL, array(), t('Delete'));
+    $this->assertEqual($this->getUrl(), url('admin/settings/mollom/blacklist/profanity', array('absolute' => TRUE)), t('Correct page redirection.'));
     $this->assertNoText($text, 'Text blacklist removed.');
   }
 }
