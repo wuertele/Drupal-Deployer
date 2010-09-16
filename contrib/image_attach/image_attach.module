@@ -484,15 +484,21 @@ function image_attach_nodeapi(&$node, $op, $teaser, $page) {
  * Helper function for hook_nodeapi: view op.
  * Loads all the required attached image nodes.
  *
- * @param $nids: an array of node ids.
- * @param $teaser: if true, only load the first of the node ids.
+ * @param $attached_nids
+ *  An array of node ids.
+ * @param $teaser
+ *  If true, only load the first of the node ids.
  *
- * @return: An numerical array of node objects.
+ * @return
+ *  An numerical array of node objects.
  */
 function _image_attach_node_load_attached($attached_nids, $teaser = FALSE) {
-  // If teaser, we only want the first node.
   if ($teaser) {
-    $attached_nids = array($attached_nids[0]);
+    // For the teaser we only want the first image from $attached_nids. 
+    // During normal node viewing the array is zero-keyed but during edit
+    // preview it is keyed by iid. Therefore using array_shift() will return the
+    // first image for either of these situations.
+    $attached_nids = array(array_shift($attached_nids));
   }
   foreach ($attached_nids as $nid) {
     $nodes[] = node_load($nid);
