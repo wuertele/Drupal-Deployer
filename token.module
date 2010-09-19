@@ -549,6 +549,16 @@ function token_get_invalid_tokens_by_context($text, $valid_types = array(), $lea
         $found = TRUE;
         break;
       }
+      elseif (preg_match('/^(.*[_-])\d+$/', $token, $result)) {
+        // Some modules use a 'wildcard' token, e.g. Location.module defines
+        // [location-country_N] but users actually use [location-country_0].
+        // If the token has a digit on the end and there is a 'wildcard'
+        // token definition, we should allow it.
+        if (isset($tokens[$result[1] . 'N']) || isset($tokens[$result[1] . '?'])) {
+          $found = TRUE;
+          break;
+        }
+      }
     }
     if (!$found) {
       $invalid_tokens[] = $token;
