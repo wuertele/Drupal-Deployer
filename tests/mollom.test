@@ -1283,7 +1283,7 @@ class MollomLanguageDetectionTestCase extends MollomWebTestCase {
 class MollomBlacklistTestCase extends MollomWebTestCase {
   public static function getInfo() {
     return array(
-      'name' => 'Blacklisting',
+      'name' => 'Blacklist',
       'description' => 'Tests URL and text blacklist functionality.',
       'group' => 'Mollom',
     );
@@ -1347,7 +1347,11 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
     $blacklist = mollom('mollom.listBlacklistText');
     foreach ($blacklist as $entry) {
       if (strtotime($entry['created']) - time() > 86400) {
-        mollom('mollom.removeBlacklistText', array('text' => $entry['text']));
+        mollom('mollom.removeBlacklistText', array(
+          'text' => $entry['text'],
+          'context' => $entry['context'],
+          'reason' => $entry['reason'],
+        ));
       }
     }
 
@@ -1356,8 +1360,9 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
     $term = drupal_strtolower(preg_replace('/[^a-zA-Z]/', '', $this->randomName()));
     $result = mollom('mollom.addBlacklistText', array(
       'text' => $term,
-      'match' => 'contains',
+      'context' => 'everything',
       'reason' => 'spam',
+      'match' => 'contains',
     ));
     $this->assertIdentical($result, TRUE, t('The text was blacklisted.'));
 
@@ -1377,12 +1382,12 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
     ));
     $this->assertEqual($result['spam'], MOLLOM_ANALYSIS_SPAM, t('Partial match was blocked.'));
 
-    // To update the work (i.e. to change the 'match' property), we simply
-    // overwrite it.
+    // Update the blacklist entry to match the term only exactly.
     $result = mollom('mollom.addBlacklistText', array(
       'text' => $term,
-      'match' => 'exact',
+      'context' => 'everything',
       'reason' => 'spam',
+      'match' => 'exact',
     ));
     $this->assertTrue($result, t('The text was blacklisted.'));
 
@@ -1396,8 +1401,20 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
     ));
     $this->assertNotEqual($result['spam'], MOLLOM_ANALYSIS_SPAM, t('Partial match was not blocked.'));
 
-    $result = mollom('mollom.removeBlacklistText', array('text' => $term));
+    $result = mollom('mollom.removeBlacklistText', array(
+      'text' => $term,
+      'context' => 'everything',
+      'reason' => 'spam',
+    ));
     $this->assertTrue($result, t('The blacklisted text was removed.'));
+
+    // Try to remove a non-existing entry.
+    $result = mollom('mollom.removeBlacklistText', array(
+      'text' => $term,
+      'context' => 'everything',
+      'reason' => 'spam',
+    ));
+    $this->assertNotIdentical($result, TRUE, t('Error response for a non-existing blacklist text found.'));
   }
 
   /**
@@ -1415,8 +1432,8 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
     $this->drupalGet('admin/settings/mollom/blacklist');
     $text = $this->randomName();
     $edit = array(
-      'entry[context]' => 'everything',
       'entry[text]' => $text,
+      'entry[context]' => 'everything',
     );
     $this->drupalPost(NULL, $edit, t('Add'));
     $this->assertText(t('The entry was added to the blacklist.'));
@@ -1434,8 +1451,8 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
     $this->drupalGet('admin/settings/mollom/blacklist/profanity');
     $text = $this->randomName();
     $edit = array(
-      'entry[context]' => 'everything',
       'entry[text]' => $text,
+      'entry[context]' => 'everything',
     );
     $this->drupalPost(NULL, $edit, t('Add'));
     $this->assertText(t('The entry was added to the blacklist.'));

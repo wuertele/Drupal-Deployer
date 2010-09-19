@@ -387,13 +387,33 @@ function mollom_admin_blacklist_form(&$form_state, $type = 'spam') {
  * Form submit handler to save a text string to the Mollom blacklist.
  */
 function mollom_admin_blacklist_form_submit($form, &$form_state) {
-  $result = mollom('mollom.addBlacklistText', $form_state['values']['entry']);
+  $data = array(
+    'text' => $form_state['values']['entry']['text'],
+    'context' => $form_state['values']['entry']['context'],
+    'reason' => $form_state['values']['entry']['reason'],
+  );
+  $result = mollom('mollom.addBlacklistText', $data);
 
+  $args = array(
+    '@text' => $data['text'],
+    '@context' => $data['context'],
+    '@reason' => $data['reason'],
+  );
   if ($result === TRUE) {
     drupal_set_message(t('The entry was added to the blacklist.'));
+    _mollom_watchdog(array(
+      'Added @text (@context) to @reason blacklist.' => $args,
+      'Data:<pre>@data</pre>' => array('@data' => $data),
+      'Result:<pre>@result</pre>' => array('@result' => $result),
+    ));
   }
   else {
     drupal_set_message(t('An error occurred upon trying to add the text to the blacklist.'), 'error');
+    _mollom_watchdog(array(
+      'Failed to add @text (%context) to @reason blacklist.' => $args,
+      'Data:<pre>@data</pre>' => array('@data' => $data),
+      'Result:<pre>@result</pre>' => array('@result' => $result),
+    ), WATCHDOG_ERROR);
   }
 }
 
@@ -477,11 +497,26 @@ function mollom_admin_blacklist_delete_submit($form, &$form_state) {
   );
   $result = mollom('mollom.removeBlacklistText', $data);
 
+  $args = array(
+    '@text' => $data['text'],
+    '@context' => $data['context'],
+    '@reason' => $data['reason'],
+  );
   if ($result === TRUE) {
     drupal_set_message(t('The entry was removed from the blacklist.'));
+    _mollom_watchdog(array(
+      'Removed @text (@context) from @reason blacklist.' => $args,
+      'Data:<pre>@data</pre>' => array('@data' => $data),
+      'Result:<pre>@result</pre>' => array('@result' => $result),
+    ));
   }
   else {
     drupal_set_message(t('An error occurred upon trying to remove the item from the blacklist.'), 'error');
+    _mollom_watchdog(array(
+      'Failed to removed @text (%context) from @reason blacklist.' => $args,
+      'Data:<pre>@data</pre>' => array('@data' => $data),
+      'Result:<pre>@result</pre>' => array('@result' => $result),
+    ), WATCHDOG_ERROR);
   }
 
   $form_state['redirect'] = 'admin/settings/mollom/blacklist';
