@@ -143,3 +143,12 @@ function _token_token_tree_format_row($token, $token_info = array(), $is_group =
 function _token_clean_css_identifier($id) {
   return 'token-' . str_replace(array('][', '_', ' ', ':'), '-', trim($id, '[]'));
 }
+
+/**
+ * Menu callback; prints the available tokens and values for an object.
+ */
+function token_devel_token_object($entity, $object) {
+  $tokens = token_get_values($entity, $object);
+  $tokens = array_combine($tokens->tokens, $tokens->values);
+  return kdevel_print_object($tokens);
+}
