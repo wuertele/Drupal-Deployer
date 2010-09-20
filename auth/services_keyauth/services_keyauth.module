@@ -128,7 +128,38 @@ function services_get_hash($timestamp, $domain, $nonce, $method, $args) {
     }
   }
   $api_key = db_result(db_query("SELECT kid FROM {services_keys} WHERE domain = '%s'", $domain));
+  // Store Key ID so service has ability to later identify caller if this call
+  // is successfully authenticated.
+  _services_keyauth_set_kid($api_key);
+
   return hash_hmac("sha256", implode(';', $hash_parameters), $api_key);
+}
+
+/**
+ * Returns Key ID of key used to authenticate call.
+ *
+ * @return
+ *   The Key ID.
+ */
+function services_keyauth_get_kid() {
+  return _services_keyauth_set_kid();
+}
+
+/**
+ * Set or get Key ID of key used to authenticate call.
+ *
+ * @param
+ *   A Key ID to set.
+ *
+ * @return
+ *   The Key ID currently set.
+ */
+function _services_keyauth_set_kid($caller_kid = NULL) {
+  static $kid;
+  if (!$kid && $caller_kid) {
+    $kid = $caller_kid;
+  }
+  return $kid;
 }
 
 /**
