@@ -192,6 +192,7 @@ function services_admin_browse_test_submit($form, $form_state) {
 }
 
 function services_admin_browse_test_unserialize_args($values, $formats) {
+  $return = array();
   $method = services_method_get(arg(4));
   $noskip = FALSE;
   // Convert args
