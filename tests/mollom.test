@@ -140,7 +140,16 @@ class MollomWebTestCase extends DrupalWebTestCase {
     $this->messages = array();
     $result = db_query("SELECT * FROM {watchdog} WHERE type = 'mollom' ORDER BY timestamp ASC");
     while ($row = db_fetch_object($result)) {
-      if ($no_fail_expected ? $row->severity >= WATCHDOG_NOTICE : $row->severity < WATCHDOG_NOTICE) {
+      // In case no fail is expected, only log messages with a severity of
+      // WATCHDOG_NOTICE or less severe messages must pass. More severe messages
+      // need to fail. The comparison logic applied here is a bit confusing,
+      // since the values of watchdog severity level constants are negated to
+      // their actual "severity level" meaning:
+      // WATCHDOG_EMERGENCY is 0, WATCHDOG_NOTICE is 5, WATCHDOG_DEBUG is 7.
+      // In case a fail is expected, all messages always pass, since we would
+      // otherwise trigger a false positive test failure if there are additional
+      // non-severe log messages.
+      if (!$no_fail_expected || $row->severity >= WATCHDOG_NOTICE) {
         $this->pass(_dblog_format_message($row), t('Watchdog'));
       }
       else {
@@ -1281,12 +1290,20 @@ class MollomLanguageDetectionTestCase extends MollomWebTestCase {
  * the same blacklist. You can configure a custom key to avoid this.
  */
 class MollomBlacklistTestCase extends MollomWebTestCase {
+  protected $profile = 'testing';
+
   public static function getInfo() {
     return array(
       'name' => 'Blacklist',
       'description' => 'Tests URL and text blacklist functionality.',
       'group' => 'Mollom',
     );
+  }
+
+  function setUp() {
+    $this->disableDefaultSetup = TRUE;
+    parent::setUp('mollom');
+    $this->setKeys();
   }
 
   /**
@@ -1296,7 +1313,7 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
     // Remove any stale blacklist entries from test runs that did not finish.
     $blacklist = mollom('mollom.listBlacklistURL');
     foreach ($blacklist as $entry) {
-      if (strtotime($entry['created']) - time() > 86400) {
+      if (time() - strtotime($entry['created']) > 86400) {
         mollom('mollom.removeBlacklistURL', array('url' => $entry['url']));
       }
     }
@@ -1346,7 +1363,7 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
     // Remove any stale blacklist entries from test runs that did not finish.
     $blacklist = mollom('mollom.listBlacklistText');
     foreach ($blacklist as $entry) {
-      if (strtotime($entry['created']) - time() > 86400) {
+      if (time() - strtotime($entry['created']) > 86400) {
         mollom('mollom.removeBlacklistText', array(
           'text' => $entry['text'],
           'context' => $entry['context'],
@@ -1414,6 +1431,7 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
       'context' => 'everything',
       'reason' => 'spam',
     ));
+    $this->assertMollomWatchdogMessages(FALSE);
     $this->assertNotIdentical($result, TRUE, t('Error response for a non-existing blacklist text found.'));
   }
 
@@ -1426,6 +1444,10 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
    */
   function testBlacklistUI() {
     // Log in as an administrator and access the blacklist administration page.
+    $this->admin_user = $this->drupalCreateUser(array(
+      'administer mollom',
+      'access administration pages',
+    ));
     $this->drupalLogin($this->admin_user);
 
     // Add a word to the spam blacklist.
@@ -1436,6 +1458,7 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
       'entry[context]' => 'everything',
     );
     $this->drupalPost(NULL, $edit, t('Add'));
+    $text = drupal_strtolower($text);
     $this->assertText(t('The entry was added to the blacklist.'));
     $this->assertText($text);
 
@@ -1456,6 +1479,7 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
     );
     $this->drupalPost(NULL, $edit, t('Add'));
     $this->assertText(t('The entry was added to the blacklist.'));
+    $text = drupal_strtolower($text);
     $this->assertText($text);
 
     // Remove the word from the profanity blacklist.
