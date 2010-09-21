@@ -74,6 +74,13 @@ function recipe_plaintext_import($text) {
       $recipe['title'] = $line;
     }
     elseif ( $region == INGREDIENTS ) {
+
+      // Replace a decimal quantity with a fractional one.  Needs to be done before ' ' to '-' below.
+      $line = preg_replace_callback('/^(\d+\.\d+)/', 'decimal_to_fraction_callback', $line);
+
+      // Replace a space separated fraction with a '-' to normalize the input string.
+      $line = preg_replace('/^(\d+)[ \-](\d+)[\/](\d+)/', '${1}-${2}/${3}', $line);
+
       // 1 cup flour
       if ( preg_match('/^([0-9\-\.\/]+) +([A-Za-z\.]+) +(.*)/', $line, $matches)  ) {
         $i = array();
@@ -207,4 +214,11 @@ function format_plaintext_ingredients($node = NULL) {
   }
 
   return $output;
+}
+
+function decimal_to_fraction_callback($matches) {
+  $fraction_str = recipe_ingredient_quantity_from_decimal($matches[1], TRUE);
+  // Don't want the frasl hassle.
+  $fraction_str = preg_replace('/\&frasl;/', '/', $fraction_str);
+  return $fraction_str;
 }
