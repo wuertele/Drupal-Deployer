@@ -58,11 +58,25 @@ function recipe_html_export_single($nid = NULL, $yield = NULL) {
     return;
   }
 
-  // add our custom recipe fields, it also runs recipe_node_prepare.
-  $node = recipe_view($node, FALSE, TRUE);
+	// This calls other modules *_view hooks.
+  $node = node_build_content($node, FALSE, TRUE);
+
+	// Set the proper node part, then unset unused $node part so that a bad
+  // theme can not open a security hole.
+  $content = drupal_render($node->content);
+  if ($teaser) {
+    $node->teaser = $content;
+    unset($node->body);
+  }
+  else {
+    $node->body = $content;
+    unset($node->teaser);
+  }
+
+	// Allow modules to modify the fully-built node.
+  node_invoke_nodeapi($node, 'alter', $teaser, $page);
 
   $html = theme('recipe_export_html_page', $node);
-
   return $html;
 }
 
