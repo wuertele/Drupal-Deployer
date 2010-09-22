@@ -323,11 +323,15 @@ function mollom_admin_unprotect_form_submit($form, &$form_state) {
 function mollom_admin_blacklist_form(&$form_state, $type = 'spam') {
   $form['#tree'] = TRUE;
 
-  // Select options and translation of internal values for rendering.
+  // Translate internal reason values for rendering and select list in form.
   $contexts = array(
     'everything' => t('All fields'),
     'links' => t('Links'),
     'author' => t('Author name'),
+  );
+  $matches = array(
+    'contains' => t('contains'),
+    'exact' => t('exact'),
   );
 
   $form['blacklist'] = array();
@@ -338,10 +342,21 @@ function mollom_admin_blacklist_form(&$form_state, $type = 'spam') {
       if ($entry['reason'] != $type) {
         continue;
       }
+      // #class property is internally used by
+      // theme_mollom_admin_blacklist_form().
       $row = array(
-        'context' => array('#value' => check_plain($contexts[$entry['context']])),
-        'text' => array('#value' => check_plain($entry['text'])),
-        'text' => array('#value' => check_plain($entry['text'])),
+        'context' => array(
+          '#value' => check_plain($contexts[$entry['context']]),
+          '#class' => 'mollom-blacklist-context value-' . check_plain($entry['context']),
+        ),
+        'match' => array(
+          '#value' => check_plain($matches[$entry['match']]),
+          '#class' => 'mollom-blacklist-match value-' . check_plain($entry['match']),
+        ),
+        'text' => array(
+          '#value' => check_plain($entry['text']),
+          '#class' => 'mollom-blacklist-text',
+        ),
       );
       $query = 'text=' . urlencode($entry['text']) . '&';
       $query .= 'context=' . urlencode($entry['context']) . '&';
@@ -355,17 +370,33 @@ function mollom_admin_blacklist_form(&$form_state, $type = 'spam') {
     }
   }
 
+  // The value NULL in the following select lists will intentionally trigger a
+  // form validation error, since the elements are #required.
+  // @see http://drupal.org/node/140783
   $form['entry']['context'] = array(
     '#type' => 'select',
-    '#options' => $contexts,
-    '#default_value' => 'everything',
+    '#title' => t('Context'),
+    '#options' => array(NULL => t('- Any -')) + $contexts,
     '#required' => TRUE,
+    '#id' => 'mollom-blacklist-filter-context',
+  );
+  $form['entry']['match'] = array(
+    '#type' => 'select',
+    '#title' => t('Match'),
+    '#options' => array(NULL => t('- Any -')) + $matches,
+    '#required' => TRUE,
+    '#id' => 'mollom-blacklist-filter-match',
   );
   $form['entry']['text'] = array(
     '#type' => 'textfield',
+    '#title' => t('Text'),
     '#size' => 40,
     '#required' => TRUE,
     '#maxlength' => 64,
+    '#id' => 'mollom-blacklist-filter-text',
+    '#attributes' => array(
+      'autocomplete' => 'off',
+    ),
   );
   $form['entry']['reason'] = array(
     '#type' => 'value',
@@ -389,6 +420,7 @@ function mollom_admin_blacklist_form_submit($form, &$form_state) {
   $data = array(
     'text' => $form_state['values']['entry']['text'],
     'context' => $form_state['values']['entry']['context'],
+    'match' => $form_state['values']['entry']['match'],
     'reason' => $form_state['values']['entry']['reason'],
   );
   $result = mollom('mollom.addBlacklistText', $data);
@@ -396,12 +428,13 @@ function mollom_admin_blacklist_form_submit($form, &$form_state) {
   $args = array(
     '@text' => $data['text'],
     '@context' => $data['context'],
+    '@match' => $data['match'],
     '@reason' => $data['reason'],
   );
   if ($result === TRUE) {
     drupal_set_message(t('The entry was added to the blacklist.'));
     _mollom_watchdog(array(
-      'Added @text (@context) to @reason blacklist.' => $args,
+      'Added @text (@context, @match) to @reason blacklist.' => $args,
       'Data:<pre>@data</pre>' => array('@data' => $data),
       'Result:<pre>@result</pre>' => array('@result' => $result),
     ));
@@ -409,7 +442,7 @@ function mollom_admin_blacklist_form_submit($form, &$form_state) {
   else {
     drupal_set_message(t('An error occurred upon trying to add the text to the blacklist.'), 'error');
     _mollom_watchdog(array(
-      'Failed to add @text (%context) to @reason blacklist.' => $args,
+      'Failed to add @text (@context, @match) to @reason blacklist.' => $args,
       'Data:<pre>@data</pre>' => array('@data' => $data),
       'Result:<pre>@result</pre>' => array('@result' => $result),
     ), WATCHDOG_ERROR);
@@ -422,28 +455,46 @@ function mollom_admin_blacklist_form_submit($form, &$form_state) {
 function theme_mollom_admin_blacklist_form($form) {
   $header = array(
     t('Context'),
+    t('Matches'),
     t('Text'),
     '',
   );
   $rows = array();
 
+  // D6 only: There is no #title_display yet, so unset the titles.
+  unset($form['entry']['context']['#title']);
+  unset($form['entry']['match']['#title']);
+  unset($form['entry']['text']['#title']);
   $rows[] = array(
     drupal_render($form['entry']['context']),
+    drupal_render($form['entry']['match']),
     drupal_render($form['entry']['text']),
     drupal_render($form['entry']['actions']),
   );
 
   foreach (element_children($form['blacklist']) as $id) {
     $rows[] = array(
-      drupal_render($form['blacklist'][$id]['context']),
-      drupal_render($form['blacklist'][$id]['text']),
+      array(
+        'data' => drupal_render($form['blacklist'][$id]['context']),
+        'class' => $form['blacklist'][$id]['context']['#class'],
+      ),
+      array(
+        'data' => drupal_render($form['blacklist'][$id]['match']),
+        'class' => $form['blacklist'][$id]['match']['#class'],
+      ),
+      array(
+        'data' => drupal_render($form['blacklist'][$id]['text']),
+        'class' => $form['blacklist'][$id]['text']['#class'],
+      ),
       drupal_render($form['blacklist'][$id]['actions']),
     );
   }
 
   // This table is never empty due to the form.
-  $output  = theme('table', $header, $rows);
+  $output = theme('table', $header, $rows, array('id' => 'mollom-blacklist'));
   $output .= drupal_render($form);
+
+  drupal_add_js(drupal_get_path('module', 'mollom') . '/mollom.admin.js', 'module', 'header', FALSE, TRUE, FALSE);
 
   return $output;
 }
