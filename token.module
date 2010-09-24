@@ -39,6 +39,7 @@ function token_help($path, $arg) {
  * Impelments hook_menu().
  */
 function token_menu() {
+  $items = array();
   if (module_exists('devel')) {
     $items['node/%node/devel/token'] = array(
       'title' => 'Tokens',
@@ -58,8 +59,8 @@ function token_menu() {
       'file' => 'token.pages.inc',
       'weight' => 5,
     );
-    return $items;
   }
+  return $items;
 }
 
 /**
@@ -347,7 +348,7 @@ function token_get_values($type = 'global', $object = NULL, $flush = FALSE, $opt
     $tokens['global']['default'] = module_invoke_all('token_values', 'global');
   }
 
-  $all = _token_array_merge($tokens['global']['default'], $tokens[$type][$id]);
+  $all = array_merge($tokens['global']['default'], $tokens[$type][$id]);
 
   $result = new stdClass();
   $result->tokens = array_keys($all);
@@ -358,37 +359,12 @@ function token_get_values($type = 'global', $object = NULL, $flush = FALSE, $opt
   return $result;
 }
 
-/**
- * Merge two arrays of token values, checking and warning for duplication.
- *
- * Because array_merge will combinue elements that have the same key into an
- * array instead of overriding the existing element, this causes problems since
- * we need the values to always be a string.
- *
- * @param $array1
- *   An array of token values keyed by token name.
- * @param $array2
- *   An array of token values keyed by token name.
- * @return
- *   A merged array of token values keyed by token name.
- */
-function _token_array_merge($array1, $array2) {
-  static $warned = array();
-
-  $merged = array_merge($array1, $array2);
-  foreach ($merged as $key => $value) {
-    if (is_array($value)) {
-      if (empty($warned[$key])) {
-        // Only warn once about duplicate token.
-        watchdog('token', 'More than one module has defined the %key token.', array('%key' => $key), WATCHDOG_WARNING);
-        $warned[$key] = TRUE;
-      }
-      // Use the last-defined value (module with lowest weight).
-      $merged[$key] = array_pop($value);
-    }
+function _token_get_values($type, $object = NULL, $options = array()) {
+  $tokens = array();
+  foreach (module_implements('token_values') as $module) {
+    $tokens[$module] = module_invoke($module, 'token_values', $type, $object, $options);
   }
-
-  return $merged;
+  return $tokens;
 }
 
 /**
@@ -643,4 +619,32 @@ function token_element_validate_token_context(&$element, &$form_state) {
     form_error($element, t('The %element-title is using the following invalid tokens: @invalid-tokens.', array('%element-title' => $element['#title'], '@invalid-tokens' => implode(', ', $invalid_tokens))));
   }
   return $element;
+}
+
+/**
+ * Find tokens that have been declared twice by different modules.
+ */
+function token_find_duplicate_tokens() {
+  token_include();
+  $all_tokens = array();
+
+  foreach (module_implements('token_list') as $module) {
+    $module_tokens = module_invoke($module, 'token_list', 'all');
+    if (in_array($module, array('node', 'taxonomy', 'comment', 'user'))) {
+      $module = 'token';
+    }
+    foreach ($module_tokens as $type => $tokens) {
+      foreach (array_keys($tokens) as $token) {
+        $all_tokens[$type . ':' . $token][] = $module;
+      }
+    }
+  }
+
+  foreach ($all_tokens as $token => $modules) {
+    if (count($modules) < 2) {
+      unset($all_tokens[$token]);
+    }
+  }
+
+  return $all_tokens;
 }
