@@ -336,7 +336,12 @@ function image_attach_validate(&$form, &$form_state) {
 
   // Validate the number of attached images. Filter out the 'None' with array_filter.
   if ($maximum_images = variable_get('image_attach_maximum_' . $form['#node']->type, 0)) {
-    $num_images = count(array_filter($form_state['values']['iids']));
+    if (is_array($form_state['values']['iids'])) {
+      $num_images = count(array_filter($form_state['values']['iids']));
+    }
+    else {
+      $num_images = 0;
+    }
 
     $node_type_label = node_get_types('name', $form['#node']->type);
     if ($num_images >= $maximum_images && $uploading_new_image) {
