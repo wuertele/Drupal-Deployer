@@ -380,7 +380,7 @@ function token_get_list($types = 'all') {
   foreach (module_implements('token_list') as $module) {
     foreach ($types as $type) {
       $module_token_list = module_invoke($module, 'token_list', $type);
-      if (is_array($module_token_list)) {
+      if (isset($module_token_list) && is_array($module_token_list)) {
         foreach ($module_token_list as $category => $tokens) {
           foreach ($tokens as $token => $title) {
             // Automatically append a raw token warning.
@@ -614,11 +614,16 @@ function token_find_duplicate_tokens() {
   $all_tokens = array();
 
   foreach (module_implements('token_list') as $module) {
-    $module_tokens = module_invoke($module, 'token_list', 'all');
+    $module_token_list = module_invoke($module, 'token_list', 'all');
+    if (!isset($module_token_list) || !is_array($module_token_list)) {
+      // Skip modules that do not return an array as that is a valid return
+      // value.
+      continue;
+    }
     if (in_array($module, _token_core_supported_modules())) {
       $module = 'token';
     }
-    foreach ($module_tokens as $type => $tokens) {
+    foreach ($module_token_list as $type => $tokens) {
       foreach (array_keys($tokens) as $token) {
         $all_tokens[$type . ':' . $token][] = $module;
       }
