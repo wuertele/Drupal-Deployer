@@ -1647,6 +1647,28 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
     // Verify that the form was not submitted and cannot be submitted.
     $this->assertNoText('Successful form submission.');
     $this->assertText($this->spam_message);
+
+    // Verify that we can remove the form protection.
+    $this->drupalLogin($this->admin_user);
+    $this->drupalGet('admin/settings/mollom');
+    $this->assertText('Mollom test form');
+
+    $this->drupalPost('admin/settings/mollom/unprotect/mollom_test_form', array(), t('Confirm'));
+    $this->assertEqual($this->getUrl(), url('admin/settings/mollom', array('absolute' => TRUE)), t('Correct page redirection.'));
+    $this->assertNoText('Mollom test form');
+    $this->assertText(t('The form protection has been removed.'));
+    $mollom_form = mollom_form_load('mollom_test_form');
+    $this->assertFalse($mollom_form, t('Form protection not found.'));
+
+    // Verify that the form is no longer protected.
+    $this->drupalLogout();
+    $edit = array(
+      'title' => 'unsure',
+    );
+    $this->drupalPost('mollom-test/form', $edit, 'Submit');
+    $this->assertText('Successful form submission.');
+    $this->assertNoText($this->unsure_message);
+    $this->assertNoCaptchaField();
   }
 
   /**

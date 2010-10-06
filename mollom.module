@@ -596,8 +596,6 @@ function mollom_data_report_multiple($entity, $ids, $feedback) {
  * necessary.
  */
 function mollom_form_alter(&$form, &$form_state, $form_id) {
-  static $forms;
-
   // Skip installation and update forms.
   if (defined('MAINTENANCE_MODE')) {
     return;
@@ -609,9 +607,7 @@ function mollom_form_alter(&$form, &$form_state, $form_id) {
   }
 
   // Retrieve a list of all protected forms once.
-  if (!isset($forms)) {
-    $forms = mollom_form_cache();
-  }
+  $forms = mollom_form_cache();
 
   // Remind of enabled testing mode on all protected forms.
   if (isset($forms['protected'][$form_id]) || strpos($_GET['q'], 'admin/settings/mollom') === 0) {
@@ -720,15 +716,23 @@ function mollom_form_alter(&$form, &$form_state, $form_id) {
  *     and therefore have an identical 'post_id' mapping.
  */
 function mollom_form_cache($reset = FALSE) {
+  static $forms;
+
   if ($reset) {
     // This catches both 'mollom_form_cache' as well as mollom_form_load()'s
     // 'mollom:form:*' entries.
     cache_clear_all('mollom', 'cache', TRUE);
+    unset($forms);
     return;
   }
 
+  if (isset($forms)) {
+    return $forms;
+  }
+
   if ($cache = cache_get('mollom_form_cache')) {
-    return $cache->data;
+    $forms = $cache->data;
+    return $forms;
   }
 
   $result = db_query("SELECT form_id, module FROM {mollom_form}");
@@ -912,6 +916,21 @@ function mollom_form_save(&$mollom_form) {
   mollom_form_cache(TRUE);
 
   return $status;
+}
+
+/**
+ * Deletes a Mollom form configuration.
+ */
+function mollom_form_delete($form_id) {
+  $mollom_form = mollom_form_load($form_id);
+
+  db_query("DELETE FROM {mollom_form} WHERE form_id = '%s'", $form_id);
+
+  // Allow modules to react on saved form configurations.
+  module_invoke_all('mollom_form_delete', $mollom_form);
+
+  // Flush cached Mollom forms and the Mollom form mapping cache.
+  mollom_form_cache(TRUE);
 }
 
 /**
