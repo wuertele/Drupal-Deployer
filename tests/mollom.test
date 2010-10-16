@@ -353,9 +353,9 @@ class MollomWebTestCase extends DrupalWebTestCase {
    */
   protected function assertMollomData($entity, $id, $session_id = NULL) {
     $data = mollom_data_load($entity, $id);
-    $this->assertTrue($data->session, t('Mollom session data for %entity @id exists: <pre>@data</pre>', array('%entity' => $entity, '@id' => $id, '@data' => var_export($data, TRUE))));
+    $this->assertTrue($data->session_id, t('Mollom session data for %entity @id exists: <pre>@data</pre>', array('%entity' => $entity, '@id' => $id, '@data' => var_export($data, TRUE))));
     if (isset($session_id)) {
-      $this->assertSame(t('Stored session id'), $data->session, $session_id);
+      $this->assertSame(t('Stored session id'), $data->session_id, $session_id);
     }
     return $data;
   }
@@ -2406,6 +2406,13 @@ class MollomDataTestCase extends MollomWebTestCase {
     $new_mid = $this->getFieldValueByName('mid');
     $this->assertEqual($new_mid, $mid, t('Existing entity id found.'));
 
+    // Verify that session data was stored.
+    $this->assertSame('entity', $data->entity, 'mollom_test');
+    $this->assertSame('id', $data->id, $mid);
+    $this->assertSame('form_id', $data->form_id, 'mollom_test_form');
+    $count = db_result(db_query("SELECT COUNT(1) FROM {mollom}"));
+    $this->assertEqual($count, 1, t('Data was stored in {mollom}.'));
+
     // Update the stored entry.
     $edit['title'] = 'unsure';
     $this->drupalPost(NULL, $edit, 'Submit');
@@ -2415,8 +2422,9 @@ class MollomDataTestCase extends MollomWebTestCase {
 
     // Verify that only session data was updated.
     $this->assertSame('entity', $data->entity, $new_data->entity);
-    $this->assertSame('id', $data->did, $new_data->did);
-    $this->assertNotSame('session_id', $data->session, $new_data->session);
+    $this->assertSame('id', $data->id, $new_data->id);
+    $this->assertNotSame('session_id', $data->session_id, $new_data->session_id);
+    $this->assertSame('form_id', $data->form_id, $new_data->form_id);
     $this->assertSame('quality', $data->quality, $new_data->quality);
     $count = db_result(db_query("SELECT COUNT(1) FROM {mollom}"));
     $this->assertEqual($count, 1, t('Stored data in {mollom} was updated.'));
