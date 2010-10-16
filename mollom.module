@@ -470,6 +470,29 @@ function mollom_data_save($data) {
 }
 
 /**
+ * Updates stored Mollom session data to mark a bad post as moderated.
+ *
+ * @param $entity
+ *   The entity type of the moderated post.
+ * @param $id
+ *   The entity id of the moderated post.
+ */
+function mollom_data_moderate($entity, $id) {
+  $data = mollom_data_load($entity, $id);
+  // Nothing to do, if no data exists.
+  if (!$data) {
+    return;
+  }
+
+  // Report the session to Mollom.
+  _mollom_send_feedback($data->session_id, 'ham');
+
+  // Mark the session data as moderated.
+  $data->moderate = 0;
+  mollom_data_save($data);
+}
+
+/**
  * Deletes a Mollom session data record from the database.
  *
  * @param $entity
@@ -656,6 +679,7 @@ function mollom_form_alter(&$form, &$form_state, $form_id) {
       // Add Mollom form validation handlers.
       $form['#validate'][] = 'mollom_validate_analysis';
       $form['#validate'][] = 'mollom_validate_captcha';
+      $form['#validate'][] = 'mollom_validate_post';
 
       // Add a submit handler to remove form state storage.
       $form['#submit'][] = 'mollom_form_submit';
@@ -816,6 +840,7 @@ function mollom_form_info($form_id, $module) {
     'module' => $module,
     'entity' => NULL,
     'mode' => NULL,
+    'discard' => TRUE,
     'bypass access' => array(),
     'elements' => array(),
     'mapping' => array(),
@@ -1347,12 +1372,20 @@ function mollom_process_mollom($element, $input, &$form_state, $complete_form) {
       'require_analysis' => $element['#mollom_form']['mode'] == MOLLOM_MODE_ANALYSIS,
       'require_captcha' => $element['#mollom_form']['mode'] == MOLLOM_MODE_CAPTCHA,
       'passed_captcha' => FALSE,
+      'require_moderation' => FALSE,
       'response' => array(
         'session_id' => '',
       ),
     );
   }
   $form_state['mollom'] += $element['#mollom_form'];
+
+  // By default, bad form submissions are discarded, unless the form was
+  // configured to moderate bad posts. 'discard' may only be FALSE, if there is
+  // a valid 'moderation callback'. Otherwise, it must be TRUE.
+  if (empty($form_state['mollom']['moderation callback']) || !function_exists($form_state['mollom']['moderation callback'])) {
+    $form_state['mollom']['discard'] = TRUE;
+  }
 
   // Add the Mollom session element.
   $element['session_id'] = array(
@@ -1466,6 +1499,9 @@ function mollom_validate_analysis(&$form, &$form_state) {
   // Store the response returned by Mollom.
   $form_state['mollom']['response'] = $result;
 
+  // Prepare watchdog message teaser text.
+  $teaser = truncate_utf8(strip_tags(isset($data['post_title']) ? $data['post_title'] : isset($data['post_body']) ? $data['post_body'] : '--'), 40);
+
   // Handle the spam check result.
   // The Mollom backend is remembering results of previous mollom.checkContent
   // invocations for a single user/post session. When content is re-checked
@@ -1474,7 +1510,6 @@ function mollom_validate_analysis(&$form, &$form_state) {
   // the spam check led to a MOLLOM_ANALYSIS_UNSURE result, and the user solved
   // the CAPTCHA correctly, subsequent spam check results will likely be
   // MOLLOM_ANALYSIS_HAM (though not guaranteed).
-  $teaser = truncate_utf8(strip_tags(isset($data['post_title']) ? $data['post_title'] : isset($data['post_body']) ? $data['post_body'] : '--'), 40);
   if (isset($result['spam'])) {
     switch ($result['spam']) {
       case MOLLOM_ANALYSIS_HAM:
@@ -1488,7 +1523,12 @@ function mollom_validate_analysis(&$form, &$form_state) {
 
       case MOLLOM_ANALYSIS_SPAM:
         $form_state['mollom']['require_captcha'] = FALSE;
-        form_set_error('mollom', t('Your submission has triggered the spam filter and will not be accepted.'));
+        if ($form_state['mollom']['discard']) {
+          form_set_error('mollom', t('Your submission has triggered the spam filter and will not be accepted.'));
+        }
+        else {
+          $form_state['mollom']['require_moderation'] = TRUE;
+        }
         _mollom_watchdog(array(
           'Spam: %teaser' => array('%teaser' => $teaser),
           'Data:<pre>@data</pre>' => array('@data' => $data),
@@ -1667,6 +1707,20 @@ function mollom_pre_render_mollom($element) {
 }
 
 /**
+ * Form validation handler to perform post-validation tasks.
+ */
+function mollom_validate_post(&$form, &$form_state) {
+  // Retain a post instead of discarding it. If 'discard' is FALSE, then the
+  // 'moderation callback' is responsible for altering $form_state in a way that
+  // the post ends up in a moderation queue. Most callbacks will only want to
+  // set or change a value in $form_state.
+  if ($form_state['mollom']['require_moderation']) {
+    $function = $form_state['mollom']['moderation callback'];
+    $function($form, $form_state);
+  }
+}
+
+/**
  * Form submit handler to flush Mollom session and form information from cache.
  */
 function mollom_form_submit($form, &$form_state) {
@@ -1690,10 +1744,13 @@ function mollom_form_submit($form, &$form_state) {
     $values = mollom_form_get_values($form_state['values'], array(), $form_state['mollom']['mapping']);
     // We only consider non-empty and non-zero values as valid entity ids.
     if (!empty($values['post_id'])) {
+      // Save the Mollom session data.
       $data = (object) $form_state['mollom']['response'];
       $data->entity = $form_state['mollom']['entity'];
       $data->id = $values['post_id'];
       $data->form_id = $form_state['mollom']['form_id'];
+      // Set the moderation flag for forms accepting bad posts.
+      $data->moderate = $form_state['mollom']['require_moderation'];
       mollom_data_save($data);
     }
   }
@@ -2194,6 +2251,7 @@ function node_mollom_form_info($form_id) {
     // @todo This is incompatible with node access.
     'bypass access' => array('administer nodes', 'edit any ' . $type->type . ' content'),
     'bundle' => $type->type,
+    'moderation callback' => 'node_mollom_form_moderation',
     'elements' => array(),
     'mapping' => array(
       'post_id' => 'nid',
@@ -2232,10 +2290,30 @@ function mollom_nodeapi($node, $op) {
     $data->entity = 'node';
     $data->id = $node->nid;
     $data->form_id = $mollom['form_id'];
+    // Set the moderation flag for forms accepting bad posts.
+    $data->moderate = $mollom['require_moderation'];
     mollom_data_save($data);
   }
   elseif ($op == 'delete') {
     mollom_data_delete('node', $node->nid);
+  }
+}
+
+/**
+ * Mollom form moderation callback for nodes.
+ */
+function node_mollom_form_moderation(&$form, &$form_state) {
+  $form_state['values']['status'] = 0;
+}
+
+/**
+ * Implements hook_node_presave().
+ */
+function mollom_node_presave($comment) {
+  // If an existing node is published and we have session data stored for it,
+  // mark the data as moderated.
+  if (!empty($node->nid) && $node->status) {
+    mollom_data_moderate('node', $node->nid);
   }
 }
 
@@ -2298,6 +2376,7 @@ function comment_mollom_form_info($form_id) {
   $form_info = array(
     'mode' => MOLLOM_MODE_ANALYSIS,
     'bypass access' => array('administer comments'),
+    'moderation callback' => 'comment_mollom_form_moderation',
     'elements' => array(
       'subject' => t('Subject'),
       'comment' => t('Comment'),
@@ -2363,6 +2442,13 @@ function mollom_comment_form_validate($form, &$form_state) {
 }
 
 /**
+ * Mollom form moderation callback for comments.
+ */
+function comment_mollom_form_moderation(&$form, &$form_state) {
+  $form_state['values']['status'] = COMMENT_NOT_PUBLISHED;
+}
+
+/**
  * Implements hook_comment().
  */
 function mollom_comment($comment, $op) {
@@ -2372,9 +2458,28 @@ function mollom_comment($comment, $op) {
     $data->entity = 'comment';
     $data->id = (isset($comment['cid']) ? $comment['cid'] : $comment->cid);
     $data->form_id = $mollom['form_id'];
+    // Set the moderation flag for forms accepting bad posts.
+    $data->moderate = $mollom['require_moderation'];
     mollom_data_save($data);
   }
-  elseif ($op == 'delete') {
+  // If an existing comment is published and we have session data stored for it,
+  // mark the data as moderated. Since Drupal 6 does not expose a
+  // hook_comment_presave(), the operation needs to be performed in the update
+  // case. In case a comment is updated through a comment form submission, this
+  // may mean that above code will insert or update the data, and the following
+  // code may update it again. However, the resulting logic is easier to follow
+  // this way.
+  if ($op == 'publish') {
+    if (is_array($comment)) {
+      if (!empty($comment['cid'])) {
+        mollom_data_moderate('comment', $comment['cid']);
+      }
+    }
+    elseif (!empty($comment->cid)) {
+      mollom_data_moderate('comment', $comment->cid);
+    }
+  }
+  if ($op == 'delete') {
     mollom_data_delete('comment', $comment->cid);
   }
 }
@@ -2430,7 +2535,6 @@ function user_mollom_form_list() {
   );
   $forms['user_pass'] = array(
     'title' => t('User password request form'),
-    'entity' => 'user',
   );
   return $forms;
 }
@@ -2444,6 +2548,7 @@ function user_mollom_form_info($form_id) {
       $form_info = array(
         'mode' => MOLLOM_MODE_CAPTCHA,
         'bypass access' => array('administer users'),
+        'moderation callback' => 'user_mollom_form_moderation',
         'mapping' => array(
           'post_id' => 'uid',
           'author_name' => 'name',
@@ -2465,6 +2570,13 @@ function user_mollom_form_info($form_id) {
       );
       return $form_info;
   }
+}
+
+/**
+ * Mollom form moderation callback for user accounts.
+ */
+function user_mollom_form_moderation(&$form, &$form_state) {
+  $form_state['values']['status'] = 0;
 }
 
 /**

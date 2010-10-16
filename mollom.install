@@ -113,6 +113,13 @@ function mollom_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
+      'moderate' => array(
+        'description' => 'Whether the content needs to be moderated.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
       // Server response columns are NULL by default, because any default value
       // would have an unintended meaning. Also, values are stored in individual
       // columns, so as to be able to join and filter/sort on these values for
@@ -171,6 +178,13 @@ function mollom_schema() {
         'type' => 'text',
         'not null' => FALSE,
         'serialize' => TRUE,
+      ),
+      'discard' => array(
+        'description' => 'Whether to discard (1) or retain (0) bad posts.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 1,
       ),
       'enabled_fields' => array(
         'description' => 'Form elements to analyze.',
@@ -592,5 +606,31 @@ function mollom_update_6116() {
     ));
   }
   db_add_index($ret, 'mollom', 'session_id', array('session_id'));
+  return $ret;
+}
+
+/**
+ * Add {mollom_form}.discard and {mollom}.moderate columns.
+ */
+function mollom_update_6117() {
+  $ret = array();
+  if (!db_column_exists('mollom_form', 'discard')) {
+    db_add_field($ret, 'mollom_form', 'discard', array(
+      'description' => 'Whether to discard (1) or retain (0) bad posts.',
+      'type' => 'int',
+      'size' => 'tiny',
+      'not null' => TRUE,
+      'default' => 1,
+    ));
+  }
+  if (!db_column_exists('mollom', 'moderate')) {
+    db_add_field($ret, 'mollom', 'moderate', array(
+      'description' => 'Whether the content needs to be moderated.',
+      'type' => 'int',
+      'size' => 'tiny',
+      'not null' => TRUE,
+      'default' => 0,
+    ));
+  }
   return $ret;
 }
