@@ -681,7 +681,12 @@ function mollom_form_alter(&$form, &$form_state, $form_id) {
       $form['#validate'][] = 'mollom_validate_captcha';
       $form['#validate'][] = 'mollom_validate_post';
 
-      // Add a submit handler to remove form state storage.
+      // Prepend a submit handler to clean up internal Mollom values from
+      // $form_state['values'].
+      array_unshift($form['#submit'], 'mollom_form_pre_submit');
+      // Append a submit handler to store Mollom session data. Requires that
+      // the primary submit handler has run already, so a potential 'post_id'
+      // mapping can be retrieved from $form_state['values'].
       $form['#submit'][] = 'mollom_form_submit';
 
       // Add link to privacy policy on forms protected via textual analysis,
@@ -1127,6 +1132,14 @@ function mollom_form_get_values($form_values, $fields, $mapping) {
   // User IP.
   $data['author_ip'] = ip_address();
 
+  // Honeypot.
+  // For the Mollom backend, it only matters whether 'honeypot' is non-empty.
+  // The submitted value is only taken over to allow site administrators to
+  // see the actual honeypot value in watchdog log entries.
+  if (isset($form_values['mollom']['homepage']) && $form_values['mollom']['homepage'] !== '') {
+    $data['honeypot'] = $form_values['mollom']['homepage'];
+  }
+
   return $data;
 }
 
@@ -1403,6 +1416,19 @@ function mollom_process_mollom($element, $input, &$form_state, $complete_form) {
     '#description' => t("Type the characters you see in the picture above; if you can't read them, submit the form and a new image will be generated. Not case sensitive."),
   );
 
+  // Add a spambot trap. Purposively use 'homepage' as field name.
+  // @todo Use a random field name (from the usual names of 'name', 'email',
+  //   'url', etc.) to make it harder to identify this trap.
+  $element['homepage'] = array(
+    '#type' => 'textfield',
+    // Wrap the entire honeypot form element markup into a hidden container, so
+    // robots cannot simply check for a style attribute, but instead have to
+    // implement advanced DOM processing to figure out whether they are dealing
+    // with a honeypot field.
+    '#prefix' => '<div style="display: none;">',
+    '#suffix' => '</div>',
+  );
+
   // Make Mollom form and session information available to #pre_render callback.
   // This must be assigned by reference. It is the essential "communication
   // layer" between form API and the rendering system. Any modifications to
@@ -1598,8 +1624,13 @@ function mollom_validate_captcha(&$form, &$form_state) {
     'session_id' => $form_state['mollom']['response']['session_id'],
     'captcha_result' => $form_state['values']['mollom']['captcha'],
     'author_ip' => $all_data['author_ip'],
-    'author_id' => isset($all_data['author_id']) ? $all_data['author_id'] : NULL,
   );
+  if (isset($all_data['author_id'])) {
+    $data['author_id'] = $all_data['author_id'];
+  }
+  if (isset($all_data['honeypot'])) {
+    $data['honeypot'] = $all_data['honeypot'];
+  }
   $result = mollom('mollom.checkCaptcha', $data);
   // Use all available data properties for log messages below.
   $data += $all_data;
@@ -1718,6 +1749,33 @@ function mollom_validate_post(&$form, &$form_state) {
     $function = $form_state['mollom']['moderation callback'];
     $function($form, $form_state);
   }
+}
+
+/**
+ * Form submit handler to clean up internal Mollom values from $form_state['values'].
+ *
+ * Some form submit handlers blindly take over and save all submitted form
+ * values in $form_state['values'] into the database. To prevent Mollom's
+ * internal values from being mistakenly stored somewhere else, this submit
+ * handler is prepended to the stack of $form['#submit'] handlers of protected
+ * forms.
+ *
+ * @todo Fix Drupal core to remove the need for separately prepended submit
+ *   handlers like this one by making form_state_values_clean() invoke a hook.
+ * @see http://drupal.org/node/939510
+ */
+function mollom_form_pre_submit($form, &$form_state) {
+  // Some modules are implementing multi-step forms without separate form
+  // submit handlers. In case we reach here and the form will be rebuilt, we
+  // need to defer our submit handling until final submission.
+  if (!empty($form_state['rebuild'])) {
+    return;
+  }
+  // When having passed the form validation stage and reaching the form
+  // submission stage, all submitted form values have been processed into
+  // $form_state['mollom'] already, so the entire top-level 'mollom' key can be
+  // safely removed.
+  unset($form_state['values']['mollom']);
 }
 
 /**

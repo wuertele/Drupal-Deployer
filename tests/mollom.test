@@ -2371,7 +2371,7 @@ class MollomDataTestCase extends MollomWebTestCase {
 
     // Verify that submitted data equals post data.
     $data = $this->getServerRecord('mollom.checkCaptcha');
-    $this->assertSame('author_id', $data['author_id'], NULL);
+    $this->assertFalse(isset($data['author_id']), t('author_id: Undefined.'));
 
     // Log in admin user and edit comment containing spam.
     $this->resetServerRecords();
@@ -2383,6 +2383,68 @@ class MollomDataTestCase extends MollomWebTestCase {
     // Verify that no data was submitted to Mollom.
     $data = $this->getServerRecord();
     $this->assertFalse($data, t('Administrative form submission was not validated by Mollom.'));
+  }
+
+  /**
+   * Tests that protected forms contain a hidden honeypot field and its value is recorded.
+   */
+  function testHoneypot() {
+    // Enable protection for mollom_test_form.
+    $this->drupalLogin($this->admin_user);
+    $this->setProtection('mollom_test_form');
+    $this->drupalLogout();
+
+    // Verify that the hidden honeypot field is output.
+    $this->drupalGet('mollom-test/form');
+    $elements = $this->xpath(strtr('//div[contains(@style, :style)]/descendant::input[@name = :name]', array(
+      ':style' => '"display: none"',
+      ':name' => '"mollom[homepage]"',
+    )));
+    $this->assertEqual(count($elements), 1, t('Hidden honeypot field found.'));
+
+    // Verify that a honeypot value is sent to mollom.checkContent.
+    $edit = array(
+      'title' => 'unsure',
+      'body' => 'unsure',
+      'mollom[homepage]' => 'HONEYPOT-VALUE',
+    );
+    $this->drupalPost(NULL, $edit, 'Submit');
+    $this->assertCaptchaField();
+    $data = $this->getServerRecord();
+    $this->assertSame('honeypot', $data['honeypot'], $edit['mollom[homepage]']);
+
+    $this->postCorrectCaptcha(NULL, array(), 'Submit', 'Successful form submission.');
+    $data = $this->getServerRecord();
+    $this->assertSame('honeypot', $data['honeypot'], $edit['mollom[homepage]']);
+    $data = $this->getServerRecord('mollom.checkCaptcha');
+    $this->assertSame('honeypot', $data['honeypot'], $edit['mollom[homepage]']);
+
+    // Change form protection to CAPTCHA only.
+    $this->drupalLogin($this->admin_user);
+    $this->setProtection('mollom_test_form', MOLLOM_MODE_CAPTCHA);
+    $this->drupalLogout();
+    $this->resetServerRecords();
+
+    // Verify that the hidden honeypot field is output.
+    $this->drupalGet('mollom-test/form');
+    $elements = $this->xpath(strtr('//div[contains(@style, :style)]/descendant::input[@name = :name]', array(
+      ':style' => '"display: none"',
+      ':name' => '"mollom[homepage]"',
+    )));
+    $this->assertEqual(count($elements), 1, t('Hidden honeypot field found.'));
+
+    // Verify that a honeypot value is sent to mollom.checkContent.
+    // postCorrectCaptcha() cannot be used for mollom_test_form, since the form
+    // is re-displayed again after a successful form submission.
+    $edit = array(
+      'title' => $this->randomString(),
+      'mollom[captcha]' => 'correct',
+      'mollom[homepage]' => 'HONEYPOT-VALUE',
+    );
+    $this->drupalPost(NULL, $edit, 'Submit');
+    $this->assertText('Successful form submission.');
+    $data = $this->getServerRecord('mollom.checkCaptcha');
+    $this->assertSame('honeypot', $data['honeypot'], $edit['mollom[homepage]']);
   }
 
   /**
