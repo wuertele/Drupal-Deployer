@@ -15,6 +15,7 @@ class views_handler_field_amazon_title extends views_handler_field {
     if (!empty($data['link_format']) && $data['link_format'] == 'amazon') {
       $this->additional_fields[] = 'detailpageurl';
     }
+    $this->additional_fields[] = 'asin';
   }
 
   /**
@@ -34,6 +35,10 @@ class views_handler_field_amazon_title extends views_handler_field {
     if ($this->view->base_table == 'node') {
       $form['link_format']['#options']['node'] = t('A link to the node the product is associated with');
     }
+    if (module_exists('amazon_store')) {
+      $form['link_format']['#options']['amazon_store'] = t("A link to the product's Amazon Store page (Amazon Store Module)");
+    }
+
   }
 
   function render($values) {
@@ -48,6 +53,11 @@ class views_handler_field_amazon_title extends views_handler_field {
       case 'amazon':
         return l($title, check_url($values->{$this->table_alias . '_detailpageurl'}), array('html' => TRUE));
         break;
+      case 'amazon_store':
+        $asin = $values->{$this->aliases['asin']};
+        return l($title, 'amazon_store/item/' . $asin, array('html' => TRUE));
+        break;
+
     }
   }
 }
