@@ -1828,6 +1828,65 @@ class MollomUserFormsTestCase extends MollomWebTestCase {
   }
 }
 
+/**
+ * Tests Profile module integration.
+ */
+class MollomProfileFormsTestCase extends MollomWebTestCase {
+  public static function getInfo() {
+    return array(
+      'name' => 'Profile integration',
+      'description' => 'Tests Profile module integration.',
+      'group' => 'Mollom',
+    );
+  }
+
+  function setUp() {
+    parent::setUp(array('profile'));
+  }
+
+  /**
+   * Tests Profile module integration with user registration form.
+   */
+  function testProfileRegistration() {
+    $this->drupalLogin($this->admin_user);
+
+    // Add the three supported profile field types.
+    $fields = array();
+    foreach (array('textfield', 'textarea', 'url') as $type) {
+      $name = 'profile_' . drupal_strtolower($this->randomName());
+      $title = $this->randomString();
+      $fields[$name] = $title;
+      $edit = array(
+        'category' => 'Registration',
+        'title' => $title,
+        'name' => $name,
+        'register' => 1,
+      );
+      $this->drupalPost('admin/user/profile/add/' . $type, $edit, t('Save field'));
+    }
+
+    // Enable text analysis protection for user registration form.
+    $this->setProtection('user_register', MOLLOM_MODE_ANALYSIS);
+    $this->drupalLogout();
+
+    $this->drupalGet('user/register');
+    $this->assertNoCaptchaField();
+
+    $name = $this->randomName();
+    $edit = array(
+      'name' => $name,
+      'mail' => $name . '@example.com',
+    );
+    foreach ($fields as $key => $title) {
+      $edit[$key] = 'unsure';
+    }
+    $this->drupalPost(NULL, $edit, t('Create new account'));
+    $this->postCorrectCaptcha(NULL, array(), t('Create new account'));
+    $this->assertText(t('Your password and further instructions have been sent to your e-mail address.'));
+    $this->assertTrue(user_load(array('name' => $name)), t('New user was found in database.'));
+  }
+}
+
 class MollomCommentFormTestCase extends MollomWebTestCase {
   private $node;
 

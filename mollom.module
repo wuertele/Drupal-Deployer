@@ -2604,7 +2604,6 @@ function user_mollom_form_info($form_id) {
   switch ($form_id) {
     case 'user_register':
       $form_info = array(
-        'mode' => MOLLOM_MODE_CAPTCHA,
         'bypass access' => array('administer users'),
         'moderation callback' => 'user_mollom_form_moderation',
         'mapping' => array(
@@ -2700,4 +2699,29 @@ function contact_mollom_form_info($form_id) {
 
 /**
  * @} End of "name mollom_contact".
+ */
+
+/**
+ * @name mollom_profile Profile module integration for Mollom.
+ * @{
+ */
+
+/**
+ * Implements hook_mollom_form_info_alter().
+ *
+ * Adds profile fields exposed on the user registration form.
+ */
+function profile_mollom_form_info_alter(&$form_info, $form_id) {
+  if ($form_id != 'user_register') {
+    return;
+  }
+  // @see profile_form_profile()
+  $result = db_query("SELECT * FROM {profile_fields} WHERE register = 1 AND type IN ('textfield', 'textarea', 'url')");
+  while ($field = db_fetch_object($result)) {
+    $form_info['elements'][$field->name] = check_plain($field->title);
+  }
+}
+
+/**
+ * @} End of "name mollom_profile".
  */
