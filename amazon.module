@@ -460,10 +460,21 @@ function amazon_item_clean_xml($xml) {
   }
   // Note that this one assumes we've searched with Merchant = Amazon.
   // Otherwise we can do an xpath search looking for the actual amazon listing.
-  if (!empty($xml->Offers->Offer[0]->OfferListing->Price) && (string)$xml->Offers->Offer[0]->Merchant->MerchantId == 'ATVPDKIKX0DER') {
-    $item['amazonpriceamount'] = (string)$xml->Offers->Offer[0]->OfferListing->Price->Amount;
-    $item['amazonpricecurrencycode'] = (string)$xml->Offers->Offer[0]->OfferListing->Price->CurrencyCode;
-    $item['amazonpriceformattedprice'] = (string)$xml->Offers->Offer[0]->OfferListing->Price->FormattedPrice;
+  if (!empty($xml->Offers->Offer[0]->OfferListing->Price)) {
+    $amazon_merchant_ids = array(
+      /* JP */ 'ATVPDKIKX0DER',
+      /* UK */ 'A3P5ROKL5A1OLE',
+      /* JP */ 'AN1VRQENFRJN5',
+      /* FR */ 'A1X6FK5RDHNB96',
+      /* DE */ 'A3JWKAKR8XB7XF',
+      /* CA */ 'A3DWYIK6Y9EEQB',
+    );
+    $merchant = (string)$xml->Offers->Offer[0]->Merchant->MerchantId;
+    if (in_array($merchant, $amazon_merchant_ids)) {
+      $item['amazonpriceamount'] = (string)$xml->Offers->Offer[0]->OfferListing->Price->Amount;
+      $item['amazonpricecurrencycode'] = (string)$xml->Offers->Offer[0]->OfferListing->Price->CurrencyCode;
+      $item['amazonpriceformattedprice'] = (string)$xml->Offers->Offer[0]->OfferListing->Price->FormattedPrice;
+    }
   }
 
   $participant_types = split(',', AMAZON_PARTICIPANT_TYPES);
