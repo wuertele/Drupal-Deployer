@@ -201,6 +201,7 @@ function amazon_views_data() {
   );
 
 
+  // Editorial review
   $data['amazon_item_editorial_review']['table']['group']  = t('Amazon');
   $data['amazon_item_editorial_review']['table']['join'] = array(
     // editorial review links to amazon_item directly via asin.
@@ -210,7 +211,7 @@ function amazon_views_data() {
     ),
   );
   _amazon_make_simple_text_field($data, 'amazon_item_editorial_review', 'source', 'Editorial review source', 'The source of this editorial review. Since there may be more than one review for each product, your view will produce one row per review.');
-  _amazon_make_simple_text_field($data, 'amazon_item_editorial_review', 'content', 'Editorial content', 'Content of an editorial review. Since there may be more than one review for each product, your view will produce one row per review.');
+  _amazon_make_simple_markup_field($data, 'amazon_item_editorial_review', 'content', 'Editorial content', 'Content of an editorial review. Since there may be more than one review for each product, your view will produce one row per review.');
 
   $data['amazon_item_customer_review']['table']['group']  = t('Amazon');
   $data['amazon_item_customer_review']['table']['join'] = array(
@@ -257,6 +258,18 @@ function _amazon_make_simple_text_field(&$data, $table, $column, $title, $help =
     'argument' => array('handler' => 'views_handler_argument_string'),
     'filter' => array('handler' => 'views_handler_filter_string'),
     'sort' => array('handler' => 'views_handler_sort'),
+  );
+}
+
+function _amazon_make_simple_markup_field(&$data, $table, $column, $title, $help = '') {
+  $data[$table][$column] = array(
+    'title' => $title, // The item it appears as on the UI,
+    'help' => $help, // The help that appears on the UI,
+     // Information for displaying a title as a field
+    'field' => array(
+      'handler' => 'views_handler_field_markup',
+      'format' => FILTER_FORMAT_DEFAULT,
+     ),
   );
 }
 
