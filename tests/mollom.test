@@ -1852,15 +1852,17 @@ class MollomProfileFormsTestCase extends MollomWebTestCase {
 
     // Add the three supported profile field types.
     $fields = array();
-    foreach (array('textfield', 'textarea', 'url') as $type) {
+    foreach (array('textfield', 'textarea', 'url', 'list') as $type) {
       $name = 'profile_' . drupal_strtolower($this->randomName());
       $title = $this->randomString();
-      $fields[$name] = $title;
       $edit = array(
         'category' => 'Registration',
         'title' => $title,
         'name' => $name,
         'register' => 1,
+      );
+      $fields[$name] = $edit + array(
+        'type' => $type,
       );
       $this->drupalPost('admin/user/profile/add/' . $type, $edit, t('Save field'));
     }
@@ -1869,18 +1871,21 @@ class MollomProfileFormsTestCase extends MollomWebTestCase {
     $this->setProtection('user_register', MOLLOM_MODE_ANALYSIS);
     $this->drupalLogout();
 
-    $this->drupalGet('user/register');
-    $this->assertNoCaptchaField();
-
-    $name = $this->randomName();
-    $edit = array(
-      'name' => $name,
-      'mail' => $name . '@example.com',
-    );
-    foreach ($fields as $key => $title) {
-      $edit[$key] = 'unsure';
+    // Test each supported field separately.
+    foreach ($fields as $key => $field) {
+      $this->drupalGet('user/register');
+      $this->assertNoCaptchaField();
+  
+      $name = $this->randomName();
+      $edit = array(
+        'name' => $name,
+        'mail' => $name . '@example.com',
+        $key => $field['type'] != 'url' ? 'unsure' : 'http://example.com/unsure',
+      );
+      $this->drupalPost(NULL, $edit, t('Create new account'));
+      $this->assertCaptchaField();
     }
-    $this->drupalPost(NULL, $edit, t('Create new account'));
+
     $this->postCorrectCaptcha(NULL, array(), t('Create new account'));
     $this->assertText(t('Your password and further instructions have been sent to your e-mail address.'));
     $this->assertTrue(user_load(array('name' => $name)), t('New user was found in database.'));
