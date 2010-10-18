@@ -605,7 +605,7 @@ function mollom_admin_settings(&$form_state) {
     // If there is any configuration error, then mollom_init() will have output
     // it already.
     if ($status === TRUE) {
-      drupal_set_message(t('We contacted the Mollom servers to verify your keys: the Mollom services are operating correctly. We are now blocking spam.'));
+      drupal_set_message(t('Mollom servers verified your keys. The services are operating correctly.'));
     }
   }
 
@@ -638,14 +638,14 @@ function mollom_admin_settings(&$form_state) {
 
   $form['mollom_fallback'] = array(
     '#type' => 'radios',
-    '#title' => t('Fallback strategy for protected forms'),
+    '#title' => t('When Mollom is down or unreachable'),
     // Default to treating everything as inappropriate.
     '#default_value' => variable_get('mollom_fallback', MOLLOM_FALLBACK_BLOCK),
     '#options' => array(
       MOLLOM_FALLBACK_BLOCK => t('Block all form submissions'),
       MOLLOM_FALLBACK_ACCEPT => t('Accept all form submissions'),
     ),
-    '#description' => t('In case the Mollom services are unreachable, no text analysis is performed and no CAPTCHAs are generated. If this occurs, your site will use the configured fallback strategy until the server problems are resolved. Subscribers to <a href="@pricing-url">Mollom Plus</a> receive access to <a href="@sla-url">Mollom\'s high-availability backend infrastructure</a>, not available to free users, reducing potential downtime.', array(
+    '#description' => t('In case the Mollom services are unreachable, no text analysis can be performed and no CAPTCHAs can be generated. Subscribers to <a href="@pricing-url">Mollom Plus</a> receive access to <a href="@sla-url">Mollom\'s high-availability backend infrastructure</a>, not available to free users, reducing potential downtime.', array(
       '@pricing-url' => 'http://mollom.com/pricing',
       '@sla-url' => 'http://mollom.com/standard-service-level-agreement',
     )),
@@ -656,7 +656,7 @@ function mollom_admin_settings(&$form_state) {
     '#title' => t("Link to Mollom's privacy policy on forms protected by textual analysis"),
     '#return_value' => 1,
     '#default_value' => variable_get('mollom_privacy_link', 1),
-    '#description' => t('Displays a link to the recommended <a href="@privacy-policy-url">privacy policy on mollom.com</a> on all forms that are protected via <a href="@help-url">textual analysis</a>. When disabling this option, you are required to inform visitors about data privacy through other means, as stated in the <a href="@terms-of-service-url">terms of service</a> applying to your subscription.', array(
+    '#description' => t('Displays a link to the recommended <a href="@privacy-policy-url">privacy policy on mollom.com</a> on all forms that are protected via <a href="@help-url">textual analysis</a>. When disabling this option, you are required to inform visitors about data privacy through other means, as stated in the <a href="@terms-of-service-url">terms of service</a>.', array(
       '@privacy-policy-url' => 'http://mollom.com/web-service-privacy-policy',
       '@help-url' => url('admin/help/mollom'),
       '@terms-of-service-url' => 'http://mollom.com/terms-of-service',
