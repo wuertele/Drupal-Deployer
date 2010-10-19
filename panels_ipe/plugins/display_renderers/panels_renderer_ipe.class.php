@@ -248,6 +248,7 @@ function panels_ipe_edit_control_form(&$form_state) {
   $form['buttons']['cancel'] = array(
     '#type' => 'submit',
     '#value' => t('Cancel'),
+    '#id' => 'panels-ipe-cancel',
   );
   return $form;
 }

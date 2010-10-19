@@ -61,6 +61,8 @@ Drupal.CTools.AJAX.commands.endIPE = function(data) {
   }
 };
 
+
+
 /**
  * Base object (class) definition for the Panels In-Place Editor.
  *
@@ -139,10 +141,10 @@ function DrupalPanelsIPE(cache_key, cfg) {
     });
 
     $('input:submit', ipe.control).each(function() {
-      if ($(this).val() == 'Save') {
+      if ($(this).attr('id') == 'panels-ipe-save') {
         $(this).click(ipe.saveEditing);
       };
-      if ($(this).val() == 'Cancel') {
+      if ($(this).attr('id') == 'panels-ipe-cancel') {
         $(this).click(ipe.cancelEditing);
       };
     });
