@@ -204,18 +204,24 @@ function recipe_form(&$node, $form_state) {
     '#weight' => -6,
   );
 
-  // Now we define the form elements specific to our node type.
-  $form['body'] = array(
+  // To allow for wysiwyg, we need a parent key.
+  $form['body']['body'] = array(
     '#type' => 'textarea',
     '#title' => t('Description'),
     '#default_value' => $node->body,
     '#cols' => 60,
     '#rows' => 1,
     '#description' => t('A short description or "teaser" for the recipe.'),
-    '#required' => TRUE,
-    '#weight' => -5,
-    'format' => filter_form($node->format, NULL, array('body_format'))
+    '#required' => TRUE
   );
+  // Render a filter_form to allow for wysiwyg javascript hookup.
+  $form['body']['format'] = filter_form($node->format, NULL, array('body_format'));
+  // Hide the filter form so the users won't see one of these for each textarea.
+  $form['body']['format']['#prefix'] = '<div style="display:none;">';
+  $form['body']['format']['#suffix'] = '</div>';
+  // Weight goes on parent, not value.
+  $form['body']['#weight'] = -5;
+
 
   $form['yield'] = array(
     '#type' => 'textfield',
@@ -313,16 +319,25 @@ function recipe_form(&$node, $form_state) {
     '#submit' => array('recipe_more_ingredients_submit'),
   );
 
-  $form['instructions'] = array(
+
+
+  // To allow for wysiwyg, we need a parent key.
+  $form['instructions']['instructions'] = array(
     '#type' => 'textarea',
     '#title' => t('Instructions'),
     '#default_value' => $node->instructions,
     '#cols' => 60,
     '#rows' => 10,
-    '#description' => t('Step by step instructions on how to prepare and cook the recipe.'),
-    '#weight' => -2,
-    'format' => filter_form($node->format, NULL, array('instructions_format'))
+    '#description' => t('Step by step instructions on how to prepare and cook the recipe.')
   );
+  // Render a filter_form to allow for wysiwyg javascript hookup.
+  $form['instructions']['format'] = filter_form($node->format, NULL, array('instructions_format'));
+  // Hide the filter form so the users won't see one of these for each textarea.
+  $form['instructions']['format']['#prefix'] = '<div style="display:none;">';
+  $form['instructions']['format']['#suffix'] = '</div>';
+  // Weight goes on parent, not value.
+  $form['instructions']['#weight'] = -2;
+
 
   $form["source"] = array(
     '#type' => 'textfield',
@@ -334,16 +349,24 @@ function recipe_form(&$node, $form_state) {
     '#weight' => -2,
   );
 
-  $form['notes'] = array(
+
+  // To allow for wysiwyg, we need a parent key.
+  $form['notes']['notes'] = array(
     '#type' => 'textarea',
     '#title' => t('Additional notes'),
     '#default_value' => $node->notes,
     '#cols' => 60,
     '#rows' => 5,
     '#description' => t('Optional. Describe a great dining experience relating to this recipe, or note which wine or other dishes complement this recipe.'),
-    '#weight' => -2,
-    'format' => filter_form($node->format, NULL, array('notes_format'))
   );
+  // Render a filter_form to allow for wysiwyg javascript hookup.
+  $form['notes']['format'] = filter_form($node->format, NULL, array('notes_format'));
+  // Hide the filter form so the users won't see one of these for each textarea.
+  $form['notes']['format']['#prefix'] = '<div style="display:none;">';
+  $form['notes']['format']['#suffix'] = '</div>';
+  // Weight goes on parent, not value.
+  $form['notes']['#weight'] = -2;
+
 
   $form['preptime'] = array(
     '#type' => 'select',
@@ -371,8 +394,10 @@ function recipe_form(&$node, $form_state) {
   );
 
 
-  // We don't need this because we have set individual filters on the textareas.
-  //$form['filter'] = filter_form($node->format);
+  //We still need the parent input format filter set.
+  $form['filter'] = filter_form($node->format);
+  // Move the filter form down a bit.
+  $form['filter']['#weight'] = 5;
 
   return $form;
 }
