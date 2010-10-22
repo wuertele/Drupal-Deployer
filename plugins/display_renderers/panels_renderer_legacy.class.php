@@ -206,7 +206,7 @@ class panels_renderer_legacy {
    * @param stdClass $pane
    *    A Panels pane object, as loaded from the database.
    */
-  function render_pane($pane) {
+  function render_pane(&$pane) {
     ctools_include('context');
     if (!is_array($this->display->context)) {
       $this->display->context = array();
