@@ -129,37 +129,50 @@ class MollomWebTestCase extends DrupalWebTestCase {
    *
    * This function can be (repeatedly) invoked to assert new watchdog messages.
    * All watchdog messages with a higher severity than WATCHDOG_NOTICE are
-   * considered as fails.
+   * considered as "severe".
    *
-   * @param $no_fail_expected
-   *   (optional) Boolean whether a failing watchdog message is expected.
-   *   Defaults to TRUE (no fail expected). If FALSE is passed, the logic for
-   *   assertion messages is flipped.
+   * @param $max_severity
+   *   (optional) A maximum watchdog severity level message constant that log
+   *   messages must have to pass the assertion. All messages with a higher
+   *   severity will fail. Defaults to WATCHDOG_NOTICE. If a severity level
+   *   higher than WATCHDOG_NOTICE is passed, then at least one severe message
+   *   is expected.
    *
-   * @todo Add this to D7 core.
+   * @todo Add this to Drupal core.
    */
-  protected function assertMollomWatchdogMessages($no_fail_expected = TRUE) {
+  protected function assertMollomWatchdogMessages($max_severity = WATCHDOG_NOTICE) {
     module_load_include('inc', 'dblog', 'dblog.admin');
 
     $this->messages = array();
     $result = db_query("SELECT * FROM {watchdog} WHERE type = 'mollom' ORDER BY timestamp ASC");
+
+    // The comparison logic applied in this function is a bit confusing, since
+    // the values of the watchdog severity level constants in Drupal core are
+    // negated to their actual "severity level" meaning:
+    // WATCHDOG_EMERG is 0, WATCHDOG_NOTICE is 5, WATCHDOG_DEBUG is 7.
+
+    $fail_expected = ($max_severity < WATCHDOG_NOTICE);
+    $had_severe_message = FALSE;
     while ($row = db_fetch_object($result)) {
-      // In case no fail is expected, only log messages with a severity of
-      // WATCHDOG_NOTICE or less severe messages must pass. More severe messages
-      // need to fail. The comparison logic applied here is a bit confusing,
-      // since the values of watchdog severity level constants are negated to
-      // their actual "severity level" meaning:
-      // WATCHDOG_EMERGENCY is 0, WATCHDOG_NOTICE is 5, WATCHDOG_DEBUG is 7.
-      // In case a fail is expected, all messages always pass, since we would
-      // otherwise trigger a false positive test failure if there are additional
-      // non-severe log messages.
-      if (!$no_fail_expected || $row->severity >= WATCHDOG_NOTICE) {
+      $this->messages[$row->wid] = $row;
+      // Only messages with a maximum severity of $max_severity or less severe
+      // messages must pass. More severe messages need to fail. See note about
+      // severity level constant values above.
+      if ($row->severity >= $max_severity) {
         $this->pass(_dblog_format_message($row), t('Watchdog'));
       }
       else {
         $this->fail(_dblog_format_message($row), t('Watchdog'));
       }
-      $this->messages[$row->wid] = $row;
+      // In case a severe message is expected, non-severe messages always pass,
+      // since we would trigger a false positive test failure otherwise.
+      // However, in order to actually assert the expectation, there must have
+      // been at least one severe log message.
+      $had_severe_message = ($had_severe_message || $row->severity < WATCHDOG_NOTICE);
+    }
+    // Assert that there was a severe message, in case we expected one.
+    if ($fail_expected && !$had_severe_message) {
+      $this->fail(t('Severe log message not found.'), t('Watchdog'));
     }
     // Delete processed watchdog messages.
     if (!empty($this->messages)) {
@@ -607,7 +620,7 @@ class MollomWebTestCase extends DrupalWebTestCase {
    */
   protected function drupalGet($path, array $options = array(), array $headers = array()) {
     $output = parent::drupalGet($path, $options, $headers);
-    $options += array('watchdog' => TRUE);
+    $options += array('watchdog' => WATCHDOG_NOTICE);
     $this->assertMollomWatchdogMessages($options['watchdog']);
     return $output;
   }
@@ -627,7 +640,7 @@ class MollomWebTestCase extends DrupalWebTestCase {
    */
   protected function drupalPost($path, $edit, $submit, array $options = array(), array $headers = array()) {
     $output = parent::drupalPost($path, $edit, $submit, $options, $headers);
-    $options += array('watchdog' => TRUE);
+    $options += array('watchdog' => WATCHDOG_NOTICE);
     $this->assertMollomWatchdogMessages($options['watchdog']);
     return $output;
   }
@@ -777,7 +790,8 @@ class MollomInstallationTestCase extends MollomWebTestCase {
       'mollom_public_key' => 'foo',
       'mollom_private_key' => 'bar',
     );
-    $this->drupalPost('admin/settings/mollom/settings', $edit, t('Save configuration'), array('watchdog' => FALSE));
+    $this->drupalGet('admin/settings/mollom/settings');
+    $this->drupalPost(NULL, $edit, t('Save configuration'), array('watchdog' => WATCHDOG_EMERG));
     $this->assertText(t('The configuration options have been saved.'));
     $this->assertNoText($this->fallback_message, t('Fallback message not found.'));
 
@@ -787,26 +801,26 @@ class MollomInstallationTestCase extends MollomWebTestCase {
     $this->assertNoText(t('The Mollom servers could not be contacted. Please make sure that your web server can make outgoing HTTP requests.'));
 
     // Verify requirements error about invalid API keys.
-    $this->drupalGet('admin/reports/status', array('watchdog' => FALSE));
+    $this->drupalGet('admin/reports/status', array('watchdog' => WATCHDOG_EMERG));
     $this->assertText('The configured Mollom API keys are invalid.');
 
     // Ensure unreachable servers.
     variable_set('mollom_servers', array('http://fake-host'));
 
     // Verify presence of 'network error' message.
-    $this->drupalGet('admin/settings/mollom/settings', array('watchdog' => FALSE));
+    $this->drupalGet('admin/settings/mollom/settings', array('watchdog' => WATCHDOG_EMERG));
     $this->assertText(t('The Mollom servers could not be contacted. Please make sure that your web server can make outgoing HTTP requests.'));
 
     // Ensure unreachable servers.
     variable_set('mollom_servers', array('http://fake-host'));
 
     // Verify requirements error about network error.
-    $this->drupalGet('admin/reports/status', array('watchdog' => FALSE));
+    $this->drupalGet('admin/reports/status', array('watchdog' => WATCHDOG_EMERG));
     $this->assertText(t('The Mollom servers could not be contacted. Please make sure that your web server can make outgoing HTTP requests.'));
     $this->assertNoText($this->fallback_message, t('Fallback message not found.'));
 
     // Verify that valid keys work.
-    $this->drupalGet('admin/settings/mollom/settings', array('watchdog' => FALSE));
+    $this->drupalGet('admin/settings/mollom/settings', array('watchdog' => WATCHDOG_EMERG));
     $edit = array(
       'mollom_public_key' => MOLLOM_TEST_PUBLIC_KEY,
       'mollom_private_key' => MOLLOM_TEST_PRIVATE_KEY,
@@ -1035,7 +1049,7 @@ class MollomAccessTestCase extends MollomWebTestCase {
       'mollom_public_key' => 'invalid-public-key',
       'mollom_private_key' => 'invalid-private-key',
     );
-    $this->drupalPost(NULL, $edit, t('Save configuration'), array('watchdog' => FALSE));
+    $this->drupalPost(NULL, $edit, t('Save configuration'), array('watchdog' => WATCHDOG_EMERG));
     $this->assertText(t('The configuration options have been saved.'));
     $this->assertText('The configured Mollom API keys are invalid.');
   }
@@ -1148,7 +1162,7 @@ class MollomFallbackTestCase extends MollomWebTestCase {
 
     // Check the password request form.
     // @todo Test mail sending with assertMail() now that it is available.
-    $this->drupalGet('user/password', array('watchdog' => FALSE));
+    $this->drupalGet('user/password', array('watchdog' => WATCHDOG_EMERG));
     $this->assertNoCaptchaField();
     $this->assertText($this->fallback_message);
   }
@@ -1171,7 +1185,7 @@ class MollomFallbackTestCase extends MollomWebTestCase {
     variable_set('mollom_servers', array('http://fake-host'));
 
     // Check the password request form.
-    $this->drupalGet('user/password', array('watchdog' => FALSE));
+    $this->drupalGet('user/password', array('watchdog' => WATCHDOG_EMERG));
     $this->assertNoCaptchaField();
     $this->assertNoText($this->fallback_message);
   }
@@ -1245,7 +1259,7 @@ class MollomServerListRecoveryTestCase extends MollomWebTestCase {
 
       $key_is_valid = mollom('mollom.verifyKey');
       $this->assertIdentical($key_is_valid, NETWORK_ERROR, t('The Mollom servers could not be contacted.'));
-      $this->assertMollomWatchdogMessages(FALSE);
+      $this->assertMollomWatchdogMessages(WATCHDOG_EMERG);
 
       $key_is_valid = mollom('mollom.verifyKey');
       $this->assertIdentical($key_is_valid, TRUE, t('The Mollom servers could be contacted.'));
@@ -1439,7 +1453,7 @@ class MollomBlacklistTestCase extends MollomWebTestCase {
       'context' => 'everything',
       'reason' => 'spam',
     ));
-    $this->assertMollomWatchdogMessages(FALSE);
+    $this->assertMollomWatchdogMessages(WATCHDOG_EMERG);
     $this->assertNotIdentical($result, TRUE, t('Error response for a non-existing blacklist text found.'));
   }
 
@@ -1875,7 +1889,7 @@ class MollomProfileFormsTestCase extends MollomWebTestCase {
     foreach ($fields as $key => $field) {
       $this->drupalGet('user/register');
       $this->assertNoCaptchaField();
-  
+
       $name = $this->randomName();
       $edit = array(
         'name' => $name,
@@ -2248,7 +2262,7 @@ class MollomResellerTestCase extends MollomWebTestCase {
     // Retrieve information about a non-existing site:
     $details = mollom('mollom.getSite', array('client_key' => 'bogus'));
     $this->assertEqual(xmlrpc_errno(), TRUE, t('Retrieving information from a non-existing site returned an XML-RPC error.'));
-    $this->assertMollomWatchdogMessages(FALSE);
+    $this->assertMollomWatchdogMessages(WATCHDOG_EMERG);
 
     // Verify that all sites have been deleted:
     $sites = mollom('mollom.listSites');
