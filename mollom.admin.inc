@@ -764,6 +764,7 @@ function mollom_reports_page() {
     'allowScriptAccess' => 'sameDomain',
     'type' => 'application/x-shockwave-flash',
     'pluginspage' => 'http://www.adobe.com/go/getflashplayer',
+    'wmode' => 'transparent',
   );
   $form['chart'] = array(
     '#type' => 'item',
