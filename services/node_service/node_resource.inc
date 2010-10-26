@@ -30,7 +30,11 @@ function _node_resource_retrieve($nid) {
 
 function _node_resource_create($node) {
   $node = (object)$node;
-
+  if (!isset($node->name)) {
+    //assign username to the node from $user created at auth step.
+    global $user;
+    $node->name = $user->name;
+  }
   if (!isset($node->type)) {
     return services_error('Missing node type', 406);
   }
