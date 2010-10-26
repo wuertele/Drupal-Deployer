@@ -95,7 +95,8 @@ function user_service_login($username, $password) {
   if ($user->uid) {
     // Regenerate the session ID to prevent against session fixation attacks.
     sess_regenerate();
-    module_invoke_all('user', 'login', NULL, $user);
+    $array = array();
+    user_module_invoke('login', $array, $user);
 
     $return = new stdClass();
     $return->sessid = session_id();
@@ -122,7 +123,8 @@ function user_service_logout() {
 
   // Destroy the current session:
   session_destroy();
-  module_invoke_all('user', 'logout', NULL, $user);
+  $array = array();
+  user_module_invoke('logout', $array, $user);
 
   // Load the anonymous user
   $user = drupal_anonymous_user();
