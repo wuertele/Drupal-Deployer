@@ -69,18 +69,21 @@ function _services_keyauth_alter_methods(&$methods) {
     'name' => 'sessid',
     'type' => 'string',
     'description' => t('A valid sessid.'),
+    'source' => array('param' => 'sessid'),
   );
 
   $arg_domain_time_stamp = array(
     'name' => 'domain_time_stamp',
     'type' => 'string',
     'description' => t('Time stamp used to hash key.'),
+    'source' => array('param' => 'domain_time_stamp'),
   );
 
   $arg_nonce = array(
     'name' => 'nonce',
     'type' => 'string',
     'description' => t('One-time-use nonce also used to hash key.'),
+    'source' => array('param' => 'nonce'),
   );
 
   // domain arg
@@ -88,6 +91,7 @@ function _services_keyauth_alter_methods(&$methods) {
     'name' => 'domain_name',
     'type' => 'string',
     'description' => t('A valid domain for the API key.'),
+    'source' => array('param' => 'domain_name'),
   );
 
   // api_key arg
@@ -95,6 +99,7 @@ function _services_keyauth_alter_methods(&$methods) {
     'name' => 'hash',
     'type' => 'string',
     'description' => t('An SHA-256 hash of the timestamp, domain, nonce, and method name delimited by semicolons and using the remote API key as the shared key.'),
+    'source' => array('param' => 'hash'),
   );
 
   foreach ($methods as $key => &$method) {

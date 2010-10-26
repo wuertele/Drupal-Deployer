@@ -378,7 +378,16 @@ function services_auth_invoke_custom($module, $method, &$arg1 = NULL, &$arg2 = N
 function services_method_call($method_name, $args = array(), $browsing = FALSE) {
   // Allow external modules to log the results of this service call
   module_invoke_all('services_method_call', $method_name, $args, $browsing);
-
+  
+  // If we're dealing with a resource, we need to convert it.
+  if(isset($method_name['resource_type'])) {
+    module_load_include('inc', 'services', 
+	'services.resource-translation');
+    
+    $method_name = _services_resource_controller_as_service(
+    $method_name['resource_name'], $method_name['resource_type'] , 
+    $method_name, $method_name['file']);
+  }
   if (is_array($method_name) && isset($method_name['callback'])) {
     $method = $method_name;
   }
