@@ -372,11 +372,6 @@ function mollom_test_form_submit($form, &$form_state) {
   $form_state['values']['field'][] = $form_state['values']['field']['new'];
   unset($form_state['values']['field']['new']);
 
-  // Allow modules to alter the record before saving. This is done for code
-  // consistency only.
-  // @see mollom_mollom_test_presave()
-  module_invoke_all('mollom_test_presave', $form_state['values']);
-
   // Store submission.
   $update = !empty($form_state['values']['mid']) ? 'mid' : array();
   drupal_write_record('mollom_test', $form_state['values'], $update);
@@ -403,17 +398,6 @@ function mollom_test_form_alter(&$form, &$form_state, $form_id) {
  */
 function mollom_test_mollom_form_moderation(&$form, &$form_state) {
   $form_state['values']['status'] = 0;
-}
-
-/**
- * Implements hook_mollom_test_presave() on behalf of mollom.module.
- */
-function mollom_mollom_test_presave($record) {
-  // If an existing record is published and we have session data stored for it,
-  // mark the data as moderated.
-  if (!empty($record['mid']) && $record['status']) {
-    mollom_data_moderate('mollom_test', $record['mid']);
-  }
 }
 
 /**

@@ -113,13 +113,6 @@ function mollom_schema() {
         'not null' => TRUE,
         'default' => 0,
       ),
-      'moderate' => array(
-        'description' => 'Whether the content needs to be moderated.',
-        'type' => 'int',
-        'size' => 'tiny',
-        'not null' => TRUE,
-        'default' => 0,
-      ),
       // Server response columns are NULL by default, because any default value
       // would have an unintended meaning. Also, values are stored in individual
       // columns, so as to be able to join and filter/sort on these values for
@@ -623,14 +616,16 @@ function mollom_update_6117() {
       'default' => 1,
     ));
   }
-  if (!db_column_exists('mollom', 'moderate')) {
-    db_add_field($ret, 'mollom', 'moderate', array(
-      'description' => 'Whether the content needs to be moderated.',
-      'type' => 'int',
-      'size' => 'tiny',
-      'not null' => TRUE,
-      'default' => 0,
-    ));
+  return $ret;
+}
+
+/**
+ * Remove the {mollom}.moderate column introduced in mollom_update_6117().
+ */
+function mollom_update_6118() {
+  $ret = array();
+  if (db_column_exists('mollom', 'moderate')) {
+    db_drop_field($ret, 'mollom', 'moderate');
   }
   return $ret;
 }
