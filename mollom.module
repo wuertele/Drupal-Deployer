@@ -996,14 +996,14 @@ function mollom_form_get_values($form_values, $fields, $mapping) {
     // $mapping with the actual form element value, and continue to the next
     // field. Also unset this field from $exclude_fields, so we can process the
     // remaining mappings below.
-    if (isset($exclude_fields[$field]) && drupal_validate_utf8($value)) {
+    if (isset($exclude_fields[$field])) {
       $mapping[$exclude_fields[$field]] = $value;
       unset($exclude_fields[$field]);
       continue;
     }
     // Only add form element values that are not empty.
     if (isset($value)) {
-      if (is_string($value) && drupal_validate_utf8($value) && drupal_strlen($value)) {
+      if (is_string($value) && drupal_strlen($value)) {
         $post_body[$field] = $value;
       }
       // Recurse into nested values (e.g. multiple value fields).
@@ -1011,7 +1011,7 @@ function mollom_form_get_values($form_values, $fields, $mapping) {
         // Ensure we have a flat array to implode(); form values of
         // field_attach_form() use several subkeys.
         _mollom_flatten_form_values($value);
-        if (($value = implode("\n", $value)) && drupal_validate_utf8($value)) {
+        if (($value = implode("\n", $value))) {
           $post_body[$field] = $value;
         }
       }
@@ -1029,7 +1029,7 @@ function mollom_form_get_values($form_values, $fields, $mapping) {
     foreach ($parents as $key) {
       $value = isset($value[$key]) ? $value[$key] : NULL;
     }
-    if (isset($value) && drupal_validate_utf8($value)) {
+    if (isset($value)) {
       $mapping[$property] = $value;
     }
   }
@@ -1115,6 +1115,24 @@ function mollom_form_get_values($form_values, $fields, $mapping) {
   // see the actual honeypot value in watchdog log entries.
   if (isset($form_values['mollom']['homepage']) && $form_values['mollom']['homepage'] !== '') {
     $data['honeypot'] = $form_values['mollom']['homepage'];
+  }
+
+  // Ensure that all $data values contain valid UTF-8. Invalid UTF-8 would be
+  // sanitized into an empty string, so the Mollom backend would not receive
+  // any value.
+  $valid_utf8 = TRUE;
+  foreach ($data as $key => $value) {
+    if (!drupal_validate_utf8($value)) {
+      $valid_utf8 = FALSE;
+    }
+  }
+  if (!$valid_utf8) {
+    form_set_error('mollom', t('Invalid form values. Your submission will not be accepted.'));
+    _mollom_watchdog(array(
+      'Invalid UTF-8 in form values' => array(),
+      'Data:<pre>@data</pre>' => array('@data' => $data),
+    ));
+    $data = FALSE;
   }
 
   return $data;
@@ -1478,6 +1496,10 @@ function mollom_validate_analysis(&$form, &$form_state) {
 
   // Perform textual analysis.
   $all_data = mollom_form_get_values($form_state['values'], $form_state['mollom']['enabled_fields'], $form_state['mollom']['mapping']);
+  // Cancel processing upon invalid UTF-8 data.
+  if ($all_data === FALSE) {
+    return;
+  }
   $data = $all_data;
   // Remove 'post_id' property; only used by mollom_form_submit().
   if (isset($data['post_id'])) {
@@ -1597,6 +1619,10 @@ function mollom_validate_captcha(&$form, &$form_state) {
   // takes into account the author's IP and local user id (if registered). Any
   // other values are ignored.
   $all_data = mollom_form_get_values($form_state['values'], $form_state['mollom']['enabled_fields'], $form_state['mollom']['mapping']);
+  // Cancel processing upon invalid UTF-8 data.
+  if ($all_data === FALSE) {
+    return;
+  }
   $data = array(
     'session_id' => $form_state['mollom']['response']['session_id'],
     'captcha_result' => $form_state['values']['mollom']['captcha'],
