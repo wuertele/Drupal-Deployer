@@ -1723,6 +1723,20 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
     $this->assertText($form_info['user_register']['title']);
     $this->assertTrue(mollom_form_load('user_register'), t('Form configuration exists.'));
 
+    // Retrieve a list of all permissions to verify them below.
+    $all_permissions = array();
+    foreach (module_implements('perm') as $module) {
+      // Transpose permissions into D7 format.
+      $module_permissions = array_flip(module_invoke($module, 'perm'));
+      foreach ($module_permissions as $permission => $key) {
+        $module_permissions[$permission] = array(
+          'title' => $permission,
+          'module' => $module,
+        );
+      }
+      $all_permissions += $module_permissions;
+    }
+
     // Iterate over all unconfigured forms and protect them.
     foreach ($form_info as $form_id => $info) {
       if (!mollom_form_load($form_id)) {
@@ -1744,6 +1758,11 @@ class MollomFormConfigurationTestCase extends MollomWebTestCase {
         else {
           $this->assertNoText(t('Analyze text for'));
           $this->assertNoText(t('Text fields to analyze'));
+        }
+        // Verify that bypass permissions are output.
+        $this->assertText($all_permissions['bypass mollom protection']['title']);
+        foreach ($info['bypass access'] as $permission) {
+          $this->assertText($all_permissions[$permission]['title']);
         }
         $this->drupalPost(NULL, $edit, t('Save'));
         $this->assertText(t('The form protection has been added.'));

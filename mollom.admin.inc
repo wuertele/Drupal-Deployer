@@ -12,6 +12,9 @@
 function mollom_admin_form_list() {
   _mollom_testing_mode_warning();
 
+  // Reset the cached list of protected forms.
+  mollom_form_cache(TRUE);
+
   $modes = array(
     MOLLOM_MODE_ANALYSIS => t('Text analysis'),
     MOLLOM_MODE_CAPTCHA => t('CAPTCHA'),
@@ -26,15 +29,20 @@ function mollom_admin_form_list() {
   $result = db_query("SELECT form_id FROM {mollom_form}");
   while ($form_id = db_result($result)) {
     $mollom_form = mollom_form_load($form_id);
-    $rows[] = array(
-      $mollom_form['title'],
-      t('!protection-mode (@discard)', array(
+    $row = array();
+    $row[] = $mollom_form['title'];
+    if ($mollom_form['mode'] == MOLLOM_MODE_ANALYSIS) {
+      $row[] = t('!protection-mode (@discard)', array(
         '!protection-mode' => $modes[$mollom_form['mode']],
         '@discard' => $mollom_form['discard'] ? t('discard') : t('retain'),
-      )),
-      l(t('Configure'), 'admin/settings/mollom/manage/' . $form_id),
-      l(t('Unprotect'), 'admin/settings/mollom/unprotect/' . $form_id),
-    );
+      ));
+    }
+    else {
+      $row[] = $modes[$mollom_form['mode']];
+    }
+    $row[] = l(t('Configure'), 'admin/settings/mollom/manage/' . $form_id);
+    $row[] = l(t('Unprotect'), 'admin/settings/mollom/unprotect/' . $form_id);
+    $rows[] = $row;
   }
 
   // Add a row to add a form.
@@ -131,7 +139,6 @@ function mollom_admin_configure_form(&$form_state, $mollom_form = NULL) {
       drupal_set_title(t('Configure %form-title protection', array('%form-title' => $mollom_form['title'])));
       $form['#after_build'][] = 'mollom_admin_configure_form_after_build';
 
-      // Display a list of fields for textual analysis (last step).
       $form['mollom']['form_id'] = array(
         '#type' => 'value',
         '#value' => $mollom_form['form_id'],
@@ -152,6 +159,30 @@ function mollom_admin_configure_form(&$form_state, $mollom_form = NULL) {
         '#default_value' => isset($mollom_form['mode']) ? $mollom_form['mode'] : key($modes),
       );
 
+      $all_permissions = array();
+      foreach (module_implements('perm') as $module) {
+        // Transpose permissions into D7 format.
+        $module_permissions = array_flip(module_invoke($module, 'perm'));
+        foreach ($module_permissions as $permission => $key) {
+          $module_permissions[$permission] = array(
+            'title' => $permission,
+            'module' => $module,
+          );
+        }
+        $all_permissions += $module_permissions;
+      }
+      // Prepend Mollom's global permission to the list.
+      array_unshift($mollom_form['bypass access'], 'bypass mollom protection');
+      $permissions = array();
+      foreach ($mollom_form['bypass access'] as $permission) {
+        $permissions[] = l($all_permissions[$permission]['title'], 'admin/user/permissions', array(
+          'fragment' => 'module-' . $all_permissions[$permission]['module'],
+        ));
+      }
+      $form['mollom']['mode']['#description'] = t('The protection is omitted for users having any of the permissions: !permission-list', array(
+        '!permission-list' => theme('item_list', $permissions),
+      ));
+
       if (!empty($mollom_form['elements'])) {
         // If not re-configuring an existing protection, make it the default.
         if (!isset($mollom_form['mode'])) {
@@ -169,18 +200,6 @@ function mollom_admin_configure_form(&$form_state, $mollom_form = NULL) {
           // D7 only.
           '#value' => array('spam' => 'spam'),
           '#access' => FALSE,
-        );
-
-        $form['mollom']['discard'] = array(
-          '#type' => 'radios',
-          '#title' => t('When a post is blocked'),
-          '#default_value' => $mollom_form['discard'],
-          '#options' => array(
-            1 => t('Automatically discard'),
-            0 => t('Retain for manual moderation'),
-          ),
-          // Only possible for forms supporting moderation of unpublished posts.
-          '#access' => !empty($mollom_form['moderation callback']),
         );
 
         // Form elements defined by hook_mollom_form_info() use the
@@ -209,6 +228,19 @@ function mollom_admin_configure_form(&$form_state, $mollom_form = NULL) {
           '#default_value' => $enabled_fields,
           '#required' => $mollom_form['mode'] == MOLLOM_MODE_ANALYSIS,
         );
+
+        $form['mollom']['discard'] = array(
+          '#type' => 'radios',
+          '#title' => t('When text analysis identifies spam'),
+          '#default_value' => $mollom_form['discard'],
+          '#options' => array(
+            1 => t('Automatically discard the post'),
+            0 => t('Retain the post for manual moderation'),
+          ),
+          '#required' => $mollom_form['mode'] == MOLLOM_MODE_ANALYSIS,
+          // Only possible for forms supporting moderation of unpublished posts.
+          '#access' => !empty($mollom_form['moderation callback']),
+        );
       }
 
       $form['actions']['submit'] = array(
@@ -229,9 +261,12 @@ function mollom_admin_configure_form(&$form_state, $mollom_form = NULL) {
  * #after_build callback for mollom_admin_configure_form().
  */
 function mollom_admin_configure_form_after_build($form, &$form_state) {
-  // Make field checkboxes required, if protection mode is textual analysis.
+  // Conditionally make text analysis form elements required.
   // Accounts for different add and edit form builds and rebuilds.
-  $form['mollom']['enabled_fields']['#required'] = ($form_state['values']['mollom']['mode'] == MOLLOM_MODE_ANALYSIS);
+  $required = ($form_state['values']['mollom']['mode'] == MOLLOM_MODE_ANALYSIS);
+  $form['mollom']['checks']['#required'] = $required;
+  $form['mollom']['enabled_fields']['#required'] = $required;
+  $form['mollom']['discard']['#required'] = $required;
 
   return $form;
 }
@@ -258,6 +293,7 @@ function mollom_admin_configure_form_validate(&$form, &$form_state) {
     $required = ($form_state['values']['mollom']['mode'] == MOLLOM_MODE_ANALYSIS);
     $form['mollom']['checks']['#required'] = $required;
     $form['mollom']['enabled_fields']['#required'] = $required;
+    $form['mollom']['discard']['#required'] = $required;
 
     if ($required && !array_filter($form_state['values']['mollom']['checks'])) {
       form_error($form['mollom']['checks'], t('At least one text analysis check is required.'));
