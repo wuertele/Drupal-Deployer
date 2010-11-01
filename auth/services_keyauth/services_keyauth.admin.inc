@@ -107,6 +107,18 @@ function services_keyauth_admin_keys_form() {
 }
 
 /**
+ * Validate callback for services_keyauth_admin_keys_form().
+ */
+function services_keyauth_admin_keys_form_validate($form, &$form_state) {
+  $domain = $form_state['values']['domain'];
+  $is_existing =  db_result(db_query("SELECT count(*) FROM {services_keys}
+    WHERE domain = '%s'", $domain));
+  if($is_existing) {
+    form_set_error('domain', t('Domain @domain already exists.', array('@domain', $domain)));
+  }
+}
+
+/**
  * Submit callback for services_keyauth_admin_keys_form().
  */
 function services_keyauth_admin_keys_form_submit($form, &$form_state) {
