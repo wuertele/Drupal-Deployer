@@ -2308,7 +2308,7 @@ function node_mollom_form_info($form_id) {
   $type = node_get_types('type', $nodetype);
   $form_info = array(
     // @todo This is incompatible with node access.
-    'bypass access' => array('administer nodes', 'edit any ' . $type->type . ' content'),
+    'bypass access' => array('administer nodes'),
     'bundle' => $type->type,
     'moderation callback' => 'node_mollom_form_moderation',
     'elements' => array(),
@@ -2317,6 +2317,11 @@ function node_mollom_form_info($form_id) {
       'author_name' => 'name',
     ),
   );
+  // @see node_perm()
+  if ($type->module == 'node') {
+    $form_info['bypass access'][] = 'edit any ' . $type->type . ' content';
+    $form_info['bypass access'][] = 'delete any ' . $type->type . ' content';
+  }
   // @see node_content_form()
   if ($type->has_title) {
     $form_info['elements']['title'] = check_plain($type->title_label);

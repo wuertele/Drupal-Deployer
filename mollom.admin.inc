@@ -25,10 +25,37 @@ function mollom_admin_form_list() {
     t('Protection mode'),
     array('data' => t('Operations'), 'colspan' => 2),
   );
-  $rows = array();
   $result = db_query("SELECT form_id FROM {mollom_form}");
+  $forms = array();
+  $modules = array();
   while ($form_id = db_result($result)) {
-    $mollom_form = mollom_form_load($form_id);
+    $forms[$form_id] = mollom_form_load($form_id);
+
+    // Load module information.
+    $module = $forms[$form_id]['module'];
+    if (!isset($modules[$module])) {
+      // Default to the module's machine name in case the query below does not
+      // lead to a result (which is possible, because D6 does not inform modules
+      // about uninstalled modules).
+      $modules[$module] = $module;
+      $module_info = db_result(db_query("SELECT info FROM {system} WHERE type = 'module' AND name = '%s'", $module));
+      if ($module_info) {
+        $module_info = unserialize($module_info);
+        $modules[$module] = t($module_info['name']);
+      }
+    }
+
+    $forms[$form_id]['title'] = t('!module: !form-title', array(
+      '!form-title' => $forms[$form_id]['title'],
+      '!module' => $modules[$module],
+    ));
+  }
+
+  // Sort forms by title (including module name prefix).
+  uasort($forms, 'mollom_sort_by_title');
+
+  $rows = array();
+  foreach ($forms as $form_id => $mollom_form) {
     $row = array();
     $row[] = $mollom_form['title'];
     if ($mollom_form['mode'] == MOLLOM_MODE_ANALYSIS) {
@@ -51,6 +78,19 @@ function mollom_admin_form_list() {
   }
 
   return theme('table', $header, $rows);
+}
+
+/**
+ * Array sorting callback; sorts elements by 'title' key.
+ */
+function mollom_sort_by_title($a, $b) {
+  if (!isset($b['title'])) {
+    return -1;
+  }
+  if (!isset($a['title'])) {
+    return 1;
+  }
+  return strcasecmp($a['title'], $b['title']);
 }
 
 /**
@@ -78,13 +118,16 @@ function mollom_admin_form_options() {
   $result = db_query("SELECT name, info FROM {system} WHERE type = 'module' AND name IN ($placeholders)", $modules);
   $modules = array();
   while ($row = db_fetch_object($result)) {
-    $module_info = unserialize($row->info);
-    $modules[$row->name] = t($module_info['name']);
+    $row->info = unserialize($row->info);
+    $modules[$row->name] = t($row->info['name']);
   }
 
   // Transform form information into an associative array suitable for #options.
-  foreach ($form_list as $form_id => $info) {
-    $form_list[$form_id] = $modules[$info['module']] . ': ' . $info['title'];
+  foreach ($form_list as $form_id => $mollom_form) {
+    $form_list[$form_id] = t('!module: !form-title', array(
+      '!form-title' => $mollom_form['title'],
+      '!module' => $modules[$mollom_form['module']],
+    ));
   }
   // Sort form options by title.
   asort($form_list);
