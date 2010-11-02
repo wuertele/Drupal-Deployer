@@ -411,6 +411,7 @@ function node_export_node_export($original_node, $return_code = FALSE, $iteratio
       // The function signature is: hook_node_export_node_alter(&$node, $original_node, $method)
       // Where $method is 'export'
       drupal_alter('node_export_node', $node, $original_node, 'export', $format);
+      $node = node_export_remove_recursion($node);
       $node_code = node_export_node_encode($node, $iteration, $format);
       if ($return_code) {
         return $node_code;
@@ -503,6 +504,7 @@ function node_export_theme() {
  */
 function node_export_import($node_code, $method = NULL, $redirect = TRUE, $msg_func = 'drupal_set_message', $msg_t = 't') {
   $import = node_export_node_decode($node_code);
+  $import = node_export_restore_recursion($import);
   $types_exist = node_export_import_types_check($import);
   if ($types_exist) {
     $count = 0;
@@ -963,4 +965,56 @@ function node_export_get_menu($node) {
     return $node->menu;
   }
 
+}
+
+
+/**
+ * Remove recursion problem from an object or array.
+ */
+function node_export_remove_recursion($o) {
+   static  $replace;
+   if (!isset($replace)) {
+   $replace = create_function(
+         '$m',
+         '$r="\x00{$m[1]}ecursion_";return \'s:\'.strlen($r.$m[2]).\':"\'.$r.$m[2].\'";\';'
+      );
+   }
+   if (is_array($o) || is_object($o)) {
+      $re = '#(r|R):([0-9]+);#';
+      $serialize = serialize($o);
+      if (preg_match($re, $serialize)) {
+         $last = $pos = 0;
+         while (false !== ($pos = strpos($serialize, 's:', $pos))) {
+            $chunk = substr($serialize, $last, $pos - $last);
+            if (preg_match($re, $chunk)) {
+               $length = strlen($chunk);
+               $chunk = preg_replace_callback($re, $replace, $chunk);
+               $serialize = substr($serialize, 0, $last) . $chunk . substr($serialize, $last + ($pos - $last));
+               $pos += strlen($chunk) - $length;
+            }
+            $pos += 2;
+            $last = strpos($serialize, ':', $pos);
+            $length = substr($serialize, $pos, $last - $pos);
+            $last += 4 + $length;
+            $pos = $last;
+         }
+         $serialize = substr($serialize, 0, $last) . preg_replace_callback($re, $replace, substr($serialize, $last));
+         $o = unserialize($serialize);
+      }
+   }
+   return $o;
+}
+
+
+/**
+ * Restore recursion to an object or array.
+ */
+function node_export_restore_recursion($o) {
+    return unserialize(
+        preg_replace(
+            '#s:[0-9]+:"\x00(r|R)ecursion_([0-9]+)";#',
+            '\1:\2;',
+            serialize($o)
+        )
+    );
 }
