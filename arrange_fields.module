@@ -321,6 +321,10 @@ function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_butt
     $field_name = $field_arr["name"];
     $element = &$field_arr["element"];
     
+    // We need to make sure that field_name does not contain trouble characters, like spaces.
+    // The Profile module lets you create fieldsets with spaces in it, for example.
+    $field_name = preg_replace("/[^a-zA-Z0-9]/", "-", $field_name);
+    
     if ($element["#arrange_fields_added_wrappers"] == TRUE) {
       // We have already added wrappers to this element.  This can possibly
       // happen when we are working on Webforms, based on the way the logic works,
@@ -506,10 +510,11 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
     unset($form["#submit"]);
     
     $form["#attributes"]["class"] = "arrange-fields-container";
-    
+            
     if (!$GLOBALS["arrange_fields_added_wrappers_" . $form["form_id"]["#value"]]) {
       arrange_fields_add_draggable_wrappers($form, $form_type, TRUE);
     }
+    
   }
 
   // Do we have position data for the content type (form) currently being displayed?
