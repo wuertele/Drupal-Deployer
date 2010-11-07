@@ -78,6 +78,7 @@ function amazon_schema() {
       'amazonpriceformattedprice' => array('type' => 'varchar', 'length' => 32),
       'productgroup' => array('type' => 'varchar', 'length' => 255),
       'producttypename' => array('type' => 'varchar', 'length' => 255),
+      'customerreviews_iframe' => array('type' => 'varchar', 'length' => 255),
       'invalid_asin' => array('type' => 'int', 'default' => 0),
       'timestamp' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0),
     ),
@@ -113,17 +114,6 @@ function amazon_schema() {
     'fields' => array(
       'asin' => array('type' => 'varchar', 'length' => 64, 'not null' => TRUE),
       'source' => array('type' => 'varchar', 'length' => 255, 'not null' => TRUE),
-      'content' => array('type' => 'text'),
-    ),
-    'indexes' => array('asin' => array('asin')),
-  );
-
-  $schema['amazon_item_customer_review'] = array(
-    'fields' => array(
-      'asin' => array('type' => 'varchar', 'length' => 64, 'not null' => TRUE),
-      'rating' => array('type' => 'numeric'),
-      'date' => array('type' => 'varchar', 'length' => 11),
-      'summary' => array('type' => 'text'),
       'content' => array('type' => 'text'),
     ),
     'indexes' => array('asin' => array('asin')),
@@ -340,5 +330,17 @@ function amazon_update_6014() {
   // Force all data to be updated from Amazon so that images can be properly updated.
   $ret[] = update_sql('UPDATE {amazon_item} SET timestamp = 0;');
   drupal_set_message(t('If you have enabled a default image, you may need to wait for a few cron runs (or run cron a few times) before all images are properly set up.'));
+  return $ret;
+}
+
+/**
+ * Amazon has stopped providing customer review data; now we only get an
+ * iframe link where Amazon will provide the data, so we need to drop the table
+ * that was used for customer reviews and add the new iframe link.
+ */
+function amazon_update_6015() {
+  db_add_field($ret, 'amazon_item', 'customerreviews_iframe', array('type' => 'varchar', 'length' => 255));
+  db_drop_table($ret, 'amazon_item_customer_review');
+  $ret[] = update_sql('UPDATE {amazon_item} SET timestamp = 0;');
   return $ret;
 }

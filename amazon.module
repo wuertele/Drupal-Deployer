@@ -9,7 +9,7 @@
  * save configuration and setup.
  */
 
-define('AMAZON_ECS_SCHEMA', '2009-03-31');
+define('AMAZON_ECS_SCHEMA', '2010-09-01');
 define('AMAZON_PARTICIPANT_TYPES', 'Author,Artist,Actor,Director,Creator');
 
 // Other common sizes include SwatchImage, TinyImage, and ThumbnailImage.
@@ -117,8 +117,8 @@ function amazon_preprocess_amazon_item(&$variables) {
 
   $variables['type'] = _amazon_clean_type($item['producttypename']);
   $variables['detailpageurl'] = check_url($item['detailpageurl']);
-  $variables['editorialreview'] = !empty($item['editorialreviews']) ? filter_xss($item['editorialreviews'][0]['content']) : '';
-  $variables['customerreview'] = !empty($item['customerreviews']) ? check_markup($item['customerreviews'][0]['content']) : '';
+  $variables['editorialreview'] = !empty($item['editorialreviews']) ? check_markup($item['editorialreviews'][0]['content']) : '';
+  $variables['customerreviews_iframe'] = !empty($item['customerreviews_iframe']) ? check_url($item['customerreviews_iframe']) : '';
   $variables['invalid_asin'] = !empty($item['invalid_asin']) ? 1 : 0;
 
   if (!empty($variables['theatricalreleasedate'])) {
@@ -525,14 +525,7 @@ function amazon_item_clean_xml($xml) {
 
   // And the customer reviews.
   if (isset($xml->CustomerReviews)) {
-    foreach($xml->CustomerReviews->Review as $data) {
-      $item['customerreviews'][] = array(
-        'rating' => (string)$data->Rating,
-        'date' => (string)$data->Date,
-        'summary' => (string)$data->Summary,
-        'content' => (string)$data->Content,
-      );
-    }
+    $item['customerreviews_iframe'] = (string)$xml->CustomerReviews->IFrameURL;
   }
 
   // Give other modules an opportunity to pull out other bits of Amazon data
@@ -625,16 +618,6 @@ function amazon_item_insert($item) {
       }
     }
   }
-  // Save the customer reviews if they exist.
-  if (in_array('customer_reviews', variable_get('amazon_core_data', array('creators', 'images')))) {
-    if (isset($item['customerreviews'])) {
-      foreach($item['customerreviews'] as $data) {
-        $review = array('asin' => $item['asin'], 'rating' => $data['rating'], 'date' => $data['date'], 'summary' => $data['summary'], 'content' => $data['content']);
-        drupal_write_record('amazon_item_customer_review', $review);
-      }
-    }
-  }
-
   module_invoke_all('amazon_item_insert', $item);
 }
 
@@ -650,7 +633,6 @@ function amazon_item_delete($asin) {
   db_query("DELETE FROM {amazon_item_participant} WHERE asin = '%s'", $asin);
   db_query("DELETE FROM {amazon_item_image} WHERE asin = '%s'", $asin);
   db_query("DELETE FROM {amazon_item_editorial_review} WHERE asin = '%s'", $asin);
-  db_query("DELETE FROM {amazon_item_customer_review} WHERE asin = '%s'", $asin);
 }
 
 /**
