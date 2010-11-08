@@ -7,11 +7,27 @@
  */
 
 /**
+ * Implementation of hook_menu().
+ */
+function asin_menu() {
+  $items = array();
+  $items['asin/autocomplete'] = array(
+    'page callback' => 'asin_autocomplete_callback',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK
+  );
+  return $items;
+}
+
+/**
  * Implementation of hook_theme().
  */
 function asin_theme() {
   return array(
     'asin_text' => array(
+      'arguments' => array('element'),
+    ),
+    'asin_autocomplete' => array(
       'arguments' => array('element'),
     ),
     'asin_formatter_default' => array(
@@ -207,7 +223,7 @@ function theme_asin_formatter_default($element) {
 
 /**
  * Theme function for 'thumbnail' asin field formatter, appropriate for
- * product hilighting and display.
+ * product highlighting and display.
  */
 function theme_asin_formatter_thumbnail($element) {
   $asin = trim($element['#item']['asin']);
@@ -219,7 +235,7 @@ function theme_asin_formatter_thumbnail($element) {
 
 /**
  * Theme function for 'full' asin field formatter, appropriate for
- * product hilighting and display.
+ * product highlighting and display.
  */
 function theme_asin_formatter_details($element) {
   $asin = trim($element['#item']['asin']);
@@ -257,8 +273,16 @@ function theme_asin_formatter_inline($element) {
  */
 function asin_widget_info() {
   return array(
+    'asin_autocomplete' => array(
+      'label' => t('Product name autocomplete'),
+      'field types' => array('asin'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+      'callbacks' => array(
+        'default value' => CONTENT_CALLBACK_DEFAULT,
+      ),
+    ),
     'asin_text' => array(
-      'label' => t('Text field'),
+      'label' => t('ASIN or ISBN Text field'),
       'field types' => array('asin'),
       'multiple values' => CONTENT_HANDLE_CORE,
       'callbacks' => array(
@@ -282,6 +306,12 @@ function asin_elements() {
     'asin_text' => array(
       '#input' => TRUE,
       '#process' => array('asin_text_process'),
+    ),
+    'asin_autocomplete' => array(
+      '#input' => TRUE,
+      '#process' => array('asin_autocomplete_process'),
+      '#autocomplete_path' => FALSE,
+      '#value_callback' => 'asin_autocomplete_value',
     ),
   );
 }
@@ -352,6 +382,41 @@ function asin_text_process($element, $edit, $form_state, $form) {
   return $element;
 }
 
+/**
+ * Process an autocomplete widget.
+ */
+function asin_autocomplete_process($element, $edit, $form_state, $form) {
+  $element = asin_text_process($element, $edit, $form_state, $form);
+  $asin_key = $element['#columns'][0];
+  $element[$asin_key]['#autocomplete_path'] = 'asin/autocomplete';
+  $element[$asin_key]['#element_validate'][] = 'asin_autocomplete_validate';
+  $element[$asin_key]['#maxlength'] = 256;
+  return $element;
+}
+
+/**
+ * Autocomplete callback for the asin_autocomplete widget.
+ */
+function asin_autocomplete_callback($string = '') {
+  $items = $matches = array();
+  // Search Amazon.
+  $parameters = array(
+    'ResponseGroup' => 'Small',
+    'SearchIndex' => 'Blended',
+    'Keywords' => urlencode($string)
+  );
+  $results = amazon_http_request('ItemSearch', $parameters);
+  // Process the results.
+  foreach($results->Items->Item as $xml) {
+    $items[(string) $xml->ASIN] = (string) $xml->ItemAttributes->Title;
+  }
+  // Create our response.
+  foreach ($items as $asin => $title) {
+    // Add a class wrapper for a few required CSS overrides.
+    $matches[$title . ' [asin:' . $asin . ']'] = '<div class="reference-autocomplete">'. $title . '</div>';
+  }
+  drupal_json($matches);
+}
 
 /**
  * Validate an select element.
@@ -361,6 +426,23 @@ function asin_text_process($element, $edit, $form_state, $form) {
 function asin_text_validate($element, &$form_state) {
   array_pop($element['#parents']);
   form_set_value($element, $form_state['values'][$element['#field_name']], $form_state);
+}
+
+/**
+ * Validate the autocomplete widget.
+ *
+ * This corrects the value (we want just the ASIN, not the whole title).
+ */
+function asin_autocomplete_validate($element, &$form_state) {
+  $value = $element['#value'];
+  $asin = NULL;
+  if (preg_match('!.*\[asin\:([a-zA-Z0-9]*)\]!', $value, $matches)) {
+    $asin = $matches[1];
+  }
+  else {
+    $asin = $value;
+  }
+  form_set_value($element, $asin, $form_state);
 }
 
 
@@ -427,5 +509,9 @@ function asin_feeds_set_target($node, $target, $value) {
   }
 
   $node->$target = $field;
+}
+
+function theme_asin_autocomplete($element) {
+  return theme_asin_text($element);
 }
 
