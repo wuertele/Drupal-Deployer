@@ -17,7 +17,7 @@ function node_export_drush_command() {
     'description' => "Export nodes by Node ID.",
     'arguments' => array(
       'nids' => "A list of space-separated node IDs to export.",
-    ),    
+    ),
     'options' => array(
       '--file' => "The filename of the output file.  If supplied, the node code will be exported to that file, otherwise it will export to stdout.",
       '--status' => "Filter for 'status'; A boolean value (0 or 1) indicating whether the node is published (visible to non-administrators).",
@@ -28,11 +28,11 @@ function node_export_drush_command() {
       '--type' => "Filter for 'type'; The machine-readable name (e.g. story or page) of the type of this node.",
     ),
     'examples' => array(
-      'drush node-export-export 45 46 47 --file=filename' => 
+      'drush node-export-export 45 46 47 --file=filename' =>
         "Export nodes with node IDs 45, 46, and 47 to the file with the supplied filename.",
-      'drush node-export-export --type=story,page --file=filename' => 
+      'drush node-export-export --type=story,page --file=filename' =>
         "Export nodes of type story and page to the file with the supplied filename.",
-      //'drush node-export-export 45 46 47 > filename' => 
+      //'drush node-export-export 45 46 47 > filename' =>
       //  "Export nodes with node IDs 45, 46, and 47 to the file with the supplied filename.  NOTE: Error messages may be output to the file.",
     ),
   );
@@ -44,11 +44,11 @@ function node_export_drush_command() {
       '--file' => "The filename of the input file.  If supplied, the node code will be imported from that file, otherwise it will import to stdin.",
     ),
     'examples' => array(
-      'drush node-export-import --file=filename' => 
+      'drush node-export-import --file=filename' =>
         'Import nodes from the file with the given filename.',
-      'drush node-export-import --uid=2 --file=filename' => 
+      'drush node-export-import --uid=2 --file=filename' =>
         "Import nodes from the file with the given filename.  The author of the nodes will be set to the user that has the user ID of 2.",
-      //'drush node-export-import < filename' => 
+      //'drush node-export-import < filename' =>
       //  'Import nodes from the file with the given filename.',
     ),
   );
@@ -58,14 +58,14 @@ function node_export_drush_command() {
     'description' => "Export all nodes of the given node type.",
     'arguments' => array(
       'type' => "The node type to export.",
-    ),    
+    ),
     'options' => array(
       '--file' => "The filename of the output file.  If supplied, the node code will be exported to that file, otherwise it will export to stdout.",
     ),
     'examples' => array(
-      'drush node-export-type story --file=filename' => 
+      'drush node-export-type story --file=filename' =>
         "Export all nodes of type 'story' to the file with supplied filename.",
-      //'drush node-export-type story > filename' => 
+      //'drush node-export-type story > filename' =>
       //  "Export all nodes of type 'story' to the file with supplied filename.  NOTE: Error messages may be output to the file.",
     ),
   );
@@ -124,7 +124,7 @@ function node_export_drush_help($section) {
         }
         else {
           $last_alias = array_pop($command_info['node_export command aliases']);
-          $output .= "\nThis command can be called by it's aliases; "
+          $output .= "\nThis command can be called by it's aliases; ";
           $output .= implode(", ", $command_info['node_export command aliases']);
           $output .= ", or ". $last_alias .".";
         }
@@ -228,13 +228,13 @@ function node_export_drush_callback_export() {
   $data = node_export_node_bulk($nids, TRUE);
 
   $filename = drush_get_option('file');
-  
+
   if ($filename) {
     // Output data to file. Note this only takes a flat filename for the current directory.
     // If file exists, ask for whether to overwrite.
     if (file_exists($filename)) {
       if (!drush_confirm(dt("File $filename exists. Do you really want to overwrite?"))) {
-        return; 
+        return;
       }
     }
     // Write the file.
@@ -292,15 +292,15 @@ function node_export_drush_callback_export_type($type) {
   if ($type == NULL) {
     drush_set_error('DRUSH_NOT_COMPLETED', "Please supply the node type.");
   }
-  
+
   $nids = array();
   $sql = "SELECT nid FROM {node} WHERE type = '%s'";
   $rs = db_query($sql, $type);
-  
+
   while ($row = db_fetch_array($rs)) {
     $nids[] = $row['nid'];
   }
-  
+
   if (!empty($nids)) {
     call_user_func_array('node_export_drush_callback_export', $nids);
   }
