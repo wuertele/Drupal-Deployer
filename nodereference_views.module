@@ -29,6 +29,9 @@ function nodereference_views_theme($existing, $type, $theme, $path) {
     'nodereference_views_formatter_views' => array(
       'arguments' => array('element'),
     ),
+    'nodereference_views_formatter_views_single' => array(
+      'arguments' => array('element' => NULL),
+    ),
   );
 }
 
@@ -37,13 +40,21 @@ function nodereference_views_theme($existing, $type, $theme, $path) {
  * Implementation of hook_field_formatter_info().
  */
 function nodereference_views_field_formatter_info() {
-  return array(
+  $formatters = array(
     'views' => array(
       'label' => t('View'),
       'field types' => array('nodereference'),
       'multiple values' => CONTENT_HANDLE_MODULE,
     ),
   );
+  if (module_exists('content_multigroup')) {
+    $formatters['views_single'] = array(
+      'label' => t('View (for multigroups)'),
+      'field types' => array('nodereference'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    );
+  }
+  return $formatters;
 }
 
 /**
@@ -70,6 +81,34 @@ function theme_nodereference_views_formatter_views($element) {
   // Don't use views_embed_view so we can return an error if the view can't be found.
   $view_name  = $element['#field_name'];
   $args[]     = $arg_nids;
+  $args[]     = $element['#node']->nid;
+
+  $view = views_get_view($view_name);
+  if (!$view) {
+    return "Error: view $view_name not found.";
+  }
+
+  return $view->preview('default', $args);
+}
+
+/**
+ * Formatter theme function.
+ *
+ * This looks for a view with the same name as the field, eg 'field_my_noderef'
+ * and passes it the node id that the CCK field gives us.
+ * A view used for this should have the 'Node: nid' argument in first place
+ * The second argument is the displayed node's nid.
+ */
+function theme_nodereference_views_formatter_views_single($element) {
+  // We get here even if the field is empty, so check that the value is not a proper nid
+  // and return nothing so the label is not shown.
+  if (!$element['#item']['nid']) {
+    return;
+  }
+
+  // Don't use views_embed_view so we can return an error if the view can't be found.
+  $view_name  = $element['#field_name'];
+  $args[]     = $element['#item']['nid'];
   $args[]     = $element['#node']->nid;
 
   $view = views_get_view($view_name);
