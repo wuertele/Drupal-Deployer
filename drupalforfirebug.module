@@ -157,11 +157,9 @@ function drupalforfirebug_get_sql_log() {
   if (!module_exists('devel')) {
     $output .= '<legend>' . t('Devel Module is Not Installed') . '</legend>';
     $output .= t('Please install and enable the Devel Module to display the SQL queries.');
-    return $output;
   } elseif (!variable_get('dev_query', 0)) {
     $output .= '<legend>' . t('Query Logging is Not Enabled') . '</legend>';
     $output .= t('Please enable "Collect query info" in the Devel Module Settings (admin/settings/devel) to use this feature.');
-    return $output;
   } else {
     global $queries;
     list($counts, $query_summary) = devel_query_summary();
@@ -179,7 +177,7 @@ function drupalforfirebug_get_sql_log() {
 function drupalforfirebug_execute_form() {
   $form['code'] = array(
     '#type' => 'textarea',
-    '#description' => t('Enter PHP code for execution. Do not use <code>&lt;?php ?&gt;</code> tags.')
+    '#description' => t('Enter PHP code for execution. Do not use <code>&#60;?php ?&#62;</code> tags.')
   );
   $form['op'] = array('#type' => 'submit', '#value' => t('Execute'));
   $form['#redirect'] = FALSE;
@@ -189,23 +187,26 @@ function drupalforfirebug_execute_form() {
 }
 
 function drupalforfirebug_get_php_exec_area() {
-  $output = '<iframe width=100% frameborder=0 height=100% style="margin-bottom:-3px;" src="' . url('admin/firebug/exec', array('absolute' => TRUE)) . '"></iframe>';
+  #$output = '<iframe style="width=100%;frameborder=0;height=100%;margin-bottom:-3px;" src="' . url('admin/firebug/exec', array('absolute' => TRUE)) . '"></iframe>';
+  $output = '<object style="width:100%;frameborder=0;height=100%;margin-bottom:-3px;" type="text/html" data="' . url('admin/firebug/exec', array('absolute' => TRUE)) . '"></object>';
   return $output;
 }
 
 function drupalforfirebug_get_php_exec($code = NULL) {
-  $output = '<fieldset>';
+  $output = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">';
+  $output .= '<html><head><title>Execute PHP Code</title></head><body>';
+  $output .= '<fieldset>';
   if (!user_access('Execute Firebug PHP')) {
     $output .= '<legend>' . t('Execute Firebug PHP') . '</legend>';
     $output .= t('You do not have the proper permissions to use this functionality.');
-    $output .= '</fieldset>';
+    $output .= '</fieldset></body></html>';
     print $output;
     exit();
   } else {
     if (!$code) {
       $output .= '<legend>' . t('Execute Firebug PHP') . '</legend>';
       $output .= drupal_get_form('drupalforfirebug_execute_form');
-      $output .= '</fieldset>';
+      $output .= '</fieldset></body></html>';
       print $output;
       exit();
     } else {
@@ -222,7 +223,7 @@ function drupalforfirebug_get_php_exec($code = NULL) {
       $output .= '<fieldset>';
       $output .= '<legend>' . t('Execute Firebug PHP') . '</legend>';
       $output .= drupal_get_form('drupalforfirebug_execute_form');
-      $output .= '</fieldset>';
+      $output .= '</fieldset></body></html>';
       print $output;
       exit();
     }
@@ -317,24 +318,24 @@ function drupalforfirebug_array_row_build($key, $value, $style, $depth) {
   }
   switch ($style) {
     case 'ADDED':
-      $color = '<font color="green">';
-      $colorend = '</font>';
+      $color = '<span style="color: green;">';
+      $colorend = '</span>';
       break;
     case 'REMOVED':
-      $color = '<font color="red">';
-      $colorend = '</font>'; 
+      $color = '<span style="color: red;">';
+      $colorend = '</span>'; 
       break;
     case 'SAME':
-      $color = '<font color="black">';
-      $colorend = '</font>';
+      $color = '<span style="color: red;">';
+      $colorend = '</span>';
       break;
     case 'DIFFERENT':
-      $color = '<font color="orange">';
-      $colorend = '</font>';
+      $color = '<span style="color: orange;">';
+      $colorend = '</span>';
       break;
     default: // suppose to be for objects
-      $color = '<font color="grey">'.$style;
-      $colorend = '</font>';
+      $color = '<span style="color: grey;">'.$style;
+      $colorend = '</span>';
       break;
   }
 
@@ -347,7 +348,7 @@ function drupalforfirebug_array_row_build($key, $value, $style, $depth) {
     if (is_array($value)) {
       $output .= "<div>$spacing $color [$key] => array ( $colorend </div>";
     } else {
-      $output .= "<div>$spacing <font color=grey> [$key] => stdClass ($colorend </div>";
+      $output .= '<div>$spacing <span style="color: grey;"> [' . $key .'] => stdClass (' . $colorend .'</div>';
     }
     $output .= drupalforfirebug_array_highlight_code($value, $depth + 1);
     $output .= "<div>$spacing $color ) $colorend </div>";
