@@ -71,6 +71,22 @@ function arrange_fields_menu() {
     "type" => MENU_LOCAL_TASK,
     "weight" => 2,
   );
+  $items["admin/settings/arrange-fields/export"] = array(
+    "title" => "Export",
+    "page callback" => "drupal_get_form",
+    "page arguments" => array("arrange_fields_export_form"),
+    "access arguments" => array("administer arrange fields"),
+    "type" => MENU_LOCAL_TASK,
+    "weight" => 3,
+  );
+  $items["admin/settings/arrange-fields/import"] = array(
+    "title" => "Import",
+    "page callback" => "drupal_get_form",
+    "page arguments" => array("arrange_fields_import_form"),
+    "access arguments" => array("administer arrange fields"),
+    "type" => MENU_LOCAL_TASK,
+    "weight" => 4,
+  );
   
   
   
@@ -190,6 +206,122 @@ function arrange_fields_settings_form() {
   );
   
   return system_settings_form($form);
+}
+
+
+
+/**
+ * This function simply provides textareas for the user to copy/paste from
+ * which will allow them to export the arrangement of their forms.
+ * It does not really need to use the form API, since there is no submission,
+ * but I am doing this to make it easier to program.
+ *
+ */
+function arrange_fields_export_form() {
+  $form = array();
+  
+  
+  // We need to look for every type of form in which we have arrangement data on.
+  // The easiest way to do this is to look through the variables table.
+  $res = db_query("SELECT * FROM {variable}
+                   WHERE name LIKE 'arrange_fields_position_data_%%' 
+                   ORDER BY name ");
+  while ($cur = db_fetch_array($res)) {
+    $db_name = $cur["name"];
+    
+    // Convert it to a plain string.
+    if (!$db_value = unserialize($cur["value"])) {
+      continue;
+    }
+    
+    // Make sure we actually contain arrangement data, and not just an
+    // empty string.
+    if (trim($db_value) == "") {
+      continue;
+    }
+    
+    // Get the form_id from the name.
+    $form_id = str_replace("arrange_fields_position_data_", "", $db_name);
+
+    // If this is a webform, verify that it still exists and has not been
+    // deleted.
+    if (strstr($form_id, "webform_client_form")) {
+      $nid = str_replace("webform_client_form_", "", $form_id);
+      if (!$node = node_load($nid)) {
+        continue;
+      }
+      // Otherwise, grab the title so we can append that to the form_id.
+      $form_id .= " (Webform: $node->title)";
+    }
+    
+    
+    $value = $db_name . "~~!af-name-sep!~~" . $db_value . "~~!af-val-sep!~~";
+    
+    $form[$db_name] = array(
+      "#title" => $form_id,
+      "#type" => "textarea",
+      "#default_value" => $value,
+    );
+    
+  }  
+  
+  return $form;
+}
+
+
+
+/**
+ * We will use this form to let users paste in definitions for form arrangements
+ * which they got from the "export" screen.
+ *
+ */
+function arrange_fields_import_form() {
+  $form = array();
+
+  $form["import"] = array(
+    "#title" => "Import",
+    "#type" => "textarea",
+    "#rows" => 15,
+    "#description" => t("Use this box to import definitions from an Arrange Fields export.
+                       You may paste in more than one definition at a time."),
+    
+  );
+  
+  $form["submit"] = array(
+    "#type" => "submit",
+    "#value" => "Import",
+  );
+  
+  return $form;
+}
+
+
+
+/**
+ * This function will handle the actual importing of arrange fields definitions.
+ *
+ */
+function arrange_fields_import_form_submit($form, $form_state) {
+  
+  $import = trim($form_state["values"]["import"]);
+
+  $definitions = explode("~~!af-val-sep!~~", $import);
+  
+  foreach ($definitions as $definition) {
+    $temp = explode("~~!af-name-sep!~~", $definition);
+    $db_name = trim($temp[0]);
+    $db_value = trim($temp[1]);
+    
+    if ($db_name == "") {
+      continue;
+    }
+        
+    // Let's use variable_set to import the information.
+    variable_set($db_name, $db_value);
+    drupal_set_message($db_name . " " . t("definition was imported successfully."));
+  }
+  
+  
 }
 
 
@@ -1144,8 +1276,8 @@ function arrange_fields_position_form($form_state, $form_id, $form_type) {
   // position data for all our fields.
   $form["arrange_fields_position_data"] = array(
     "#type" => "textfield",
-    "#maxlength" => 999999999999,  // trying to make it basically infinite.
-  );
+    "#maxlength" => 999999999999  // trying to make it basically infinite.
+  );                
   
   $form["save"] = array(
     "#type" => "submit",
