@@ -124,7 +124,7 @@ function arrange_fields_menu() {
     // to support.  Having both here shouldn't harm anything.
     
     // This is for webform 2.9
-    $items["node/%/edit/arrange-fields"] = array(
+    $items["node/%webform_menu/edit/arrange-fields"] = array(
       "title" => "Arrange fields",
       "page callback" => "arrange_fields_display_webform",
       "page arguments" => array(1),
@@ -135,7 +135,7 @@ function arrange_fields_menu() {
     
     
     // This is for webform 3.x.
-    $items["node/%/webform/arrange-fields"] = array(
+    $items["node/%webform_menu/webform/arrange-fields"] = array(
       "title" => "Arrange fields",
       "page callback" => "arrange_fields_display_webform",
       "page arguments" => array(1),
@@ -473,6 +473,7 @@ function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_butt
       continue;
     }
 
+    
     $field_type = $element["#type"];
     $edit_link = "";
     $edit_link = "<div class='arrange-fields-control-handle'>";
@@ -514,12 +515,18 @@ function arrange_fields_add_draggable_wrappers(&$form, $form_type, $disable_butt
     $css_class = "draggable-form-item";
     $css_id = "edit-$field_name-draggable-wrapper";
 
-    // Are we dealing with a fieldset?     
-    if ($element["#type"] == "fieldset") {
+    // Are we dealing with a fieldset?**     
+    if ($element["#type"] == "fieldset" && $field_name != "captcha") {
       // Fieldsets get an extra css_class and the ID changes.
       $css_class .= " draggable-form-item-fieldset";
       $css_id = "edit-$field_name-fieldset-draggable-wrapper";        
     }
+    // **The bit about captcha is a hack put in to ensure that Captcha is NOT considered a fieldset.
+    // It seems that at different times during form rendering, the #type property
+    // for it sometimes has "fieldset" and sometimes does not, possibly depending
+    // on other modules installed in the system.  To make it consistent, we are not
+    // going to see it as a fieldset, as that is how it appears for most systems.
+    
     
     // Set the prefix and suffix for this field such that we 
     // wrap a div around it which the jquery can lock onto later to
@@ -1137,7 +1144,16 @@ function arrange_fields_render_dialogs() {
  */
 function arrange_fields_display_webform($nid) {
 
-  $webform_node = node_load($nid);
+  if (is_object($nid)) {
+    // We were passed a node by the menu, so sort out
+    // what is supposed to be the node, and what the nid.
+    $webform_node = $nid;
+    $nid = $webform_node->nid;
+  }
+  else {  
+    $webform_node = node_load($nid);
+  }
+  
   $form_id = "webform_client_form_$nid";
   $form_type = "webform";
   
