@@ -27,7 +27,7 @@ function node_export_drush_command() {
       '--language' => "Filter for 'language'; The language code (e.g. de or en-US) of this node.",
       '--type' => "Filter for 'type'; The machine-readable name (e.g. story or page) of the type of this node.",
       '--sql' => "Filter by SQL (EXPERIMENTAL); An SQL query string that returns nids (e.g. \"SELECT nid FROM nodes WHERE nid < 10\").",
-      '--php' => "Filter by PHP (EXPERIMENTAL); PHP that prints, or function that returns, an array or CSV string of nids (e.g. \"custom_get_my_nids();\"). Don't include PHP tags.",
+      '--php' => "Filter by PHP (EXPERIMENTAL); PHP that prints or returns, an array or CSV string of nids (e.g. \"custom_get_my_nids();\"). Don't include PHP tags.",
     ),
     'examples' => array(
       'drush node-export-export 45 46 47 --file=filename' =>
