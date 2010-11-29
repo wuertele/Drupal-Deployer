@@ -128,7 +128,7 @@ function hook_node_export_node_decode_alter(&$return, $string) {
  * @param $format
  *   A string indicating what the export format is, and whether to do anything.
  */
-function hook__node_export_node_bulk_encode_alter(&$node_code, $nodes, $format) {
+function hook_node_export_node_bulk_encode_alter(&$node_code, $nodes, $format) {
   // your code here
 
   /*
