@@ -144,3 +144,20 @@ function hook_node_export_node_bulk_encode_alter(&$node_code, $nodes, $format) {
    node_export, don't replace that.
   */
 }
+
+/**
+ * Register a format handler, for exporting code using other methods.
+ *
+ * @return
+ *   An array keyed by format names containing an array with keys #title and
+ *   #module, where the value for #title is the display name of the format, and
+ *   the value for #module is the module that implements it.
+ */
+function hook_node_export_format_handlers() {
+  return array(
+    'format_short_name' => array(
+      '#title' => t('Format Title'),
+      '#module' => 'format_module_name',
+    ),
+  );
+}
