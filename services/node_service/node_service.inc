@@ -203,7 +203,9 @@ function node_service_save($edit) {
 function node_service_save_access($node) {
   $node = (array) $node;
   if (isset($node['nid'])) {
-    return node_access('update', $node);
+    // Grab the existing node information and use that for the access check.
+    $old_node = node_load($node['nid']);
+    return node_access('update', $old_node);
   }
   return node_access('create', $node['type']);
 }
