@@ -10,28 +10,29 @@
  */
 
 class views_handler_field_amazon_image extends views_handler_field {
-  function options(&$options) {
-    parent::options($options);
-    $options['image_size'] = 'smallimage';
-    $options['link_format'] = 'amazon';
+  function option_definition() {
+    $options = parent::option_definition();
+    $options['image_size'] = array('default' => 'smallimage');
+    $options['link_format'] = array('default' => 'amazon');
+    $options['presentation_format'] = array('default' => 'markup');
+    return $options;
   }
-
   /**
    * Override init function to provide generic option to link to node.
    */
   function init(&$view, &$data) {
     parent::init($view, $data);
     if (!empty($data['image_size'])) {
-      //$this->additional_fields[] = 'size';
-      $this->additional_fields[] = 'height';
-      $this->additional_fields[] = 'width';
+      $this->additional_fields['height'] = 'height';
+      $this->additional_fields['width'] = 'width';
     }
     if (!empty($data['link_format']) && $data['link_format'] == 'amazon') {
       $this->additional_fields['detailpageurl'] = array(
         'table' => 'amazon_item', 'field' => 'detailpageurl', 'value' => 'amazon_item_detailpageurl'
       );
     }
-    $this->additional_fields[] = 'asin';
+    $this->additional_fields['asin'] = 'asin';
+    $this->additional_fields['url'] = 'url';
   }
 
   function ensure_my_table() {
@@ -86,33 +87,27 @@ class views_handler_field_amazon_image extends views_handler_field {
       ),
       '#default_value' => !empty($this->options['presentation_format']) ? $this->options['presentation_format'] : 'markup',
     );
-    if ($this->view->base_table == 'node') {
-      $form['link_format']['#options']['node'] = t('A link to the node the product is associated with');
-    }
   }
 
   function render($values) {
     // We may not have a URL. It's not guaranteed that Amazon will give us one.
-    if (empty($values->{$this->table_alias . '_url'})) {
-      return;
+    if (empty($values->{$this->aliases['url']})) {
+          return;
     }
     $attributes = array(
-      'height' => $values->{$this->table_alias . '_height'},
-      'width' => $values->{$this->table_alias . '_width'},
+      'height' => $values->{$this->aliases['height']},
+      'width' => $values->{$this->aliases['width']},
     );
 
     // Choose presentation style
     if ($this->options['presentation_format'] == 'markup') {
-      $image = theme('image', $values->{$this->table_alias . '_url'}, NULL, NULL, $attributes, FALSE);
+      $image = theme('image', $values->{$this->aliases['url']}, NULL, NULL, $attributes, FALSE);
     } else {
-      $image = $values->{$this->table_alias . '_url'};
+      $image = $values->{$this->aliases['url']};
     }
     switch($this->options['link_format']) {
       case 'plain':
         return $image;
-        break;
-      case 'node':
-        return l($image, 'node/'. $values->nid, array('html' => TRUE));
         break;
       case 'amazon':
         if (!empty($values->{$this->aliases['detailpageurl']})) {

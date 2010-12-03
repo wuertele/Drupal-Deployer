@@ -187,7 +187,7 @@ function amazon_views_data() {
   // image
   $data['amazon_item_image']['product_image'] = array(
     'title' => t('Product image'), // The item it appears as on the UI,
-    'help' => t("A photo of the Amazon product in question."), // The help that appears on the UI,
+    'help' => t("An image of the Amazon product."), // The help that appears on the UI,
      // Information for displaying a title as a field
     'field' => array(
       'field' => 'url', // the real field
