@@ -401,12 +401,16 @@ function services_method_call($method_name, $args = array(), $browsing = FALSE) 
 
   // Check for missing args
   $hash_parameters = array();
+  $missing_parameters = array();
   foreach ($method['args'] as $key => $arg) {
     if (isset($arg['optional']) && !$arg['optional']) {
       if (!isset($args[$key]) && !is_array($args[$key]) && !is_bool($args[$key])) {
-        return services_error(t('Missing required arguments.'), 406);
+        $missing_parameters[] = $arg['name'];
       }
     }
+  }
+  if (!empty($missing_parameters)) {
+    return services_error(t('Missing required arguments: @missing', array('@missing' => implode(', ', $missing_parameters))), 406);
   }
 
   // Check authentication
