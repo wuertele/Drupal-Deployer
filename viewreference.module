@@ -442,7 +442,7 @@ function viewreference_select_process($element, $edit, $form_state, $form) {
     '#default_value' => isset($element['#value'][$element['#columns'][0]]) ? $element['#value'][$element['#columns'][0]] : '',
     '#element_validate' => array('viewreference_select_validate'),
     '#prefix' => t(
-      '<div class="viewreference-wrapper" id="viewreference-!field_id">', 
+      '<div class="viewreference-wrapper" id="viewreference-!field_id">',
       array("!field_id" => str_replace('_', '-', $element['#field_name']) .'-'. $element['#delta'])
     ),  // localized for customisations
     // The following values were set by the content module and need
@@ -453,7 +453,7 @@ function viewreference_select_process($element, $edit, $form_state, $form) {
     '#title' => $element['#title'],
     '#required' => $element['#required'],
     '#description' => $element['#description'],
- 
+
   );
   if ($field['dsv_arguments'] == 1 || $field['php_arguments'] == 1) {
     if ($field['rows'] == 1) {
@@ -500,7 +500,7 @@ function viewreference_autocomplete_process($element, $edit, $form_state, $form)
     '#autocomplete_path' => 'viewreference/autocomplete/'. $element['#field_name'],
     '#element_validate' => array('viewreference_autocomplete_validate'),
     '#prefix' => t(
-      '<div class="viewreference-wrapper" id="viewreference-!field_id">', 
+      '<div class="viewreference-wrapper" id="viewreference-!field_id">',
       array("!field_id" => str_replace('_', '-', $element['#field_name']) .'-'. $element['#delta'])
     ),  // localized for customisations
     // The following values were set by the content module and need
@@ -561,7 +561,7 @@ function viewreference_autocomplete_validate($element, &$form_state) {
       list(, $title, $vid) = $matches;
       $args[] = $vid;
       $result = db_query("SELECT title FROM {viewreference} WHERE view_id = '%s'", $args);
-      if (!empty($title) && ($v = db_fetch_object($result)) && $title != $v->title) {  
+      if (!empty($title) && ($v = db_fetch_object($result)) && $title != $v->title) {
         form_set_error($element[$field_key], t('%name: Title mismatch. Please check your selection.'), array('%name' => t($element[$field_key]['#title'])));
       }
     }
@@ -630,7 +630,7 @@ function theme_viewreference_autocomplete($element) {
  * @return
  *   The array of views.
  */
-function viewreference_get_views($filter = NULL, $full = FALSE, $string = '', $exact_string = FALSE, $long_key = FALSE) {  
+function viewreference_get_views($filter = NULL, $full = FALSE, $string = '', $exact_string = FALSE, $long_key = FALSE) {
   $views = array();
   $loaded_views = views_get_all_views();
   foreach ((array)$loaded_views as $view_name => $view) {
@@ -639,14 +639,14 @@ function viewreference_get_views($filter = NULL, $full = FALSE, $string = '', $e
       if ($display_key != 'default') {
         $id = $view_name .":". $display_key;
         // Skip this one if it's not 'allowed'.
-        if (empty($filter) || in_array($id, $filter)) {
+        if (empty($filter) || !empty($filter[$id])) {
           // Get display title.
           $display_title = viewreference_get_display_title($view_name, $view, $display_key);
           // Append $id to the title for disambiguation in lists.
           $display_title .= " [". $id ."]";
           // Determine whether and what to return.
           $key = $long_key ? $display_title : $id;
-          if ($string) { 
+          if ($string) {
             if (!$exact_string && stripos($display_title, $string) !== FALSE) {
               $views[$key] = $full ? $display : $display_title;
             }
