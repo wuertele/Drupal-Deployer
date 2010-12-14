@@ -25,6 +25,14 @@ function viewreference_menu() {
  */
 function viewreference_theme() {
   return array(
+    'viewreference_display_title' => array(
+      'arguments' => array(
+        'view' => NULL,
+        'view_name' => NULL,
+        'display_name' => NULL,
+        'append_id' => FALSE,
+      ),
+    ),
     'viewreference_select' => array(
       'arguments' => array('element' => NULL),
     ),
@@ -41,6 +49,9 @@ function viewreference_theme() {
       'arguments' => array('element'),
     ),
     'viewreference_formatter_link' => array(
+      'arguments' => array('element'),
+    ),
+    'viewreference_formatter_path' => array(
       'arguments' => array('element'),
     ),
   );
@@ -85,7 +96,7 @@ function viewreference_field_settings($op, $field) {
         '#description' => t('Select the views that can be referenced. If no views are selected, then all the views will be available.'),
         '#multiple' => TRUE,
         '#default_value' => is_array($field['referenceable_views']) ? $field['referenceable_views'] : array(),
-        '#options' => viewreference_get_views(),
+        '#options' => viewreference_get_views($field['append_id']),
       );
       $form['arguments'] = array(
         '#type' => 'fieldset',
@@ -124,10 +135,16 @@ function viewreference_field_settings($op, $field) {
         '#description' => t('Set as 1 for textfield, or larger values for textarea (may be easier to write PHP with a textarea)'),
         '#required' => TRUE,
       );
+      $form['append_id'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Append unique ID in lists.'),
+        '#default_value' => isset($field['append_id']) ? $field['append_id'] : 0,
+        '#description' => t('It is possible for views displays to have the same title, this option will append [view:view_display_n] in lists used by this field to disambiguate the options.'),
+      );
       return $form;
 
     case 'save':
-      $settings = array('referenceable_views', 'dsv_arguments', 'php_arguments', 'delimiter', 'rows');
+      $settings = array('referenceable_views', 'dsv_arguments', 'php_arguments', 'delimiter', 'rows', 'append_id');
       return $settings;
 
     case 'database columns':
@@ -153,7 +170,7 @@ function viewreference_field_settings($op, $field) {
 function viewreference_field($op, &$node, $field, &$items, $teaser, $page) {
   switch ($op) {
     case 'validate':
-      $views = viewreference_get_views($field['referenceable_views']);
+      $views = viewreference_get_views($field['append_id'], $field['referenceable_views']);
       foreach ($items as $delta => $item) {
         if (is_array($item) && !empty($item['error_field'])) {
           $error_field = $item['error_field'];
@@ -201,6 +218,11 @@ function viewreference_field_formatter_info() {
       'field types' => array('viewreference'),
       'multiple values' => CONTENT_HANDLE_CORE,
     ),
+    'path' => array(
+      'label' => t('Path'),
+      'field types' => array('viewreference'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
   );
 }
 
@@ -214,6 +236,8 @@ function viewreference_field_formatter_info() {
  *     'embed' - The $view->preview() of the view display
  *     'title' - The display title of the view display
  *     'link' - A link to the view display, or the title if link not available.
+ * @return
+ *   The view object.
  */
 function viewreference_get_view($element, $params = array()) {
   if (!empty($element['#item']['view_id'])) {
@@ -227,7 +251,7 @@ function viewreference_get_view($element, $params = array()) {
         $view['embed'] = $view['view']->preview($view['display'], $view['args']);
       }
       if (in_array('title', $params) || in_array('link', $params)) {
-        $view['title'] = viewreference_get_display_title($view['name'], $view['view'], $view['display']);
+        $view['title'] = theme('viewreference_display_title', $view['view'], $view['name'], $view['display']);
         if (in_array('link', $params)) {
           if (isset($view['view']->display[$view['display']]->display_options['path']) && !$view['view']->disabled) {
             $view['args'] = $view['args'] ? $view['args'] : viewreference_get_element_args($element);
@@ -289,6 +313,17 @@ function theme_viewreference_formatter_link($element) {
   $output = '';
   if ($view = viewreference_get_view($element, array('link'))) {
     $output .= $view['link'];
+  }
+  return $output;
+}
+
+/**
+ * Theme function for 'path' viewreference field formatter.
+ */
+function theme_viewreference_formatter_path($element) {
+  $output = '';
+  if ($view = viewreference_get_view($element, array('link'))) {
+    $output .= isset($view['path']) ? $view['path'] : $view['link'];
   }
   return $output;
 }
@@ -417,7 +452,8 @@ function viewreference_autocomplete_value($element, $edit = FALSE) {
   $field_key = $element['#columns'][0];
   $args_key = $element['#columns'][1];
   if (!empty($element['#default_value'][$field_key])) {
-    $views = viewreference_get_views(array($element['#default_value'][$field_key]));
+    $field = content_fields($element['#field_name']);
+    $views = viewreference_get_views($field['append_id'], array($element['#default_value'][$field_key]));
     $value = $views[$element['#default_value'][$field_key]];
     return array($field_key => $value, $element['#columns'][1] => $element['#default_value'][$args_key]);
   }
@@ -566,7 +602,7 @@ function viewreference_autocomplete_validate($element, &$form_state) {
       }
     }
     else {
-      $vids = viewreference_get_views($field['referenceable_views'], FALSE, $value, TRUE);
+      $vids = viewreference_get_views($field['append_id'], $field['referenceable_views'], FALSE, $value, TRUE);
       $vid = (!empty($vids)) ? array_shift(array_keys($vids)) : 0;
     }
   }
@@ -578,7 +614,7 @@ function viewreference_autocomplete_validate($element, &$form_state) {
  * Implementation of hook_allowed_values().
  */
 function viewreference_allowed_values($field) {
-  $options = viewreference_get_views($field['referenceable_views']);
+  $options = viewreference_get_views($field['append_id'], $field['referenceable_views']);
   if (!$field['required']) {
     $options = array(0 => '<'. t('none') .'>') + $options;
   }
@@ -590,7 +626,7 @@ function viewreference_allowed_values($field) {
  */
 function viewreference_autocomplete($field_name, $string = '') {
   $field = content_fields($field_name);
-  $matches = viewreference_get_views($field['referenceable_views'], FALSE, $string, FALSE, TRUE);
+  $matches = viewreference_get_views($field['append_id'], $field['referenceable_views'], FALSE, $string, FALSE, TRUE);
   drupal_json($matches);
 }
 
@@ -616,6 +652,8 @@ function theme_viewreference_autocomplete($element) {
 /**
  * Get an array of views.
  *
+ * @param $append_id
+ *   Whether to append the id to the returned display names.
  * @param $filter
  *   A list of IDs in the format view_name:display_key to restrict results by.
  * @param $full
@@ -630,7 +668,7 @@ function theme_viewreference_autocomplete($element) {
  * @return
  *   The array of views.
  */
-function viewreference_get_views($filter = NULL, $full = FALSE, $string = '', $exact_string = FALSE, $long_key = FALSE) {
+function viewreference_get_views($append_id = FALSE, $filter = NULL, $full = FALSE, $string = '', $exact_string = FALSE, $long_key = FALSE) {
   $views = array();
   $loaded_views = views_get_all_views();
   foreach ((array)$loaded_views as $view_name => $view) {
@@ -638,16 +676,15 @@ function viewreference_get_views($filter = NULL, $full = FALSE, $string = '', $e
       // Skip this one if it's a 'default' view.
       if ($display_key != 'default') {
         $id = $view_name .":". $display_key;
+        $filter = array_filter((array)$filter);
         // Skip this one if it's not 'allowed'.
         if (empty($filter) || !empty($filter[$id])) {
           // Get display title.
-          $display_title = viewreference_get_display_title($view_name, $view, $display_key);
-          // Append $id to the title for disambiguation in lists.
-          $display_title .= " [". $id ."]";
+          $display_title = theme('viewreference_display_title', $view, $view_name, $display_key, $append_id);
           // Determine whether and what to return.
           $key = $long_key ? $display_title : $id;
           if ($string) {
-            if (!$exact_string && stripos($display_title, $string) !== FALSE) {
+            if (!$exact_string && (stripos($display_title, $string) !== FALSE || stripos($key, $string) !== FALSE)) {
               $views[$key] = $full ? $display : $display_title;
             }
             else if ($display_title == $string) {
@@ -665,22 +702,35 @@ function viewreference_get_views($filter = NULL, $full = FALSE, $string = '', $e
 }
 
 /**
- * Get the display title for this view display.
+ * Theme the display title for this view display.
+ *
+ * @param $view
+ *  The view object.
+ * @param $view_name
+ *  The name of the view.
+ * @param $display_name
+ *  The name of the display to use.
+ * @param $form_display
+ *  Boolean indication this is being used as an option in a form.
+ * @return
+ *  The display title of this views display.
  */
-function viewreference_get_display_title($view_name, $view, $display) {
-  // Build the display title.
-  if (isset($view->display[$display]->display_options['title'])) {
-    // This views display has a nice title, let's use that.
-    return $view->display[$display]->display_options['title'];
+function theme_viewreference_display_title($view, $view_name, $display_name, $append_id = FALSE) {
+
+  $view->set_display($display_name);
+  $display_title = $view->get_title();
+
+  if (!$display_title) {
+    // No title, we have to construct a title.
+    $display_title = ucfirst($view_name) ." ". strtolower($view->display[$display_name]->display_title);
   }
-  else if ($view->display['default']->display_options['title']) {
-    // This views display inherits it's title from the default display.
-    return $view->display['default']->display_options['title'];
+
+  if ($append_id) {
+    // Append ID for disambiguation in forms (views displays can have the same title).
+    $display_title .= " [". $view_name .':'. $display_name ."]";
   }
-  else {
-    // This views display is badly configured, we have to construct a title.
-    return ucfirst($view_name) ." ". strtolower($view->display[$display]->display_title);
-  }
+
+  return $display_title;
 }
 
 /**
