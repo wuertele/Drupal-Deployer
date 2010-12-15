@@ -174,6 +174,10 @@ function drupalforfirebug_execute_form() {
     '#type' => 'textarea',
     '#description' => t('Enter PHP code for execution. Do not use <code>&#60;?php ?&#62;</code> tags.')
   );
+  $form['token'] = array(
+    '#type' => 'hidden',
+    '#value' => drupal_get_token(),
+  );
   $form['op'] = array('#type' => 'submit', '#value' => t('Execute'));
   $form['#redirect'] = FALSE;
   $form['#action'] = url('admin/firebug/exec', array('absolute' => TRUE));
@@ -187,11 +191,11 @@ function drupalforfirebug_get_php_exec_area() {
   return $output;
 }
 
-function drupalforfirebug_get_php_exec($code = NULL) {
+function drupalforfirebug_get_php_exec($code = NULL, $token = NULL) {
   $output = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">';
   $output .= '<html><head><title>Execute PHP Code</title></head><body>';
   $output .= '<fieldset>';
-  if (!user_access('Execute Firebug PHP')) {
+  if (!user_access('Execute Firebug PHP') || (!is_null($code) && !drupal_valid_token($token))) {
     $output .= '<legend>' . t('Execute Firebug PHP') . '</legend>';
     $output .= t('You do not have the proper permissions to use this functionality.');
     $output .= '</fieldset></body></html>';
@@ -230,12 +234,9 @@ function drupalforfirebug_get_php_exec($code = NULL) {
 * Outputs a Execute PHP Form
 */
 function drupalforfirebug_get_exec_php_callback() {
-  if (isset($_POST['code'])) {
-    $code = $_POST['code'];
-  } else {
-    $code = NULL;
-  }
-  return drupalforfirebug_get_php_exec($code);
+  $code = (isset($_POST['code'])) ? $_POST['code'] : NULL;
+  $token = (isset($_POST['token'])) ? $_POST['token'] : NULL;
+  return drupalforfirebug_get_php_exec($code, $token);
 }
 
 /**
