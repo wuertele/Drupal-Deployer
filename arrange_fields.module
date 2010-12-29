@@ -673,12 +673,15 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
     drupal_add_css(drupal_get_path("module", "arrange_fields") . "/css/arrange_fields.css");    
     drupal_add_js(drupal_get_path("module", "arrange_fields") . "/js/arrange_fields_node_edit.js");    
 
+    $fid = $form["#id"];  // The form's CSS id.  We will use it later to target just this one form.    
+    
     $form["#attributes"]["class"] .= " arrange-fields-container ";
+    $form["#attributes"]["class"] .= " arrange-fields-container-$fid ";
     
     if (!$GLOBALS["arrange_fields_added_wrappers_" . $form["form_id"]["#value"]]) {
       arrange_fields_add_draggable_wrappers($form, $form_type);
     }
-      
+
     // Let's go through and assign the positions.
     $jsConfigArray = array();
     $jsMarkupArray = array();
@@ -708,7 +711,7 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
       if ($wrapper_id == "~~maxBottom~~") {
         // This is actually the height of the container.  Let's set that,
         // then continue.
-        $css_markup .= " .arrange-fields-container{
+        $css_markup .= " .arrange-fields-container-$fid {
                       height: $pos_top;
                         }";
         continue;
@@ -737,7 +740,7 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
         </div>";
         
         $css_markup .= "
-          #$wrapper_id {
+          #$fid #$wrapper_id {
             top: $pos_top;
             left: $pos_left;
             width: $markup_width;
@@ -765,10 +768,10 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
       // Add to our CSS markup value...
       $css_markup .= "
             
-      #$wrapper_id{        
-        top: $pos_top;
-        left: $pos_left; 
-      }
+        #$fid #$wrapper_id{        
+          top: $pos_top;
+          left: $pos_left; 
+        }
       ";
       
       // We do not want to try to resize any input fields if this
@@ -776,8 +779,8 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
       // This usually happens when you have CAPTCHA installed.
       if ($width != "0px" && $element_type != "") {        
         $css_markup .= "        
-        #$wrapper_id $element_type.form-text, 
-        #$wrapper_id $element_type.form-textarea {
+        #$fid #$wrapper_id $element_type.form-text, 
+        #$fid #$wrapper_id $element_type.form-textarea {
           width: $width;
           height: $height;
         }
@@ -786,24 +789,24 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
       
       // Handle any configurations which were set in the configure dialog.
       if ($wrapper_width != "") {
-        $css_markup .= "#$wrapper_id { width: $wrapper_width; } ";
+        $css_markup .= " #$fid #$wrapper_id { width: $wrapper_width; } ";
       }
       if ($wrapper_height != "") {
         $css_markup .= "
-          #$wrapper_id { height: $wrapper_height; } 
-          #$wrapper_id fieldset { height: 100%; } 
+          #$fid #$wrapper_id { height: $wrapper_height; } 
+          #$fid #$wrapper_id fieldset { height: 100%; } 
         ";
       }
       if ($label_display != "") {
         $css_markup .= "
-          #$wrapper_id .form-item label { 
+          #$fid #$wrapper_id .form-item label { 
             vertical-align: $label_vertical_align; 
           }
-          #$wrapper_id .form-item > input, 
-          #$wrapper_id .form-item > label,
-          #$wrapper_id .form-item > div,
-          #$wrapper_id .form-item > div.form-radios > div,
-          #$wrapper_id .form-item > div.form-checkboxes > div
+          #$fid #$wrapper_id .form-item > input, 
+          #$fid #$wrapper_id .form-item > label,
+          #$fid #$wrapper_id .form-item > div,
+          #$fid #$wrapper_id .form-item > div.form-radios > div,
+          #$fid #$wrapper_id .form-item > div.form-checkboxes > div
           {
             display: $label_display;
           }";
@@ -815,7 +818,7 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
           // it must simply be "inline."  However, the textfield itself still
           // needs to be "inline-block."  Thanks IE!
           $css_markup .= "
-            #$wrapper_id .form-item > label
+            #$fid #$wrapper_id .form-item > label
             {
               display: $text_label_display;
             }
@@ -824,8 +827,8 @@ function arrange_fields_form_alter(&$form, &$form_state, $form_id) {
         
         
         $css_markup .= "  
-          #$wrapper_id .form-item div.ui-resizable-handle,
-          #$wrapper_id .form-item div.description
+          #$fid #$wrapper_id .form-item div.ui-resizable-handle,
+          #$fid #$wrapper_id .form-item div.description
           {
             display: block;
           }                          
