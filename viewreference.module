@@ -446,18 +446,18 @@ function viewreference_widget(&$form, &$form_state, $field, $items, $delta = 0) 
 /**
  * Value for a viewreference autocomplete element.
  *
- * Substitute in the view title for the internal view vid.
+ * Substitute in the view title for the internal view id.
  */
 function viewreference_autocomplete_value($element, $edit = FALSE) {
   $field_key = $element['#columns'][0];
   $args_key = $element['#columns'][1];
   if (!empty($element['#default_value'][$field_key])) {
     $field = content_fields($element['#field_name']);
-    $views = viewreference_get_views($field['append_id'], array($element['#default_value'][$field_key]));
+    $views = viewreference_get_views(TRUE, array($element['#default_value'][$field_key]));
     $value = $views[$element['#default_value'][$field_key]];
-    return array($field_key => $value, $element['#columns'][1] => $element['#default_value'][$args_key]);
+    return array($field_key => $value, $args_key => $element['#default_value'][$args_key]);
   }
-  return array($field_key => NULL, $element['#columns'][1] => $element['#default_value'][$args_key]);
+  return array($field_key => NULL, $args_key => $element['#default_value'][$args_key]);
 }
 
 /**
@@ -586,28 +586,53 @@ function viewreference_autocomplete_process($element, $edit, $form_state, $form)
 function viewreference_autocomplete_validate($element, &$form_state) {
   $field_name = $element['#field_name'];
   $field = content_fields($field_name);
-  $field_key  = $element['#columns'][0];
-  $delta = $element['#delta'];
+  $field_key = $element['#columns'][0];
   $value = $element['#value'][$field_key];
-  $vid = NULL;
+  $new_value = NULL;
+
   if (!empty($value)) {
-    preg_match('/^(?:\s*|(.*) )?\[\s*view\s*:\s*(\d+)\s*\]$/', $value, $matches);
+    $regex  = '/' // Start of string
+      . '(.*).*?' // Any non-greedy
+      . '(\\[)' // [
+      . '((?:[a-z][a-z0-9_]*))' // Variable 1
+      . '(:)' // :
+      . '((?:[a-z][a-z0-9_]*))' // Variable 2
+      . '(\\])' // ]
+      . '/is'; // End of string
+    preg_match($regex, $value, $matches);
     if (!empty($matches)) {
-      // explicit vid
-      list(, $title, $vid) = $matches;
-      $args[] = $vid;
-      $result = db_query("SELECT title FROM {viewreference} WHERE view_id = '%s'", $args);
-      if (!empty($title) && ($v = db_fetch_object($result)) && $title != $v->title) {
-        form_set_error($element[$field_key], t('%name: Title mismatch. Please check your selection.'), array('%name' => t($element[$field_key]['#title'])));
+      $new_value = $matches[3] . ':' . $matches[5];
+      $allowed = viewreference_get_views(FALSE, $field['settings']['referenceable_views']);
+      if (!isset($allowed[$new_value])) {
+        form_error(
+          $element,
+          t(
+            '%name: View display %value cannot be referenced.',
+            array(
+              '%name' => $element[$field_key]['#title'],
+              '%value' => $new_value,
+            )
+          )
+        );
       }
     }
     else {
-      $vids = viewreference_get_views($field['append_id'], $field['referenceable_views'], FALSE, $value, TRUE);
-      $vid = (!empty($vids)) ? array_shift(array_keys($vids)) : 0;
+      form_error(
+        $element,
+        t(
+          '%name: The value %value is in an unexpected format.  Expecting: %format',
+          array(
+            '%name' => $element[$field_key]['#title'],
+            '%value' => $value,
+            '%format' => '<em>View title [view:display_n]</em>',
+          )
+        )
+      );
     }
   }
-  form_set_value($element, $vid, $form_state);
-  return $element;
+
+  form_set_value($element, $new_value, $form_state);
+
 }
 
 /**
@@ -676,13 +701,12 @@ function viewreference_get_views($append_id = FALSE, $filter = NULL, $full = FAL
       // Skip this one if it's a 'default' view.
       if ($display_key != 'default') {
         $id = $view_name .":". $display_key;
-        $filter = array_filter((array)$filter);
         // Skip this one if it's not 'allowed'.
-        if (empty($filter) || !empty($filter[$id])) {
+        if (empty($filter) || in_array($id, $filter)) {
           // Get display title.
           $display_title = theme('viewreference_display_title', $view, $view_name, $display_key, $append_id);
           // Determine whether and what to return.
-          $key = $long_key ? $display_title : $id;
+          $key = $long_key ? $display_title . ($append_id ? '' : ' [' . $id . ']') : $id;
           if ($string) {
             if (!$exact_string && (stripos($display_title, $string) !== FALSE || stripos($key, $string) !== FALSE)) {
               $views[$key] = $full ? $display : $display_title;
