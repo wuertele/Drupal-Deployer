@@ -97,17 +97,22 @@ function unitsapi_convert($value, $from, $to, $details = FALSE) {
   // Round to the 6 spaces after the decimal.
   $result = round($result, 6);
 
-  $return = array();
-  if ($details) {
-    $return['result'] = $result;
-    $return['from'] = $value == 1 ? t($units[$from]['singular']) : t($units[$from]['plural']);
-    $return['to'] = $result == 1 ? t($units[$to]['singular']) : t($units[$to]['plural']);
-  }
-  else {
-    $return = $result;
-  }
+  $result_array = array(
+    'value' => $value,
+    'result' => $result,
+    'from' => $units[$from],
+    'to' => $units[$to],
+  );
 
-  return $return;
+  // Add the plural forms for easy access
+  $result_array['from']['view'] = $value == 1 ? t($units[$from]['singular']) : t($units[$from]['plural']);
+  $result_array['to']['view'] = $result == 1 ? t($units[$to]['singular']) : t($units[$to]['plural']);
+
+  // Allow other modules to modify conversion results.
+  drupal_alter('unitsapi_result', $result_array);
+
+  // If $details is TRUE, return the array of data.  Otherwise, just return the result float.
+  return $details ? $result_array : $result_array['result'];
 }
 
 /**
@@ -123,7 +128,7 @@ function unitsapi_get_units() {
     $cache = cache_get('unitsapi_data');
   }
   $units = $cache->data;
-  drupal_alter('unitsapi', $units);
+  drupal_alter('unitsapi_load', $units);
   return $units;
 }
 
