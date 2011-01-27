@@ -1,0 +1,293 @@
+<?php
+
+/**
+ * @file
+ * CCK field with a text or nodereference formatter and autocomplete widget.
+ */
+
+/**
+ * Implementation of hook_menu().
+ */
+function text_noderef_menu() {
+  $items = array();
+  $items['text_noderef/%/%'] = array(
+    'title' => 'Text or Nodereference',
+    'page callback' => 'text_noderef_json',
+    'page arguments' => array(1, 2),
+    'access callback' => 'text_noderef_access',
+    'access arguments' => array(1, 2),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Check access to the menu callback of the text_noderef widget.
+ */
+function text_noderef_access($type_name, $field_name) {
+  return user_access('access content') && ($field = content_fields($field_name, $type_name)) && content_access('view', $field) && content_access('edit', $field);
+}
+
+/**
+ * Menu callback; Retrieve a pipe delimited string of autocomplete suggestions.
+ */
+function text_noderef_json($type_name, $field_name, $string = '') {
+  $field = content_fields($field_name, $type_name);
+  $match = isset($field['widget']['autocomplete_match']) ? $field['widget']['autocomplete_match'] : 'contains';
+  $matches = array();
+  // Do not act upon empty search string nor on unrelated fields.
+  if (($field['widget']['type'] == 'text_noderef_textfield') && ($string != '')) {
+    $args = array($string);
+    $match_operators = array(
+      'contains' => "LIKE $lower('%%%s%%')",
+      'equals' => "= '%s'",
+      'starts_with' => "LIKE $lower('%s%%')",
+    );
+    $match_operator = (isset($match_operators[$match]) ? $match_operators[$match] : $match_operators['contains']);
+    // Step 1/3: Fetch the available field data.
+    $db_info = content_database_info($field);
+    $table = $db_info['table'];
+    $column = $field['field_name'] . '_' . key($db_info['columns']);
+    $lower = (!empty($field['widget']['case_sensitive']) || $match == 'equals' ? '' : 'LOWER');
+    $where = "$lower(f." . $column . ') ' . $match_operator;
+    $sql = 'SELECT f.' . $column . ' FROM {' . $table . '} f WHERE ' . $where . ' ORDER BY f.' . $column;
+    if (!empty($field['widget']['i18n_support'])) {
+      // Adding a join with the node table allows i18n rewriting the query to
+      // filter values from node for the proper language.
+      $sql = db_rewrite_sql(str_replace(' WHERE ', ' INNER JOIN {node} n ON f.vid = n.vid WHERE ', $sql));
+    }
+    $result = db_query_range($sql, $args, 0, 10);
+    while ($entry = db_result($result)) {
+      $matches[$entry] = $entry;
+    }
+    // Step 2/3: Fetch the existing node titles.
+    $where = "$lower(title) " . $match_operator;
+    $sql = db_rewrite_sql('SELECT title FROM {node} n WHERE ' . $where . ' ORDER BY title');
+    $result = db_query_range($sql, $args, 0, 10);
+    while ($entry = db_result($result)) {
+      $matches[$entry] = $entry;
+    }
+    // Step 3/3: Merge and sanitize output.
+    asort($matches, SORT_LOCALE_STRING);
+    foreach ($matches as &$value) {
+      // Add a class wrapper for a few required CSS overrides.
+      $value = '<div class="reference-autocomplete">'. check_plain($value) .'</div>';
+    }
+  }
+  drupal_json($matches);
+}
+
+/**
+ * Implementation of hook_form_FORM_ID_alter().
+ */
+function text_noderef_form_content_field_edit_form_alter(&$form, $form_state) {
+  // Do not allow changing this to anything else besides 'Plain text'.
+  $form['field']['text_processing'] = array(
+    '#type' => 'value',
+    '#value' => 0,
+  );
+}
+
+/****************************************************************************
+ * CCK cruft: widget-related stuff.
+ ****************************************************************************/
+
+/**
+ * Implementation of hook_widget_info().
+ */
+function text_noderef_widget_info() {
+  return array(
+    'text_noderef_textfield' => array(
+      'label' => t('Autocomplete for existing field data and/or node titles'),
+      'field types' => array('text'),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_widget().
+ */
+function text_noderef_widget(&$form, &$form_state, $field, $items, $delta = 0) {
+  $element = array(
+    '#type' => $field['widget']['type'],
+    '#default_value' => isset($items[$delta]) ? $items[$delta] : '',
+  );
+  return $element;
+}
+
+/**
+ * Implementation of hook_widget_settings().
+ */
+function text_noderef_widget_settings($op, $widget) {
+  switch ($op) {
+  case 'form':
+    $content_types = node_get_types('names');
+    $form['content_types'] = array(
+      '#type' => 'checkboxes',
+      '#title' => t('Content types for autocompleting on titles'),
+      '#options' => $content_types,
+      '#default_value' => (isset($widget['content_types']) ? $widget['content_types'] : array()),
+      '#description' => t('Autocompleting is done on all the content types if none of them is selected.'),
+    );
+    $form['autocomplete_match'] = array(
+      '#type' => 'select',
+      '#title' => t('Autocomplete matching'),
+      '#default_value' => (isset($widget['autocomplete_match']) ? $widget['autocomplete_match'] : 'contains'),
+      '#options' => array('starts_with' => t('Starts with'), 'contains' => t('Contains')),
+      '#description' => t('Select the method used to collect autocomplete suggestions. Note that <em>Contains</em> can cause performance issues on sites with thousands of records.'),
+    );
+    $form['case_sensitive'] = array(
+      '#type' => 'radios',
+      '#title' => t('Case sensitive'),
+      '#default_value' => (isset($widget['case_sensitive']) ? $widget['case_sensitive'] : 1),
+      '#options' => array(0 => t('Disabled'), 1 => t('Enabled')),
+    );
+    $form['case_sensitive']['#description'] = t('Case-insensitive queries are implemented using the <a href="!function-lower-url">LOWER()</a> function in combination with the <a href="!operator-like-url">LIKE</a> operator.', array(
+      '!function-lower-url' => 'http://dev.mysql.com/doc/refman/5.1/en/string-functions.html#function_lower',
+      '!operator-like-url' => 'http://dev.mysql.com/doc/refman/5.1/en/string-comparison-functions.html#operator_like',
+    ));
+    if (in_array($GLOBALS['db_type'], array('mysql', 'mysqli'))) {
+      $form['case_sensitive']['#description'] .= ' ' . t('Note that MySQL might ignore case sensitivity depending on the collation used in your database definition (see <a href="!mysql-i18n-l10n-url">Internationalization and Localization</a> chapter in the MySQL manual). If you need case insensitive checks, it is recommended (for performance reasons) to use a case insensitive collation as well (such as utf8_general_ci), rather than disabling the case sensitive option here.', array(
+        '!mysql-i18n-l10n-url' => 'http://dev.mysql.com/doc/refman/5.1/en/internationalization-localization.html',
+      ));
+    }
+    elseif ($GLOBALS['db_type'] == 'pgsql') {
+      $form['case_sensitive']['#description'] .= ' ' . t('You may want to create an expression index using the LOWER() function to speed up this kind of queries in PostgreSQL (See <a href="!indexes-expressional-url">Indexes on Expressions</a>).', array(
+        '!indexes-expressional-url' => 'http://www.postgresql.org/docs/8.4/static/indexes-expressional.html',
+      ));
+    }
+    if (module_exists('i18n')) {
+      $form['i18n_support'] = array(
+        '#type' => 'radios',
+        '#title' => t('Internationalization support'),
+        '#default_value' => (isset($widget['i18n_support']) ? $widget['i18n_support'] : 0),
+        '#options' => array(0 => t('Disabled'), 1 => t('Enabled')),
+        '#description' => t('Enable this option to provide a different set of allowed values based on the language their nodes are assigned to. This option is only available when <a href="@i18n-project-page">Internationalization</a> module is enabled.', array('@i18n-project-page' => 'http://drupal.org/project/i18n')),
+      );
+    }
+    return $form;
+  case 'save':
+    return array('content_types', 'autocomplete_match', 'case_sensitive', 'i18n_support');
+  }
+}
+
+/****************************************************************************
+ * FAPI cruft: how to display the widgets?
+ ****************************************************************************/
+
+/**
+ * Implementation of hook_elements().
+ */
+function text_noderef_elements() {
+  return array(
+    'text_noderef_textfield' => array(
+      '#input' => TRUE,
+      '#columns' => 'value',
+      '#delta' => 0,
+      '#process' => array('text_noderef_textfield_process'),
+      '#autocomplete_path' => FALSE,
+    ),
+  );
+}
+
+/**
+ * FAPI element builder.
+ */
+function text_noderef_textfield_process($element, $edit, $form_state, $form) {
+  $field = $form['#field_info'][$element['#field_name']];
+  $field_key = $element['#columns'][0];
+  $delta = $element['#delta'];
+  $element[$field_key] = array(
+    '#type' => 'textfield',
+    '#default_value' => isset($element['#value'][$field_key]) ? $element['#value'][$field_key] : NULL,
+    '#autocomplete_path' => 'text_noderef/' . $element['#type_name'] . '/' . $element['#field_name'],
+    '#size' => !empty($field['widget']['size']) ? $field['widget']['size'] : 60,
+    '#attributes' => array('class' => 'text'),
+    '#maxlength' => !empty($field['max_length']) ? $field['max_length'] : NULL,
+    // The following values were set by the content module and need
+    // to be passed down to the nested element.
+    '#title' => $element['#title'],
+    '#description' => $element['#description'],
+    '#required' => $element['#required'],
+    '#field_name' => $element['#field_name'],
+    '#type_name' => $element['#type_name'],
+    '#delta' => $element['#delta'],
+    '#columns' => $element['#columns'],
+  );
+  $element['_error_element'] = array(
+    '#type' => 'value',
+    '#value' => implode('][', array_merge($element['#parents'], array($field_key))),
+  );
+  return $element;
+}
+
+/**
+ * Implementation of hook_theme().
+ */
+function text_noderef_theme($existing, $type, $theme, $path) {
+  return array(
+    'text_noderef_textfield' => array(
+      'arguments' => array('element' => array()),
+    ),
+    'text_noderef_formatter_text_noderef' => array(
+      'arguments' => array('element' => array()),
+    ),
+  );
+}
+
+/**
+ * Default theme implementation for text_noderef_textfield.
+ */
+function theme_text_noderef_textfield($element) {
+  return $element['#children'];
+}
+
+/****************************************************************************
+ * CCK cruft: formatter-related stuff.
+ ****************************************************************************/
+
+/**
+ * Implementation of hook_field_formatter_info().
+ */
+function text_noderef_field_formatter_info() {
+  return array(
+    'text_noderef' => array(
+      'label' => t('Text or nodereference'),
+      'field types' => array('text'),
+      'multiple values' => CONTENT_HANDLE_CORE,
+    ),
+  );
+}
+
+/**
+ * Theme function for 'default' text_noderef field formatter.
+ */
+function theme_text_noderef_formatter_text_noderef($element) {
+  static $cache;
+  // This function may be called several times on a single page, so cache
+  // the settings to a local static variable to speed up non-first calls.
+  $key = $element['#field_name'] . '@' . $element['#type_name'];
+  if (!$cache || !isset($cache[$key])) {
+    $field = content_fields($element['#field_name'], $element['#type_name']);
+    $types = array_filter($field['widget']['content_types']);
+    if ($types) {
+      $where = $args = array();
+      foreach ($types as $type) {
+        $where[] = "'%s'";
+        $args[] = $type;
+      }
+      $where = ' AND type IN (' . implode(',', $where) . ')';
+      $cache[$key] = array($where, $args);
+    }
+    else {
+      $cache[$key] = array('', array());
+    }
+  }
+  list($where, $args) = $cache[$key];
+  array_unshift($args, $element['#item']['value']);
+  if (!empty($element['#item']['value']) && ($nid = db_result(db_query(db_rewrite_sql("SELECT nid FROM {node} WHERE title = '%s'" . $where), $args)))) {
+    return l($element['#item']['value'], 'node/' . $nid);
+  }
+  return $element['#item']['safe'];
+}
+
