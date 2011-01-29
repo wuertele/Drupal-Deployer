@@ -54,8 +54,9 @@ class views_handler_field_amazon_title extends views_handler_field {
         return l($title, check_url($values->{$this->table_alias . '_detailpageurl'}), array('html' => TRUE));
         break;
       case 'amazon_store':
+        $path = function_exists('amazon_store_get_amazon_store_path') ? amazon_store_get_amazon_store_path() : 'amazon_store';
         $asin = $values->{$this->aliases['asin']};
-        return l($title, 'amazon_store/item/' . $asin, array('html' => TRUE));
+        return l($title, "$path/item/$asin", array('html' => TRUE));
         break;
 
     }

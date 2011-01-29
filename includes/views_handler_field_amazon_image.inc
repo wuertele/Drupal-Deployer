@@ -118,8 +118,9 @@ class views_handler_field_amazon_image extends views_handler_field {
         }
         break;
       case 'amazon_store':
+        $path = function_exists('amazon_store_get_amazon_store_path') ? amazon_store_get_amazon_store_path() : 'amazon_store';
         $asin = $values->{$this->aliases['asin']};
-        return l($image, 'amazon_store/item/' . $asin, array('html' => TRUE));
+        return l($image, "$path/item/$asin", array('html' => TRUE));
         break;
     }
   }
