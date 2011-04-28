@@ -1,0 +1,32 @@
+<?php
+// $Id$
+
+function rest_server_server_info() {
+  return array(
+    'name' => 'REST',
+    'path' => 'rest',
+  );
+}
+
+function rest_server_autoload_info() {
+  module_load_include('inc', 'rest_server');
+  return _rest_server_autoload_info();
+}
+
+/**
+ * Implementation of hook_enable().
+ */
+function rest_server_enable() {
+  // Flush the autoload caches so that our classes are registered
+  autoload_flush_caches();
+}
+
+function rest_server_server($endpoint = 'services/rest') {
+  $canonical_path = trim(substr($_GET['q'], drupal_strlen($endpoint)), '/');
+  $server = new RESTServer();
+  return $server->handle($canonical_path, $endpoint);
+}
+
+function rest_server_server_error($message, $code=0, $exception=NULL) {
+  throw new Exception($message, $code);
+}
