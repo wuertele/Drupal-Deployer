@@ -1,0 +1,47 @@
+<?php
+
+/**
+ * @file
+ * Module installation/uninstallation hooks.
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function text_noderef_install() {
+  // Make sure this module is loaded after CCK Text/Number fields.
+  // See text_noderef_form_alter().
+  $weight = 1 + db_result(db_query("SELECT weight FROM {system} WHERE name = 'content'"));
+  db_query("UPDATE {system} SET weight = %d WHERE name = 'text_noderef'", $weight);
+  // Notify content module when this module is installed.
+  drupal_load('module', 'content');
+  content_notify('install', 'text_noderef');
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function text_noderef_uninstall() {
+  // Notify content module when this module is uninstalled.
+  drupal_load('module', 'content');
+  content_notify('uninstall', 'text_noderef');
+}
+
+/**
+ * Implementation of hook_enable().
+ */
+function text_noderef_enable() {
+  // Notify content module when this module is enabled.
+  drupal_load('module', 'content');
+  content_notify('enable', 'text_noderef');
+}
+
+/**
+ * Implementation of hook_disable().
+ */
+function text_noderef_disable() {
+  // Notify content module when this module is disabled.
+  drupal_load('module', 'content');
+  content_notify('disable', 'text_noderef');
+}
+
