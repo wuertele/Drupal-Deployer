@@ -1,4 +1,5 @@
 push @git_modules, { path => "drupal-6.x", remote => "drupal.org", url => "$drupal_project/drupal.git", objects => 119358, commit => "88146f6d", };
+push @git_modules, { path => "drupal-7.x", remote => "drupal.org", url => "$drupal_project/drupal.git", objects => 119358, commit => "49791492", };
 push @git_modules, { remote => "drupal.org/admin_menu", path => "$modules_path/admin_menu/", url => "$drupal_project/admin_menu.git", objects => 2701, commit => "18eb12b8d", };
 push @git_modules, { remote => "drupal.org/advanced_help", path => "$modules_path/advanced_help/", url => "$drupal_project/advanced_help.git", objects => 399, commit => "775335f1f", };
 push @git_modules, { remote => "drupal.org/amazon", path => "$modules_path/amazon/", url => "$drupal_project/amazon.git", objects => 1251, commit => "dc8728fbe", };

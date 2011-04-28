@@ -94,6 +94,7 @@ foreach my $module (@module_install_order) {
 	system_print ("mv $repository_path/$module->{filename}.work/" . basename ($module->{filename}, qw(.zip .tar.gz .tar.bz2 .tbz)) . " $repository_path/$module->{path}");
     }
     system_print ("rm -rf $repository_path/$module->{filename}.work");
+    system_print ("echo $module->{url} > $module->{path}/.module-source-url");
     system_print ("git add $module->{path}");
     system_print ("git commit -m $module->{url}");
 }

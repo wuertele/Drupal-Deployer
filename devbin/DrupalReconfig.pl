@@ -47,42 +47,40 @@ foreach my $module (@module_add_order) {
 
 
 my @module_merge_order = @git_modules;
-foreach my $module (@module_merge_order) {
+MERGE_MODULE: foreach my $module (@module_merge_order) {
     # discover any previous merge
-    my $merge_commit;
     if (-f $module->{path}) {
-	$merged_sha1 = `git log --merges -- drupal-6.x/sites/all/modules/views | grep Merge: | head -1 | cut -f3 -d' ' | xargs git rev-parse`;
+	# BUG:  the next line will fail if a subdir of $module->{path} is the path of another module (like htmlpurify/library)!
+	$merged_sha1 = `git log --merges -- $module->{path} | grep Merge: | head -1 | cut -f3 -d' ' | xargs git rev-parse`;
 	$requested_sha1 = `git rev-parse $module->{commit}`;
 	if ($requested_sha1 eq $merged_sha1) {
-	    # We're already merged
-	    $merge_commit = $module->{commit};
+	    # We're already merged to the right place
+	    next MERGE_MODULE;
 	}
+    }
+
+    system_print ("git merge -s ours --no-commit $module->{commit}");
+    if (defined $module->{tree}) {
+	system_print ("git read-tree --prefix=$module->{path} -u $module->{tree}");
     } else {
-	$merge_commit = $module->{commit};
+	system_print ("git read-tree --prefix=$module->{path} -u $module->{commit}");
     }
-
-    if (defined $merge_commit) {
-	system_print ("git merge -s ours --no-commit $module->{commit}") 
-	    if (defined $module->{tree}) {
-		system_print ("git read-tree --prefix=$module->{path} -u $module->{tree}");
-	} else {
-	    system_print ("git read-tree --prefix=$module->{path} -u $module->{commit}");
-	}
-	system_print ("git commit -m 'Merged $module->{path}'");
-    }
-}
-
-chdir "$repository_path/.." or die "can't chdir to $repository_path/..: $!";
-$repository_backup = "$repository_path" . ".gits-merged";
-system_print ("rm -rf $repository_backup");
-system_print ("cp -a $repository_path $repository_backup");
-chdir $repository_path or die "can't chdir to $repository_path: $!";
-
+    system_print ("git commit -m 'Merged $module->{path}'");
 }
 
 # Modules distributed as files
 my @module_install_order = @file_modules;
-foreach my $module (@module_install_order) {
+INSTALL_MODULE_FILE: foreach my $module (@module_install_order) {
+    if (-f "$module->{path}/.module_source_url") {
+	my $original_module_source_url = `cat $module->{path}/.module_source_url`;
+	if ($module->{url} eq $original_module_source_url) {
+	    next INSTALL_MODULE_FILE;
+	} else {
+	    # clean up old version
+	    system_print ("rm -rf $module->{path}");
+	}
+    }
+
     chdir $repository_path or die "can't chdir to $repository_path: $!";
     system_print ("mkdir -p $module->{filename}.work");
     chdir "$repository_path/$module->{filename}.work" or die "can't chdir to $repository_path/$module->{filename}.work: $!";
@@ -102,10 +100,3 @@ foreach my $module (@module_install_order) {
     system_print ("git add $module->{path}");
     system_print ("git commit -m $module->{url}");
 }
-
-
-chdir "$repository_path/.." or die "can't chdir to $repository_path/..: $!";
-$repository_backup = "$repository_path" . ".files-merged";
-system_print ("rm -rf $repository_backup");
-system_print ("cp -a $repository_path $repository_backup");
-chdir $repository_path or die "can't chdir to $repository_path: $!";
