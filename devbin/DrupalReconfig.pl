@@ -45,15 +45,31 @@ foreach my $module (@module_add_order) {
     }
 }
 
+
 my @module_merge_order = @git_modules;
 foreach my $module (@module_merge_order) {
-    system_print ("git merge -s ours --no-commit $module->{commit}");
-    if (defined $module->{tree}) {
-	system_print ("git read-tree --prefix=$module->{path} -u $module->{tree}");
+    # discover any previous merge
+    my $merge_commit;
+    if (-f $module->{path}) {
+	$merged_sha1 = `git log --merges -- drupal-6.x/sites/all/modules/views | grep Merge: | head -1 | cut -f3 -d' ' | xargs git rev-parse`;
+	$requested_sha1 = `git rev-parse $module->{commit}`;
+	if ($requested_sha1 eq $merged_sha1) {
+	    # We're already merged
+	    $merge_commit = $module->{commit};
+	}
     } else {
-	system_print ("git read-tree --prefix=$module->{path} -u $module->{commit}");
+	$merge_commit = $module->{commit};
     }
-    system_print ("git commit -m 'Merged $module->{path}'");
+
+    if (defined $merge_commit) {
+	system_print ("git merge -s ours --no-commit $module->{commit}") 
+	    if (defined $module->{tree}) {
+		system_print ("git read-tree --prefix=$module->{path} -u $module->{tree}");
+	} else {
+	    system_print ("git read-tree --prefix=$module->{path} -u $module->{commit}");
+	}
+	system_print ("git commit -m 'Merged $module->{path}'");
+    }
 }
 
 chdir "$repository_path/.." or die "can't chdir to $repository_path/..: $!";
