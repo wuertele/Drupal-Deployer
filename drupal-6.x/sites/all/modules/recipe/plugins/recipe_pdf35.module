@@ -1,0 +1,531 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * recipe_pdf35.module - Enables exporting of 3x5" cards in pdf format.
+ * This is incredibly rudimentary at this point.  1 and only 1 card and if you go over, the text is lost.
+ */
+
+/**
+ * Implementation of hook_recipeio($type).
+ */
+function recipe_pdf35_recipeio($type) {
+  $supported = array(
+    'export_single' => array(
+      'format_name' => t('PDF-3x5'),
+      'callback' => 'recipe_pdf35_export_single',
+      'format_help' => t('Export 3"x5" cards in pdf format.'),
+      // No special permissions for pdf export.
+      'access arguments' => 'access content',
+    )
+  );
+
+  if ( isset($supported[$type]) ) {
+    return array('pdf35' => $supported[$type]);
+  }
+  else {
+    return FALSE;
+  }
+}
+
+function recipe_pdf35_export_single($nid = NULL) {
+  if ( $nid === NULL ) {
+    drupal_set_message(t('Recipe not found.'));
+    drupal_not_found();
+  }
+
+  $node = node_load(array('nid' => $nid, 'type' => 'recipe'));
+
+  // you should not be able to export unpublished recipes
+  if ( $node->status == 0 ) {
+    drupal_access_denied();
+    return;
+  }
+
+  $recipe_data = prepare_receipe_data($node);
+
+  $pdf_pages = get_pdf_pages($recipe_data);
+
+// This is a non-indented section for ease of making byte-accurate pdf strings.
+// The newlines and spacing is pretty critical for this to work.
+
+
+$pdf_index = array();
+$objects = array('first item in the objects array is thrown out.');
+
+// Resource Object, required by page objects.
+$obj = <<<EOS
+[/PDF /Text]
+EOS;
+array_push($objects, $obj);
+$pdf_index['resource'] = count($objects) - 1;
+
+
+// Font 1 Object, required by page objects.
+$obj = <<<EOS
+<< /Type /Font
+/Subtype /Type1
+/Name /F1
+/BaseFont /Arial
+/Encoding /WinAnsiEncoding
+>>
+EOS;
+array_push($objects, $obj);
+$pdf_index['font1'] = count($objects) - 1;
+
+// Font 2 Object, required by page objects.
+$obj = <<<EOS
+<< /Type /Font
+/Subtype /Type1
+/Name /F2
+/BaseFont /Courier
+/Encoding /WinAnsiEncoding
+>>
+EOS;
+array_push($objects, $obj);
+$pdf_index['font2'] = count($objects) - 1;
+
+
+$current_pos = count($objects) + 1;
+$page_refs = array();
+for ($i=0; $i<count($pdf_pages); $i++) {
+  if ( count($pdf_pages) > 1 ) {
+    $page_item_count = get_page_item_count($pdf_pages[$i]) + 1;
+  }
+  else {
+    $page_item_count = get_page_item_count($pdf_pages[$i]);
+  }
+
+  $page_refs[] = $current_pos + $page_item_count . ' 0 R';
+  $current_pos = $current_pos + $page_item_count + 1;
+}
+$kid_refs = implode(" ", $page_refs);
+$kid_count = count($page_refs);
+
+// Pages Object, required by root.
+$obj = <<<EOS
+<< /Type /Pages
+/Kids [$kid_refs]
+/Count $kid_count
+>>
+EOS;
+array_push($objects, $obj);
+$pdf_index['pages'] = count($objects) - 1;
+
+// Render the objects for each page, then the page item.
+for ($i=0; $i<count($pdf_pages); $i++) {
+  foreach ( $pdf_pages[$i]['header'] as $obj ) {
+    array_push($objects, $obj);
+    $pdf_pages[$i]['items'][] = "" . count($objects) - 1 .  ' 0 R';
+  }
+
+  foreach ( $pdf_pages[$i]['column_0'] as $obj ) {
+    array_push($objects, $obj);
+    $pdf_pages[$i]['items'][] = "" . count($objects) - 1 .  ' 0 R';
+  }
+
+  foreach ( $pdf_pages[$i]['column_1'] as $obj ) {
+    array_push($objects, $obj);
+    $pdf_pages[$i]['items'][] = "" . count($objects) - 1 .  ' 0 R';
+  }
+
+  foreach ( $pdf_pages[$i]['column_2'] as $obj ) {
+    array_push($objects, $obj);
+    $pdf_pages[$i]['items'][] = "" . count($objects) - 1 .  ' 0 R';
+  }
+
+  foreach ( $pdf_pages[$i]['footer'] as $obj ) {
+    array_push($objects, $obj);
+    $pdf_pages[$i]['items'][] = "" . count($objects) - 1 .  ' 0 R';
+  }
+
+  // Page Numbers
+  if ( count($pdf_pages) > 1 ) {
+    $page_nbr = t('Page ' . ($i + 1));
+    $obj = "BT /F1 6 Tf 12 TL 325 17 Td ($page_nbr)' ET";
+    $len = strlen($obj);
+    $obj = "<< /Length $len >>\nstream\n${obj}\nendstream";
+    array_push($objects, $obj);
+    $pdf_pages[$i]['items'][] = "" . count($objects) - 1 .  ' 0 R';
+  }
+
+
+  // Page Object
+  $content_refs = implode(' ', $pdf_pages[$i]['items']);
+  $obj = "<< /Type /Page\n/Parent ${pdf_index['pages']} 0 R\n/MediaBox [0 0 360 216]\n/Contents [${content_refs}]\n/Resources << /ProcSet 4 0 R\n/Font << /F1 ${pdf_index['font1']} 0 R /F2 ${pdf_index['font2']} 0 R >>\n>>\n>>";
+  array_push($objects, $obj);
+}
+
+// Root Object, required by trailer.
+$obj = <<<EOS
+<< /Type /Catalog
+  /Pages ${pdf_index['pages']} 0 R
+>>
+EOS;
+array_push($objects, $obj);
+$pdf_index['root'] = count($objects) - 1;
+
+
+
+
+  /* Loop the objects array for the actual pdf with object refs.
+   *
+   */
+  $xref = array();
+  $pdf = "%PDF-1.4\n";
+  $pdf .= '%' . pack("c*", 128, 200, 225, 255) . "\n";
+  foreach ($objects as $obj_num => $o) {
+    // We skip array index 0.
+    if ( $obj_num != 0 ) {
+      // Save the xref byte offset.
+      $xref[$obj_num] = strlen($pdf);
+      $pdf .= "$obj_num 0 obj\n";
+      $pdf .= "$o\n";
+      $pdf .= "endobj\n";
+    }
+  }
+
+  $xref_start_pos = strlen($pdf);
+  $xref_entry_count = count($xref)+1;
+  $pdf .= "xref\n";
+  $pdf .= "0 $xref_entry_count\n";
+  $pdf .= "0000000000 65535 f \n";
+  foreach ($xref as $obj_num => $offset) {
+    $pdf .= sprintf("%010u 00000 n \n", $offset);
+  }
+
+  // Start of trailer section.
+  $pdf .= "trailer\n";
+  $pdf .= "<< /Size $xref_entry_count\n";
+  // Hard coded warning, /Root is the 1 0 object in this module.
+  $pdf .= "/Root ${pdf_index['root']} 0 R\n";
+  $pdf .= ">>\n";
+  $pdf .= "startxref\n";
+  $pdf .= "$xref_start_pos\n";
+  $pdf .= '%%EOF';
+
+
+  $file_name = strtolower($node->title) . '.pdf';
+  $file_name = str_replace(' ', '_', $file_name);
+  drupal_set_header('Content-type: application/pdf');
+  drupal_set_header($header = "Content-Disposition: attachment; filename=$file_name");
+  return $pdf;
+}
+
+
+function get_page_item_count($page) {
+  // Count up the columns + header and footer.
+  return count($page['column_0']) + count($page['column_1']) + count($page['column_2']) + count($page['header']) + count($page['footer']);
+}
+
+
+function prepare_receipe_data($node) {
+
+  // Preprocess the ingredients.
+  $ingredients = array();
+  foreach ( $node->ingredients as $key => $i ) {
+    $fullingredient = strlen($i->note) > 0 ? $i->name . ' (' . $i->note .')' : $i->name;
+    $quantity = recipe_ingredient_quantity_from_decimal($i->quantity, TRUE);
+    $quantity = trim(str_replace('&frasl;', '/', $quantity));
+    $ingredients[] = $quantity . ' ' . $i->abbreviation . ' ' . $fullingredient;
+  }
+
+  // Preprocess the instructions.
+  $instructions_str = str_replace("&deg;", "\xB0", $node->instructions);
+
+  $data = array(
+    'recipe_title' => $node->title,
+    'ingredient_heading' => t('Ingredients'),
+    'instruction_heading'=> t('Instructions'),
+    'ingredients'=> $ingredients,
+    'instructions'=> $instructions_str
+
+  );
+  return $data;
+}
+
+
+
+function get_pdf_pages($recipe_data) {
+
+  $pages = array();
+
+  /*
+   * Handle the ingredients.
+   */
+
+  // Put them in the correct column.
+  $col1 = array();
+  for ( $i=0; $i<count($recipe_data['ingredients']); $i++ ) {
+    $tmp_list = wrap_and_pdf_escape($recipe_data['ingredients'][$i], 35, "\n   ");
+    $col1 = array_merge($col1, $tmp_list);
+  }
+
+  // setup first page.
+  $page = get_new_pdf_page($recipe_data);
+  $line = 1;
+  for ( $i=0; $i<count($col1); $i++ ) {
+
+    // You've filled the page, get a new one.
+    if ( $line > 16 ) {
+      // End the strings in the columns.
+      if ( count($page['column_1']) > 0 ) {
+        $obj = $page['column_1'][count($page['column_1'])-1];
+        $obj .= 'ET';
+        $len = strlen($obj);
+        $obj = "<< /Length $len >>\nstream\n${obj}\nendstream";
+        $page['column_1'][count($page['column_1'])-1] = $obj;
+      }
+      if ( count($page['column_2']) > 0 ) {
+        $obj = $page['column_2'][count($page['column_2'])-1];
+        $obj .= 'ET';
+        $len = strlen($obj);
+        $obj = "<< /Length $len >>\nstream\n${obj}\nendstream";
+        $page['column_2'][count($page['column_2'])-1] = $obj;
+      }
+
+      // Put the page onto pages and get a new one.
+      $pages[] = $page;
+      $page = get_new_pdf_page($recipe_data);
+      $line = 1;
+    }
+
+    // If you have more than 16 ingredients, use two columns.
+    if ( count($col1) > 16 ) {
+      if ( $line == 1 ) {
+
+        // The ingredients header.
+        $ingredient_heading = $recipe_data['ingredient_heading'];
+        $obj = "BT /F1 10 Tf 12 TL 20 185 Td ($ingredient_heading)' ET";
+        $len = strlen($obj);
+        $obj = "<< /Length $len >>\nstream\n${obj}\nendstream";
+        $page['column_1'][] = $obj;
+
+        // The 2-coloumn ingredients header underline.
+        $obj = "0.5 w\n20 170 m\n340 170 l\nS\n";
+        $len = strlen($obj);
+        $obj = "<< /Length $len >>\nstream\n${obj}\nendstream";
+        $page['column_1'][] = $obj;
+
+        // Begin ingredients text for column 1.
+        $page['column_1'][] = "BT /F1 8 Tf 10 TL 25 170 Td ";
+
+        // Begin ingredients text for column 2.
+        $page['column_2'][] = "BT /F1 8 Tf 10 TL 170 170 Td ";
+      }
+      $page['column_1'][count($page['column_1'])-1] .= $col1[$i++];
+      $page['column_2'][count($page['column_2'])-1] .= $col1[$i];
+    }
+    else {
+      if ( $line == 1 ) {
+        // The ingredients header.
+        $ingredient_heading = $recipe_data['ingredient_heading'];
+        $obj = "BT /F1 10 Tf 12 TL 20 185 Td ($ingredient_heading)' ET";
+        $len = strlen($obj);
+        $obj = "<< /Length $len >>\nstream\n${obj}\nendstream";
+        $page['column_1'][] = $obj;
+
+        // The 1-column ingredients header underline.
+        $obj = "0.5 w\n20 170 m\n155 170 l\nS\n";
+        $len = strlen($obj);
+        $obj = "<< /Length $len >>\nstream\n${obj}\nendstream";
+        $page['column_1'][] = $obj;
+
+        $page['column_1'][] = "BT /F1 8 Tf 10 TL 25 170 Td ";
+      }
+      $page['column_1'][count($page['column_1'])-1] .= $col1[$i];
+    }
+    $line++;
+  }
+
+  // Finish the last page.
+  if ( count($page['column_1']) > 0 ) {
+    $obj = $page['column_1'][count($page['column_1'])-1];
+    $obj .= 'ET';
+    $len = strlen($obj);
+    $obj = "<< /Length $len >>\nstream\n${obj}\nendstream";
+    $page['column_1'][count($page['column_1'])-1] = $obj;
+  }
+  if ( count($page['column_2']) > 0 ) {
+    $obj = $page['column_2'][count($page['column_2'])-1];
+    $obj .= 'ET';
+    $len = strlen($obj);
+    $obj = "<< /Length $len >>\nstream\n${obj}\nendstream";
+    $page['column_2'][count($page['column_2'])-1] = $obj;
+  }
+
+
+  /*
+   * Handle the instructions.
+   */
+
+  // $page still contains last page
+
+  $col = 0;
+  $col2_i_list = array();
+
+  // If column 2 is empty, use it.
+  if (count($page['column_2']) == 0) {
+    $col = 2;
+    $inst_list = wrap_and_pdf_escape($recipe_data['instructions'], 50);
+  }
+  // Or get a new page.
+  else {
+    $col = 0;
+    $inst_list = wrap_and_pdf_escape($recipe_data['instructions'], 85);
+    // Put the page onto pages and get a new one.
+    $pages[] = $page;
+    $page = get_new_pdf_page($recipe_data);
+  }
+
+  $instruction_heading = $recipe_data['instruction_heading'];
+  if ( $col == 0 ) {
+    // The instructions header.
+    $obj = "BT /F1 10 Tf 12 TL 20 185 Td ($instruction_heading)' ET";
+    $len = strlen($obj);
+    $obj = "<< /Length $len >>\nstream\n${obj}\nendstream";
+    $page['column_0'][] = $obj;
+
+    // The instructions header underline.
+    $obj = "0.5 w\n20 170 m\n340 170 l\nS\n";
+    $len = strlen($obj);
+    $obj = "<< /Length $len >>\nstream\n${obj}\nendstream";
+    $page['column_0'][] = $obj;
+  }
+  elseif ( $col == 2 ) {
+    // The instructions header.
+    $obj = "BT /F1 10 Tf 12 TL 165 185 Td ($instruction_heading)' ET";
+    $len = strlen($obj);
+    $obj = "<< /Length $len >>\nstream\n${obj}\nendstream";
+    $page['column_2'][] = $obj;
+
+    // The instructions header underline.
+    $obj = "0.5 w\n165 170 m\n340 170 l\nS\n";
+    $len = strlen($obj);
+    $obj = "<< /Length $len >>\nstream\n${obj}endstream";
+    $page['column_2'][] = $obj;
+  }
+
+  $line = 1;
+  for ( $i=0; $i<count($inst_list); $i++ ) {
+
+    // You've filled the page, finish the columns and get a new page.
+    if ( $line > 16 ) {
+      if ( count($page['column_2']) > 0 ) {
+        $obj = $page['column_2'][count($page['column_2'])-1];
+        $obj .= 'ET';
+        $len = strlen($obj);
+        $obj = "<< /Length $len >>\nstream\n${obj}endstream";
+        $page['column_2'][count($page['column_2'])-1] = $obj;
+      }
+      if ( count($page['column_0']) > 0 ) {
+        $obj = $page['column_0'][count($page['column_0'])-1];
+        $obj .= 'ET';
+        $len = strlen($obj);
+        $obj = "<< /Length $len >>\nstream\n${obj}endstream";
+        $page['column_0'][count($page['column_0'])-1] = $obj;
+      }
+      $pages[] = $page;
+      $page = get_new_pdf_page($recipe_data);
+      $line = 1;
+      $col = 0;
+    }
+
+    if ( $line == 1 ) {
+      if ( $col == 2 ) {
+        $page['column_2'][] = "BT /F1 8 Tf 10 TL 170 170 Td ";
+      }
+      elseif ( $col == 0 ) {
+        $page['column_0'][] = "BT /F1 8 Tf 10 TL 20 170 Td ";
+      }
+    }
+    if ( $col == 2 ) {
+      $page['column_2'][count($page['column_2'])-1] .= $inst_list[$i];
+    }
+    elseif ( $col == 0 ) {
+      $page['column_0'][count($page['column_0'])-1] .= $inst_list[$i];
+    }
+    $line++;
+
+  }
+
+  // Finish the last page.
+  if ( count($page['column_0']) > 0 ) {
+    $obj = $page['column_0'][count($page['column_0'])-1];
+    $obj .= 'ET';
+    $len = strlen($obj);
+    $obj = "<< /Length $len >>\nstream\n${obj}\nendstream";
+    $page['column_0'][count($page['column_0'])-1] = $obj;
+  }
+  if ( count($page['column_1']) > 0 ) {
+    $obj = $page['column_1'][count($page['column_1'])-1];
+    $obj .= 'ET';
+    $len = strlen($obj);
+    $obj = "<< /Length $len >>\nstream\n${obj}\nendstream";
+    $page['column_1'][count($page['column_1'])-1] = $obj;
+  }
+  if ( count($page['column_2']) > 0 ) {
+    $obj = $page['column_2'][count($page['column_2'])-1];
+    $obj .= 'ET';
+    $len = strlen($obj);
+    $obj = "<< /Length $len >>\nstream\n${obj}\nendstream";
+    $page['column_2'][count($page['column_2'])-1] = $obj;
+  }
+
+  // Add remaining page to the pages array.
+  $pages[] = $page;
+
+
+  return $pages;
+}
+
+
+function get_new_pdf_page($recipe_data) {
+  $page = array(
+    'header'=>array(),
+    'footer'=>array(),
+    'column_0'=>array(),
+    'column_1'=>array(),
+    'column_2'=>array()
+  );
+
+  // The page header.
+  if ( strlen($recipe_data['recipe_title']) < 48 ) {
+    $recipe_title = wrap_and_pdf_escape($recipe_data['recipe_title'], 48);
+    $recipe_title = join(" ", $recipe_title);
+    $obj = "BT /F1 14 Tf 12 TL 20 200 Td $recipe_title ET";
+    $len = strlen($obj);
+    $obj = "<< /Length $len >>\nstream\n${obj}\nendstream";
+    $page['header'][] = $obj;
+  }
+  else {
+    $recipe_title = wrap_and_pdf_escape($recipe_data['recipe_title'], 70);
+    $recipe_title = join(" ", $recipe_title);
+    $obj = "BT /F1 10 Tf 12 TL 20 200 Td $recipe_title ET";
+    $len = strlen($obj);
+    $obj = "<< /Length $len >>\nstream\n${obj}\nendstream";
+    $page['header'][] = $obj;
+  }
+
+  return $page;
+}
+
+
+function wrap_and_pdf_escape($item_str, $wrap_cols, $wrap_indent=NULL) {
+
+  if (isset($wrap_indent) ) {
+    $item_str = wordwrap($item_str, $wrap_cols, $wrap_indent);
+  }
+  else {
+    $item_str = wordwrap($item_str, $wrap_cols);
+  }
+
+  $item_str = str_replace(array("\\", "(", ")"), array("\\\\", "\\(", "\\)"), $item_str);
+  $item_list = preg_split('/\n/', $item_str);
+  for($i=0; $i<count($item_list); $i++) {
+    $item_list[$i] = str_replace("\x0D", " ", $item_list[$i]);
+    $item_list[$i] = "($item_list[$i])'\n";
+  }
+  return $item_list;
+}

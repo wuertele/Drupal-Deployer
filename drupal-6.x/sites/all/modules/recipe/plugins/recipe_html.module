@@ -1,0 +1,124 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * recipe_recipeML.module - Enables importing and exporting of recipeML format recipes.
+ */
+
+/**
+ * Implementation of hook_recipeio($type).
+ */
+function recipe_html_recipeio($type) {
+  $supported = array(
+    'export_single' => array(
+      'format_name' => t('HTML'),
+      'callback' => 'recipe_html_export_single',
+      'format_help' => t('Export to a printer friendly HTML format.'),
+      'access arguments' => 'access content',   // everyone should be able to export HTML
+    )
+  );
+
+  if ( isset($supported[$type]) ) {
+    return array('reciphtml' => $supported[$type]);
+  }
+  else {
+    return FALSE;
+  }
+}
+
+/**
+ * Example implementation of hook_perm().  If you need special permissions for a format,
+ * use this and match the permission name to the access arguments above.
+
+function recipe_html_perm() {
+  return array(t('export single'));
+}
+*/
+
+
+function recipe_html_export_single($nid = NULL, $yield = NULL) {
+  if ( $nid === NULL ) {
+    drupal_set_message(t('Recipe not found.'));
+    drupal_not_found();
+    return;
+  }
+
+  $node = node_load(array('nid' => $nid, 'type' => 'recipe'));
+
+  // Set the custom yield so we can scale up/down the recipe quantities.
+  $node->custom_yield = $yield;
+
+  // Set yield_form_off to remove buttons.
+  $node->yield_form_off = 1;
+
+  // you should not be able to export unpublished recipes
+  if ( $node->status == 0 ) {
+    drupal_access_denied();
+    return;
+  }
+
+	// This calls other modules *_view hooks.
+  $node = node_build_content($node, FALSE, TRUE);
+
+	// Set the proper node part, then unset unused $node part so that a bad
+  // theme can not open a security hole.
+  $content = drupal_render($node->content);
+  if ($teaser) {
+    $node->teaser = $content;
+    unset($node->body);
+  }
+  else {
+    $node->body = $content;
+    unset($node->teaser);
+  }
+
+	// Allow modules to modify the fully-built node.
+  node_invoke_nodeapi($node, 'alter', $teaser, $page);
+
+  $html = theme('recipe_export_html_page', $node);
+  return $html;
+}
+
+
+/**
+ * Implementation of hook_theme().
+ */
+function recipe_html_theme() {
+  return array(
+    'recipe_export_html_page' => array(
+      'function' => 'theme_recipe_export_html_page',
+      'arguments' => array('node' => NULL),
+    ),
+
+    'recipe_html_node' => array(
+      'arguments' => array('node' => NULL, 'teaser' => FALSE, 'page' => FALSE),
+      'template' => 'recipe_html_node',
+    ),
+
+  );
+}
+
+
+/**
+ * How the recipe's HTML export should be themed.
+ *
+ * @ingroup themeable
+ */
+function theme_recipe_export_html_page($node = NULL) {
+  global $base_url;
+  $html = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n";
+  $html .= '<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">';
+  $html .= "<head>\n<title>". check_plain($node->title) ."</title>\n";
+  $html .= '<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />';
+  $html .= '<base href="'. $base_url .'/" />'."\n";
+  $html .= "<style type=\"text/css\">\n@import url(". drupal_get_path('module', 'recipe') ."/recipe.css);\n</style>\n";
+  # 'title' is exception to "all recipe titles in recipe CSS namespace" rule
+  $html .= "</head>\n<body>\n". theme('recipe_html_node', $node, FALSE, TRUE) ."\n</body>\n</html>\n";
+  return $html;
+}
+
+
+function recipe_html_preprocess_recipe_html_node(&$variables) {
+  recipe_preprocess_node($variables);
+}

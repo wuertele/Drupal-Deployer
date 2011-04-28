@@ -1,0 +1,374 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * recipe_recipeML.module - Enables importing and exporting of recipeML format recipes.
+ */
+
+/**
+ * Implementation of hook_recipeio($type).
+ */
+function recipe_recipeML_recipeio($type) {
+  $supported = array(
+    'export_single' => array(
+      'format_name' => t('recipeML'),
+      'callback' => 'recipe_recipeML_export_single',
+      'format_help' => t('Export to a recipeML based xml format.')
+    ),
+    'export_multi' => array(
+      'format_name' => t('recipeML'),
+      'callback' => 'recipe_recipeML_export_multi',
+      'format_help' => t('Export all recipes to recipeML based xml format.')
+    ),
+    'import_multi' => array(
+      'format_name' => t('recipeML'),
+      'callback' => 'recipe_recipeML_import_multi',
+      'format_help' => t('Import recipes from a recipeML based xml file.')
+    )
+  );
+  if ( isset($supported[$type]) ) {
+    return array('recipeml' => $supported[$type]);
+  }
+  else {
+    return FALSE;
+  }
+}
+
+function recipe_recipeML_export_multi() {
+  // you should not be able to export unpublished recipes
+  $rs = db_query("SELECT n.nid from {node} n WHERE n.type='recipe' and n.status>0 ORDER BY n.title");
+
+  $o = '<?xml version="1.0" encoding="UTF-8"?>'."\n".
+  '<!DOCTYPE recipeml PUBLIC "-//FormatData//DTD RecipeML 0.5//EN" "http://www.formatdata.com/recipeml/recipeml.dtd">'."\n".
+  '<recipeml version="0.5" generator="http://drupal.org/project/recipe">'."\n";
+
+  while ($row = db_fetch_object($rs)) {
+    $o .= recipe_recipeML_export_single($row->nid, FALSE);
+  }
+  $o .= '</recipeml>';
+  drupal_set_header('Content-type: text/xml');
+  return $o;
+}
+
+function recipe_recipeML_export_single($nid = NULL, $add_content_header = TRUE) {
+  if ( $nid === NULL ) {
+    drupal_set_message(t('Recipe not found.'));
+    drupal_not_found();
+  }
+
+  $node = node_load(array('nid' => $nid, 'type' => 'recipe'));
+  // you should not be able to export unpublished recipes
+  if ( $node->status == 0 ) {
+    drupal_access_denied();
+    return;
+  }
+
+  $vocabs = taxonomy_get_vocabularies('recipe');
+  $cat_string = '';
+  foreach ($vocabs as $vocab) {
+    $terms = taxonomy_node_get_terms_by_vocabulary($node, $vocab->vid);
+    foreach ( $terms as $term ) {
+      $term = array_shift($terms);
+      $cat_string .= $term->name . ', ';
+    }
+    $cat_string = substr($cat_string, 0, -2);
+  }
+  if ( $cat_string != '' ) {
+    $cat_string = '<categories>'. $cat_string .'</categories>';
+  }
+
+  $output = '';
+  if ( $add_content_header == TRUE ) {
+    $output .= '<?xml version="1.0" encoding="UTF-8"?>'."\n".
+    '<!DOCTYPE recipeml PUBLIC "-//FormatData//DTD RecipeML 0.5//EN" "http://www.formatdata.com/recipeml/recipeml.dtd">'."\n".
+    '<recipeml version="0.5" generator="http://drupal.org/project/recipe">'."\n";
+  }
+
+  $output .= '<recipe>'."\n".
+    '<head>'."\n".
+    '<title>'. my_xml_escape($node->title) ."</title>\n".
+    '      <version>'. date('m-d-Y', $node->changed) .'</version>'."\n".
+    '      <source>'. my_xml_escape((($node->source == '') ? $base_url.'/node/'.$node->nid : $node->source)) .'</source>'."\n".
+    '      <yield><qty>'. floatval($node->yield) .'</qty><unit>'. my_xml_escape(($node->yield_unit == '')?t('Servings'):$node->yield_unit) .'</unit></yield>'."\n".
+    '      <preptime type="cooking"><time><qty>'. $node->preptime .'</qty><timeunit>minutes</timeunit></time></preptime>'.
+    "\n$cat_string".
+    '</head>'."\n".
+    '<description>'. my_xml_escape($node->body) .'</description>'."\n".
+    '<ingredients>';
+
+  foreach ($node->ingredients as $ingredient) {
+    $prep = '';
+    if (strlen($ingredient->note) > 0) {
+      $prep = '<prep>'. $ingredient->note .'</prep>';
+    }
+    $output .= "\n".'<ing><amt><qty>'. $ingredient->quantity .'</qty><unit>'. $ingredient->abbreviation .'</unit></amt><item>'. $ingredient->name ."</item>$prep</ing>";
+  }
+
+  $output .= "\n".
+    '</ingredients>'."\n".
+    '<directions>'. my_xml_escape($node->instructions) .'</directions>'."\n".
+    '<note>'. my_xml_escape($node->notes) .'</note>'."\n".
+    '</recipe>'."\n";
+
+
+  if ( $add_content_header == TRUE) {
+    $output .= '</recipeml>';
+    drupal_set_header('Content-type: text/xml');
+  }
+  return $output;
+}
+
+function my_xml_escape($string) {
+  $chars = array(
+    '&'   => '&amp;',
+    '<'   => '&lt;',
+    '>'   => '&gt;',
+    '"'   => '&quot;',
+    '\''  => '&apos;'
+  );
+  return str_replace(array_keys($chars), array_values($chars), $string);
+}
+
+
+function recipe_recipeML_import_multi() {
+  $o = drupal_get_form('recipe_recipeML_import_form');
+  return theme('page', $o);
+}
+
+
+function recipe_recipeML_import_form($form_state) {
+  $form = array();
+  $form['#attributes'] = array('enctype' => "multipart/form-data");
+  $form['recipe_import_file'] = array(
+    '#type' => 'file',
+    '#title' => t('RecipeML File'),
+    '#default_value' => $object['foo'],
+    '#size' => 34,
+    '#description' => t("A Recipe in RecipeML format, see http://www.formatdata.com/recipeml.  Note: This will add taxonomy terms to the lightest weight recipe taxonomy."),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Import'),
+  );
+  return $form;
+}
+function recipe_recipeML_import_form_validate($form, &$form_state) {
+  //if(!file_check_upload('recipe_import_file')) {
+  //  form_set_error('recipe_import_file', 'File missing for upload.');
+  //}
+}
+function recipe_recipeML_import_form_submit($form, &$form_state) {
+  global $ingredient, $yield, $data_string, $recipes, $recipe, $user, $preptime;
+
+  // save to a temp files
+  if ($file = file_save_upload('recipe_import_file', array(), 'files', FILE_EXISTS_RENAME)) {
+    drupal_set_message(t('The attached file was successfully uploaded'));
+  }
+  else {
+    drupal_set_message(t('The attched file failed to upload.'), 'error');
+    return;
+  }
+
+  $output = '';
+  if ($file) {
+    // Load the xml string.
+    $data = file_get_contents($file->filepath);
+
+    // Parse the data.
+    $xml_parser = drupal_xml_parser_create($data);
+    xml_set_element_handler($xml_parser, 'recipe_import_element_start', 'recipe_import_element_end');
+    xml_set_character_data_handler($xml_parser, 'recipe_import_element_data');
+
+    if (!xml_parse($xml_parser, $data, 1)) {
+      $message = t('Failed to parse RecipeML file: %error at line %line.',
+                   array(
+                   '%error' => xml_error_string(xml_get_error_code($xml_parser)),
+                   '%line' => xml_get_current_line_number($xml_parser)));
+      watchdog('recipe', $message, WATCHDOG_WARNING);
+      drupal_set_message($message, 'error');
+    }
+    // Free the parser.
+    xml_parser_free($xml_parser);
+    // Delete the upload file.
+    file_delete($file->filepath);
+
+    if ($_POST['op'] == t('Import')) {
+
+      $vocabs = taxonomy_get_vocabularies('recipe');
+      list($lightest_vid, $vocab) = each($vocabs);
+      reset($vocabs);
+
+      foreach ($recipes as $recipe) {
+        $recipe->taxonomy = array();
+        foreach ($recipe->_categories as $category) {
+
+          // Search the lightest weight recipe vocab for this term.
+          $term = recipe_get_term_by_name($category, $lightest_vid);
+
+          // You didn't find that term, so add it.
+          if ( $term == FALSE && isset($lightest_vid) ) {
+            $term = array('name' => $category, 'vid' => $lightest_vid);
+            drupal_set_message(t('Adding term %term_name', array('%term_name' => $category)));
+            taxonomy_save_term($term);
+            // Cast back to object so it's like the return value from recipe_get_term_by_name().
+            $term = (object)$term;
+          }
+
+          // You have the term now (existing or new), link it ink.
+          if ( isset($term) ) {
+            $recipe->taxonomy[] = $term->tid;
+          }
+
+        }
+
+        // Save the recipe into its proper tables.
+        node_save($recipe);
+      }
+    }
+  }
+}
+
+
+
+/**
+ * Call-back function used by the XML parser.
+ */
+function recipe_import_element_start($parser, $name, $attributes) {
+  global $recipe, $yield, $ingredient, $preptime;
+
+  switch ($name) {
+    case 'RECIPE':
+      $recipe = new stdClass();
+      $recipe->type = "recipe";
+      // Let's allow comments by default.
+      $recipe->comment = 2;
+      $recipe->_categories = array();
+      break;
+    case 'ING':
+      $ingredient = new stdClass();
+      break;
+    case 'YIELD':
+      $yield = TRUE;
+      break;
+    case 'PREPTIME':
+      $preptime = TRUE;
+      break;
+  }
+}
+
+/**
+ * Call-back function used by the XML parser.
+ */
+function recipe_import_element_end($parser, $name) {
+  global $ingredient, $yield, $data_string, $recipes, $recipe, $user;
+
+  switch ($name) {
+      case 'RECIPE':
+        $recipe->uid = $user->uid;
+        if ($recipe->yield == 0) $recipe->yield = 1;
+        if (!$recipe->notes) $recipe->notes = "Imported from RecipeML file";
+        if (!$recipe->title) {
+          $recipe->title = "RecipeML autotitle";
+        }
+        else {
+          if (!$recipe->teaser) {
+            $recipe->teaser = $recipe->title ." recipe";
+          }
+          if (!$recipe->body) {
+            $recipe->body = $recipe->title ." recipe";
+          }
+        }
+        $recipes[] = $recipe;
+        break;
+      case 'ING':
+        $recipe->ingredients[] = $ingredient;
+        break;
+      case 'YIELD':
+        $yield = FALSE;
+        break;
+      case "TITLE":
+        $recipe->title = trim($data_string);
+        break;
+      case "SOURCE":
+        $recipe->source = trim($data_string);
+        break;
+      case "CATEGORIES":
+        $xmlterms = explode(',', $data_string);
+        foreach ( $xmlterms as $xmlterm ) {
+          $recipe->_categories[] = trim($xmlterm);
+        }
+        break;
+      // QTY tag appears in more than one container tag.
+      case 'QTY':
+        if ($yield) $recipe->yield = trim($data_string);
+        elseif ($preptime) $recipe->preptime = trim($data_string);
+        else $ingredient->quantity = trim($data_string);
+        break;
+      case 'UNIT':
+        // UNIT is contained in preptime, yield, as well as amt(ingredient).
+        if (!$preptime) {
+          if ($unit = recipe_unit_fuzzymatch(trim($data_string))) {
+            $ingredient->unit_id = $unit->id;
+          }
+          else {
+            if ($unit = recipe_unit_from_name('Unit')) {
+              $ingredient->unit_id = $unit->id;
+              if (strlen($ingredient->name) > 0) {
+                $ingredient->name = $ingredient->name .' '. trim($data_string);
+              }
+              else {
+                $ingredient->name = trim($data_string);
+              }
+            }
+          }
+        }
+        break;
+      case 'ITEM':
+        if (strlen($ingredient->name) > 0) {
+          $ingredient->name = trim($data_string) .' '. $ingredient->name;
+        }
+        else {
+          $ingredient->name = trim($data_string);
+        }
+        break;
+      case 'YIELD':
+        $yield = FALSE;
+        break;
+      case 'DIRECTIONS':
+        $recipe->instructions .= trim($data_string);
+        break;
+      case 'STEP':
+        $recipe->instructions .= trim($data_string) ."\n";
+        break;
+      case 'NOTE':
+        $recipe->notes = trim($data_string);
+        break;
+      case 'SOURCE':
+        $recipe->source = trim($data_string);
+        break;
+      case 'PREPTIME':
+        $preptime = FALSE;
+        break;
+  }
+  $data_string = '';
+}
+
+/**
+ * Call-back function used by the XML parser.
+ */
+function recipe_import_element_data($parser, $data) {
+  global $data_string;
+  $data_string .= $data;
+}
+
+
+
+function recipe_get_term_by_name($name, $vocab_id) {
+  $db_result = db_query(db_rewrite_sql("SELECT t.tid, t.* FROM {term_data} t WHERE t.vid=%d and LOWER(t.name) = LOWER('%s')", 't', 'tid'), $vocab_id, trim($name));
+  $result = array();
+  while ($term = db_fetch_object($db_result)) {
+    return $term;
+  }
+  return FALSE;
+}

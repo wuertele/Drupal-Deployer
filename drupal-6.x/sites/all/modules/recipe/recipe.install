@@ -1,0 +1,375 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Install, update and uninstall functions for the recipe module.
+ */
+
+
+/**
+ * implementation of hook_requirements to make sure we let them know about
+ * the 'simple' editor option is depricated and will be removed post 1.0.
+ * @param $phase
+ * @return unknown_type
+ */
+function recipe_requirements($phase) {
+  if ($phase == 'runtime') {
+    $system = variable_get('recipe_ingredient_system', '');
+    //drupal_set_message($system);
+    $requirement = array();
+    if ($system == 'simple') {
+      drupal_set_message(t("The Recipe module Ingredient entering system is set to 'simple' which is deprecated. Please go to !settings and set this to 'complex'.", array("!settings" => l(t("Recipe Settings"), 'admin/settings/recipe'))));
+      $requirement['title'] = t("Recipe Ingredient system");
+      $requirement['severity'] = REQUIREMENT_WARNING;
+      $requirement['value'] = t("Not Set");
+      $requirement['description'] = t("The Recipe module Ingredient entering system is set to 'simple' which is deprecated. Please go to !settings and set this to 'complex'.", array("!settings" => l(t("Recipe Settings"), 'admin/settings/recipe')));
+      return array('recipe_ingredient_system', $requirement);
+    }
+  }
+  return NULL;
+}
+
+
+/**
+* Implementation of hook_schema().
+*/
+function recipe_schema() {
+  $schema['recipe'] = array(
+    'fields' => array(
+      'nid' => array(
+        'description' => 'The primary identifier for a recipe.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'source' => array(
+        'type' => 'varchar',
+        'not null' => FALSE,
+        'length' => 255,
+      ),
+      'yield' => array(
+        'type' => 'int',
+        'unsigned' => FALSE,
+        'not null' => TRUE,
+      ),
+      'yield_unit' => array(
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The units for the yield field(servings, people, cans, cookies, etc).',
+      ),
+      'instructions' => array(
+        'type' => 'text',
+      ),
+      'notes' => array(
+        'type' => 'text',
+      ),
+      'preptime' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'primary key' => array('nid'),
+  );
+
+  $schema['recipe_node_ingredient'] = array(
+    'description' => 'The base table for recipe ingredients.',
+    'fields' => array(
+      'id' => array(
+        'description' => 'The primary identifier for a recipe ingredient.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'nid' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'unit_id' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'quantity' => array(
+        'type' => 'float',
+        'not null' => FALSE,
+      ),
+      'ingredient_id' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'weight' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Ingredient weight within recipe.',
+      ),
+      'note' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'Ingredient processing or notes related to recipe.',
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+
+  $schema['recipe_ingredient'] = array(
+    'description' => 'The base table for recipe ingredients.',
+    'fields' => array(
+      'id' => array(
+        'description' => 'The primary identifier for a recipe ingredient.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => 255,
+      ),
+      'link' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+
+  $schema['recipe_unit'] = array(
+    'description' => 'The base table for recipe units.',
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'type' => 'varchar',
+        'length' => 255,
+      ),
+      'abbreviation' => array(
+        'type' => 'varchar',
+        'length' => 8,
+      ),
+      'metric' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0,
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 6,
+        'not null' => TRUE,
+        'default' => 'Mass',
+      ),
+      'aliases' => array(
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'A common separated list of other names and abbreviations that apply to this unit.',
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+
+  return $schema;
+}
+
+
+/**
+ * Implementation of hook_install().
+ */
+function recipe_install() {
+  drupal_install_schema('recipe');
+  recipe_populate_units();
+}
+
+
+/**
+ * Implementation of hook_enable().
+ * Remember last used recipe vocabs.
+ */
+function recipe_enable() {
+  $vocab_ids = variable_get('recipe_last_vocab_ids', FALSE);
+  if ( $vocab_ids ) {
+    foreach ($vocab_ids as $vid) {
+      if ($vocabulary = taxonomy_vocabulary_load($vid)) {
+        // Existing install. Add back recipe node type, if the recipe
+        // vocabulary still exists. Keep all other node types intact there.
+        $vocabulary = (array) $vocabulary;
+        $vocabulary['nodes']['recipe'] = 1;
+        taxonomy_save_vocabulary($vocabulary);
+      }
+    }
+  }
+}
+
+
+/**
+ * Implementation of hook_disable().
+ * Reinstate last used recipe vocabs.
+ */
+function recipe_disable() {
+  if ($vocabs = taxonomy_get_vocabularies('recipe')) {
+    $vocab_ids = array();
+    foreach ($vocabs as $v) {
+      $vocab_ids[] = $v->vid;
+    }
+    variable_set('recipe_last_vocab_ids', $vocab_ids);
+  }
+}
+
+
+/**
+ * Load the recipe_units table.
+ */
+function recipe_populate_units() {
+  $s = TRUE;
+  $units = get_default_units();
+  foreach ( $units as $u ) {
+    $s = $s && db_query(
+      "INSERT INTO {recipe_unit} (name, abbreviation, metric, type, aliases) VALUES ('%s', '%s', %d, '%s', '%s')",
+        $u['name'], $u['abbreviation'], $u['metric'], $u['type'], $u['aliases']
+    );
+  }
+  return $s;
+}
+
+
+/**
+* Implementation of hook_uninstall().
+*/
+function recipe_uninstall() {
+  // remove db tables
+  drupal_uninstall_schema('recipe');
+
+  // remove node revisions
+  db_query("DELETE FROM {node_revisions} WHERE nid in (select nid from {node} WHERE type='%s')", 'recipe');
+  // remove recipe nodes
+  db_query("DELETE FROM {node} WHERE type = '%s'", 'recipe');
+
+  // remove variables
+  db_query("DELETE FROM {variable} WHERE name like '%s%%'", 'recipe_');
+}
+
+
+/**
+ * Takes schema from 5.x-1.0 version up to 6.x, pre 6100
+ */
+function recipe_update_6000() {
+  $ret = array();
+  db_change_field($ret, 'recipe', 'nid', 'nid', array('type' => 'serial', 'not null' => TRUE, 'unsigned' => TRUE, 'size' => 'normal'));
+  db_change_field($ret, 'recipe', 'yield', 'yield', array('type' => 'int', 'not null' => TRUE, 'unsigned' => FALSE));
+  db_change_field($ret, 'recipe_node_ingredient', 'unit_id', 'unit_id', array('type' => 'int', 'not null' => TRUE, 'unsigned' => TRUE));
+  db_change_field($ret, 'recipe_node_ingredient', 'quantity', 'quantity', array('type' => 'float', 'not null' => FALSE));
+  db_change_field($ret, 'recipe_ingredient', 'link', 'link', array('type' => 'int', 'not null' => TRUE, 'unsigned' => TRUE));
+  db_change_field($ret, 'recipe_unit', 'id', 'id', array('type' => 'serial', 'not null' => TRUE, 'unsigned' => TRUE, 'size' => 'normal'));
+  db_change_field($ret, 'recipe_unit', 'name', 'name', array('type' => 'varchar', 'length' => 255, 'not null' => FALSE));
+  db_change_field($ret, 'recipe_unit', 'abbreviation', 'abbreviation', array('type' => 'varchar', 'length' => 8, 'not null' => FALSE));
+  db_change_field($ret, 'recipe_unit', 'metric', 'metric', array('type' => 'int', 'not null' => TRUE, 'unsigned' => TRUE, 'default' => 0));
+  db_change_field($ret, 'recipe_unit', 'type', 'type', array('type' => 'varchar', 'length' => 6, 'not null' => TRUE, 'default' => 'Mass'));
+  return $ret;
+}
+
+/**
+ * Adds weight column to recipe_node_ingredient
+ */
+function recipe_update_6100() {
+  $ret = array();
+  db_add_field($ret, 'recipe_node_ingredient', 'weight', array('type' => 'int', 'not null' => TRUE, 'default' => 0));
+  return $ret;
+}
+
+/**
+ * Adds aliases column to recipe_unit
+ */
+function recipe_update_6101() {
+  $ret = array();
+  db_add_field($ret, 'recipe_unit', 'aliases', array('type' => 'varchar', 'length' => 128, 'not null' => TRUE, 'default' => ''));
+  $units = get_default_units();
+  foreach ( $units as $u ) {
+    db_query("UPDATE {recipe_unit} SET aliases = '%s' WHERE name='%s'", $u['aliases'], $u['name']);
+  }
+  return $ret;
+}
+
+/**
+ * Adds note column to the recipe_node_ingredient table.
+ */
+function recipe_update_6102() {
+  $ret = array();
+  db_add_field($ret, 'recipe_node_ingredient', 'note', array('type' => 'varchar', 'length' => 255, 'not null' => TRUE, 'default' => ''));
+  return $ret;
+}
+
+
+/**
+ * Adds yield_unit column to the recipe table.
+ */
+function recipe_update_6103() {
+  $ret = array();
+  db_add_field($ret, 'recipe', 'yield_unit',  array('type' => 'varchar', 'length' => 64, 'not null' => TRUE, 'default' => ''));
+  return $ret;
+}
+
+
+/**
+ * Fixes bad index depth setting value from recipe-6.x-1.1
+ */
+function recipe_update_6104() {
+  $ret = array();
+  $depth = variable_get('recipe_index_depth', 4);
+  if ( $depth <= 0 ) {
+    // Let the stock default value handle this.
+    variable_del('recipe_index_depth');
+  }
+  return $ret;
+}
+
+/**
+ * Get an array of the default unit values.
+ * Used to fill the recipe_unit table.
+ */
+function get_default_units() {
+  $units = array(
+    array('name' => 'Slice',               'abbreviation' => 'sli', 'metric' => 0, 'type' => 'Unit', 'aliases' => ''),
+    array('name' => 'Unit',                'abbreviation' => '',    'metric' => 0, 'type' => 'Unit', 'aliases' => 'each,ea,whole'),
+    array('name' => 'Clove',               'abbreviation' => 'clv', 'metric' => 0, 'type' => 'Unit', 'aliases' => ''),
+    array('name' => 'Pinch',               'abbreviation' => 'pn',  'metric' => 0, 'type' => 'Unit', 'aliases' => ''),
+    array('name' => 'Package',             'abbreviation' => 'pk',  'metric' => 0, 'type' => 'Unit', 'aliases' => 'pack'),
+    array('name' => 'Can',                 'abbreviation' => 'cn',  'metric' => 0, 'type' => 'Unit', 'aliases' => 'jar'),
+    array('name' => 'Drop',                'abbreviation' => 'dr',  'metric' => 0, 'type' => 'Unit', 'aliases' => ''),
+    array('name' => 'Bunch',               'abbreviation' => 'bn',  'metric' => 0, 'type' => 'Unit', 'aliases' => ''),
+    array('name' => 'Dash',                'abbreviation' => 'ds',  'metric' => 0, 'type' => 'Unit', 'aliases' => ''),
+    array('name' => 'Carton',              'abbreviation' => 'ct',  'metric' => 0, 'type' => 'Unit', 'aliases' => ''),
+    array('name' => 'Cup',                 'abbreviation' => 'c',   'metric' => 0, 'type' => 'Volume', 'aliases' => ''),
+    array('name' => 'Tablespoon',          'abbreviation' => 'T',   'metric' => 0, 'type' => 'Volume', 'aliases' => 'tbsp,tb'),
+    array('name' => 'Teaspoon',            'abbreviation' => 't',   'metric' => 0, 'type' => 'Volume', 'aliases' => 'tsp'),
+    array('name' => 'Pound',               'abbreviation' => 'lb',  'metric' => 0, 'type' => 'Mass', 'aliases' => ''),
+    array('name' => 'Ounce',               'abbreviation' => 'oz',  'metric' => 0, 'type' => 'Mass', 'aliases' => ''),
+    array('name' => 'Pint',                'abbreviation' => 'pt',  'metric' => 0, 'type' => 'Volume', 'aliases' => ''),
+    array('name' => 'Quart',               'abbreviation' => 'q',   'metric' => 0, 'type' => 'Volume', 'aliases' => ''),
+    array('name' => 'Gallon',              'abbreviation' => 'gal', 'metric' => 0, 'type' => 'Volume', 'aliases' => ''),
+    array('name' => 'Milligram',           'abbreviation' => 'mg',  'metric' => 1, 'type' => 'Mass', 'aliases' => ''),
+    array('name' => 'Centigram',           'abbreviation' => 'cg',  'metric' => 1, 'type' => 'Mass', 'aliases' => ''),
+    array('name' => 'Gram',                'abbreviation' => 'g',   'metric' => 1, 'type' => 'Mass', 'aliases' => ''),
+    array('name' => 'Kilogram',            'abbreviation' => 'kg',  'metric' => 1, 'type' => 'Mass', 'aliases' => ''),
+    array('name' => 'Millilitre',          'abbreviation' => 'ml',  'metric' => 1, 'type' => 'Volume', 'aliases' => ''),
+    array('name' => 'Centilitre',          'abbreviation' => 'cl',  'metric' => 1, 'type' => 'Volume', 'aliases' => ''),
+    array('name' => 'Litre',               'abbreviation' => 'l',   'metric' => 1, 'type' => 'Volume', 'aliases' => ''),
+    array('name' => 'Decilitre',           'abbreviation' => 'dl',  'metric' => 1, 'type' => 'Volume', 'aliases' => ''),
+    array('name' => 'Tablespoon (Metric)', 'abbreviation' => 'tbsp', 'metric' => 1, 'type' => 'Volume', 'aliases' => 'T'),
+    array('name' => 'Teaspoon (Metric)',   'abbreviation' => 'tsp', 'metric' => 1, 'type' => 'Volume', 'aliases' => 't'),
+    array('name' => 'Unknown',             'abbreviation' => 'Unknown', 'metric' => 0, 'type' => 'Unit', 'aliases' => '')
+  );
+  return $units;
+}
