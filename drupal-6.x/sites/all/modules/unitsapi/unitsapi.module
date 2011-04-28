@@ -1,0 +1,443 @@
+<?php // $Id$
+
+/**
+ * @file
+ * Provides a variety of measurement unit conversions.
+ */
+
+/**
+ * Implementation of hook_help().
+ */
+function unitsapi_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#unitsapi':
+      $output = '<p>'. t('To use the unitsapi_convert() function, you need the key of the to and from unit.  These keys are below.') .'</p>';
+      $output .= _unitsapi_key_table();
+      return $output;
+  }
+}
+
+/**
+ * Implementation of hook_define_units().
+ *
+ * Exposes all units defined in the units.xml to the units module.
+ *
+ * @return
+ *   Array of arrays of unit definitions, with unit ids as keys.
+ *
+ * @see hook_define_units()
+ */
+function unitsapi_define_units() {
+  $units = unitsapi_get_units();
+  $converted_units = array();
+  if (!empty($units)) {
+    foreach ($units as $unit_name => $unit) {
+      $key = str_replace(' ', '_', $unit['kind'] . '_' . $unit_name);
+      $converted_units[$key] = array(
+        'shortname'   => $unit['symbol'],
+        'fullname'    => t($unit['singular']),
+        'symbol'      => $unit['symbol'],
+        'category_id' => $unit['kind'],
+        'category'    => t($unit['kind']),
+        'decimals'    => '0',
+      );
+    }
+  }
+  return $converted_units;
+}
+
+/**
+ * The API call for all unit conversions.
+ *
+ * @param $value
+ *   A number containing the value of the measurement.
+ * @param $from
+ *   A string containing the name of the measurement to convert from.
+ * @param $to
+ *   A string containing the name of the measurement to convert to.
+ * @param $details
+ *   TRUE returns a detailed conversion array.  FALSE returns the value only.
+ * @return
+ *   A float containing the result of the conversion. FALSE if an error occured.
+ */
+function unitsapi_convert($value, $from, $to, $details = FALSE) {
+
+  $units = unitsapi_get_units();
+
+  // Only accept numeric values.
+  if (!is_numeric($value)) {
+    watchdog('units api', 'Unit conversion value must be numeric.', array(), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  // Check to see if the unit key was found in the array.
+  if (!isset($units[$from]) || !isset($units[$to])) {
+    watchdog('units api', 'Units API cannot find the specified measurement units.', array(), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  // Only convert with like kinds
+  if ($units[$from]['kind'] != $units[$to]['kind']) {
+    watchdog('units api', 'Units API cannot convert between different kinds of measurement units.', array(), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  // Execute the conversion factors differently based on the kind.  For example, temperature needs to be executed differently.
+  switch ($units[$from]['kind']) {
+    case 'temperature':
+        $result = _unitsapi_convert_temperature($value, $units[$to]['factor'][$from]);
+      break;
+    default:
+      $from_si = $units[$from]['factor'];
+      $to_si = $units[$to]['factor'];
+      $from_convert = $value * $from_si;
+      $result = $from_convert / $to_si;
+  }
+
+  // Round to the 6 spaces after the decimal.
+  $result = round($result, 6);
+
+  $result_array = array(
+    'value' => $value,
+    'result' => $result,
+    'from' => $units[$from],
+    'to' => $units[$to],
+  );
+
+  // Add the plural forms for easy access
+  $result_array['from']['view'] = $value == 1 ? t($units[$from]['singular']) : t($units[$from]['plural']);
+  $result_array['to']['view'] = $result == 1 ? t($units[$to]['singular']) : t($units[$to]['plural']);
+
+  // Allow other modules to modify conversion results.
+  drupal_alter('unitsapi_result', $result_array);
+
+  // If $details is TRUE, return the array of data.  Otherwise, just return the result float.
+  return $details ? $result_array : $result_array['result'];
+}
+
+/**
+ * Fetches the units array, and saved to cache if needed.
+ *
+ * @return
+ *   An array of unit data, including conversion factors and labels.
+ */
+function unitsapi_get_units() {
+  $cache = cache_get('unitsapi_data');
+  if (empty($cache->data) || !is_array($cache->data)) {
+    unitsapi_xml_cache();
+    $cache = cache_get('unitsapi_data');
+  }
+  $units = $cache->data;
+  drupal_alter('unitsapi_load', $units);
+  return $units;
+}
+
+/**
+ * Loads units.xml and saves it in the cache as a serialized array.
+ *
+ * @return
+ *   TRUE if the cache was successful. FALSE if an error occured.
+ */
+function unitsapi_xml_cache() {
+
+  $file = drupal_get_path('module', 'unitsapi') .'/units.xml';
+
+  // Load the XML file
+  if (!function_exists('simplexml_load_file')) {
+    watchdog('units api', 'SimpleXML not found.  PHP 5 is required for Units API.', array(), WATCHDOG_ERROR);
+    return FALSE;
+  }
+  elseif (!file_exists($file)) {
+    watchdog('units api', 'The specified Units XML file does not exist.', array(), WATCHDOG_ERROR);
+    return FALSE;
+  }
+  elseif (!$xml = simplexml_load_file($file)) {
+    watchdog('units api', 'The Units API XML file could not be loaded by SimpleXML.', array(), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  // Loop the XML file.  It is often easier to force the type of the SimpleXML object to an array.
+  foreach ((array) $xml as $kind => $units) {
+
+    foreach ($units->unit as $unit) {
+
+      $unitarray = (array) $unit;
+
+      // If this unit has multiple factors, set them in $unitsarray according to their kind
+      if (isset($unit->factors)) {
+        unset($unitarray['factors']);
+        foreach ($unit->factors->factor as $factor) {
+          $factor = (array) $factor;
+
+          switch ($kind) {
+            case 'temperature':
+                $unitarray['factor'][$factor['@attributes']['from']] = $factor[0];
+              break;
+          }
+        }
+      }
+
+      $units_cache[$unitarray['key']] = array(
+        'singular' => $unitarray['singular'],
+        'plural' => $unitarray['plural'],
+        'symbol' => $unitarray['symbol'],
+        'factor' => _unitsapi_factor_set($unitarray['factor']),
+        'kind' => $kind,
+        'source' => $unitarray['source'],
+      );
+
+    }
+  }
+
+  cache_set('unitsapi_data', $units_cache);
+  return TRUE;
+}
+
+
+/**
+ * Helper function to format the conversion factor.
+ *
+ * @param $si
+ *   A string or array containing the conversion factor equation.
+ * @return
+ *   A string or array that contains equations that are formatted for execution.
+ */
+function _unitsapi_factor_set($si) {
+
+  $si = str_replace(' ', '', $si);
+  $si = str_replace(array('—', '−', '–'), '-', $si);
+
+  return $si;
+}
+
+/**
+ * Executes the temperature conversion equation.
+ *
+ * @param $value
+ *   A number containing the value of the temperature.
+ * @param $factor
+ *   A string containing the conversion equation.
+ * @return
+ *   A float containing the result of the conversion. FALSE if an error occured.
+ */
+function _unitsapi_convert_temperature($value, $factor) {
+
+  // Security note: Execute a variety of checks to make sure the equation is not something mischievous
+  $equation = str_replace(array('t/°C', 't/°F', 'T/K'), $value, $factor);
+  $equation = preg_replace("/[^0-9+\-.*\/()%]/", "", $equation);
+  $equation = preg_replace("/([+-])([0-9]+)(%)/", "*(1\$1.\$2)", $equation);
+  $equation = preg_replace("/([0-9]+)(%)/", ".\$1", $equation);
+
+  if ($equation == "") {
+    $return = FALSE;
+  }
+  else {
+    eval("\$return=". $equation .";");
+  }
+  return $return;
+}
+
+/**
+ * Helper function to generate a table of units.
+ *
+ * @return
+ *   A themed table of unit keys, symbols, and conversion factors.
+ */
+function _unitsapi_key_table() {
+
+  $units = unitsapi_get_units();
+
+  $header = array(
+    t('Key'),
+    t('Unit name'),
+    t('Conversion factor'),
+  );
+
+  if (!empty($units) && is_array($units)) {
+    foreach ($units as $key => $unit) {
+      if ($curr_kind != $unit['kind']) {
+        $curr_kind = $unit['kind'];
+        $row = array(
+          'data' => array(array('data' => '<strong>'. drupal_ucfirst(t($curr_kind)) .'</strong>', 'colspan' => 4)),
+        );
+        $rows[] = $row;
+      }
+
+      if ($curr_kind == 'temperature') {
+        $output_factor = '';
+
+        foreach ($unit['factor'] as $factor_key => $factor) {
+          $output_factor .= t('from @factor-key:',  array('@factor-key' => $factor_key)) . ' ' . l($factor, $unit['source']) . '<br />';
+        }
+
+        $row = array(
+          check_plain($key),
+          t('@singular (@symbol)', array('@singular' => $unit['singular'], '@symbol' => $unit['symbol'])),
+          $output_factor,
+        );
+      }
+      else {
+        $row = array(
+          check_plain($key),
+          t('@singular (@symbol)', array('@singular' => $unit['singular'], '@symbol' => $unit['symbol'])),
+          l($unit['factor'], $unit['source']),
+        );
+      }
+
+      $rows[] = $row;
+
+    }
+  }
+  return theme('table', $header, $rows);
+}
+
+/**
+ * Helper function to generate a list of translatable strings.
+ */
+function _unitsapi_dummy_potx_generate() {
+  $units = unitsapi_get_units();
+  $output = "  \$strings = array(\n";
+  foreach ($units as $unit) {
+    if (!empty($unit['singular'])) {
+      $output .= "    t('{$unit['singular']}'),\n";
+    }
+    if (!empty($unit['plural'])) {
+      $output .= "    t('{$unit['plural']}'),\n";
+    }
+  }
+  $output .= "  );\n";
+  print $output;
+}
+
+/**
+ * Helper function to hold dummy translatable strings.
+ *
+ * @see _unitsapi_dummy_potx_generate()
+ * @see http://api.drupal.org/api/function/t
+ */
+function _unitsapi_dummy_potx() {
+  $strings = array(
+    t('millimeter'),
+    t('millimeters'),
+    t('centimeter'),
+    t('centimeters'),
+    t('decimeter'),
+    t('decimeters'),
+    t('meter'),
+    t('meters'),
+    t('kilometer'),
+    t('kilometers'),
+    t('foot'),
+    t('feet'),
+    t('inch'),
+    t('inches'),
+    t('mile'),
+    t('miles'),
+    t('yard'),
+    t('yards'),
+    t('cubic foot'),
+    t('cubic feet'),
+    t('cubic inch'),
+    t('cubic inches'),
+    t('cubic mile'),
+    t('cubic miles'),
+    t('cubic yard'),
+    t('cubic yards'),
+    t('cup'),
+    t('cups'),
+    t('Imperial gallon'),
+    t('Imperial gallons'),
+    t('US gallon'),
+    t('US gallons'),
+    t('liter'),
+    t('liters'),
+    t('Imperial fluid ounce'),
+    t('Imperial fluid ounces'),
+    t('US fluid ounce'),
+    t('US fluid ounces'),
+    t('Imperial pint'),
+    t('Imperial pints'),
+    t('US pint (liquid)'),
+    t('US pints (liquid)'),
+    t('US pint (dry)'),
+    t('US pints (dry)'),
+    t('Imperial quart'),
+    t('Imperial quarts'),
+    t('US quart (liquid)'),
+    t('US quarts (liquid)'),
+    t('US quart (dry)'),
+    t('US quarts (dry)'),
+    t('tablespoon'),
+    t('tablespoons'),
+    t('teaspoon'),
+    t('teaspoons'),
+    t('milligram'),
+    t('milligrams'),
+    t('gram'),
+    t('grams'),
+    t('kilogram'),
+    t('kilograms'),
+    t('carat'),
+    t('carats'),
+    t('grain'),
+    t('grains'),
+    t('ounce'),
+    t('ounces'),
+    t('pennyweight'),
+    t('pennyweights'),
+    t('pound'),
+    t('pounds'),
+    t('stone'),
+    t('stones'),
+    t('slug'),
+    t('slugs'),
+    t('metric ton'),
+    t('metric tons'),
+    t('long ton'),
+    t('long tons'),
+    t('short ton'),
+    t('short tons'),
+    t('acre'),
+    t('acres'),
+    t('are'),
+    t('ares'),
+    t('hectare'),
+    t('hectares'),
+    t('square foot'),
+    t('square feet'),
+    t('square meter'),
+    t('square meters'),
+    t('square kilometer'),
+    t('square kilometers'),
+    t('square inch'),
+    t('square inches'),
+    t('square yard'),
+    t('square yards'),
+    t('square mile'),
+    t('square miles'),
+    t('pascal'),
+    t('pascal'),
+    t('torr'),
+    t('torr'),
+    t('bar'),
+    t('bars'),
+    t('millibar'),
+    t('millibars'),
+    t('psi'),
+    t('psi'),
+    t('day'),
+    t('days'),
+    t('hour'),
+    t('hours'),
+    t('minute'),
+    t('minutes'),
+    t('year'),
+    t('years'),
+    t('celsius'),
+    t('celsius'),
+    t('fahrenheit'),
+    t('fahrenheit'),
+    t('kelvin'),
+    t('kelvin'),
+  );
+}

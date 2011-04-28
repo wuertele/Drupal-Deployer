@@ -1,0 +1,187 @@
+<?php // $Id$
+
+/**
+ * @file
+ * Tests for Units API module.
+ */
+
+/**
+ * Functional tests for the Units API module.
+ */
+class UnitsAPIUnitTest extends DrupalWebTestCase {
+
+  function getInfo() {
+    return array(
+      'name' => t('Units API functionality'),
+      'description' => t('Validate various unit conversions.'),
+      'group' => t('Units API'),
+    );
+  }
+
+  function setUp() {
+    parent::setUp('unitsapi', 'units');
+    unitsapi_xml_cache();
+  }
+
+  /**
+   * Check to see if an unit conversion equals an expected value.
+   *
+   * @param $value
+   *   A number containing the value of the measurement.
+   * @param $from
+   *   A string containing the name of the measurement to convert from.
+   * @param $to
+   *   A string containing the name of the measurement to convert to.
+   * @param $expected
+   *   A number containing the expected result of the conversion.
+   * @param $group
+   *   A string with the SimpleTest group label.
+   * @return
+   *   The status passed in.
+   */
+  protected function assertUnitConversion($value, $from, $to, $expected, $group = 'Other') {
+    $test = unitsapi_convert($value, $from, $to, TRUE);
+
+    $message = t('@value @from to @to = %expected @to (returned %result @to)', array(
+      '@value' => $value,
+      '@from' => $test['from']['view'],
+      '@to' => $test['to']['view'],
+      '%expected' => $expected,
+      '%result' => $test['result'],
+    ));
+
+    return $this->assert($expected == $test['result'], $message, $group);
+  }
+
+  /**
+   * Tests load and cache of units.xml
+   */
+  function testUnitsAPICache() {
+    $result = unitsapi_xml_cache();
+    $this->assertTrue($result, t('Set XML cache.'));
+  }
+
+  /**
+   * Tests error returned by mixing unit kinds.
+   */
+  function testUnitsAPIKinds() {
+    $this->assertFalse(unitsapi_convert(1, 'mile', 'liter'), t('Mismatched unit kinds return false.'));
+  }
+
+  /**
+   * Tests compatibility with units.module
+   */
+  function testUnitsAPItoUnits() {
+    $this->assertEqual(count(units_get_units()), count(unitsapi_get_units()), t('Total count of units.module units equals total count of unitsapi units.'));
+  }
+
+  /**
+   * Tests various length unit conversions.
+   */
+  function testUnitsAPILength() {
+    $group = t('Length');
+    $this->assertUnitConversion(4000, 'millimeter', 'inch', 157.480315, $group);
+    $this->assertUnitConversion(120, 'centimeter', 'foot', 3.937008, $group);
+    $this->assertUnitConversion(92, 'decimeter', 'yard', 10.061242, $group);
+    $this->assertUnitConversion(5, 'meter', 'mile', 0.003107, $group);
+    $this->assertUnitConversion(1.5, 'kilometer', 'foot', 4921.259843, $group);
+    $this->assertUnitConversion(30, 'foot', 'yard', 10, $group);
+    $this->assertUnitConversion(87, 'inch', 'decimeter', 22.098, $group);
+    $this->assertUnitConversion(135, 'yard', 'meter', 123.444, $group);
+    $this->assertUnitConversion(10, 'mile', 'yard', 17600, $group);
+    $this->assertUnitConversion(22, 'mile', 'kilometer', 35.405568, $group);
+  }
+
+  /**
+   * Tests various volume unit conversions.
+   */
+  function testUnitsAPIVolume() {
+    $group = t('Volume');
+    $this->assertUnitConversion(90, 'cubic inch', 'us liquid quart', 1.558441, $group);
+    $this->assertUnitConversion(4, 'cubic yard', 'cubic foot', 107.999993, $group);
+    $this->assertUnitConversion(16, 'cup', 'imperial pint', 6.661392, $group);
+    $this->assertUnitConversion(40, 'us fluid ounce', 'cubic inch', 72.187519, $group);
+    $this->assertUnitConversion(25, 'imperial pint', 'tablespoon', 960.760251, $group);
+    $this->assertUnitConversion(70, 'us dry quart', 'imperial gallon', 16.956433, $group);
+    $this->assertUnitConversion(55, 'tablespoon', 'cubic inch', 49.628902, $group);
+    $this->assertUnitConversion(120, 'teaspoon', 'cup', 2.500001, $group);
+    $this->assertUnitConversion(2, 'liter', 'imperial fluid ounce', 70.390166, $group);
+    $this->assertUnitConversion(12, 'us gallon', 'liter', 45.424944, $group);
+    $this->assertUnitConversion(2, 'cubic foot', 'cup', 239.376689, $group);
+  }
+
+  /**
+   * Tests various weight unit conversions.
+   */
+  function testUnitsAPIWeight() {
+    $group = t('Weight');
+    $this->assertUnitConversion(25, 'milligram', 'carat', 0.125, $group);
+    $this->assertUnitConversion(60, 'grain', 'gram', 3.887935, $group);
+    $this->assertUnitConversion(122, 'pennyweight', 'slug', 0.013001, $group);
+    $this->assertUnitConversion(812, 'pound', 'long ton', 0.3625, $group);
+    $this->assertUnitConversion(88, 'kilogram', 'short ton', 0.097003, $group);
+    $this->assertUnitConversion(50, 'stone', 'pound', 699.999954, $group);
+  }
+
+  /**
+   * Tests various area unit conversions.
+   */
+  function testUnitsAPIArea() {
+    $group = t('Area');
+    $this->assertUnitConversion(197, 'square yard', 'acre', 0.040702, $group);
+    $this->assertUnitConversion(70, 'hectare', 'square mile', 0.270272, $group);
+    $this->assertUnitConversion(103, 'square inch', 'square foot', 0.715278, $group);
+    $this->assertUnitConversion(76, 'are', 'acre', 1.877993, $group);
+    $this->assertUnitConversion(9, 'square meter', 'square yard', 10.76391, $group);
+    $this->assertUnitConversion(38, 'square kilometer', 'square mile', 14.671883, $group);
+    $this->assertUnitConversion(10, 'aankadam', 'kottah', 1.000149, $group);
+    $this->assertUnitConversion(20, 'perch', 'rood', 0.499946, $group);
+    $this->assertUnitConversion(25, 'cent', 'acre', 0.250008, $group);
+    $this->assertUnitConversion(12, 'chatak', 'aankadam', 74.995516, $group);
+    $this->assertUnitConversion(121, 'kottah', 'acre', 1.999986, $group);
+    $this->assertUnitConversion(5, 'guntha', 'perch', 20.001977, $group);
+    $this->assertUnitConversion(90, 'ground', 'kanal', 2.000024, $group);
+    $this->assertUnitConversion(4, 'marla', 'square yard', 2400.017031, $group);
+    $this->assertUnitConversion(3, 'rood', 'acre', 0.749994, $group);
+    $this->assertUnitConversion(10, 'bigha I', 'cent', 399.985174, $group);
+    $this->assertUnitConversion(10, 'bigha II', 'acre', 6.249986, $group);
+    $this->assertUnitConversion(2, 'kanal', 'chatak', 479.958383, $group);
+    $this->assertUnitConversion(3, 'biswa I', 'acre', 23.999901, $group);
+    $this->assertUnitConversion(2, 'biswa II', 'acre', 24.9999, $group);
+  }
+
+  /**
+   * Tests various pressure unit conversions.
+   */
+  function testUnitsAPIPressure() {
+    $group = t('Pressure');
+    $this->assertUnitConversion(5926, 'pascal', 'torr', 44.448645, $group);
+    $this->assertUnitConversion(28, 'bar', 'psi', 406.105683, $group);
+    $this->assertUnitConversion(865, 'torr', 'bar', 1.153239, $group);
+    $this->assertUnitConversion(55, 'millibar', 'pascal', 5500, $group);
+  }
+  
+  /**
+   * Tests various temperature unit conversions.
+   */
+  function testUnitsAPITemperature() {
+    $group = t('Temperature');
+    $this->assertUnitConversion(25, 'celsius', 'fahrenheit', 77, $group);
+    $this->assertUnitConversion(45, 'celsius', 'kelvin', 318.15, $group);
+    $this->assertUnitConversion(90, 'fahrenheit', 'celsius', 32.222222, $group);
+    $this->assertUnitConversion(55, 'fahrenheit', 'kelvin', 285.927778, $group);
+    $this->assertUnitConversion(295, 'kelvin', 'celsius', 21.85, $group);
+    $this->assertUnitConversion(300, 'kelvin', 'fahrenheit', 80.33, $group);
+  }
+
+  /**
+   * Tests various time unit conversions.
+   */
+  function testUnitsAPITime() {
+    $group = t('Time');
+    $this->assertUnitConversion(50000, 'minute', 'year', 0.095129, $group);
+    $this->assertUnitConversion(82, 'hour', 'day', 3.416667, $group);
+    $this->assertUnitConversion(3.5, 'day', 'minute', 5040, $group);
+    $this->assertUnitConversion(20, 'year', 'hour', 175200, $group);
+  }
+}
