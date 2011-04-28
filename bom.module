@@ -1,0 +1,142 @@
+<?php
+// $Id$
+
+function computed_field_field_assembly_bom_args_compute($node, $field, &$node_field) {
+//  foreach (debug_backtrace() as $mystack) {
+//    drupal_set_message ("Dave: nid=" . $node->nid . "; function:" . serialize ($mystack['function']));
+//  }
+
+  $node_field[0]['value'] = "";
+  $component_count = array();
+  foreach ($node->field_assembly_part_count as $key => $count) {
+    $subnode = node_load ($node->field_assembly_part_node[$key]['nid'], NULL, TRUE);
+    if ($subnode->type == 'component') {
+             $component_count[$node->field_assembly_part_node[$key]['nid']] += $count['value'];
+    } elseif ($subnode->type == 'assembly') {
+              if (!empty($subnode->field_assembly_bom_args[0]['value'])) {
+		//drupal_set_message ("BOM for child node " . $node->field_assembly_part_node[$key]['nid'] . " is " . $subnode->field_assembly_bom_args[0]['value']);
+                   $sub_bom_records = explode (',', $subnode->field_assembly_bom_args[0]['value']);
+                   foreach ($sub_bom_records as $sub_bom_record) {
+	               list($sub_count, $sub_component) = explode ('x', $sub_bom_record);
+	               $component_count[$sub_component] += $count['value'] * $sub_count;
+                   }
+              } else {
+                  drupal_set_message ("<br>A:" . $count['value'] . "x " . $subnode->title . " has no bom!");
+              }
+    }
+  }
+
+  $component_text = array();
+  foreach ($component_count as $component_nid => $count) {
+    $component_text[$component_nid] = $count . "x" . $component_nid;
+  }
+
+  $node_field[0]['value'] = implode (',', $component_text);
+  $node->field_assembly_bom_args[0]['value'] = $node_field[0]['value'];
+  //  content_storage ('update', $node);
+  drupal_set_message("Updated BOM for node " . $node->nid . " (" . $node->title . "): " . $node_field[0]['value']);
+
+  if (0) {
+  // now re-compute all parent nodes
+  $query = db_rewrite_sql ("SELECT * FROM {node} WHERE type='assembly'");
+  $result = db_query($query, $node->nid);
+  while ($row = db_fetch_array($result)) {
+    if ($row['nid'] != $node->nid) {
+      $potential_mommy_node = node_load ($row['nid'], NULL, TRUE);
+      if (! is_object ($potential_mommy_node)) {
+	drupal_set_message ("potential_mommy_node with nid " . $row['nid'] . " is not an object");
+      }
+      if (is_array ($potential_mommy_node->field_assembly_part_node)) {
+	$doupdate = 0;
+	foreach ($potential_mommy_node->field_assembly_part_node as $child_of_potential_mommy) {
+	  if ($child_of_potential_mommy['nid'] == $node->nid) {
+	    $doupdate = 1;
+	  }
+	}
+	if ($doupdate == 1) {
+	  drupal_set_message ("Node " . $row['nid'] . " is a parent of node " . $node->nid . ", and must have its BOM updated.");
+	  $node_to_update = $potential_mommy_node;
+	  $original_mommy_bom = $node_to_update->field_assembly_bom_args[0]['value'];
+	  
+//	  drupal_set_message ("node " . $row['nid'] . " before update: " . serialize ($node_to_update));
+
+	  if (1) {
+	  // update mommy
+	  // change node revision?
+	  node_invoke_nodeapi($node_to_update, 'prepare'); /* testing */
+	  //node_invoke_nodeapi($node_to_update, 'validate'); /* testing */
+	  $submitted_node = node_submit($node_to_update); /* apparently only needed in Drupal 5 */
+	  node_invoke_nodeapi($submitted_node, 'presave'); /* testing */
+	  node_save($submitted_node);			    /* insufficient */
+	  node_invoke_nodeapi($submitted_node, 'update'); /* testing */
+          }
+	  
+//	  drupal_set_message ("node " . $row['nid'] . " after update: " . serialize ($node_to_update));
+
+	  // verify mommy
+	  $new_mommy_bom = $submitted_node->field_assembly_bom_args[0]['value'];
+	  $node_reloaded = node_load ($row['nid'], NULL, TRUE);
+	  $saved_mommy_bom = $node_reloaded->field_assembly_bom_args[0]['value'];
+	  if ($saved_mommy_bom != $new_mommy_bom) {
+	    drupal_set_message ("Warning:  Node " . $row['nid'] . " bom changed from " . $original_mommy_bom . " to " . $new_mommy_bom . ", but saved value is " . $saved_mommy_bom);
+	  } else {
+	    //drupal_set_message ("Node " . $row['nid'] . " bom changed from " . $original_mommy_bom . " to " . $new_mommy_bom . ", and saved value is " . $saved_mommy_bom);
+	  }
+	}
+      }
+    }
+  }
+  }
+}
+
+
+function computed_field_field_assembly_bom_args_display($field, $element, $node) {
+  $rows = array();
+  $header = array('Count', 'Component', 'Price (ea)', 'Subtotal');
+  if (!empty($element['#item']['value'])) {
+    $bom_records = explode (',', $element['#item']['value']);
+    foreach ($bom_records as $bom_record) {
+      list($count, $component_nid) = explode ('x', $bom_record);
+      $component_node = node_load ($component_nid, NULL, TRUE);
+      $subtotal = $count * $component_node->field_component_minimum_price[0]['value'];
+      $rows[] = array ($count, l ($component_node->title, "node/" . $component_nid, array('html' => TRUE)), $component_node->field_component_minimum_price[0]['value'], $subtotal);
+      $total += $subtotal;
+    }
+    $rows[] = array ("<b>Total</b>", "", "", $total);
+  }
+  return theme('table', $header, $rows);
+}
+
+
+function computed_field_field_assembly_extern_structure_compute ($node, $field, &$node_field) {
+  if (!$node->nid) node_save($node);
+  $node_field = array();
+  $query = db_rewrite_sql ("SELECT * FROM {node} WHERE type='assembly'");
+  $result = db_query($query, $node->nid);
+  while ($row = db_fetch_array($result)) {
+    if ($row['nid'] != $node->nid) {
+      $potential_mommy_node = node_load ($row['nid'], NULL, TRUE);
+      if (! is_object ($potential_mommy_node)) {
+	drupal_set_message ("potential_mommy_node with nid " . $row['nid'] . " is not an object");
+      }
+      if (is_array ($potential_mommy_node->field_assembly_part_node)) {
+	foreach ($potential_mommy_node->field_assembly_part_node as $child_of_potential_mommy) {
+	  //drupal_set_message("checking whether nid " . $child_of_potential_mommy['nid'] . " matches nid " . $node->nid);
+	  if ($child_of_potential_mommy['nid'] == $node->nid) {
+	    $node_field[]['value'] = $row['nid'];
+	    drupal_set_message("wrote " . $row['nid'] . " to node_field");
+	  }
+	}
+      }
+    }
+  }
+}
+
+function computed_field_field_assembly_extern_structure_display ($field, $element, $node) {
+  if (!empty($element['#item']['value'])) {
+    $mommy_node = node_load ($element['#item']['value'], NULL, TRUE);
+    return l ($mommy_node->title, "node/" . $element['#item']['value'], array('html' => TRUE));
+  } else {
+    return "";
+  }
+}
