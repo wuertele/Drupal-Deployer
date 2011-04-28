@@ -1,0 +1,128 @@
+#!/bin/sh -v
+
+rm -rf subproject
+mkdir subproject
+cd subproject
+git init
+echo v0 > Changelog
+echo v0 > README
+git add .
+git commit -m "v0"
+git tag v0
+
+# add v1 files
+echo A > Feature-A-v1
+echo B > Feature-B-v1v2
+echo C > Feature-C-v1v3
+echo D > Feature-D-v1v2v3
+# tell README what files to expect in v1
+echo v1 > README
+ls *v1* >> README
+# update Changelog
+cat README > Changelog.new
+echo "" >> Changelog.new
+cat Changelog >> Changelog.new
+mv Changelog.new Changelog
+# commit this version
+git add .
+git commit -am "v1"
+git tag v1
+
+# remove non-v2 files
+ls Feature* | grep -v v2 | xargs rm
+# add new v2 files
+echo E > Feature-E-v2
+echo F > Feature-F-v2v3
+echo G > Feature-G-v2v4
+echo H > Feature-H-v2v3v4
+# tell README what files to expect in v2
+echo v2 > README
+ls *v2* >> README
+# update Changelog
+cat README > Changelog.new
+echo "" >> Changelog.new
+cat Changelog >> Changelog.new
+mv Changelog.new Changelog
+# commit this version
+git add .
+git commit -am "v2"
+git tag v2
+
+# remove non-v3 files
+ls Feature* | grep -v v3 | xargs rm
+# add new v3 files
+echo I > Feature-I-v3
+echo J > Feature-J-v3v4
+# tell README what files to expect in v3
+echo v3 > README
+ls *v3* >> README
+# update Changelog
+cat README > Changelog.new
+echo "" >> Changelog.new
+cat Changelog >> Changelog.new
+mv Changelog.new Changelog
+# commit this version
+git add .
+git commit -am "v3"
+git tag v3
+
+# remove non-v4 files
+ls Feature* | grep -v v4 | xargs rm
+# add new v4 files
+echo K > Feature-K-v4
+# tell README what files to expect in v4
+echo v4 > README
+ls *v4* >> README
+# update Changelog
+cat README > Changelog.new
+echo "" >> Changelog.new
+cat Changelog >> Changelog.new
+mv Changelog.new Changelog
+# commit this version
+git add .
+git commit -am "v4"
+git tag v4
+
+# Create superproject
+cd ..
+rm -rf superproject
+mkdir superproject
+cd superproject
+git init
+echo superproject > README
+git add .
+git commit -m "initial commit"
+
+# Merge subproject at v1 as subproject-a
+git remote add subproject ../subproject
+git fetch --tags subproject
+git merge -s ours --no-commit v1
+git read-tree --prefix=subproject-a/ -u v1
+git commit -m "added v1 subproject at subproject-a"
+
+# Merge subproject at v2 as subproject-b
+git merge -s ours --no-commit v2
+git read-tree --prefix=subproject-b/ -u v2
+git commit -m "added v2 subproject at subproject-b"
+
+# Patch subproject-a on a branch
+git checkout -b patch-subproject-a
+echo "superproject patch existing file" >> subproject-a/Feature-D-v1v2v3
+echo "superproject patch new file" >> subproject-a/Feature-L-v1v2v3v4
+git add subproject-a/Feature-L-v1v2v3v4
+git commit -am "patching subproject-a"
+
+# Patch subproject-a on the branch again, dependent on previous patch
+echo "superproject patch file from previous patch" >> subproject-a/Feature-L-v1v2v3v4
+echo "superproject patch existing file not from previous patch" >> subproject-a/Feature-B-v1v2
+echo "superproject patch new file" >> subproject-a/Feature-M-v1v2v3v4
+git add subproject-a/Feature-M-v1v2v3v4
+git commit -am "patching subproject-a again"
+
+# Patch subproject-a on the branch again, NOT dependent on previous patch
+echo "superproject patch existing file independent of previous patch" >> subproject-a/Feature-B-v1v2
+echo "superproject patch new file" >> subproject-a/Feature-N-v1v2v3v4
+git add subproject-a/Feature-N-v1v2v3v4
+git commit -am "patching subproject-a yet again"
+
+exit 0

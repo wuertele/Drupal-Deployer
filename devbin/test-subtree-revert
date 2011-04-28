@@ -1,0 +1,177 @@
+#!/bin/sh -v
+
+rm -rf subproject
+mkdir subproject
+cd subproject
+git init
+echo v0 > Changelog
+echo v0 > README
+git add .
+git commit -m "v0"
+git tag v0
+
+# add v1 files
+echo A > Feature-A-v1
+echo B > Feature-B-v1v2
+echo C > Feature-C-v1v3
+echo D > Feature-D-v1v2v3
+# tell README what files to expect in v1
+echo v1 > README
+ls *v1* >> README
+# update Changelog
+cat README > Changelog.new
+echo "" >> Changelog.new
+cat Changelog >> Changelog.new
+mv Changelog.new Changelog
+# commit this version
+git add .
+git commit -am "v1"
+git tag v1
+
+# remove non-v2 files
+ls Feature* | grep -v v2 | xargs rm
+# add new v2 files
+echo E > Feature-E-v2
+echo F > Feature-F-v2v3
+echo G > Feature-G-v2v4
+echo H > Feature-H-v2v3v4
+# tell README what files to expect in v2
+echo v2 > README
+ls *v2* >> README
+# update Changelog
+cat README > Changelog.new
+echo "" >> Changelog.new
+cat Changelog >> Changelog.new
+mv Changelog.new Changelog
+# commit this version
+git add .
+git commit -am "v2"
+git tag v2
+
+# remove non-v3 files
+ls Feature* | grep -v v3 | xargs rm
+# add back removed v3 files
+echo C > Feature-C-v1v3
+# add new v3 files
+echo I > Feature-I-v3
+echo J > Feature-J-v3v4
+# tell README what files to expect in v3
+echo v3 > README
+ls *v3* >> README
+# update Changelog
+cat README > Changelog.new
+echo "" >> Changelog.new
+cat Changelog >> Changelog.new
+mv Changelog.new Changelog
+# commit this version
+git add .
+git commit -am "v3"
+git tag v3
+
+# remove non-v4 files
+ls Feature* | grep -v v4 | xargs rm
+# add back removed v4 files
+echo G > Feature-G-v2v4
+# add new v4 files
+echo K > Feature-K-v4
+# tell README what files to expect in v4
+echo v4 > README
+ls *v4* >> README
+# update Changelog
+cat README > Changelog.new
+echo "" >> Changelog.new
+cat Changelog >> Changelog.new
+mv Changelog.new Changelog
+# commit this version
+git add .
+git commit -am "v4"
+git tag v4
+
+# Create superproject
+cd ..
+rm -rf superproject
+mkdir superproject
+cd superproject
+git init
+echo superproject > README
+git add .
+git commit -m "initial commit"
+
+# Merge subproject at v1 as subtree
+git remote add subproject ../subproject
+git fetch --tags subproject
+git merge -s ours --no-commit v1
+git read-tree --prefix=subproject/ -u v1
+git commit -m "added subproject at v1"
+
+# # Patch (incompatible with v2 or v3) subproject in a branch
+# git checkout master
+# git checkout -b patch-v1-subproject-incompatible
+# echo "superproject patch existing v1v2v3 file" >> subproject/Feature-D-v1v2v3
+# echo "superproject patch existing v1v2 file" >> subproject/Feature-B-v1v2
+# echo "superproject patch existing v1 file" >> subproject/Feature-A-v1
+# echo "superproject patch new file" >> subproject/Feature-L-v1v2v3v4
+# git add subproject/Feature-L-v1v2v3v4
+# git commit -am "patching subproject"
+
+# # Patch (incompatible with v2 or v3) subproject in a branch
+# git checkout master
+# git checkout -b patch-v1-subproject-compatible-v2
+# echo "superproject patch existing v1v2v3 file" >> subproject/Feature-D-v1v2v3
+# echo "superproject patch existing v1v2 file" >> subproject/Feature-B-v1v2
+# echo "superproject patch new file" >> subproject/Feature-M-v1v2v3v4
+# git add subproject/Feature-M-v1v2v3v4
+# git commit -am "patching subproject"
+
+# # Patch (incompatible with v2 or v3) subproject in a branch
+# git checkout master
+# git checkout -b patch-v1-subproject-compatible-v3
+# echo "superproject patch existing v1v2v3 file" >> subproject/Feature-D-v1v2v3
+# echo "superproject patch new file" >> subproject/Feature-M-v1v2v3v4
+# git add subproject/Feature-N-v1v2v3v4
+# git commit -am "patching subproject"
+
+# Update subproject to v3 on a test branch
+git checkout master
+git checkout -b update-subproject-to-v3
+git merge -s subtree -X subtree=subproject v3
+# Make sure no unexpected files remain in superproject
+ls Feature* 2>/dev/null; if [ $? -eq 0 ]; then echo Unexpected files in superproject:; ls Feature* ; exit -1; fi
+# Make sure no unexpected files remain in subproject
+ls subproject/Feature* | grep -v v3 >/dev/null; if [ $? -eq 0 ]; then echo Unexpected files in v3: ; ls subproject/Feature* | grep -v v3 ; exit -1; fi
+# Make sure all expected files exist
+cd subproject; grep Feature README | xargs ls > /dev/null; if [ $? -ne 0 ]; then echo Couldnt find expected file in v3 ; exit -1; fi
+cd ..; echo Upgrade looks good
+
+# # Merge patches from patch-subproject
+# git merge patch-v1-subproject-compatible-v3
+# # Make sure no unexpected files remain in superproject
+# ls Feature* 2>/dev/null; if [ $? -eq 0 ]; then echo Unexpected files in superproject:; ls Feature* ; exit -1; fi
+# # Make sure no unexpected files remain in subproject
+# ls subproject/Feature* | grep -v v3 >/dev/null; if [ $? -eq 0 ]; then echo Unexpected files in v3: ; ls subproject/Feature* | grep -v v3 ; exit -1; fi
+# # Make sure all expected files exist
+# cd subproject; grep Feature README | xargs ls > /dev/null; if [ $? -ne 0 ]; then echo Couldnt find expected file in v3 ; exit -1; fi
+# cd ..; echo Merge looks good
+
+# # Patch (compatible with v3 but not v2) subproject in a branch
+# git checkout -b patch-v3-subproject
+# echo "superproject patch existing v3 file" >> subproject/Feature-I-v3
+# echo "superproject patch new file" >> subproject/Feature-O-v1v2v3v4
+# git add subproject/Feature-O-v1v2v3v4
+# git commit -am "patching subproject"
+
+# Revert subproject to v2 on a test branch
+git checkout update-subproject-to-v3
+git checkout -b downgrade-subproject-to-v2
+git diff v3 v2 --src-prefix=subproject/ --dst-prefix=subproject/ | patch -p0
+#doesn't work: git revert --no-edit v3
+#doesn't work: git merge -s subtree -X subtree=subproject v2
+# Make sure no unexpected files remain in superproject
+ls Feature* 2>/dev/null; if [ $? -eq 0 ]; then echo Unexpected files in superproject:; ls Feature* ; exit -1; fi
+# Make sure no unexpected files remain in subproject
+ls subproject/Feature* | grep -v v2 >/dev/null; if [ $? -eq 0 ]; then echo Unexpected files in v2: ; ls subproject/Feature* | grep -v v2 ; exit -1; fi
+# Make sure all expected files exist
+cd subproject; grep Feature README | xargs ls > /dev/null; if [ $? -ne 0 ]; then echo Couldnt find expected file in v2 ; exit -1; fi
+cd ..; echo Downgrade looks good
+
+exit 0
