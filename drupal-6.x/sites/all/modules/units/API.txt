@@ -1,0 +1,88 @@
+$Id$
+
+Units module provides following API functions:
+ 
+  Hooks:
+  ======
+  
+  hook_define_units()
+  
+    Main hook of Units module API.
+    Returns array of arrays of unit definitions, with unit id's as keys.
+    
+    ID of unit is it's machine-readable name (i.e. alphanumeric characters 
+    and underscores). It's database stored value, and must be unique within
+    all Units implementations. For the sake of uniqueness, it's better to 
+    prefix unit id with it's category id.
+    
+    For simplicity, unit category descriptions are stored in units themselves. 
+    As there are probably not that many units needed for single site, it won't
+    be big penalty.
+    
+    All unit properties should be safe for output (i.e. all special 
+    characters should be encoded). Units module does not filter them and
+    integration modules such as MVF will assume they are safe.
+    Translation of unit properties also should be done in module implementing
+    hook_define_units(). 
+
+    Structure of unit definition:
+    'id' => array('property1' => 'value1', 'property2' => 'value2', ...)
+    
+    Example definition for USD currency:
+    
+    'currency_usd' => array(
+      // Short name ( ~ 1 word if possible).  
+      'shortname' => 'USD',
+       
+      // Full name, e.g. several words describing unit.
+      'fullname' => t('U.S. Dollar'),
+
+      // Symbol of unit, or abbreviation.
+      'symbol' => '$',
+      
+      // Machine-readable name of the category of unit. Serves for storing 
+      // category internally.
+      'category_id' => 'currency',
+      
+      // Name of the category of unit. Serves for grouping up similar unit 
+      // types e.g. in UI.
+      'category' => t('World Currencies'),
+      
+      // Decimals. The number of digits to the right of the decimal point.
+      // Note: this is just recommended value. It's not enforced in Units 
+      // module.
+      'decimals' => '2'
+    );
+  
+  
+  hook_units_alter(&$units)
+  
+    Allows modules to alter units collection after it was built. It allows one 
+    module to alter definition of other module's unit
+    
+ 
+  Some useful functions:
+  ====================== 
+  
+  units_get_units()
+    
+    Main workhorse function.
+    Returns array of unit definitions, keyed by unit id.
+  
+    
+  units_get_enabled_units()
+  
+    Returns array of globally enabled units id-s. By convention, empty array 
+    means "all units are enabled". Units get enabled or disabled in UI at 
+    "admin/content/units".
+  
+    
+  units_get_unit_names($full = NULL)
+  
+    Returns array of unit names, keyed by unit id-s.
+    If $full is not null, names are full names, otherwise short names.
+  
+  
+  units_get_symbol($id)
+  
+    Returns symbol for unit, if one exists, or empty string otherwise.

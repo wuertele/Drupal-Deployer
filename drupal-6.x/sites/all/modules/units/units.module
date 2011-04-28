@@ -1,0 +1,94 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Units module.
+ */
+
+/**
+ * Implementation of hook_menu()
+ */
+function units_menu() {
+  $items = array();
+  $items['admin/content/units'] = array(
+    'title' => 'Units',
+    'description' => 'Manage site-wide collection of units of measurement.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('units_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'units.admin.inc',
+  );
+  return $items;
+}
+
+/**
+ *  Check if provided unit is enabled.
+ */
+function units_unit_is_enabled($id) {
+  $enabled = units_get_enabled_units();
+  if (empty($enabled)) {
+    return TRUE;
+  }
+  return in_array($id, $enabled);
+}
+
+/**
+ * Collect and return units definitions from modules.
+ */
+function units_get_units() {
+  static $units;
+  if (!isset($units)) {
+    $units = array();
+    $items = module_invoke_all('define_units');
+    foreach ($items as $id => $unit) {
+      $units[$id] = $unit;
+    }
+    // Allow other modules to alter units definitions using hook_units_alter().
+    drupal_alter('units', $units);
+  }
+  return $units;
+}
+
+/**
+ * Return array of short names of enabled units.
+ * 
+ * Empty array means "all units enabled".
+ */
+function units_get_enabled_units() {
+  static $enabled_units;
+  if (!isset($enabled_units)) {
+    $enabled_units = variable_get('units_enabled_units', array()); 
+  }
+  return $enabled_units;
+}
+
+/**
+ * Return array of unit names keyed by unit id's
+ * 
+ * @param $full
+ *   if not null, return full names, otherwise short names.
+ */
+function units_get_unit_names($full = NULL) {
+  $names = array();
+  $units = units_get_units();
+  if ($full) {
+    foreach ($units as $id => $unit) {
+      $names[$id] = $unit['fullname'];
+    }
+  }
+  else {
+    foreach ($units as $id => $unit) {
+      $names[$id] = $unit['shortname'];
+    }
+  }
+  return $names; 
+}
+
+/**
+ * Return symbol of unit
+ */
+function units_get_symbol($unit_id) {
+  $units = units_get_units();
+  return isset($units[$unit_id]['symbol']) ? $units[$unit_id]['symbol'] : ''; 
+}
