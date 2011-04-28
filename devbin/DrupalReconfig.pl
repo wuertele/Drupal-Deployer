@@ -27,38 +27,23 @@ if (! defined ($repository_relpath)) {
 my $repository_path = abs_path ($repository_relpath);
 my $repository_backup;
 
-if (0) {
-
-system_print ("mkdir -p $repository_path");
-chdir $repository_path;
-system_print ("git init");
-system_print ("touch README");
-system_print ("git add .");
-system_print ("git commit -m 'initial commit'");
-
-foreach my $branchname (keys %branch) {
-    system_print ("git branch $branchname");
-}
-
 system_print ("git checkout drupal");
 
-my %added_remote;
+my (%added_remote, %added_new_remote);
 my @module_add_order;
 @module_add_order = sort { ($a->{objects} || die ("$a->{remote} has no objects!")) <=> ($b->{objects} || die ("$b->{remote} has no objects!")) } @git_modules;
 foreach my $module (@module_add_order) {
     if (! defined $added_remote{$module->{remote}}) {
-#	$module->{url} =~ s/^http/git/;
-	system_print ("git remote add -f $module->{remote} $module->{url}") == 0 or die "remote add failure: $?\n";
-	if (defined $module->{tags}) { system_print ("git fetch --tags $module->{remote}") == 0 or die "remote tags failure: $?\n"; }
+	my $preexisting_remote = system_print ("git remote add -f $module->{remote} $module->{url}");
+	if ($preexisting_remote == 0) {
+	    $added_new_remote{$module->{remote}}++;
+	    if (defined $module->{tags}) {
+		system_print ("git fetch --tags $module->{remote}") == 0 or die "remote tags failure: $?\n";
+	    }
+	}
 	$added_remote{$module->{remote}}++;
     }
 }
-
-chdir "$repository_path/.." or die "can't chdir to $repository_path/..: $!";
-$repository_backup = "$repository_path" . ".remotes-added";
-system_print ("rm -rf $repository_backup");
-system_print ("cp -a $repository_path $repository_backup");
-chdir $repository_path or die "can't chdir to $repository_path: $!";
 
 my @module_merge_order = @git_modules;
 foreach my $module (@module_merge_order) {
