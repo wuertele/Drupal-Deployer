@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-#	-*- Perl -*-		DrupalInit.pl:	
+#	-*- Perl -*-		DrupalReconfig.pl:	
 #
-#	(usage)% DrupalInit.pl
+#	(usage)% DrupalReconfig.pl
 #
 #	Inputs:		
 #			
@@ -26,6 +26,8 @@ if (! defined ($repository_relpath)) {
 
 my $repository_path = abs_path ($repository_relpath);
 my $repository_backup;
+
+if (0) {
 
 system_print ("mkdir -p $repository_path");
 chdir $repository_path;
@@ -74,6 +76,8 @@ $repository_backup = "$repository_path" . ".gits-merged";
 system_print ("rm -rf $repository_backup");
 system_print ("cp -a $repository_path $repository_backup");
 chdir $repository_path or die "can't chdir to $repository_path: $!";
+
+}
 
 # Modules distributed as files
 my @module_install_order = @file_modules;
