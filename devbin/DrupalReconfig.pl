@@ -27,6 +27,8 @@ if (! defined ($repository_relpath)) {
 my $repository_path = abs_path ($repository_relpath);
 my $repository_backup;
 
+chdir $repository_path or die "can't chdir to $repository_path: $!";
+
 system_print ("git checkout drupal");
 
 my (%added_remote, %added_new_remote);
@@ -49,14 +51,20 @@ foreach my $module (@module_add_order) {
 my @module_merge_order = @git_modules;
 MERGE_MODULE: foreach my $module (@module_merge_order) {
     # discover any previous merge
-    if (-f $module->{path}) {
+    if (-d $module->{path}) {
 	# BUG:  the next line will fail if a subdir of $module->{path} is the path of another module (like htmlpurify/library)!
-	$merged_sha1 = `git log --merges -- $module->{path} | grep Merge: | head -1 | cut -f3 -d' ' | xargs git rev-parse`;
-	$requested_sha1 = `git rev-parse $module->{commit}`;
+	my $merged_sha1 = `git log --merges --reverse -- $module->{path} | grep Merge: | head -1 | cut -f3 -d' ' | xargs git rev-parse`;
+	my $requested_sha1 = `git rev-parse $module->{commit}`;
+	chomp $merged_sha1;
+	chomp $requested_sha1;
 	if ($requested_sha1 eq $merged_sha1) {
 	    # We're already merged to the right place
 	    next MERGE_MODULE;
+	} else {
+	    print STDERR "\$module->{commit} ($requested_sha1) != \$merged_sha1 ($merged_sha1)\n";
 	}
+    } else {
+	print STDERR "$module->{path} does not exist\n";
     }
 
     system_print ("git merge -s ours --no-commit $module->{commit}");
@@ -66,6 +74,8 @@ MERGE_MODULE: foreach my $module (@module_merge_order) {
 	system_print ("git read-tree --prefix=$module->{path} -u $module->{commit}");
     }
     system_print ("git commit -m 'Merged $module->{path}'");
+
+    exit;
 }
 
 # Modules distributed as files

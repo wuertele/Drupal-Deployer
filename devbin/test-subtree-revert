@@ -104,32 +104,32 @@ git merge -s ours --no-commit v1
 git read-tree --prefix=subproject/ -u v1
 git commit -m "added subproject at v1"
 
-# # Patch (incompatible with v2 or v3) subproject in a branch
-# git checkout master
-# git checkout -b patch-v1-subproject-incompatible
-# echo "superproject patch existing v1v2v3 file" >> subproject/Feature-D-v1v2v3
-# echo "superproject patch existing v1v2 file" >> subproject/Feature-B-v1v2
-# echo "superproject patch existing v1 file" >> subproject/Feature-A-v1
-# echo "superproject patch new file" >> subproject/Feature-L-v1v2v3v4
-# git add subproject/Feature-L-v1v2v3v4
-# git commit -am "patching subproject"
+# Patch (incompatible with v2 or v3) subproject in a branch
+git checkout master
+git checkout -b patch-v1-subproject-incompatible
+echo "superproject patch existing v1v2v3 file" >> subproject/Feature-D-v1v2v3
+echo "superproject patch existing v1v2 file" >> subproject/Feature-B-v1v2
+echo "superproject patch existing v1 file" >> subproject/Feature-A-v1
+echo "superproject patch new file" >> subproject/Feature-L-v1v2v3v4
+git add subproject/Feature-L-v1v2v3v4
+git commit -am "patching subproject"
 
-# # Patch (incompatible with v2 or v3) subproject in a branch
-# git checkout master
-# git checkout -b patch-v1-subproject-compatible-v2
-# echo "superproject patch existing v1v2v3 file" >> subproject/Feature-D-v1v2v3
-# echo "superproject patch existing v1v2 file" >> subproject/Feature-B-v1v2
-# echo "superproject patch new file" >> subproject/Feature-M-v1v2v3v4
-# git add subproject/Feature-M-v1v2v3v4
-# git commit -am "patching subproject"
+# Patch (incompatible with v2 or v3) subproject in a branch
+git checkout master
+git checkout -b patch-v1-subproject-compatible-v2
+echo "superproject patch existing v1v2v3 file" >> subproject/Feature-D-v1v2v3
+echo "superproject patch existing v1v2 file" >> subproject/Feature-B-v1v2
+echo "superproject patch new file" >> subproject/Feature-M-v1v2v3v4
+git add subproject/Feature-M-v1v2v3v4
+git commit -am "patching subproject"
 
-# # Patch (incompatible with v2 or v3) subproject in a branch
-# git checkout master
-# git checkout -b patch-v1-subproject-compatible-v3
-# echo "superproject patch existing v1v2v3 file" >> subproject/Feature-D-v1v2v3
-# echo "superproject patch new file" >> subproject/Feature-M-v1v2v3v4
-# git add subproject/Feature-N-v1v2v3v4
-# git commit -am "patching subproject"
+# Patch (incompatible with v2 or v3) subproject in a branch
+git checkout master
+git checkout -b patch-v1-subproject-compatible-v3
+echo "superproject patch existing v1v2v3 file" >> subproject/Feature-D-v1v2v3
+echo "superproject patch new file" >> subproject/Feature-M-v1v2v3v4
+git add subproject/Feature-M-v1v2v3v4
+git commit -am "patching subproject"
 
 # Update subproject to v3 on a test branch
 git checkout master
@@ -143,29 +143,55 @@ ls subproject/Feature* | grep -v v3 >/dev/null; if [ $? -eq 0 ]; then echo Unexp
 cd subproject; grep Feature README | xargs ls > /dev/null; if [ $? -ne 0 ]; then echo Couldnt find expected file in v3 ; exit -1; fi
 cd ..; echo Upgrade looks good
 
-# # Merge patches from patch-subproject
-# git merge patch-v1-subproject-compatible-v3
-# # Make sure no unexpected files remain in superproject
-# ls Feature* 2>/dev/null; if [ $? -eq 0 ]; then echo Unexpected files in superproject:; ls Feature* ; exit -1; fi
-# # Make sure no unexpected files remain in subproject
-# ls subproject/Feature* | grep -v v3 >/dev/null; if [ $? -eq 0 ]; then echo Unexpected files in v3: ; ls subproject/Feature* | grep -v v3 ; exit -1; fi
-# # Make sure all expected files exist
-# cd subproject; grep Feature README | xargs ls > /dev/null; if [ $? -ne 0 ]; then echo Couldnt find expected file in v3 ; exit -1; fi
-# cd ..; echo Merge looks good
+# Merge patches from patch-v1-subproject-compatible-v3
+# git merge patch-v1-subproject-incompatible
+# git merge patch-v1-subproject-compatible-v2
+git merge patch-v1-subproject-compatible-v3
+# Make sure no unexpected files remain in superproject
+ls Feature* 2>/dev/null; if [ $? -eq 0 ]; then echo Unexpected files in superproject:; ls Feature* ; exit -1; fi
+# Make sure no unexpected files remain in subproject
+ls subproject/Feature* | grep -v v3 >/dev/null; if [ $? -eq 0 ]; then echo Unexpected files in v3: ; ls subproject/Feature* | grep -v v3 ; exit -1; fi
+# Make sure all expected files exist
+cd subproject; grep Feature README | xargs ls > /dev/null; if [ $? -ne 0 ]; then echo Couldnt find expected file in v3 ; exit -1; fi
+cd ..; echo Merge looks good
 
-# # Patch (compatible with v3 but not v2) subproject in a branch
-# git checkout -b patch-v3-subproject
-# echo "superproject patch existing v3 file" >> subproject/Feature-I-v3
-# echo "superproject patch new file" >> subproject/Feature-O-v1v2v3v4
-# git add subproject/Feature-O-v1v2v3v4
-# git commit -am "patching subproject"
+# Patch (compatible with v3 but not v2) subproject in a branch
+git checkout -b patch-v3-subproject
+echo "superproject patch existing v3 file" >> subproject/Feature-I-v3
+echo "superproject patch new file" >> subproject/Feature-O-v1v2v3v4
+git add subproject/Feature-O-v1v2v3v4
+git commit -am "patching subproject"
+
+# Merge patches from patch-v3-subproject
+git checkout update-subproject-to-v3
+git merge patch-v3-subproject
+# Make sure no unexpected files remain in superproject
+ls Feature* 2>/dev/null; if [ $? -eq 0 ]; then echo Unexpected files in superproject:; ls Feature* ; exit -1; fi
+# Make sure no unexpected files remain in subproject
+ls subproject/Feature* | grep -v v3 >/dev/null; if [ $? -eq 0 ]; then echo Unexpected files in v3: ; ls subproject/Feature* | grep -v v3 ; exit -1; fi
+# Make sure all expected files exist
+cd subproject; grep Feature README | xargs ls > /dev/null; if [ $? -ne 0 ]; then echo Couldnt find expected file in v3 ; exit -1; fi
+cd ..; echo Merge looks good
 
 # Revert subproject to v2 on a test branch
-git checkout update-subproject-to-v3
 git checkout -b downgrade-subproject-to-v2
-git diff v3 v2 --src-prefix=subproject/ --dst-prefix=subproject/ | patch -p0
-#doesn't work: git revert --no-edit v3
-#doesn't work: git merge -s subtree -X subtree=subproject v2
+#
+# works:
+#  git diff v3 v2 --src-prefix=subproject/ --dst-prefix=subproject/ | patch -p0
+#
+# doesn't work:
+#  git revert --no-edit v3
+#  git merge -s subtree -X subtree=subproject v2
+#
+# testing:
+#git revert --no-edit --strategy subtree -X subtree=subproject v3
+git checkout v3
+git revert --no-edit HEAD
+git tag revert-v3
+git checkout -
+git merge -s subtree -X subtree=subproject revert-v3
+#
+
 # Make sure no unexpected files remain in superproject
 ls Feature* 2>/dev/null; if [ $? -eq 0 ]; then echo Unexpected files in superproject:; ls Feature* ; exit -1; fi
 # Make sure no unexpected files remain in subproject
