@@ -13,6 +13,7 @@ push @git_modules, { remote => "drupal.org/comment_upload", path => "$modules_pa
 push @git_modules, { remote => "drupal.org/computed_field", path => "$modules_path/computed_field/", url => "$drupal_project/computed_field.git", objects => 302, commit => "a8b5ec324", };
 push @git_modules, { remote => "drupal.org/ctools", path => "$modules_path/ctools/", url => "$drupal_project/ctools.git", objects => 8439, commit => "28aba335c", };
 push @git_modules, { remote => "drupal.org/currency", path => "$modules_path/currency/", url => "$drupal_project/currency.git", objects => 483, commit => "f0c443ca4", };
+push @git_modules, { remote => "drupal.org/date", path => "$modules_path/date/", url => "$drupal_project/date.git", objects => 12981, commit => "128f8d5c90c88fac8dc64863347c155e452a57c9"};
 push @git_modules, { remote => "drupal.org/devel", path => "$modules_path/devel/", url => "$drupal_project/devel.git", objects => (4977+725), commit => "ff56ee79f", tags => 1};
 push @git_modules, { remote => "drupal.org/drupalforfirebug", path => "$modules_path/drupalforfirebug/", url => "$drupal_project/drupalforfirebug.git", objects => 375, commit => "d28193a75", };
 push @git_modules, { remote => "drupal.org/elements", path => "$modules_path/elements/", url => "$drupal_project/elements.git", objects => 93, commit => "7a97dfe78", };
