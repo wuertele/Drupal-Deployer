@@ -46,6 +46,7 @@ push @git_modules, { remote => "drupal.org/mimedetect", path => "$modules_path/m
 push @git_modules, { remote => "drupal.org/mollom", path => "$modules_path/mollom/", url => "$drupal_project/mollom.git", objects => 2252, commit => "ef7c9b186", };
 push @git_modules, { remote => "drupal.org/mvf", path => "$modules_path/mvf/", url => "$drupal_project/mvf.git", objects => 58, commit => "361c8de57", };
 push @git_modules, { remote => "drupal.org/node_export", path => "$modules_path/node_export/", url => "$drupal_project/node_export.git", objects => 669, commit => "d3aa52fbf", };
+push @git_modules, { remote => "drupal.org/reference_views", path => "$modules_path/reference_views/", url => "$drupal_project/reference_views.git", objects => 26, commit => "435b28929319aa65bf56dba6926691a98812e7c1", };
 push @git_modules, { remote => "drupal.org/nodereference_views", path => "$modules_path/nodereference_views/", url => "$drupal_project/nodereference_views.git", objects => 26, commit => "0d65a9782", };
 push @git_modules, { remote => "drupal.org/nodereference_views_select", path => "$modules_path/nodereference_views_select/", url => "$drupal_project/nodereference_views_select.git", objects => 67, commit => "be9d41a3a", };
 push @git_modules, { remote => "drupal.org/page_title", path => "$modules_path/page_title/", url => "$drupal_project/page_title.git", objects => 959, commit => "c8ba5261d", };
