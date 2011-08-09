@@ -85,3 +85,4 @@ push @git_modules, { remote => "drupal.org/ifeeldirty", path => "drupal-6.x/site
 push @git_modules, { remote => "drupal.org/minimalist", path => "drupal-6.x/sites/all/themes/minimalist/", url => "$drupal_project/minimalist.git", objects => (57+13), commit => "245ded7dc", tags => 1};
 push @git_modules, { remote => "drupal.org/pixture_reloaded", path => "drupal-6.x/sites/all/themes/pixture_reloaded/", url => "$drupal_project/pixture_reloaded.git", objects => 635, commit => "ce6fa1f68", };
 push @git_modules, { remote => "github/bom", path => "drupal-6.x/sites/all/modules/bom/", url => "http://github.com/wuertele/drupal-bom.git", objects => 5, commit => "40124f4ce", };
+push @git_modules, { remote => "drupal.org/mathjax", path => "drupal-6.x/sites/all/modules/mathjax/", url => "$drupal_project/mathjax.git", objects => 63, commit => "9cf2d1b37391a35691c981d0bc794301425ef3b1", };
